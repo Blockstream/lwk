@@ -1,0 +1,49 @@
+[package]
+name = "gdk_rust"
+version = "0.1.0"
+authors = ["Riccardo Casatta <riccardo@casatta.it>", "Nadav Ivgi <nadav@shesek.info>", "William Casarin <jb55@jb55.com>", "Leonardo Comandini <leo@leocomandini.org>"]
+license = "(MIT)"
+edition = "2018"
+
+[lib]
+crate-type = ["lib"]
+
+[features]
+android_log = ["android_logger"]
+
+[dependencies]
+# rand = "0.7.3"
+rand = "0.6.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_cbor = "0.11.1"
+libc = "0.2"
+hex = "0.4.0"
+dirs = "1.0"
+chrono = "0.4.11"
+log = "0.4.8"
+android_logger = { version = "0.8.6", optional = true }
+url = "1.7.2"
+ureq = { version = "1.0.0", features = ["json"] }
+
+sha2 = "0.8.0"
+aes-gcm-siv = "0.5.0"
+electrum-client = "0.3.0-beta.1"
+block-modes = "0.3.3"
+tempdir = "0.3.7"
+secp256k1 = { version = "0.19.0", features = [ "recovery", "rand"] }
+lazy_static = "1.4.0"
+
+# remember to update secp256k1 deps if increasing this one, unfortunately we can't use the rexported one from bitcoin because we need recovery feature
+bitcoin = { version = "0.25", features = [ "use-serde" ] }
+elements = { version = "0.13", features = ["serde-feature"] }
+
+[dev-dependencies]
+bitcoincore-rpc = { git="https://github.com/romanz/rust-bitcoincore-rpc", rev="637e895a0b73ffc21c8f62fa2c65b6fd1247785a" }
+
+[profile.release]
+lto = true
+panic = 'abort'
+opt-level = 'z'
+codegen-units = 1
+incremental = false

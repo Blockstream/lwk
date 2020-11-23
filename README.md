@@ -2,10 +2,10 @@
 
 **WARNING: early stage software, DO NOT USE it with real funds**
 
-BEWallet is a library For Bitcoin and Elements wallets.
+BEWallet is a library for Bitcoin and Elements wallets.
 
 BEWallet is based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
-Basically, it took all GDK Rust pieces and move it to their own project.
+Basically, it took all GDK Rust pieces and moved them to their own project.
 
 BEWallet uses Electrum backends.
 
@@ -18,6 +18,11 @@ cargo build
 ```
 
 Run tests:
+
+Run unit tests:
+```
+cargo test --lib
+```
 
 Integration tests needs local servers:
 ```
@@ -35,6 +40,7 @@ curl -L https://github.com/ElementsProject/elements/releases/download/elements-0
 cd $PROJECT_DIR
 ```
 
+To run them:
 ```
 export ELECTRS_LIQUID_EXEC=$PWD/server/electrs_liquid/bin/electrs
 export ELECTRS_EXEC=$PWD/server/electrs_bitcoin/bin/electrs
@@ -43,10 +49,4 @@ export ELEMENTSD_EXEC=$PWD/server/elements-0.18.1.8/bin/elementsd
 
 DEBUG=1 ./launch_integration_tests.sh bitcoin
 DEBUG=1 ./launch_integration_tests.sh liquid
-cd gdk_common
-cargo test
-cd ..
-cd gdk_electrum
-cargo test
-cd ..
 ```

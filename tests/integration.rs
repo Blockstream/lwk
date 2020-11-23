@@ -9,7 +9,6 @@ fn bitcoin() {
         .expect("env ELECTRS_EXEC pointing to electrs executable is required");
     let node_exec = env::var("BITCOIND_EXEC")
         .expect("env BITCOIND_EXEC pointing to elementsd executable is required");
-    env::var("WALLY_DIR").expect("env WALLY_DIR directory containing libwally is required");
     let debug = env::var("DEBUG").is_ok();
 
     let mut test_electrum_wallet =
@@ -44,7 +43,6 @@ fn liquid() {
         .expect("env ELECTRS_LIQUID_EXEC pointing to electrs executable is required");
     let node_exec = env::var("ELEMENTSD_EXEC")
         .expect("env ELEMENTSD_EXEC pointing to elementsd executable is required");
-    env::var("WALLY_DIR").expect("env WALLY_DIR directory containing libwally is required");
     let debug = env::var("DEBUG").is_ok();
 
     let mut test_electrum_wallet = test_session::setup_wallet(true, debug, electrs_exec, node_exec);

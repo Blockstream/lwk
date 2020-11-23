@@ -12,8 +12,6 @@ BEWallet uses Electrum backends.
 To build:
 
 ```
-./build_wally.sh
-export WALLY_DIR=$PWD/libwally-core/build/lib/
 cargo build
 ```
 

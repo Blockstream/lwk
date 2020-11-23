@@ -18,7 +18,7 @@ use crate::model::{
 };
 use crate::network::{ElementsNetwork, Network, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
-use crate::wally::*;
+use wally::*;
 
 use crate::error::*;
 use crate::store::*;
@@ -791,7 +791,7 @@ impl WalletCtx {
         all_vbfs.extend(input_vbfs.to_vec());
         all_vbfs.extend(output_vbfs.iter().cloned().flatten().collect::<Vec<u8>>());
 
-        let last_vbf = asset_final_vbf(all_values, in_num as u32, all_abfs, all_vbfs);
+        let last_vbf = asset_final_vbf(all_values, in_num, all_abfs, all_vbfs);
         output_vbfs.push(last_vbf.to_vec());
 
         for (i, mut output) in tx.output.iter_mut().enumerate() {

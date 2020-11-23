@@ -1,7 +1,7 @@
 use crate::be::*;
 use crate::error::Error;
 use crate::model::Balances;
-use crate::wally::asset_surjectionproof_size;
+use wally::asset_surjectionproof_size;
 use crate::{ElementsNetwork, NetworkId};
 use bitcoin::consensus::encode::deserialize as btc_des;
 use bitcoin::consensus::encode::serialize as btc_ser;

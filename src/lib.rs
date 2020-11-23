@@ -13,9 +13,9 @@ pub mod model;
 pub mod network;
 pub mod scripts;
 mod store;
-pub mod wally;
+//pub mod wally as wallymod;
 
-use crate::wally::{
+use wally::{
     asset_blinding_key_from_seed, asset_blinding_key_to_ec_private_key, asset_unblind,
     MasterBlindingKey,
 };

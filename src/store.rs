@@ -3,7 +3,7 @@ use crate::be::{ScriptBatch, Unblinded};
 use crate::error::fn_err;
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
-use crate::wally::{
+use wally::{
     asset_blinding_key_to_ec_private_key, ec_public_key_from_private_key, MasterBlindingKey,
 };
 use crate::Error;

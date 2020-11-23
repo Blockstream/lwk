@@ -9,8 +9,6 @@ use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Debug)]
 pub enum Error {
-    Other(String),
-    JsonFrom(serde_json::Error),
     Generic(String),
     InvalidAddress,
     UnknownCall,
@@ -20,7 +18,6 @@ pub enum Error {
     EmptyAddressees,
     AssetEmpty,
     InvalidHeaders,
-    InvalidSubaccount(u32),
     SendAll,
     AddrParse(String),
     Bitcoin(bitcoin::util::Error),
@@ -28,6 +25,7 @@ pub enum Error {
     BitcoinBIP32Error(bitcoin::util::bip32::Error),
     BitcoinConsensus(bitcoin::consensus::encode::Error),
     JSON(serde_json::error::Error),
+    JsonFrom(serde_json::Error),
     StdIOError(std::io::Error),
     Hex(hex::FromHexError),
     ClientError(electrum_client::Error),
@@ -38,6 +36,47 @@ pub enum Error {
     Secp256k1(bitcoin::secp256k1::Error),
 }
 
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Error::Generic(ref strerr) => write!(f, "{}", strerr),
+            Error::InvalidMnemonic => write!(f, "invalid mnemonic"),
+            Error::InsufficientFunds => write!(f, "insufficient funds"),
+            Error::SendAll => write!(f, "sendall error"),
+            Error::InvalidAddress => write!(f, "invalid address"),
+            Error::InvalidAmount => write!(f, "invalid amount"),
+            Error::InvalidHeaders => write!(f, "invalid headers"),
+            Error::EmptyAddressees => write!(f, "addressees cannot be empty"),
+            Error::AssetEmpty => write!(f, "asset_tag cannot be empty in liquid"),
+            Error::UnknownCall => write!(f, "unknown call"),
+            Error::AddrParse(ref addr) => write!(f, "could not parse SocketAddr `{}`", addr),
+            Error::Bitcoin(ref btcerr) => write!(f, "bitcoin: {}", btcerr),
+            Error::BitcoinHashes(ref btcerr) => write!(f, "bitcoin_hashes: {}", btcerr),
+            Error::BitcoinBIP32Error(ref bip32err) => write!(f, "bip32: {}", bip32err),
+            Error::BitcoinConsensus(ref consensus_err) => write!(f, "consensus: {}", consensus_err),
+            Error::JSON(ref json_err) => write!(f, "json: {}", json_err),
+            Error::JsonFrom(ref json_from_err) => write!(f, "json from: {}", json_from_err),
+            Error::StdIOError(ref io_err) => write!(f, "io: {}", io_err),
+            Error::Hex(ref hex_err) => write!(f, "hex: {}", hex_err),
+            Error::ClientError(ref client_err) => write!(f, "client: {:?}", client_err),
+            Error::SliceConversionError(ref slice_err) => write!(f, "slice: {}", slice_err),
+            Error::ElementsEncode(ref el_err) => write!(f, "el_err: {}", el_err),
+            Error::Send(ref send_err) => write!(f, "send_err: {:?}", send_err),
+            Error::Encryption(ref send_err) => write!(f, "encryption_err: {:?}", send_err),
+            Error::Secp256k1(ref err) => write!(f, "Secp256k1_err: {:?}", err),
+        }
+    }
+}
+
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self))
+    }
+}
+
 pub fn err<R>(str: &str) -> Result<R, Error> {
     Err(Error::Generic(str.into()))
 }
@@ -45,61 +84,6 @@ pub fn err<R>(str: &str) -> Result<R, Error> {
 pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
     move || Error::Generic(str.into())
 }
-
-pub fn _io_err(str: &str) -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::InvalidInput, str.to_string())
-}
-
-impl Error {
-    /// Convert the error to a GDK-compatible code.
-    pub fn to_gdk_code(&self) -> String {
-        // Unhandles error codes:
-        // id_no_amount_specified
-        // id_fee_rate_is_below_minimum
-        // id_invalid_replacement_fee_rate
-        // id_send_all_requires_a_single_output
-
-        match *self {
-            /*
-            Error::Electrum(electrum::error::Error::InsufficientFunds) => {
-                "id_insufficient_funds".to_string()
-            }
-            Error::Electrum(electrum::error::Error::InvalidAddress) => {
-                "id_invalid_address".to_string()
-            }
-            Error::Electrum(electrum::error::Error::InvalidAmount) => {
-                "id_invalid_amount".to_string()
-            }
-            */
-            _ => "id_unknown".to_string(),
-        }
-    }
-
-    pub fn gdk_display(&self) -> String {
-        match self {
-            Error::Other(s) => s.clone(),
-            Error::JsonFrom(ref json) => format!("{}", json),
-            //Error::Electrum(ref electrum) => format!("{}", electrum),
-            //Error::InvalidAddress(ref err) => format!("{:?}", err),
-            Error::Generic(s) => s.clone(),
-            _ => "TODO".to_string(),
-        }
-    }
-}
-
-/*
-impl From<String> for Error {
-    fn from(e: String) -> Error {
-        Error::Other(e)
-    }
-}
-
-impl From<electrum::error::Error> for Error {
-    fn from(e: electrum::error::Error) -> Error {
-        Error::Electrum(e)
-    }
-}
-*/
 
 impl From<serde_json::Error> for Error {
     fn from(e: serde_json::Error) -> Error {
@@ -119,58 +103,17 @@ macro_rules! impl_error {
 
 impl_error!(&str);
 impl_error!(bitcoin::util::base58::Error);
-//impl_error!(sled::Error);
-//impl_error!(bitcoin::hashes::error::Error);
-//impl_error!(bitcoin::consensus::encode::Error);
-//impl_error!(bitcoin::util::bip32::Error);
-//impl_error!(std::array::TryFromSliceError);
-//impl_error!(elements::encode::Error);
 impl_error!(elements::address::AddressError);
-//impl_error!(hex::FromHexError);
 impl_error!(bitcoin::util::address::Error);
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            Error::Generic(ref strerr) => write!(f, "{}", strerr),
-            Error::AddrParse(ref addr) => write!(f, "could not parse SocketAddr `{}`", addr),
-            Error::InvalidMnemonic => write!(f, "invalid mnemonic"),
-            Error::InsufficientFunds => write!(f, "insufficient funds"),
-            Error::SendAll => write!(f, "sendall error"),
-            Error::InvalidAddress => write!(f, "invalid address"),
-            Error::InvalidAmount => write!(f, "invalid amount"),
-            Error::InvalidHeaders => write!(f, "invalid headers"),
-            Error::EmptyAddressees => write!(f, "addressees cannot be empty"),
-            Error::AssetEmpty => write!(f, "asset_tag cannot be empty in liquid"),
-            Error::InvalidSubaccount(sub) => write!(f, "invalid subaccount {}", sub),
-            Error::UnknownCall => write!(f, "unknown call"),
-            Error::Bitcoin(ref btcerr) => write!(f, "bitcoin: {}", btcerr),
-            Error::BitcoinHashes(ref btcerr) => write!(f, "bitcoin_hashes: {}", btcerr),
-            Error::BitcoinBIP32Error(ref bip32err) => write!(f, "bip32: {}", bip32err),
-            Error::BitcoinConsensus(ref consensus_err) => write!(f, "consensus: {}", consensus_err),
-            Error::JSON(ref json_err) => write!(f, "json: {}", json_err),
-            Error::StdIOError(ref io_err) => write!(f, "io: {}", io_err),
-            Error::Hex(ref hex_err) => write!(f, "hex: {}", hex_err),
-            Error::ClientError(ref client_err) => write!(f, "client: {:?}", client_err),
-            Error::SliceConversionError(ref slice_err) => write!(f, "slice: {}", slice_err),
-            Error::ElementsEncode(ref el_err) => write!(f, "el_err: {}", el_err),
-            //Error::Common(ref cmn_err) => write!(f, "cmn_err: {:?}", cmn_err),
-            Error::Send(ref send_err) => write!(f, "send_err: {:?}", send_err),
-            Error::Encryption(ref send_err) => write!(f, "encryption_err: {:?}", send_err),
-            Error::Secp256k1(ref err) => write!(f, "Secp256k1_err: {:?}", err),
-            _ => write!(f, "TODO"),
-        }
-    }
-}
-
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&format!("{}", self))
-    }
-}
+impl_error!(aead::Error);
+impl_error!(PoisonError<RwLockReadGuard<'_, StoreMeta>>);
+impl_error!(PoisonError<RwLockWriteGuard<'_, StoreMeta>>);
+impl_error!(block_modes::InvalidKeyIvLength);
+impl_error!(serde_cbor::error::Error);
+impl_error!(bitcoin::hashes::hex::Error);
+impl_error!(std::string::FromUtf8Error);
+impl_error!(block_modes::BlockModeError);
+impl_error!(bitcoin::util::key::Error);
 
 impl From<std::array::TryFromSliceError> for Error {
     fn from(err: std::array::TryFromSliceError) -> Self {
@@ -183,14 +126,6 @@ impl From<std::net::AddrParseError> for Error {
         Error::AddrParse("SocketAddr parse failure with no additional info".into())
     }
 }
-
-/*
-impl From<serde_json::error::Error> for Error {
-    fn from(err: serde_json::error::Error) -> Self {
-        Error::JSON(err)
-    }
-}
-*/
 
 impl From<bitcoin::util::bip32::Error> for Error {
     fn from(err: bitcoin::util::bip32::Error) -> Self {
@@ -245,62 +180,8 @@ impl From<std::sync::mpsc::SendError<()>> for Error {
     }
 }
 
-impl From<std::string::FromUtf8Error> for Error {
-    fn from(err: std::string::FromUtf8Error) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<block_modes::BlockModeError> for Error {
-    fn from(err: block_modes::BlockModeError) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
 impl From<bitcoin::secp256k1::Error> for Error {
     fn from(err: bitcoin::secp256k1::Error) -> Self {
         Error::Secp256k1(err)
-    }
-}
-
-impl From<bitcoin::util::key::Error> for Error {
-    fn from(err: bitcoin::util::key::Error) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<bitcoin::hashes::hex::Error> for Error {
-    fn from(err: bitcoin::hashes::hex::Error) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<serde_cbor::error::Error> for Error {
-    fn from(err: serde_cbor::error::Error) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<block_modes::InvalidKeyIvLength> for Error {
-    fn from(err: block_modes::InvalidKeyIvLength) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<PoisonError<RwLockReadGuard<'_, StoreMeta>>> for Error {
-    fn from(err: PoisonError<RwLockReadGuard<'_, StoreMeta>>) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<PoisonError<RwLockWriteGuard<'_, StoreMeta>>> for Error {
-    fn from(err: PoisonError<RwLockWriteGuard<'_, StoreMeta>>) -> Self {
-        Error::Generic(err.to_string())
-    }
-}
-
-impl From<aead::Error> for Error {
-    fn from(err: aead::Error) -> Self {
-        Error::Generic(err.to_string())
     }
 }

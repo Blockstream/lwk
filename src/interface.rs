@@ -906,10 +906,11 @@ fn random32() -> Vec<u8> {
 #[cfg(test)]
 mod test {
     use crate::interface::p2shwpkh_script_sig;
+    use bitcoin::blockdata::transaction::SigHashType;
     use bitcoin::consensus::deserialize;
     use bitcoin::hashes::Hash;
     use bitcoin::secp256k1::{All, Message, Secp256k1, SecretKey};
-    use bitcoin::util::bip143::SighashComponents;
+    use bitcoin::util::bip143::SigHashCache;
     use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
     use bitcoin::util::key::PrivateKey;
     use bitcoin::util::key::PublicKey;
@@ -950,9 +951,8 @@ mod test {
             "76a91479091972186c449eb1ded22b78e40d009bdf008988ac"
         );
         let value = 1_000_000_000;
-        let comp = SighashComponents::new(&tx);
-        let hash = comp
-            .sighash_all(&tx.input[0], &witness_script, value)
+        let hash = SigHashCache::new(&tx)
+            .signature_hash(0, &witness_script, value, SigHashType::All)
             .into_inner();
 
         assert_eq!(
@@ -1006,8 +1006,7 @@ mod test {
             "76a9141790ee5e7710a06ce4a9250c8677c1ec2843844f88ac"
         );
         let value = 10_202;
-        let comp = SighashComponents::new(&tx);
-        let hash = comp.sighash_all(&tx.input[0], &witness_script, value);
+        let hash = SigHashCache::new(&tx).signature_hash(0, &witness_script, value, SigHashType::All);
 
         assert_eq!(
             &hash.into_inner()[..],

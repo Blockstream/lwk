@@ -11,13 +11,10 @@ use hex;
 use log::{info, trace};
 use rand::Rng;
 
-use bip39;
-use crate::model::{
-    AddressPointer, CreateTransactionOpt, Settings, TransactionDetails,
-    TXO,
-};
+use crate::model::{AddressPointer, CreateTransactionOpt, Settings, TransactionDetails, TXO};
 use crate::network::{ElementsNetwork, Network, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
+use bip39;
 use wally::*;
 
 use crate::error::*;
@@ -308,10 +305,7 @@ impl WalletCtx {
     }
 
     #[allow(clippy::cognitive_complexity)]
-    pub fn create_tx(
-        &self,
-        opt: &mut CreateTransactionOpt,
-    ) -> Result<TransactionDetails, Error> {
+    pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
         info!("create_tx {:?}", opt);
 
         // TODO put checks into CreateTransaction::validate, add check asset_tag are valid asset hex
@@ -1006,7 +1000,8 @@ mod test {
             "76a9141790ee5e7710a06ce4a9250c8677c1ec2843844f88ac"
         );
         let value = 10_202;
-        let hash = SigHashCache::new(&tx).signature_hash(0, &witness_script, value, SigHashType::All);
+        let hash =
+            SigHashCache::new(&tx).signature_hash(0, &witness_script, value, SigHashType::All);
 
         assert_eq!(
             &hash.into_inner()[..],

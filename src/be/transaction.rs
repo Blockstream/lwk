@@ -1,7 +1,6 @@
 use crate::be::*;
 use crate::error::Error;
 use crate::model::Balances;
-use wally::asset_surjectionproof_size;
 use crate::{ElementsNetwork, NetworkId};
 use bitcoin::consensus::encode::deserialize as btc_des;
 use bitcoin::consensus::encode::serialize as btc_ser;
@@ -19,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
+use wally::asset_surjectionproof_size;
 
 pub const DUST_VALUE: u64 = 546;
 

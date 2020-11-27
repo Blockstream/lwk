@@ -14,12 +14,12 @@ pub mod scripts;
 mod store;
 //pub mod wally as wallymod;
 
+pub use network::*;
+use serde_json::Value;
 use wally::{
     asset_blinding_key_from_seed, asset_blinding_key_to_ec_private_key, asset_unblind,
     MasterBlindingKey,
 };
-pub use network::*;
-use serde_json::Value;
 
 #[cfg(feature = "android_log")]
 use android_logger::{Config, FilterBuilder};
@@ -38,21 +38,21 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
 
+use crate::error::Error;
 use crate::model::{
     CreateTransactionOpt, GDKRUST_json, GetTransactionsOpt, TransactionDetails, TXO,
 };
-use crate::error::Error;
 
-pub use crate::{ElementsNetwork, NetworkId};
 use crate::be::*;
 use crate::headers::bitcoin::HeadersChain;
 use crate::headers::liquid::Verifier;
 use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
-use bip39;
 use crate::model::*;
 pub use crate::network::Network;
 use crate::store::*;
+pub use crate::{ElementsNetwork, NetworkId};
+use bip39;
 
 use log::{debug, info, trace, warn};
 

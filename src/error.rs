@@ -2,11 +2,11 @@ use std::string::ToString;
 
 use crate::store::StoreMeta;
 use aes_gcm_siv::aead;
+use bip39;
 use serde::ser::Serialize;
 use std::convert::From;
 use std::fmt::Display;
 use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
-use bip39;
 
 #[derive(Debug)]
 pub enum Error {
@@ -41,7 +41,9 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
             Error::Generic(ref strerr) => write!(f, "{}", strerr),
-            Error::InvalidMnemonic(ref mnemonic_err) => write!(f, "invalid mnemonic: {}", mnemonic_err),
+            Error::InvalidMnemonic(ref mnemonic_err) => {
+                write!(f, "invalid mnemonic: {}", mnemonic_err)
+            }
             Error::InsufficientFunds => write!(f, "insufficient funds"),
             Error::SendAll => write!(f, "sendall error"),
             Error::InvalidAddress => write!(f, "invalid address"),

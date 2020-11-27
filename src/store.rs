@@ -3,9 +3,6 @@ use crate::be::{ScriptBatch, Unblinded};
 use crate::error::fn_err;
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
-use wally::{
-    asset_blinding_key_to_ec_private_key, ec_public_key_from_private_key, MasterBlindingKey,
-};
 use crate::Error;
 use crate::{ElementsNetwork, NetworkId};
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
@@ -27,6 +24,9 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
+use wally::{
+    asset_blinding_key_to_ec_private_key, ec_public_key_from_private_key, MasterBlindingKey,
+};
 
 pub const BATCH_SIZE: u32 = 20;
 

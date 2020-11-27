@@ -36,6 +36,7 @@ lazy_static = "1.4.0"
 
 # ideally we should just use secp256k1-zkp
 wally = { git= "https://github.com/RCasatta/wally", rev="91b0f462be4ff7ba05821fe040cb63a6ac45b998" }
+bip39 = "1.0.0-rc1"
 
 # remember to update secp256k1 deps if increasing this one, unfortunately we can't use the rexported one from bitcoin because we need recovery feature
 bitcoin = { version = "0.25", features = [ "use-serde" ] }

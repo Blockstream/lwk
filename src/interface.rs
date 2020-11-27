@@ -11,7 +11,7 @@ use hex;
 use log::{info, trace};
 use rand::Rng;
 
-use crate::mnemonic::Mnemonic;
+use bip39;
 use crate::model::{
     AddressPointer, CreateTransactionOpt, Settings, TransactionDetails,
     TXO,
@@ -36,7 +36,7 @@ use std::str::FromStr;
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
     pub network: Network,
-    pub mnemonic: Mnemonic,
+    pub mnemonic: bip39::Mnemonic,
     pub store: Store,
     pub xprv: ExtendedPrivKey,
     pub xpub: ExtendedPubKey,
@@ -68,7 +68,7 @@ impl ElectrumUrl {
 impl WalletCtx {
     pub fn new(
         store: Store,
-        mnemonic: Mnemonic,
+        mnemonic: bip39::Mnemonic,
         network: Network,
         xprv: ExtendedPrivKey,
         xpub: ExtendedPubKey,
@@ -86,7 +86,7 @@ impl WalletCtx {
         })
     }
 
-    pub fn get_mnemonic(&self) -> &Mnemonic {
+    pub fn get_mnemonic(&self) -> &bip39::Mnemonic {
         &self.mnemonic
     }
 

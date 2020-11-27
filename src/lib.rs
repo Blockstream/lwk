@@ -8,7 +8,6 @@ pub mod be;
 pub mod error;
 pub mod headers;
 pub mod interface;
-pub mod mnemonic;
 pub mod model;
 pub mod network;
 pub mod scripts;
@@ -50,7 +49,7 @@ use crate::headers::bitcoin::HeadersChain;
 use crate::headers::liquid::Verifier;
 use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
-use crate::mnemonic::Mnemonic;
+use bip39;
 use crate::model::*;
 pub use crate::network::Network;
 use crate::store::*;
@@ -594,7 +593,7 @@ impl ElectrumWallet {
 
     // when to pass the mnemonic?
     //pub fn start(&mut self) -> Result<(), Error> {
-    pub fn start(&mut self, mnemonic: &Mnemonic) -> Result<(), Error> {
+    pub fn start(&mut self, mnemonic: &str) -> Result<(), Error> {
         // login
         info!("start {:?} {:?}", self.network, self.state);
 
@@ -602,10 +601,10 @@ impl ElectrumWallet {
             return Ok(());
         }
 
+        let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
         // TODO: passphrase?
-
-        let mnem_str = mnemonic.clone().get_mnemonic_str();
-        let seed = wally::bip39_mnemonic_to_seed(&mnem_str, "").ok_or(Error::InvalidMnemonic)?;
+        let passphrase = "".into();
+        let seed = mnemonic.to_seed(passphrase);
         let secp = Secp256k1::new();
         let xprv =
             ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;

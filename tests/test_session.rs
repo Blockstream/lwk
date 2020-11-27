@@ -9,7 +9,6 @@ use elements;
 
 use gdk_rust::be::{BETransaction, DUST_VALUE};
 use gdk_rust::error::Error;
-use gdk_rust::mnemonic::Mnemonic;
 use gdk_rust::model::*;
 use gdk_rust::Network;
 use gdk_rust::{determine_electrum_url_from_net, ElectrumWallet};
@@ -286,7 +285,7 @@ pub fn setup_wallet(
     info!("creating wallet electrum");
     let mut electrum_wallet = ElectrumWallet::new(network.clone(), &db_root, url).unwrap();
 
-    let mnemonic: Mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string().into();
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
     info!("start wallet electrum");
     electrum_wallet.start(&mnemonic).unwrap();
     let tx_status = electrum_wallet.tx_status().unwrap();

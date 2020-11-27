@@ -6,13 +6,14 @@ use serde::ser::Serialize;
 use std::convert::From;
 use std::fmt::Display;
 use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
+use bip39;
 
 #[derive(Debug)]
 pub enum Error {
     Generic(String),
     InvalidAddress,
     UnknownCall,
-    InvalidMnemonic,
+    InvalidMnemonic(bip39::Error),
     InsufficientFunds,
     InvalidAmount,
     EmptyAddressees,
@@ -40,7 +41,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
             Error::Generic(ref strerr) => write!(f, "{}", strerr),
-            Error::InvalidMnemonic => write!(f, "invalid mnemonic"),
+            Error::InvalidMnemonic(ref mnemonic_err) => write!(f, "invalid mnemonic: {}", mnemonic_err),
             Error::InsufficientFunds => write!(f, "insufficient funds"),
             Error::SendAll => write!(f, "sendall error"),
             Error::InvalidAddress => write!(f, "invalid address"),
@@ -183,5 +184,11 @@ impl From<std::sync::mpsc::SendError<()>> for Error {
 impl From<bitcoin::secp256k1::Error> for Error {
     fn from(err: bitcoin::secp256k1::Error) -> Self {
         Error::Secp256k1(err)
+    }
+}
+
+impl From<bip39::Error> for Error {
+    fn from(err: bip39::Error) -> Self {
+        Error::InvalidMnemonic(err)
     }
 }

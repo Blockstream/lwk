@@ -12,14 +12,10 @@ pub mod model;
 pub mod network;
 pub mod scripts;
 mod store;
-//pub mod wally as wallymod;
 
 pub use network::*;
 use serde_json::Value;
-use wally::{
-    asset_blinding_key_from_seed, asset_blinding_key_to_ec_private_key, asset_unblind,
-    MasterBlindingKey,
-};
+use wally::asset_unblind;
 
 #[cfg(feature = "android_log")]
 use android_logger::{Config, FilterBuilder};
@@ -63,6 +59,7 @@ use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{BlockHash, Script, Txid};
 
 use elements::confidential::{self, Asset, Nonce};
+use elements::slip77::MasterBlindingKey;
 
 use electrum_client::GetHistoryRes;
 use electrum_client::{Client, ElectrumApi};
@@ -508,10 +505,12 @@ impl Syncer {
                 confidential::Value::Confidential(_, _),
                 Nonce::Confidential(_, _),
             ) => {
-                let master_blinding = self.master_blinding.as_ref().unwrap();
-
                 let script = output.script_pubkey.clone();
-                let blinding_key = asset_blinding_key_to_ec_private_key(master_blinding, &script);
+                let blinding_key = self
+                    .master_blinding
+                    .as_ref()
+                    .unwrap()
+                    .derive_blinding_key(&script);
                 let rangeproof = output.witness.rangeproof.clone();
                 let value_commitment = elements::encode::serialize(&output.value);
                 let asset_commitment = elements::encode::serialize(&output.asset);
@@ -635,7 +634,7 @@ impl ElectrumWallet {
         let sync_interval = self.network.sync_interval.unwrap_or(7);
 
         let master_blinding = if self.network.liquid {
-            Some(asset_blinding_key_from_seed(&seed))
+            Some(MasterBlindingKey::new(&seed))
         } else {
             None
         };

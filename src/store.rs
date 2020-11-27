@@ -1,6 +1,5 @@
 use crate::be::{BEBlockHeader, BEOutPoint, BETransaction, BETransactions};
 use crate::be::{ScriptBatch, Unblinded};
-use crate::error::fn_err;
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
@@ -9,10 +8,10 @@ use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use bitcoin::hashes::sha256;
 use bitcoin::hashes::Hash;
-use bitcoin::secp256k1::{All, Secp256k1};
+use bitcoin::secp256k1::{self, All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use bitcoin::{Address, BlockHash, Script, Transaction, Txid};
-use elements::{AddressParams, OutPoint};
+use elements::{slip77::MasterBlindingKey, AddressParams, OutPoint};
 use log::{info, trace, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -24,9 +23,6 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
-use wally::{
-    asset_blinding_key_to_ec_private_key, ec_public_key_from_private_key, MasterBlindingKey,
-};
 
 pub const BATCH_SIZE: u32 = 20;
 
@@ -332,13 +328,13 @@ impl StoreMeta {
                             };
 
                             let script = p2shwpkh_script(&second_deriv.public_key);
-                            let blinding_key = asset_blinding_key_to_ec_private_key(
-                                self.master_blinding.as_ref().ok_or_else(fn_err(
-                                    "missing master blinding in elements session",
-                                ))?,
-                                &script,
-                            );
-                            let public_key = ec_public_key_from_private_key(blinding_key);
+                            let blinding_key = self
+                                .master_blinding
+                                .as_ref()
+                                .unwrap()
+                                .derive_blinding_key(&script);
+                            let public_key =
+                                secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
                             let blinder = Some(public_key);
 
                             let address = elements::Address::p2shwpkh(

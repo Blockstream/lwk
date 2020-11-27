@@ -16,9 +16,8 @@ use crate::network::{ElementsNetwork, Network, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
 use wally::{
-    asset_blinding_key_to_ec_private_key, asset_final_vbf, asset_generator_from_bytes,
-    asset_rangeproof, asset_surjectionproof, asset_value_commitment,
-    ec_public_key_from_private_key, tx_get_elements_signature_hash, MasterBlindingKey,
+    asset_final_vbf, asset_generator_from_bytes, asset_rangeproof, asset_surjectionproof,
+    asset_value_commitment, tx_get_elements_signature_hash,
 };
 
 use crate::error::*;
@@ -29,6 +28,7 @@ use bitcoin::util::bip143::SigHashCache;
 use electrum_client::raw_client::RawClient;
 use electrum_client::Client;
 use elements::confidential::{Asset, Nonce, Value};
+use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -91,6 +91,12 @@ impl WalletCtx {
         &self.mnemonic
     }
 
+    fn get_master_blinding_key(&self) -> &MasterBlindingKey {
+        self.master_blinding
+            .as_ref()
+            .expect("we are in elements but master blinding is None")
+    }
+
     fn derive_address(&self, xpub: &ExtendedPubKey, path: [u32; 2]) -> Result<BEAddress, Error> {
         let path: Vec<ChildNumber> = path
             .iter()
@@ -102,14 +108,9 @@ impl WalletCtx {
                 Address::p2shwpkh(&derived.public_key, network).unwrap(),
             )),
             NetworkId::Elements(network) => {
-                let master_blinding_key = self
-                    .master_blinding
-                    .as_ref()
-                    .expect("we are in elements but master blinding is None");
                 let script = p2shwpkh_script(&derived.public_key);
-                let blinding_key =
-                    asset_blinding_key_to_ec_private_key(&master_blinding_key, &script);
-                let public_key = ec_public_key_from_private_key(blinding_key);
+                let blinding_key = self.get_master_blinding_key().derive_blinding_key(&script);
+                let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
                 let blinder = Some(public_key);
                 let addr = elements::Address::p2shwpkh(
                     &derived.public_key,
@@ -800,11 +801,11 @@ impl WalletCtx {
                         info!("value: {}", value);
                         let nonce = elements::encode::serialize(&output.nonce);
                         let blinding_pubkey = PublicKey::from_slice(&nonce).unwrap();
-                        let blinding_key = asset_blinding_key_to_ec_private_key(
-                            self.master_blinding.as_ref().unwrap(),
-                            &output.script_pubkey,
-                        );
-                        let blinding_public_key = ec_public_key_from_private_key(blinding_key);
+                        let blinding_key = self
+                            .get_master_blinding_key()
+                            .derive_blinding_key(&output.script_pubkey);
+                        let blinding_public_key =
+                            secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
                         let mut output_abf = [0u8; 32];
                         output_abf.copy_from_slice(&(&output_abfs[i])[..]);
                         let mut output_vbf = [0u8; 32];

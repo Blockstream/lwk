@@ -15,7 +15,11 @@ use crate::model::{AddressPointer, CreateTransactionOpt, Settings, TransactionDe
 use crate::network::{ElementsNetwork, Network, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::*;
+use wally::{
+    asset_blinding_key_to_ec_private_key, asset_final_vbf, asset_generator_from_bytes,
+    asset_rangeproof, asset_surjectionproof, asset_value_commitment,
+    ec_public_key_from_private_key, tx_get_elements_signature_hash, MasterBlindingKey,
+};
 
 use crate::error::*;
 use crate::store::*;

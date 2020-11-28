@@ -63,18 +63,18 @@ use electrum_client::{Client, ElectrumApi};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-pub struct Syncer {
+struct Syncer {
     pub store: Store,
     pub master_blinding: Option<MasterBlindingKey>,
     pub network: Network,
 }
 
-pub struct Tipper {
+struct Tipper {
     pub store: Store,
     pub network: Network,
 }
 
-pub struct Headers {
+struct Headers {
     pub store: Store,
     pub checker: ChainOrVerifier,
 }

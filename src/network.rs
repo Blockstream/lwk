@@ -40,21 +40,6 @@ pub enum NetworkId {
     Bitcoin(bitcoin::Network),
 }
 
-impl NetworkId {
-    pub fn get_bitcoin_network(self: NetworkId) -> Option<bitcoin::Network> {
-        match self {
-            NetworkId::Bitcoin(net) => Some(net),
-            _ => None,
-        }
-    }
-    pub fn get_elements_network(self: NetworkId) -> Option<ElementsNetwork> {
-        match self {
-            NetworkId::Elements(net) => Some(net),
-            _ => None,
-        }
-    }
-}
-
 impl Network {
     pub fn id(&self) -> NetworkId {
         match (self.liquid, self.mainnet, self.development) {

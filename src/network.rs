@@ -7,15 +7,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Network {
-    name: String,
-    network: String,
-
     pub development: bool,
     pub liquid: bool,
     pub mainnet: bool,
-
-    tx_explorer_url: String,
-    address_explorer_url: String,
 
     pub tls: Option<bool>,
     pub electrum_url: Option<String>,

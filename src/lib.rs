@@ -17,10 +17,6 @@ pub use network::*;
 use serde_json::Value;
 use wally::asset_unblind;
 
-#[cfg(feature = "android_log")]
-use android_logger::{Config, FilterBuilder};
-#[cfg(feature = "android_log")]
-use log::Level;
 use std::time::Duration;
 
 use std::collections::hash_map::DefaultHasher;

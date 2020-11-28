@@ -865,7 +865,7 @@ impl ElectrumWallet {
         Ok(self.get_wallet()?.get_settings()?)
     }
 
-    pub fn get_wallet(&self) -> Result<&WalletCtx, Error> {
+    fn get_wallet(&self) -> Result<&WalletCtx, Error> {
         self.wallet
             .as_ref()
             .ok_or_else(|| Error::Generic("wallet not initialized".into()))

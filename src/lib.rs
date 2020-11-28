@@ -80,7 +80,7 @@ struct Headers {
 }
 
 #[derive(Clone)]
-pub struct NativeNotif(
+struct NativeNotif(
     pub  Option<(
         extern "C" fn(*const libc::c_void, *const GDKRUST_json),
         *const libc::c_void,
@@ -88,7 +88,7 @@ pub struct NativeNotif(
 );
 unsafe impl Send for NativeNotif {}
 
-pub struct Closer {
+struct Closer {
     pub senders: Vec<Sender<()>>,
     pub handles: Vec<JoinHandle<()>>,
 }
@@ -565,8 +565,8 @@ pub struct ElectrumWallet {
     pub network: Network,
     pub url: ElectrumUrl,
     pub wallet: Option<WalletCtx>,
-    pub notify: NativeNotif,
-    pub closer: Closer,
+    notify: NativeNotif,
+    closer: Closer,
     pub state: State,
 }
 

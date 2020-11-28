@@ -1,4 +1,4 @@
-use crate::error::*;
+use crate::error::Error;
 use crate::headers::compute_merkle_root;
 use bitcoin::blockdata::constants::{
     genesis_block, max_target, DIFFCHANGE_INTERVAL, DIFFCHANGE_TIMESPAN,

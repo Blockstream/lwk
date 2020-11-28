@@ -1,6 +1,6 @@
 use elements::{self, BlockExtData};
 
-use crate::error::*;
+use crate::error::Error;
 use crate::headers::compute_merkle_root;
 use crate::ElementsNetwork;
 use bitcoin::blockdata::opcodes::Class;

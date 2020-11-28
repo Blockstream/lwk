@@ -37,6 +37,14 @@ pub enum Error {
     Secp256k1(bitcoin::secp256k1::Error),
 }
 
+pub fn err<R>(str: &str) -> Result<R, Error> {
+    Err(Error::Generic(str.into()))
+}
+
+pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
+    move || Error::Generic(str.into())
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
@@ -78,14 +86,6 @@ impl Serialize for Error {
     {
         serializer.serialize_str(&format!("{}", self))
     }
-}
-
-pub fn err<R>(str: &str) -> Result<R, Error> {
-    Err(Error::Generic(str.into()))
-}
-
-pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
-    move || Error::Generic(str.into())
 }
 
 impl From<serde_json::Error> for Error {

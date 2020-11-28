@@ -20,7 +20,7 @@ use wally::{
     asset_value_commitment, tx_get_elements_signature_hash,
 };
 
-use crate::error::*;
+use crate::error::{fn_err, Error};
 use crate::store::*;
 
 use crate::be::{self, *};

@@ -15,7 +15,6 @@ use elements::{slip77::MasterBlindingKey, AddressParams, OutPoint};
 use log::{info, trace, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -61,12 +60,6 @@ pub struct RawCache {
 
     /// max used indexes for external derivation /0/* and internal derivation /1/* (change)
     pub indexes: Indexes,
-
-    /// registry assets last modified, used when making the http request
-    pub assets_last_modified: String,
-
-    /// registry icons last modified, used when making the http request
-    pub icons_last_modified: String,
 }
 
 /// RawStore contains data that are not extractable from xpub+blockchain
@@ -245,54 +238,6 @@ impl StoreMeta {
         self.flush_store()?;
         self.flush_cache()?;
         Ok(())
-    }
-
-    fn read(&self, name: &str) -> Result<Option<Value>, Error> {
-        let mut path = self.path.clone();
-        path.push(name);
-        if path.exists() {
-            let mut file = File::open(path)?;
-            let mut buffer = vec![];
-            info!("start read from {}", name);
-            file.read_to_end(&mut buffer)?;
-            info!("end read from {}, start parsing json", name);
-            let value = serde_json::from_slice(&buffer)?;
-            info!("end parsing json {}", name);
-            Ok(Some(value))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn write(&self, name: &str, value: &Value) -> Result<(), Error> {
-        let mut path = self.path.clone();
-        path.push(name);
-        let mut file = File::create(path)?;
-        let vec = serde_json::to_vec(value)?;
-        info!("start write {} bytes to {}", vec.len(), name);
-        file.write(&vec)?;
-        info!("end write {} bytes to {}", vec.len(), name);
-        Ok(())
-    }
-
-    pub fn read_asset_icons(&self) -> Result<Option<Value>, Error> {
-        self.read("asset_icons")
-    }
-
-    /// write asset icons to a local file
-    /// it is stored out of the encrypted area since it's public info
-    pub fn write_asset_icons(&self, asset_icons: &Value) -> Result<(), Error> {
-        self.write("asset_icons", asset_icons)
-    }
-
-    pub fn read_asset_registry(&self) -> Result<Option<Value>, Error> {
-        self.read("asset_registry")
-    }
-
-    /// write asset registry to a local file
-    /// it is stored out of the encrypted area since it's public info
-    pub fn write_asset_registry(&self, asset_registry: &Value) -> Result<(), Error> {
-        self.write("asset_registry", asset_registry)
     }
 
     pub fn get_script_batch(&self, int_or_ext: u32, batch: u32) -> Result<ScriptBatch, Error> {

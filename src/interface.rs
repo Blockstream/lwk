@@ -21,7 +21,7 @@ use wally::{
 };
 
 use crate::error::{fn_err, Error};
-use crate::store::*;
+use crate::store::Store;
 
 use crate::be::{self, *};
 use bitcoin::util::bip143::SigHashCache;

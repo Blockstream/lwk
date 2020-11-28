@@ -46,7 +46,7 @@ use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
 pub use crate::network::Network;
-use crate::store::*;
+use crate::store::{Indexes, Store, StoreMeta, BATCH_SIZE};
 pub use crate::{ElementsNetwork, NetworkId};
 use bip39;
 

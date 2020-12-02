@@ -22,7 +22,6 @@ pub struct Network {
     pub sync_interval: Option<u32>,
     pub ct_bits: Option<i32>,
     pub ct_exponent: Option<i32>,
-    pub ct_min_value: Option<u64>,
     pub spv_enabled: Option<bool>,
 }
 

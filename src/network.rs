@@ -5,6 +5,10 @@ use elements::confidential::Asset;
 use elements::{confidential, issuance};
 use serde::{Deserialize, Serialize};
 
+// TODO: policy asset should only be set for ElementsRegtest, fail otherwise
+const LIQUID_POLICY_ASSET_STR: &str =
+    "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Network {
     pub development: bool,
@@ -50,8 +54,15 @@ impl Network {
     }
 
     pub fn policy_asset_id(&self) -> Result<AssetId, Error> {
-        if let Some(str) = self.policy_asset.as_ref() {
-            Ok(asset_to_bin(str)?)
+        if self.liquid {
+            if self.development {
+                match self.policy_asset.as_ref() {
+                    Some(policy_asset_str) => Ok(asset_to_bin(policy_asset_str)?),
+                    None => Err("no policy asset".into()),
+                }
+            } else {
+                Ok(asset_to_bin(LIQUID_POLICY_ASSET_STR)?)
+            }
         } else {
             Err("no policy asset".into())
         }

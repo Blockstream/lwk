@@ -268,8 +268,6 @@ pub fn setup_wallet(
     network.electrum_url = Some(electrs_url.to_string());
     network.sync_interval = Some(1);
     network.development = true;
-    network.ct_bits = Some(52);
-    network.ct_exponent = Some(0);
     network.spv_enabled = Some(true);
     if is_liquid {
         network.liquid = true;

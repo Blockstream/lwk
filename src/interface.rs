@@ -759,11 +759,8 @@ impl WalletCtx {
             input_ags.extend(elements::encode::serialize(&input_asset));
         }
 
-        let ct_exp = self
-            .network
-            .ct_exponent
-            .expect("ct_exponent not set in network");
-        let ct_bits = self.network.ct_bits.expect("ct_bits not set in network");
+        let ct_exp = self.network.ct_exponent.unwrap_or(0);
+        let ct_bits = self.network.ct_bits.unwrap_or(52);
         info!("ct params ct_exp:{}, ct_bits:{}", ct_exp, ct_bits);
 
         let mut output_blinded_values = vec![];

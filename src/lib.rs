@@ -651,15 +651,28 @@ impl ElectrumWallet {
             )?)),
         };
 
-        let estimates = store.read()?.fee_estimates().clone();
+        if self.wallet.is_none() {
+            let wallet = WalletCtx::new(
+                store,
+                mnemonic.clone(),
+                self.network.clone(),
+                xprv,
+                xpub,
+                master_blinding.clone(),
+            )?;
+
+            self.wallet = Some(wallet);
+        }
+
+        let estimates = self.get_wallet()?.store.read()?.fee_estimates().clone();
         notify_fee(self.notify.clone(), &estimates);
-        let mut tip_height = store.read()?.cache.tip.0;
+        let mut tip_height = self.get_wallet()?.store.read()?.cache.tip.0;
         notify_block(self.notify.clone(), tip_height);
 
         info!("building client");
         if let Ok(fee_client) = self.url.build_client() {
             info!("building built end");
-            let fee_store = store.clone();
+            let fee_store = self.get_wallet()?.store.clone();
             thread::spawn(move || {
                 match try_get_fee_estimates(&fee_client) {
                     Ok(fee_estimates) => {
@@ -684,7 +697,7 @@ impl ElectrumWallet {
             };
 
             let mut headers = Headers {
-                store: store.clone(),
+                store: self.get_wallet()?.store.clone(),
                 checker,
             };
 
@@ -754,28 +767,16 @@ impl ElectrumWallet {
         }
 
         let syncer = Syncer {
-            store: store.clone(),
+            store: self.get_wallet()?.store.clone(),
             master_blinding: master_blinding.clone(),
             network: self.network.clone(),
         };
 
         let tipper = Tipper {
-            store: store.clone(),
+            store: self.get_wallet()?.store.clone(),
             network: self.network.clone(),
         };
 
-        if self.wallet.is_none() {
-            let wallet = WalletCtx::new(
-                store,
-                mnemonic.clone(),
-                self.network.clone(),
-                xprv,
-                xpub,
-                master_blinding,
-            )?;
-
-            self.wallet = Some(wallet);
-        }
         info!(
             "login STATUS block:{:?} tx:{}",
             self.block_status()?,

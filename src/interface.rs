@@ -87,10 +87,6 @@ impl WalletCtx {
         })
     }
 
-    pub fn get_mnemonic(&self) -> &bip39::Mnemonic {
-        &self.mnemonic
-    }
-
     fn get_master_blinding_key(&self) -> &MasterBlindingKey {
         self.master_blinding
             .as_ref()

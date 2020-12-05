@@ -11,7 +11,7 @@ use gdk_rust::be::{BETransaction, DUST_VALUE};
 use gdk_rust::error::Error;
 use gdk_rust::model::*;
 use gdk_rust::Network;
-use gdk_rust::{determine_electrum_url_from_net, ElectrumWallet};
+use gdk_rust::ElectrumWallet;
 use gdk_rust::{ElementsNetwork, NetworkId};
 
 use log::LevelFilter;
@@ -278,11 +278,10 @@ pub fn setup_wallet(
     let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
     let db_root = format!("{}", db_root_dir.path().display());
-    let url = determine_electrum_url_from_net(&network).unwrap();
 
     info!("starting wallet electrum");
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let electrum_wallet = ElectrumWallet::start(network.clone(), &db_root, url, &mnemonic).unwrap();
+    let electrum_wallet = ElectrumWallet::start(network.clone(), &db_root, &mnemonic).unwrap();
 
     let tx_status = electrum_wallet.tx_status().unwrap();
     assert_eq!(tx_status, 15130871412783076140);

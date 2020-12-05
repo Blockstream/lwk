@@ -520,15 +520,13 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
-    // when to pass the mnemonic?
-    //pub fn start(&mut self) -> Result<(), Error> {
     pub fn start(
         network: Network,
         data_root: &str,
-        url: ElectrumUrl,
         mnemonic: &str,
     ) -> Result<Self, Error> {
         let sync_interval = network.sync_interval.unwrap_or(7);
+        let url = determine_electrum_url_from_net(&network)?;
 
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
 

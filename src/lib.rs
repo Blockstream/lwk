@@ -103,13 +103,6 @@ impl Closer {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum State {
-    Disconnected,
-    Connected,
-    Logged,
-}
-
 fn notify(notif: NativeNotif, data: Value) {
     info!("push notification: {:?}", data);
     if let Some((handler, self_context)) = notif.0 {
@@ -563,7 +556,6 @@ pub struct ElectrumWallet {
     pub wallet: Option<WalletCtx>,
     notify: NativeNotif,
     closer: Closer,
-    pub state: State,
 }
 
 impl ElectrumWallet {
@@ -765,22 +757,11 @@ impl ElectrumWallet {
             wallet: Some(wallet),
             notify: nativenotify,
             closer,
-            state: State::Logged,
         })
     }
 
     pub fn stop(&mut self) -> Result<(), Error> {
-        // disconnect
-        info!("state:{:?}", self.state);
-        info!(
-            "STATUS block:{:?} tx:{}",
-            self.block_status()?,
-            self.tx_status()?
-        );
-        if self.state != State::Disconnected {
-            self.closer.close()?;
-            self.state = State::Disconnected;
-        }
+        self.closer.close()?;
         Ok(())
     }
 

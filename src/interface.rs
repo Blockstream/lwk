@@ -69,26 +69,6 @@ impl ElectrumUrl {
 }
 
 impl WalletCtx {
-    pub fn new(
-        store: Store,
-        mnemonic: bip39::Mnemonic,
-        network: Network,
-        xprv: ExtendedPrivKey,
-        xpub: ExtendedPubKey,
-        master_blinding: Option<MasterBlindingKey>,
-    ) -> Result<Self, Error> {
-        Ok(WalletCtx {
-            mnemonic,
-            store,
-            network, // TODO: from db
-            secp: Secp256k1::gen_new(),
-            xprv,
-            xpub,
-            master_blinding,
-            change_max_deriv: 0,
-        })
-    }
-
     pub fn from_mnemonic(mnemonic: &str, data_root: &str, network: Network) -> Result<Self, Error> {
         let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
         // TODO: passphrase?

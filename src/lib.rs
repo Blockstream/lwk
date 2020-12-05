@@ -1,7 +1,4 @@
 #[macro_use]
-extern crate serde_json;
-
-#[macro_use]
 extern crate lazy_static;
 
 pub mod be;
@@ -14,7 +11,6 @@ pub mod scripts;
 mod store;
 
 pub use network::*;
-use serde_json::Value;
 use wally::asset_unblind;
 
 use std::time::Duration;
@@ -30,7 +26,7 @@ use std::time::Instant;
 
 use crate::error::Error;
 use crate::model::{
-    CreateTransactionOpt, GDKRUST_json, GetTransactionsOpt, TransactionDetails, TXO,
+    CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO,
 };
 
 use crate::be::*;
@@ -75,15 +71,6 @@ struct Headers {
     pub checker: ChainOrVerifier,
 }
 
-#[derive(Clone)]
-struct NativeNotif(
-    pub  Option<(
-        extern "C" fn(*const libc::c_void, *const GDKRUST_json),
-        *const libc::c_void,
-    )>,
-);
-unsafe impl Send for NativeNotif {}
-
 struct Closer {
     pub senders: Vec<Sender<()>>,
     pub handles: Vec<JoinHandle<()>>,
@@ -101,31 +88,6 @@ impl Closer {
         }
         Ok(())
     }
-}
-
-fn notify(notif: NativeNotif, data: Value) {
-    info!("push notification: {:?}", data);
-    if let Some((handler, self_context)) = notif.0 {
-        // TODO check the native pointer is still alive
-        handler(self_context, GDKRUST_json::new(data));
-    } else {
-        warn!("no registered handler to receive notification");
-    }
-}
-
-fn notify_block(notif: NativeNotif, height: u32) {
-    let data = json!({"block":{"block_height":height},"event":"block"});
-    notify(notif, data);
-}
-
-fn notify_settings(notif: NativeNotif, settings: &Settings) {
-    let data = json!({"settings":settings,"event":"settings"});
-    notify(notif, data);
-}
-
-fn notify_fee(notif: NativeNotif, fees: &[FeeEstimate]) {
-    let data = json!({"fees":fees,"event":"fees"});
-    notify(notif, data);
 }
 
 fn determine_electrum_url(
@@ -554,7 +516,6 @@ pub struct ElectrumWallet {
     pub network: Network,
     pub url: ElectrumUrl,
     pub wallet: Option<WalletCtx>,
-    notify: NativeNotif,
     closer: Closer,
 }
 
@@ -571,16 +532,12 @@ impl ElectrumWallet {
 
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
 
-        let nativenotify = NativeNotif(None);
         let mut closer = Closer {
             senders: vec![],
             handles: vec![],
         };
 
-        let estimates = wallet.store.read()?.fee_estimates().clone();
-        notify_fee(nativenotify.clone(), &estimates);
         let mut tip_height = wallet.store.read()?.cache.tip.0;
-        notify_block(nativenotify.clone(), tip_height);
 
         info!("building client");
         if let Ok(fee_client) = url.build_client() {
@@ -690,8 +647,6 @@ impl ElectrumWallet {
             network: network.clone(),
         };
 
-        let notify_blocks = nativenotify.clone();
-
         let (close_tipper, r) = channel();
         closer.senders.push(close_tipper);
         let tipper_url = url.clone();
@@ -704,7 +659,6 @@ impl ElectrumWallet {
                             if tip_height != current_tip {
                                 tip_height = current_tip;
                                 info!("tip is {:?}", tip_height);
-                                notify_block(notify_blocks.clone(), tip_height);
                             }
                         }
                         Err(e) => {
@@ -722,7 +676,6 @@ impl ElectrumWallet {
 
         let (close_syncer, r) = channel();
         closer.senders.push(close_syncer);
-        let notify_txs = nativenotify.clone();
         let syncer_url = url.clone();
         let syncer_handle = thread::spawn(move || {
             info!("starting syncer thread");
@@ -732,8 +685,6 @@ impl ElectrumWallet {
                         Ok(new_txs) => {
                             if new_txs {
                                 info!("there are new transactions");
-                                let mockup_json = json!({"event":"transaction","transaction":{"subaccounts":[0]}});
-                                notify(notify_txs.clone(), mockup_json);
                             }
                         }
                         Err(e) => warn!("Error during sync, {:?}", e),
@@ -748,14 +699,11 @@ impl ElectrumWallet {
         });
         closer.handles.push(syncer_handle);
 
-        notify_settings(nativenotify.clone(), &wallet.get_settings()?);
-
         Ok(Self {
             data_root: data_root.to_string(),
             network,
             url,
             wallet: Some(wallet),
-            notify: nativenotify,
             closer,
         })
     }

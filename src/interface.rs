@@ -40,7 +40,6 @@ pub struct WalletCtx {
     pub secp: Secp256k1<All>,
     pub network: Network,
     pub store: Store,
-    pub xprv: ExtendedPrivKey,
     pub xpub: ExtendedPubKey,
     pub master_blinding: Option<MasterBlindingKey>,
     pub change_max_deriv: u32,
@@ -67,41 +66,52 @@ impl ElectrumUrl {
     }
 }
 
+fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
+    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
+    // TODO: passphrase?
+    let passphrase = "".into();
+    let seed = mnemonic.to_seed(passphrase);
+    Ok(seed)
+}
+
+fn mnemonic2xprv(mnemonic: &str, network: Network) -> Result<ExtendedPrivKey, Error> {
+    let seed = mnemonic2seed(mnemonic)?;
+    let xprv =
+        ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
+
+    // BIP44: m / purpose' / coin_type' / account' / change / address_index
+    // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+    // slip44 suggest 1 for every testnet, so we are using it also for regtest
+    let coin_type: u32 = match network.id() {
+        NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
+            bitcoin::Network::Bitcoin => 0,
+            bitcoin::Network::Testnet => 1,
+            bitcoin::Network::Regtest => 1,
+        },
+        NetworkId::Elements(elements_network) => match elements_network {
+            ElementsNetwork::Liquid => 1776,
+            ElementsNetwork::ElementsRegtest => 1,
+        },
+    };
+    // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
+    let path_string = format!("m/49'/{}'/0'", coin_type);
+    info!("Using derivation path {}/0|1/*", path_string);
+    let path = DerivationPath::from_str(&path_string)?;
+    let secp = Secp256k1::new();
+    Ok(xprv.derive_priv(&secp, &path)?)
+}
+
 impl WalletCtx {
     pub fn from_mnemonic(mnemonic: &str, data_root: &str, network: Network) -> Result<Self, Error> {
-        let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
-        // TODO: passphrase?
-        let passphrase = "".into();
-        let seed = mnemonic.to_seed(passphrase);
+        let xprv = mnemonic2xprv(mnemonic, network.clone())?;
         let secp = Secp256k1::new();
-        let xprv =
-            ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
-
-        // BIP44: m / purpose' / coin_type' / account' / change / address_index
-        // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-        // slip44 suggest 1 for every testnet, so we are using it also for regtest
-        let coin_type: u32 = match network.id() {
-            NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
-                bitcoin::Network::Bitcoin => 0,
-                bitcoin::Network::Testnet => 1,
-                bitcoin::Network::Regtest => 1,
-            },
-            NetworkId::Elements(elements_network) => match elements_network {
-                ElementsNetwork::Liquid => 1776,
-                ElementsNetwork::ElementsRegtest => 1,
-            },
-        };
-        // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
-        let path_string = format!("m/49'/{}'/0'", coin_type);
-        info!("Using derivation path {}/0|1/*", path_string);
-        let path = DerivationPath::from_str(&path_string)?;
-        let xprv = xprv.derive_priv(&secp, &path)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
         let wallet_desc = format!("{}{:?}", xpub, network);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
         let master_blinding = if network.liquid {
+            let seed = mnemonic2seed(mnemonic)?;
             Some(MasterBlindingKey::new(&seed))
         } else {
             None
@@ -124,7 +134,6 @@ impl WalletCtx {
             store,
             network, // TODO: from db
             secp,
-            xprv,
             xpub,
             master_blinding,
             change_max_deriv: 0,
@@ -606,8 +615,9 @@ impl WalletCtx {
         input_index: usize,
         path: &DerivationPath,
         value: u64,
+        xprv: ExtendedPrivKey,
     ) -> (Script, Vec<Vec<u8>>) {
-        let xprv = self.xprv.derive_priv(&self.secp, &path).unwrap();
+        let xprv = xprv.derive_priv(&self.secp, &path).unwrap();
         let private_key = &xprv.private_key;
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
         let witness_script = p2pkh_script(public_key);
@@ -642,8 +652,9 @@ impl WalletCtx {
         input_index: usize,
         derivation_path: &DerivationPath,
         value: Value,
+        xprv: ExtendedPrivKey,
     ) -> (Script, Vec<Vec<u8>>) {
-        let xprv = self.xprv.derive_priv(&self.secp, &derivation_path).unwrap();
+        let xprv = xprv.derive_priv(&self.secp, &derivation_path).unwrap();
         let private_key = &xprv.private_key;
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
 
@@ -671,7 +682,12 @@ impl WalletCtx {
         (script_sig, witness)
     }
 
-    pub fn sign(&self, be_tx: &mut BETransaction) -> Result<(), Error> {
+    pub fn sign_with_mnemonic(&self, be_tx: &mut BETransaction, mnemonic: &str) -> Result<(), Error> {
+        let xprv = mnemonic2xprv(mnemonic, self.network.clone())?;
+        self.sign_with_xprv(be_tx, xprv)
+    }
+
+    pub fn sign_with_xprv(&self, be_tx: &mut BETransaction, xprv: ExtendedPrivKey) -> Result<(), Error> {
         info!("sign");
         let store_read = self.store.read()?;
         match be_tx {
@@ -693,7 +709,7 @@ impl WalletCtx {
                     );
 
                     let (script_sig, witness) =
-                        self.internal_sign_bitcoin(&tx, i, &derivation_path, out.value);
+                        self.internal_sign_bitcoin(&tx, i, &derivation_path, out.value, xprv);
 
                     tx.input[i].script_sig = script_sig;
                     tx.input[i].witness = witness;
@@ -726,7 +742,7 @@ impl WalletCtx {
                         .clone();
 
                     let (script_sig, witness) =
-                        self.internal_sign_elements(&tx, i, &derivation_path, out.value);
+                        self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv);
 
                     tx.input[i].script_sig = script_sig;
                     tx.input[i].witness.script_witness = witness;

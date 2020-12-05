@@ -133,6 +133,7 @@ pub struct TestElectrumWallet {
     db_root_dir: TempDir,
     network_id: NetworkId,
     network: Network,
+    mnemonic: String,
 }
 
 // should be TestElectrumWallet::setup
@@ -321,6 +322,7 @@ pub fn setup_wallet(
         db_root_dir,
         network_id,
         network,
+        mnemonic,
     }
 }
 
@@ -501,7 +503,7 @@ impl TestElectrumWallet {
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
         let len_before = tx.serialize().len();
-        self.electrum_wallet.sign_tx(&mut tx).unwrap();
+        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
         let len_after = tx.serialize().len();
         assert!(len_before < len_after, "sign tx did not increased tx size");
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
@@ -569,7 +571,7 @@ impl TestElectrumWallet {
         create_opt.send_all = Some(true);
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
-        self.electrum_wallet.sign_tx(&mut tx).unwrap();
+        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
 
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
@@ -644,7 +646,7 @@ impl TestElectrumWallet {
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
-        self.electrum_wallet.sign_tx(&mut tx).unwrap();
+        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
         let _txid = tx.txid().to_string();
         self.electrum_wallet.broadcast_tx(&tx).unwrap();

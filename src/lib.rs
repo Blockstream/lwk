@@ -851,8 +851,8 @@ impl ElectrumWallet {
         self.get_wallet()?.create_tx(opt)
     }
 
-    pub fn sign_tx(&self, transaction: &mut BETransaction) -> Result<(), Error> {
-        self.get_wallet()?.sign(transaction)
+    pub fn sign_tx(&self, transaction: &mut BETransaction, mnemonic: &str) -> Result<(), Error> {
+        self.get_wallet()?.sign_with_mnemonic(transaction, mnemonic)
     }
 
     pub fn broadcast_tx(&self, transaction: &BETransaction) -> Result<(), Error> {

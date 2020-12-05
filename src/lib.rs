@@ -567,51 +567,33 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
-    pub fn new(network: Network, db_root: &str, url: ElectrumUrl) -> Result<Self, Error> {
-        Ok(Self {
-            data_root: db_root.to_string(),
-            network,
-            url,
-            wallet: None,
-            notify: NativeNotif(None),
-            closer: Closer {
-                senders: vec![],
-                handles: vec![],
-            },
-            state: State::Disconnected,
-        })
-    }
-
     // when to pass the mnemonic?
     //pub fn start(&mut self) -> Result<(), Error> {
-    pub fn start(&mut self, mnemonic: &str) -> Result<(), Error> {
-        // login
-        info!("start {:?} {:?}", self.network, self.state);
+    pub fn start(
+        network: Network,
+        data_root: &str,
+        url: ElectrumUrl,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let sync_interval = network.sync_interval.unwrap_or(7);
 
-        if self.state == State::Logged {
-            return Ok(());
-        }
+        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
 
-        let sync_interval = self.network.sync_interval.unwrap_or(7);
+        let nativenotify = NativeNotif(None);
+        let mut closer = Closer {
+            senders: vec![],
+            handles: vec![],
+        };
 
-        // is this ever the case?
-        if self.wallet.is_none() {
-            self.wallet = Some(WalletCtx::from_mnemonic(
-                mnemonic,
-                &self.data_root,
-                self.network.clone(),
-            )?);
-        }
-
-        let estimates = self.get_wallet()?.store.read()?.fee_estimates().clone();
-        notify_fee(self.notify.clone(), &estimates);
-        let mut tip_height = self.get_wallet()?.store.read()?.cache.tip.0;
-        notify_block(self.notify.clone(), tip_height);
+        let estimates = wallet.store.read()?.fee_estimates().clone();
+        notify_fee(nativenotify.clone(), &estimates);
+        let mut tip_height = wallet.store.read()?.cache.tip.0;
+        notify_block(nativenotify.clone(), tip_height);
 
         info!("building client");
-        if let Ok(fee_client) = self.url.build_client() {
+        if let Ok(fee_client) = url.build_client() {
             info!("building built end");
-            let fee_store = self.get_wallet()?.store.clone();
+            let fee_store = wallet.store.clone();
             thread::spawn(move || {
                 match try_get_fee_estimates(&fee_client) {
                     Ok(fee_estimates) => {
@@ -622,10 +604,10 @@ impl ElectrumWallet {
             });
         }
 
-        if self.network.spv_enabled.unwrap_or(false) {
-            let checker = match self.network.id() {
+        if network.spv_enabled.unwrap_or(false) {
+            let checker = match network.id() {
                 NetworkId::Bitcoin(network) => {
-                    let mut path: PathBuf = self.data_root.as_str().into();
+                    let mut path: PathBuf = data_root.into();
                     path.push(format!("headers_chain_{}", network));
                     ChainOrVerifier::Chain(HeadersChain::new(path, network)?)
                 }
@@ -636,13 +618,13 @@ impl ElectrumWallet {
             };
 
             let mut headers = Headers {
-                store: self.get_wallet()?.store.clone(),
+                store: wallet.store.clone(),
                 checker,
             };
 
-            let headers_url = self.url.clone();
+            let headers_url = url.clone();
             let (close_headers, r) = channel();
-            self.closer.senders.push(close_headers);
+            closer.senders.push(close_headers);
             let mut chunk_size = DIFFCHANGE_INTERVAL as usize;
             let headers_handle = thread::spawn(move || {
                 info!("starting headers thread");
@@ -702,31 +684,25 @@ impl ElectrumWallet {
                     }
                 }
             });
-            self.closer.handles.push(headers_handle);
+            closer.handles.push(headers_handle);
         }
 
         let syncer = Syncer {
-            store: self.get_wallet()?.store.clone(),
-            master_blinding: self.get_wallet()?.master_blinding.clone(),
-            network: self.network.clone(),
+            store: wallet.store.clone(),
+            master_blinding: wallet.master_blinding.clone(),
+            network: network.clone(),
         };
 
         let tipper = Tipper {
-            store: self.get_wallet()?.store.clone(),
-            network: self.network.clone(),
+            store: wallet.store.clone(),
+            network: network.clone(),
         };
 
-        info!(
-            "login STATUS block:{:?} tx:{}",
-            self.block_status()?,
-            self.tx_status()?
-        );
-
-        let notify_blocks = self.notify.clone();
+        let notify_blocks = nativenotify.clone();
 
         let (close_tipper, r) = channel();
-        self.closer.senders.push(close_tipper);
-        let tipper_url = self.url.clone();
+        closer.senders.push(close_tipper);
+        let tipper_url = url.clone();
         let tipper_handle = thread::spawn(move || {
             info!("starting tipper thread");
             loop {
@@ -750,12 +726,12 @@ impl ElectrumWallet {
                 }
             }
         });
-        self.closer.handles.push(tipper_handle);
+        closer.handles.push(tipper_handle);
 
         let (close_syncer, r) = channel();
-        self.closer.senders.push(close_syncer);
-        let notify_txs = self.notify.clone();
-        let syncer_url = self.url.clone();
+        closer.senders.push(close_syncer);
+        let notify_txs = nativenotify.clone();
+        let syncer_url = url.clone();
         let syncer_handle = thread::spawn(move || {
             info!("starting syncer thread");
             loop {
@@ -778,12 +754,19 @@ impl ElectrumWallet {
                 }
             }
         });
-        self.closer.handles.push(syncer_handle);
+        closer.handles.push(syncer_handle);
 
-        notify_settings(self.notify.clone(), &self.get_settings()?);
+        notify_settings(nativenotify.clone(), &wallet.get_settings()?);
 
-        self.state = State::Logged;
-        Ok(())
+        Ok(Self {
+            data_root: data_root.to_string(),
+            network,
+            url,
+            wallet: Some(wallet),
+            notify: nativenotify,
+            closer,
+            state: State::Logged,
+        })
     }
 
     pub fn stop(&mut self) -> Result<(), Error> {
@@ -799,10 +782,6 @@ impl ElectrumWallet {
             self.state = State::Disconnected;
         }
         Ok(())
-    }
-
-    fn get_settings(&self) -> Result<Settings, Error> {
-        Ok(self.get_wallet()?.get_settings()?)
     }
 
     fn get_wallet(&self) -> Result<&WalletCtx, Error> {

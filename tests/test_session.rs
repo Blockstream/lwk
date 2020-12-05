@@ -280,12 +280,10 @@ pub fn setup_wallet(
     let db_root = format!("{}", db_root_dir.path().display());
     let url = determine_electrum_url_from_net(&network).unwrap();
 
-    info!("creating wallet electrum");
-    let mut electrum_wallet = ElectrumWallet::new(network.clone(), &db_root, url).unwrap();
-
+    info!("starting wallet electrum");
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    info!("start wallet electrum");
-    electrum_wallet.start(&mnemonic).unwrap();
+    let electrum_wallet = ElectrumWallet::start(network.clone(), &db_root, url, &mnemonic).unwrap();
+
     let tx_status = electrum_wallet.tx_status().unwrap();
     assert_eq!(tx_status, 15130871412783076140);
     let mut i = 120;
@@ -503,7 +501,9 @@ impl TestElectrumWallet {
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
         let len_before = tx.serialize().len();
-        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
+        self.electrum_wallet
+            .sign_tx(&mut tx, &self.mnemonic)
+            .unwrap();
         let len_after = tx.serialize().len();
         assert!(len_before < len_after, "sign tx did not increased tx size");
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
@@ -571,7 +571,9 @@ impl TestElectrumWallet {
         create_opt.send_all = Some(true);
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
-        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
+        self.electrum_wallet
+            .sign_tx(&mut tx, &self.mnemonic)
+            .unwrap();
 
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
@@ -646,7 +648,9 @@ impl TestElectrumWallet {
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
-        self.electrum_wallet.sign_tx(&mut tx, &self.mnemonic).unwrap();
+        self.electrum_wallet
+            .sign_tx(&mut tx, &self.mnemonic)
+            .unwrap();
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
         let _txid = tx.txid().to_string();
         self.electrum_wallet.broadcast_tx(&tx).unwrap();

@@ -76,8 +76,7 @@ fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
 
 fn mnemonic2xprv(mnemonic: &str, network: Network) -> Result<ExtendedPrivKey, Error> {
     let seed = mnemonic2seed(mnemonic)?;
-    let xprv =
-        ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
+    let xprv = ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
 
     // BIP44: m / purpose' / coin_type' / account' / change / address_index
     // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
@@ -682,12 +681,20 @@ impl WalletCtx {
         (script_sig, witness)
     }
 
-    pub fn sign_with_mnemonic(&self, be_tx: &mut BETransaction, mnemonic: &str) -> Result<(), Error> {
+    pub fn sign_with_mnemonic(
+        &self,
+        be_tx: &mut BETransaction,
+        mnemonic: &str,
+    ) -> Result<(), Error> {
         let xprv = mnemonic2xprv(mnemonic, self.network.clone())?;
         self.sign_with_xprv(be_tx, xprv)
     }
 
-    pub fn sign_with_xprv(&self, be_tx: &mut BETransaction, xprv: ExtendedPrivKey) -> Result<(), Error> {
+    pub fn sign_with_xprv(
+        &self,
+        be_tx: &mut BETransaction,
+        xprv: ExtendedPrivKey,
+    ) -> Result<(), Error> {
         info!("sign");
         let store_read = self.store.read()?;
         match be_tx {

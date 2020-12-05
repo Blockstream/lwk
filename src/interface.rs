@@ -1,7 +1,7 @@
 use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::Transaction;
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::{self, All, Message, Secp256k1};
 use bitcoin::util::address::{Address, Payload};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
@@ -21,7 +21,7 @@ use wally::{
 };
 
 use crate::error::{fn_err, Error};
-use crate::store::Store;
+use crate::store::{Store, StoreMeta};
 
 use crate::be::{self, *};
 use bitcoin::util::bip143::SigHashCache;
@@ -32,7 +32,9 @@ use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
+use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::{Arc, RwLock};
 
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
@@ -80,6 +82,70 @@ impl WalletCtx {
             store,
             network, // TODO: from db
             secp: Secp256k1::gen_new(),
+            xprv,
+            xpub,
+            master_blinding,
+            change_max_deriv: 0,
+        })
+    }
+
+    pub fn from_mnemonic(mnemonic: &str, data_root: &str, network: Network) -> Result<Self, Error> {
+        let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
+        // TODO: passphrase?
+        let passphrase = "".into();
+        let seed = mnemonic.to_seed(passphrase);
+        let secp = Secp256k1::new();
+        let xprv =
+            ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
+
+        // BIP44: m / purpose' / coin_type' / account' / change / address_index
+        // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+        // slip44 suggest 1 for every testnet, so we are using it also for regtest
+        let coin_type: u32 = match network.id() {
+            NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
+                bitcoin::Network::Bitcoin => 0,
+                bitcoin::Network::Testnet => 1,
+                bitcoin::Network::Regtest => 1,
+            },
+            NetworkId::Elements(elements_network) => match elements_network {
+                ElementsNetwork::Liquid => 1776,
+                ElementsNetwork::ElementsRegtest => 1,
+            },
+        };
+        // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
+        let path_string = format!("m/49'/{}'/0'", coin_type);
+        info!("Using derivation path {}/0|1/*", path_string);
+        let path = DerivationPath::from_str(&path_string)?;
+        let xprv = xprv.derive_priv(&secp, &path)?;
+        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
+
+        let wallet_desc = format!("{}{:?}", xpub, network);
+        let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
+
+        let master_blinding = if network.liquid {
+            Some(MasterBlindingKey::new(&seed))
+        } else {
+            None
+        };
+
+        let mut path: PathBuf = data_root.into();
+        if !path.exists() {
+            std::fs::create_dir_all(&path)?;
+        }
+        path.push(wallet_id);
+        info!("Store root path: {:?}", path);
+        let store = Arc::new(RwLock::new(StoreMeta::new(
+            &path,
+            xpub,
+            master_blinding.clone(),
+            network.id(),
+        )?));
+
+        Ok(WalletCtx {
+            mnemonic,
+            store,
+            network, // TODO: from db
+            secp,
             xprv,
             xpub,
             master_blinding,

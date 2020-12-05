@@ -23,9 +23,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, RwLock};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -42,16 +40,14 @@ use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
 pub use crate::network::Network;
-use crate::store::{Indexes, Store, StoreMeta, BATCH_SIZE};
+use crate::store::{Indexes, Store, BATCH_SIZE};
 pub use crate::{ElementsNetwork, NetworkId};
-use bip39;
 
 use log::{debug, info, trace, warn};
 
 use bitcoin::blockdata::constants::DIFFCHANGE_INTERVAL;
-use bitcoin::hashes::{sha256, Hash};
-use bitcoin::secp256k1::{self, Secp256k1};
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::secp256k1;
+use bitcoin::util::bip32::DerivationPath;
 use bitcoin::{BlockHash, Script, Txid};
 
 use elements::confidential::{self, Asset, Nonce};
@@ -596,72 +592,15 @@ impl ElectrumWallet {
             return Ok(());
         }
 
-        let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
-        // TODO: passphrase?
-        let passphrase = "".into();
-        let seed = mnemonic.to_seed(passphrase);
-        let secp = Secp256k1::new();
-        let xprv =
-            ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
-
-        // BIP44: m / purpose' / coin_type' / account' / change / address_index
-        // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-        // slip44 suggest 1 for every testnet, so we are using it also for regtest
-        let coin_type: u32 = match self.network.id() {
-            NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
-                bitcoin::Network::Bitcoin => 0,
-                bitcoin::Network::Testnet => 1,
-                bitcoin::Network::Regtest => 1,
-            },
-            NetworkId::Elements(elements_network) => match elements_network {
-                ElementsNetwork::Liquid => 1776,
-                ElementsNetwork::ElementsRegtest => 1,
-            },
-        };
-        // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
-        let path_string = format!("m/49'/{}'/0'", coin_type);
-        info!("Using derivation path {}/0|1/*", path_string);
-        let path = DerivationPath::from_str(&path_string)?;
-        let xprv = xprv.derive_priv(&secp, &path)?;
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-
-        let wallet_desc = format!("{}{:?}", xpub, self.network);
-        let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
         let sync_interval = self.network.sync_interval.unwrap_or(7);
 
-        let master_blinding = if self.network.liquid {
-            Some(MasterBlindingKey::new(&seed))
-        } else {
-            None
-        };
-
-        let mut path: PathBuf = self.data_root.as_str().into();
-        if !path.exists() {
-            std::fs::create_dir_all(&path)?;
-        }
-        path.push(wallet_id);
-        info!("Store root path: {:?}", path);
-        let store = match self.get_wallet() {
-            Ok(wallet) => wallet.store.clone(),
-            Err(_) => Arc::new(RwLock::new(StoreMeta::new(
-                &path,
-                xpub,
-                master_blinding.clone(),
-                self.network.id(),
-            )?)),
-        };
-
+        // is this ever the case?
         if self.wallet.is_none() {
-            let wallet = WalletCtx::new(
-                store,
-                mnemonic.clone(),
+            self.wallet = Some(WalletCtx::from_mnemonic(
+                mnemonic,
+                &self.data_root,
                 self.network.clone(),
-                xprv,
-                xpub,
-                master_blinding.clone(),
-            )?;
-
-            self.wallet = Some(wallet);
+            )?);
         }
 
         let estimates = self.get_wallet()?.store.read()?.fee_estimates().clone();
@@ -768,7 +707,7 @@ impl ElectrumWallet {
 
         let syncer = Syncer {
             store: self.get_wallet()?.store.clone(),
-            master_blinding: master_blinding.clone(),
+            master_blinding: self.get_wallet()?.master_blinding.clone(),
             network: self.network.clone(),
         };
 

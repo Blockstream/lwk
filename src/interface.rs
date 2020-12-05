@@ -39,7 +39,6 @@ use std::sync::{Arc, RwLock};
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
     pub network: Network,
-    pub mnemonic: bip39::Mnemonic,
     pub store: Store,
     pub xprv: ExtendedPrivKey,
     pub xpub: ExtendedPubKey,
@@ -122,7 +121,6 @@ impl WalletCtx {
         )?));
 
         Ok(WalletCtx {
-            mnemonic,
             store,
             network, // TODO: from db
             secp,

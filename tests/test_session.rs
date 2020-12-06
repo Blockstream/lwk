@@ -10,8 +10,8 @@ use elements;
 use gdk_rust::be::{BETransaction, DUST_VALUE};
 use gdk_rust::error::Error;
 use gdk_rust::model::*;
-use gdk_rust::Network;
 use gdk_rust::ElectrumWallet;
+use gdk_rust::Network;
 use gdk_rust::{ElementsNetwork, NetworkId};
 
 use log::LevelFilter;

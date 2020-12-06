@@ -25,9 +25,7 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 
 use crate::error::Error;
-use crate::model::{
-    CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO,
-};
+use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
 use crate::be::*;
 use crate::headers::bitcoin::HeadersChain;
@@ -520,11 +518,7 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
-    pub fn start(
-        network: Network,
-        data_root: &str,
-        mnemonic: &str,
-    ) -> Result<Self, Error> {
+    pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let sync_interval = network.sync_interval.unwrap_or(7);
         let url = determine_electrum_url_from_net(&network)?;
 

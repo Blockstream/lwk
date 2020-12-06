@@ -534,6 +534,24 @@ impl ElectrumWallet {
         }
     }
 
+    fn update_tip(&self) -> Result<(), Error> {
+        // consider not using Tipper
+        let tipper = Tipper {
+            store: self.wallet.store.clone(),
+            network: self.network.clone(),
+        };
+        let tipper_url = self.url.clone();
+        if let Ok(client) = tipper_url.build_client() {
+            match tipper.tip(&client) {
+                Ok(_) => (),
+                Err(e) => {
+                    warn!("exception in tipper {:?}", e);
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let sync_interval = network.sync_interval.unwrap_or(7);
         let url = determine_electrum_url_from_net(&network)?;
@@ -544,8 +562,6 @@ impl ElectrumWallet {
             senders: vec![],
             handles: vec![],
         };
-
-        let mut tip_height = wallet.store.read()?.cache.tip.0;
 
         if network.spv_enabled.unwrap_or(false) {
             let checker = match network.id() {
@@ -636,38 +652,6 @@ impl ElectrumWallet {
             network: network.clone(),
         };
 
-        let tipper = Tipper {
-            store: wallet.store.clone(),
-            network: network.clone(),
-        };
-
-        let (close_tipper, r) = channel();
-        closer.senders.push(close_tipper);
-        let tipper_url = url.clone();
-        let tipper_handle = thread::spawn(move || {
-            info!("starting tipper thread");
-            loop {
-                if let Ok(client) = tipper_url.build_client() {
-                    match tipper.tip(&client) {
-                        Ok(current_tip) => {
-                            if tip_height != current_tip {
-                                tip_height = current_tip;
-                                info!("tip is {:?}", tip_height);
-                            }
-                        }
-                        Err(e) => {
-                            warn!("exception in tipper {:?}", e);
-                        }
-                    }
-                }
-                if wait_or_close(&r, sync_interval) {
-                    info!("closing tipper thread {:?}", tip_height);
-                    break;
-                }
-            }
-        });
-        closer.handles.push(tipper_handle);
-
         let (close_syncer, r) = channel();
         closer.senders.push(close_syncer);
         let syncer_url = url.clone();
@@ -708,6 +692,7 @@ impl ElectrumWallet {
     }
 
     pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {
+        self.update_tip()?;
         let tip = self.wallet.get_tip()?;
         info!("tip={:?}", tip);
         Ok(tip)

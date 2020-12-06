@@ -518,6 +518,22 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
+    pub fn update_fee_estimates(&self) {
+        info!("building client");
+        if let Ok(fee_client) = self.url.build_client() {
+            info!("building built end");
+            let fee_store = self.wallet.store.clone();
+            thread::spawn(move || {
+                match try_get_fee_estimates(&fee_client) {
+                    Ok(fee_estimates) => {
+                        fee_store.write().unwrap().cache.fee_estimates = fee_estimates
+                    }
+                    Err(e) => warn!("can't update fee estimates {:?}", e),
+                };
+            });
+        }
+    }
+
     pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let sync_interval = network.sync_interval.unwrap_or(7);
         let url = determine_electrum_url_from_net(&network)?;
@@ -530,20 +546,6 @@ impl ElectrumWallet {
         };
 
         let mut tip_height = wallet.store.read()?.cache.tip.0;
-
-        info!("building client");
-        if let Ok(fee_client) = url.build_client() {
-            info!("building built end");
-            let fee_store = wallet.store.clone();
-            thread::spawn(move || {
-                match try_get_fee_estimates(&fee_client) {
-                    Ok(fee_estimates) => {
-                        fee_store.write().unwrap().cache.fee_estimates = fee_estimates
-                    }
-                    Err(e) => warn!("can't update fee estimates {:?}", e),
-                };
-            });
-        }
 
         if network.spv_enabled.unwrap_or(false) {
             let checker = match network.id() {

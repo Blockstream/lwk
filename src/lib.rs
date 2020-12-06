@@ -515,7 +515,7 @@ pub struct ElectrumWallet {
     pub data_root: String,
     pub network: Network,
     pub url: ElectrumUrl,
-    pub wallet: Option<WalletCtx>,
+    pub wallet: WalletCtx,
     closer: Closer,
 }
 
@@ -701,7 +701,7 @@ impl ElectrumWallet {
             data_root: data_root.to_string(),
             network,
             url,
-            wallet: Some(wallet),
+            wallet,
             closer,
         })
     }
@@ -711,14 +711,8 @@ impl ElectrumWallet {
         Ok(())
     }
 
-    fn get_wallet(&self) -> Result<&WalletCtx, Error> {
-        self.wallet
-            .as_ref()
-            .ok_or_else(|| Error::Generic("wallet not initialized".into()))
-    }
-
     pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {
-        let tip = self.get_wallet()?.get_tip()?;
+        let tip = self.wallet.get_tip()?;
         info!("tip={:?}", tip);
         Ok(tip)
     }
@@ -726,7 +720,7 @@ impl ElectrumWallet {
     pub fn tx_status(&self) -> Result<u64, Error> {
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
-        let txs = self.get_wallet()?.list_tx(&opt)?;
+        let txs = self.wallet.list_tx(&opt)?;
         let mut hasher = DefaultHasher::new();
         for tx in txs.iter() {
             std::hash::Hash::hash(&tx.txid, &mut hasher);
@@ -737,28 +731,28 @@ impl ElectrumWallet {
     }
 
     pub fn balance(&self) -> Result<Balances, Error> {
-        self.get_wallet()?.balance()
+        self.wallet.balance()
     }
 
     pub fn address(&self) -> Result<AddressPointer, Error> {
-        self.get_wallet()?.get_address()
+        self.wallet.get_address()
     }
 
     pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
-        self.get_wallet()?.list_tx(opt)
+        self.wallet.list_tx(opt)
     }
 
     // actually should list all coins, not only the unspent ones
     pub fn utxos(&self) -> Result<Vec<TXO>, Error> {
-        self.get_wallet()?.utxos()
+        self.wallet.utxos()
     }
 
     pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
-        self.get_wallet()?.create_tx(opt)
+        self.wallet.create_tx(opt)
     }
 
     pub fn sign_tx(&self, transaction: &mut BETransaction, mnemonic: &str) -> Result<(), Error> {
-        self.get_wallet()?.sign_with_mnemonic(transaction, mnemonic)
+        self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
 
     pub fn broadcast_tx(&self, transaction: &BETransaction) -> Result<(), Error> {

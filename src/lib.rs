@@ -13,15 +13,11 @@ mod store;
 pub use network::*;
 use wally::asset_unblind;
 
-use std::time::Duration;
-
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
-use std::thread::JoinHandle;
 use std::time::Instant;
 
 use crate::error::Error;
@@ -67,25 +63,6 @@ struct Tipper {
 struct Headers {
     pub store: Store,
     pub checker: ChainOrVerifier,
-}
-
-struct Closer {
-    pub senders: Vec<Sender<()>>,
-    pub handles: Vec<JoinHandle<()>>,
-}
-
-impl Closer {
-    pub fn close(&mut self) -> Result<(), Error> {
-        while let Some(sender) = self.senders.pop() {
-            sender.send(())?;
-        }
-        while let Some(handle) = self.handles.pop() {
-            handle
-                .join()
-                .expect("Couldn't join on the associated thread");
-        }
-        Ok(())
-    }
 }
 
 fn determine_electrum_url(
@@ -506,22 +483,11 @@ impl Syncer {
     }
 }
 
-fn wait_or_close(r: &Receiver<()>, interval: u32) -> bool {
-    for _ in 0..(interval * 2) {
-        thread::sleep(Duration::from_millis(500));
-        if r.try_recv().is_ok() {
-            return true;
-        }
-    }
-    false
-}
-
 pub struct ElectrumWallet {
     pub data_root: String,
     pub network: Network,
     pub url: ElectrumUrl,
     pub wallet: WalletCtx,
-    closer: Closer,
 }
 
 impl ElectrumWallet {
@@ -648,23 +614,12 @@ impl ElectrumWallet {
 
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
 
-        let mut closer = Closer {
-            senders: vec![],
-            handles: vec![],
-        };
-
         Ok(Self {
             data_root: data_root.to_string(),
             network,
             url,
             wallet,
-            closer,
         })
-    }
-
-    pub fn stop(&mut self) -> Result<(), Error> {
-        self.closer.close()?;
-        Ok(())
     }
 
     pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {

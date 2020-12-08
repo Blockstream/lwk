@@ -327,7 +327,6 @@ pub fn setup_wallet(
 impl TestElectrumWallet {
     /// stop the bitcoin node in the test session
     pub fn stop(&mut self) {
-        self.electrum_wallet.stop().unwrap();
         self.node.stop().unwrap();
         self.node_process.wait().unwrap();
         self.electrs_process.kill().unwrap();

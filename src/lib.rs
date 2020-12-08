@@ -491,6 +491,19 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
+    pub fn new(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
+        let url = determine_electrum_url_from_net(&network)?;
+
+        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
+
+        Ok(Self {
+            data_root: data_root.to_string(),
+            network,
+            url,
+            wallet,
+        })
+    }
+
     pub fn update_fee_estimates(&self) {
         info!("building client");
         if let Ok(fee_client) = self.url.build_client() {
@@ -607,19 +620,6 @@ impl ElectrumWallet {
             }
         }
         Ok(())
-    }
-
-    pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let url = determine_electrum_url_from_net(&network)?;
-
-        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
-
-        Ok(Self {
-            data_root: data_root.to_string(),
-            network,
-            url,
-            wallet,
-        })
     }
 
     pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {

@@ -281,7 +281,7 @@ pub fn setup_wallet(
 
     info!("starting wallet electrum");
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let electrum_wallet = ElectrumWallet::start(network.clone(), &db_root, &mnemonic).unwrap();
+    let electrum_wallet = ElectrumWallet::new(network.clone(), &db_root, &mnemonic).unwrap();
     electrum_wallet.update_fee_estimates();
 
     let tx_status = electrum_wallet.tx_status().unwrap();

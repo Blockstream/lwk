@@ -17,7 +17,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::thread;
 use std::time::Instant;
 
 use crate::error::Error;
@@ -509,14 +508,12 @@ impl ElectrumWallet {
         if let Ok(fee_client) = self.url.build_client() {
             info!("building built end");
             let fee_store = self.wallet.store.clone();
-            thread::spawn(move || {
-                match try_get_fee_estimates(&fee_client) {
-                    Ok(fee_estimates) => {
-                        fee_store.write().unwrap().cache.fee_estimates = fee_estimates
-                    }
-                    Err(e) => warn!("can't update fee estimates {:?}", e),
-                };
-            });
+            match try_get_fee_estimates(&fee_client) {
+                Ok(fee_estimates) => {
+                    fee_store.write().unwrap().cache.fee_estimates = fee_estimates
+                }
+                Err(e) => warn!("can't update fee estimates {:?}", e),
+            };
         }
     }
 

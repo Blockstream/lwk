@@ -19,7 +19,6 @@ pub struct Network {
     pub electrum_url: Option<String>,
     pub validate_domain: Option<bool>,
     pub policy_asset: Option<String>,
-    pub sync_interval: Option<u32>,
     pub ct_bits: Option<i32>,
     pub ct_exponent: Option<i32>,
     pub spv_enabled: Option<bool>,

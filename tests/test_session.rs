@@ -267,7 +267,6 @@ pub fn setup_wallet(
 
     let mut network = Network::default();
     network.electrum_url = Some(electrs_url.to_string());
-    network.sync_interval = Some(1);
     network.development = true;
     network.spv_enabled = Some(true);
     if is_liquid {

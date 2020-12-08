@@ -626,8 +626,24 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    pub fn sync(&self) -> Result<(), Error> {
+        let syncer = Syncer {
+            store: self.wallet.store.clone(),
+            master_blinding: self.wallet.master_blinding.clone(),
+            network: self.network.clone(),
+        };
+
+        if let Ok(client) = self.url.clone().build_client() {
+            match syncer.sync(&client) {
+                Ok(true) => info!("there are new transcations"),
+                Ok(false) => (),
+                Err(e) => warn!("Error during sync, {:?}", e),
+            }
+        }
+        Ok(())
+    }
+
     pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let sync_interval = network.sync_interval.unwrap_or(7);
         let url = determine_electrum_url_from_net(&network)?;
 
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
@@ -636,37 +652,6 @@ impl ElectrumWallet {
             senders: vec![],
             handles: vec![],
         };
-
-        let syncer = Syncer {
-            store: wallet.store.clone(),
-            master_blinding: wallet.master_blinding.clone(),
-            network: network.clone(),
-        };
-
-        let (close_syncer, r) = channel();
-        closer.senders.push(close_syncer);
-        let syncer_url = url.clone();
-        let syncer_handle = thread::spawn(move || {
-            info!("starting syncer thread");
-            loop {
-                match syncer_url.build_client() {
-                    Ok(client) => match syncer.sync(&client) {
-                        Ok(new_txs) => {
-                            if new_txs {
-                                info!("there are new transactions");
-                            }
-                        }
-                        Err(e) => warn!("Error during sync, {:?}", e),
-                    },
-                    Err(e) => warn!("Can't build client {:?}", e),
-                }
-                if wait_or_close(&r, sync_interval) {
-                    info!("closing syncer thread");
-                    break;
-                }
-            }
-        });
-        closer.handles.push(syncer_handle);
 
         Ok(Self {
             data_root: data_root.to_string(),
@@ -690,6 +675,7 @@ impl ElectrumWallet {
     }
 
     pub fn tx_status(&self) -> Result<u64, Error> {
+        self.sync()?;
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let txs = self.wallet.list_tx(&opt)?;
@@ -703,23 +689,28 @@ impl ElectrumWallet {
     }
 
     pub fn balance(&self) -> Result<Balances, Error> {
+        self.sync()?;
         self.wallet.balance()
     }
 
     pub fn address(&self) -> Result<AddressPointer, Error> {
+        self.sync()?;
         self.wallet.get_address()
     }
 
     pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
+        self.sync()?;
         self.wallet.list_tx(opt)
     }
 
     // actually should list all coins, not only the unspent ones
     pub fn utxos(&self) -> Result<Vec<TXO>, Error> {
+        self.sync()?;
         self.wallet.utxos()
     }
 
     pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
+        self.sync()?;
         self.wallet.create_tx(opt)
     }
 

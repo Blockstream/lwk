@@ -392,6 +392,7 @@ impl TestElectrumWallet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
+        self.electrum_wallet.update_spv().unwrap();
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let list = self.electrum_wallet.transactions(&opt).unwrap();

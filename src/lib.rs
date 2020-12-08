@@ -143,6 +143,13 @@ impl Tipper {
 }
 
 impl Headers {
+    pub fn height(&self) -> u32 {
+        match &self.checker {
+            ChainOrVerifier::Chain(chain) => chain.height(),
+            _ => 0,
+        }
+    }
+
     pub fn ask(&mut self, chunk_size: usize, client: &Client) -> Result<usize, Error> {
         if let ChainOrVerifier::Chain(chain) = &mut self.checker {
             info!(
@@ -552,6 +559,73 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    pub fn update_spv(&self) -> Result<(), Error> {
+        let checker = match self.network.id() {
+            NetworkId::Bitcoin(network) => {
+                let mut path: PathBuf = self.data_root.clone().into();
+                path.push(format!("headers_chain_{}", network));
+                ChainOrVerifier::Chain(HeadersChain::new(path, network)?)
+            }
+            NetworkId::Elements(network) => {
+                let verifier = Verifier::new(network);
+                ChainOrVerifier::Verifier(verifier)
+            }
+        };
+
+        let mut headers = Headers {
+            store: self.wallet.store.clone(),
+            checker,
+        };
+
+        self.update_tip()?;
+        let (tip, _) = self.wallet.store.read()?.cache.tip;
+        if let Ok(client) = self.url.clone().build_client() {
+            loop {
+                let missing_blocks = 0.max(tip - headers.height());
+                let chunk_size = missing_blocks.min(DIFFCHANGE_INTERVAL) as usize;
+                info!(
+                    "missing_blocks {}, chunk_size: {}",
+                    missing_blocks, chunk_size
+                );
+                match headers.ask(chunk_size, &client) {
+                    Ok(headers_found) => {
+                        if headers_found == 0 {
+                            break;
+                        } else {
+                            info!("headers found: {}", headers_found);
+                        }
+                    }
+                    Err(Error::InvalidHeaders) => {
+                        info!("error invalid headers");
+                        // this should handle reorgs and also broke IO writes update
+                        if headers.remove(144).is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        // usual error is because I reached the tip, trying asking half
+                        //TODO this is due to an esplora electrs bug, according to spec it should
+                        // just return available headers, remove when fix is deployed and change previous
+                        // break condition to headers_found < chunk_size
+                        info!("error while asking headers {}", e);
+                        break;
+                    }
+                }
+            }
+
+            info!("getting proofs");
+            match headers.get_proofs(&client) {
+                Ok(found) => {
+                    if found > 0 {
+                        info!("found proof {}", found)
+                    }
+                }
+                Err(e) => warn!("error in getting proofs {:?}", e),
+            }
+        }
+        Ok(())
+    }
+
     pub fn start(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let sync_interval = network.sync_interval.unwrap_or(7);
         let url = determine_electrum_url_from_net(&network)?;
@@ -562,89 +636,6 @@ impl ElectrumWallet {
             senders: vec![],
             handles: vec![],
         };
-
-        if network.spv_enabled.unwrap_or(false) {
-            let checker = match network.id() {
-                NetworkId::Bitcoin(network) => {
-                    let mut path: PathBuf = data_root.into();
-                    path.push(format!("headers_chain_{}", network));
-                    ChainOrVerifier::Chain(HeadersChain::new(path, network)?)
-                }
-                NetworkId::Elements(network) => {
-                    let verifier = Verifier::new(network);
-                    ChainOrVerifier::Verifier(verifier)
-                }
-            };
-
-            let mut headers = Headers {
-                store: wallet.store.clone(),
-                checker,
-            };
-
-            let headers_url = url.clone();
-            let (close_headers, r) = channel();
-            closer.senders.push(close_headers);
-            let mut chunk_size = DIFFCHANGE_INTERVAL as usize;
-            let headers_handle = thread::spawn(move || {
-                info!("starting headers thread");
-
-                'outer: loop {
-                    if wait_or_close(&r, sync_interval) {
-                        info!("closing headers thread");
-                        break;
-                    }
-
-                    if let Ok(client) = headers_url.build_client() {
-                        loop {
-                            if r.try_recv().is_ok() {
-                                info!("closing headers thread");
-                                break 'outer;
-                            }
-                            match headers.ask(chunk_size, &client) {
-                                Ok(headers_found) => {
-                                    if headers_found == 0 {
-                                        chunk_size = 1
-                                    } else {
-                                        info!("headers found: {}", headers_found);
-                                    }
-                                }
-                                Err(Error::InvalidHeaders) => {
-                                    // this should handle reorgs and also broke IO writes update
-                                    if headers.remove(144).is_err() {
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    // usual error is because I reached the tip, trying asking half
-                                    //TODO this is due to an esplora electrs bug, according to spec it should
-                                    // just return available headers, remove when fix is deployed and change previous
-                                    // break condition to headers_found < chunk_size
-                                    info!("error while asking headers {}", e);
-                                    if chunk_size > 1 {
-                                        chunk_size /= 2
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-                            if chunk_size == 1 {
-                                break;
-                            }
-                        }
-
-                        match headers.get_proofs(&client) {
-                            Ok(found) => {
-                                if found > 0 {
-                                    info!("found proof {}", found)
-                                }
-                            }
-                            Err(e) => warn!("error in getting proofs {:?}", e),
-                        }
-                    }
-                }
-            });
-            closer.handles.push(headers_handle);
-        }
 
         let syncer = Syncer {
             store: wallet.store.clone(),

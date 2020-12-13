@@ -1,4 +1,4 @@
-extern crate gdk_rust;
+extern crate bewallet;
 
 use bitcoin::{self, Amount, BlockHash};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
@@ -7,12 +7,12 @@ use electrum_client::raw_client::{ElectrumPlaintextStream, RawClient};
 use electrum_client::ElectrumApi;
 use elements;
 
-use gdk_rust::be::{BETransaction, DUST_VALUE};
-use gdk_rust::error::Error;
-use gdk_rust::model::*;
-use gdk_rust::ElectrumWallet;
-use gdk_rust::Network;
-use gdk_rust::{ElementsNetwork, NetworkId};
+use bewallet::be::{BETransaction, DUST_VALUE};
+use bewallet::error::Error;
+use bewallet::model::*;
+use bewallet::ElectrumWallet;
+use bewallet::Network;
+use bewallet::{ElementsNetwork, NetworkId};
 
 use log::LevelFilter;
 use log::{info, warn, Metadata, Record};

@@ -1,4 +1,4 @@
-use gdk_rust::model::SPVVerifyResult;
+use bewallet::model::SPVVerifyResult;
 use std::env;
 
 mod test_session;

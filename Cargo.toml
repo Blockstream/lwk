@@ -1,5 +1,5 @@
 [package]
-name = "gdk_rust"
+name = "bewallet"
 version = "0.1.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>", "Nadav Ivgi <nadav@shesek.info>", "William Casarin <jb55@jb55.com>", "Leonardo Comandini <leo@leocomandini.org>"]
 license = "(MIT)"

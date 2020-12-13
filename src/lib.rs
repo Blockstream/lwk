@@ -28,7 +28,7 @@ use crate::headers::liquid::Verifier;
 use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
-pub use crate::network::Network;
+pub use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 pub use crate::{ElementsNetwork, NetworkId};
 
@@ -51,12 +51,12 @@ use rand::thread_rng;
 struct Syncer {
     pub store: Store,
     pub master_blinding: Option<MasterBlindingKey>,
-    pub network: Network,
+    pub config: Config,
 }
 
 struct Tipper {
     pub store: Store,
-    pub network: Network,
+    pub config: Config,
 }
 
 struct Headers {
@@ -86,8 +86,8 @@ fn determine_electrum_url(
     }
 }
 
-pub fn determine_electrum_url_from_net(network: &Network) -> Result<ElectrumUrl, Error> {
-    determine_electrum_url(&network.electrum_url, network.tls, network.validate_domain)
+pub fn determine_electrum_url_from_net(config: &Config) -> Result<ElectrumUrl, Error> {
+    determine_electrum_url(&config.electrum_url, config.tls, config.validate_domain)
 }
 
 fn try_get_fee_estimates(client: &Client) -> Result<Vec<FeeEstimate>, Error> {
@@ -110,7 +110,7 @@ impl Tipper {
         let height = header.height as u32;
         let tip_height = self.store.read()?.cache.tip.0;
         if height != tip_height {
-            let hash = BEBlockHeader::deserialize(&header.header, self.network.id())?.block_hash();
+            let hash = BEBlockHeader::deserialize(&header.header, self.config.network_id())?.block_hash();
             info!("saving in store new tip {:?}", (height, hash));
             self.store.write()?.cache.tip = (height, hash);
         }
@@ -334,7 +334,7 @@ impl Syncer {
                 client.batch_block_header_raw(heights_to_download.clone())?;
             let mut headers_downloaded: Vec<BEBlockHeader> = vec![];
             for vec in headers_bytes_downloaded {
-                headers_downloaded.push(BEBlockHeader::deserialize(&vec, self.network.id())?);
+                headers_downloaded.push(BEBlockHeader::deserialize(&vec, self.config.network_id())?);
             }
             info!("headers_downloaded {:?}", &headers_downloaded);
             for (header, height) in headers_downloaded
@@ -363,7 +363,7 @@ impl Syncer {
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
             let mut txs_downloaded: Vec<BETransaction> = vec![];
             for vec in txs_bytes_downloaded {
-                let tx = BETransaction::deserialize(&vec, self.network.id())?;
+                let tx = BETransaction::deserialize(&vec, self.config.network_id())?;
                 txs_downloaded.push(tx);
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
@@ -411,7 +411,7 @@ impl Syncer {
             if !txs_to_download.is_empty() {
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
                 for vec in txs_bytes_downloaded {
-                    let mut tx = BETransaction::deserialize(&vec, self.network.id())?;
+                    let mut tx = BETransaction::deserialize(&vec, self.config.network_id())?;
                     tx.strip_witness();
                     txs.push((tx.txid(), tx));
                 }
@@ -484,20 +484,20 @@ impl Syncer {
 
 pub struct ElectrumWallet {
     pub data_root: String,
-    pub network: Network,
+    pub config: Config,
     pub url: ElectrumUrl,
     pub wallet: WalletCtx,
 }
 
 impl ElectrumWallet {
-    pub fn new(network: Network, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let url = determine_electrum_url_from_net(&network)?;
+    pub fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
+        let url = determine_electrum_url_from_net(&config)?;
 
-        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, network.clone())?;
+        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 
         Ok(Self {
             data_root: data_root.to_string(),
-            network,
+            config,
             url,
             wallet,
         })
@@ -521,7 +521,7 @@ impl ElectrumWallet {
         // consider not using Tipper
         let tipper = Tipper {
             store: self.wallet.store.clone(),
-            network: self.network.clone(),
+            config: self.config.clone(),
         };
         let tipper_url = self.url.clone();
         if let Ok(client) = tipper_url.build_client() {
@@ -536,7 +536,7 @@ impl ElectrumWallet {
     }
 
     pub fn update_spv(&self) -> Result<(), Error> {
-        let checker = match self.network.id() {
+        let checker = match self.config.network_id() {
             NetworkId::Bitcoin(network) => {
                 let mut path: PathBuf = self.data_root.clone().into();
                 path.push(format!("headers_chain_{}", network));
@@ -606,7 +606,7 @@ impl ElectrumWallet {
         let syncer = Syncer {
             store: self.wallet.store.clone(),
             master_blinding: self.wallet.master_blinding.clone(),
-            network: self.network.clone(),
+            config: self.config.clone(),
         };
 
         if let Ok(client) = self.url.clone().build_client() {

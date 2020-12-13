@@ -12,7 +12,7 @@ use log::{info, trace};
 use rand::Rng;
 
 use crate::model::{AddressPointer, CreateTransactionOpt, Settings, TransactionDetails, TXO};
-use crate::network::{ElementsNetwork, Network, NetworkId};
+use crate::network::{ElementsNetwork, Config, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
 use wally::{
@@ -38,7 +38,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
-    pub network: Network,
+    pub config: Config,
     pub store: Store,
     pub xpub: ExtendedPubKey,
     pub master_blinding: Option<MasterBlindingKey>,
@@ -74,14 +74,14 @@ fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
     Ok(seed)
 }
 
-fn mnemonic2xprv(mnemonic: &str, network: Network) -> Result<ExtendedPrivKey, Error> {
+fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Error> {
     let seed = mnemonic2seed(mnemonic)?;
     let xprv = ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
 
     // BIP44: m / purpose' / coin_type' / account' / change / address_index
     // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
     // slip44 suggest 1 for every testnet, so we are using it also for regtest
-    let coin_type: u32 = match network.id() {
+    let coin_type: u32 = match config.network_id() {
         NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
             bitcoin::Network::Bitcoin => 0,
             bitcoin::Network::Testnet => 1,
@@ -101,15 +101,15 @@ fn mnemonic2xprv(mnemonic: &str, network: Network) -> Result<ExtendedPrivKey, Er
 }
 
 impl WalletCtx {
-    pub fn from_mnemonic(mnemonic: &str, data_root: &str, network: Network) -> Result<Self, Error> {
-        let xprv = mnemonic2xprv(mnemonic, network.clone())?;
+    pub fn from_mnemonic(mnemonic: &str, data_root: &str, config: Config) -> Result<Self, Error> {
+        let xprv = mnemonic2xprv(mnemonic, config.clone())?;
         let secp = Secp256k1::new();
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
-        let wallet_desc = format!("{}{:?}", xpub, network);
+        let wallet_desc = format!("{}{:?}", xpub, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let master_blinding = if network.liquid {
+        let master_blinding = if config.liquid {
             let seed = mnemonic2seed(mnemonic)?;
             Some(MasterBlindingKey::new(&seed))
         } else {
@@ -126,12 +126,12 @@ impl WalletCtx {
             &path,
             xpub,
             master_blinding.clone(),
-            network.id(),
+            config.network_id(),
         )?));
 
         Ok(WalletCtx {
             store,
-            network, // TODO: from db
+            config, // TODO: from db
             secp,
             xpub,
             master_blinding,
@@ -151,7 +151,7 @@ impl WalletCtx {
             .map(|x| ChildNumber::Normal { index: *x })
             .collect();
         let derived = xpub.derive_pub(&self.secp, &path)?;
-        match self.network.id() {
+        match self.config.network_id() {
             NetworkId::Bitcoin(network) => Ok(BEAddress::Bitcoin(
                 Address::p2shwpkh(&derived.public_key, network).unwrap(),
             )),
@@ -213,7 +213,7 @@ impl WalletCtx {
             let fee = tx.fee(
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
-                &self.network.policy_asset().ok(),
+                &self.config.policy_asset().ok(),
             )?;
             trace!("tx_id {} fee {}", tx_id, fee);
 
@@ -224,7 +224,7 @@ impl WalletCtx {
             );
             trace!("tx_id {} balances {:?}", tx_id, balances);
 
-            let spv_verified = if self.network.spv_enabled.unwrap_or(false) {
+            let spv_verified = if self.config.spv_enabled.unwrap_or(false) {
                 store_read
                     .cache
                     .txs_verif
@@ -292,7 +292,7 @@ impl WalletCtx {
                     })
                     .collect(),
                 BETransaction::Elements(tx) => {
-                    let policy_asset = self.network.policy_asset_id()?;
+                    let policy_asset = self.config.policy_asset_id()?;
                     tx.output
                         .clone()
                         .into_iter()
@@ -345,10 +345,10 @@ impl WalletCtx {
     pub fn balance(&self) -> Result<Balances, Error> {
         info!("start balance");
         let mut result = HashMap::new();
-        match self.network.id() {
+        match self.config.network_id() {
             NetworkId::Bitcoin(_) => result.entry("btc".to_string()).or_insert(0),
             NetworkId::Elements(_) => result
-                .entry(self.network.policy_asset.as_ref().unwrap().clone())
+                .entry(self.config.policy_asset.as_ref().unwrap().clone())
                 .or_insert(0),
         };
         for u in self.utxos()?.iter() {
@@ -364,7 +364,7 @@ impl WalletCtx {
         // TODO put checks into CreateTransaction::validate, add check asset_tag are valid asset hex
         // eagerly check for address validity
         for address in opt.addressees.iter().map(|a| &a.address) {
-            match self.network.id() {
+            match self.config.network_id() {
                 NetworkId::Bitcoin(network) => {
                     if let Ok(address) = bitcoin::Address::from_str(address) {
                         info!("address.network:{} network:{}", address.network, network);
@@ -416,10 +416,10 @@ impl WalletCtx {
         if !send_all {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= be::DUST_VALUE {
-                    match self.network.id() {
+                    match self.config.network_id() {
                         NetworkId::Bitcoin(_) => return Err(Error::InvalidAmount),
                         NetworkId::Elements(_) => {
-                            if address_amount.asset_tag == self.network.policy_asset {
+                            if address_amount.asset_tag == self.config.policy_asset {
                                 // we apply dust rules for liquid bitcoin as elements do
                                 return Err(Error::InvalidAmount);
                             }
@@ -429,14 +429,14 @@ impl WalletCtx {
             }
         }
 
-        if let NetworkId::Elements(_) = self.network.id() {
+        if let NetworkId::Elements(_) = self.config.network_id() {
             if opt.addressees.iter().any(|a| a.asset_tag.is_none()) {
                 return Err(Error::AssetEmpty);
             }
         }
 
         // convert from satoshi/kbyte to satoshi/byte
-        let default_value = match self.network.id() {
+        let default_value = match self.config.network_id() {
             NetworkId::Bitcoin(_) => 1000,
             NetworkId::Elements(_) => 100,
         };
@@ -461,9 +461,9 @@ impl WalletCtx {
             let all_utxos: Vec<&TXO> = utxos.iter().filter(|u| u.asset == asset).collect();
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
-            let to_send = if asset == "btc" || Some(asset.to_string()) == self.network.policy_asset
+            let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset
             {
-                let mut dummy_tx = BETransaction::new(self.network.id());
+                let mut dummy_tx = BETransaction::new(self.config.network_id());
                 for utxo in all_utxos.iter() {
                     dummy_tx.add_input(utxo.outpoint.clone());
                 }
@@ -484,7 +484,7 @@ impl WalletCtx {
             opt.addressees[0].satoshi = to_send;
         }
 
-        let mut tx = BETransaction::new(self.network.id());
+        let mut tx = BETransaction::new(self.config.network_id());
         // transaction is created in 3 steps:
         // 1) adding requested outputs to tx outputs
         // 2) adding enough utxso to inputs such that tx outputs and estimated fees are covered
@@ -503,7 +503,7 @@ impl WalletCtx {
             let mut needs = tx.needs(
                 fee_rate,
                 send_all,
-                self.network.policy_asset.clone(),
+                self.config.policy_asset.clone(),
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
             ); // Vec<(asset_string, satoshi)  "policy asset" is last, in bitcoin asset_string="btc" and max 1 element
@@ -524,7 +524,7 @@ impl WalletCtx {
             asset_utxos.sort_by(|a, b| a.satoshi.cmp(&b.satoshi));
             let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
 
-            match self.network.id() {
+            match self.config.network_id() {
                 NetworkId::Bitcoin(_) => {
                     // UTXO with same script must be spent together
                     for other_utxo in utxos.iter() {
@@ -557,7 +557,7 @@ impl WalletCtx {
         );
         let changes = tx.changes(
             estimated_fee,
-            self.network.policy_asset.clone(),
+            self.config.policy_asset.clone(),
             &store_read.cache.all_txs,
             &store_read.cache.unblinded,
         ); // Vec<Change> asset, value
@@ -576,7 +576,7 @@ impl WalletCtx {
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption
         tx.scramble();
 
-        let policy_asset = self.network.policy_asset().ok();
+        let policy_asset = self.config.policy_asset().ok();
         let fee_val = tx.fee(
             &store_read.cache.all_txs,
             &store_read.cache.unblinded,
@@ -686,7 +686,7 @@ impl WalletCtx {
         be_tx: &mut BETransaction,
         mnemonic: &str,
     ) -> Result<(), Error> {
-        let xprv = mnemonic2xprv(mnemonic, self.network.clone())?;
+        let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
         self.sign_with_xprv(be_tx, xprv)
     }
 
@@ -822,8 +822,8 @@ impl WalletCtx {
             input_ags.extend(elements::encode::serialize(&input_asset));
         }
 
-        let ct_exp = self.network.ct_exponent.unwrap_or(0);
-        let ct_bits = self.network.ct_bits.unwrap_or(52);
+        let ct_exp = self.config.ct_exponent.unwrap_or(0);
+        let ct_bits = self.config.ct_bits.unwrap_or(52);
         info!("ct params ct_exp:{}, ct_bits:{}", ct_exp, ct_bits);
 
         let mut output_blinded_values = vec![];

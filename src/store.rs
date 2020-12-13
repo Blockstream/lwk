@@ -78,7 +78,7 @@ pub struct StoreMeta {
     pub store: RawStore,
     master_blinding: Option<MasterBlindingKey>,
     secp: Secp256k1<All>,
-    id: NetworkId,
+    network_id: NetworkId,
     path: PathBuf,
     cipher: Aes256GcmSiv,
     first_deriv: [ExtendedPubKey; 2],
@@ -164,7 +164,7 @@ impl StoreMeta {
         path: P,
         xpub: ExtendedPubKey,
         master_blinding: Option<MasterBlindingKey>,
-        id: NetworkId,
+        network_id: NetworkId,
     ) -> Result<StoreMeta, Error> {
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.to_bytes());
@@ -190,7 +190,7 @@ impl StoreMeta {
             cache,
             store,
             master_blinding,
-            id,
+            network_id,
             cipher,
             secp,
             path,
@@ -259,7 +259,7 @@ impl StoreMeta {
                     let second_path = [ChildNumber::from(j)];
                     let second_deriv = first_deriv.derive_pub(&self.secp, &second_path)?;
                     // Note we are using regtest here because we are not interested in the address, only in script construction
-                    let script = match self.id {
+                    let script = match self.network_id {
                         NetworkId::Bitcoin(network) => {
                             let address =
                                 Address::p2shwpkh(&second_deriv.public_key, network).unwrap();
@@ -343,7 +343,7 @@ impl StoreMeta {
 
     pub fn fee_estimates(&self) -> Vec<FeeEstimate> {
         if self.cache.fee_estimates.is_empty() {
-            let min_fee = match self.id {
+            let min_fee = match self.network_id {
                 NetworkId::Bitcoin(_) => 1000,
                 NetworkId::Elements(_) => 100,
             };
@@ -400,12 +400,12 @@ mod tests {
             Txid::from_hex("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let id = NetworkId::Bitcoin(Network::Testnet);
-        let mut store = StoreMeta::new(&dir, xpub, None, id).unwrap();
+        let network_id = NetworkId::Bitcoin(Network::Testnet);
+        let mut store = StoreMeta::new(&dir, xpub, None, network_id).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, xpub, None, id).unwrap();
+        let store = StoreMeta::new(&dir, xpub, None, network_id).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 }

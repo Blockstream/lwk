@@ -62,16 +62,16 @@ pub fn spv_verify_tx(input: &SPVVerifyTx) -> Result<SPVVerifyResult, Error> {
     let txid = Txid::from_hex(&input.txid)?;
 
     let mut cache: VerifiedCache =
-        VerifiedCache::new(&input.path, input.network.id(), &input.encryption_key)?;
+        VerifiedCache::new(&input.path, input.config.network_id(), &input.encryption_key)?;
     if cache.contains(&txid)? {
         info!("verified cache hit for {}", txid);
         return Ok(SPVVerifyResult::Verified);
     }
 
-    let url = determine_electrum_url_from_net(&input.network)?;
+    let url = determine_electrum_url_from_net(&input.config)?;
     let client = url.build_client()?;
 
-    match input.network.id() {
+    match input.config.network_id() {
         NetworkId::Bitcoin(bitcoin_network) => {
             let mut path: PathBuf = (&input.path).into();
             path.push(format!("headers_chain_{}", bitcoin_network));

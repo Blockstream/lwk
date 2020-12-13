@@ -11,7 +11,7 @@ use bewallet::be::{BETransaction, DUST_VALUE};
 use bewallet::error::Error;
 use bewallet::model::*;
 use bewallet::ElectrumWallet;
-use bewallet::Network;
+use bewallet::Config;
 use bewallet::{ElementsNetwork, NetworkId};
 
 use log::LevelFilter;
@@ -132,7 +132,7 @@ pub struct TestElectrumWallet {
     electrs_work_dir: TempDir,
     db_root_dir: TempDir,
     network_id: NetworkId,
-    network: Network,
+    config: Config,
     mnemonic: String,
 }
 
@@ -265,13 +265,13 @@ pub fn setup_wallet(
     let electrs = RawClient::new(&electrs_url).unwrap();
     info!("done creating electrs client");
 
-    let mut network = Network::default();
-    network.electrum_url = Some(electrs_url.to_string());
-    network.development = true;
-    network.spv_enabled = Some(true);
+    let mut config = Config::default();
+    config.electrum_url = Some(electrs_url.to_string());
+    config.development = true;
+    config.spv_enabled = Some(true);
     if is_liquid {
-        network.liquid = true;
-        network.policy_asset =
+        config.liquid = true;
+        config.policy_asset =
             Some("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225".into());
     }
     let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
@@ -280,7 +280,7 @@ pub fn setup_wallet(
 
     info!("starting wallet electrum");
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let electrum_wallet = ElectrumWallet::new(network.clone(), &db_root, &mnemonic).unwrap();
+    let electrum_wallet = ElectrumWallet::new(config.clone(), &db_root, &mnemonic).unwrap();
     electrum_wallet.update_fee_estimates();
 
     let tx_status = electrum_wallet.tx_status().unwrap();
@@ -318,7 +318,7 @@ pub fn setup_wallet(
         electrs_work_dir,
         db_root_dir,
         network_id,
-        network,
+        config,
         mnemonic,
     }
 }
@@ -378,7 +378,7 @@ impl TestElectrumWallet {
         match self.network_id {
             NetworkId::Elements(_) => {
                 let asset =
-                    asset.unwrap_or(self.network.policy_asset.as_ref().unwrap().to_string());
+                    asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
                 *balance.get(&asset).unwrap_or(&0i64) as u64
             }
             NetworkId::Bitcoin(_) => *balance.get("btc").unwrap() as u64,
@@ -426,7 +426,7 @@ impl TestElectrumWallet {
     }
 
     pub fn fund_asset(&mut self) -> String {
-        assert!(self.network.liquid);
+        assert!(self.config.liquid);
 
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
@@ -471,7 +471,7 @@ impl TestElectrumWallet {
     pub fn policy_asset(&self) -> Option<String> {
         match self.network_id {
             NetworkId::Bitcoin(_) => None,
-            NetworkId::Elements(_) => self.network.policy_asset.clone(),
+            NetworkId::Elements(_) => self.config.policy_asset.clone(),
         }
     }
 
@@ -486,7 +486,7 @@ impl TestElectrumWallet {
         let init_sat = self.balance_asset(asset.clone());
         let init_node_balance = self.node_balance(asset.clone());
         let mut create_opt = CreateTransactionOpt::default();
-        let fee_rate = match self.network.id() {
+        let fee_rate = match self.config.network_id() {
             NetworkId::Elements(_) => 100,
             NetworkId::Bitcoin(_) => 1000,
         };
@@ -512,7 +512,7 @@ impl TestElectrumWallet {
 
         self.tx_checks(&tx);
 
-        let fee = if asset.is_none() || asset == self.network.policy_asset {
+        let fee = if asset.is_none() || asset == self.config.policy_asset {
             tx_details.fee
         } else {
             0
@@ -544,7 +544,7 @@ impl TestElectrumWallet {
     }
 
     pub fn send_tx_to_unconf(&mut self) {
-        assert!(self.network.liquid);
+        assert!(self.config.liquid);
         let init_sat = self.balance_btc();
         let ap = self.electrum_wallet.address().unwrap();
         let unconf_address = to_unconfidential(ap.address);

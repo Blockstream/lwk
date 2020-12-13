@@ -10,7 +10,7 @@ const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct Network {
+pub struct Config {
     pub development: bool,
     pub liquid: bool,
     pub mainnet: bool,
@@ -36,8 +36,8 @@ pub enum NetworkId {
     Bitcoin(bitcoin::Network),
 }
 
-impl Network {
-    pub fn id(&self) -> NetworkId {
+impl Config {
+    pub fn network_id(&self) -> NetworkId {
         match (self.liquid, self.mainnet, self.development) {
             (true, true, false) => NetworkId::Elements(ElementsNetwork::Liquid),
             (true, false, true) => NetworkId::Elements(ElementsNetwork::ElementsRegtest),

@@ -61,8 +61,11 @@ pub fn spv_verify_tx(input: &SPVVerifyTx) -> Result<SPVVerifyResult, Error> {
     info!("spv_verify_tx {:?}", input);
     let txid = Txid::from_hex(&input.txid)?;
 
-    let mut cache: VerifiedCache =
-        VerifiedCache::new(&input.path, input.config.network_id(), &input.encryption_key)?;
+    let mut cache: VerifiedCache = VerifiedCache::new(
+        &input.path,
+        input.config.network_id(),
+        &input.encryption_key,
+    )?;
     if cache.contains(&txid)? {
         info!("verified cache hit for {}", txid);
         return Ok(SPVVerifyResult::Verified);

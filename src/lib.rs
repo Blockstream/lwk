@@ -110,7 +110,8 @@ impl Tipper {
         let height = header.height as u32;
         let tip_height = self.store.read()?.cache.tip.0;
         if height != tip_height {
-            let hash = BEBlockHeader::deserialize(&header.header, self.config.network_id())?.block_hash();
+            let hash =
+                BEBlockHeader::deserialize(&header.header, self.config.network_id())?.block_hash();
             info!("saving in store new tip {:?}", (height, hash));
             self.store.write()?.cache.tip = (height, hash);
         }
@@ -334,7 +335,8 @@ impl Syncer {
                 client.batch_block_header_raw(heights_to_download.clone())?;
             let mut headers_downloaded: Vec<BEBlockHeader> = vec![];
             for vec in headers_bytes_downloaded {
-                headers_downloaded.push(BEBlockHeader::deserialize(&vec, self.config.network_id())?);
+                headers_downloaded
+                    .push(BEBlockHeader::deserialize(&vec, self.config.network_id())?);
             }
             info!("headers_downloaded {:?}", &headers_downloaded);
             for (header, height) in headers_downloaded
@@ -509,9 +511,7 @@ impl ElectrumWallet {
             info!("building built end");
             let fee_store = self.wallet.store.clone();
             match try_get_fee_estimates(&fee_client) {
-                Ok(fee_estimates) => {
-                    fee_store.write().unwrap().cache.fee_estimates = fee_estimates
-                }
+                Ok(fee_estimates) => fee_store.write().unwrap().cache.fee_estimates = fee_estimates,
                 Err(e) => warn!("can't update fee estimates {:?}", e),
             };
         }

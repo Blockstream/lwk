@@ -10,8 +10,8 @@ use elements;
 use bewallet::be::{BETransaction, DUST_VALUE};
 use bewallet::error::Error;
 use bewallet::model::*;
-use bewallet::ElectrumWallet;
 use bewallet::Config;
+use bewallet::ElectrumWallet;
 use bewallet::{ElementsNetwork, NetworkId};
 
 use log::LevelFilter;
@@ -377,8 +377,7 @@ impl TestElectrumWallet {
         info!("balance: {:?}", balance);
         match self.network_id {
             NetworkId::Elements(_) => {
-                let asset =
-                    asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
+                let asset = asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
                 *balance.get(&asset).unwrap_or(&0i64) as u64
             }
             NetworkId::Bitcoin(_) => *balance.get("btc").unwrap() as u64,

@@ -12,7 +12,7 @@ use log::{info, trace};
 use rand::Rng;
 
 use crate::model::{AddressPointer, CreateTransactionOpt, Settings, TransactionDetails, TXO};
-use crate::network::{ElementsNetwork, Config, NetworkId};
+use crate::network::{Config, ElementsNetwork, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
 use wally::{
@@ -461,8 +461,7 @@ impl WalletCtx {
             let all_utxos: Vec<&TXO> = utxos.iter().filter(|u| u.asset == asset).collect();
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
-            let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset
-            {
+            let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset {
                 let mut dummy_tx = BETransaction::new(self.config.network_id());
                 for utxo in all_utxos.iter() {
                     dummy_tx.add_input(utxo.outpoint.clone());

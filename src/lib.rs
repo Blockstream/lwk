@@ -23,7 +23,6 @@ use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails,
 
 use crate::be::*;
 use crate::headers::liquid::Verifier;
-use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
 pub use crate::network::Config;
@@ -32,7 +31,6 @@ pub use crate::{ElementsNetwork, NetworkId};
 
 use log::{debug, info, trace, warn};
 
-use bitcoin::blockdata::constants::DIFFCHANGE_INTERVAL;
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::{BlockHash, Script, Txid};
@@ -59,7 +57,7 @@ struct Tipper {
 
 struct Headers {
     pub store: Store,
-    pub checker: ChainOrVerifier,
+    pub verifier: Verifier,
 }
 
 fn determine_electrum_url(
@@ -118,32 +116,6 @@ impl Tipper {
 }
 
 impl Headers {
-    pub fn height(&self) -> u32 {
-        match &self.checker {
-            ChainOrVerifier::Chain(chain) => chain.height(),
-            _ => 0,
-        }
-    }
-
-    pub fn ask(&mut self, chunk_size: usize, client: &Client) -> Result<usize, Error> {
-        if let ChainOrVerifier::Chain(chain) = &mut self.checker {
-            info!(
-                "asking headers, current height:{} chunk_size:{} ",
-                chain.height(),
-                chunk_size
-            );
-            let headers = client
-                .block_headers(chain.height() as usize + 1, chunk_size)?
-                .headers;
-            let len = headers.len();
-            chain.push(headers)?;
-            Ok(len)
-        } else {
-            // Liquid doesn't need to download the header's chain
-            Ok(0)
-        }
-    }
-
     pub fn get_proofs(&mut self, client: &Client) -> Result<usize, Error> {
         let store_read = self.store.read()?;
         let needs_proof: Vec<(Txid, u32)> = self
@@ -162,19 +134,12 @@ impl Headers {
         let mut txs_verified = HashMap::new();
         for (txid, height) in needs_proof {
             let proof = client.transaction_get_merkle(&txid, height as usize)?;
-            let verified = match &self.checker {
-                ChainOrVerifier::Chain(chain) => {
-                    chain.verify_tx_proof(&txid, height, proof).is_ok()
-                }
-                ChainOrVerifier::Verifier(verifier) => {
-                    if let Some(BEBlockHeader::Elements(header)) =
-                        self.store.read()?.cache.headers.get(&height)
-                    {
-                        verifier.verify_tx_proof(&txid, proof, &header).is_ok()
-                    } else {
-                        false
-                    }
-                }
+            let verified = if let Some(BEBlockHeader::Elements(header)) =
+                self.store.read()?.cache.headers.get(&height)
+            {
+                self.verifier.verify_tx_proof(&txid, proof, &header).is_ok()
+            } else {
+                false
             };
             if verified {
                 info!("proof for {} verified!", txid);
@@ -187,13 +152,6 @@ impl Headers {
         let proofs_done = txs_verified.len();
         self.store.write()?.cache.txs_verif.extend(txs_verified);
         Ok(proofs_done)
-    }
-
-    pub fn remove(&mut self, headers: u32) -> Result<(), Error> {
-        if let ChainOrVerifier::Chain(chain) = &mut self.checker {
-            chain.remove(headers)?;
-        }
-        Ok(())
     }
 }
 
@@ -530,55 +488,18 @@ impl ElectrumWallet {
     }
 
     pub fn update_spv(&self) -> Result<(), Error> {
-        let checker = match self.config.network_id() {
-            NetworkId::Elements(network) => {
-                let verifier = Verifier::new(network);
-                ChainOrVerifier::Verifier(verifier)
-            }
+        let verifier = match self.config.network_id() {
+            NetworkId::Elements(network) => Verifier::new(network),
             _ => panic!(),
         };
 
         let mut headers = Headers {
             store: self.wallet.store.clone(),
-            checker,
+            verifier,
         };
 
         self.update_tip()?;
-        let (tip, _) = self.wallet.store.read()?.cache.tip;
         if let Ok(client) = self.url.clone().build_client() {
-            loop {
-                let missing_blocks = 0.max(tip - headers.height());
-                let chunk_size = missing_blocks.min(DIFFCHANGE_INTERVAL) as usize;
-                info!(
-                    "missing_blocks {}, chunk_size: {}",
-                    missing_blocks, chunk_size
-                );
-                match headers.ask(chunk_size, &client) {
-                    Ok(headers_found) => {
-                        if headers_found == 0 {
-                            break;
-                        } else {
-                            info!("headers found: {}", headers_found);
-                        }
-                    }
-                    Err(Error::InvalidHeaders) => {
-                        info!("error invalid headers");
-                        // this should handle reorgs and also broke IO writes update
-                        if headers.remove(144).is_err() {
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        // usual error is because I reached the tip, trying asking half
-                        //TODO this is due to an esplora electrs bug, according to spec it should
-                        // just return available headers, remove when fix is deployed and change previous
-                        // break condition to headers_found < chunk_size
-                        info!("error while asking headers {}", e);
-                        break;
-                    }
-                }
-            }
-
             info!("getting proofs");
             match headers.get_proofs(&client) {
                 Ok(found) => {

@@ -1,6 +1,5 @@
 use crate::determine_electrum_url_from_net;
 use crate::error::Error;
-use crate::headers::bitcoin::HeadersChain;
 use crate::headers::liquid::Verifier;
 use crate::model::{SPVVerifyResult, SPVVerifyTx};
 use crate::NetworkId;
@@ -17,16 +16,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-pub mod bitcoin;
 pub mod liquid;
-
-pub enum ChainOrVerifier {
-    /// used for bitcoin networks
-    Chain(HeadersChain),
-
-    /// used for elements networks
-    Verifier(Verifier),
-}
 
 /// compute the merkle root from the merkle path of a tx in electrum format (note the hash.reverse())
 fn compute_merkle_root(txid: &Txid, merkle: GetMerkleRes) -> Result<TxMerkleNode, Error> {
@@ -75,39 +65,6 @@ pub fn spv_verify_tx(input: &SPVVerifyTx) -> Result<SPVVerifyResult, Error> {
     let client = url.build_client()?;
 
     match input.config.network_id() {
-        NetworkId::Bitcoin(bitcoin_network) => {
-            let mut path: PathBuf = (&input.path).into();
-            path.push(format!("headers_chain_{}", bitcoin_network));
-            let mut chain = HeadersChain::new(path, bitcoin_network)?;
-
-            if input.height < chain.height() {
-                info!(
-                    "chain height ({}) enough to verify, downloading proof",
-                    chain.height()
-                );
-                let proof = client.transaction_get_merkle(&txid, input.height as usize)?;
-                if chain.verify_tx_proof(&txid, input.height, proof).is_ok() {
-                    cache.write(&txid)?;
-                    Ok(SPVVerifyResult::Verified)
-                } else {
-                    Ok(SPVVerifyResult::NotVerified)
-                }
-            } else {
-                info!(
-                    "chain height ({}) not enough to verify, downloading 2016 headers",
-                    chain.height()
-                );
-                let headers_to_download = input.headers_to_download.unwrap_or(2016).min(2016);
-                let headers = client
-                    .block_headers(chain.height() as usize + 1, headers_to_download)?
-                    .headers;
-                if let Err(Error::InvalidHeaders) = chain.push(headers) {
-                    // handle reorgs
-                    chain.remove(144)?;
-                }
-                Ok(SPVVerifyResult::InProgress)
-            }
-        }
         NetworkId::Elements(elements_network) => {
             let proof = client.transaction_get_merkle(&txid, input.height as usize)?;
             let verifier = Verifier::new(elements_network);
@@ -120,6 +77,7 @@ pub fn spv_verify_tx(input: &SPVVerifyTx) -> Result<SPVVerifyResult, Error> {
                 Ok(SPVVerifyResult::NotVerified)
             }
         }
+        _ => panic!(),
     }
 }
 

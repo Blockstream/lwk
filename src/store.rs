@@ -76,7 +76,7 @@ pub struct RawStore {
 pub struct StoreMeta {
     pub cache: RawCache,
     pub store: RawStore,
-    master_blinding: Option<MasterBlindingKey>,
+    master_blinding: MasterBlindingKey,
     secp: Secp256k1<All>,
     network_id: NetworkId,
     path: PathBuf,
@@ -163,7 +163,7 @@ impl StoreMeta {
     pub fn new<P: AsRef<Path>>(
         path: P,
         xpub: ExtendedPubKey,
-        master_blinding: Option<MasterBlindingKey>,
+        master_blinding: MasterBlindingKey,
         network_id: NetworkId,
     ) -> Result<StoreMeta, Error> {
         let mut enc_key_data = vec![];
@@ -273,11 +273,7 @@ impl StoreMeta {
                             };
 
                             let script = p2shwpkh_script(&second_deriv.public_key);
-                            let blinding_key = self
-                                .master_blinding
-                                .as_ref()
-                                .unwrap()
-                                .derive_blinding_key(&script);
+                            let blinding_key = self.master_blinding.derive_blinding_key(&script);
                             let public_key =
                                 secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
                             let blinder = Some(public_key);
@@ -388,6 +384,7 @@ mod tests {
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::{Network, Txid};
+    use elements::slip77::MasterBlindingKey;
     use std::str::FromStr;
     use tempdir::TempDir;
 
@@ -401,11 +398,12 @@ mod tests {
                 .unwrap();
 
         let network_id = NetworkId::Bitcoin(Network::Testnet);
-        let mut store = StoreMeta::new(&dir, xpub, None, network_id).unwrap();
+        let master_blinding = MasterBlindingKey::new(&[0u8; 32]);
+        let mut store = StoreMeta::new(&dir, xpub, master_blinding.clone(), network_id).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, xpub, None, network_id).unwrap();
+        let store = StoreMeta::new(&dir, xpub, master_blinding, network_id).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 }

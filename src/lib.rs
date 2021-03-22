@@ -50,7 +50,7 @@ use rand::thread_rng;
 
 struct Syncer {
     pub store: Store,
-    pub master_blinding: Option<MasterBlindingKey>,
+    pub master_blinding: MasterBlindingKey,
     pub config: Config,
 }
 
@@ -436,11 +436,7 @@ impl Syncer {
                 Nonce::Confidential(_, _),
             ) => {
                 let script = output.script_pubkey.clone();
-                let blinding_key = self
-                    .master_blinding
-                    .as_ref()
-                    .unwrap()
-                    .derive_blinding_key(&script);
+                let blinding_key = self.master_blinding.derive_blinding_key(&script);
                 let rangeproof = output.witness.rangeproof.clone();
                 let value_commitment = elements::encode::serialize(&output.value);
                 let asset_commitment = elements::encode::serialize(&output.asset);

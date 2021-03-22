@@ -41,7 +41,7 @@ pub struct WalletCtx {
     pub config: Config,
     pub store: Store,
     pub xpub: ExtendedPubKey,
-    pub master_blinding: Option<MasterBlindingKey>,
+    pub master_blinding: MasterBlindingKey,
     pub change_max_deriv: u32,
 }
 
@@ -109,12 +109,8 @@ impl WalletCtx {
         let wallet_desc = format!("{}{:?}", xpub, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let master_blinding = if config.liquid {
-            let seed = mnemonic2seed(mnemonic)?;
-            Some(MasterBlindingKey::new(&seed))
-        } else {
-            None
-        };
+        let seed = mnemonic2seed(mnemonic)?;
+        let master_blinding = MasterBlindingKey::new(&seed);
 
         let mut path: PathBuf = data_root.into();
         if !path.exists() {
@@ -139,12 +135,6 @@ impl WalletCtx {
         })
     }
 
-    fn get_master_blinding_key(&self) -> &MasterBlindingKey {
-        self.master_blinding
-            .as_ref()
-            .expect("we are in elements but master blinding is None")
-    }
-
     fn derive_address(&self, xpub: &ExtendedPubKey, path: [u32; 2]) -> Result<BEAddress, Error> {
         let path: Vec<ChildNumber> = path
             .iter()
@@ -157,7 +147,7 @@ impl WalletCtx {
             )),
             NetworkId::Elements(network) => {
                 let script = p2shwpkh_script(&derived.public_key);
-                let blinding_key = self.get_master_blinding_key().derive_blinding_key(&script);
+                let blinding_key = self.master_blinding.derive_blinding_key(&script);
                 let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
                 let blinder = Some(public_key);
                 let addr = elements::Address::p2shwpkh(
@@ -861,7 +851,7 @@ impl WalletCtx {
                         let nonce = elements::encode::serialize(&output.nonce);
                         let blinding_pubkey = PublicKey::from_slice(&nonce).unwrap();
                         let blinding_key = self
-                            .get_master_blinding_key()
+                            .master_blinding
                             .derive_blinding_key(&output.script_pubkey);
                         let blinding_public_key =
                             secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);

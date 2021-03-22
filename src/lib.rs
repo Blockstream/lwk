@@ -16,14 +16,12 @@ use wally::asset_unblind;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
-use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::error::Error;
 use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
 use crate::be::*;
-use crate::headers::bitcoin::HeadersChain;
 use crate::headers::liquid::Verifier;
 use crate::headers::ChainOrVerifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
@@ -533,15 +531,11 @@ impl ElectrumWallet {
 
     pub fn update_spv(&self) -> Result<(), Error> {
         let checker = match self.config.network_id() {
-            NetworkId::Bitcoin(network) => {
-                let mut path: PathBuf = self.data_root.clone().into();
-                path.push(format!("headers_chain_{}", network));
-                ChainOrVerifier::Chain(HeadersChain::new(path, network)?)
-            }
             NetworkId::Elements(network) => {
                 let verifier = Verifier::new(network);
                 ChainOrVerifier::Verifier(verifier)
             }
+            _ => panic!(),
         };
 
         let mut headers = Headers {

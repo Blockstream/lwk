@@ -3,7 +3,6 @@ use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::{self, All, Message, Secp256k1};
-use bitcoin::util::address::{Address, Payload};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{BlockHash, PublicKey, SigHashType, Txid};
 use elements;
@@ -79,18 +78,14 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     let xprv = ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
 
     // BIP44: m / purpose' / coin_type' / account' / change / address_index
-    // coin_type = 0 bitcoin, 1 testnet, 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+    // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
     // slip44 suggest 1 for every testnet, so we are using it also for regtest
     let coin_type: u32 = match config.network_id() {
-        NetworkId::Bitcoin(bitcoin_network) => match bitcoin_network {
-            bitcoin::Network::Bitcoin => 0,
-            bitcoin::Network::Testnet => 1,
-            bitcoin::Network::Regtest => 1,
-        },
         NetworkId::Elements(elements_network) => match elements_network {
             ElementsNetwork::Liquid => 1776,
             ElementsNetwork::ElementsRegtest => 1,
         },
+        _ => panic!(),
     };
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
     let path_string = format!("m/49'/{}'/0'", coin_type);
@@ -141,9 +136,6 @@ impl WalletCtx {
             .collect();
         let derived = xpub.derive_pub(&self.secp, &path)?;
         match self.config.network_id() {
-            NetworkId::Bitcoin(network) => Ok(BEAddress::Bitcoin(
-                Address::p2shwpkh(&derived.public_key, network).unwrap(),
-            )),
             NetworkId::Elements(network) => {
                 let script = p2shwpkh_script(&derived.public_key);
                 let blinding_key = self.master_blinding.derive_blinding_key(&script);
@@ -157,6 +149,7 @@ impl WalletCtx {
 
                 Ok(BEAddress::Elements(addr))
             }
+            _ => panic!(),
         }
     }
 
@@ -335,10 +328,10 @@ impl WalletCtx {
         info!("start balance");
         let mut result = HashMap::new();
         match self.config.network_id() {
-            NetworkId::Bitcoin(_) => result.entry("btc".to_string()).or_insert(0),
             NetworkId::Elements(_) => result
                 .entry(self.config.policy_asset.as_ref().unwrap().clone())
                 .or_insert(0),
+            _ => panic!(),
         };
         for u in self.utxos()?.iter() {
             *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
@@ -354,28 +347,6 @@ impl WalletCtx {
         // eagerly check for address validity
         for address in opt.addressees.iter().map(|a| &a.address) {
             match self.config.network_id() {
-                NetworkId::Bitcoin(network) => {
-                    if let Ok(address) = bitcoin::Address::from_str(address) {
-                        info!("address.network:{} network:{}", address.network, network);
-                        if address.network == network
-                            || (address.network == bitcoin::Network::Testnet
-                                && network == bitcoin::Network::Regtest)
-                        {
-                            continue;
-                        }
-                        if let Payload::WitnessProgram {
-                            version: v,
-                            program: _p,
-                        } = &address.payload
-                        {
-                            // Do not support segwit greater than v0
-                            if v.to_u8() > 0 {
-                                return Err(Error::InvalidAddress);
-                            }
-                        }
-                    }
-                    return Err(Error::InvalidAddress);
-                }
                 NetworkId::Elements(network) => {
                     if let Ok(address) = elements::Address::from_str(address) {
                         info!(
@@ -389,6 +360,7 @@ impl WalletCtx {
                     }
                     return Err(Error::InvalidAddress);
                 }
+                _ => panic!(),
             }
         }
 
@@ -406,13 +378,13 @@ impl WalletCtx {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= be::DUST_VALUE {
                     match self.config.network_id() {
-                        NetworkId::Bitcoin(_) => return Err(Error::InvalidAmount),
                         NetworkId::Elements(_) => {
                             if address_amount.asset_tag == self.config.policy_asset {
                                 // we apply dust rules for liquid bitcoin as elements do
                                 return Err(Error::InvalidAmount);
                             }
                         }
+                        _ => panic!(),
                     }
                 }
             }
@@ -425,10 +397,7 @@ impl WalletCtx {
         }
 
         // convert from satoshi/kbyte to satoshi/byte
-        let default_value = match self.config.network_id() {
-            NetworkId::Bitcoin(_) => 1000,
-            NetworkId::Elements(_) => 100,
-        };
+        let default_value = 100;
         let fee_rate = (opt.fee_rate.unwrap_or(default_value) as f64) / 1000.0;
         info!("target fee_rate {:?} satoshi/byte", fee_rate);
 
@@ -513,15 +482,6 @@ impl WalletCtx {
             let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
 
             match self.config.network_id() {
-                NetworkId::Bitcoin(_) => {
-                    // UTXO with same script must be spent together
-                    for other_utxo in utxos.iter() {
-                        if other_utxo.script_pubkey == utxo.script_pubkey {
-                            used_utxo.insert(other_utxo.outpoint.clone());
-                            tx.add_input(other_utxo.outpoint.clone());
-                        }
-                    }
-                }
                 NetworkId::Elements(_) => {
                     // Don't spend same script together in liquid. This would allow an attacker
                     // to cheaply send assets without value to the target, which will have to
@@ -531,6 +491,7 @@ impl WalletCtx {
                     used_utxo.insert(utxo.outpoint.clone());
                     tx.add_input(utxo.outpoint.clone());
                 }
+                _ => panic!(),
             }
         }
 

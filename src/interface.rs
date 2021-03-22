@@ -121,7 +121,6 @@ impl WalletCtx {
         let store = Arc::new(RwLock::new(StoreMeta::new(
             &path,
             xpub,
-            master_blinding.clone(),
             config.network_id(),
         )?));
 

@@ -3,16 +3,16 @@ use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
-use crate::{ElementsNetwork, NetworkId};
+use crate::NetworkId;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use bitcoin::hashes::sha256;
 use bitcoin::hashes::Hash;
-use bitcoin::secp256k1::{self, All, Secp256k1};
+use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
-use bitcoin::{Address, BlockHash, Script, Transaction, Txid};
-use elements::{slip77::MasterBlindingKey, AddressParams, OutPoint};
-use log::{info, trace, warn};
+use bitcoin::{BlockHash, Script, Transaction, Txid};
+use elements::OutPoint;
+use log::{info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -76,7 +76,6 @@ pub struct RawStore {
 pub struct StoreMeta {
     pub cache: RawCache,
     pub store: RawStore,
-    master_blinding: MasterBlindingKey,
     secp: Secp256k1<All>,
     network_id: NetworkId,
     path: PathBuf,
@@ -163,7 +162,6 @@ impl StoreMeta {
     pub fn new<P: AsRef<Path>>(
         path: P,
         xpub: ExtendedPubKey,
-        master_blinding: MasterBlindingKey,
         network_id: NetworkId,
     ) -> Result<StoreMeta, Error> {
         let mut enc_key_data = vec![];
@@ -189,7 +187,6 @@ impl StoreMeta {
         Ok(StoreMeta {
             cache,
             store,
-            master_blinding,
             network_id,
             cipher,
             secp,
@@ -258,44 +255,7 @@ impl StoreMeta {
                     result.cached = false;
                     let second_path = [ChildNumber::from(j)];
                     let second_deriv = first_deriv.derive_pub(&self.secp, &second_path)?;
-                    // Note we are using regtest here because we are not interested in the address, only in script construction
-                    let script = match self.network_id {
-                        NetworkId::Bitcoin(network) => {
-                            let address =
-                                Address::p2shwpkh(&second_deriv.public_key, network).unwrap();
-                            trace!("{}/{} {}", int_or_ext as u32, j, address);
-                            address.script_pubkey()
-                        }
-                        NetworkId::Elements(network) => {
-                            let params = match network {
-                                ElementsNetwork::Liquid => &AddressParams::LIQUID,
-                                ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
-                            };
-
-                            let script = p2shwpkh_script(&second_deriv.public_key);
-                            let blinding_key = self.master_blinding.derive_blinding_key(&script);
-                            let public_key =
-                                secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
-                            let blinder = Some(public_key);
-
-                            let address = elements::Address::p2shwpkh(
-                                &second_deriv.public_key,
-                                blinder,
-                                params,
-                            );
-                            trace!(
-                                "{}/{} blinded address {}  blinder {:?}",
-                                int_or_ext as u32,
-                                j,
-                                address,
-                                blinder
-                            );
-                            assert_eq!(script, address.script_pubkey());
-                            address.script_pubkey()
-                        }
-                    };
-
-                    script
+                    p2shwpkh_script(&second_deriv.public_key)
                 }
             };
             result.value.push((script, path));
@@ -340,8 +300,8 @@ impl StoreMeta {
     pub fn fee_estimates(&self) -> Vec<FeeEstimate> {
         if self.cache.fee_estimates.is_empty() {
             let min_fee = match self.network_id {
-                NetworkId::Bitcoin(_) => 1000,
                 NetworkId::Elements(_) => 100,
+                _ => panic!(),
             };
             vec![FeeEstimate(min_fee); 25]
         } else {
@@ -380,11 +340,10 @@ impl StoreMeta {
 #[cfg(test)]
 mod tests {
     use crate::store::StoreMeta;
-    use crate::NetworkId;
+    use crate::{ElementsNetwork, NetworkId};
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::bip32::ExtendedPubKey;
-    use bitcoin::{Network, Txid};
-    use elements::slip77::MasterBlindingKey;
+    use bitcoin::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;
 
@@ -397,13 +356,12 @@ mod tests {
             Txid::from_hex("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let network_id = NetworkId::Bitcoin(Network::Testnet);
-        let master_blinding = MasterBlindingKey::new(&[0u8; 32]);
-        let mut store = StoreMeta::new(&dir, xpub, master_blinding.clone(), network_id).unwrap();
+        let network_id = NetworkId::Elements(ElementsNetwork::ElementsRegtest);
+        let mut store = StoreMeta::new(&dir, xpub, network_id).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, xpub, master_blinding, network_id).unwrap();
+        let store = StoreMeta::new(&dir, xpub, network_id).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 }

@@ -129,7 +129,11 @@ impl WalletCtx {
         })
     }
 
-    fn derive_address(&self, xpub: &ExtendedPubKey, path: [u32; 2]) -> Result<BEAddress, Error> {
+    fn derive_address(
+        &self,
+        xpub: &ExtendedPubKey,
+        path: [u32; 2],
+    ) -> Result<elements::Address, Error> {
         let path: Vec<ChildNumber> = path
             .iter()
             .map(|x| ChildNumber::Normal { index: *x })
@@ -147,7 +151,7 @@ impl WalletCtx {
                     address_params(network),
                 );
 
-                Ok(BEAddress::Elements(addr))
+                Ok(addr)
             }
             _ => panic!(),
         }

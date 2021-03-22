@@ -1,11 +1,9 @@
 use std::convert::TryInto;
 
-mod address;
 mod blockheader;
 mod outpoint;
 mod transaction;
 
-pub use address::*;
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::Script;

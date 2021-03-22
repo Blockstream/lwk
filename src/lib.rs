@@ -35,6 +35,7 @@ use bitcoin::secp256k1;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::{BlockHash, Script, Txid};
 
+use elements;
 use elements::confidential::{self, Asset, Nonce};
 use elements::slip77::MasterBlindingKey;
 
@@ -106,8 +107,9 @@ impl Tipper {
         let height = header.height as u32;
         let tip_height = self.store.read()?.cache.tip.0;
         if height != tip_height {
-            let hash =
-                BEBlockHeader::deserialize(&header.header, self.config.network_id())?.block_hash();
+            let block_header: elements::BlockHeader =
+                elements::encode::deserialize(&header.header)?;
+            let hash: BlockHash = block_header.block_hash();
             info!("saving in store new tip {:?}", (height, hash));
             self.store.write()?.cache.tip = (height, hash);
         }
@@ -134,9 +136,7 @@ impl Headers {
         let mut txs_verified = HashMap::new();
         for (txid, height) in needs_proof {
             let proof = client.transaction_get_merkle(&txid, height as usize)?;
-            let verified = if let Some(BEBlockHeader::Elements(header)) =
-                self.store.read()?.cache.headers.get(&height)
-            {
+            let verified = if let Some(header) = self.store.read()?.cache.headers.get(&height) {
                 self.verifier.verify_tx_proof(&txid, proof, &header).is_ok()
             } else {
                 false
@@ -273,7 +273,7 @@ impl Syncer {
         &self,
         heights_set: &HashSet<u32>,
         client: &Client,
-    ) -> Result<Vec<(u32, BEBlockHeader)>, Error> {
+    ) -> Result<Vec<(u32, elements::BlockHeader)>, Error> {
         let mut result = vec![];
         let mut heights_in_db: HashSet<u32> = self
             .store
@@ -289,10 +289,9 @@ impl Syncer {
         if !heights_to_download.is_empty() {
             let headers_bytes_downloaded =
                 client.batch_block_header_raw(heights_to_download.clone())?;
-            let mut headers_downloaded: Vec<BEBlockHeader> = vec![];
+            let mut headers_downloaded: Vec<elements::BlockHeader> = vec![];
             for vec in headers_bytes_downloaded {
-                headers_downloaded
-                    .push(BEBlockHeader::deserialize(&vec, self.config.network_id())?);
+                headers_downloaded.push(elements::encode::deserialize(&vec)?);
             }
             info!("headers_downloaded {:?}", &headers_downloaded);
             for (header, height) in headers_downloaded

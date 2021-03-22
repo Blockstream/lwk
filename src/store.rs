@@ -1,4 +1,4 @@
-use crate::be::{BEBlockHeader, BEOutPoint, BETransaction, BETransactions};
+use crate::be::{BEOutPoint, BETransaction, BETransactions};
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
@@ -11,7 +11,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use bitcoin::{BlockHash, Script, Transaction, Txid};
-use elements::OutPoint;
+use elements::{BlockHeader, OutPoint};
 use log::{info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -44,7 +44,7 @@ pub struct RawCache {
     pub heights: HashMap<Txid, Option<u32>>,
 
     /// contains headers at the height of my txs (used to show tx timestamps)
-    pub headers: HashMap<u32, BEBlockHeader>,
+    pub headers: HashMap<u32, BlockHeader>,
 
     /// unblinded values (only for liquid)
     pub unblinded: HashMap<OutPoint, Unblinded>,

@@ -1,13 +1,11 @@
 use std::convert::TryInto;
 
-mod blockheader;
 mod outpoint;
 mod transaction;
 
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::Script;
-pub use blockheader::*;
 pub use outpoint::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

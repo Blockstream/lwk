@@ -242,10 +242,9 @@ impl WalletCtx {
                 .all_txs
                 .get(tx_id)
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
-            let tx_txos: Vec<TXO> = match tx {
-                BETransaction::Elements(tx) => {
+            let tx_txos: Vec<TXO> = {
                     let policy_asset = self.config.policy_asset_id()?;
-                    tx.output
+                    tx.0.output
                         .clone()
                         .into_iter()
                         .enumerate()
@@ -285,8 +284,6 @@ impl WalletCtx {
                             None
                         })
                         .collect()
-                }
-                _ => panic!(),
             };
             txos.extend(tx_txos);
         }
@@ -391,13 +388,13 @@ impl WalletCtx {
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
             let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset {
-                let mut dummy_tx = BETransaction::new(self.config.network_id());
+                let mut dummy_tx = ETransaction::new();
                 for utxo in all_utxos.iter() {
                     dummy_tx.add_input(utxo.outpoint.clone());
                 }
                 let out = &opt.addressees[0]; // safe because we checked we have exactly one recipient
                 dummy_tx
-                    .add_output(&out.address, out.satoshi, out.asset_tag.clone())
+                    .add_output(&out.address, out.satoshi, out.asset_tag.clone().unwrap())
                     .map_err(|_| Error::InvalidAddress)?;
                 let estimated_fee = dummy_tx.estimated_fee(fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
                 total_amount_utxos
@@ -412,7 +409,7 @@ impl WalletCtx {
             opt.addressees[0].satoshi = to_send;
         }
 
-        let mut tx = BETransaction::new(self.config.network_id());
+        let mut tx = ETransaction::new();
         // transaction is created in 3 steps:
         // 1) adding requested outputs to tx outputs
         // 2) adding enough utxso to inputs such that tx outputs and estimated fees are covered
@@ -420,7 +417,7 @@ impl WalletCtx {
 
         // STEP 1) add the outputs requested for this transactions
         for out in opt.addressees.iter() {
-            tx.add_output(&out.address, out.satoshi, out.asset_tag.clone())
+            tx.add_output(&out.address, out.satoshi, out.asset_tag.clone().unwrap())
                 .map_err(|_| Error::InvalidAddress)?;
         }
 
@@ -490,7 +487,7 @@ impl WalletCtx {
                 "adding change to {} of {} asset {:?}",
                 &change_address, change.satoshi, change.asset
             );
-            tx.add_output(&change_address, change.satoshi, Some(change.asset.clone()))?;
+            tx.add_output(&change_address, change.satoshi, change.asset.clone())?;
         }
 
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption
@@ -562,27 +559,25 @@ impl WalletCtx {
 
     pub fn sign_with_mnemonic(
         &self,
-        be_tx: &mut BETransaction,
+        e_tx: &mut ETransaction,
         mnemonic: &str,
     ) -> Result<(), Error> {
         let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
-        self.sign_with_xprv(be_tx, xprv)
+        self.sign_with_xprv(e_tx, xprv)
     }
 
     pub fn sign_with_xprv(
         &self,
-        be_tx: &mut BETransaction,
+        tx: &mut ETransaction,
         xprv: ExtendedPrivKey,
     ) -> Result<(), Error> {
         info!("sign");
         let store_read = self.store.read()?;
-        match be_tx {
-            BETransaction::Elements(tx) => {
                 // FIXME: is blinding here the right thing to do?
-                self.blind_tx(tx)?;
+                self.blind_tx(&mut tx.0)?;
 
-                for i in 0..tx.input.len() {
-                    let prev_output = tx.input[i].previous_output;
+                for i in 0..tx.0.input.len() {
+                    let prev_output = tx.0.input[i].previous_output;
                     info!("input#{} prev_output:{:?}", i, prev_output);
                     let prev_tx = store_read.get_liquid_tx(&prev_output.txid)?;
                     let out = prev_tx.output[prev_output.vout as usize].clone();
@@ -594,13 +589,13 @@ impl WalletCtx {
                         .clone();
 
                     let (script_sig, witness) =
-                        self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv);
+                        self.internal_sign_elements(&tx.0, i, &derivation_path, out.value, xprv);
 
-                    tx.input[i].script_sig = script_sig;
-                    tx.input[i].witness.script_witness = witness;
+                    tx.0.input[i].script_sig = script_sig;
+                    tx.0.input[i].witness.script_witness = witness;
                 }
 
-                let fee: u64 = tx
+                let fee: u64 = tx.0
                     .output
                     .iter()
                     .filter(|o| o.is_fee())
@@ -608,19 +603,15 @@ impl WalletCtx {
                     .sum();
                 info!(
                     "transaction final size is {} bytes and {} vbytes and fee is {}",
-                    tx.get_size(),
-                    tx.get_weight() / 4,
+                    tx.0.get_size(),
+                    tx.0.get_weight() / 4,
                     fee
                 );
                 info!(
                     "FINALTX inputs:{} outputs:{}",
-                    tx.input.len(),
-                    tx.output.len()
+                    tx.0.input.len(),
+                    tx.0.output.len()
                 );
-            }
-            _ => panic!(),
-        };
-
         /*
         drop(store_read);
         let mut store_write = self.store.write()?;

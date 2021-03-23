@@ -157,7 +157,7 @@ impl Headers {
 
 #[derive(Default)]
 struct DownloadTxResult {
-    txs: Vec<(Txid, BETransaction)>,
+    txs: Vec<(Txid, ETransaction)>,
     unblinds: Vec<(elements::OutPoint, Unblinded)>,
 }
 
@@ -318,9 +318,9 @@ impl Syncer {
         let txs_to_download: Vec<&Txid> = history_txs_id.difference(&txs_in_db).collect();
         if !txs_to_download.is_empty() {
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
-            let mut txs_downloaded: Vec<BETransaction> = vec![];
+            let mut txs_downloaded: Vec<ETransaction> = vec![];
             for vec in txs_bytes_downloaded {
-                let tx = BETransaction::deserialize(&vec, self.config.network_id())?;
+                let tx = ETransaction::deserialize(&vec)?;
                 txs_downloaded.push(tx);
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
@@ -329,32 +329,28 @@ impl Syncer {
                 let txid = tx.txid();
                 txs_in_db.insert(txid);
 
-                if let BETransaction::Elements(tx) = &tx {
-                    info!("compute OutPoint Unblinded");
-                    for (i, output) in tx.output.iter().enumerate() {
-                        // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
-                        if self
-                            .store
-                            .read()?
-                            .cache
-                            .paths
-                            .contains_key(&output.script_pubkey)
-                            || scripts.contains_key(&output.script_pubkey)
-                        {
-                            let vout = i as u32;
-                            let outpoint = elements::OutPoint {
-                                txid: tx.txid(),
-                                vout,
-                            };
+                info!("compute OutPoint Unblinded");
+                for (i, output) in tx.0.output.iter().enumerate() {
+                    // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
+                    if self
+                        .store
+                        .read()?
+                        .cache
+                        .paths
+                        .contains_key(&output.script_pubkey)
+                        || scripts.contains_key(&output.script_pubkey)
+                    {
+                        let vout = i as u32;
+                        let outpoint = elements::OutPoint {
+                            txid: tx.txid(),
+                            vout,
+                        };
 
-                            match self.try_unblind(outpoint, output.clone()) {
-                                Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                                Err(_) => info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
-                            }
+                        match self.try_unblind(outpoint, output.clone()) {
+                            Ok(unblinded) => unblinds.push((outpoint, unblinded)),
+                            Err(_) => info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
                     }
-                } else {
-                    panic!()
                 }
                 tx.strip_witness();
                 txs.push((txid, tx));
@@ -365,7 +361,7 @@ impl Syncer {
             if !txs_to_download.is_empty() {
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
                 for vec in txs_bytes_downloaded {
-                    let mut tx = BETransaction::deserialize(&vec, self.config.network_id())?;
+                    let mut tx = ETransaction::deserialize(&vec)?;
                     tx.strip_witness();
                     txs.push((tx.txid(), tx));
                 }
@@ -573,11 +569,11 @@ impl ElectrumWallet {
         self.wallet.create_tx(opt)
     }
 
-    pub fn sign_tx(&self, transaction: &mut BETransaction, mnemonic: &str) -> Result<(), Error> {
+    pub fn sign_tx(&self, transaction: &mut ETransaction, mnemonic: &str) -> Result<(), Error> {
         self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
 
-    pub fn broadcast_tx(&self, transaction: &BETransaction) -> Result<(), Error> {
+    pub fn broadcast_tx(&self, transaction: &ETransaction) -> Result<(), Error> {
         info!("broadcast_transaction {:#?}", transaction.txid());
         let client = self.url.build_client()?;
         client.transaction_broadcast_raw(&transaction.serialize())?;

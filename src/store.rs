@@ -1,4 +1,4 @@
-use crate::be::{BETransaction, BETransactions};
+use crate::be::{ETransactions};
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
@@ -10,7 +10,7 @@ use bitcoin::hashes::sha256;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
-use bitcoin::{BlockHash, Script, Transaction, Txid};
+use bitcoin::{BlockHash, Script, Txid};
 use elements::{BlockHeader, OutPoint};
 use log::{info, warn};
 use rand::{thread_rng, Rng};
@@ -32,7 +32,7 @@ pub type Store = Arc<RwLock<StoreMeta>>;
 #[derive(Default, Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
-    pub all_txs: BETransactions,
+    pub all_txs: ETransactions,
 
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, DerivationPath>,
@@ -263,16 +263,9 @@ impl StoreMeta {
         Ok(result)
     }
 
-    pub fn get_bitcoin_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
-        match self.cache.all_txs.get(txid) {
-            Some(BETransaction::Bitcoin(tx)) => Ok(tx.clone()),
-            _ => Err(Error::Generic("expected bitcoin tx".to_string())),
-        }
-    }
-
     pub fn get_liquid_tx(&self, txid: &Txid) -> Result<elements::Transaction, Error> {
         match self.cache.all_txs.get(txid) {
-            Some(BETransaction::Elements(tx)) => Ok(tx.clone()),
+            Some(tx) => Ok(tx.0.clone()),
             _ => Err(Error::Generic("expected liquid tx".to_string())),
         }
     }
@@ -280,10 +273,7 @@ impl StoreMeta {
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
         let mut result = HashSet::new();
         for tx in self.cache.all_txs.values() {
-            let outpoints: Vec<OutPoint> = match tx {
-                BETransaction::Elements(tx) => tx.input.iter().map(|i| i.previous_output).collect(),
-                _ => panic!(),
-            };
+            let outpoints: Vec<OutPoint> = tx.0.input.iter().map(|i| i.previous_output).collect();
             result.extend(outpoints.into_iter());
         }
         Ok(result)

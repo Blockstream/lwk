@@ -7,7 +7,7 @@ use electrum_client::raw_client::{ElectrumPlaintextStream, RawClient};
 use electrum_client::ElectrumApi;
 use elements;
 
-use bewallet::be::{BETransaction, DUST_VALUE};
+use bewallet::be::{ETransaction, DUST_VALUE};
 use bewallet::error::Error;
 use bewallet::model::*;
 use bewallet::Config;
@@ -766,51 +766,46 @@ impl TestElectrumWallet {
     }
 
     /// performs checks on transactions, like checking for address reuse in outputs and on liquid confidential commitments inequality
-    pub fn tx_checks(&self, transaction: &BETransaction) {
-        match transaction {
-            BETransaction::Elements(tx) => {
-                let output_nofee: Vec<&elements::TxOut> =
-                    tx.output.iter().filter(|o| !o.is_fee()).collect();
-                for current in output_nofee.iter() {
-                    assert_eq!(
-                        1,
-                        output_nofee
-                            .iter()
-                            .filter(|o| o.script_pubkey == current.script_pubkey)
-                            .count(),
-                        "address reuse"
-                    ); // for example using the same change address for lbtc and asset change
-                    assert_eq!(
-                        1,
-                        output_nofee
-                            .iter()
-                            .filter(|o| o.asset == current.asset)
-                            .count(),
-                        "asset commitment equal"
-                    );
-                    assert_eq!(
-                        1,
-                        output_nofee
-                            .iter()
-                            .filter(|o| o.value == current.value)
-                            .count(),
-                        "value commitment equal"
-                    );
-                    assert_eq!(
-                        1,
-                        output_nofee
-                            .iter()
-                            .filter(|o| o.nonce == current.nonce)
-                            .count(),
-                        "nonce commitment equal"
-                    );
-                }
-                assert!(
-                    tx.output.last().unwrap().is_fee(),
-                    "last output is not a fee"
-                );
-            }
-            _ => panic!(),
+    pub fn tx_checks(&self, transaction: &ETransaction) {
+        let output_nofee: Vec<&elements::TxOut> =
+            transaction.0.output.iter().filter(|o| !o.is_fee()).collect();
+        for current in output_nofee.iter() {
+            assert_eq!(
+                1,
+                output_nofee
+                    .iter()
+                    .filter(|o| o.script_pubkey == current.script_pubkey)
+                    .count(),
+                "address reuse"
+            ); // for example using the same change address for lbtc and asset change
+            assert_eq!(
+                1,
+                output_nofee
+                    .iter()
+                    .filter(|o| o.asset == current.asset)
+                    .count(),
+                "asset commitment equal"
+            );
+            assert_eq!(
+                1,
+                output_nofee
+                    .iter()
+                    .filter(|o| o.value == current.value)
+                    .count(),
+                "value commitment equal"
+            );
+            assert_eq!(
+                1,
+                output_nofee
+                    .iter()
+                    .filter(|o| o.nonce == current.nonce)
+                    .count(),
+                "nonce commitment equal"
+            );
         }
+        assert!(
+            transaction.0.output.last().unwrap().is_fee(),
+            "last output is not a fee"
+        );
     }
 }

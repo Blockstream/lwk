@@ -250,7 +250,13 @@ impl WalletCtx {
                         .into_iter()
                         .enumerate()
                         .map(|(vout, output)| {
-                            (BEOutPoint::new_elements(tx.txid(), vout as u32), output)
+                            (
+                                elements::OutPoint {
+                                    txid: tx.txid(),
+                                    vout: vout as u32,
+                                },
+                                output,
+                            )
                         })
                         .filter_map(|(vout, output)| {
                             store_read
@@ -261,26 +267,20 @@ impl WalletCtx {
                         })
                         .filter(|(outpoint, _, _)| !spent.contains(&outpoint))
                         .filter_map(|(outpoint, output, path)| {
-                            if let BEOutPoint::Elements(el_outpoint) = outpoint {
-                                if let Some(unblinded) =
-                                    store_read.cache.unblinded.get(&el_outpoint)
-                                {
-                                    if unblinded.value < DUST_VALUE
-                                        && unblinded.asset == policy_asset
-                                    {
-                                        return None;
-                                    }
-                                    return Some(TXO::new(
-                                        outpoint,
-                                        unblinded.asset_hex(),
-                                        unblinded.value,
-                                        None,
-                                        None,
-                                        output.script_pubkey,
-                                        height.clone(),
-                                        path.clone(),
-                                    ));
+                            if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
+                                if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
+                                    return None;
                                 }
+                                return Some(TXO::new(
+                                    outpoint,
+                                    unblinded.asset_hex(),
+                                    unblinded.value,
+                                    None,
+                                    None,
+                                    output.script_pubkey,
+                                    height.clone(),
+                                    path.clone(),
+                                ));
                             }
                             None
                         })
@@ -426,7 +426,7 @@ impl WalletCtx {
 
         // STEP 2) add utxos until tx outputs are covered (including fees) or fail
         let store_read = self.store.read()?;
-        let mut used_utxo: HashSet<BEOutPoint> = HashSet::new();
+        let mut used_utxo: HashSet<elements::OutPoint> = HashSet::new();
         loop {
             let mut needs = tx.needs(
                 fee_rate,

@@ -1,4 +1,4 @@
-use crate::be::{BEOutPoint, BETransaction, BETransactions};
+use crate::be::{BETransaction, BETransactions};
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
@@ -277,20 +277,12 @@ impl StoreMeta {
         }
     }
 
-    pub fn spent(&self) -> Result<HashSet<BEOutPoint>, Error> {
+    pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
         let mut result = HashSet::new();
         for tx in self.cache.all_txs.values() {
-            let outpoints: Vec<BEOutPoint> = match tx {
-                BETransaction::Bitcoin(tx) => tx
-                    .input
-                    .iter()
-                    .map(|i| BEOutPoint::Bitcoin(i.previous_output))
-                    .collect(),
-                BETransaction::Elements(tx) => tx
-                    .input
-                    .iter()
-                    .map(|i| BEOutPoint::Elements(i.previous_output))
-                    .collect(),
+            let outpoints: Vec<OutPoint> = match tx {
+                BETransaction::Elements(tx) => tx.input.iter().map(|i| i.previous_output).collect(),
+                _ => panic!(),
             };
             result.extend(outpoints.into_iter());
         }

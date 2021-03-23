@@ -85,13 +85,9 @@ impl BETransaction {
         }
     }
 
-    pub fn previous_outputs(&self) -> Vec<BEOutPoint> {
+    pub fn previous_outputs(&self) -> Vec<elements::OutPoint> {
         match self {
-            Self::Elements(tx) => tx
-                .input
-                .iter()
-                .map(|i| BEOutPoint::Elements(i.previous_output))
-                .collect(),
+            Self::Elements(tx) => tx.input.iter().map(|i| i.previous_output).collect(),
             _ => panic!(),
         }
     }
@@ -328,10 +324,7 @@ impl BETransaction {
                         .get_previous_output_asset_hex(input.previous_output, unblinded)
                         .unwrap();
                     let value = all_txs
-                        .get_previous_output_value(
-                            &BEOutPoint::Elements(input.previous_output),
-                            unblinded,
-                        )
+                        .get_previous_output_value(&input.previous_output, unblinded)
                         .unwrap();
                     *inputs.entry(asset_hex).or_insert(0) += value;
                 }
@@ -391,10 +384,7 @@ impl BETransaction {
                         .get_previous_output_asset_hex(input.previous_output, unblinded)
                         .unwrap();
                     let value = all_txs
-                        .get_previous_output_value(
-                            &BEOutPoint::Elements(input.previous_output),
-                            unblinded,
-                        )
+                        .get_previous_output_value(&input.previous_output, unblinded)
                         .unwrap();
                     *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
                 }
@@ -438,9 +428,9 @@ impl BETransaction {
         Ok(())
     }
 
-    pub fn add_input(&mut self, outpoint: BEOutPoint) {
-        match (outpoint, self) {
-            (BEOutPoint::Elements(outpoint), BETransaction::Elements(tx)) => {
+    pub fn add_input(&mut self, outpoint: elements::OutPoint) {
+        match self {
+            BETransaction::Elements(tx) => {
                 let new_in = elements::TxIn {
                     previous_output: outpoint,
                     is_pegin: false,
@@ -452,7 +442,7 @@ impl BETransaction {
                 };
                 tx.input.push(new_in);
             }
-            _ => panic!("unexpected mix of bitcoin and elements types"),
+            _ => panic!(),
         }
     }
 
@@ -488,7 +478,7 @@ impl BETransaction {
                     let sum_inputs: u64 = tx
                         .input
                         .iter()
-                        .map(|i| BEOutPoint::Elements(i.previous_output))
+                        .map(|i| i.previous_output)
                         .filter_map(|o| all_txs.get_previous_output_value(&o, all_unblinded))
                         .sum();
 
@@ -600,19 +590,22 @@ impl DerefMut for BETransactions {
     }
 }
 impl BETransactions {
-    pub fn get_previous_output_script_pubkey(&self, outpoint: &BEOutPoint) -> Option<Script> {
+    pub fn get_previous_output_script_pubkey(
+        &self,
+        outpoint: &elements::OutPoint,
+    ) -> Option<Script> {
         self.0
-            .get(&outpoint.txid())
-            .map(|tx| tx.output_script(outpoint.vout()))
+            .get(&outpoint.txid)
+            .map(|tx| tx.output_script(outpoint.vout))
     }
     pub fn get_previous_output_value(
         &self,
-        outpoint: &BEOutPoint,
+        outpoint: &elements::OutPoint,
         all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
     ) -> Option<u64> {
         self.0
-            .get(&outpoint.txid())
-            .map(|tx| tx.output_value(outpoint.vout(), &all_unblinded))
+            .get(&outpoint.txid)
+            .map(|tx| tx.output_value(outpoint.vout, &all_unblinded))
     }
 
     pub fn get_previous_output_asset_hex(

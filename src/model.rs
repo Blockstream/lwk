@@ -1,10 +1,11 @@
-use crate::be::{AssetId, BEOutPoint, BETransaction};
+use crate::be::{AssetId, BETransaction};
 use bitcoin::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::util::bip32::DerivationPath;
+use elements::OutPoint;
 use std::convert::TryInto;
 use std::fmt::Display;
 
@@ -12,7 +13,7 @@ pub type Balances = HashMap<String, i64>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {
-    pub outpoint: BEOutPoint,
+    pub outpoint: OutPoint,
     pub asset: String,                  // Use better type
     pub satoshi: u64,                   // aka amount, value
     pub asset_blinder: Option<String>,  // FIXME
@@ -24,7 +25,7 @@ pub struct TXO {
 
 impl TXO {
     pub fn new(
-        outpoint: BEOutPoint,
+        outpoint: OutPoint,
         asset: String,
         satoshi: u64,
         _asset_blinder: Option<String>,

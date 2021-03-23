@@ -810,18 +810,7 @@ impl TestElectrumWallet {
                     "last output is not a fee"
                 );
             }
-            BETransaction::Bitcoin(tx) => {
-                for current in tx.output.iter() {
-                    assert_eq!(
-                        1,
-                        tx.output
-                            .iter()
-                            .filter(|o| o.script_pubkey == current.script_pubkey)
-                            .count(),
-                        "address reuse"
-                    ); // for example using the same change address for lbtc and asset change
-                }
-            }
+            _ => panic!(),
         }
     }
 }

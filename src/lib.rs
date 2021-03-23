@@ -324,7 +324,7 @@ impl Syncer {
                 txs_downloaded.push(tx);
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
-            let mut previous_txs_to_download = HashSet::new();
+            let previous_txs_to_download = HashSet::new();
             for mut tx in txs_downloaded.into_iter() {
                 let txid = tx.txid();
                 txs_in_db.insert(txid);
@@ -354,10 +354,7 @@ impl Syncer {
                         }
                     }
                 } else {
-                    // download all previous output only for bitcoin (to calculate fee of incoming tx)
-                    for previous_txid in tx.previous_output_txids() {
-                        previous_txs_to_download.insert(previous_txid);
-                    }
+                    panic!()
                 }
                 tx.strip_witness();
                 txs.push((txid, tx));

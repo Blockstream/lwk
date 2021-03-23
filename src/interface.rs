@@ -1,8 +1,7 @@
 use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::secp256k1::{self, All, Message, Secp256k1};
+use bitcoin::secp256k1::{self, All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{BlockHash, PublicKey, SigHashType, Txid};
 use elements;
@@ -23,7 +22,6 @@ use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
 
 use crate::be::{self, *};
-use bitcoin::util::bip143::SigHashCache;
 use electrum_client::raw_client::RawClient;
 use electrum_client::Client;
 use elements::confidential::{Asset, Nonce, Value};
@@ -249,34 +247,6 @@ impl WalletCtx {
                 .get(tx_id)
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<TXO> = match tx {
-                BETransaction::Bitcoin(tx) => tx
-                    .output
-                    .clone()
-                    .into_iter()
-                    .enumerate()
-                    .filter(|(_, output)| output.value > DUST_VALUE)
-                    .map(|(vout, output)| (BEOutPoint::new_bitcoin(tx.txid(), vout as u32), output))
-                    .filter_map(|(vout, output)| {
-                        store_read
-                            .cache
-                            .paths
-                            .get(&output.script_pubkey)
-                            .map(|path| (vout, output, path))
-                    })
-                    .filter(|(outpoint, _, _)| !spent.contains(&outpoint))
-                    .map(|(outpoint, output, path)| {
-                        TXO::new(
-                            outpoint,
-                            "btc".to_string(),
-                            output.value,
-                            None,
-                            None,
-                            output.script_pubkey,
-                            height.clone(),
-                            path.clone(),
-                        )
-                    })
-                    .collect(),
                 BETransaction::Elements(tx) => {
                     let policy_asset = self.config.policy_asset_id()?;
                     tx.output
@@ -320,6 +290,7 @@ impl WalletCtx {
                         })
                         .collect()
                 }
+                _ => panic!(),
             };
             txos.extend(tx_txos);
         }
@@ -561,43 +532,6 @@ impl WalletCtx {
     // TODO when we can serialize psbt
     //pub fn sign(&self, psbt: PartiallySignedTransaction) -> Result<PartiallySignedTransaction, Error> { Err(Error::Generic("NotImplemented".to_string())) }
 
-    fn internal_sign_bitcoin(
-        &self,
-        tx: &Transaction,
-        input_index: usize,
-        path: &DerivationPath,
-        value: u64,
-        xprv: ExtendedPrivKey,
-    ) -> (Script, Vec<Vec<u8>>) {
-        let xprv = xprv.derive_priv(&self.secp, &path).unwrap();
-        let private_key = &xprv.private_key;
-        let public_key = &PublicKey::from_private_key(&self.secp, private_key);
-        let witness_script = p2pkh_script(public_key);
-
-        let hash = SigHashCache::new(tx).signature_hash(
-            input_index,
-            &witness_script,
-            value,
-            SigHashType::All,
-        );
-
-        let message = Message::from_slice(&hash.into_inner()[..]).unwrap();
-        let signature = self.secp.sign(&message, &private_key.key);
-
-        let mut signature = signature.serialize_der().to_vec();
-        signature.push(SigHashType::All as u8);
-
-        let script_sig = p2shwpkh_script_sig(public_key);
-        let witness = vec![signature, public_key.to_bytes()];
-        info!(
-            "added size len: script_sig:{} witness:{}",
-            script_sig.len(),
-            witness.iter().map(|v| v.len()).sum::<usize>()
-        );
-
-        (script_sig, witness)
-    }
-
     pub fn internal_sign_elements(
         &self,
         tx: &elements::Transaction,
@@ -651,40 +585,6 @@ impl WalletCtx {
         info!("sign");
         let store_read = self.store.read()?;
         match be_tx {
-            BETransaction::Bitcoin(tx) => {
-                for i in 0..tx.input.len() {
-                    let prev_output = tx.input[i].previous_output;
-                    info!("input#{} prev_output:{:?}", i, prev_output);
-                    let prev_tx = store_read.get_bitcoin_tx(&prev_output.txid)?;
-                    let out = prev_tx.output[prev_output.vout as usize].clone();
-                    let derivation_path: DerivationPath = store_read
-                        .cache
-                        .paths
-                        .get(&out.script_pubkey)
-                        .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
-                        .clone();
-                    info!(
-                        "input#{} prev_output:{:?} derivation_path:{:?}",
-                        i, prev_output, derivation_path
-                    );
-
-                    let (script_sig, witness) =
-                        self.internal_sign_bitcoin(&tx, i, &derivation_path, out.value, xprv);
-
-                    tx.input[i].script_sig = script_sig;
-                    tx.input[i].witness = witness;
-                }
-                info!(
-                    "transaction final size is {} bytes and {} vbytes",
-                    tx.get_size(),
-                    tx.get_weight() / 4
-                );
-                info!(
-                    "FINALTX inputs:{} outputs:{}",
-                    tx.input.len(),
-                    tx.output.len()
-                );
-            }
             BETransaction::Elements(tx) => {
                 // FIXME: is blinding here the right thing to do?
                 self.blind_tx(tx)?;
@@ -726,6 +626,7 @@ impl WalletCtx {
                     tx.output.len()
                 );
             }
+            _ => panic!(),
         };
 
         /*

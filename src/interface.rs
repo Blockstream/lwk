@@ -517,7 +517,7 @@ impl WalletCtx {
             &store_read.cache.unblinded,
             &policy_asset,
         )?; // recompute exact fee_val from built tx
-        tx.add_fee_if_elements(fee_val, &policy_asset)?;
+        add_fee_output(&mut tx, fee_val, &policy_asset)?;
 
         info!("created tx fee {:?}", fee_val);
 

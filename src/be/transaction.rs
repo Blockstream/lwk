@@ -272,6 +272,21 @@ pub fn changes(
     result
 }
 
+pub fn add_fee_output(
+    tx: &mut elements::Transaction,
+    value: u64,
+    policy_asset: &Option<Asset>,
+) -> Result<(), Error> {
+    let policy_asset = policy_asset.ok_or_else(|| Error::Generic("Missing policy asset".into()))?;
+    let new_out = elements::TxOut {
+        asset: policy_asset,
+        value: confidential::Value::Explicit(value),
+        ..Default::default()
+    };
+    tx.output.push(new_out);
+    Ok(())
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -300,22 +315,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    pub fn add_fee_if_elements(
-        &mut self,
-        value: u64,
-        policy_asset: &Option<Asset>,
-    ) -> Result<(), Error> {
-        let policy_asset =
-            policy_asset.ok_or_else(|| Error::Generic("Missing policy asset".into()))?;
-        let new_out = elements::TxOut {
-            asset: policy_asset,
-            value: confidential::Value::Explicit(value),
-            ..Default::default()
-        };
-        self.0.output.push(new_out);
-        Ok(())
     }
 
     pub fn add_input(&mut self, outpoint: elements::OutPoint) {

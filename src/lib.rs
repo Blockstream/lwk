@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 pub mod be;
 pub mod error;
 pub mod headers;

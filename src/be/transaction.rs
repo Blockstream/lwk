@@ -372,32 +372,6 @@ impl ETransaction {
         })
     }
 
-    pub fn rbf_optin(&self) -> bool {
-        self.0.input.iter().any(|e| e.sequence < 0xffff_fffe)
-    }
-
-    pub fn is_redeposit(
-        &self,
-        all_scripts: &HashMap<Script, DerivationPath>,
-        all_txs: &ETransactions,
-    ) -> bool {
-        let previous_scripts: Vec<Script> = self
-            .0
-            .input
-            .iter()
-            .filter_map(|i| all_txs.get_previous_output_script_pubkey(&i.previous_output.into()))
-            .collect();
-
-        previous_scripts.len() == self.0.input.len()
-            && previous_scripts.iter().all(|i| all_scripts.contains_key(i))
-            && self
-                .0
-                .output
-                .iter()
-                .filter(|o| !o.is_fee())
-                .all(|o| all_scripts.contains_key(&o.script_pubkey))
-    }
-
     pub fn my_balance_changes(
         &self,
         all_unblinded: &HashMap<elements::OutPoint, Unblinded>,

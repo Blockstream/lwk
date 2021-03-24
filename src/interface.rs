@@ -400,7 +400,7 @@ impl WalletCtx {
                     out.asset_tag.clone().unwrap(),
                 )
                 .map_err(|_| Error::InvalidAddress)?;
-                let estimated_fee = dummy_tx.estimated_fee(fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
+                let estimated_fee = estimated_fee(&dummy_tx, fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
                 total_amount_utxos
                     .checked_sub(estimated_fee)
                     .ok_or_else(|| Error::InsufficientFunds)?
@@ -473,7 +473,8 @@ impl WalletCtx {
         }
 
         // STEP 3) adding change(s)
-        let estimated_fee = tx.estimated_fee(
+        let estimated_fee = estimated_fee(
+            &tx,
             fee_rate,
             tx.estimated_changes(
                 send_all,

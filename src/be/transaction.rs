@@ -100,6 +100,49 @@ pub fn scramble(tx: &mut elements::Transaction) {
     tx.output.shuffle(&mut rng);
 }
 
+/// estimates the fee of the final transaction given the `fee_rate`
+/// called when the tx is being built and miss things like signatures and changes outputs.
+pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8) -> u64 {
+    let mut tx = tx.clone();
+    for input in tx.input.iter_mut() {
+        let mut tx_wit = TxInWitness::default();
+        tx_wit.script_witness = vec![vec![0u8; 72], vec![0u8; 33]]; // considering signature sizes (72) and compressed public key (33)
+        input.witness = tx_wit;
+        input.script_sig = vec![0u8; 23].into(); // p2shwpkh redeem script size
+    }
+    for _ in 0..more_changes {
+        let new_out = elements::TxOut {
+            asset: confidential::Asset::Confidential(0u8, [0u8; 32]),
+            value: confidential::Value::Confidential(0u8, [0u8; 32]),
+            nonce: confidential::Nonce::Confidential(0u8, [0u8; 32]),
+            ..Default::default()
+        };
+        tx.output.push(new_out);
+    }
+    let sur_size = asset_surjectionproof_size(std::cmp::max(1, tx.input.len()));
+    for output in tx.output.iter_mut() {
+        output.witness = TxOutWitness {
+            surjection_proof: vec![0u8; sur_size],
+            rangeproof: vec![0u8; 4174],
+        };
+        output.script_pubkey = vec![0u8; 21].into();
+    }
+
+    tx.output.push(elements::TxOut::default()); // mockup for the explicit fee output
+    let vbytes = tx.get_weight() as f64 / 4.0;
+    let fee_val = (vbytes * fee_rate * 1.03) as u64; // increasing estimated fee by 3% to stay over relay fee, TODO improve fee estimation and lower this
+    info!(
+        "DUMMYTX inputs:{} outputs:{} num_changes:{} vbytes:{} sur_size:{} fee_val:{}",
+        tx.input.len(),
+        tx.output.len(),
+        more_changes,
+        vbytes,
+        sur_size,
+        fee_val
+    );
+    fee_val
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -128,49 +171,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    /// estimates the fee of the final transaction given the `fee_rate`
-    /// called when the tx is being built and miss things like signatures and changes outputs.
-    pub fn estimated_fee(&self, fee_rate: f64, more_changes: u8) -> u64 {
-        let mut tx = self.0.clone();
-        for input in tx.input.iter_mut() {
-            let mut tx_wit = TxInWitness::default();
-            tx_wit.script_witness = vec![vec![0u8; 72], vec![0u8; 33]]; // considering signature sizes (72) and compressed public key (33)
-            input.witness = tx_wit;
-            input.script_sig = vec![0u8; 23].into(); // p2shwpkh redeem script size
-        }
-        for _ in 0..more_changes {
-            let new_out = elements::TxOut {
-                asset: confidential::Asset::Confidential(0u8, [0u8; 32]),
-                value: confidential::Value::Confidential(0u8, [0u8; 32]),
-                nonce: confidential::Nonce::Confidential(0u8, [0u8; 32]),
-                ..Default::default()
-            };
-            tx.output.push(new_out);
-        }
-        let sur_size = asset_surjectionproof_size(std::cmp::max(1, tx.input.len()));
-        for output in tx.output.iter_mut() {
-            output.witness = TxOutWitness {
-                surjection_proof: vec![0u8; sur_size],
-                rangeproof: vec![0u8; 4174],
-            };
-            output.script_pubkey = vec![0u8; 21].into();
-        }
-
-        tx.output.push(elements::TxOut::default()); // mockup for the explicit fee output
-        let vbytes = tx.get_weight() as f64 / 4.0;
-        let fee_val = (vbytes * fee_rate * 1.03) as u64; // increasing estimated fee by 3% to stay over relay fee, TODO improve fee estimation and lower this
-        info!(
-            "DUMMYTX inputs:{} outputs:{} num_changes:{} vbytes:{} sur_size:{} fee_val:{}",
-            tx.input.len(),
-            tx.output.len(),
-            more_changes,
-            vbytes,
-            sur_size,
-            fee_val
-        );
-        fee_val
     }
 
     pub fn estimated_changes(
@@ -228,7 +228,8 @@ impl ETransaction {
             *inputs.entry(asset_hex).or_insert(0) += value;
         }
 
-        let estimated_fee = self.estimated_fee(
+        let estimated_fee = estimated_fee(
+            &self.0,
             fee_rate,
             self.estimated_changes(no_change, all_txs, unblinded),
         );

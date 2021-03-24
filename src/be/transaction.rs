@@ -287,6 +287,19 @@ pub fn add_fee_output(
     Ok(())
 }
 
+pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
+    let new_in = elements::TxIn {
+        previous_output: outpoint,
+        is_pegin: false,
+        has_issuance: false,
+        script_sig: Script::default(),
+        sequence: 0xffff_fffe, // nSequence is disabled, nLocktime is enabled, RBF is not signaled.
+        asset_issuance: Default::default(),
+        witness: TxInWitness::default(),
+    };
+    tx.input.push(new_in);
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -315,19 +328,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    pub fn add_input(&mut self, outpoint: elements::OutPoint) {
-        let new_in = elements::TxIn {
-            previous_output: outpoint,
-            is_pegin: false,
-            has_issuance: false,
-            script_sig: Script::default(),
-            sequence: 0xffff_fffe, // nSequence is disabled, nLocktime is enabled, RBF is not signaled.
-            asset_issuance: Default::default(),
-            witness: TxInWitness::default(),
-        };
-        self.0.input.push(new_in);
     }
 
     /// calculate transaction fee,

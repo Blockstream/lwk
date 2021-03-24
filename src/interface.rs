@@ -390,7 +390,7 @@ impl WalletCtx {
             let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset {
                 let mut dummy_tx = ETransaction::new();
                 for utxo in all_utxos.iter() {
-                    dummy_tx.add_input(utxo.outpoint.clone());
+                    add_input(&mut dummy_tx, utxo.outpoint.clone());
                 }
                 let out = &opt.addressees[0]; // safe because we checked we have exactly one recipient
                 add_output(
@@ -467,7 +467,7 @@ impl WalletCtx {
                     // While blinded address are required and not public knowledge,
                     // they are still available to whom transacted with us in the past
                     used_utxo.insert(utxo.outpoint.clone());
-                    tx.add_input(utxo.outpoint.clone());
+                    add_input(&mut tx, utxo.outpoint.clone());
                 }
                 _ => panic!(),
             }

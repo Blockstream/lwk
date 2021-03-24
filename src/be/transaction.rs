@@ -36,6 +36,15 @@ impl DerefMut for ETransaction {
     }
 }
 
+pub fn strip_witness(tx: &mut elements::Transaction) {
+    for input in tx.input.iter_mut() {
+        input.witness = TxInWitness::default();
+    }
+    for output in tx.output.iter_mut() {
+        output.witness = TxOutWitness::default();
+    }
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -56,15 +65,6 @@ impl ETransaction {
 
     pub fn serialize(&self) -> Vec<u8> {
         elm_ser(&self.0)
-    }
-
-    pub fn strip_witness(&mut self) {
-        for input in self.0.input.iter_mut() {
-            input.witness = TxInWitness::default();
-        }
-        for output in self.0.output.iter_mut() {
-            output.witness = TxOutWitness::default();
-        }
     }
 
     pub fn txid(&self) -> Txid {

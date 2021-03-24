@@ -349,7 +349,7 @@ impl Syncer {
                         }
                     }
                 }
-                tx.strip_witness();
+                strip_witness(&mut tx.0);
                 txs.push((txid, tx));
             }
 
@@ -359,7 +359,7 @@ impl Syncer {
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
                 for vec in txs_bytes_downloaded {
                     let mut tx = ETransaction::deserialize(&vec)?;
-                    tx.strip_witness();
+                    strip_witness(&mut tx.0);
                     txs.push((tx.txid(), tx));
                 }
             }

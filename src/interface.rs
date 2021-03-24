@@ -218,8 +218,13 @@ impl WalletCtx {
 
             trace!("tx_id {} spv_verified {:?}", tx_id, spv_verified);
 
-            let tx_details =
-                TransactionDetails::new(tx.clone(), balances, fee, **height, spv_verified);
+            let tx_details = TransactionDetails::new(
+                ETransaction(tx.clone()),
+                balances,
+                fee,
+                **height,
+                spv_verified,
+            );
 
             txs.push(tx_details);
         }
@@ -245,7 +250,7 @@ impl WalletCtx {
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<TXO> = {
                 let policy_asset = self.config.policy_asset_id()?;
-                tx.0.output
+                tx.output
                     .clone()
                     .into_iter()
                     .enumerate()

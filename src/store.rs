@@ -1,4 +1,3 @@
-use crate::be::ETransaction;
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
@@ -32,7 +31,7 @@ pub type Store = Arc<RwLock<StoreMeta>>;
 #[derive(Default, Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
-    pub all_txs: HashMap<Txid, ETransaction>,
+    pub all_txs: HashMap<Txid, elements::Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, DerivationPath>,
@@ -265,7 +264,7 @@ impl StoreMeta {
 
     pub fn get_liquid_tx(&self, txid: &Txid) -> Result<elements::Transaction, Error> {
         match self.cache.all_txs.get(txid) {
-            Some(tx) => Ok(tx.0.clone()),
+            Some(tx) => Ok(tx.clone()),
             _ => Err(Error::Generic("expected liquid tx".to_string())),
         }
     }
@@ -273,7 +272,7 @@ impl StoreMeta {
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
         let mut result = HashSet::new();
         for tx in self.cache.all_txs.values() {
-            let outpoints: Vec<OutPoint> = tx.0.input.iter().map(|i| i.previous_output).collect();
+            let outpoints: Vec<OutPoint> = tx.input.iter().map(|i| i.previous_output).collect();
             result.extend(outpoints.into_iter());
         }
         Ok(result)

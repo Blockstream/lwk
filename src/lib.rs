@@ -154,7 +154,7 @@ impl Headers {
 
 #[derive(Default)]
 struct DownloadTxResult {
-    txs: Vec<(Txid, ETransaction)>,
+    txs: Vec<(Txid, elements::Transaction)>,
     unblinds: Vec<(elements::OutPoint, Unblinded)>,
 }
 
@@ -315,9 +315,9 @@ impl Syncer {
         let txs_to_download: Vec<&Txid> = history_txs_id.difference(&txs_in_db).collect();
         if !txs_to_download.is_empty() {
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
-            let mut txs_downloaded: Vec<ETransaction> = vec![];
+            let mut txs_downloaded: Vec<elements::Transaction> = vec![];
             for vec in txs_bytes_downloaded {
-                let tx = ETransaction::deserialize(&vec)?;
+                let tx: elements::Transaction = elements::encode::deserialize(&vec)?;
                 txs_downloaded.push(tx);
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
@@ -327,7 +327,7 @@ impl Syncer {
                 txs_in_db.insert(txid);
 
                 info!("compute OutPoint Unblinded");
-                for (i, output) in tx.0.output.iter().enumerate() {
+                for (i, output) in tx.output.iter().enumerate() {
                     // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
                     if self
                         .store
@@ -349,7 +349,7 @@ impl Syncer {
                         }
                     }
                 }
-                strip_witness(&mut tx.0);
+                strip_witness(&mut tx);
                 txs.push((txid, tx));
             }
 
@@ -358,8 +358,8 @@ impl Syncer {
             if !txs_to_download.is_empty() {
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_to_download)?;
                 for vec in txs_bytes_downloaded {
-                    let mut tx = ETransaction::deserialize(&vec)?;
-                    strip_witness(&mut tx.0);
+                    let mut tx: elements::Transaction = elements::encode::deserialize(&vec)?;
+                    strip_witness(&mut tx);
                     txs.push((tx.txid(), tx));
                 }
             }

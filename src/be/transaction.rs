@@ -151,7 +151,7 @@ pub fn needs(
     fee_rate: f64,
     no_change: bool,
     policy_asset: Option<String>,
-    all_txs: &HashMap<Txid, ETransaction>,
+    all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Vec<AssetValue> {
     let policy_asset = policy_asset.expect("policy asset empty in elements");
@@ -203,7 +203,7 @@ pub fn needs(
 pub fn estimated_changes(
     tx: &elements::Transaction,
     send_all: bool,
-    all_txs: &HashMap<Txid, ETransaction>,
+    all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> u8 {
     let mut different_assets = HashSet::new();
@@ -225,7 +225,7 @@ pub fn changes(
     tx: &elements::Transaction,
     estimated_fee: u64,
     policy_asset: Option<String>,
-    all_txs: &HashMap<Txid, ETransaction>,
+    all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Vec<AssetValue> {
     let mut outputs_asset_amounts: HashMap<String, u64> = HashMap::new();
@@ -301,7 +301,7 @@ pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
 ///                       and use the outputs value that must be still unblinded
 pub fn fee(
     tx: &elements::Transaction,
-    all_txs: &HashMap<Txid, ETransaction>,
+    all_txs: &HashMap<Txid, elements::Transaction>,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
     policy_asset: &Option<Asset>,
 ) -> Result<u64, Error> {
@@ -403,7 +403,7 @@ impl ETransaction {
 }
 
 pub fn get_previous_output_value(
-    txs: &HashMap<Txid, ETransaction>,
+    txs: &HashMap<Txid, elements::Transaction>,
     outpoint: &elements::OutPoint,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Option<u64> {
@@ -412,7 +412,7 @@ pub fn get_previous_output_value(
 }
 
 pub fn get_previous_output_asset_hex(
-    txs: &HashMap<Txid, ETransaction>,
+    txs: &HashMap<Txid, elements::Transaction>,
     outpoint: elements::OutPoint,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Option<String> {

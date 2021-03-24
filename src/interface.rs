@@ -393,8 +393,7 @@ impl WalletCtx {
                     dummy_tx.add_input(utxo.outpoint.clone());
                 }
                 let out = &opt.addressees[0]; // safe because we checked we have exactly one recipient
-                dummy_tx
-                    .add_output(&out.address, out.satoshi, out.asset_tag.clone().unwrap())
+                add_output(&mut dummy_tx, &out.address, out.satoshi, out.asset_tag.clone().unwrap())
                     .map_err(|_| Error::InvalidAddress)?;
                 let estimated_fee = dummy_tx.estimated_fee(fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
                 total_amount_utxos
@@ -417,7 +416,7 @@ impl WalletCtx {
 
         // STEP 1) add the outputs requested for this transactions
         for out in opt.addressees.iter() {
-            tx.add_output(&out.address, out.satoshi, out.asset_tag.clone().unwrap())
+            add_output(&mut tx, &out.address, out.satoshi, out.asset_tag.clone().unwrap())
                 .map_err(|_| Error::InvalidAddress)?;
         }
 
@@ -487,7 +486,7 @@ impl WalletCtx {
                 "adding change to {} of {} asset {:?}",
                 &change_address, change.satoshi, change.asset
             );
-            tx.add_output(&change_address, change.satoshi, change.asset.clone())?;
+            add_output(&mut tx, &change_address, change.satoshi, change.asset.clone())?;
         }
 
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption

@@ -71,6 +71,29 @@ fn get_output_asset_hex(
     }
 }
 
+pub fn add_output(
+    tx: &mut elements::Transaction,
+    address: &str,
+    value: u64,
+    asset_hex: String,
+) -> Result<(), Error> {
+    let address = elements::Address::from_str(&address).map_err(|_| Error::InvalidAddress)?;
+    let blinding_pubkey = address.blinding_pubkey.ok_or(Error::InvalidAddress)?;
+    let bytes = blinding_pubkey.serialize();
+    let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();
+    let asset = asset_to_bin(&asset_hex).expect("invalid asset hex");
+    let asset_id = issuance::AssetId::from_slice(&asset)?;
+    let new_out = elements::TxOut {
+        asset: confidential::Asset::Explicit(asset_id),
+        value: confidential::Value::Explicit(value),
+        nonce: confidential::Nonce::Confidential(bytes[0], byte32),
+        script_pubkey: address.script_pubkey(),
+        witness: TxOutWitness::default(),
+    };
+    tx.output.push(new_out);
+    Ok(())
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -99,29 +122,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    pub fn add_output(
-        &mut self,
-        address: &str,
-        value: u64,
-        asset_hex: String,
-    ) -> Result<(), Error> {
-        let address = elements::Address::from_str(&address).map_err(|_| Error::InvalidAddress)?;
-        let blinding_pubkey = address.blinding_pubkey.ok_or(Error::InvalidAddress)?;
-        let bytes = blinding_pubkey.serialize();
-        let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();
-        let asset = asset_to_bin(&asset_hex).expect("invalid asset hex");
-        let asset_id = issuance::AssetId::from_slice(&asset)?;
-        let new_out = elements::TxOut {
-            asset: confidential::Asset::Explicit(asset_id),
-            value: confidential::Value::Explicit(value),
-            nonce: confidential::Nonce::Confidential(bytes[0], byte32),
-            script_pubkey: address.script_pubkey(),
-            witness: TxOutWitness::default(),
-        };
-        self.0.output.push(new_out);
-        Ok(())
     }
 
     pub fn scramble(&mut self) {

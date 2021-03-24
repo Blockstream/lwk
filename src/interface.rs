@@ -202,7 +202,7 @@ impl WalletCtx {
             )?;
             trace!("tx_id {} fee {}", tx_id, fee);
 
-            let balances = tx.my_balance_changes(&store_read.cache.unblinded);
+            let balances = my_balance_changes(&tx, &store_read.cache.unblinded);
             trace!("tx_id {} balances {:?}", tx_id, balances);
 
             let spv_verified = if self.config.spv_enabled.unwrap_or(false) {
@@ -523,7 +523,7 @@ impl WalletCtx {
 
         info!("created tx fee {:?}", fee_val);
 
-        let mut satoshi = tx.my_balance_changes(&store_read.cache.unblinded);
+        let mut satoshi = my_balance_changes(&tx, &store_read.cache.unblinded);
 
         for (_, v) in satoshi.iter_mut() {
             *v = v.abs();

@@ -243,47 +243,47 @@ impl WalletCtx {
                 .get(tx_id)
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<TXO> = {
-                    let policy_asset = self.config.policy_asset_id()?;
-                    tx.0.output
-                        .clone()
-                        .into_iter()
-                        .enumerate()
-                        .map(|(vout, output)| {
-                            (
-                                elements::OutPoint {
-                                    txid: tx.txid(),
-                                    vout: vout as u32,
-                                },
-                                output,
-                            )
-                        })
-                        .filter_map(|(vout, output)| {
-                            store_read
-                                .cache
-                                .paths
-                                .get(&output.script_pubkey)
-                                .map(|path| (vout, output, path))
-                        })
-                        .filter(|(outpoint, _, _)| !spent.contains(&outpoint))
-                        .filter_map(|(outpoint, output, path)| {
-                            if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
-                                if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
-                                    return None;
-                                }
-                                return Some(TXO::new(
-                                    outpoint,
-                                    unblinded.asset_hex(),
-                                    unblinded.value,
-                                    None,
-                                    None,
-                                    output.script_pubkey,
-                                    height.clone(),
-                                    path.clone(),
-                                ));
+                let policy_asset = self.config.policy_asset_id()?;
+                tx.0.output
+                    .clone()
+                    .into_iter()
+                    .enumerate()
+                    .map(|(vout, output)| {
+                        (
+                            elements::OutPoint {
+                                txid: tx.txid(),
+                                vout: vout as u32,
+                            },
+                            output,
+                        )
+                    })
+                    .filter_map(|(vout, output)| {
+                        store_read
+                            .cache
+                            .paths
+                            .get(&output.script_pubkey)
+                            .map(|path| (vout, output, path))
+                    })
+                    .filter(|(outpoint, _, _)| !spent.contains(&outpoint))
+                    .filter_map(|(outpoint, output, path)| {
+                        if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
+                            if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
+                                return None;
                             }
-                            None
-                        })
-                        .collect()
+                            return Some(TXO::new(
+                                outpoint,
+                                unblinded.asset_hex(),
+                                unblinded.value,
+                                None,
+                                None,
+                                output.script_pubkey,
+                                height.clone(),
+                                path.clone(),
+                            ));
+                        }
+                        None
+                    })
+                    .collect()
             };
             txos.extend(tx_txos);
         }
@@ -557,11 +557,7 @@ impl WalletCtx {
         (script_sig, witness)
     }
 
-    pub fn sign_with_mnemonic(
-        &self,
-        e_tx: &mut ETransaction,
-        mnemonic: &str,
-    ) -> Result<(), Error> {
+    pub fn sign_with_mnemonic(&self, e_tx: &mut ETransaction, mnemonic: &str) -> Result<(), Error> {
         let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
         self.sign_with_xprv(e_tx, xprv)
     }
@@ -573,45 +569,45 @@ impl WalletCtx {
     ) -> Result<(), Error> {
         info!("sign");
         let store_read = self.store.read()?;
-                // FIXME: is blinding here the right thing to do?
-                self.blind_tx(&mut tx.0)?;
+        // FIXME: is blinding here the right thing to do?
+        self.blind_tx(&mut tx.0)?;
 
-                for i in 0..tx.0.input.len() {
-                    let prev_output = tx.0.input[i].previous_output;
-                    info!("input#{} prev_output:{:?}", i, prev_output);
-                    let prev_tx = store_read.get_liquid_tx(&prev_output.txid)?;
-                    let out = prev_tx.output[prev_output.vout as usize].clone();
-                    let derivation_path: DerivationPath = store_read
-                        .cache
-                        .paths
-                        .get(&out.script_pubkey)
-                        .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
-                        .clone();
+        for i in 0..tx.0.input.len() {
+            let prev_output = tx.0.input[i].previous_output;
+            info!("input#{} prev_output:{:?}", i, prev_output);
+            let prev_tx = store_read.get_liquid_tx(&prev_output.txid)?;
+            let out = prev_tx.output[prev_output.vout as usize].clone();
+            let derivation_path: DerivationPath = store_read
+                .cache
+                .paths
+                .get(&out.script_pubkey)
+                .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
+                .clone();
 
-                    let (script_sig, witness) =
-                        self.internal_sign_elements(&tx.0, i, &derivation_path, out.value, xprv);
+            let (script_sig, witness) =
+                self.internal_sign_elements(&tx.0, i, &derivation_path, out.value, xprv);
 
-                    tx.0.input[i].script_sig = script_sig;
-                    tx.0.input[i].witness.script_witness = witness;
-                }
+            tx.0.input[i].script_sig = script_sig;
+            tx.0.input[i].witness.script_witness = witness;
+        }
 
-                let fee: u64 = tx.0
-                    .output
-                    .iter()
-                    .filter(|o| o.is_fee())
-                    .map(|o| o.minimum_value())
-                    .sum();
-                info!(
-                    "transaction final size is {} bytes and {} vbytes and fee is {}",
-                    tx.0.get_size(),
-                    tx.0.get_weight() / 4,
-                    fee
-                );
-                info!(
-                    "FINALTX inputs:{} outputs:{}",
-                    tx.0.input.len(),
-                    tx.0.output.len()
-                );
+        let fee: u64 =
+            tx.0.output
+                .iter()
+                .filter(|o| o.is_fee())
+                .map(|o| o.minimum_value())
+                .sum();
+        info!(
+            "transaction final size is {} bytes and {} vbytes and fee is {}",
+            tx.0.get_size(),
+            tx.0.get_weight() / 4,
+            fee
+        );
+        info!(
+            "FINALTX inputs:{} outputs:{}",
+            tx.0.input.len(),
+            tx.0.output.len()
+        );
         /*
         drop(store_read);
         let mut store_write = self.store.write()?;

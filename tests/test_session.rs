@@ -767,8 +767,12 @@ impl TestElectrumWallet {
 
     /// performs checks on transactions, like checking for address reuse in outputs and on liquid confidential commitments inequality
     pub fn tx_checks(&self, transaction: &ETransaction) {
-        let output_nofee: Vec<&elements::TxOut> =
-            transaction.0.output.iter().filter(|o| !o.is_fee()).collect();
+        let output_nofee: Vec<&elements::TxOut> = transaction
+            .0
+            .output
+            .iter()
+            .filter(|o| !o.is_fee())
+            .collect();
         for current in output_nofee.iter() {
             assert_eq!(
                 1,

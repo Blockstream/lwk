@@ -19,7 +19,7 @@ use crate::error::Error;
 use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
 use crate::be::*;
-use crate::headers::liquid::Verifier;
+use crate::headers::Verifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
 pub use crate::network::Config;

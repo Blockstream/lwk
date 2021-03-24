@@ -1,4 +1,4 @@
-use crate::be::{ETransactions};
+use crate::be::ETransactions;
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;

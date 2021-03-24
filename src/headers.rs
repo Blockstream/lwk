@@ -1,18 +1,19 @@
 use elements::{self, BlockExtData};
 
 use crate::error::Error;
-use crate::headers::compute_merkle_root;
 use crate::ElementsNetwork;
 use bitcoin::blockdata::opcodes::Class;
 use bitcoin::blockdata::script::Instruction;
 use bitcoin::blockdata::{opcodes, script};
 use bitcoin::hash_types::BlockHash;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::secp256k1::{Message, Secp256k1, Signature, VerifyOnly};
-use bitcoin::{PublicKey, Script, Txid};
+use bitcoin::{PublicKey, Script, TxMerkleNode, Txid};
 use electrum_client::GetMerkleRes;
 use log::info;
+
+use std::io::Write;
 
 /// liquid v1 block header verifier, not suitable for dynafed
 /// checks the challenge is exactly equal to the one present in block 1
@@ -29,6 +30,28 @@ const LIQUID_GENESIS_HASH: &'static str =
     "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003";
 const ELEMENTS_REGTEST_GENESIS_HASH: &'static str =
     "209577bda6bf4b5804bd46f8621580dd6d4e8bfa2d190e1c50e932492baca07d";
+
+/// compute the merkle root from the merkle path of a tx in electrum format (note the hash.reverse())
+fn compute_merkle_root(txid: &Txid, merkle: GetMerkleRes) -> Result<TxMerkleNode, Error> {
+    let mut pos = merkle.pos;
+    let mut current = txid.into_inner();
+
+    for mut hash in merkle.merkle {
+        let mut engine = sha256d::Hash::engine();
+        hash.reverse();
+        if pos % 2 == 0 {
+            engine.write(&current)?;
+            engine.write(&hash)?;
+        } else {
+            engine.write(&hash)?;
+            engine.write(&current)?;
+        }
+        current = sha256d::Hash::from_engine(engine).into_inner();
+        pos /= 2;
+    }
+
+    Ok(TxMerkleNode::from_slice(&current)?)
+}
 
 impl Verifier {
     pub fn new(network: ElementsNetwork) -> Self {
@@ -165,7 +188,7 @@ impl Verifier {
 
 #[cfg(test)]
 mod test {
-    use crate::headers::liquid::Verifier;
+    use crate::headers::Verifier;
     use crate::ElementsNetwork;
     use bitcoin::Script;
     use elements::encode::deserialize;

@@ -300,6 +300,46 @@ pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
     tx.input.push(new_in);
 }
 
+/// calculate transaction fee,
+/// for bitcoin it requires all previous output to get input values.
+/// for elements,
+///     for complete transactions looks at the explicit fee output,
+///     for incomplete tx (without explicit fee output) take the sum previous outputs value, previously unblinded
+///                       and use the outputs value that must be still unblinded
+pub fn fee(
+    tx: &elements::Transaction,
+    all_txs: &ETransactions,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    policy_asset: &Option<Asset>,
+) -> Result<u64, Error> {
+    Ok({
+        let has_fee = tx.output.iter().any(|o| o.is_fee());
+
+        if has_fee {
+            let policy_asset =
+                policy_asset.ok_or_else(|| Error::Generic("Missing policy asset".into()))?;
+            tx.output
+                .iter()
+                .filter(|o| o.is_fee())
+                .filter(|o| policy_asset == o.asset)
+                .map(|o| o.minimum_value()) // minimum_value used for extracting the explicit value (value is always explicit for fee)
+                .sum::<u64>()
+        } else {
+            // while we are not filtering assets, the following holds for valid tx because
+            // sum of input assets = sum of output assets
+            let sum_outputs: u64 = tx.output.iter().map(|o| o.minimum_value()).sum();
+            let sum_inputs: u64 = tx
+                .input
+                .iter()
+                .map(|i| i.previous_output)
+                .filter_map(|o| all_txs.get_previous_output_value(&o, all_unblinded))
+                .sum();
+
+            sum_inputs - sum_outputs
+        }
+    })
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -328,48 +368,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    /// calculate transaction fee,
-    /// for bitcoin it requires all previous output to get input values.
-    /// for elements,
-    ///     for complete transactions looks at the explicit fee output,
-    ///     for incomplete tx (without explicit fee output) take the sum previous outputs value, previously unblinded
-    ///                       and use the outputs value that must be still unblinded
-    pub fn fee(
-        &self,
-        all_txs: &ETransactions,
-        all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-        policy_asset: &Option<Asset>,
-    ) -> Result<u64, Error> {
-        Ok({
-            let has_fee = self.0.output.iter().any(|o| o.is_fee());
-
-            if has_fee {
-                let policy_asset =
-                    policy_asset.ok_or_else(|| Error::Generic("Missing policy asset".into()))?;
-                self.0
-                    .output
-                    .iter()
-                    .filter(|o| o.is_fee())
-                    .filter(|o| policy_asset == o.asset)
-                    .map(|o| o.minimum_value()) // minimum_value used for extracting the explicit value (value is always explicit for fee)
-                    .sum::<u64>()
-            } else {
-                // while we are not filtering assets, the following holds for valid tx because
-                // sum of input assets = sum of output assets
-                let sum_outputs: u64 = self.0.output.iter().map(|o| o.minimum_value()).sum();
-                let sum_inputs: u64 = self
-                    .0
-                    .input
-                    .iter()
-                    .map(|i| i.previous_output)
-                    .filter_map(|o| all_txs.get_previous_output_value(&o, all_unblinded))
-                    .sum();
-
-                sum_inputs - sum_outputs
-            }
-        })
     }
 
     pub fn my_balance_changes(

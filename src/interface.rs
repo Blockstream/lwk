@@ -194,7 +194,8 @@ impl WalletCtx {
                 .get(*tx_id)
                 .ok_or_else(fn_err(&format!("list_tx no tx {}", tx_id)))?;
 
-            let fee = tx.fee(
+            let fee = fee(
+                &tx,
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
                 &self.config.policy_asset().ok(),
@@ -512,7 +513,8 @@ impl WalletCtx {
         scramble(&mut tx);
 
         let policy_asset = self.config.policy_asset().ok();
-        let fee_val = tx.fee(
+        let fee_val = fee(
+            &tx,
             &store_read.cache.all_txs,
             &store_read.cache.unblinded,
             &policy_asset,

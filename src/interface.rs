@@ -484,7 +484,8 @@ impl WalletCtx {
                 &store_read.cache.unblinded,
             ),
         );
-        let changes = tx.changes(
+        let changes = changes(
+            &tx,
             estimated_fee,
             self.config.policy_asset.clone(),
             &store_read.cache.all_txs,

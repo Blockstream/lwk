@@ -223,6 +223,55 @@ pub fn estimated_changes(
     }
 }
 
+/// return a Vector with changes of this transaction
+/// requires inputs are greater than outputs for earch asset
+pub fn changes(
+    tx: &elements::Transaction,
+    estimated_fee: u64,
+    policy_asset: Option<String>,
+    all_txs: &ETransactions,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Vec<AssetValue> {
+    let mut outputs_asset_amounts: HashMap<String, u64> = HashMap::new();
+    for output in tx.output.iter() {
+        match (output.asset, output.value) {
+            (Asset::Explicit(asset), Value::Explicit(value)) => {
+                let asset_hex = asset_to_hex(&asset.into_inner());
+                *outputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
+            }
+            _ => panic!("asset and value should be explicit here"),
+        }
+    }
+
+    let mut inputs_asset_amounts: HashMap<String, u64> = HashMap::new();
+    for input in tx.input.iter() {
+        let asset_hex = all_txs
+            .get_previous_output_asset_hex(input.previous_output, unblinded)
+            .unwrap();
+        let value = all_txs
+            .get_previous_output_value(&input.previous_output, unblinded)
+            .unwrap();
+        *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
+    }
+    let mut result = vec![];
+    for (asset, value) in inputs_asset_amounts.iter() {
+        let mut sum = value - outputs_asset_amounts.remove(asset).unwrap_or(0);
+        if asset == policy_asset.as_ref().unwrap() {
+            // from a purely privacy perspective could make sense to always create the change output in liquid, so min change = 0
+            // however elements core use the dust anyway for 2 reasons: rebasing from core and economical considerations
+            sum -= estimated_fee;
+            if sum > DUST_VALUE {
+                // we apply dust rules for liquid bitcoin as elements do
+                result.push(AssetValue::new(asset.to_string(), sum));
+            }
+        } else if sum > 0 {
+            result.push(AssetValue::new(asset.to_string(), sum));
+        }
+    }
+    assert!(outputs_asset_amounts.is_empty());
+    result
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -251,55 +300,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    /// return a Vector with changes of this transaction
-    /// requires inputs are greater than outputs for earch asset
-    pub fn changes(
-        &self,
-        estimated_fee: u64,
-        policy_asset: Option<String>,
-        all_txs: &ETransactions,
-        unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> Vec<AssetValue> {
-        let mut outputs_asset_amounts: HashMap<String, u64> = HashMap::new();
-        for output in self.0.output.iter() {
-            match (output.asset, output.value) {
-                (Asset::Explicit(asset), Value::Explicit(value)) => {
-                    let asset_hex = asset_to_hex(&asset.into_inner());
-                    *outputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
-                }
-                _ => panic!("asset and value should be explicit here"),
-            }
-        }
-
-        let mut inputs_asset_amounts: HashMap<String, u64> = HashMap::new();
-        for input in self.0.input.iter() {
-            let asset_hex = all_txs
-                .get_previous_output_asset_hex(input.previous_output, unblinded)
-                .unwrap();
-            let value = all_txs
-                .get_previous_output_value(&input.previous_output, unblinded)
-                .unwrap();
-            *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
-        }
-        let mut result = vec![];
-        for (asset, value) in inputs_asset_amounts.iter() {
-            let mut sum = value - outputs_asset_amounts.remove(asset).unwrap_or(0);
-            if asset == policy_asset.as_ref().unwrap() {
-                // from a purely privacy perspective could make sense to always create the change output in liquid, so min change = 0
-                // however elements core use the dust anyway for 2 reasons: rebasing from core and economical considerations
-                sum -= estimated_fee;
-                if sum > DUST_VALUE {
-                    // we apply dust rules for liquid bitcoin as elements do
-                    result.push(AssetValue::new(asset.to_string(), sum));
-                }
-            } else if sum > 0 {
-                result.push(AssetValue::new(asset.to_string(), sum));
-            }
-        }
-        assert!(outputs_asset_amounts.is_empty());
-        result
     }
 
     pub fn add_fee_if_elements(

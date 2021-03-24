@@ -434,7 +434,8 @@ impl WalletCtx {
         let store_read = self.store.read()?;
         let mut used_utxo: HashSet<elements::OutPoint> = HashSet::new();
         loop {
-            let mut needs = tx.needs(
+            let mut needs = needs(
+                &tx,
                 fee_rate,
                 send_all,
                 self.config.policy_asset.clone(),
@@ -476,7 +477,8 @@ impl WalletCtx {
         let estimated_fee = estimated_fee(
             &tx,
             fee_rate,
-            tx.estimated_changes(
+            estimated_changes(
+                &tx,
                 send_all,
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,

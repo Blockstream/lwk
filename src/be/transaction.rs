@@ -143,6 +143,86 @@ pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8
     fee_val
 }
 
+/// return a Vector with the amount needed for this transaction to be valid
+/// for bitcoin it contains max 1 element eg ("btc", 100)
+/// for elements could contain more than 1 element, 1 for each asset, with the policy asset last
+pub fn needs(
+    tx: &elements::Transaction,
+    fee_rate: f64,
+    no_change: bool,
+    policy_asset: Option<String>,
+    all_txs: &ETransactions,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Vec<AssetValue> {
+    let policy_asset = policy_asset.expect("policy asset empty in elements");
+    let mut outputs: HashMap<String, u64> = HashMap::new();
+    for output in tx.output.iter() {
+        match (output.asset, output.value) {
+            (Asset::Explicit(asset), Value::Explicit(value)) => {
+                let asset_hex = asset_to_hex(&asset.into_inner());
+                *outputs.entry(asset_hex).or_insert(0) += value;
+            }
+            _ => panic!("asset and value should be explicit here"),
+        }
+    }
+
+    let mut inputs: HashMap<String, u64> = HashMap::new();
+
+    for input in tx.input.iter() {
+        let asset_hex = all_txs
+            .get_previous_output_asset_hex(input.previous_output, unblinded)
+            .unwrap();
+        let value = all_txs
+            .get_previous_output_value(&input.previous_output, unblinded)
+            .unwrap();
+        *inputs.entry(asset_hex).or_insert(0) += value;
+    }
+
+    let estimated_fee = estimated_fee(
+        &tx,
+        fee_rate,
+        estimated_changes(&tx, no_change, all_txs, unblinded),
+    );
+    *outputs.entry(policy_asset.clone()).or_insert(0) += estimated_fee;
+
+    let mut result = vec![];
+    for (asset, value) in outputs.iter() {
+        if let Some(sum) = value.checked_sub(inputs.remove(asset).unwrap_or(0)) {
+            if sum > 0 {
+                result.push(AssetValue::new(asset.to_string(), sum));
+            }
+        }
+    }
+
+    if let Some(index) = result.iter().position(|e| e.asset == policy_asset) {
+        let last_index = result.len() - 1;
+        if index != last_index {
+            result.swap(index, last_index); // put the policy asset last
+        }
+    }
+    result
+}
+
+pub fn estimated_changes(
+    tx: &elements::Transaction,
+    send_all: bool,
+    all_txs: &ETransactions,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> u8 {
+    let mut different_assets = HashSet::new();
+    for input in tx.input.iter() {
+        let asset_hex = all_txs
+            .get_previous_output_asset_hex(input.previous_output, unblinded)
+            .unwrap();
+        different_assets.insert(asset_hex.clone());
+    }
+    if different_assets.is_empty() {
+        0
+    } else {
+        different_assets.len() as u8 - send_all as u8
+    }
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -171,86 +251,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    pub fn estimated_changes(
-        &self,
-        send_all: bool,
-        all_txs: &ETransactions,
-        unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> u8 {
-        let mut different_assets = HashSet::new();
-        for input in self.0.input.iter() {
-            let asset_hex = all_txs
-                .get_previous_output_asset_hex(input.previous_output, unblinded)
-                .unwrap();
-            different_assets.insert(asset_hex.clone());
-        }
-        if different_assets.is_empty() {
-            0
-        } else {
-            different_assets.len() as u8 - send_all as u8
-        }
-    }
-
-    /// return a Vector with the amount needed for this transaction to be valid
-    /// for bitcoin it contains max 1 element eg ("btc", 100)
-    /// for elements could contain more than 1 element, 1 for each asset, with the policy asset last
-    pub fn needs(
-        &self,
-        fee_rate: f64,
-        no_change: bool,
-        policy_asset: Option<String>,
-        all_txs: &ETransactions,
-        unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> Vec<AssetValue> {
-        let policy_asset = policy_asset.expect("policy asset empty in elements");
-        let mut outputs: HashMap<String, u64> = HashMap::new();
-        for output in self.0.output.iter() {
-            match (output.asset, output.value) {
-                (Asset::Explicit(asset), Value::Explicit(value)) => {
-                    let asset_hex = asset_to_hex(&asset.into_inner());
-                    *outputs.entry(asset_hex).or_insert(0) += value;
-                }
-                _ => panic!("asset and value should be explicit here"),
-            }
-        }
-
-        let mut inputs: HashMap<String, u64> = HashMap::new();
-
-        for input in self.0.input.iter() {
-            let asset_hex = all_txs
-                .get_previous_output_asset_hex(input.previous_output, unblinded)
-                .unwrap();
-            let value = all_txs
-                .get_previous_output_value(&input.previous_output, unblinded)
-                .unwrap();
-            *inputs.entry(asset_hex).or_insert(0) += value;
-        }
-
-        let estimated_fee = estimated_fee(
-            &self.0,
-            fee_rate,
-            self.estimated_changes(no_change, all_txs, unblinded),
-        );
-        *outputs.entry(policy_asset.clone()).or_insert(0) += estimated_fee;
-
-        let mut result = vec![];
-        for (asset, value) in outputs.iter() {
-            if let Some(sum) = value.checked_sub(inputs.remove(asset).unwrap_or(0)) {
-                if sum > 0 {
-                    result.push(AssetValue::new(asset.to_string(), sum));
-                }
-            }
-        }
-
-        if let Some(index) = result.iter().position(|e| e.asset == policy_asset) {
-            let last_index = result.len() - 1;
-            if index != last_index {
-                result.swap(index, last_index); // put the policy asset last
-            }
-        }
-        result
     }
 
     /// return a Vector with changes of this transaction

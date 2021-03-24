@@ -94,6 +94,12 @@ pub fn add_output(
     Ok(())
 }
 
+pub fn scramble(tx: &mut elements::Transaction) {
+    let mut rng = thread_rng();
+    tx.input.shuffle(&mut rng);
+    tx.output.shuffle(&mut rng);
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -122,12 +128,6 @@ impl ETransaction {
 
     pub fn get_weight(&self) -> usize {
         self.0.get_weight()
-    }
-
-    pub fn scramble(&mut self) {
-        let mut rng = thread_rng();
-        self.0.input.shuffle(&mut rng);
-        self.0.output.shuffle(&mut rng);
     }
 
     /// estimates the fee of the final transaction given the `fee_rate`

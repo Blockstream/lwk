@@ -407,14 +407,6 @@ impl ETransaction {
     pub fn serialize(&self) -> Vec<u8> {
         elm_ser(&self.0)
     }
-
-    pub fn txid(&self) -> Txid {
-        self.0.txid()
-    }
-
-    pub fn get_weight(&self) -> usize {
-        self.0.get_weight()
-    }
 }
 
 #[derive(Default, Serialize, Deserialize)]

@@ -1,4 +1,4 @@
-use crate::be::ETransactions;
+use crate::be::ETransaction;
 use crate::be::{ScriptBatch, Unblinded};
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
@@ -32,7 +32,7 @@ pub type Store = Arc<RwLock<StoreMeta>>;
 #[derive(Default, Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
-    pub all_txs: ETransactions,
+    pub all_txs: HashMap<Txid, ETransaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, DerivationPath>,

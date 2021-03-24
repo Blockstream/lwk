@@ -151,7 +151,7 @@ pub fn needs(
     fee_rate: f64,
     no_change: bool,
     policy_asset: Option<String>,
-    all_txs: &ETransactions,
+    all_txs: &HashMap<Txid, ETransaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Vec<AssetValue> {
     let policy_asset = policy_asset.expect("policy asset empty in elements");
@@ -170,9 +170,8 @@ pub fn needs(
 
     for input in tx.input.iter() {
         let asset_hex =
-            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
-        let value =
-            get_previous_output_value(&all_txs.0, &input.previous_output, unblinded).unwrap();
+            get_previous_output_asset_hex(&all_txs, input.previous_output, unblinded).unwrap();
+        let value = get_previous_output_value(&all_txs, &input.previous_output, unblinded).unwrap();
         *inputs.entry(asset_hex).or_insert(0) += value;
     }
 
@@ -204,13 +203,13 @@ pub fn needs(
 pub fn estimated_changes(
     tx: &elements::Transaction,
     send_all: bool,
-    all_txs: &ETransactions,
+    all_txs: &HashMap<Txid, ETransaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> u8 {
     let mut different_assets = HashSet::new();
     for input in tx.input.iter() {
         let asset_hex =
-            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
+            get_previous_output_asset_hex(&all_txs, input.previous_output, unblinded).unwrap();
         different_assets.insert(asset_hex.clone());
     }
     if different_assets.is_empty() {
@@ -226,7 +225,7 @@ pub fn changes(
     tx: &elements::Transaction,
     estimated_fee: u64,
     policy_asset: Option<String>,
-    all_txs: &ETransactions,
+    all_txs: &HashMap<Txid, ETransaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Vec<AssetValue> {
     let mut outputs_asset_amounts: HashMap<String, u64> = HashMap::new();
@@ -243,9 +242,8 @@ pub fn changes(
     let mut inputs_asset_amounts: HashMap<String, u64> = HashMap::new();
     for input in tx.input.iter() {
         let asset_hex =
-            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
-        let value =
-            get_previous_output_value(&all_txs.0, &input.previous_output, unblinded).unwrap();
+            get_previous_output_asset_hex(&all_txs, input.previous_output, unblinded).unwrap();
+        let value = get_previous_output_value(&all_txs, &input.previous_output, unblinded).unwrap();
         *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
     }
     let mut result = vec![];
@@ -303,7 +301,7 @@ pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
 ///                       and use the outputs value that must be still unblinded
 pub fn fee(
     tx: &elements::Transaction,
-    all_txs: &ETransactions,
+    all_txs: &HashMap<Txid, ETransaction>,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
     policy_asset: &Option<Asset>,
 ) -> Result<u64, Error> {
@@ -327,7 +325,7 @@ pub fn fee(
                 .input
                 .iter()
                 .map(|i| i.previous_output)
-                .filter_map(|o| get_previous_output_value(&all_txs.0, &o, all_unblinded))
+                .filter_map(|o| get_previous_output_value(&all_txs, &o, all_unblinded))
                 .sum();
 
             sum_inputs - sum_outputs
@@ -404,28 +402,13 @@ impl ETransaction {
     }
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct ETransactions(HashMap<Txid, ETransaction>);
-
-impl Deref for ETransactions {
-    type Target = HashMap<Txid, ETransaction>;
-    fn deref(&self) -> &<Self as Deref>::Target {
-        &self.0
-    }
-}
-impl DerefMut for ETransactions {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 pub fn get_previous_output_value(
     txs: &HashMap<Txid, ETransaction>,
     outpoint: &elements::OutPoint,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Option<u64> {
     txs.get(&outpoint.txid)
-        .map(|tx| get_output_satoshi(&tx.0, outpoint.vout, &all_unblinded))
+        .map(|tx| get_output_satoshi(&tx, outpoint.vout, &all_unblinded))
 }
 
 pub fn get_previous_output_asset_hex(

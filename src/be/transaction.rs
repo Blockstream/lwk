@@ -45,6 +45,18 @@ pub fn strip_witness(tx: &mut elements::Transaction) {
     }
 }
 
+fn get_output_satoshi(
+    tx: &elements::Transaction,
+    vout: u32,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> u64 {
+    let outpoint = elements::OutPoint {
+        txid: tx.txid(),
+        vout,
+    };
+    all_unblinded.get(&outpoint).unwrap().value // TODO return Result<u64>?
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -89,18 +101,6 @@ impl ETransaction {
 
     pub fn output_len(&self) -> usize {
         self.0.output.len()
-    }
-
-    pub fn output_value(
-        &self,
-        vout: u32,
-        all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> u64 {
-        let outpoint = elements::OutPoint {
-            txid: self.0.txid(),
-            vout,
-        };
-        all_unblinded.get(&outpoint).unwrap().value // TODO return Result<u64>?
     }
 
     pub fn output_script(&self, vout: u32) -> Script {
@@ -512,7 +512,7 @@ impl ETransactions {
     ) -> Option<u64> {
         self.0
             .get(&outpoint.txid)
-            .map(|tx| tx.output_value(outpoint.vout, &all_unblinded))
+            .map(|tx| get_output_satoshi(&tx.0, outpoint.vout, &all_unblinded))
     }
 
     pub fn get_previous_output_asset_hex(

@@ -169,12 +169,10 @@ pub fn needs(
     let mut inputs: HashMap<String, u64> = HashMap::new();
 
     for input in tx.input.iter() {
-        let asset_hex = all_txs
-            .get_previous_output_asset_hex(input.previous_output, unblinded)
-            .unwrap();
-        let value = all_txs
-            .get_previous_output_value(&input.previous_output, unblinded)
-            .unwrap();
+        let asset_hex =
+            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
+        let value =
+            get_previous_output_value(&all_txs.0, &input.previous_output, unblinded).unwrap();
         *inputs.entry(asset_hex).or_insert(0) += value;
     }
 
@@ -211,9 +209,8 @@ pub fn estimated_changes(
 ) -> u8 {
     let mut different_assets = HashSet::new();
     for input in tx.input.iter() {
-        let asset_hex = all_txs
-            .get_previous_output_asset_hex(input.previous_output, unblinded)
-            .unwrap();
+        let asset_hex =
+            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
         different_assets.insert(asset_hex.clone());
     }
     if different_assets.is_empty() {
@@ -245,12 +242,10 @@ pub fn changes(
 
     let mut inputs_asset_amounts: HashMap<String, u64> = HashMap::new();
     for input in tx.input.iter() {
-        let asset_hex = all_txs
-            .get_previous_output_asset_hex(input.previous_output, unblinded)
-            .unwrap();
-        let value = all_txs
-            .get_previous_output_value(&input.previous_output, unblinded)
-            .unwrap();
+        let asset_hex =
+            get_previous_output_asset_hex(&all_txs.0, input.previous_output, unblinded).unwrap();
+        let value =
+            get_previous_output_value(&all_txs.0, &input.previous_output, unblinded).unwrap();
         *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
     }
     let mut result = vec![];
@@ -332,7 +327,7 @@ pub fn fee(
                 .input
                 .iter()
                 .map(|i| i.previous_output)
-                .filter_map(|o| all_txs.get_previous_output_value(&o, all_unblinded))
+                .filter_map(|o| get_previous_output_value(&all_txs.0, &o, all_unblinded))
                 .sum();
 
             sum_inputs - sum_outputs
@@ -423,34 +418,23 @@ impl DerefMut for ETransactions {
         &mut self.0
     }
 }
-impl ETransactions {
-    pub fn get_previous_output_script_pubkey(
-        &self,
-        outpoint: &elements::OutPoint,
-    ) -> Option<Script> {
-        self.0
-            .get(&outpoint.txid)
-            .map(|tx| tx.output[outpoint.vout as usize].script_pubkey.clone())
-    }
-    pub fn get_previous_output_value(
-        &self,
-        outpoint: &elements::OutPoint,
-        all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> Option<u64> {
-        self.0
-            .get(&outpoint.txid)
-            .map(|tx| get_output_satoshi(&tx.0, outpoint.vout, &all_unblinded))
-    }
 
-    pub fn get_previous_output_asset_hex(
-        &self,
-        outpoint: elements::OutPoint,
-        all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> Option<String> {
-        self.0
-            .get(&outpoint.txid)
-            .map(|tx| get_output_asset_hex(&tx, outpoint.vout, &all_unblinded).unwrap())
-    }
+pub fn get_previous_output_value(
+    txs: &HashMap<Txid, ETransaction>,
+    outpoint: &elements::OutPoint,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Option<u64> {
+    txs.get(&outpoint.txid)
+        .map(|tx| get_output_satoshi(&tx.0, outpoint.vout, &all_unblinded))
+}
+
+pub fn get_previous_output_asset_hex(
+    txs: &HashMap<Txid, ETransaction>,
+    outpoint: elements::OutPoint,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Option<String> {
+    txs.get(&outpoint.txid)
+        .map(|tx| get_output_asset_hex(&tx, outpoint.vout, &all_unblinded).unwrap())
 }
 
 //TODO remove this, `fn needs` could return BTreeMap<String, u64> instead

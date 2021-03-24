@@ -1,13 +1,12 @@
 use crate::be::*;
 use crate::error::Error;
 use crate::model::Balances;
-use crate::{ElementsNetwork, NetworkId};
 use bitcoin::hash_types::Txid;
 use bitcoin::Script;
 use elements::confidential::{Asset, Value};
 use elements::encode::deserialize as elm_des;
 use elements::encode::serialize as elm_ser;
-use elements::{confidential, issuance, AddressParams};
+use elements::{confidential, issuance};
 use elements::{TxInWitness, TxOutWitness};
 use log::{info, trace};
 use rand::seq::SliceRandom;
@@ -81,41 +80,6 @@ impl ETransaction {
 
     pub fn txid(&self) -> Txid {
         self.0.txid()
-    }
-
-    pub fn previous_outputs(&self) -> Vec<elements::OutPoint> {
-        self.0.input.iter().map(|i| i.previous_output).collect()
-    }
-
-    pub fn previous_output_txids(&self) -> Vec<Txid> {
-        self.0
-            .input
-            .iter()
-            .map(|i| i.previous_output.txid)
-            .collect()
-    }
-
-    pub fn input_len(&self) -> usize {
-        self.0.input.len()
-    }
-
-    pub fn output_len(&self) -> usize {
-        self.0.output.len()
-    }
-
-    pub fn output_address(&self, vout: u32, network: NetworkId) -> Option<String> {
-        match network {
-            NetworkId::Elements(network) => {
-                // Note we are returning the unconfidential address, because recipient blinding pub key is not in the transaction
-                let script = self.0.output[vout as usize].script_pubkey.clone();
-                let params = match network {
-                    ElementsNetwork::Liquid => &AddressParams::LIQUID,
-                    ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
-                };
-                elements::Address::from_script(&script, None, params).map(|a| a.to_string())
-            }
-            _ => panic!(),
-        }
     }
 
     pub fn output_asset_hex(

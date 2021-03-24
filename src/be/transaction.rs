@@ -56,6 +56,21 @@ fn get_output_satoshi(
     all_unblinded.get(&outpoint).unwrap().value // TODO return Result<u64>?
 }
 
+fn get_output_asset_hex(
+    tx: &elements::Transaction,
+    vout: u32,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Option<String> {
+    let outpoint = elements::OutPoint {
+        txid: tx.txid(),
+        vout,
+    };
+    match all_unblinded.get(&outpoint) {
+        Some(unblinded) => Some(unblinded.asset_hex()),
+        None => None,
+    }
+}
+
 impl ETransaction {
     pub fn new() -> Self {
         ETransaction(elements::Transaction {
@@ -80,18 +95,6 @@ impl ETransaction {
 
     pub fn txid(&self) -> Txid {
         self.0.txid()
-    }
-
-    pub fn output_asset_hex(
-        &self,
-        vout: u32,
-        all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-    ) -> Option<String> {
-        let outpoint = elements::OutPoint {
-            txid: self.0.txid(),
-            vout,
-        };
-        Some(all_unblinded.get(&outpoint).unwrap().asset_hex())
     }
 
     pub fn get_weight(&self) -> usize {
@@ -482,7 +485,7 @@ impl ETransactions {
     ) -> Option<String> {
         self.0
             .get(&outpoint.txid)
-            .map(|tx| tx.output_asset_hex(outpoint.vout, &all_unblinded).unwrap())
+            .map(|tx| get_output_asset_hex(&tx, outpoint.vout, &all_unblinded).unwrap())
     }
 }
 

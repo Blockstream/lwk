@@ -103,15 +103,11 @@ impl ETransaction {
         self.0.output.len()
     }
 
-    pub fn output_script(&self, vout: u32) -> Script {
-        self.0.output[vout as usize].script_pubkey.clone()
-    }
-
     pub fn output_address(&self, vout: u32, network: NetworkId) -> Option<String> {
         match network {
             NetworkId::Elements(network) => {
                 // Note we are returning the unconfidential address, because recipient blinding pub key is not in the transaction
-                let script = self.output_script(vout);
+                let script = self.0.output[vout as usize].script_pubkey.clone();
                 let params = match network {
                     ElementsNetwork::Liquid => &AddressParams::LIQUID,
                     ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
@@ -503,7 +499,7 @@ impl ETransactions {
     ) -> Option<Script> {
         self.0
             .get(&outpoint.txid)
-            .map(|tx| tx.output_script(outpoint.vout))
+            .map(|tx| tx.output[outpoint.vout as usize].script_pubkey.clone())
     }
     pub fn get_previous_output_value(
         &self,

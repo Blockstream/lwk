@@ -1,3 +1,4 @@
+pub mod asset;
 pub mod error;
 pub mod headers;
 pub mod interface;
@@ -18,6 +19,7 @@ use std::time::Instant;
 use crate::error::Error;
 use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
+use crate::asset::Unblinded;
 use crate::headers::Verifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;

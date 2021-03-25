@@ -1,6 +1,6 @@
+use crate::asset::Unblinded;
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
-use crate::transaction::Unblinded;
 use crate::Error;
 use crate::NetworkId;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};

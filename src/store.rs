@@ -1,6 +1,6 @@
 use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
 use crate::scripts::p2shwpkh_script;
-use crate::transaction::{ScriptBatch, Unblinded};
+use crate::transaction::Unblinded;
 use crate::Error;
 use crate::NetworkId;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
@@ -92,6 +92,12 @@ impl Drop for StoreMeta {
 pub struct Indexes {
     pub external: u32, // m/0/*
     pub internal: u32, // m/1/*
+}
+
+#[derive(Default)]
+pub struct ScriptBatch {
+    pub cached: bool,
+    pub value: Vec<(Script, DerivationPath)>,
 }
 
 impl RawCache {

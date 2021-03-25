@@ -15,7 +15,6 @@ use wally::asset_surjectionproof_size;
 use std::convert::TryInto;
 
 use bitcoin::hashes::core::fmt::Formatter;
-use bitcoin::util::bip32::DerivationPath;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -429,12 +428,6 @@ pub fn asset_to_hex(asset: &[u8]) -> String {
     let mut asset = asset.to_vec();
     asset.reverse();
     hex::encode(asset)
-}
-
-#[derive(Default)]
-pub struct ScriptBatch {
-    pub cached: bool,
-    pub value: Vec<(Script, DerivationPath)>,
 }
 
 #[cfg(test)]

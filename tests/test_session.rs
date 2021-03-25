@@ -7,7 +7,7 @@ use electrum_client::raw_client::{ElectrumPlaintextStream, RawClient};
 use electrum_client::ElectrumApi;
 use elements;
 
-use bewallet::be::{ETransaction, DUST_VALUE};
+use bewallet::be::DUST_VALUE;
 use bewallet::error::Error;
 use bewallet::model::*;
 use bewallet::Config;
@@ -509,7 +509,7 @@ impl TestElectrumWallet {
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
         self.wallet_wait_tx_status_change();
 
-        self.tx_checks(&tx);
+        self.tx_checks(&tx.0);
 
         let fee = if asset.is_none() || asset == self.config.policy_asset {
             tx_details.fee
@@ -653,7 +653,7 @@ impl TestElectrumWallet {
         let _txid = tx.txid().to_string();
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
         self.wallet_wait_tx_status_change();
-        self.tx_checks(&tx);
+        self.tx_checks(&tx.0);
 
         let fee = tx_details.fee;
         if assets.is_empty() {
@@ -766,13 +766,9 @@ impl TestElectrumWallet {
     }
 
     /// performs checks on transactions, like checking for address reuse in outputs and on liquid confidential commitments inequality
-    pub fn tx_checks(&self, transaction: &ETransaction) {
-        let output_nofee: Vec<&elements::TxOut> = transaction
-            .0
-            .output
-            .iter()
-            .filter(|o| !o.is_fee())
-            .collect();
+    pub fn tx_checks(&self, transaction: &elements::Transaction) {
+        let output_nofee: Vec<&elements::TxOut> =
+            transaction.output.iter().filter(|o| !o.is_fee()).collect();
         for current in output_nofee.iter() {
             assert_eq!(
                 1,
@@ -808,7 +804,7 @@ impl TestElectrumWallet {
             );
         }
         assert!(
-            transaction.0.output.last().unwrap().is_fee(),
+            transaction.output.last().unwrap().is_fee(),
             "last output is not a fee"
         );
     }

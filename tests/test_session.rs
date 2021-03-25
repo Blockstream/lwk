@@ -137,12 +137,7 @@ pub struct TestElectrumWallet {
 }
 
 // should be TestElectrumWallet::setup
-pub fn setup_wallet(
-    is_liquid: bool,
-    is_debug: bool,
-    electrs_exec: String,
-    node_exec: String,
-) -> TestElectrumWallet {
+pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> TestElectrumWallet {
     START.call_once(|| {
         let filter = if is_debug {
             LevelFilter::Info
@@ -156,7 +151,7 @@ pub fn setup_wallet(
 
     let node_work_dir = TempDir::new("electrum_integration_tests").unwrap();
     let node_work_dir_str = format!("{}", &node_work_dir.path().display());
-    let sum_port = is_liquid as u16;
+    let sum_port = 1;
 
     let rpc_port = 55363u16 + sum_port;
     let p2p_port = 34975u16 + sum_port;
@@ -173,15 +168,10 @@ pub fn setup_wallet(
     let rpcport_arg = format!("-rpcport={}", rpc_port);
     let p2pport_arg = format!("-port={}", p2p_port);
     let mut args: Vec<&str> = vec![&datadir_arg, &rpcport_arg, &p2pport_arg];
-    if is_liquid {
-        args.push("-initialfreecoins=2100000000");
-        args.push("-chain=liquidregtest");
-        args.push("-validatepegin=0");
-        args.push("-fallbackfee=0.00001");
-    } else {
-        args.push("-regtest");
-        args.push("-fallbackfee=0.0001");
-    };
+    args.push("-initialfreecoins=2100000000");
+    args.push("-chain=liquidregtest");
+    args.push("-validatepegin=0");
+    args.push("-fallbackfee=0.00001");
     if !is_debug {
         args.push("-daemon");
     }
@@ -190,11 +180,7 @@ pub fn setup_wallet(
     let node_process = Command::new(node_exec).args(args).spawn().unwrap();
     info!("node spawned");
 
-    let par_network = if is_liquid {
-        "liquidregtest"
-    } else {
-        "regtest"
-    };
+    let par_network = "liquidregtest";
     let cookie_file = node_work_dir.path().join(par_network).join(".cookie");
     // wait bitcoind is ready, use default wallet
     let mut i = 120;
@@ -269,11 +255,9 @@ pub fn setup_wallet(
     config.electrum_url = Some(electrs_url.to_string());
     config.development = true;
     config.spv_enabled = Some(true);
-    if is_liquid {
-        config.liquid = true;
-        config.policy_asset =
-            Some("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225".into());
-    }
+    config.liquid = true;
+    config.policy_asset =
+        Some("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225".into());
     let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
     let db_root = format!("{}", db_root_dir.path().display());
@@ -298,11 +282,7 @@ pub fn setup_wallet(
     };
     assert_eq!(block_status.0, 101);
 
-    let network_id = if is_liquid {
-        NetworkId::Elements(ElementsNetwork::ElementsRegtest)
-    } else {
-        NetworkId::Bitcoin(bitcoin::Network::Regtest)
-    };
+    let network_id = NetworkId::Elements(ElementsNetwork::ElementsRegtest);
 
     info!("returning TestElectrumWallet");
     TestElectrumWallet {
@@ -425,8 +405,6 @@ impl TestElectrumWallet {
     }
 
     pub fn fund_asset(&mut self) -> String {
-        assert!(self.config.liquid);
-
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
         let asset = self.node_issueasset(satoshi);
@@ -543,7 +521,6 @@ impl TestElectrumWallet {
     }
 
     pub fn send_tx_to_unconf(&mut self) {
-        assert!(self.config.liquid);
         let init_sat = self.balance_btc();
         let ap = self.electrum_wallet.address().unwrap();
         let unconf_address = to_unconfidential(ap.address);

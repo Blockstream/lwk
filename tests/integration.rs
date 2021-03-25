@@ -11,7 +11,7 @@ fn liquid() {
         .expect("env ELEMENTSD_EXEC pointing to elementsd executable is required");
     let debug = env::var("DEBUG").is_ok();
 
-    let mut test_electrum_wallet = test_session::setup_wallet(true, debug, electrs_exec, node_exec);
+    let mut test_electrum_wallet = test_session::setup_wallet(debug, electrs_exec, node_exec);
 
     let node_address = test_electrum_wallet.node_getnewaddress(Some("p2sh-segwit"));
     let node_bech32_address = test_electrum_wallet.node_getnewaddress(Some("bech32"));

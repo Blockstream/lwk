@@ -1,4 +1,3 @@
-pub mod be;
 pub mod error;
 pub mod headers;
 pub mod interface;
@@ -6,6 +5,7 @@ pub mod model;
 pub mod network;
 pub mod scripts;
 mod store;
+pub mod transaction;
 
 pub use network::*;
 use wally::asset_unblind;
@@ -18,12 +18,12 @@ use std::time::Instant;
 use crate::error::Error;
 use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
-use crate::be::*;
 use crate::headers::Verifier;
 use crate::interface::{ElectrumUrl, WalletCtx};
 use crate::model::*;
 pub use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
+use crate::transaction::*;
 pub use crate::{ElementsNetwork, NetworkId};
 
 use log::{debug, info, trace, warn};

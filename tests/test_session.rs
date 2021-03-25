@@ -7,9 +7,9 @@ use electrum_client::raw_client::{ElectrumPlaintextStream, RawClient};
 use electrum_client::ElectrumApi;
 use elements;
 
-use bewallet::be::DUST_VALUE;
 use bewallet::error::Error;
 use bewallet::model::*;
+use bewallet::transaction::DUST_VALUE;
 use bewallet::Config;
 use bewallet::ElectrumWallet;
 use bewallet::{ElementsNetwork, NetworkId};

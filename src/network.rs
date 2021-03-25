@@ -1,6 +1,6 @@
-use crate::be::asset_to_bin;
-use crate::be::AssetId;
 use crate::error::Error;
+use crate::transaction::asset_to_bin;
+use crate::transaction::AssetId;
 use elements::confidential::Asset;
 use elements::{confidential, issuance};
 use serde::{Deserialize, Serialize};

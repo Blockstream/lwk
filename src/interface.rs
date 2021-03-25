@@ -21,7 +21,7 @@ use wally::{
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
 
-use crate::be::{self, *};
+use crate::transaction::*;
 use electrum_client::raw_client::RawClient;
 use electrum_client::Client;
 use elements::confidential::{Asset, Nonce, Value};
@@ -345,7 +345,7 @@ impl WalletCtx {
 
         if !send_all {
             for address_amount in opt.addressees.iter() {
-                if address_amount.satoshi <= be::DUST_VALUE {
+                if address_amount.satoshi <= DUST_VALUE {
                     match self.config.network_id() {
                         NetworkId::Elements(_) => {
                             if address_amount.asset_tag == self.config.policy_asset {

@@ -1,4 +1,4 @@
-use crate::be::AssetId;
+use crate::AssetId;
 use bitcoin::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

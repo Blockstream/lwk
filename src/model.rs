@@ -151,40 +151,6 @@ pub struct AddressPointer {
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct FeeEstimate(pub u64);
 
-/// Change to the model of Settings and Pricing structs could break old versions.
-/// You can't remove fields, change fields type and if you add a new field, it must be Option<T>
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Settings {
-    pub unit: String,
-    pub required_num_blocks: u32,
-    pub altimeout: u32,
-    pub pricing: Pricing,
-    pub sound: bool,
-}
-
-/// see comment for struct Settings
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Pricing {
-    currency: String,
-    exchange: String,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        let pricing = Pricing {
-            currency: "USD".to_string(),
-            exchange: "BITFINEX".to_string(),
-        };
-        Settings {
-            unit: "BTC".to_string(),
-            required_num_blocks: 12,
-            altimeout: 600,
-            pricing,
-            sound: false,
-        }
-    }
-}
-
 impl AddressAmount {
     pub fn asset(&self) -> Option<AssetId> {
         if let Some(asset_tag) = self.asset_tag.as_ref() {

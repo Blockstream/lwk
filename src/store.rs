@@ -1,5 +1,5 @@
 use crate::asset::Unblinded;
-use crate::model::{FeeEstimate, SPVVerifyResult, Settings};
+use crate::model::{FeeEstimate, SPVVerifyResult};
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
 use crate::NetworkId;
@@ -65,9 +65,6 @@ pub struct RawCache {
 /// like wallet settings and memos
 #[derive(Default, Serialize, Deserialize)]
 pub struct RawStore {
-    /// wallet settings
-    settings: Option<Settings>,
-
     /// transaction memos
     memos: HashMap<Txid, String>,
 }
@@ -304,16 +301,6 @@ impl StoreMeta {
 
     pub fn get_memo(&self, txid: &Txid) -> Option<&String> {
         self.store.memos.get(txid)
-    }
-
-    pub fn insert_settings(&mut self, settings: Option<Settings>) -> Result<(), Error> {
-        self.store.settings = settings;
-        self.flush_store()?;
-        Ok(())
-    }
-
-    pub fn get_settings(&self) -> Option<Settings> {
-        self.store.settings.clone()
     }
 }
 

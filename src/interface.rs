@@ -9,7 +9,7 @@ use hex;
 use log::{info, trace};
 use rand::Rng;
 
-use crate::model::{AddressPointer, CreateTransactionOpt, Settings, TransactionDetails, TXO};
+use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, TXO};
 use crate::network::{Config, ElementsNetwork, NetworkId};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -153,17 +153,6 @@ impl WalletCtx {
             }
             _ => panic!(),
         }
-    }
-
-    pub fn get_settings(&self) -> Result<Settings, Error> {
-        Ok(self.store.read()?.get_settings().unwrap_or_default())
-    }
-
-    pub fn change_settings(&self, settings: &Settings) -> Result<(), Error> {
-        self.store
-            .write()?
-            .insert_settings(Some(settings.clone()))?;
-        Ok(())
     }
 
     pub fn get_tip(&self) -> Result<(u32, BlockHash), Error> {

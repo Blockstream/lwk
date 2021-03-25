@@ -394,7 +394,12 @@ impl WalletCtx {
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
             let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset {
-                let mut dummy_tx = ETransaction::new();
+                let mut dummy_tx = elements::Transaction {
+                    version: 2,
+                    lock_time: 0,
+                    input: vec![],
+                    output: vec![],
+                };
                 for utxo in all_utxos.iter() {
                     add_input(&mut dummy_tx, utxo.outpoint.clone());
                 }
@@ -419,7 +424,12 @@ impl WalletCtx {
             opt.addressees[0].satoshi = to_send;
         }
 
-        let mut tx = ETransaction::new();
+        let mut tx = elements::Transaction {
+            version: 2,
+            lock_time: 0,
+            input: vec![],
+            output: vec![],
+        };
         // transaction is created in 3 steps:
         // 1) adding requested outputs to tx outputs
         // 2) adding enough utxso to inputs such that tx outputs and estimated fees are covered
@@ -536,7 +546,7 @@ impl WalletCtx {
 
         // Also return changes used?
         Ok(TransactionDetails::new(
-            tx,
+            ETransaction(tx),
             satoshi,
             fee_val,
             None,

@@ -1,4 +1,4 @@
-use crate::be::{AssetId, ETransaction};
+use crate::be::AssetId;
 use bitcoin::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ impl TXO {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionDetails {
-    pub transaction: ETransaction,
+    pub transaction: elements::Transaction,
     pub txid: String,
     pub balances: Balances,
     pub fee: u64,
@@ -59,7 +59,7 @@ pub struct TransactionDetails {
 
 impl TransactionDetails {
     pub fn new(
-        transaction: ETransaction,
+        transaction: elements::Transaction,
         balances: Balances,
         fee: u64,
         height: Option<u32>,
@@ -77,7 +77,7 @@ impl TransactionDetails {
     }
 
     pub fn hex(&self) -> String {
-        hex::encode(&self.transaction.serialize())
+        hex::encode(elements::encode::serialize(&self.transaction))
     }
 }
 

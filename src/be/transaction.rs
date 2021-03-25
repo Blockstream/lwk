@@ -4,36 +4,16 @@ use crate::model::Balances;
 use bitcoin::hash_types::Txid;
 use bitcoin::Script;
 use elements::confidential::{Asset, Value};
-use elements::encode::deserialize as elm_des;
-use elements::encode::serialize as elm_ser;
 use elements::{confidential, issuance};
 use elements::{TxInWitness, TxOutWitness};
 use log::{info, trace};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use wally::asset_surjectionproof_size;
 
 pub const DUST_VALUE: u64 = 546;
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Hash)]
-pub struct ETransaction(pub elements::Transaction);
-
-impl Deref for ETransaction {
-    type Target = elements::Transaction;
-    fn deref(&self) -> &<Self as Deref>::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for ETransaction {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
 
 pub fn strip_witness(tx: &mut elements::Transaction) {
     for input in tx.input.iter_mut() {
@@ -377,29 +357,6 @@ pub fn my_balance_changes(
 
     // we don't want to see redeposited assets
     return result.into_iter().filter(|&(_, v)| v != 0).collect();
-}
-
-impl ETransaction {
-    pub fn new() -> Self {
-        ETransaction(elements::Transaction {
-            version: 2,
-            lock_time: 0,
-            input: vec![],
-            output: vec![],
-        })
-    }
-
-    pub fn deserialize(bytes: &[u8]) -> Result<Self, crate::error::Error> {
-        Ok(ETransaction(elm_des(bytes)?))
-    }
-
-    pub fn from_hex(hex: &str) -> Result<Self, crate::error::Error> {
-        Self::deserialize(&hex::decode(hex)?)
-    }
-
-    pub fn serialize(&self) -> Vec<u8> {
-        elm_ser(&self.0)
-    }
 }
 
 pub fn get_previous_output_value(

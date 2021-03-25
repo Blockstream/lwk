@@ -218,13 +218,8 @@ impl WalletCtx {
 
             trace!("tx_id {} spv_verified {:?}", tx_id, spv_verified);
 
-            let tx_details = TransactionDetails::new(
-                ETransaction(tx.clone()),
-                balances,
-                fee,
-                **height,
-                spv_verified,
-            );
+            let tx_details =
+                TransactionDetails::new(tx.clone(), balances, fee, **height, spv_verified);
 
             txs.push(tx_details);
         }
@@ -546,7 +541,7 @@ impl WalletCtx {
 
         // Also return changes used?
         Ok(TransactionDetails::new(
-            ETransaction(tx),
+            tx,
             satoshi,
             fee_val,
             None,

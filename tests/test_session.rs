@@ -498,18 +498,18 @@ impl TestElectrumWallet {
         create_opt.utxos = utxos;
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
-        let len_before = tx.serialize().len();
+        let len_before = elements::encode::serialize(&tx).len();
         self.electrum_wallet
             .sign_tx(&mut tx, &self.mnemonic)
             .unwrap();
-        let len_after = tx.serialize().len();
+        let len_after = elements::encode::serialize(&tx).len();
         assert!(len_before < len_after, "sign tx did not increased tx size");
         //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
         let txid = tx.txid().to_string();
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
         self.wallet_wait_tx_status_change();
 
-        self.tx_checks(&tx.0);
+        self.tx_checks(&tx);
 
         let fee = if asset.is_none() || asset == self.config.policy_asset {
             tx_details.fee
@@ -653,7 +653,7 @@ impl TestElectrumWallet {
         let _txid = tx.txid().to_string();
         self.electrum_wallet.broadcast_tx(&tx).unwrap();
         self.wallet_wait_tx_status_change();
-        self.tx_checks(&tx.0);
+        self.tx_checks(&tx);
 
         let fee = tx_details.fee;
         if assets.is_empty() {

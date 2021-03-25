@@ -582,23 +582,27 @@ impl WalletCtx {
         (script_sig, witness)
     }
 
-    pub fn sign_with_mnemonic(&self, e_tx: &mut ETransaction, mnemonic: &str) -> Result<(), Error> {
+    pub fn sign_with_mnemonic(
+        &self,
+        tx: &mut elements::Transaction,
+        mnemonic: &str,
+    ) -> Result<(), Error> {
         let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
-        self.sign_with_xprv(e_tx, xprv)
+        self.sign_with_xprv(tx, xprv)
     }
 
     pub fn sign_with_xprv(
         &self,
-        tx: &mut ETransaction,
+        tx: &mut elements::Transaction,
         xprv: ExtendedPrivKey,
     ) -> Result<(), Error> {
         info!("sign");
         let store_read = self.store.read()?;
         // FIXME: is blinding here the right thing to do?
-        self.blind_tx(&mut tx.0)?;
+        self.blind_tx(tx)?;
 
-        for i in 0..tx.0.input.len() {
-            let prev_output = tx.0.input[i].previous_output;
+        for i in 0..tx.input.len() {
+            let prev_output = tx.input[i].previous_output;
             info!("input#{} prev_output:{:?}", i, prev_output);
             let prev_tx = store_read.get_liquid_tx(&prev_output.txid)?;
             let out = prev_tx.output[prev_output.vout as usize].clone();
@@ -610,28 +614,28 @@ impl WalletCtx {
                 .clone();
 
             let (script_sig, witness) =
-                self.internal_sign_elements(&tx.0, i, &derivation_path, out.value, xprv);
+                self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv);
 
-            tx.0.input[i].script_sig = script_sig;
-            tx.0.input[i].witness.script_witness = witness;
+            tx.input[i].script_sig = script_sig;
+            tx.input[i].witness.script_witness = witness;
         }
 
-        let fee: u64 =
-            tx.0.output
-                .iter()
-                .filter(|o| o.is_fee())
-                .map(|o| o.minimum_value())
-                .sum();
+        let fee: u64 = tx
+            .output
+            .iter()
+            .filter(|o| o.is_fee())
+            .map(|o| o.minimum_value())
+            .sum();
         info!(
             "transaction final size is {} bytes and {} vbytes and fee is {}",
-            tx.0.get_size(),
-            tx.0.get_weight() / 4,
+            tx.get_size(),
+            tx.get_weight() / 4,
             fee
         );
         info!(
             "FINALTX inputs:{} outputs:{}",
-            tx.0.input.len(),
-            tx.0.output.len()
+            tx.input.len(),
+            tx.output.len()
         );
         /*
         drop(store_read);

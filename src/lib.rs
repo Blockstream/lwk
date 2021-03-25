@@ -566,7 +566,11 @@ impl ElectrumWallet {
         self.wallet.create_tx(opt)
     }
 
-    pub fn sign_tx(&self, transaction: &mut ETransaction, mnemonic: &str) -> Result<(), Error> {
+    pub fn sign_tx(
+        &self,
+        transaction: &mut elements::Transaction,
+        mnemonic: &str,
+    ) -> Result<(), Error> {
         self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
 

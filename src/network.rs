@@ -9,7 +9,6 @@ const LIQUID_POLICY_ASSET_STR: &str =
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
-    pub development: bool,
     pub mainnet: bool,
 
     pub tls: Option<bool>,
@@ -29,10 +28,9 @@ pub enum ElementsNetwork {
 
 impl Config {
     pub fn network(&self) -> ElementsNetwork {
-        match (self.mainnet, self.development) {
-            (true, _) => ElementsNetwork::Liquid,
-            (false, true) => ElementsNetwork::ElementsRegtest,
-            _ => panic!("unsupported network"),
+        match self.mainnet {
+            true => ElementsNetwork::Liquid,
+            false => ElementsNetwork::ElementsRegtest,
         }
     }
 

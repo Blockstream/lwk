@@ -251,7 +251,7 @@ impl WalletCtx {
                             }
                             return Some(TXO::new(
                                 outpoint,
-                                unblinded.asset_hex(),
+                                unblinded.asset.to_hex(),
                                 unblinded.value,
                                 None,
                                 None,

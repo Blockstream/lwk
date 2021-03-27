@@ -24,15 +24,9 @@ pub struct Unblinded {
     pub value: u64,
 }
 
-impl Unblinded {
-    pub fn asset_hex(&self) -> String {
-        self.asset.to_hex()
-    }
-}
-
 impl Debug for Unblinded {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.asset_hex(), self.value)
+        write!(f, "{} {}", self.asset.to_hex(), self.value)
     }
 }
 

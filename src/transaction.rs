@@ -49,7 +49,7 @@ fn get_output_asset_hex(
         vout,
     };
     match all_unblinded.get(&outpoint) {
-        Some(unblinded) => Some(unblinded.asset_hex()),
+        Some(unblinded) => Some(unblinded.asset.to_hex()),
         None => None,
     }
 }
@@ -332,7 +332,7 @@ pub fn my_balance_changes(
                 outpoint,
                 unblinded.value
             );
-            let asset_id_str = unblinded.asset_hex();
+            let asset_id_str = unblinded.asset.to_hex();
             *result.entry(asset_id_str).or_default() -= unblinded.value as i64;
             // TODO check overflow
         }
@@ -349,7 +349,7 @@ pub fn my_balance_changes(
                 outpoint,
                 unblinded.value
             );
-            let asset_id_str = unblinded.asset_hex();
+            let asset_id_str = unblinded.asset.to_hex();
             *result.entry(asset_id_str).or_default() += unblinded.value as i64;
             // TODO check overflow
         }

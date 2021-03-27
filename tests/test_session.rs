@@ -355,13 +355,8 @@ impl TestElectrumWallet {
     fn balance_asset(&self, asset: Option<String>) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
-        match self.network_id {
-            NetworkId::Elements(_) => {
-                let asset = asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
-                *balance.get(&asset).unwrap_or(&0i64) as u64
-            }
-            NetworkId::Bitcoin(_) => *balance.get("btc").unwrap() as u64,
-        }
+        let asset = asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
+        *balance.get(&asset).unwrap_or(&0i64) as u64
     }
 
     fn balance_btc(&self) -> u64 {
@@ -425,31 +420,20 @@ impl TestElectrumWallet {
     fn node_balance(&self, asset: Option<String>) -> u64 {
         let balance: Value = self.node.call("getbalance", &[]).unwrap();
         let unconfirmed_balance: Value = self.node.call("getunconfirmedbalance", &[]).unwrap();
-        match self.network_id {
-            NetworkId::Bitcoin(_) => {
-                ((balance.as_f64().unwrap() + unconfirmed_balance.as_f64().unwrap())
-                    * 100_000_000.0) as u64
-            }
-            NetworkId::Elements(_) => {
-                let asset_or_policy = asset.or(Some("bitcoin".to_string())).unwrap();
-                let balance = match balance.get(&asset_or_policy) {
-                    Some(Value::Number(s)) => s.as_f64().unwrap(),
-                    _ => 0.0,
-                };
-                let unconfirmed_balance = match unconfirmed_balance.get(&asset_or_policy) {
-                    Some(Value::Number(s)) => s.as_f64().unwrap(),
-                    _ => 0.0,
-                };
-                ((balance + unconfirmed_balance) * 100_000_000.0) as u64
-            }
-        }
+        let asset_or_policy = asset.or(Some("bitcoin".to_string())).unwrap();
+        let balance = match balance.get(&asset_or_policy) {
+            Some(Value::Number(s)) => s.as_f64().unwrap(),
+            _ => 0.0,
+        };
+        let unconfirmed_balance = match unconfirmed_balance.get(&asset_or_policy) {
+            Some(Value::Number(s)) => s.as_f64().unwrap(),
+            _ => 0.0,
+        };
+        ((balance + unconfirmed_balance) * 100_000_000.0) as u64
     }
 
     pub fn policy_asset(&self) -> Option<String> {
-        match self.network_id {
-            NetworkId::Bitcoin(_) => None,
-            NetworkId::Elements(_) => self.config.policy_asset.clone(),
-        }
+        self.config.policy_asset.clone()
     }
 
     /// send a tx from the wallet to the specified address
@@ -463,10 +447,7 @@ impl TestElectrumWallet {
         let init_sat = self.balance_asset(asset.clone());
         let init_node_balance = self.node_balance(asset.clone());
         let mut create_opt = CreateTransactionOpt::default();
-        let fee_rate = match self.config.network_id() {
-            NetworkId::Elements(_) => 100,
-            NetworkId::Bitcoin(_) => 1000,
-        };
+        let fee_rate = 100;
         create_opt.fee_rate = Some(fee_rate);
         create_opt.addressees.push(AddressAmount {
             address: address.to_string(),

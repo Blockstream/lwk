@@ -32,7 +32,6 @@ pub enum ElementsNetwork {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkId {
     Elements(ElementsNetwork),
-    Bitcoin(bitcoin::Network),
 }
 
 impl Config {
@@ -40,9 +39,6 @@ impl Config {
         match (self.liquid, self.mainnet, self.development) {
             (true, true, false) => NetworkId::Elements(ElementsNetwork::Liquid),
             (true, false, true) => NetworkId::Elements(ElementsNetwork::ElementsRegtest),
-            (false, true, false) => NetworkId::Bitcoin(bitcoin::Network::Bitcoin),
-            (false, false, false) => NetworkId::Bitcoin(bitcoin::Network::Testnet),
-            (false, false, true) => NetworkId::Bitcoin(bitcoin::Network::Regtest),
             (l, m, d) => panic!(
                 "inconsistent network parameters: lq={}, main={}, dev={}",
                 l, m, d

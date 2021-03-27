@@ -2,7 +2,6 @@ use crate::asset::Unblinded;
 use crate::model::{FeeEstimate, SPVVerifyResult};
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
-use crate::NetworkId;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use bitcoin::hashes::sha256;
@@ -64,7 +63,6 @@ pub struct RawCache {
 pub struct StoreMeta {
     pub cache: RawCache,
     secp: Secp256k1<All>,
-    network_id: NetworkId,
     path: PathBuf,
     cipher: Aes256GcmSiv,
     first_deriv: [ExtendedPubKey; 2],
@@ -135,11 +133,7 @@ fn load_decrypt<P: AsRef<Path>>(
 }
 
 impl StoreMeta {
-    pub fn new<P: AsRef<Path>>(
-        path: P,
-        xpub: ExtendedPubKey,
-        network_id: NetworkId,
-    ) -> Result<StoreMeta, Error> {
+    pub fn new<P: AsRef<Path>>(path: P, xpub: ExtendedPubKey) -> Result<StoreMeta, Error> {
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.to_bytes());
         enc_key_data.extend(&xpub.chain_code.to_bytes());
@@ -161,7 +155,6 @@ impl StoreMeta {
 
         Ok(StoreMeta {
             cache,
-            network_id,
             cipher,
             secp,
             path,
@@ -242,10 +235,7 @@ impl StoreMeta {
 
     pub fn fee_estimates(&self) -> Vec<FeeEstimate> {
         if self.cache.fee_estimates.is_empty() {
-            let min_fee = match self.network_id {
-                NetworkId::Elements(_) => 100,
-                _ => panic!(),
-            };
+            let min_fee = 100;
             vec![FeeEstimate(min_fee); 25]
         } else {
             self.cache.fee_estimates.clone()
@@ -263,7 +253,6 @@ impl StoreMeta {
 #[cfg(test)]
 mod tests {
     use crate::store::StoreMeta;
-    use crate::{ElementsNetwork, NetworkId};
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Txid;
@@ -279,12 +268,11 @@ mod tests {
             Txid::from_hex("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let network_id = NetworkId::Elements(ElementsNetwork::ElementsRegtest);
-        let mut store = StoreMeta::new(&dir, xpub, network_id).unwrap();
+        let mut store = StoreMeta::new(&dir, xpub).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, xpub, network_id).unwrap();
+        let store = StoreMeta::new(&dir, xpub).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 }

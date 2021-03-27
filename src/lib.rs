@@ -481,7 +481,6 @@ impl ElectrumWallet {
     pub fn update_spv(&self) -> Result<(), Error> {
         let verifier = match self.config.network_id() {
             NetworkId::Elements(network) => Verifier::new(network),
-            _ => panic!(),
         };
 
         let mut headers = Headers {

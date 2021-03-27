@@ -83,7 +83,6 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
             ElementsNetwork::Liquid => 1776,
             ElementsNetwork::ElementsRegtest => 1,
         },
-        _ => panic!(),
     };
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
     let path_string = format!("m/49'/{}'/0'", coin_type);
@@ -111,11 +110,7 @@ impl WalletCtx {
         }
         path.push(wallet_id);
         info!("Store root path: {:?}", path);
-        let store = Arc::new(RwLock::new(StoreMeta::new(
-            &path,
-            xpub,
-            config.network_id(),
-        )?));
+        let store = Arc::new(RwLock::new(StoreMeta::new(&path, xpub)?));
 
         Ok(WalletCtx {
             store,
@@ -151,7 +146,6 @@ impl WalletCtx {
 
                 Ok(addr)
             }
-            _ => panic!(),
         }
     }
 
@@ -289,7 +283,6 @@ impl WalletCtx {
             NetworkId::Elements(_) => result
                 .entry(self.config.policy_asset.as_ref().unwrap().clone())
                 .or_insert(0),
-            _ => panic!(),
         };
         for u in self.utxos()?.iter() {
             *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
@@ -318,7 +311,6 @@ impl WalletCtx {
                     }
                     return Err(Error::InvalidAddress);
                 }
-                _ => panic!(),
             }
         }
 
@@ -335,23 +327,16 @@ impl WalletCtx {
         if !send_all {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= DUST_VALUE {
-                    match self.config.network_id() {
-                        NetworkId::Elements(_) => {
-                            if address_amount.asset_tag == self.config.policy_asset {
-                                // we apply dust rules for liquid bitcoin as elements do
-                                return Err(Error::InvalidAmount);
-                            }
-                        }
-                        _ => panic!(),
+                    if address_amount.asset_tag == self.config.policy_asset {
+                        // we apply dust rules for liquid bitcoin as elements do
+                        return Err(Error::InvalidAmount);
                     }
                 }
             }
         }
 
-        if let NetworkId::Elements(_) = self.config.network_id() {
-            if opt.addressees.iter().any(|a| a.asset_tag.is_none()) {
-                return Err(Error::AssetEmpty);
-            }
+        if opt.addressees.iter().any(|a| a.asset_tag.is_none()) {
+            return Err(Error::AssetEmpty);
         }
 
         // convert from satoshi/kbyte to satoshi/byte
@@ -459,18 +444,13 @@ impl WalletCtx {
             asset_utxos.sort_by(|a, b| a.satoshi.cmp(&b.satoshi));
             let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
 
-            match self.config.network_id() {
-                NetworkId::Elements(_) => {
-                    // Don't spend same script together in liquid. This would allow an attacker
-                    // to cheaply send assets without value to the target, which will have to
-                    // waste fees for the extra tx inputs and (eventually) outputs.
-                    // While blinded address are required and not public knowledge,
-                    // they are still available to whom transacted with us in the past
-                    used_utxo.insert(utxo.outpoint.clone());
-                    add_input(&mut tx, utxo.outpoint.clone());
-                }
-                _ => panic!(),
-            }
+            // Don't spend same script together in liquid. This would allow an attacker
+            // to cheaply send assets without value to the target, which will have to
+            // waste fees for the extra tx inputs and (eventually) outputs.
+            // While blinded address are required and not public knowledge,
+            // they are still available to whom transacted with us in the past
+            used_utxo.insert(utxo.outpoint.clone());
+            add_input(&mut tx, utxo.outpoint.clone());
         }
 
         // STEP 3) adding change(s)

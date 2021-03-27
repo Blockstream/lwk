@@ -39,19 +39,27 @@ fn get_output_satoshi(
     all_unblinded.get(&outpoint).unwrap().value // TODO return Result<u64>?
 }
 
-fn get_output_asset_hex(
+fn get_output_asset(
     tx: &elements::Transaction,
     vout: u32,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-) -> Option<String> {
+) -> Option<elements::issuance::AssetId> {
     let outpoint = elements::OutPoint {
         txid: tx.txid(),
         vout,
     };
     match all_unblinded.get(&outpoint) {
-        Some(unblinded) => Some(unblinded.asset.to_hex()),
+        Some(unblinded) => Some(unblinded.asset),
         None => None,
     }
+}
+
+fn get_output_asset_hex(
+    tx: &elements::Transaction,
+    vout: u32,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Option<String> {
+    get_output_asset(tx, vout, all_unblinded).and_then(|a| Some(a.to_hex()))
 }
 
 pub fn add_output(
@@ -368,11 +376,21 @@ pub fn get_previous_output_value(
         .map(|tx| get_output_satoshi(&tx, outpoint.vout, &all_unblinded))
 }
 
+pub fn get_previous_output_asset(
+    txs: &HashMap<Txid, elements::Transaction>,
+    outpoint: elements::OutPoint,
+    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Option<elements::issuance::AssetId> {
+    txs.get(&outpoint.txid)
+        .map(|tx| get_output_asset(&tx, outpoint.vout, &all_unblinded).unwrap())
+}
+
 pub fn get_previous_output_asset_hex(
     txs: &HashMap<Txid, elements::Transaction>,
     outpoint: elements::OutPoint,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> Option<String> {
+    get_previous_output_asset(txs, outpoint, all_unblinded).and_then(|a| Some(a.to_hex()));
     txs.get(&outpoint.txid)
         .map(|tx| get_output_asset_hex(&tx, outpoint.vout, &all_unblinded).unwrap())
 }

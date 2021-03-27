@@ -12,7 +12,7 @@ use bewallet::model::*;
 use bewallet::transaction::DUST_VALUE;
 use bewallet::Config;
 use bewallet::ElectrumWallet;
-use bewallet::{ElementsNetwork, NetworkId};
+use bewallet::ElementsNetwork;
 
 use log::LevelFilter;
 use log::{info, warn, Metadata, Record};
@@ -131,7 +131,7 @@ pub struct TestElectrumWallet {
     node_work_dir: TempDir,
     electrs_work_dir: TempDir,
     db_root_dir: TempDir,
-    network_id: NetworkId,
+    network: ElementsNetwork,
     config: Config,
     mnemonic: String,
 }
@@ -282,7 +282,7 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
     };
     assert_eq!(block_status.0, 101);
 
-    let network_id = NetworkId::Elements(ElementsNetwork::ElementsRegtest);
+    let network = ElementsNetwork::ElementsRegtest;
 
     info!("returning TestElectrumWallet");
     TestElectrumWallet {
@@ -297,7 +297,7 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
         node_work_dir,
         electrs_work_dir,
         db_root_dir,
-        network_id,
+        network,
         config,
         mnemonic,
     }

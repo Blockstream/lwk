@@ -10,7 +10,7 @@ use log::{info, trace};
 use rand::Rng;
 
 use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, TXO};
-use crate::network::{Config, ElementsNetwork, NetworkId};
+use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
 use wally::{
@@ -78,11 +78,9 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     // BIP44: m / purpose' / coin_type' / account' / change / address_index
     // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
     // slip44 suggest 1 for every testnet, so we are using it also for regtest
-    let coin_type: u32 = match config.network_id() {
-        NetworkId::Elements(elements_network) => match elements_network {
-            ElementsNetwork::Liquid => 1776,
-            ElementsNetwork::ElementsRegtest => 1,
-        },
+    let coin_type: u32 = match config.network() {
+        ElementsNetwork::Liquid => 1776,
+        ElementsNetwork::ElementsRegtest => 1,
     };
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
     let path_string = format!("m/49'/{}'/0'", coin_type);
@@ -132,21 +130,17 @@ impl WalletCtx {
             .map(|x| ChildNumber::Normal { index: *x })
             .collect();
         let derived = xpub.derive_pub(&self.secp, &path)?;
-        match self.config.network_id() {
-            NetworkId::Elements(network) => {
-                let script = p2shwpkh_script(&derived.public_key);
-                let blinding_key = self.master_blinding.derive_blinding_key(&script);
-                let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
-                let blinder = Some(public_key);
-                let addr = elements::Address::p2shwpkh(
-                    &derived.public_key,
-                    blinder,
-                    address_params(network),
-                );
+        let script = p2shwpkh_script(&derived.public_key);
+        let blinding_key = self.master_blinding.derive_blinding_key(&script);
+        let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
+        let blinder = Some(public_key);
+        let addr = elements::Address::p2shwpkh(
+            &derived.public_key,
+            blinder,
+            address_params(self.config.network()),
+        );
 
-                Ok(addr)
-            }
-        }
+        Ok(addr)
     }
 
     pub fn get_tip(&self) -> Result<(u32, BlockHash), Error> {
@@ -279,11 +273,9 @@ impl WalletCtx {
     pub fn balance(&self) -> Result<Balances, Error> {
         info!("start balance");
         let mut result = HashMap::new();
-        match self.config.network_id() {
-            NetworkId::Elements(_) => result
-                .entry(self.config.policy_asset.as_ref().unwrap().clone())
-                .or_insert(0),
-        };
+        result
+            .entry(self.config.policy_asset.as_ref().unwrap().clone())
+            .or_insert(0);
         for u in self.utxos()?.iter() {
             *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
         }
@@ -297,21 +289,18 @@ impl WalletCtx {
         // TODO put checks into CreateTransaction::validate, add check asset_tag are valid asset hex
         // eagerly check for address validity
         for address in opt.addressees.iter().map(|a| &a.address) {
-            match self.config.network_id() {
-                NetworkId::Elements(network) => {
-                    if let Ok(address) = elements::Address::from_str(address) {
-                        info!(
-                            "address.params:{:?} address_params(network):{:?}",
-                            address.params,
-                            address_params(network)
-                        );
-                        if address.params == address_params(network) {
-                            continue;
-                        }
-                    }
-                    return Err(Error::InvalidAddress);
+            let network = self.config.network();
+            if let Ok(address) = elements::Address::from_str(address) {
+                info!(
+                    "address.params:{:?} address_params(network):{:?}",
+                    address.params,
+                    address_params(network)
+                );
+                if address.params == address_params(network) {
+                    continue;
                 }
             }
+            return Err(Error::InvalidAddress);
         }
 
         if opt.addressees.is_empty() {

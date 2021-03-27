@@ -29,20 +29,12 @@ pub enum ElementsNetwork {
     ElementsRegtest,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NetworkId {
-    Elements(ElementsNetwork),
-}
-
 impl Config {
-    pub fn network_id(&self) -> NetworkId {
-        match (self.liquid, self.mainnet, self.development) {
-            (true, true, false) => NetworkId::Elements(ElementsNetwork::Liquid),
-            (true, false, true) => NetworkId::Elements(ElementsNetwork::ElementsRegtest),
-            (l, m, d) => panic!(
-                "inconsistent network parameters: lq={}, main={}, dev={}",
-                l, m, d
-            ),
+    pub fn network(&self) -> ElementsNetwork {
+        match (self.mainnet, self.development) {
+            (true, _) => ElementsNetwork::Liquid,
+            (false, true) => ElementsNetwork::ElementsRegtest,
+            _ => panic!("unsupported network"),
         }
     }
 

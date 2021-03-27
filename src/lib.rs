@@ -26,7 +26,7 @@ use crate::model::*;
 pub use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
-pub use crate::{ElementsNetwork, NetworkId};
+pub use crate::ElementsNetwork;
 
 use log::{debug, info, trace, warn};
 
@@ -479,9 +479,7 @@ impl ElectrumWallet {
     }
 
     pub fn update_spv(&self) -> Result<(), Error> {
-        let verifier = match self.config.network_id() {
-            NetworkId::Elements(network) => Verifier::new(network),
-        };
+        let verifier = Verifier::new(self.config.network());
 
         let mut headers = Headers {
             store: self.wallet.store.clone(),

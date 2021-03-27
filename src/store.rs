@@ -231,13 +231,6 @@ impl StoreMeta {
         Ok(result)
     }
 
-    pub fn get_liquid_tx(&self, txid: &Txid) -> Result<elements::Transaction, Error> {
-        match self.cache.all_txs.get(txid) {
-            Some(tx) => Ok(tx.clone()),
-            _ => Err(Error::Generic("expected liquid tx".to_string())),
-        }
-    }
-
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
         let mut result = HashSet::new();
         for tx in self.cache.all_txs.values() {

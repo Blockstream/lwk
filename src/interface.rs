@@ -598,7 +598,11 @@ impl WalletCtx {
         for i in 0..tx.input.len() {
             let prev_output = tx.input[i].previous_output;
             info!("input#{} prev_output:{:?}", i, prev_output);
-            let prev_tx = store_read.get_liquid_tx(&prev_output.txid)?;
+            let prev_tx = store_read
+                .cache
+                .all_txs
+                .get(&prev_output.txid)
+                .ok_or_else(|| Error::Generic("expected tx".into()))?;
             let out = prev_tx.output[prev_output.vout as usize].clone();
             let derivation_path: DerivationPath = store_read
                 .cache

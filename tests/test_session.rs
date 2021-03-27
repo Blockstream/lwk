@@ -255,7 +255,6 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
     config.electrum_url = Some(electrs_url.to_string());
     config.development = true;
     config.spv_enabled = Some(true);
-    config.liquid = true;
     config.policy_asset =
         Some("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225".into());
     let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();

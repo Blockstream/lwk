@@ -11,7 +11,6 @@ const LIQUID_POLICY_ASSET_STR: &str =
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub development: bool,
-    pub liquid: bool,
     pub mainnet: bool,
 
     pub tls: Option<bool>,
@@ -39,17 +38,16 @@ impl Config {
     }
 
     pub fn policy_asset_id(&self) -> Result<AssetId, Error> {
-        if self.liquid {
-            if self.development {
+        match self.network() {
+            ElementsNetwork::Liquid => Ok(asset_to_bin(LIQUID_POLICY_ASSET_STR)?),
+            ElementsNetwork::ElementsRegtest => {
+                // TODO: pack policy asset in ElementsRegtest variant
+                //let asset_str = self.policy_asset.as_ref().unwrap_or_else(|| Err("no policy_asset".into()));
                 match self.policy_asset.as_ref() {
                     Some(policy_asset_str) => Ok(asset_to_bin(policy_asset_str)?),
                     None => Err("no policy asset".into()),
                 }
-            } else {
-                Ok(asset_to_bin(LIQUID_POLICY_ASSET_STR)?)
             }
-        } else {
-            Err("no policy asset".into())
         }
     }
 

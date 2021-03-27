@@ -3,19 +3,6 @@ use bitcoin::hashes::hex::ToHex;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-//TODO remove this, `fn needs` could return BTreeMap<String, u64> instead
-#[derive(Debug)]
-pub struct AssetValue {
-    pub asset: String,
-    pub satoshi: u64,
-}
-
-impl AssetValue {
-    pub fn new(asset: String, satoshi: u64) -> Self {
-        AssetValue { asset, satoshi }
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,

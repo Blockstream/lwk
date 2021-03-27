@@ -413,21 +413,22 @@ impl WalletCtx {
                 &tx,
                 fee_rate,
                 send_all,
-                self.config.policy_asset.clone(),
+                self.config.policy_asset_id().unwrap(),
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
-            ); // Vec<(asset_string, satoshi)  "policy asset" is last, in bitcoin asset_string="btc" and max 1 element
+            );
             info!("needs: {:?}", needs);
             if needs.is_empty() {
                 // SUCCESS tx doesn't need other inputs
                 break;
             }
-            let current_need = needs.pop().unwrap(); // safe to unwrap just checked it's not empty
+
+            let (asset, _) = needs.pop().unwrap(); // safe to unwrap just checked it's not empty
 
             // taking only utxos of current asset considered, filters also utxos used in this loop
             let mut asset_utxos: Vec<&TXO> = utxos
                 .iter()
-                .filter(|u| u.asset == current_need.asset && !used_utxo.contains(&u.outpoint))
+                .filter(|u| u.asset == asset.to_hex() && !used_utxo.contains(&u.outpoint))
                 .collect();
 
             // sort by biggest utxo, random maybe another option, but it should be deterministically random (purely random breaks send_all algorithm)
@@ -457,25 +458,20 @@ impl WalletCtx {
         let changes = changes(
             &tx,
             estimated_fee,
-            self.config.policy_asset.clone(),
+            self.config.policy_asset_id()?,
             &store_read.cache.all_txs,
             &store_read.cache.unblinded,
-        ); // Vec<Change> asset, value
-        for (i, change) in changes.iter().enumerate() {
+        );
+        for (i, (asset, satoshi)) in changes.iter().enumerate() {
             let change_index = store_read.cache.indexes.internal + i as u32 + 1;
             let change_address = self
                 .derive_address(&self.xpub, [1, change_index])?
                 .to_string();
             info!(
                 "adding change to {} of {} asset {:?}",
-                &change_address, change.satoshi, change.asset
+                &change_address, satoshi, asset
             );
-            add_output(
-                &mut tx,
-                &change_address,
-                change.satoshi,
-                change.asset.clone(),
-            )?;
+            add_output(&mut tx, &change_address, *satoshi, asset.to_hex())?;
         }
 
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption

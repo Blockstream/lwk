@@ -1,4 +1,4 @@
-use crate::asset::{AssetValue, Unblinded};
+use crate::asset::Unblinded;
 use crate::error::Error;
 use crate::model::Balances;
 use bitcoin::hash_types::Txid;
@@ -133,35 +133,31 @@ pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8
     fee_val
 }
 
-/// return a Vector with the amount needed for this transaction to be valid
-/// for bitcoin it contains max 1 element eg ("btc", 100)
-/// for elements could contain more than 1 element, 1 for each asset, with the policy asset last
+/// return a map asset-value for the outputs needed for this transaction to be valid
 pub fn needs(
     tx: &elements::Transaction,
     fee_rate: f64,
     no_change: bool,
-    policy_asset: Option<String>,
+    policy_asset: elements::issuance::AssetId,
     all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
-) -> Vec<AssetValue> {
-    let policy_asset = policy_asset.expect("policy asset empty in elements");
-    let mut outputs: HashMap<String, u64> = HashMap::new();
+) -> Vec<(elements::issuance::AssetId, u64)> {
+    let mut outputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for output in tx.output.iter() {
         match (output.asset, output.value) {
             (Asset::Explicit(asset), Value::Explicit(value)) => {
-                *outputs.entry(asset.to_hex()).or_insert(0) += value;
+                *outputs.entry(asset).or_insert(0) += value;
             }
             _ => panic!("asset and value should be explicit here"),
         }
     }
 
-    let mut inputs: HashMap<String, u64> = HashMap::new();
+    let mut inputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
 
     for input in tx.input.iter() {
-        let asset_hex =
-            get_previous_output_asset_hex(&all_txs, input.previous_output, unblinded).unwrap();
+        let asset = get_previous_output_asset(&all_txs, input.previous_output, unblinded).unwrap();
         let value = get_previous_output_value(&all_txs, &input.previous_output, unblinded).unwrap();
-        *inputs.entry(asset_hex).or_insert(0) += value;
+        *inputs.entry(asset).or_insert(0) += value;
     }
 
     let estimated_fee = estimated_fee(
@@ -169,23 +165,17 @@ pub fn needs(
         fee_rate,
         estimated_changes(&tx, no_change, all_txs, unblinded),
     );
-    *outputs.entry(policy_asset.clone()).or_insert(0) += estimated_fee;
+    *outputs.entry(policy_asset).or_insert(0) += estimated_fee;
 
     let mut result = vec![];
     for (asset, value) in outputs.iter() {
         if let Some(sum) = value.checked_sub(inputs.remove(asset).unwrap_or(0)) {
             if sum > 0 {
-                result.push(AssetValue::new(asset.to_string(), sum));
+                result.push((*asset, sum));
             }
         }
     }
 
-    if let Some(index) = result.iter().position(|e| e.asset == policy_asset) {
-        let last_index = result.len() - 1;
-        if index != last_index {
-            result.swap(index, last_index); // put the policy asset last
-        }
-    }
     result
 }
 
@@ -208,45 +198,44 @@ pub fn estimated_changes(
     }
 }
 
-/// return a Vector with changes of this transaction
+/// return a map asset-value for the changes of this transaction
 /// requires inputs are greater than outputs for earch asset
 pub fn changes(
     tx: &elements::Transaction,
     estimated_fee: u64,
-    policy_asset: Option<String>,
+    policy_asset: elements::issuance::AssetId,
     all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
-) -> Vec<AssetValue> {
-    let mut outputs_asset_amounts: HashMap<String, u64> = HashMap::new();
+) -> HashMap<elements::issuance::AssetId, u64> {
+    let mut outputs_asset_amounts: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for output in tx.output.iter() {
         match (output.asset, output.value) {
             (Asset::Explicit(asset), Value::Explicit(value)) => {
-                *outputs_asset_amounts.entry(asset.to_hex()).or_insert(0) += value;
+                *outputs_asset_amounts.entry(asset).or_insert(0) += value;
             }
             _ => panic!("asset and value should be explicit here"),
         }
     }
 
-    let mut inputs_asset_amounts: HashMap<String, u64> = HashMap::new();
+    let mut inputs_asset_amounts: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for input in tx.input.iter() {
-        let asset_hex =
-            get_previous_output_asset_hex(&all_txs, input.previous_output, unblinded).unwrap();
+        let asset = get_previous_output_asset(&all_txs, input.previous_output, unblinded).unwrap();
         let value = get_previous_output_value(&all_txs, &input.previous_output, unblinded).unwrap();
-        *inputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
+        *inputs_asset_amounts.entry(asset).or_insert(0) += value;
     }
-    let mut result = vec![];
+    let mut result: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for (asset, value) in inputs_asset_amounts.iter() {
-        let mut sum = value - outputs_asset_amounts.remove(asset).unwrap_or(0);
-        if asset == policy_asset.as_ref().unwrap() {
+        let mut sum: u64 = value - outputs_asset_amounts.remove(asset).unwrap_or(0);
+        if *asset == policy_asset {
             // from a purely privacy perspective could make sense to always create the change output in liquid, so min change = 0
             // however elements core use the dust anyway for 2 reasons: rebasing from core and economical considerations
             sum -= estimated_fee;
             if sum > DUST_VALUE {
                 // we apply dust rules for liquid bitcoin as elements do
-                result.push(AssetValue::new(asset.to_string(), sum));
+                result.insert(*asset, sum);
             }
         } else if sum > 0 {
-            result.push(AssetValue::new(asset.to_string(), sum));
+            result.insert(*asset, sum);
         }
     }
     assert!(outputs_asset_amounts.is_empty());

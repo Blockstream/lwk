@@ -30,6 +30,7 @@ pub use crate::ElementsNetwork;
 
 use log::{debug, info, trace, warn};
 
+use bitcoin::hashes::hex::ToHex;
 use bitcoin::secp256k1;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::{BlockHash, Script, Txid};
@@ -405,10 +406,11 @@ impl Syncer {
                     asset_commitment,
                 )?;
 
+                let asset = elements::issuance::AssetId::from_slice(&asset)?;
                 info!(
                     "Unblinded outpoint:{} asset:{} value:{}",
                     outpoint,
-                    hex::encode(&asset),
+                    &asset.to_hex(),
                     value
                 );
 

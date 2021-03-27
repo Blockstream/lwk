@@ -1,5 +1,6 @@
 use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
+use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::{self, All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
@@ -640,14 +641,17 @@ impl WalletCtx {
             info!(
                 "unblinded value: {} asset:{}",
                 unblinded.value,
-                hex::encode(&unblinded.asset[..])
+                &unblinded.asset.to_hex()
             );
 
             input_values.push(unblinded.value);
-            input_assets.extend(unblinded.asset.to_vec());
+            input_assets.extend(unblinded.asset.into_inner().to_vec());
             input_abfs.extend(unblinded.abf.to_vec());
             input_vbfs.extend(unblinded.vbf.to_vec());
-            let input_asset = asset_generator_from_bytes(&unblinded.asset, &unblinded.abf);
+            let input_asset = asset_generator_from_bytes(
+                &unblinded.asset.into_inner().into_inner(),
+                &unblinded.abf,
+            );
             input_ags.extend(elements::encode::serialize(&input_asset));
         }
 

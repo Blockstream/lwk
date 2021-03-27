@@ -1,12 +1,11 @@
-use crate::asset::AssetId;
 use bitcoin::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use bitcoin::hashes::core::fmt::Formatter;
+use bitcoin::hashes::hex::FromHex;
 use bitcoin::util::bip32::DerivationPath;
 use elements::OutPoint;
-use std::convert::TryInto;
 use std::fmt::Display;
 
 pub type Balances = HashMap<String, i64>;
@@ -152,15 +151,11 @@ pub struct AddressPointer {
 pub struct FeeEstimate(pub u64);
 
 impl AddressAmount {
-    pub fn asset(&self) -> Option<AssetId> {
-        if let Some(asset_tag) = self.asset_tag.as_ref() {
-            let vec = hex::decode(asset_tag).ok();
-            if let Some(mut vec) = vec {
-                vec.reverse();
-                return (&vec[..]).try_into().ok();
-            }
+    pub fn asset(&self) -> Option<elements::issuance::AssetId> {
+        match self.asset_tag.as_ref() {
+            Some(asset) => elements::issuance::AssetId::from_hex(asset).ok(),
+            None => None,
         }
-        None
     }
 }
 

@@ -1,6 +1,5 @@
-use std::convert::TryInto;
-
 use bitcoin::hashes::core::fmt::Formatter;
+use bitcoin::hashes::hex::ToHex;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -17,11 +16,9 @@ impl AssetValue {
     }
 }
 
-pub type AssetId = [u8; 32]; // TODO use elements::issuance::AssetId
-
 #[derive(Serialize, Deserialize)]
 pub struct Unblinded {
-    pub asset: AssetId,
+    pub asset: elements::issuance::AssetId,
     pub abf: [u8; 32],
     pub vbf: [u8; 32],
     pub value: u64,
@@ -29,7 +26,7 @@ pub struct Unblinded {
 
 impl Unblinded {
     pub fn asset_hex(&self) -> String {
-        asset_to_hex(&self.asset)
+        self.asset.to_hex()
     }
 }
 
@@ -39,27 +36,14 @@ impl Debug for Unblinded {
     }
 }
 
-pub fn asset_to_bin(asset: &str) -> Result<AssetId, crate::error::Error> {
-    let mut bytes = hex::decode(asset)?;
-    bytes.reverse();
-    let asset: AssetId = (&bytes[..]).try_into()?;
-    Ok(asset)
-}
-
-pub fn asset_to_hex(asset: &[u8]) -> String {
-    let mut asset = asset.to_vec();
-    asset.reverse();
-    hex::encode(asset)
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::asset::{asset_to_bin, asset_to_hex};
+    use bitcoin::hashes::hex::{FromHex, ToHex};
 
     #[test]
     fn test_asset_roundtrip() {
-        let expected = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let result = asset_to_hex(&asset_to_bin(expected).unwrap());
-        assert_eq!(expected, &result);
+        let hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let asset = elements::issuance::AssetId::from_hex(&hex).unwrap();
+        assert_eq!(asset.to_hex(), hex);
     }
 }

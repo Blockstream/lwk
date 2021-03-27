@@ -1,8 +1,7 @@
-use crate::asset::{asset_to_bin, AssetId};
 use crate::error::Error;
-use elements::confidential::Asset;
-use elements::{confidential, issuance};
 use serde::{Deserialize, Serialize};
+
+use bitcoin::hashes::hex::FromHex;
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -37,23 +36,26 @@ impl Config {
         }
     }
 
-    pub fn policy_asset_id(&self) -> Result<AssetId, Error> {
+    pub fn policy_asset_id(&self) -> Result<elements::issuance::AssetId, Error> {
         match self.network() {
-            ElementsNetwork::Liquid => Ok(asset_to_bin(LIQUID_POLICY_ASSET_STR)?),
+            ElementsNetwork::Liquid => Ok(elements::issuance::AssetId::from_hex(
+                LIQUID_POLICY_ASSET_STR,
+            )?),
             ElementsNetwork::ElementsRegtest => {
                 // TODO: pack policy asset in ElementsRegtest variant
                 //let asset_str = self.policy_asset.as_ref().unwrap_or_else(|| Err("no policy_asset".into()));
                 match self.policy_asset.as_ref() {
-                    Some(policy_asset_str) => Ok(asset_to_bin(policy_asset_str)?),
+                    Some(policy_asset_str) => {
+                        Ok(elements::issuance::AssetId::from_hex(policy_asset_str)?)
+                    }
                     None => Err("no policy asset".into()),
                 }
             }
         }
     }
 
-    pub fn policy_asset(&self) -> Result<Asset, Error> {
+    pub fn policy_asset(&self) -> Result<elements::confidential::Asset, Error> {
         let asset_id = self.policy_asset_id()?;
-        let asset_id = issuance::AssetId::from_slice(&asset_id)?;
-        Ok(confidential::Asset::Explicit(asset_id))
+        Ok(elements::confidential::Asset::Explicit(asset_id))
     }
 }

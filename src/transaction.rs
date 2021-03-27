@@ -1,7 +1,8 @@
-use crate::asset::{asset_to_bin, asset_to_hex, AssetValue, Unblinded};
+use crate::asset::{AssetValue, Unblinded};
 use crate::error::Error;
 use crate::model::Balances;
 use bitcoin::hash_types::Txid;
+use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::Script;
 use elements::confidential::{Asset, Value};
 use elements::{confidential, issuance};
@@ -63,8 +64,7 @@ pub fn add_output(
     let blinding_pubkey = address.blinding_pubkey.ok_or(Error::InvalidAddress)?;
     let bytes = blinding_pubkey.serialize();
     let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();
-    let asset = asset_to_bin(&asset_hex).expect("invalid asset hex");
-    let asset_id = issuance::AssetId::from_slice(&asset)?;
+    let asset_id = issuance::AssetId::from_hex(&asset_hex)?;
     let new_out = elements::TxOut {
         asset: confidential::Asset::Explicit(asset_id),
         value: confidential::Value::Explicit(value),
@@ -141,8 +141,7 @@ pub fn needs(
     for output in tx.output.iter() {
         match (output.asset, output.value) {
             (Asset::Explicit(asset), Value::Explicit(value)) => {
-                let asset_hex = asset_to_hex(&asset.into_inner());
-                *outputs.entry(asset_hex).or_insert(0) += value;
+                *outputs.entry(asset.to_hex()).or_insert(0) += value;
             }
             _ => panic!("asset and value should be explicit here"),
         }
@@ -214,8 +213,7 @@ pub fn changes(
     for output in tx.output.iter() {
         match (output.asset, output.value) {
             (Asset::Explicit(asset), Value::Explicit(value)) => {
-                let asset_hex = asset_to_hex(&asset.into_inner());
-                *outputs_asset_amounts.entry(asset_hex).or_insert(0) += value;
+                *outputs_asset_amounts.entry(asset.to_hex()).or_insert(0) += value;
             }
             _ => panic!("asset and value should be explicit here"),
         }

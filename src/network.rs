@@ -1,5 +1,4 @@
 use crate::error::Error;
-use serde::{Deserialize, Serialize};
 
 use bitcoin::hashes::hex::FromHex;
 
@@ -7,9 +6,9 @@ use bitcoin::hashes::hex::FromHex;
 const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    pub mainnet: bool,
+    network: ElementsNetwork,
 
     pub tls: bool,
     pub validate_domain: bool,
@@ -33,7 +32,7 @@ impl Config {
         policy_asset: &str,
     ) -> Result<Self, Error> {
         Ok(Config {
-            mainnet: false,
+            network: ElementsNetwork::ElementsRegtest,
             tls,
             validate_domain,
             spv_enabled,
@@ -49,7 +48,7 @@ impl Config {
         electrum_url: &str,
     ) -> Result<Self, Error> {
         Ok(Config {
-            mainnet: true,
+            network: ElementsNetwork::Liquid,
             tls,
             validate_domain,
             spv_enabled,
@@ -59,10 +58,7 @@ impl Config {
     }
 
     pub fn network(&self) -> ElementsNetwork {
-        match self.mainnet {
-            true => ElementsNetwork::Liquid,
-            false => ElementsNetwork::ElementsRegtest,
-        }
+        self.network
     }
 
     pub fn policy_asset_id(&self) -> Result<elements::issuance::AssetId, Error> {

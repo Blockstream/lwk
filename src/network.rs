@@ -6,6 +6,28 @@ use bitcoin::hashes::hex::FromHex;
 const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
 
+#[derive(Clone)]
+pub enum ElectrumUrl {
+    Tls(String, bool), // the bool value indicates if the domain name should be validated
+    Plaintext(String),
+}
+
+impl ElectrumUrl {
+    pub fn build_client(&self) -> Result<electrum_client::Client, Error> {
+        match self {
+            ElectrumUrl::Tls(url, validate) => {
+                let client =
+                    electrum_client::raw_client::RawClient::new_ssl(url.as_str(), *validate)?;
+                Ok(electrum_client::Client::SSL(client))
+            }
+            ElectrumUrl::Plaintext(url) => {
+                let client = electrum_client::raw_client::RawClient::new(&url)?;
+                Ok(electrum_client::Client::TCP(client))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,

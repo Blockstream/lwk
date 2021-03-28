@@ -21,9 +21,10 @@ use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails,
 
 use crate::asset::Unblinded;
 use crate::headers::Verifier;
-use crate::interface::{ElectrumUrl, WalletCtx};
+use crate::interface::WalletCtx;
 use crate::model::*;
 pub use crate::network::Config;
+use crate::network::ElectrumUrl;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
 pub use crate::ElementsNetwork;

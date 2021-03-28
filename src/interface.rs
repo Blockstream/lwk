@@ -1,4 +1,4 @@
-use crate::model::{AddressAmount, Balances, GetTransactionsOpt, SPVVerifyResult};
+use crate::model::{Balances, Destination, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash};
@@ -349,7 +349,7 @@ impl WalletCtx {
 
             info!("send_all asset: {} to_send:{}", asset, to_send);
 
-            opt.addressees[0] = AddressAmount::new(
+            opt.addressees[0] = Destination::new(
                 &opt.addressees[0].address().to_string(),
                 to_send,
                 &opt.addressees[0].asset().to_hex(),

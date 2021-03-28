@@ -84,17 +84,17 @@ impl TransactionDetails {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct AddressAmount {
+pub struct Destination {
     address: elements::Address,
     satoshi: u64,
     asset: elements::issuance::AssetId,
 }
 
-impl AddressAmount {
+impl Destination {
     pub fn new(address: &str, satoshi: u64, asset: &str) -> Result<Self, Error> {
         let address = elements::Address::from_str(address).map_err(|_| Error::InvalidAddress)?;
         let asset = elements::issuance::AssetId::from_hex(asset)?;
-        Ok(AddressAmount {
+        Ok(Destination {
             address,
             satoshi,
             asset,
@@ -134,7 +134,7 @@ pub enum Notification {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CreateTransactionOpt {
     // TODO: chage type to hold SendAll and be valid
-    pub addressees: Vec<AddressAmount>,
+    pub addressees: Vec<Destination>,
     pub fee_rate: Option<u64>, // in satoshi/kbyte
     // TODO: this should be in addressees
     pub send_all: Option<bool>,

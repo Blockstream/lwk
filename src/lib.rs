@@ -404,20 +404,15 @@ impl Syncer {
 }
 
 pub struct ElectrumWallet {
-    pub data_root: String,
-    pub config: Config,
-    pub wallet: WalletCtx,
+    config: Config,
+    wallet: WalletCtx,
 }
 
 impl ElectrumWallet {
     pub fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 
-        Ok(Self {
-            data_root: data_root.to_string(),
-            config,
-            wallet,
-        })
+        Ok(Self { config, wallet })
     }
 
     pub fn update_fee_estimates(&self) {

@@ -25,6 +25,23 @@ pub enum ElementsNetwork {
 }
 
 impl Config {
+    pub fn new_regtest(
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        electrum_url: &str,
+        policy_asset: &str,
+    ) -> Result<Self, Error> {
+        Ok(Config {
+            mainnet: false,
+            tls,
+            validate_domain,
+            spv_enabled,
+            electrum_url: Some(electrum_url.to_string()),
+            policy_asset: Some(policy_asset.to_string()),
+        })
+    }
+
     pub fn network(&self) -> ElementsNetwork {
         match self.mainnet {
             true => ElementsNetwork::Liquid,

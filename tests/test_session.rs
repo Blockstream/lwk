@@ -251,11 +251,17 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
     let electrs = RawClient::new(&electrs_url).unwrap();
     info!("done creating electrs client");
 
-    let mut config = Config::default();
-    config.electrum_url = Some(electrs_url.to_string());
-    config.spv_enabled = true;
-    config.policy_asset =
-        Some("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225".into());
+    let tls = false;
+    let validate_domain = false;
+    let spv_enabled = true;
+    let config = Config::new_regtest(
+        tls,
+        validate_domain,
+        spv_enabled,
+        &electrs_url,
+        &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225",
+    )
+    .unwrap();
     let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
     let db_root = format!("{}", db_root_dir.path().display());

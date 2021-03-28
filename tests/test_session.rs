@@ -454,11 +454,16 @@ impl TestElectrumWallet {
         let mut create_opt = CreateTransactionOpt::default();
         let fee_rate = 100;
         create_opt.fee_rate = Some(fee_rate);
-        create_opt.addressees.push(AddressAmount {
-            address: elements::Address::from_str(&address).unwrap(),
-            satoshi,
-            asset_tag: asset.clone().or(self.policy_asset()),
-        });
+        create_opt.addressees.push(
+            AddressAmount::new(
+                address,
+                satoshi,
+                asset
+                    .as_ref()
+                    .unwrap_or(&self.config.policy_asset().to_hex()),
+            )
+            .unwrap(),
+        );
         create_opt.utxos = utxos;
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
@@ -524,11 +529,9 @@ impl TestElectrumWallet {
         let mut create_opt = CreateTransactionOpt::default();
         let fee_rate = 1000;
         create_opt.fee_rate = Some(fee_rate);
-        create_opt.addressees.push(AddressAmount {
-            address: elements::Address::from_str(&address).unwrap(),
-            satoshi: 0,
-            asset_tag: asset.clone(),
-        });
+        create_opt
+            .addressees
+            .push(AddressAmount::new(&address, 0, asset.as_ref().unwrap()).unwrap());
         create_opt.send_all = Some(true);
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
@@ -600,11 +603,9 @@ impl TestElectrumWallet {
                 Some(current)
             };
 
-            create_opt.addressees.push(AddressAmount {
-                address: elements::Address::from_str(&address).unwrap(),
-                satoshi: amount,
-                asset_tag,
-            });
+            create_opt
+                .addressees
+                .push(AddressAmount::new(&address, amount, &asset_tag.unwrap()).unwrap());
             addressees.push(address);
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
@@ -645,48 +646,54 @@ impl TestElectrumWallet {
         let fee_rate = 1000;
         let address = self.node_getnewaddress(None);
         create_opt.fee_rate = Some(fee_rate);
-        create_opt.addressees.push(AddressAmount {
-            address: elements::Address::from_str(&address).unwrap(),
-            satoshi: 0,
-            asset_tag: self.policy_asset(),
-        });
+        create_opt.addressees =
+            vec![AddressAmount::new(&address, 0, &self.config.policy_asset().to_hex()).unwrap()];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::InvalidAmount)
         ));
 
-        create_opt.addressees[0].satoshi = 200; // below dust limit
+        create_opt.addressees =
+            vec![AddressAmount::new(&address, 200, &self.config.policy_asset().to_hex()).unwrap()];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::InvalidAmount)
         ));
 
-        create_opt.addressees[0].satoshi = init_sat; // not enough to pay the fee
+        create_opt.addressees = vec![AddressAmount::new(
+            &address,
+            init_sat, // not enough to pay fee
+            &self.config.policy_asset().to_hex(),
+        )
+        .unwrap()];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::InsufficientFunds)
         ));
 
-        //create_opt.addressees[0].address = "x".to_string();
-        //assert!(matches!(
-        //    self.electrum_wallet.create_tx(&mut create_opt),
-        //    Err(Error::InvalidAddress)
-        //));
+        assert!(matches!(
+            AddressAmount::new("x", 200, &self.config.policy_asset().to_hex(),),
+            Err(Error::InvalidAddress)
+        ));
 
-        create_opt.addressees[0].address =
-            elements::Address::from_str("38CMdevthTKYAtxaSkYYtcv5QgkHXdKKk5").unwrap();
         assert!(
             matches!(
-                self.electrum_wallet.create_tx(&mut create_opt),
+                AddressAmount::new(
+                    "38CMdevthTKYAtxaSkYYtcv5QgkHXdKKk5",
+                    200,
+                    &self.config.policy_asset().to_hex(),
+                ),
                 Err(Error::InvalidAddress)
             ),
             "address with different network should fail"
         );
 
-        create_opt.addressees[0].address = elements::Address::from_str(
+        create_opt.addressees = vec![AddressAmount::new(
             "VJLCbLBTCdxhWyjVLdjcSmGAksVMtabYg15maSi93zknQD2ihC38R7CUd8KbDFnV8A4hiykxnRB3Uv6d",
+            200,
+            &self.config.policy_asset().to_hex(),
         )
-        .unwrap();
+        .unwrap()];
         assert!(
             matches!(
                 self.electrum_wallet.create_tx(&mut create_opt),
@@ -695,23 +702,30 @@ impl TestElectrumWallet {
             "address with different network should fail"
         );
 
-        create_opt.addressees[0].address = elements::Address::from_str(
-            "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
-        )
-        .unwrap(); // from bip173 test vectors
+        // from bip173 test vectors
         assert!(
             matches!(
-                self.electrum_wallet.create_tx(&mut create_opt),
+                AddressAmount::new(
+                    "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
+                    200,
+                    &self.config.policy_asset().to_hex(),
+                ),
                 Err(Error::InvalidAddress)
             ),
             "segwit v1 should fail"
         );
 
-        let addr =
-            "Azpt6vXqrbPuUtsumAioGjKnvukPApDssC1HwoFdSWZaBYJrUVSe5K8x9nk2HVYiYANy9mVQbW3iQ6xU";
-        let mut addr = elements::Address::from_str(addr).unwrap();
+        let mut addr = elements::Address::from_str(
+            "Azpt6vXqrbPuUtsumAioGjKnvukPApDssC1HwoFdSWZaBYJrUVSe5K8x9nk2HVYiYANy9mVQbW3iQ6xU",
+        )
+        .unwrap();
         addr.blinding_pubkey = None;
-        create_opt.addressees[0].address = addr;
+        create_opt.addressees = vec![AddressAmount::new(
+            &addr.to_string(),
+            1000,
+            &self.config.policy_asset().to_hex(),
+        )
+        .unwrap()];
         assert!(
             matches!(
                 self.electrum_wallet.create_tx(&mut create_opt),
@@ -720,7 +734,7 @@ impl TestElectrumWallet {
             "unblinded address should fail"
         );
 
-        create_opt.addressees.clear();
+        create_opt.addressees = vec![];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::EmptyAddressees)

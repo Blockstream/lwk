@@ -1,12 +1,15 @@
+use crate::error::Error;
+
 use bitcoin::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use bitcoin::hashes::core::fmt::Formatter;
-use bitcoin::hashes::hex::FromHex;
+use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::util::bip32::DerivationPath;
 use elements::OutPoint;
 use std::fmt::Display;
+use std::str::FromStr;
 
 pub type Balances = HashMap<String, i64>;
 
@@ -85,6 +88,18 @@ pub struct AddressAmount {
     pub address: elements::Address,
     pub satoshi: u64,
     pub asset_tag: Option<String>,
+}
+
+impl AddressAmount {
+    pub fn new(address: &str, satoshi: u64, asset: &str) -> Result<Self, Error> {
+        let address = elements::Address::from_str(address).map_err(|_| Error::InvalidAddress)?;
+        let asset = elements::issuance::AssetId::from_hex(asset)?;
+        Ok(AddressAmount {
+            address,
+            satoshi,
+            asset_tag: Some(asset.to_hex()), // TODO: asset_tag -> asset
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

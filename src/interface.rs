@@ -164,7 +164,7 @@ impl WalletCtx {
         });
 
         let policy_asset = Some(elements::confidential::Asset::Explicit(
-            self.config.policy_asset_id()?,
+            self.config.policy_asset(),
         ));
         for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
             trace!("tx_id {}", tx_id);
@@ -225,7 +225,7 @@ impl WalletCtx {
                 .get(tx_id)
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<TXO> = {
-                let policy_asset = self.config.policy_asset_id()?;
+                let policy_asset = self.config.policy_asset();
                 tx.output
                     .clone()
                     .into_iter()
@@ -278,7 +278,7 @@ impl WalletCtx {
         info!("start balance");
         let mut result = HashMap::new();
         result
-            .entry(self.config.policy_asset_str().as_ref().unwrap().clone())
+            .entry(self.config.policy_asset().to_hex())
             .or_insert(0);
         for u in self.utxos()?.iter() {
             *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
@@ -320,7 +320,7 @@ impl WalletCtx {
         if !send_all {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= DUST_VALUE {
-                    if address_amount.asset_tag == self.config.policy_asset_str() {
+                    if address_amount.asset_tag == Some(self.config.policy_asset().to_hex()) {
                         // we apply dust rules for liquid bitcoin as elements do
                         return Err(Error::InvalidAmount);
                     }
@@ -356,7 +356,7 @@ impl WalletCtx {
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
             let to_send =
-                if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset_str() {
+                if asset == "btc" || asset.to_string() == self.config.policy_asset().to_hex() {
                     let mut dummy_tx = elements::Transaction {
                         version: 2,
                         lock_time: 0,
@@ -417,7 +417,7 @@ impl WalletCtx {
                 &tx,
                 fee_rate,
                 send_all,
-                self.config.policy_asset_id().unwrap(),
+                self.config.policy_asset(),
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
             );
@@ -462,7 +462,7 @@ impl WalletCtx {
         let changes = changes(
             &tx,
             estimated_fee,
-            self.config.policy_asset_id()?,
+            self.config.policy_asset(),
             &store_read.cache.all_txs,
             &store_read.cache.unblinded,
         );
@@ -482,7 +482,7 @@ impl WalletCtx {
         scramble(&mut tx);
 
         let policy_asset = Some(elements::confidential::Asset::Explicit(
-            self.config.policy_asset_id()?,
+            self.config.policy_asset(),
         ));
         let fee_val = fee(
             &tx,

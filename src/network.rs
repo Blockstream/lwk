@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use bitcoin::hashes::hex::{FromHex, ToHex};
+use bitcoin::hashes::hex::FromHex;
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -61,11 +61,7 @@ impl Config {
         self.network
     }
 
-    pub fn policy_asset_id(&self) -> Result<elements::issuance::AssetId, Error> {
-        Ok(self.policy_asset)
-    }
-
-    pub fn policy_asset_str(&self) -> Option<String> {
-        Some(self.policy_asset.to_hex())
+    pub fn policy_asset(&self) -> elements::issuance::AssetId {
+        self.policy_asset
     }
 }

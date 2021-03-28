@@ -1,4 +1,4 @@
-use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
+use crate::model::{AddressAmount, Balances, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash};
@@ -270,7 +270,7 @@ impl WalletCtx {
         // TODO put checks into CreateTransaction::validate, add check asset are valid asset hex
         // eagerly check for address validity
         let address_params = address_params(self.config.network());
-        for address in opt.addressees.iter().map(|a| &a.address) {
+        for address in opt.addressees.iter().map(|a| a.address()) {
             if address.params != address_params {
                 return Err(Error::InvalidAddress);
             }
@@ -282,13 +282,13 @@ impl WalletCtx {
 
         let send_all = opt.send_all.unwrap_or(false);
         opt.send_all = Some(send_all); // accept default false, but always return the value
-        if !send_all && opt.addressees.iter().any(|a| a.satoshi == 0) {
+        if !send_all && opt.addressees.iter().any(|a| a.satoshi() == 0) {
             return Err(Error::InvalidAmount);
         }
 
         if !send_all {
             for address_amount in opt.addressees.iter() {
-                if address_amount.satoshi <= DUST_VALUE {
+                if address_amount.satoshi() <= DUST_VALUE {
                     if address_amount.asset() == self.config.policy_asset() {
                         // we apply dust rules for liquid bitcoin as elements do
                         return Err(Error::InvalidAmount);
@@ -334,8 +334,8 @@ impl WalletCtx {
                     let out = &opt.addressees[0]; // safe because we checked we have exactly one recipient
                     add_output(
                         &mut dummy_tx,
-                        &out.address,
-                        out.satoshi,
+                        &out.address(),
+                        out.satoshi(),
                         out.asset().to_hex(),
                     )
                     .map_err(|_| Error::InvalidAddress)?;
@@ -349,7 +349,11 @@ impl WalletCtx {
 
             info!("send_all asset: {} to_send:{}", asset, to_send);
 
-            opt.addressees[0].satoshi = to_send;
+            opt.addressees[0] = AddressAmount::new(
+                &opt.addressees[0].address().to_string(),
+                to_send,
+                &opt.addressees[0].asset().to_hex(),
+            )?;
         }
 
         let mut tx = elements::Transaction {
@@ -365,13 +369,8 @@ impl WalletCtx {
 
         // STEP 1) add the outputs requested for this transactions
         for out in opt.addressees.iter() {
-            add_output(
-                &mut tx,
-                &out.address,
-                out.satoshi,
-                out.asset().to_hex(),
-            )
-            .map_err(|_| Error::InvalidAddress)?;
+            add_output(&mut tx, &out.address(), out.satoshi(), out.asset().to_hex())
+                .map_err(|_| Error::InvalidAddress)?;
         }
 
         // STEP 2) add utxos until tx outputs are covered (including fees) or fail

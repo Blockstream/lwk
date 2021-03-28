@@ -85,8 +85,8 @@ impl TransactionDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AddressAmount {
-    pub address: elements::Address,
-    pub satoshi: u64,
+    address: elements::Address,
+    satoshi: u64,
     asset: elements::issuance::AssetId,
 }
 
@@ -99,6 +99,14 @@ impl AddressAmount {
             satoshi,
             asset,
         })
+    }
+
+    pub fn address(&self) -> elements::Address {
+        self.address.clone()
+    }
+
+    pub fn satoshi(&self) -> u64 {
+        self.satoshi
     }
 
     pub fn asset(&self) -> elements::issuance::AssetId {

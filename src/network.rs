@@ -6,7 +6,7 @@ use bitcoin::hashes::hex::FromHex;
 const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ElectrumUrl {
     Tls(String, bool), // the bool value indicates if the domain name should be validated
     Plaintext(String),
@@ -32,11 +32,9 @@ impl ElectrumUrl {
 pub struct Config {
     network: ElementsNetwork,
     policy_asset: elements::issuance::AssetId,
+    electrum_url: ElectrumUrl,
 
-    pub tls: bool,
-    pub validate_domain: bool,
     pub spv_enabled: bool,
-    pub electrum_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,12 +51,14 @@ impl Config {
         electrum_url: &str,
         policy_asset: &str,
     ) -> Result<Self, Error> {
+        let electrum_url = match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        };
         Ok(Config {
             network: ElementsNetwork::ElementsRegtest,
-            tls,
-            validate_domain,
+            electrum_url,
             spv_enabled,
-            electrum_url: Some(electrum_url.to_string()),
             policy_asset: elements::issuance::AssetId::from_hex(policy_asset)?,
         })
     }
@@ -69,12 +69,14 @@ impl Config {
         spv_enabled: bool,
         electrum_url: &str,
     ) -> Result<Self, Error> {
+        let electrum_url = match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        };
         Ok(Config {
             network: ElementsNetwork::Liquid,
-            tls,
-            validate_domain,
+            electrum_url,
             spv_enabled,
-            electrum_url: Some(electrum_url.to_string()),
             policy_asset: elements::issuance::AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
         })
     }
@@ -85,5 +87,9 @@ impl Config {
 
     pub fn policy_asset(&self) -> elements::issuance::AssetId {
         self.policy_asset
+    }
+
+    pub fn electrum_url(&self) -> ElectrumUrl {
+        self.electrum_url.clone()
     }
 }

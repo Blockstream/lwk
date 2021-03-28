@@ -62,29 +62,6 @@ struct Headers {
     pub verifier: Verifier,
 }
 
-fn determine_electrum_url(
-    url: &Option<String>,
-    tls: bool,
-    validate_domain: bool,
-) -> Result<ElectrumUrl, Error> {
-    let url = url
-        .as_ref()
-        .ok_or_else(|| Error::Generic("network url is missing".into()))?;
-    if url == "" {
-        return Err(Error::Generic("network url is empty".into()));
-    }
-
-    if tls {
-        Ok(ElectrumUrl::Tls(url.into(), validate_domain))
-    } else {
-        Ok(ElectrumUrl::Plaintext(url.into()))
-    }
-}
-
-pub fn determine_electrum_url_from_net(config: &Config) -> Result<ElectrumUrl, Error> {
-    determine_electrum_url(&config.electrum_url, config.tls, config.validate_domain)
-}
-
 fn try_get_fee_estimates(client: &Client) -> Result<Vec<FeeEstimate>, Error> {
     let relay_fee = (client.relay_fee()? * 100_000_000.0) as u64;
     let blocks: Vec<usize> = (1..25).collect();
@@ -436,7 +413,7 @@ pub struct ElectrumWallet {
 
 impl ElectrumWallet {
     pub fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let url = determine_electrum_url_from_net(&config)?;
+        let url = config.electrum_url();
 
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 

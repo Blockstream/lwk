@@ -183,7 +183,7 @@ impl WalletCtx {
             let balances = my_balance_changes(&tx, &store_read.cache.unblinded);
             trace!("tx_id {} balances {:?}", tx_id, balances);
 
-            let spv_verified = if self.config.spv_enabled.unwrap_or(false) {
+            let spv_verified = if self.config.spv_enabled {
                 store_read
                     .cache
                     .txs_verif

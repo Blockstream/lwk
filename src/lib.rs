@@ -63,8 +63,8 @@ struct Headers {
 
 fn determine_electrum_url(
     url: &Option<String>,
-    tls: Option<bool>,
-    validate_domain: Option<bool>,
+    tls: bool,
+    validate_domain: bool,
 ) -> Result<ElectrumUrl, Error> {
     let url = url
         .as_ref()
@@ -73,11 +73,8 @@ fn determine_electrum_url(
         return Err(Error::Generic("network url is empty".into()));
     }
 
-    if tls.unwrap_or(false) {
-        Ok(ElectrumUrl::Tls(
-            url.into(),
-            validate_domain.unwrap_or(false),
-        ))
+    if tls {
+        Ok(ElectrumUrl::Tls(url.into(), validate_domain))
     } else {
         Ok(ElectrumUrl::Plaintext(url.into()))
     }

@@ -11,11 +11,11 @@ const LIQUID_POLICY_ASSET_STR: &str =
 pub struct Config {
     pub mainnet: bool,
 
-    pub tls: Option<bool>,
+    pub tls: bool,
+    pub validate_domain: bool,
+    pub spv_enabled: bool,
     pub electrum_url: Option<String>,
-    pub validate_domain: Option<bool>,
     pub policy_asset: Option<String>,
-    pub spv_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

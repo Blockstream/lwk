@@ -42,6 +42,22 @@ impl Config {
         })
     }
 
+    pub fn new_mainnet(
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        electrum_url: &str,
+    ) -> Result<Self, Error> {
+        Ok(Config {
+            mainnet: true,
+            tls,
+            validate_domain,
+            spv_enabled,
+            electrum_url: Some(electrum_url.to_string()),
+            policy_asset: Some(LIQUID_POLICY_ASSET_STR.to_string()),
+        })
+    }
+
     pub fn network(&self) -> ElementsNetwork {
         match self.mainnet {
             true => ElementsNetwork::Liquid,

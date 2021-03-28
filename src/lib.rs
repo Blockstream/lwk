@@ -8,7 +8,7 @@ pub mod scripts;
 mod store;
 pub mod transaction;
 
-pub use network::*;
+use network::*;
 use wally::asset_unblind;
 
 use std::collections::hash_map::DefaultHasher;
@@ -23,10 +23,10 @@ use crate::asset::Unblinded;
 use crate::headers::Verifier;
 use crate::interface::WalletCtx;
 use crate::model::*;
-pub use crate::network::Config;
+use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
-pub use crate::ElementsNetwork;
+use crate::ElementsNetwork;
 
 use log::{debug, info, trace, warn};
 

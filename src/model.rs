@@ -121,17 +121,6 @@ pub struct GetTransactionsOpt {
     pub num_confs: Option<usize>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct SPVVerifyTx {
-    pub txid: String,
-    pub height: u32,
-    pub path: String,
-    pub config: crate::network::Config,
-    pub encryption_key: String,
-    pub tor_proxy: Option<String>,
-    pub headers_to_download: Option<usize>, // defaults to 2016, useful to set for testing
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SPVVerifyResult {
     InProgress,

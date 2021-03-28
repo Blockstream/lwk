@@ -254,11 +254,9 @@ impl WalletCtx {
     pub fn balance(&self) -> Result<Balances, Error> {
         info!("start balance");
         let mut result = HashMap::new();
-        result
-            .entry(self.config.policy_asset().to_hex())
-            .or_insert(0);
+        result.entry(self.config.policy_asset()).or_insert(0);
         for u in self.utxos()?.iter() {
-            *result.entry(u.asset.to_hex()).or_default() += u.satoshi as i64;
+            *result.entry(u.asset).or_default() += u.satoshi as i64;
         }
         Ok(result)
     }

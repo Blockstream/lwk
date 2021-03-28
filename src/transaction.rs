@@ -321,8 +321,7 @@ pub fn my_balance_changes(
                 outpoint,
                 unblinded.value
             );
-            let asset_id_str = unblinded.asset.to_hex();
-            *result.entry(asset_id_str).or_default() -= unblinded.value as i64;
+            *result.entry(unblinded.asset).or_default() -= unblinded.value as i64;
             // TODO check overflow
         }
     }
@@ -338,8 +337,7 @@ pub fn my_balance_changes(
                 outpoint,
                 unblinded.value
             );
-            let asset_id_str = unblinded.asset.to_hex();
-            *result.entry(asset_id_str).or_default() += unblinded.value as i64;
+            *result.entry(unblinded.asset).or_default() += unblinded.value as i64;
             // TODO check overflow
         }
     }

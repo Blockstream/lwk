@@ -1,6 +1,6 @@
 extern crate bewallet;
 
-use bitcoin::hashes::hex::ToHex;
+use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::{self, Amount, BlockHash};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use chrono::Utc;
@@ -360,7 +360,10 @@ impl TestElectrumWallet {
     fn balance_asset(&self, asset: Option<String>) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
-        let asset = asset.unwrap_or(self.config.policy_asset().to_hex());
+        let asset = match asset {
+            Some(asset_str) => elements::issuance::AssetId::from_hex(&asset_str).unwrap(),
+            None => self.config.policy_asset(),
+        };
         *balance.get(&asset).unwrap_or(&0i64) as u64
     }
 
@@ -576,15 +579,18 @@ impl TestElectrumWallet {
         for _ in 0..recipients {
             let address = self.node_getnewaddress(None);
             let asset = if assets.is_empty() {
-                self.config.policy_asset().to_hex()
+                self.config.policy_asset()
             } else {
-                let current = assets_cycle.next().unwrap().to_string();
-                tags.push(current.clone());
+                let current = elements::issuance::AssetId::from_hex(
+                    &assets_cycle.next().unwrap().to_string(),
+                )
+                .unwrap();
+                tags.push(current);
                 current
             };
             create_opt
                 .addressees
-                .push(Destination::new(&address, amount, &asset).unwrap());
+                .push(Destination::new(&address, amount, &asset.to_hex()).unwrap());
             addressees.push(address);
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
@@ -607,10 +613,11 @@ impl TestElectrumWallet {
         } else {
             assert_eq!(init_sat - fee, self.balance_btc());
             for tag in assets {
-                let outputs_for_this_asset = tags.iter().filter(|t| t == &tag).count() as u64;
+                let asset = elements::issuance::AssetId::from_hex(&tag).unwrap();
+                let outputs_for_this_asset = tags.iter().filter(|t| t == &&asset).count() as u64;
                 assert_eq!(
-                    *init_balances.get(tag).unwrap() as u64 - outputs_for_this_asset * amount,
-                    self.balance_asset(Some(tag.to_string()))
+                    *init_balances.get(&asset).unwrap() as u64 - outputs_for_this_asset * amount,
+                    self.balance_asset(Some(asset.to_hex()))
                 );
             }
         }

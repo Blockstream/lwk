@@ -11,7 +11,7 @@ use elements::OutPoint;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub type Balances = HashMap<String, i64>;
+pub type Balances = HashMap<elements::issuance::AssetId, i64>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {

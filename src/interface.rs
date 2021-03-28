@@ -1,4 +1,4 @@
-use crate::model::{Balances, Destination, GetTransactionsOpt, SPVVerifyResult};
+use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::blockdata::script::Script;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash};
@@ -280,19 +280,15 @@ impl WalletCtx {
             return Err(Error::EmptyAddressees);
         }
 
-        let send_all = opt.send_all.unwrap_or(false);
-        opt.send_all = Some(send_all); // accept default false, but always return the value
-        if !send_all && opt.addressees.iter().any(|a| a.satoshi() == 0) {
+        if opt.addressees.iter().any(|a| a.satoshi() == 0) {
             return Err(Error::InvalidAmount);
         }
 
-        if !send_all {
-            for address_amount in opt.addressees.iter() {
-                if address_amount.satoshi() <= DUST_VALUE {
-                    if address_amount.asset() == self.config.policy_asset() {
-                        // we apply dust rules for liquid bitcoin as elements do
-                        return Err(Error::InvalidAmount);
-                    }
+        for address_amount in opt.addressees.iter() {
+            if address_amount.satoshi() <= DUST_VALUE {
+                if address_amount.asset() == self.config.policy_asset() {
+                    // we apply dust rules for liquid bitcoin as elements do
+                    return Err(Error::InvalidAmount);
                 }
             }
         }
@@ -307,54 +303,6 @@ impl WalletCtx {
             Some(utxos) => utxos.clone(),
         };
         info!("utxos len:{}", utxos.len());
-
-        if send_all {
-            // send_all works by creating a dummy tx with all utxos, estimate the fee and set the
-            // sending amount to `total_amount_utxos - estimated_fee`
-            info!("send_all calculating total_amount");
-            if opt.addressees.len() != 1 {
-                return Err(Error::SendAll);
-            }
-            // FIXME: this error prone...
-            let asset = opt.addressees[0].asset().to_hex();
-            let all_utxos: Vec<&TXO> = utxos.iter().filter(|u| u.asset == asset).collect();
-            let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
-
-            let to_send =
-                if asset == "btc" || asset.to_string() == self.config.policy_asset().to_hex() {
-                    let mut dummy_tx = elements::Transaction {
-                        version: 2,
-                        lock_time: 0,
-                        input: vec![],
-                        output: vec![],
-                    };
-                    for utxo in all_utxos.iter() {
-                        add_input(&mut dummy_tx, utxo.outpoint.clone());
-                    }
-                    let out = &opt.addressees[0]; // safe because we checked we have exactly one recipient
-                    add_output(
-                        &mut dummy_tx,
-                        &out.address(),
-                        out.satoshi(),
-                        out.asset().to_hex(),
-                    )
-                    .map_err(|_| Error::InvalidAddress)?;
-                    let estimated_fee = estimated_fee(&dummy_tx, fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
-                    total_amount_utxos
-                        .checked_sub(estimated_fee)
-                        .ok_or_else(|| Error::InsufficientFunds)?
-                } else {
-                    total_amount_utxos
-                };
-
-            info!("send_all asset: {} to_send:{}", asset, to_send);
-
-            opt.addressees[0] = Destination::new(
-                &opt.addressees[0].address().to_string(),
-                to_send,
-                &opt.addressees[0].asset().to_hex(),
-            )?;
-        }
 
         let mut tx = elements::Transaction {
             version: 2,
@@ -380,7 +328,6 @@ impl WalletCtx {
             let mut needs = needs(
                 &tx,
                 fee_rate,
-                send_all,
                 self.config.policy_asset(),
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
@@ -416,12 +363,7 @@ impl WalletCtx {
         let estimated_fee = estimated_fee(
             &tx,
             fee_rate,
-            estimated_changes(
-                &tx,
-                send_all,
-                &store_read.cache.all_txs,
-                &store_read.cache.unblinded,
-            ),
+            estimated_changes(&tx, &store_read.cache.all_txs, &store_read.cache.unblinded),
         );
         let changes = changes(
             &tx,

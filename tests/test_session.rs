@@ -525,26 +525,6 @@ impl TestElectrumWallet {
         assert_eq!(tx.spv_verified.to_string(), verified.to_string());
     }
 
-    pub fn send_all(&mut self, address: &str, asset: Option<String>) {
-        let mut create_opt = CreateTransactionOpt::default();
-        let fee_rate = 1000;
-        create_opt.fee_rate = Some(fee_rate);
-        create_opt
-            .addressees
-            .push(Destination::new(&address, 0, asset.as_ref().unwrap()).unwrap());
-        create_opt.send_all = Some(true);
-        let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
-        let mut tx = tx_details.transaction.clone();
-        self.electrum_wallet
-            .sign_tx(&mut tx, &self.mnemonic)
-            .unwrap();
-
-        //self.check_fee_rate(fee_rate, &signed_tx, MAX_FEE_PERCENT_DIFF);
-        self.electrum_wallet.broadcast_tx(&tx).unwrap();
-        self.wallet_wait_tx_status_change();
-        assert_eq!(self.balance_asset(asset), 0);
-    }
-
     /// ask the blockcain tip to electrs
     fn electrs_tip(&mut self) -> usize {
         for _ in 0..10 {

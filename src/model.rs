@@ -136,8 +136,6 @@ pub struct CreateTransactionOpt {
     // TODO: chage type to hold SendAll and be valid
     pub addressees: Vec<Destination>,
     pub fee_rate: Option<u64>, // in satoshi/kbyte
-    // TODO: this should be in addressees
-    pub send_all: Option<bool>,
     pub utxos: Option<Vec<TXO>>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

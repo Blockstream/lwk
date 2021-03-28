@@ -135,7 +135,6 @@ pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8
 pub fn needs(
     tx: &elements::Transaction,
     fee_rate: f64,
-    no_change: bool,
     policy_asset: elements::issuance::AssetId,
     all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
@@ -158,11 +157,7 @@ pub fn needs(
         *inputs.entry(asset).or_insert(0) += value;
     }
 
-    let estimated_fee = estimated_fee(
-        &tx,
-        fee_rate,
-        estimated_changes(&tx, no_change, all_txs, unblinded),
-    );
+    let estimated_fee = estimated_fee(&tx, fee_rate, estimated_changes(&tx, all_txs, unblinded));
     *outputs.entry(policy_asset).or_insert(0) += estimated_fee;
 
     let mut result = vec![];
@@ -179,7 +174,6 @@ pub fn needs(
 
 pub fn estimated_changes(
     tx: &elements::Transaction,
-    send_all: bool,
     all_txs: &HashMap<Txid, elements::Transaction>,
     unblinded: &HashMap<elements::OutPoint, Unblinded>,
 ) -> u8 {
@@ -192,7 +186,7 @@ pub fn estimated_changes(
     if different_assets.is_empty() {
         0
     } else {
-        different_assets.len() as u8 - send_all as u8
+        different_assets.len() as u8
     }
 }
 

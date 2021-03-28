@@ -27,10 +27,7 @@ fn liquid() {
     test_electrum_wallet.send_tx(&node_legacy_address, 1_000, None, None);
     test_electrum_wallet.send_tx(&node_address, 1_000, Some(asset.clone()), None);
     test_electrum_wallet.send_tx(&node_address, 100, Some(asset.clone()), None); // asset should send below dust limit
-    test_electrum_wallet.send_all(&node_address, Some(asset.clone()));
-    test_electrum_wallet.send_all(&node_address, test_electrum_wallet.policy_asset());
     test_electrum_wallet.mine_block();
-    test_electrum_wallet.fund_btc();
     let asset1 = test_electrum_wallet.fund_asset();
     let asset2 = test_electrum_wallet.fund_asset();
     let asset3 = test_electrum_wallet.fund_asset();

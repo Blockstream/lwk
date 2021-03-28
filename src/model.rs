@@ -16,7 +16,7 @@ pub type Balances = HashMap<String, i64>;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {
     pub outpoint: OutPoint,
-    pub asset: String,                  // Use better type
+    pub asset: elements::issuance::AssetId,
     pub satoshi: u64,                   // aka amount, value
     pub asset_blinder: Option<String>,  // FIXME
     pub amount_blinder: Option<String>, // FIXME
@@ -28,7 +28,7 @@ pub struct TXO {
 impl TXO {
     pub fn new(
         outpoint: OutPoint,
-        asset: String,
+        asset: elements::issuance::AssetId,
         satoshi: u64,
         _asset_blinder: Option<String>,
         _amount_blinder: Option<String>,

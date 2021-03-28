@@ -231,7 +231,7 @@ impl WalletCtx {
                             }
                             return Some(TXO::new(
                                 outpoint,
-                                unblinded.asset.to_hex(),
+                                unblinded.asset,
                                 unblinded.value,
                                 None,
                                 None,
@@ -258,7 +258,7 @@ impl WalletCtx {
             .entry(self.config.policy_asset().to_hex())
             .or_insert(0);
         for u in self.utxos()?.iter() {
-            *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
+            *result.entry(u.asset.to_hex()).or_default() += u.satoshi as i64;
         }
         Ok(result)
     }
@@ -343,7 +343,7 @@ impl WalletCtx {
             // taking only utxos of current asset considered, filters also utxos used in this loop
             let mut asset_utxos: Vec<&TXO> = utxos
                 .iter()
-                .filter(|u| u.asset == asset.to_hex() && !used_utxo.contains(&u.outpoint))
+                .filter(|u| u.asset == asset && !used_utxo.contains(&u.outpoint))
                 .collect();
 
             // sort by biggest utxo, random maybe another option, but it should be deterministically random (purely random breaks send_all algorithm)

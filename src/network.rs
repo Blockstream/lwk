@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use bitcoin::hashes::hex::FromHex;
+use bitcoin::hashes::hex::{FromHex, ToHex};
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -9,12 +9,12 @@ const LIQUID_POLICY_ASSET_STR: &str =
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
+    policy_asset: elements::issuance::AssetId,
 
     pub tls: bool,
     pub validate_domain: bool,
     pub spv_enabled: bool,
     pub electrum_url: Option<String>,
-    pub policy_asset_str: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,7 +37,7 @@ impl Config {
             validate_domain,
             spv_enabled,
             electrum_url: Some(electrum_url.to_string()),
-            policy_asset_str: Some(policy_asset.to_string()),
+            policy_asset: elements::issuance::AssetId::from_hex(policy_asset)?,
         })
     }
 
@@ -53,7 +53,7 @@ impl Config {
             validate_domain,
             spv_enabled,
             electrum_url: Some(electrum_url.to_string()),
-            policy_asset_str: Some(LIQUID_POLICY_ASSET_STR.to_string()),
+            policy_asset: elements::issuance::AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
         })
     }
 
@@ -62,20 +62,10 @@ impl Config {
     }
 
     pub fn policy_asset_id(&self) -> Result<elements::issuance::AssetId, Error> {
-        match self.network() {
-            ElementsNetwork::Liquid => Ok(elements::issuance::AssetId::from_hex(
-                LIQUID_POLICY_ASSET_STR,
-            )?),
-            ElementsNetwork::ElementsRegtest => {
-                // TODO: pack policy asset in ElementsRegtest variant
-                //let asset_str = self.policy_asset.as_ref().unwrap_or_else(|| Err("no policy_asset".into()));
-                match self.policy_asset_str.as_ref() {
-                    Some(policy_asset_str) => {
-                        Ok(elements::issuance::AssetId::from_hex(policy_asset_str)?)
-                    }
-                    None => Err("no policy asset".into()),
-                }
-            }
-        }
+        Ok(self.policy_asset)
+    }
+
+    pub fn policy_asset_str(&self) -> Option<String> {
+        Some(self.policy_asset.to_hex())
     }
 }

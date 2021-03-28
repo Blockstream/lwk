@@ -80,9 +80,9 @@ impl TransactionDetails {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AddressAmount {
-    pub address: String, // could be bitcoin or elements
+    pub address: elements::Address,
     pub satoshi: u64,
     pub asset_tag: Option<String>,
 }

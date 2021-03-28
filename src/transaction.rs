@@ -11,7 +11,6 @@ use log::{info, trace};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
 use wally::asset_surjectionproof_size;
 
 use std::convert::TryInto;
@@ -64,11 +63,10 @@ fn get_output_asset_hex(
 
 pub fn add_output(
     tx: &mut elements::Transaction,
-    address: &str,
+    address: &elements::Address,
     value: u64,
     asset_hex: String,
 ) -> Result<(), Error> {
-    let address = elements::Address::from_str(&address).map_err(|_| Error::InvalidAddress)?;
     let blinding_pubkey = address.blinding_pubkey.ok_or(Error::InvalidAddress)?;
     let bytes = blinding_pubkey.serialize();
     let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();

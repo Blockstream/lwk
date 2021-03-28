@@ -269,19 +269,11 @@ impl WalletCtx {
 
         // TODO put checks into CreateTransaction::validate, add check asset_tag are valid asset hex
         // eagerly check for address validity
+        let address_params = address_params(self.config.network());
         for address in opt.addressees.iter().map(|a| &a.address) {
-            let network = self.config.network();
-            if let Ok(address) = elements::Address::from_str(address) {
-                info!(
-                    "address.params:{:?} address_params(network):{:?}",
-                    address.params,
-                    address_params(network)
-                );
-                if address.params == address_params(network) {
-                    continue;
-                }
+            if address.params != address_params {
+                return Err(Error::InvalidAddress);
             }
-            return Err(Error::InvalidAddress);
         }
 
         if opt.addressees.is_empty() {
@@ -445,9 +437,7 @@ impl WalletCtx {
         );
         for (i, (asset, satoshi)) in changes.iter().enumerate() {
             let change_index = store_read.cache.indexes.internal + i as u32 + 1;
-            let change_address = self
-                .derive_address(&self.xpub, [1, change_index])?
-                .to_string();
+            let change_address = self.derive_address(&self.xpub, [1, change_index])?;
             info!(
                 "adding change to {} of {} asset {:?}",
                 &change_address, satoshi, asset

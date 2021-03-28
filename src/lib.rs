@@ -24,7 +24,6 @@ use crate::headers::Verifier;
 use crate::interface::WalletCtx;
 use crate::model::*;
 pub use crate::network::Config;
-use crate::network::ElectrumUrl;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
 pub use crate::ElementsNetwork;
@@ -407,27 +406,23 @@ impl Syncer {
 pub struct ElectrumWallet {
     pub data_root: String,
     pub config: Config,
-    pub url: ElectrumUrl,
     pub wallet: WalletCtx,
 }
 
 impl ElectrumWallet {
     pub fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let url = config.electrum_url();
-
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 
         Ok(Self {
             data_root: data_root.to_string(),
             config,
-            url,
             wallet,
         })
     }
 
     pub fn update_fee_estimates(&self) {
         info!("building client");
-        if let Ok(fee_client) = self.url.build_client() {
+        if let Ok(fee_client) = self.config.electrum_url().build_client() {
             info!("building built end");
             let fee_store = self.wallet.store.clone();
             match try_get_fee_estimates(&fee_client) {
@@ -443,7 +438,7 @@ impl ElectrumWallet {
             store: self.wallet.store.clone(),
             config: self.config.clone(),
         };
-        let tipper_url = self.url.clone();
+        let tipper_url = self.config.electrum_url();
         if let Ok(client) = tipper_url.build_client() {
             match tipper.tip(&client) {
                 Ok(_) => (),
@@ -464,7 +459,7 @@ impl ElectrumWallet {
         };
 
         self.update_tip()?;
-        if let Ok(client) = self.url.clone().build_client() {
+        if let Ok(client) = self.config.electrum_url().build_client() {
             info!("getting proofs");
             match headers.get_proofs(&client) {
                 Ok(found) => {
@@ -485,7 +480,7 @@ impl ElectrumWallet {
             config: self.config.clone(),
         };
 
-        if let Ok(client) = self.url.clone().build_client() {
+        if let Ok(client) = self.config.electrum_url().build_client() {
             match syncer.sync(&client) {
                 Ok(true) => info!("there are new transcations"),
                 Ok(false) => (),
@@ -552,7 +547,7 @@ impl ElectrumWallet {
 
     pub fn broadcast_tx(&self, transaction: &elements::Transaction) -> Result<(), Error> {
         info!("broadcast_transaction {:#?}", transaction.txid());
-        let client = self.url.build_client()?;
+        let client = self.config.electrum_url().build_client()?;
         client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;
         Ok(())
     }

@@ -409,7 +409,38 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
-    pub fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
+    pub fn new_regtest(
+        policy_asset: &str,
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_regtest(
+            tls,
+            validate_domain,
+            spv_enabled,
+            electrum_url,
+            policy_asset,
+        )?;
+        Self::new(config, data_root, mnemonic)
+    }
+
+    pub fn new_mainnet(
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_mainnet(tls, validate_domain, spv_enabled, electrum_url)?;
+        Self::new(config, data_root, mnemonic)
+    }
+
+    fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 
         Ok(Self { config, wallet })

@@ -651,9 +651,8 @@ impl WalletCtx {
             input_ags.extend(elements::encode::serialize(&input_asset));
         }
 
-        let ct_exp = self.config.ct_exponent.unwrap_or(0);
-        let ct_bits = self.config.ct_bits.unwrap_or(52);
-        info!("ct params ct_exp:{}, ct_bits:{}", ct_exp, ct_bits);
+        let ct_exp = 0;
+        let ct_bits = 52;
 
         let mut output_blinded_values = vec![];
         for output in tx.output.iter() {

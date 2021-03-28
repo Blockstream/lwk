@@ -15,8 +15,6 @@ pub struct Config {
     pub electrum_url: Option<String>,
     pub validate_domain: Option<bool>,
     pub policy_asset: Option<String>,
-    pub ct_bits: Option<i32>,
-    pub ct_exponent: Option<i32>,
     pub spv_enabled: Option<bool>,
 }
 

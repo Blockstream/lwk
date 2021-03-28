@@ -278,7 +278,7 @@ impl WalletCtx {
         info!("start balance");
         let mut result = HashMap::new();
         result
-            .entry(self.config.policy_asset.as_ref().unwrap().clone())
+            .entry(self.config.policy_asset_str.as_ref().unwrap().clone())
             .or_insert(0);
         for u in self.utxos()?.iter() {
             *result.entry(u.asset.clone()).or_default() += u.satoshi as i64;
@@ -320,7 +320,7 @@ impl WalletCtx {
         if !send_all {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= DUST_VALUE {
-                    if address_amount.asset_tag == self.config.policy_asset {
+                    if address_amount.asset_tag == self.config.policy_asset_str {
                         // we apply dust rules for liquid bitcoin as elements do
                         return Err(Error::InvalidAmount);
                     }
@@ -355,7 +355,7 @@ impl WalletCtx {
             let all_utxos: Vec<&TXO> = utxos.iter().filter(|u| u.asset == asset).collect();
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
-            let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset {
+            let to_send = if asset == "btc" || Some(asset.to_string()) == self.config.policy_asset_str {
                 let mut dummy_tx = elements::Transaction {
                     version: 2,
                     lock_time: 0,

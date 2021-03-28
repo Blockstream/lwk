@@ -14,7 +14,7 @@ pub struct Config {
     pub validate_domain: bool,
     pub spv_enabled: bool,
     pub electrum_url: Option<String>,
-    pub policy_asset: Option<String>,
+    pub policy_asset_str: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,7 +37,7 @@ impl Config {
             validate_domain,
             spv_enabled,
             electrum_url: Some(electrum_url.to_string()),
-            policy_asset: Some(policy_asset.to_string()),
+            policy_asset_str: Some(policy_asset.to_string()),
         })
     }
 
@@ -53,7 +53,7 @@ impl Config {
             validate_domain,
             spv_enabled,
             electrum_url: Some(electrum_url.to_string()),
-            policy_asset: Some(LIQUID_POLICY_ASSET_STR.to_string()),
+            policy_asset_str: Some(LIQUID_POLICY_ASSET_STR.to_string()),
         })
     }
 
@@ -69,7 +69,7 @@ impl Config {
             ElementsNetwork::ElementsRegtest => {
                 // TODO: pack policy asset in ElementsRegtest variant
                 //let asset_str = self.policy_asset.as_ref().unwrap_or_else(|| Err("no policy_asset".into()));
-                match self.policy_asset.as_ref() {
+                match self.policy_asset_str.as_ref() {
                     Some(policy_asset_str) => {
                         Ok(elements::issuance::AssetId::from_hex(policy_asset_str)?)
                     }

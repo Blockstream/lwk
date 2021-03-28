@@ -359,7 +359,7 @@ impl TestElectrumWallet {
     fn balance_asset(&self, asset: Option<String>) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
-        let asset = asset.unwrap_or(self.config.policy_asset.as_ref().unwrap().to_string());
+        let asset = asset.unwrap_or(self.config.policy_asset_str.as_ref().unwrap().to_string());
         *balance.get(&asset).unwrap_or(&0i64) as u64
     }
 
@@ -437,7 +437,7 @@ impl TestElectrumWallet {
     }
 
     pub fn policy_asset(&self) -> Option<String> {
-        self.config.policy_asset.clone()
+        self.config.policy_asset_str.clone()
     }
 
     /// send a tx from the wallet to the specified address
@@ -474,7 +474,7 @@ impl TestElectrumWallet {
 
         self.tx_checks(&tx);
 
-        let fee = if asset.is_none() || asset == self.config.policy_asset {
+        let fee = if asset.is_none() || asset == self.config.policy_asset_str {
             tx_details.fee
         } else {
             0

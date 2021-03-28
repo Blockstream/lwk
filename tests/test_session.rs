@@ -583,7 +583,7 @@ impl TestElectrumWallet {
     }
 
     /// send a tx with multiple recipients with same amount from the wallet to addresses generated
-    /// by the node. If `assets` contains values, they are used as asset_tag cyclically
+    /// by the node. If `assets` contains values, they are used as asset cyclically
     pub fn send_multi(&mut self, recipients: u8, amount: u64, assets: &Vec<String>) {
         let init_sat = self.balance_btc();
         let init_balances = self.electrum_wallet.balance().unwrap();
@@ -595,17 +595,16 @@ impl TestElectrumWallet {
         let mut tags = vec![];
         for _ in 0..recipients {
             let address = self.node_getnewaddress(None);
-            let asset_tag = if assets.is_empty() {
-                self.policy_asset()
+            let asset = if assets.is_empty() {
+                self.config.policy_asset().to_hex()
             } else {
                 let current = assets_cycle.next().unwrap().to_string();
                 tags.push(current.clone());
-                Some(current)
+                current
             };
-
             create_opt
                 .addressees
-                .push(AddressAmount::new(&address, amount, &asset_tag.unwrap()).unwrap());
+                .push(AddressAmount::new(&address, amount, &asset).unwrap());
             addressees.push(address);
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();

@@ -267,7 +267,7 @@ impl WalletCtx {
     pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
         info!("create_tx {:?}", opt);
 
-        // TODO put checks into CreateTransaction::validate, add check asset_tag are valid asset hex
+        // TODO put checks into CreateTransaction::validate, add check asset are valid asset hex
         // eagerly check for address validity
         let address_params = address_params(self.config.network());
         for address in opt.addressees.iter().map(|a| &a.address) {
@@ -289,16 +289,12 @@ impl WalletCtx {
         if !send_all {
             for address_amount in opt.addressees.iter() {
                 if address_amount.satoshi <= DUST_VALUE {
-                    if address_amount.asset_tag == Some(self.config.policy_asset().to_hex()) {
+                    if address_amount.asset() == self.config.policy_asset() {
                         // we apply dust rules for liquid bitcoin as elements do
                         return Err(Error::InvalidAmount);
                     }
                 }
             }
-        }
-
-        if opt.addressees.iter().any(|a| a.asset_tag.is_none()) {
-            return Err(Error::AssetEmpty);
         }
 
         // convert from satoshi/kbyte to satoshi/byte
@@ -320,7 +316,7 @@ impl WalletCtx {
                 return Err(Error::SendAll);
             }
             // FIXME: this error prone...
-            let asset = opt.addressees[0].asset_tag.as_deref().unwrap_or("btc");
+            let asset = opt.addressees[0].asset().to_hex();
             let all_utxos: Vec<&TXO> = utxos.iter().filter(|u| u.asset == asset).collect();
             let total_amount_utxos: u64 = all_utxos.iter().map(|u| u.satoshi).sum();
 
@@ -340,7 +336,7 @@ impl WalletCtx {
                         &mut dummy_tx,
                         &out.address,
                         out.satoshi,
-                        out.asset_tag.clone().unwrap(),
+                        out.asset().to_hex(),
                     )
                     .map_err(|_| Error::InvalidAddress)?;
                     let estimated_fee = estimated_fee(&dummy_tx, fee_rate, 0) + 3; // estimating 3 satoshi more as estimating less would later result in InsufficientFunds
@@ -373,7 +369,7 @@ impl WalletCtx {
                 &mut tx,
                 &out.address,
                 out.satoshi,
-                out.asset_tag.clone().unwrap(),
+                out.asset().to_hex(),
             )
             .map_err(|_| Error::InvalidAddress)?;
         }

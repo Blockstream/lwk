@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use bitcoin::hashes::core::fmt::Formatter;
-use bitcoin::hashes::hex::{FromHex, ToHex};
+use bitcoin::hashes::hex::FromHex;
 use bitcoin::util::bip32::DerivationPath;
 use elements::OutPoint;
 use std::fmt::Display;
@@ -87,7 +87,7 @@ impl TransactionDetails {
 pub struct AddressAmount {
     pub address: elements::Address,
     pub satoshi: u64,
-    pub asset_tag: Option<String>,
+    asset: elements::issuance::AssetId,
 }
 
 impl AddressAmount {
@@ -97,8 +97,12 @@ impl AddressAmount {
         Ok(AddressAmount {
             address,
             satoshi,
-            asset_tag: Some(asset.to_hex()), // TODO: asset_tag -> asset
+            asset,
         })
+    }
+
+    pub fn asset(&self) -> elements::issuance::AssetId {
+        self.asset
     }
 }
 
@@ -153,15 +157,6 @@ pub struct AddressPointer {
 // This one is simple enough to derive a serializer
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct FeeEstimate(pub u64);
-
-impl AddressAmount {
-    pub fn asset(&self) -> Option<elements::issuance::AssetId> {
-        match self.asset_tag.as_ref() {
-            Some(asset) => elements::issuance::AssetId::from_hex(asset).ok(),
-            None => None,
-        }
-    }
-}
 
 impl SPVVerifyResult {
     pub fn as_i32(&self) -> i32 {

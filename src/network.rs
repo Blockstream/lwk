@@ -49,9 +49,4 @@ impl Config {
             }
         }
     }
-
-    pub fn policy_asset(&self) -> Result<elements::confidential::Asset, Error> {
-        let asset_id = self.policy_asset_id()?;
-        Ok(elements::confidential::Asset::Explicit(asset_id))
-    }
 }

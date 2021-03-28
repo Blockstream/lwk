@@ -163,6 +163,9 @@ impl WalletCtx {
             }
         });
 
+        let policy_asset = Some(elements::confidential::Asset::Explicit(
+            self.config.policy_asset_id()?,
+        ));
         for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
             trace!("tx_id {}", tx_id);
 
@@ -176,7 +179,7 @@ impl WalletCtx {
                 &tx,
                 &store_read.cache.all_txs,
                 &store_read.cache.unblinded,
-                &self.config.policy_asset().ok(),
+                &policy_asset,
             )?;
             trace!("tx_id {} fee {}", tx_id, fee);
 
@@ -477,7 +480,9 @@ impl WalletCtx {
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption
         scramble(&mut tx);
 
-        let policy_asset = self.config.policy_asset().ok();
+        let policy_asset = Some(elements::confidential::Asset::Explicit(
+            self.config.policy_asset_id()?,
+        ));
         let fee_val = fee(
             &tx,
             &store_read.cache.all_txs,

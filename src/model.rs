@@ -114,23 +114,6 @@ impl Destination {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct BlockNotification {
-    //pub block_hash: bitcoin::BlockHash,
-    pub block_height: u32,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionNotification {
-    pub transaction_hash: elements::Txid,
-}
-
-#[derive(Debug)]
-pub enum Notification {
-    Block(BlockNotification),
-    Transaction(TransactionNotification),
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct CreateTransactionOpt {
     // TODO: chage type to hold SendAll and be valid

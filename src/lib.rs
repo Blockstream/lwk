@@ -1,12 +1,18 @@
-pub mod asset;
-pub mod error;
-pub mod headers;
-pub mod interface;
-pub mod model;
-pub mod network;
-pub mod scripts;
+mod asset;
+mod error;
+mod headers;
+mod interface;
+mod model;
+mod network;
+mod scripts;
 mod store;
-pub mod transaction;
+mod transaction;
+
+pub use crate::error::Error;
+pub use crate::model::{
+    AddressPointer, Balances, CreateTransactionOpt, Destination, GetTransactionsOpt,
+    SPVVerifyResult, TransactionDetails, TXO,
+};
 
 use network::*;
 use wally::asset_unblind;
@@ -15,9 +21,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::time::Instant;
-
-use crate::error::Error;
-use crate::model::{CreateTransactionOpt, GetTransactionsOpt, TransactionDetails, TXO};
 
 use crate::asset::Unblinded;
 use crate::headers::Verifier;

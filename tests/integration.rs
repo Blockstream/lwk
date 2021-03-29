@@ -1,4 +1,4 @@
-use bewallet::model::SPVVerifyResult;
+use bewallet::SPVVerifyResult;
 use std::env;
 
 mod test_session;

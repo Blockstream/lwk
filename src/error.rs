@@ -37,10 +37,6 @@ pub enum Error {
     Secp256k1(bitcoin::secp256k1::Error),
 }
 
-pub fn err<R>(str: &str) -> Result<R, Error> {
-    Err(Error::Generic(str.into()))
-}
-
 pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
     move || Error::Generic(str.into())
 }

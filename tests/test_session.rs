@@ -8,10 +8,7 @@ use electrum_client::ElectrumApi;
 use elements;
 use elements::BlockHash;
 
-use bewallet::error::Error;
-use bewallet::model::*;
-use bewallet::transaction::DUST_VALUE;
-use bewallet::ElectrumWallet;
+use bewallet::*;
 
 use log::LevelFilter;
 use log::{info, warn, Metadata, Record};
@@ -24,6 +21,8 @@ use std::sync::Once;
 use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
+
+const DUST_VALUE: u64 = 546;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 

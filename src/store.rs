@@ -8,7 +8,7 @@ use bitcoin::hashes::sha256;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
-use bitcoin::{BlockHash, Script, Txid};
+use elements::{BlockHash, Script, Txid};
 use elements::{BlockHeader, OutPoint};
 use log::{info, warn};
 use rand::{thread_rng, Rng};
@@ -255,7 +255,7 @@ mod tests {
     use crate::store::StoreMeta;
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::bip32::ExtendedPubKey;
-    use bitcoin::Txid;
+    use elements::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;
 

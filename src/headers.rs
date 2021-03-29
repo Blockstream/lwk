@@ -2,15 +2,16 @@ use elements::{self, BlockExtData};
 
 use crate::error::Error;
 use crate::ElementsNetwork;
-use bitcoin::blockdata::opcodes::Class;
-use bitcoin::blockdata::script::Instruction;
-use bitcoin::blockdata::{opcodes, script};
-use bitcoin::hash_types::BlockHash;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::secp256k1::{Message, Secp256k1, Signature, VerifyOnly};
-use bitcoin::{PublicKey, Script, TxMerkleNode, Txid};
+use bitcoin::PublicKey;
 use electrum_client::GetMerkleRes;
+use elements::opcodes::Class;
+use elements::script::Instruction;
+use elements::TxMerkleNode;
+use elements::{opcodes, script};
+use elements::{BlockHash, Script, Txid};
 use log::info;
 
 use std::io::Write;
@@ -190,9 +191,9 @@ impl Verifier {
 mod test {
     use crate::headers::Verifier;
     use crate::ElementsNetwork;
-    use bitcoin::Script;
     use elements::encode::deserialize;
     use elements::BlockExtData;
+    use elements::Script;
     use hex;
     use rand::seq::SliceRandom;
 

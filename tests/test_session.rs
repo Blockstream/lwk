@@ -1,12 +1,12 @@
 extern crate bewallet;
 
 use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::{self, Amount, BlockHash};
+use bitcoin::{self, Amount};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use chrono::Utc;
-use electrum_client::raw_client::{ElectrumPlaintextStream, RawClient};
 use electrum_client::ElectrumApi;
 use elements;
+use elements::BlockHash;
 
 use bewallet::error::Error;
 use bewallet::model::*;
@@ -120,8 +120,8 @@ fn to_unconfidential(elements_address: String) -> String {
 #[allow(unused)]
 pub struct TestElectrumWallet {
     node: Client,
-    electrs: RawClient<ElectrumPlaintextStream>,
-    electrs_header: RawClient<ElectrumPlaintextStream>,
+    electrs: electrum_client::Client,
+    electrs_header: electrum_client::Client,
     electrum_wallet: ElectrumWallet,
     tx_status: u64,
     block_status: (u32, BlockHash),
@@ -233,7 +233,7 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
     let electrs_header = loop {
         assert!(i > 0, "1 minute without updates");
         i -= 1;
-        match RawClient::new(&electrs_url) {
+        match electrum_client::Client::new(&electrs_url) {
             Ok(c) => {
                 let header = c.block_headers_subscribe_raw().unwrap();
                 if header.height == 101 {
@@ -246,7 +246,7 @@ pub fn setup_wallet(is_debug: bool, electrs_exec: String, node_exec: String) -> 
             }
         }
     };
-    let electrs = RawClient::new(&electrs_url).unwrap();
+    let electrs = electrum_client::Client::new(&electrs_url).unwrap();
     info!("done creating electrs client");
 
     let tls = false;

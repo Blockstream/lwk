@@ -14,17 +14,14 @@ pub enum ElectrumUrl {
 
 impl ElectrumUrl {
     pub fn build_client(&self) -> Result<electrum_client::Client, Error> {
-        match self {
+        let builder = electrum_client::ConfigBuilder::new();
+        let (url, builder) = match self {
             ElectrumUrl::Tls(url, validate) => {
-                let client =
-                    electrum_client::raw_client::RawClient::new_ssl(url.as_str(), *validate)?;
-                Ok(electrum_client::Client::SSL(client))
+                (format!("ssl://{}", url), builder.validate_domain(*validate))
             }
-            ElectrumUrl::Plaintext(url) => {
-                let client = electrum_client::raw_client::RawClient::new(&url)?;
-                Ok(electrum_client::Client::TCP(client))
-            }
-        }
+            ElectrumUrl::Plaintext(url) => (format!("tcp://{}", url), builder),
+        };
+        Ok(electrum_client::Client::from_config(&url, builder.build())?)
     }
 }
 

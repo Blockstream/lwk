@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use bitcoin::Script;
+use elements::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -122,7 +122,7 @@ pub struct BlockNotification {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionNotification {
-    pub transaction_hash: bitcoin::Txid,
+    pub transaction_hash: elements::Txid,
 }
 
 #[derive(Debug)]

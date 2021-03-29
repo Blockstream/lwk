@@ -1,10 +1,10 @@
 use crate::asset::Unblinded;
 use crate::error::Error;
 use crate::model::Balances;
-use bitcoin::hash_types::Txid;
 use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::Script;
 use elements::confidential::{Asset, Value};
+use elements::Script;
+use elements::Txid;
 use elements::{confidential, issuance};
 use elements::{TxInWitness, TxOutWitness};
 use log::{info, trace};

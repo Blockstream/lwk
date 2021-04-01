@@ -216,15 +216,8 @@ impl WalletCtx {
                             output,
                         )
                     })
-                    .filter_map(|(vout, output)| {
-                        store_read
-                            .cache
-                            .paths
-                            .get(&output.script_pubkey)
-                            .map(|path| (vout, output, path))
-                    })
-                    .filter(|(outpoint, _, _)| !spent.contains(&outpoint))
-                    .filter_map(|(outpoint, output, path)| {
+                    .filter(|(outpoint, _)| !spent.contains(&outpoint))
+                    .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
                             if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
                                 return None;
@@ -235,7 +228,6 @@ impl WalletCtx {
                                 unblinded.value,
                                 output.script_pubkey,
                                 height.clone(),
-                                path.clone(),
                             ));
                         }
                         None

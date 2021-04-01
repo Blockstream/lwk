@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::util::bip32::DerivationPath;
 use elements::OutPoint;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -18,7 +17,6 @@ pub struct TXO {
     pub satoshi: u64, // aka amount, value
     pub script_pubkey: Script,
     pub height: Option<u32>,
-    pub path: DerivationPath,
 }
 
 impl TXO {
@@ -28,7 +26,6 @@ impl TXO {
         satoshi: u64,
         script_pubkey: Script,
         height: Option<u32>,
-        path: DerivationPath,
     ) -> TXO {
         TXO {
             outpoint,
@@ -36,7 +33,6 @@ impl TXO {
             satoshi,
             script_pubkey,
             height,
-            path,
         }
     }
 }

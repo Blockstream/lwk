@@ -1,5 +1,5 @@
-use crate::asset::Unblinded;
 use crate::error::Error;
+use crate::model::Unblinded;
 use bitcoin::hashes::hex::{FromHex, ToHex};
 use elements::confidential::{Asset, Value};
 use elements::Script;

@@ -1,5 +1,4 @@
-use crate::asset::Unblinded;
-use crate::model::{FeeEstimate, SPVVerifyResult};
+use crate::model::{FeeEstimate, SPVVerifyResult, Unblinded};
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};

@@ -1,4 +1,3 @@
-mod asset;
 mod error;
 mod headers;
 mod interface;
@@ -22,7 +21,6 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::time::Instant;
 
-use crate::asset::Unblinded;
 use crate::headers::Verifier;
 use crate::interface::WalletCtx;
 use crate::model::*;

@@ -10,7 +10,7 @@ mod transaction;
 pub use crate::error::Error;
 pub use crate::model::{
     AddressPointer, CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult,
-    TransactionDetails, TXO,
+    TransactionDetails, UnblindedTXO, TXO,
 };
 
 use network::*;
@@ -575,7 +575,7 @@ impl ElectrumWallet {
     }
 
     // actually should list all coins, not only the unspent ones
-    pub fn utxos(&self) -> Result<Vec<TXO>, Error> {
+    pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
         self.sync()?;
         self.wallet.utxos()
     }

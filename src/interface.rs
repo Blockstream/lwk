@@ -10,7 +10,7 @@ use hex;
 use log::{info, trace};
 use rand::Rng;
 
-use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, TXO};
+use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -189,7 +189,7 @@ impl WalletCtx {
         Ok(txs)
     }
 
-    pub fn utxos(&self) -> Result<Vec<TXO>, Error> {
+    pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
         info!("start utxos");
 
         let store_read = self.store.read()?;
@@ -201,7 +201,7 @@ impl WalletCtx {
                 .all_txs
                 .get(tx_id)
                 .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
-            let tx_txos: Vec<TXO> = {
+            let tx_txos: Vec<UnblindedTXO> = {
                 let policy_asset = self.config.policy_asset();
                 tx.output
                     .clone()
@@ -222,13 +222,11 @@ impl WalletCtx {
                             if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
                                 return None;
                             }
-                            return Some(TXO::new(
-                                outpoint,
-                                unblinded.asset,
-                                unblinded.value,
-                                output.script_pubkey,
-                                height.clone(),
-                            ));
+                            let txo = TXO::new(outpoint, output.script_pubkey, height.clone());
+                            return Some(UnblindedTXO {
+                                txo: txo,
+                                unblinded: unblinded.clone(),
+                            });
                         }
                         None
                     })
@@ -236,7 +234,7 @@ impl WalletCtx {
             };
             txos.extend(tx_txos);
         }
-        txos.sort_by(|a, b| b.satoshi.cmp(&a.satoshi));
+        txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
     }
@@ -246,7 +244,7 @@ impl WalletCtx {
         let mut result = HashMap::new();
         result.entry(self.config.policy_asset()).or_insert(0);
         for u in self.utxos()?.iter() {
-            *result.entry(u.asset).or_default() += u.satoshi as u64;
+            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
         }
         Ok(result)
     }
@@ -329,13 +327,13 @@ impl WalletCtx {
             let (asset, _) = needs.pop().unwrap(); // safe to unwrap just checked it's not empty
 
             // taking only utxos of current asset considered, filters also utxos used in this loop
-            let mut asset_utxos: Vec<&TXO> = utxos
+            let mut asset_utxos: Vec<&UnblindedTXO> = utxos
                 .iter()
-                .filter(|u| u.asset == asset && !used_utxo.contains(&u.outpoint))
+                .filter(|u| u.unblinded.asset == asset && !used_utxo.contains(&u.txo.outpoint))
                 .collect();
 
             // sort by biggest utxo, random maybe another option, but it should be deterministically random (purely random breaks send_all algorithm)
-            asset_utxos.sort_by(|a, b| a.satoshi.cmp(&b.satoshi));
+            asset_utxos.sort_by(|a, b| a.unblinded.value.cmp(&b.unblinded.value));
             let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
 
             // Don't spend same script together in liquid. This would allow an attacker
@@ -343,8 +341,8 @@ impl WalletCtx {
             // waste fees for the extra tx inputs and (eventually) outputs.
             // While blinded address are required and not public knowledge,
             // they are still available to whom transacted with us in the past
-            used_utxo.insert(utxo.outpoint.clone());
-            add_input(&mut tx, utxo.outpoint.clone());
+            used_utxo.insert(utxo.txo.outpoint.clone());
+            add_input(&mut tx, utxo.txo.outpoint.clone());
         }
 
         // STEP 3) adding change(s)

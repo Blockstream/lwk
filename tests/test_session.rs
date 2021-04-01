@@ -446,7 +446,7 @@ impl TestElectrumWallet {
         address: &str,
         satoshi: u64,
         asset: Option<String>,
-        utxos: Option<Vec<TXO>>,
+        utxos: Option<Vec<UnblindedTXO>>,
     ) -> String {
         let init_sat = self.balance_asset(asset.clone());
         let init_node_balance = self.node_balance(asset.clone());
@@ -717,7 +717,7 @@ impl TestElectrumWallet {
         ));
     }
 
-    pub fn utxos(&self) -> Vec<TXO> {
+    pub fn utxos(&self) -> Vec<UnblindedTXO> {
         self.electrum_wallet.utxos().unwrap()
     }
 

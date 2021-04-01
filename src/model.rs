@@ -15,9 +15,7 @@ use std::str::FromStr;
 pub struct TXO {
     pub outpoint: OutPoint,
     pub asset: elements::issuance::AssetId,
-    pub satoshi: u64,                   // aka amount, value
-    pub asset_blinder: Option<String>,  // FIXME
-    pub amount_blinder: Option<String>, // FIXME
+    pub satoshi: u64, // aka amount, value
     pub script_pubkey: Script,
     pub height: Option<u32>,
     pub path: DerivationPath,
@@ -28,8 +26,6 @@ impl TXO {
         outpoint: OutPoint,
         asset: elements::issuance::AssetId,
         satoshi: u64,
-        _asset_blinder: Option<String>,
-        _amount_blinder: Option<String>,
         script_pubkey: Script,
         height: Option<u32>,
         path: DerivationPath,
@@ -38,8 +34,6 @@ impl TXO {
             outpoint,
             asset,
             satoshi,
-            asset_blinder: None,
-            amount_blinder: None,
             script_pubkey,
             height,
             path,

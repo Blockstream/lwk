@@ -233,8 +233,6 @@ impl WalletCtx {
                                 outpoint,
                                 unblinded.asset,
                                 unblinded.value,
-                                None,
-                                None,
                                 output.script_pubkey,
                                 height.clone(),
                                 path.clone(),

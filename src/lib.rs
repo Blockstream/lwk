@@ -395,7 +395,7 @@ impl Syncer {
                 );
                 let sender_pk = secp256k1::PublicKey::from_slice(&nonce_commitment).unwrap();
 
-                let (asset, abf, vbf, value) = asset_unblind(
+                let (asset, assetblinder, valueblinder, value) = asset_unblind(
                     sender_pk,
                     blinding_key,
                     rangeproof,
@@ -415,8 +415,8 @@ impl Syncer {
                 let unblinded = Unblinded {
                     asset,
                     value,
-                    abf,
-                    vbf,
+                    assetblinder,
+                    valueblinder,
                 };
                 Ok(unblinded)
             }

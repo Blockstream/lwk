@@ -527,8 +527,8 @@ impl WalletCtx {
     fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
         info!("blind_tx {}", tx.txid());
         let mut input_assets = vec![];
-        let mut input_abfs = vec![];
-        let mut input_vbfs = vec![];
+        let mut input_assetblinders = vec![];
+        let mut input_valueblinders = vec![];
         let mut input_ags = vec![];
         let mut input_values = vec![];
         let store_read = self.store.read()?;
@@ -548,11 +548,11 @@ impl WalletCtx {
 
             input_values.push(unblinded.value);
             input_assets.extend(unblinded.asset.into_inner().to_vec());
-            input_abfs.extend(unblinded.abf.to_vec());
-            input_vbfs.extend(unblinded.vbf.to_vec());
+            input_assetblinders.extend(unblinded.assetblinder.to_vec());
+            input_valueblinders.extend(unblinded.valueblinder.to_vec());
             let input_asset = asset_generator_from_bytes(
                 &unblinded.asset.into_inner().into_inner(),
-                &unblinded.abf,
+                &unblinded.assetblinder,
             );
             input_ags.extend(elements::encode::serialize(&input_asset));
         }
@@ -573,19 +573,32 @@ impl WalletCtx {
         let in_num = tx.input.len();
         let out_num = tx.output.len();
 
-        let output_abfs: Vec<Vec<u8>> = (0..out_num - 1).map(|_| random32()).collect();
-        let mut output_vbfs: Vec<Vec<u8>> = (0..out_num - 2).map(|_| random32()).collect();
+        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1).map(|_| random32()).collect();
+        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2).map(|_| random32()).collect();
 
-        let mut all_abfs = vec![];
-        all_abfs.extend(input_abfs.to_vec());
-        all_abfs.extend(output_abfs.iter().cloned().flatten().collect::<Vec<u8>>());
+        let mut all_assetblinders = vec![];
+        all_assetblinders.extend(input_assetblinders.to_vec());
+        all_assetblinders.extend(
+            output_assetblinders
+                .iter()
+                .cloned()
+                .flatten()
+                .collect::<Vec<u8>>(),
+        );
 
-        let mut all_vbfs = vec![];
-        all_vbfs.extend(input_vbfs.to_vec());
-        all_vbfs.extend(output_vbfs.iter().cloned().flatten().collect::<Vec<u8>>());
+        let mut all_valueblinders = vec![];
+        all_valueblinders.extend(input_valueblinders.to_vec());
+        all_valueblinders.extend(
+            output_valueblinders
+                .iter()
+                .cloned()
+                .flatten()
+                .collect::<Vec<u8>>(),
+        );
 
-        let last_vbf = asset_final_vbf(all_values, in_num, all_abfs, all_vbfs);
-        output_vbfs.push(last_vbf.to_vec());
+        let last_valueblinder =
+            asset_final_vbf(all_values, in_num, all_assetblinders, all_valueblinders);
+        output_valueblinders.push(last_valueblinder.to_vec());
 
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             info!("output {:?}", output);
@@ -600,16 +613,16 @@ impl WalletCtx {
                             .derive_blinding_key(&output.script_pubkey);
                         let blinding_public_key =
                             secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
-                        let mut output_abf = [0u8; 32];
-                        output_abf.copy_from_slice(&(&output_abfs[i])[..]);
-                        let mut output_vbf = [0u8; 32];
-                        output_vbf.copy_from_slice(&(&output_vbfs[i])[..]);
+                        let mut output_assetblinder = [0u8; 32];
+                        output_assetblinder.copy_from_slice(&(&output_assetblinders[i])[..]);
+                        let mut output_valueblinder = [0u8; 32];
+                        output_valueblinder.copy_from_slice(&(&output_valueblinders[i])[..]);
                         let asset = asset.clone().into_inner();
 
                         let output_generator =
-                            asset_generator_from_bytes(&asset.into_inner(), &output_abf);
+                            asset_generator_from_bytes(&asset.into_inner(), &output_assetblinder);
                         let output_value_commitment =
-                            asset_value_commitment(value, output_vbf, output_generator);
+                            asset_value_commitment(value, output_valueblinder, output_generator);
                         let min_value = if output.script_pubkey.is_provably_unspendable() {
                             0
                         } else {
@@ -621,8 +634,8 @@ impl WalletCtx {
                             blinding_pubkey.key,
                             blinding_key,
                             asset.into_inner(),
-                            output_abf,
-                            output_vbf,
+                            output_assetblinder,
+                            output_valueblinder,
                             output_value_commitment,
                             &output.script_pubkey,
                             output_generator,
@@ -631,23 +644,23 @@ impl WalletCtx {
                             ct_bits,
                         );
                         trace!("asset: {}", hex::encode(&asset));
-                        trace!("output_abf: {}", hex::encode(&output_abf));
+                        trace!("output_assetblinder: {}", hex::encode(&output_assetblinder));
                         trace!(
                             "output_generator: {}",
                             hex::encode(&elements::encode::serialize(&output_generator))
                         );
                         trace!("input_assets: {}", hex::encode(&input_assets));
-                        trace!("input_abfs: {}", hex::encode(&input_abfs));
+                        trace!("input_assetblinders: {}", hex::encode(&input_assetblinders));
                         trace!("input_ags: {}", hex::encode(&input_ags));
                         trace!("in_num: {}", in_num);
 
                         let surjectionproof = asset_surjectionproof(
                             asset.into_inner(),
-                            output_abf,
+                            output_assetblinder,
                             output_generator,
-                            output_abf,
+                            output_assetblinder,
                             &input_assets,
-                            &input_abfs,
+                            &input_assetblinders,
                             &input_ags,
                             in_num,
                         );

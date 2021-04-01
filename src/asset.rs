@@ -6,8 +6,8 @@ use std::fmt::Debug;
 #[derive(Serialize, Deserialize)]
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,
-    pub abf: [u8; 32],
-    pub vbf: [u8; 32],
+    pub assetblinder: [u8; 32],
+    pub valueblinder: [u8; 32],
     pub value: u64,
 }
 

@@ -1,4 +1,4 @@
-use crate::model::{Balances, GetTransactionsOpt, SPVVerifyResult};
+use crate::model::{GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::{self, All, Secp256k1};
@@ -251,12 +251,12 @@ impl WalletCtx {
         Ok(txos)
     }
 
-    pub fn balance(&self) -> Result<Balances, Error> {
+    pub fn balance(&self) -> Result<HashMap<elements::issuance::AssetId, u64>, Error> {
         info!("start balance");
         let mut result = HashMap::new();
         result.entry(self.config.policy_asset()).or_insert(0);
         for u in self.utxos()?.iter() {
-            *result.entry(u.asset).or_default() += u.satoshi as i64;
+            *result.entry(u.asset).or_default() += u.satoshi as u64;
         }
         Ok(result)
     }

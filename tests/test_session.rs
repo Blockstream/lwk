@@ -360,7 +360,7 @@ impl TestElectrumWallet {
             Some(asset_str) => elements::issuance::AssetId::from_hex(&asset_str).unwrap(),
             None => self.policy_asset,
         };
-        *balance.get(&asset).unwrap_or(&0i64) as u64
+        *balance.get(&asset).unwrap_or(&0u64)
     }
 
     fn balance_btc(&self) -> u64 {

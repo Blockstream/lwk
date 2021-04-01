@@ -11,8 +11,6 @@ use elements::OutPoint;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub type Balances = HashMap<elements::issuance::AssetId, i64>;
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {
     pub outpoint: OutPoint,
@@ -53,7 +51,7 @@ impl TXO {
 pub struct TransactionDetails {
     pub transaction: elements::Transaction,
     pub txid: String,
-    pub balances: Balances,
+    pub balances: HashMap<elements::issuance::AssetId, i64>,
     pub fee: u64,
     pub height: Option<u32>,
     pub spv_verified: SPVVerifyResult,
@@ -62,7 +60,7 @@ pub struct TransactionDetails {
 impl TransactionDetails {
     pub fn new(
         transaction: elements::Transaction,
-        balances: Balances,
+        balances: HashMap<elements::issuance::AssetId, i64>,
         fee: u64,
         height: Option<u32>,
         spv_verified: SPVVerifyResult,

@@ -10,8 +10,8 @@ mod transaction;
 
 pub use crate::error::Error;
 pub use crate::model::{
-    AddressPointer, Balances, CreateTransactionOpt, Destination, GetTransactionsOpt,
-    SPVVerifyResult, TransactionDetails, TXO,
+    AddressPointer, CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult,
+    TransactionDetails, TXO,
 };
 
 use network::*;
@@ -561,7 +561,7 @@ impl ElectrumWallet {
         Ok(status)
     }
 
-    pub fn balance(&self) -> Result<Balances, Error> {
+    pub fn balance(&self) -> Result<HashMap<elements::issuance::AssetId, u64>, Error> {
         self.sync()?;
         self.wallet.balance()
     }

@@ -1,6 +1,5 @@
 use crate::asset::Unblinded;
 use crate::error::Error;
-use crate::model::Balances;
 use bitcoin::hashes::hex::{FromHex, ToHex};
 use elements::confidential::{Asset, Value};
 use elements::Script;
@@ -305,7 +304,7 @@ pub fn fee(
 pub fn my_balance_changes(
     tx: &elements::Transaction,
     all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
-) -> Balances {
+) -> HashMap<elements::issuance::AssetId, i64> {
     trace!(
         "tx_id: {} my_balances elements all_unblinded.len(): {:?}",
         tx.txid(),

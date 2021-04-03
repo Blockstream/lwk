@@ -1,6 +1,6 @@
 use crate::model::{GetTransactionsOpt, SPVVerifyResult};
 use bitcoin::hashes::hex::ToHex;
-use bitcoin::hashes::{sha256, Hash};
+use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{PublicKey, SigHashType};
@@ -8,7 +8,6 @@ use elements;
 use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
-use rand::Rng;
 
 use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
@@ -563,8 +562,8 @@ impl WalletCtx {
         let in_num = tx.input.len();
         let out_num = tx.output.len();
 
-        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1).map(|_| random32()).collect();
-        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2).map(|_| random32()).collect();
+        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1).map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, true)[..].to_vec()).collect();
+        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2).map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, false)[..].to_vec()).collect();
 
         let mut all_assetblinders = vec![];
         all_assetblinders.extend(input_assetblinders.to_vec());
@@ -695,8 +694,32 @@ fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
     }
 }
 
-fn random32() -> Vec<u8> {
-    rand::thread_rng().gen::<[u8; 32]>().to_vec()
+// Derive blinders as Ledger and Jade do
+// TODO: add test vectors
+fn derive_blinder(
+    master_blinding_key: &elements::slip77::MasterBlindingKey,
+    tx: &elements::Transaction,
+    vout: u32,
+    assetblinder: bool,
+) -> bitcoin::hashes::Hmac<sha256::Hash> {
+    let key: &[u8] = &master_blinding_key.0[..];
+    let mut engine: HmacEngine<sha256::Hash> = HmacEngine::new(key);
+    let hash_prevouts = &elements::sighash::SigHashCache::new(tx).hash_prevouts()[..];
+    engine.input(hash_prevouts);
+    let key2 = &Hmac::from_engine(engine)[..];
+    let mut engine2: HmacEngine<sha256::Hash> = HmacEngine::new(key2);
+    let start = if assetblinder { b'A' } else { b'V' };
+    let msg: [u8; 7] = [
+        start,
+        b'B',
+        b'F',
+        ((vout >> 24) & 0xff) as u8,
+        ((vout >> 16) & 0xff) as u8,
+        ((vout >> 8) & 0xff) as u8,
+        (vout & 0xff) as u8,
+    ];
+    engine2.input(&msg);
+    Hmac::from_engine(engine2).into()
 }
 
 #[cfg(test)]

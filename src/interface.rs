@@ -562,8 +562,12 @@ impl WalletCtx {
         let in_num = tx.input.len();
         let out_num = tx.output.len();
 
-        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1).map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, true)[..].to_vec()).collect();
-        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2).map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, false)[..].to_vec()).collect();
+        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1)
+            .map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, true)[..].to_vec())
+            .collect();
+        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2)
+            .map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, false)[..].to_vec())
+            .collect();
 
         let mut all_assetblinders = vec![];
         all_assetblinders.extend(input_assetblinders.to_vec());

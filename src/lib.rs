@@ -10,7 +10,7 @@ mod transaction;
 pub use crate::error::Error;
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
-    UnblindedTXO, TXO,
+    Unblinded, UnblindedTXO, TXO,
 };
 
 use network::*;

@@ -129,12 +129,6 @@ pub enum SPVVerifyResult {
     Disabled,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AddressPointer {
-    pub address: String,
-    pub pointer: u32, // child_number in bip32 terminology
-}
-
 // This one is simple enough to derive a serializer
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct FeeEstimate(pub u64);

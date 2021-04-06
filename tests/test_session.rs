@@ -110,10 +110,10 @@ fn node_issueasset(client: &Client, satoshi: u64) -> String {
     r.get("asset").unwrap().as_str().unwrap().to_string()
 }
 
-fn to_unconfidential(elements_address: String) -> String {
-    let mut address_unconf = elements::Address::from_str(&elements_address).unwrap();
+fn to_unconfidential(address: elements::Address) -> elements::Address {
+    let mut address_unconf = address.clone();
     address_unconf.blinding_pubkey = None;
-    address_unconf.to_string()
+    address_unconf
 }
 
 #[allow(unused)]
@@ -385,8 +385,8 @@ impl TestElectrumWallet {
     pub fn fund_btc(&mut self) {
         let init_balance = self.balance_btc();
         let satoshi: u64 = 1_000_000;
-        let ap = self.electrum_wallet.address().unwrap();
-        let txid = self.node_sendtoaddress(&ap.address, satoshi, None);
+        let address = self.electrum_wallet.address().unwrap();
+        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, None);
         self.wallet_wait_tx_status_change();
         let balance = init_balance + self.balance_btc();
         // node is allowed to make tx below dust with dustrelayfee, but wallet should not see
@@ -407,8 +407,8 @@ impl TestElectrumWallet {
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
         let asset = self.node_issueasset(satoshi);
-        let ap = self.electrum_wallet.address().unwrap();
-        let txid = self.node_sendtoaddress(&ap.address, satoshi, Some(asset.clone()));
+        let address = self.electrum_wallet.address().unwrap();
+        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, Some(asset.clone()));
         self.wallet_wait_tx_status_change();
 
         let balance_asset = self.balance_asset(Some(asset.clone()));
@@ -510,9 +510,9 @@ impl TestElectrumWallet {
 
     pub fn send_tx_to_unconf(&mut self) {
         let init_sat = self.balance_btc();
-        let ap = self.electrum_wallet.address().unwrap();
-        let unconf_address = to_unconfidential(ap.address);
-        self.node_sendtoaddress(&unconf_address, 10_000, None);
+        let address = self.electrum_wallet.address().unwrap();
+        let unconf_address = to_unconfidential(address);
+        self.node_sendtoaddress(&unconf_address.to_string(), 10_000, None);
         self.wallet_wait_tx_status_change();
         assert_eq!(init_sat, self.balance_btc());
     }

@@ -9,7 +9,7 @@ use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
 
-use crate::model::{AddressPointer, CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -680,14 +680,13 @@ impl WalletCtx {
         Ok(())
     }
 
-    pub fn get_address(&self) -> Result<AddressPointer, Error> {
+    pub fn get_address(&self) -> Result<elements::Address, Error> {
         let pointer = {
             let store = &mut self.store.write()?.cache;
             store.indexes.external += 1;
             store.indexes.external
         };
-        let address = self.derive_address(&self.xpub, [0, pointer])?.to_string();
-        Ok(AddressPointer { address, pointer })
+        self.derive_address(&self.xpub, [0, pointer])
     }
 }
 

@@ -19,8 +19,6 @@ hex = "0.4.0"
 dirs = "1.0"
 chrono = "0.4.11"
 log = "0.4.8"
-url = "1.7.2"
-ureq = { version = "1.0.0", features = ["json"] }
 
 sha2 = "0.8.0"
 aes-gcm-siv = "0.5.0"

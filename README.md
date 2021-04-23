@@ -32,7 +32,7 @@ cd electrs
 git checkout 5bae341585f70699cf12b587a1e9d392df43d674
 cargo install --debug --root $PROJECT_DIR/server/electrs_liquid --locked --path . --features liquid
 cd $PROJECT_DIR/server
-curl -L https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.8/elements-0.18.1.8-x86_64-linux-gnu.tar.gz | tar -xvz server/elements-0.18.1.8/bin/elementsd
+curl -L https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.8/elements-0.18.1.8-x86_64-linux-gnu.tar.gz | tar -xvz elements-0.18.1.8/bin/elementsd
 cd $PROJECT_DIR
 ```
 

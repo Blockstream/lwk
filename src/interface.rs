@@ -43,9 +43,9 @@ pub struct WalletCtx {
 fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
     let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
     // TODO: passphrase?
-    let passphrase = "".into();
+    let passphrase: &str = "";
     let seed = mnemonic.to_seed(passphrase);
-    Ok(seed)
+    Ok(seed.to_vec())
 }
 
 fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Error> {

@@ -15,7 +15,7 @@ use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
 use wally::{
     asset_final_vbf, asset_generator_from_bytes, asset_rangeproof, asset_surjectionproof,
-    asset_value_commitment, tx_get_elements_signature_hash,
+    asset_value_commitment,
 };
 
 use crate::error::{fn_err, Error};
@@ -414,13 +414,11 @@ impl WalletCtx {
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
 
         let script_code = p2pkh_script(public_key);
-        let sighash = tx_get_elements_signature_hash(
-            &tx,
+        let sighash = elements::sighash::SigHashCache::new(tx).segwitv0_sighash(
             input_index,
             &script_code,
-            &value,
-            SigHashType::All.as_u32(),
-            true, // segwit
+            value,
+            elements::SigHashType::All,
         );
         let message = secp256k1::Message::from_slice(&sighash[..]).unwrap();
         let signature = self.secp.sign(&message, &private_key.key);

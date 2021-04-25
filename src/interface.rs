@@ -3,7 +3,7 @@ use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::{self, All, Secp256k1};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::{PublicKey, SigHashType};
+use bitcoin::PublicKey;
 use elements;
 use elements::{BlockHash, Script, Txid};
 use hex;
@@ -414,16 +414,17 @@ impl WalletCtx {
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
 
         let script_code = p2pkh_script(public_key);
+        let sighash_type = elements::SigHashType::All;
         let sighash = elements::sighash::SigHashCache::new(tx).segwitv0_sighash(
             input_index,
             &script_code,
             value,
-            elements::SigHashType::All,
+            sighash_type,
         );
         let message = secp256k1::Message::from_slice(&sighash[..]).unwrap();
         let signature = self.secp.sign(&message, &private_key.key);
         let mut signature = signature.serialize_der().to_vec();
-        signature.push(SigHashType::All as u8);
+        signature.push(sighash_type as u8);
 
         let script_sig = p2shwpkh_script_sig(public_key);
         let witness = vec![signature, public_key.to_bytes()];

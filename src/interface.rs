@@ -604,7 +604,7 @@ impl WalletCtx {
                             )?;
 
                             output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
-                                output.minimum_value(),
+                                value,
                                 value_blinder,
                                 asset_blinder,
                             ));
@@ -614,7 +614,7 @@ impl WalletCtx {
                             // last value blinder is special and must be set to balance the transaction
                             secp256k1_zkp::compute_adaptive_blinding_factor(
                                 &self.secp,
-                                output.minimum_value(),
+                                value,
                                 asset_blinder,
                                 &input_commitment_secrets[..],
                                 &output_commitment_secrets[..],

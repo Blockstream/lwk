@@ -13,7 +13,7 @@ use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::{asset_rangeproof, asset_surjectionproof};
+use wally::asset_surjectionproof;
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
@@ -23,7 +23,6 @@ use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -62,6 +61,46 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     let path = DerivationPath::from_str(&path_string)?;
     let secp = Secp256k1::new();
     Ok(xprv.derive_priv(&secp, &path)?)
+}
+
+// Copied from current elements master
+// TODO: remove when updating elements
+/// Create the shared secret.
+fn make_shared_secret(
+    pk: &secp256k1_zkp::PublicKey,
+    sk: &secp256k1_zkp::SecretKey,
+) -> secp256k1_zkp::SecretKey {
+    let shared_secret = secp256k1_zkp::ecdh::SharedSecret::new_with_hash(pk, sk, |x, y| {
+        // Yes, what follows is the compressed representation of a Bitcoin public key.
+        // However, this is more by accident then by design, see here: https://github.com/rust-bitcoin/rust-secp256k1/pull/255#issuecomment-744146282
+
+        let mut dh_secret = [0u8; 33];
+        dh_secret[0] = if y.last().unwrap() % 2 == 0 {
+            0x02
+        } else {
+            0x03
+        };
+        dh_secret[1..].copy_from_slice(&x);
+
+        bitcoin::hashes::sha256d::Hash::hash(&dh_secret)
+            .into_inner()
+            .into()
+    });
+
+    secp256k1_zkp::SecretKey::from_slice(&shared_secret.as_ref()[..32])
+        .expect("always has exactly 32 bytes")
+}
+
+fn make_rangeproof_message(
+    asset: elements::issuance::AssetId,
+    bf: secp256k1_zkp::SecretKey,
+) -> [u8; 64] {
+    let mut message = [0u8; 64];
+
+    message[..32].copy_from_slice(&asset.into_inner());
+    message[32..].copy_from_slice(bf.as_ref());
+
+    message
 }
 
 impl WalletCtx {
@@ -601,6 +640,7 @@ impl WalletCtx {
         );
         output_valueblinders.push(last_valueblinder[..].to_vec());
 
+        let mut rng = rand::thread_rng();
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             info!("output {:?}", output);
             if !output.is_fee() {
@@ -608,12 +648,13 @@ impl WalletCtx {
                     (Value::Explicit(value), Asset::Explicit(asset), Nonce::Confidential(_, _)) => {
                         info!("value: {}", value);
                         let nonce = elements::encode::serialize(&output.nonce);
-                        let blinding_pubkey = PublicKey::from_slice(&nonce).unwrap();
-                        let blinding_key = self
-                            .master_blinding
-                            .derive_blinding_key(&output.script_pubkey);
-                        let blinding_public_key =
-                            secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
+                        let receiver_blinding_pk =
+                            secp256k1_zkp::PublicKey::from_slice(&nonce).unwrap();
+                        let sender_sk = secp256k1_zkp::SecretKey::new(&mut rng);
+                        let sender_pk =
+                            secp256k1_zkp::PublicKey::from_secret_key(&secp_zkp_ctx, &sender_sk);
+                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
+
                         let mut output_assetblinder = [0u8; 32];
                         output_assetblinder.copy_from_slice(&(&output_assetblinders[i])[..]);
                         let mut output_valueblinder = [0u8; 32];
@@ -637,6 +678,30 @@ impl WalletCtx {
                             value_blinder,
                             output_generator,
                         );
+                        let min_value = if output.script_pubkey.is_provably_unspendable() {
+                            0
+                        } else {
+                            1
+                        };
+
+                        let asset_id = elements::issuance::AssetId::from_inner(asset);
+                        let message = make_rangeproof_message(asset_id, asset_blinder);
+
+                        let rangeproof = secp256k1_zkp::RangeProof::new(
+                            &secp_zkp_ctx,
+                            min_value,
+                            output_value_commitment,
+                            value,
+                            value_blinder,
+                            &message,
+                            &output.script_pubkey.as_bytes(),
+                            shared_secret,
+                            ct_exp,
+                            ct_bits,
+                            output_generator,
+                        )?
+                        .serialize();
+
                         let output_generator = elements::confidential::Asset::from_commitment(
                             &output_generator.serialize(),
                         )?;
@@ -644,26 +709,6 @@ impl WalletCtx {
                             elements::confidential::Value::from_commitment(
                                 &output_value_commitment.serialize(),
                             )?;
-                        let min_value = if output.script_pubkey.is_provably_unspendable() {
-                            0
-                        } else {
-                            1
-                        };
-
-                        let rangeproof = asset_rangeproof(
-                            value,
-                            blinding_pubkey.key,
-                            blinding_key,
-                            asset.into_inner(),
-                            output_assetblinder,
-                            output_valueblinder,
-                            output_value_commitment,
-                            &output.script_pubkey,
-                            output_generator,
-                            min_value,
-                            ct_exp,
-                            ct_bits,
-                        );
                         trace!("asset: {}", hex::encode(&asset));
                         trace!("output_assetblinder: {}", hex::encode(&output_assetblinder));
                         trace!(
@@ -687,10 +732,8 @@ impl WalletCtx {
                         );
                         trace!("surjectionproof: {}", hex::encode(&surjectionproof));
 
-                        let bytes = blinding_public_key.serialize();
-                        let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();
                         output.nonce =
-                            elements::confidential::Nonce::Confidential(bytes[0], byte32);
+                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
                         output.asset = output_generator;
                         output.value = output_value_commitment;
                         info!(

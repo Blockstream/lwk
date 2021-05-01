@@ -35,6 +35,7 @@ pub enum Error {
     Send(std::sync::mpsc::SendError<()>),
     Encryption(block_modes::BlockModeError),
     Secp256k1(bitcoin::secp256k1::Error),
+    Secp256k1Zkp(secp256k1_zkp::Error),
 }
 
 pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
@@ -71,6 +72,7 @@ impl Display for Error {
             Error::Send(ref send_err) => write!(f, "send_err: {:?}", send_err),
             Error::Encryption(ref send_err) => write!(f, "encryption_err: {:?}", send_err),
             Error::Secp256k1(ref err) => write!(f, "Secp256k1_err: {:?}", err),
+            Error::Secp256k1Zkp(ref err) => write!(f, "Secp256k1_zkp_err: {:?}", err),
         }
     }
 }
@@ -182,6 +184,12 @@ impl From<std::sync::mpsc::SendError<()>> for Error {
 impl From<bitcoin::secp256k1::Error> for Error {
     fn from(err: bitcoin::secp256k1::Error) -> Self {
         Error::Secp256k1(err)
+    }
+}
+
+impl From<secp256k1_zkp::Error> for Error {
+    fn from(err: secp256k1_zkp::Error) -> Self {
+        Error::Secp256k1Zkp(err)
     }
 }
 

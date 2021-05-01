@@ -592,9 +592,6 @@ impl WalletCtx {
                             secp256k1_zkp::PublicKey::from_secret_key(&self.secp, &sender_sk);
                         let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
 
-                        // TODO: do better
-                        let asset = asset.clone().into_inner();
-
                         let asset_blinder =
                             derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
 
@@ -624,7 +621,7 @@ impl WalletCtx {
                             )
                         };
 
-                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner());
+                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
                         let output_generator = secp256k1_zkp::Generator::new_blinded(
                             &self.secp,
                             asset_tag,
@@ -642,8 +639,7 @@ impl WalletCtx {
                             1
                         };
 
-                        let asset_id = elements::issuance::AssetId::from_inner(asset);
-                        let message = make_rangeproof_message(asset_id, asset_blinder);
+                        let message = make_rangeproof_message(asset, asset_blinder);
 
                         let rangeproof = secp256k1_zkp::RangeProof::new(
                             &self.secp,
@@ -659,7 +655,6 @@ impl WalletCtx {
                             output_generator,
                         )?;
 
-                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner());
                         let surjectionproof = secp256k1_zkp::SurjectionProof::new(
                             &self.secp,
                             &mut rng,

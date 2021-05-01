@@ -13,7 +13,6 @@ use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::asset_surjectionproof;
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
@@ -550,11 +549,7 @@ impl WalletCtx {
 
     fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
         info!("blind_tx {}", tx.txid());
-        let mut input_assets = vec![];
-        let mut input_assetblinders = vec![];
-        let mut input_valueblinders = vec![];
-        let mut input_ags = vec![];
-        let mut input_values = vec![];
+        let mut input_domain = vec![];
         let mut input_commitment_secrets = vec![];
         let store_read = self.store.read()?;
         for input in tx.input.iter() {
@@ -571,15 +566,11 @@ impl WalletCtx {
                 &unblinded.asset.to_hex()
             );
 
-            input_values.push(unblinded.value);
-            input_assets.extend(unblinded.asset.into_inner().to_vec());
-            input_assetblinders.extend(unblinded.assetblinder.to_vec());
-            input_valueblinders.extend(unblinded.valueblinder.to_vec());
             let secp_zkp_ctx = secp256k1_zkp::Secp256k1::new();
             let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
             let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.assetblinder)?;
             let value_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.valueblinder)?;
-            let input_asset =
+            let asset_generator =
                 secp256k1_zkp::Generator::new_blinded(&secp_zkp_ctx, asset_tag, asset_blinder);
             let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
                 unblinded.value,
@@ -587,13 +578,12 @@ impl WalletCtx {
                 asset_blinder,
             );
             input_commitment_secrets.push(commitment_secrets);
-            input_ags.extend(&input_asset.serialize());
+            input_domain.push((asset_generator, asset_tag, asset_blinder));
         }
 
         let ct_exp = 0;
         let ct_bits = 52;
 
-        let in_num = tx.input.len();
         let out_num = tx.output.len();
         let mut output_commitment_secrets = vec![];
         let mut output_assetblinders: Vec<Vec<u8>> = vec![];
@@ -715,22 +705,16 @@ impl WalletCtx {
                             "output_generator: {}",
                             hex::encode(&elements::encode::serialize(&output_generator))
                         );
-                        trace!("input_assets: {}", hex::encode(&input_assets));
-                        trace!("input_assetblinders: {}", hex::encode(&input_assetblinders));
-                        trace!("input_ags: {}", hex::encode(&input_ags));
-                        trace!("in_num: {}", in_num);
 
-                        let surjectionproof = asset_surjectionproof(
-                            asset.into_inner(),
-                            output_assetblinder,
-                            output_generator,
-                            output_assetblinder,
-                            &input_assets,
-                            &input_assetblinders,
-                            &input_ags,
-                            in_num,
-                        );
-                        trace!("surjectionproof: {}", hex::encode(&surjectionproof));
+                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner());
+                        let surjectionproof = secp256k1_zkp::SurjectionProof::new(
+                            &secp_zkp_ctx,
+                            &mut rng,
+                            asset_tag,
+                            asset_blinder,
+                            &input_domain,
+                        )?
+                        .serialize();
 
                         output.nonce =
                             elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;

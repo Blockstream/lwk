@@ -13,10 +13,7 @@ use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::{
-    asset_final_vbf, asset_generator_from_bytes, asset_rangeproof, asset_surjectionproof,
-    asset_value_commitment,
-};
+use wally::{asset_final_vbf, asset_rangeproof, asset_surjectionproof, asset_value_commitment};
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
@@ -538,11 +535,12 @@ impl WalletCtx {
             input_assets.extend(unblinded.asset.into_inner().to_vec());
             input_assetblinders.extend(unblinded.assetblinder.to_vec());
             input_valueblinders.extend(unblinded.valueblinder.to_vec());
-            let input_asset = asset_generator_from_bytes(
-                &unblinded.asset.into_inner().into_inner(),
-                &unblinded.assetblinder,
-            );
-            input_ags.extend(elements::encode::serialize(&input_asset));
+            let secp_zkp_ctx = secp256k1_zkp::Secp256k1::new();
+            let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
+            let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.assetblinder)?;
+            let input_asset =
+                secp256k1_zkp::Generator::new_blinded(&secp_zkp_ctx, asset_tag, asset_blinder);
+            input_ags.extend(&input_asset.serialize());
         }
 
         let ct_exp = 0;
@@ -611,8 +609,18 @@ impl WalletCtx {
                         output_valueblinder.copy_from_slice(&(&output_valueblinders[i])[..]);
                         let asset = asset.clone().into_inner();
 
-                        let output_generator =
-                            asset_generator_from_bytes(&asset.into_inner(), &output_assetblinder);
+                        let secp_zkp_ctx = secp256k1_zkp::Secp256k1::new();
+                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner());
+                        let asset_blinder =
+                            secp256k1_zkp::SecretKey::from_slice(&output_assetblinder)?;
+                        let output_generator = secp256k1_zkp::Generator::new_blinded(
+                            &secp_zkp_ctx,
+                            asset_tag,
+                            asset_blinder,
+                        );
+                        let output_generator = elements::confidential::Asset::from_commitment(
+                            &output_generator.serialize(),
+                        )?;
                         let output_value_commitment =
                             asset_value_commitment(value, output_valueblinder, output_generator);
                         let min_value = if output.script_pubkey.is_provably_unspendable() {

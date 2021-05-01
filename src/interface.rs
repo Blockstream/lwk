@@ -13,7 +13,7 @@ use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::{asset_final_vbf, asset_rangeproof, asset_surjectionproof, asset_value_commitment};
+use wally::{asset_final_vbf, asset_rangeproof, asset_surjectionproof};
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
@@ -618,11 +618,21 @@ impl WalletCtx {
                             asset_tag,
                             asset_blinder,
                         );
+                        let value_blinder =
+                            secp256k1_zkp::SecretKey::from_slice(&output_valueblinder)?;
+                        let output_value_commitment = secp256k1_zkp::PedersenCommitment::new(
+                            &secp_zkp_ctx,
+                            value,
+                            value_blinder,
+                            output_generator,
+                        );
                         let output_generator = elements::confidential::Asset::from_commitment(
                             &output_generator.serialize(),
                         )?;
                         let output_value_commitment =
-                            asset_value_commitment(value, output_valueblinder, output_generator);
+                            elements::confidential::Value::from_commitment(
+                                &output_value_commitment.serialize(),
+                            )?;
                         let min_value = if output.script_pubkey.is_provably_unspendable() {
                             0
                         } else {

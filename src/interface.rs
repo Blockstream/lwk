@@ -622,16 +622,16 @@ impl WalletCtx {
                         };
 
                         let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
-                        let output_generator = secp256k1_zkp::Generator::new_blinded(
+                        let asset_generator = secp256k1_zkp::Generator::new_blinded(
                             &self.secp,
                             asset_tag,
                             asset_blinder,
                         );
-                        let output_value_commitment = secp256k1_zkp::PedersenCommitment::new(
+                        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
                             &self.secp,
                             value,
                             value_blinder,
-                            output_generator,
+                            asset_generator,
                         );
                         let min_value = if output.script_pubkey.is_provably_unspendable() {
                             0
@@ -644,7 +644,7 @@ impl WalletCtx {
                         let rangeproof = secp256k1_zkp::RangeProof::new(
                             &self.secp,
                             min_value,
-                            output_value_commitment,
+                            value_commitment,
                             value,
                             value_blinder,
                             &message,
@@ -652,7 +652,7 @@ impl WalletCtx {
                             shared_secret,
                             ct_exp,
                             ct_bits,
-                            output_generator,
+                            asset_generator,
                         )?;
 
                         let surjectionproof = secp256k1_zkp::SurjectionProof::new(
@@ -666,10 +666,10 @@ impl WalletCtx {
                         output.nonce =
                             elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
                         output.asset = elements::confidential::Asset::from_commitment(
-                            &output_generator.serialize(),
+                            &asset_generator.serialize(),
                         )?;
                         output.value = elements::confidential::Value::from_commitment(
-                            &output_value_commitment.serialize(),
+                            &value_commitment.serialize(),
                         )?;
                         output.witness.surjection_proof = surjectionproof.serialize();
                         output.witness.rangeproof = rangeproof.serialize();

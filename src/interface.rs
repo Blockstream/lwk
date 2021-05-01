@@ -595,21 +595,15 @@ impl WalletCtx {
                         // TODO: do better
                         let asset = asset.clone().into_inner();
 
-                        // TODO: derive_blinder should return a SecretKey
-                        let asset_blinder = secp256k1_zkp::SecretKey::from_slice(
-                            &derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)
-                                .into_inner(),
-                        )?;
+                        let asset_blinder =
+                            derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
 
                         let value_blinder = if i < out_num - 2 {
-                            let value_blinder = secp256k1_zkp::SecretKey::from_slice(
-                                &derive_blinder(
-                                    &self.master_blinding,
-                                    &hash_prevouts,
-                                    i as u32,
-                                    false,
-                                )
-                                .into_inner(),
+                            let value_blinder = derive_blinder(
+                                &self.master_blinding,
+                                &hash_prevouts,
+                                i as u32,
+                                false,
                             )?;
 
                             output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
@@ -720,7 +714,7 @@ fn derive_blinder(
     hash_prevouts: &bitcoin::hashes::sha256d::Hash,
     vout: u32,
     assetblinder: bool,
-) -> bitcoin::hashes::Hmac<sha256::Hash> {
+) -> Result<secp256k1_zkp::SecretKey, secp256k1_zkp::UpstreamError> {
     let key: &[u8] = &master_blinding_key.0[..];
     let mut engine: HmacEngine<sha256::Hash> = HmacEngine::new(key);
     engine.input(&hash_prevouts[..]);
@@ -737,5 +731,6 @@ fn derive_blinder(
         (vout & 0xff) as u8,
     ];
     engine2.input(&msg);
-    Hmac::from_engine(engine2).into()
+    let blinder: bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
+    secp256k1_zkp::SecretKey::from_slice(&blinder.into_inner())
 }

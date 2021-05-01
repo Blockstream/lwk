@@ -13,7 +13,7 @@ use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
-use wally::{asset_final_vbf, asset_rangeproof, asset_surjectionproof};
+use wally::{asset_rangeproof, asset_surjectionproof};
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
@@ -516,6 +516,7 @@ impl WalletCtx {
         let mut input_valueblinders = vec![];
         let mut input_ags = vec![];
         let mut input_values = vec![];
+        let mut input_commitment_secrets = vec![];
         let store_read = self.store.read()?;
         for input in tx.input.iter() {
             info!("input {:?}", input);
@@ -538,57 +539,67 @@ impl WalletCtx {
             let secp_zkp_ctx = secp256k1_zkp::Secp256k1::new();
             let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
             let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.assetblinder)?;
+            let value_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.valueblinder)?;
             let input_asset =
                 secp256k1_zkp::Generator::new_blinded(&secp_zkp_ctx, asset_tag, asset_blinder);
+            let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
+                unblinded.value,
+                value_blinder,
+                asset_blinder,
+            );
+            input_commitment_secrets.push(commitment_secrets);
             input_ags.extend(&input_asset.serialize());
         }
 
         let ct_exp = 0;
         let ct_bits = 52;
 
-        let mut output_blinded_values = vec![];
-        for output in tx.output.iter() {
-            if !output.is_fee() {
-                output_blinded_values.push(output.minimum_value());
-            }
-        }
-        info!("output_blinded_values {:?}", output_blinded_values);
-        let mut all_values = vec![];
-        all_values.extend(input_values);
-        all_values.extend(output_blinded_values);
         let in_num = tx.input.len();
         let out_num = tx.output.len();
+        let mut output_commitment_secrets = vec![];
+        let mut output_assetblinders: Vec<Vec<u8>> = vec![];
+        let mut output_valueblinders: Vec<Vec<u8>> = vec![];
+        for (idx, output) in tx.output.iter().enumerate() {
+            if !output.is_fee() {
+                let asset_blinder = derive_blinder(&self.master_blinding, tx, idx as u32, true);
+                output_assetblinders.push(asset_blinder[..].to_vec());
+                let asset_blinder =
+                    secp256k1_zkp::SecretKey::from_slice(&asset_blinder.into_inner())?;
 
-        let output_assetblinders: Vec<Vec<u8>> = (0..out_num - 1)
-            .map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, true)[..].to_vec())
-            .collect();
-        let mut output_valueblinders: Vec<Vec<u8>> = (0..out_num - 2)
-            .map(|vout| derive_blinder(&self.master_blinding, tx, vout as u32, false)[..].to_vec())
-            .collect();
+                if idx < out_num - 2 {
+                    let value_blinder =
+                        derive_blinder(&self.master_blinding, tx, idx as u32, false);
+                    output_valueblinders.push(value_blinder[..].to_vec());
+                    let value_blinder =
+                        secp256k1_zkp::SecretKey::from_slice(&value_blinder.into_inner())?;
 
-        let mut all_assetblinders = vec![];
-        all_assetblinders.extend(input_assetblinders.to_vec());
-        all_assetblinders.extend(
-            output_assetblinders
-                .iter()
-                .cloned()
-                .flatten()
-                .collect::<Vec<u8>>(),
+                    let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
+                        output.minimum_value(),
+                        value_blinder,
+                        asset_blinder,
+                    );
+                    output_commitment_secrets.push(commitment_secrets);
+                }
+            }
+        }
+        assert_eq!(output_assetblinders.len(), out_num - 1);
+        assert_eq!(output_valueblinders.len(), out_num - 2);
+        assert_eq!(output_commitment_secrets.len(), out_num - 2);
+        assert!(out_num > 1);
+
+        let idx = out_num - 2;
+        let value = tx.output[idx].minimum_value();
+        let asset_blinder = derive_blinder(&self.master_blinding, tx, idx as u32, true);
+        let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&asset_blinder.into_inner())?;
+        let secp_zkp_ctx = secp256k1_zkp::Secp256k1::new();
+        let last_valueblinder = secp256k1_zkp::compute_adaptive_blinding_factor(
+            &secp_zkp_ctx,
+            value,
+            asset_blinder,
+            &input_commitment_secrets[..],
+            &output_commitment_secrets[..],
         );
-
-        let mut all_valueblinders = vec![];
-        all_valueblinders.extend(input_valueblinders.to_vec());
-        all_valueblinders.extend(
-            output_valueblinders
-                .iter()
-                .cloned()
-                .flatten()
-                .collect::<Vec<u8>>(),
-        );
-
-        let last_valueblinder =
-            asset_final_vbf(all_values, in_num, all_assetblinders, all_valueblinders);
-        output_valueblinders.push(last_valueblinder.to_vec());
+        output_valueblinders.push(last_valueblinder[..].to_vec());
 
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             info!("output {:?}", output);

@@ -689,22 +689,7 @@ impl WalletCtx {
                             ct_exp,
                             ct_bits,
                             output_generator,
-                        )?
-                        .serialize();
-
-                        let output_generator = elements::confidential::Asset::from_commitment(
-                            &output_generator.serialize(),
                         )?;
-                        let output_value_commitment =
-                            elements::confidential::Value::from_commitment(
-                                &output_value_commitment.serialize(),
-                            )?;
-                        trace!("asset: {}", hex::encode(&asset));
-                        trace!("output_assetblinder: {}", hex::encode(&output_assetblinder));
-                        trace!(
-                            "output_generator: {}",
-                            hex::encode(&elements::encode::serialize(&output_generator))
-                        );
 
                         let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner());
                         let surjectionproof = secp256k1_zkp::SurjectionProof::new(
@@ -713,20 +698,18 @@ impl WalletCtx {
                             asset_tag,
                             asset_blinder,
                             &input_domain,
-                        )?
-                        .serialize();
+                        )?;
 
                         output.nonce =
                             elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
-                        output.asset = output_generator;
-                        output.value = output_value_commitment;
-                        info!(
-                            "added size len: surjectionproof:{} rangeproof:{}",
-                            surjectionproof.len(),
-                            rangeproof.len()
-                        );
-                        output.witness.surjection_proof = surjectionproof;
-                        output.witness.rangeproof = rangeproof;
+                        output.asset = elements::confidential::Asset::from_commitment(
+                            &output_generator.serialize(),
+                        )?;
+                        output.value = elements::confidential::Value::from_commitment(
+                            &output_value_commitment.serialize(),
+                        )?;
+                        output.witness.surjection_proof = surjectionproof.serialize();
+                        output.witness.rangeproof = rangeproof.serialize();
                     }
                     _ => panic!("create_tx created things not right"),
                 }

@@ -65,7 +65,7 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
 // Copied from current elements master
 // TODO: remove when updating elements
 /// Create the shared secret.
-fn make_shared_secret(
+pub fn make_shared_secret(
     pk: &secp256k1_zkp::PublicKey,
     sk: &secp256k1_zkp::SecretKey,
 ) -> secp256k1_zkp::SecretKey {
@@ -90,7 +90,7 @@ fn make_shared_secret(
         .expect("always has exactly 32 bytes")
 }
 
-fn make_rangeproof_message(
+pub fn make_rangeproof_message(
     asset: elements::issuance::AssetId,
     bf: secp256k1_zkp::SecretKey,
 ) -> [u8; 64] {
@@ -100,6 +100,18 @@ fn make_rangeproof_message(
     message[32..].copy_from_slice(bf.as_ref());
 
     message
+}
+
+pub fn parse_rangeproof_message(
+    message: &[u8],
+) -> Result<(elements::issuance::AssetId, secp256k1_zkp::SecretKey), Error> {
+    if message.len() < 64 {
+        return Err(Error::Generic("Unexpected rangeproof message".to_string()));
+    }
+    let asset = elements::issuance::AssetId::from_slice(&message[..32])?;
+    let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&message[32..64])?;
+
+    Ok((asset, asset_blinder))
 }
 
 impl WalletCtx {

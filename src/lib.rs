@@ -14,7 +14,6 @@ pub use crate::model::{
 };
 
 use network::*;
-use wally::asset_unblind;
 
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -22,7 +21,7 @@ use std::hash::Hasher;
 use std::time::Instant;
 
 use crate::headers::Verifier;
-use crate::interface::WalletCtx;
+use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
 use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
@@ -50,6 +49,7 @@ struct Syncer {
     pub store: Store,
     pub master_blinding: MasterBlindingKey,
     pub config: Config,
+    secp: secp256k1::Secp256k1<secp256k1::All>,
 }
 
 struct Tipper {
@@ -379,42 +379,42 @@ impl Syncer {
                 confidential::Value::Confidential(_, _),
                 Nonce::Confidential(_, _),
             ) => {
-                let script = output.script_pubkey.clone();
-                let blinding_key = self.master_blinding.derive_blinding_key(&script);
-                let rangeproof = output.witness.rangeproof.clone();
-                let value_commitment = elements::encode::serialize(&output.value);
-                let asset_commitment = elements::encode::serialize(&output.asset);
-                let nonce_commitment = elements::encode::serialize(&output.nonce);
-                info!(
-                    "commitments len {} {} {}",
-                    value_commitment.len(),
-                    asset_commitment.len(),
-                    nonce_commitment.len()
-                );
-                let sender_pk = secp256k1::PublicKey::from_slice(&nonce_commitment).unwrap();
+                let asset_commitment =
+                    secp256k1_zkp::Generator::from_slice(&output.asset.commitment().unwrap())?;
+                let value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
+                    &output.value.commitment().unwrap(),
+                )?;
+                let sender_pk =
+                    secp256k1_zkp::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                let rangeproof = secp256k1_zkp::RangeProof::from_slice(&output.witness.rangeproof)?;
 
-                let (asset, assetblinder, valueblinder, value) = asset_unblind(
-                    sender_pk,
-                    blinding_key,
-                    rangeproof,
+                let receiver_sk = self
+                    .master_blinding
+                    .derive_blinding_key(&output.script_pubkey);
+                let shared_secret = make_shared_secret(&sender_pk, &receiver_sk);
+
+                let (opening, _) = rangeproof.rewind(
+                    &self.secp,
                     value_commitment,
-                    script,
+                    shared_secret,
+                    output.script_pubkey.as_bytes(),
                     asset_commitment,
                 )?;
 
-                let asset = elements::issuance::AssetId::from_slice(&asset)?;
+                let (asset, assetblinder) = parse_rangeproof_message(&*opening.message)?;
+
                 info!(
                     "Unblinded outpoint:{} asset:{} value:{}",
                     outpoint,
                     &asset.to_hex(),
-                    value
+                    opening.value,
                 );
 
                 let unblinded = Unblinded {
                     asset,
-                    value,
-                    assetblinder,
-                    valueblinder,
+                    value: opening.value,
+                    assetblinder: *assetblinder.as_ref(),
+                    valueblinder: *opening.blinding_factor.as_ref(),
                 };
                 Ok(unblinded)
             }
@@ -526,6 +526,7 @@ impl ElectrumWallet {
             store: self.wallet.store.clone(),
             master_blinding: self.wallet.master_blinding.clone(),
             config: self.config.clone(),
+            secp: secp256k1::Secp256k1::new(),
         };
 
         if let Ok(client) = self.config.electrum_url().build_client() {

@@ -66,9 +66,9 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
 // TODO: remove when updating elements
 /// Create the shared secret.
 pub fn make_shared_secret(
-    pk: &secp256k1_zkp::PublicKey,
-    sk: &secp256k1_zkp::SecretKey,
-) -> secp256k1_zkp::SecretKey {
+    pk: &secp256k1::PublicKey,
+    sk: &secp256k1::SecretKey,
+) -> secp256k1::SecretKey {
     let shared_secret = secp256k1_zkp::ecdh::SharedSecret::new_with_hash(pk, sk, |x, y| {
         // Yes, what follows is the compressed representation of a Bitcoin public key.
         // However, this is more by accident then by design, see here: https://github.com/rust-bitcoin/rust-secp256k1/pull/255#issuecomment-744146282
@@ -86,13 +86,13 @@ pub fn make_shared_secret(
             .into()
     });
 
-    secp256k1_zkp::SecretKey::from_slice(&shared_secret.as_ref()[..32])
+    secp256k1::SecretKey::from_slice(&shared_secret.as_ref()[..32])
         .expect("always has exactly 32 bytes")
 }
 
 pub fn make_rangeproof_message(
     asset: elements::issuance::AssetId,
-    bf: secp256k1_zkp::SecretKey,
+    bf: secp256k1::SecretKey,
 ) -> [u8; 64] {
     let mut message = [0u8; 64];
 
@@ -104,12 +104,12 @@ pub fn make_rangeproof_message(
 
 pub fn parse_rangeproof_message(
     message: &[u8],
-) -> Result<(elements::issuance::AssetId, secp256k1_zkp::SecretKey), Error> {
+) -> Result<(elements::issuance::AssetId, secp256k1::SecretKey), Error> {
     if message.len() < 64 {
         return Err(Error::Generic("Unexpected rangeproof message".to_string()));
     }
     let asset = elements::issuance::AssetId::from_slice(&message[..32])?;
-    let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&message[32..64])?;
+    let asset_blinder = secp256k1::SecretKey::from_slice(&message[32..64])?;
 
     Ok((asset, asset_blinder))
 }
@@ -573,8 +573,8 @@ impl WalletCtx {
                 .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
 
             let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
-            let asset_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.assetblinder)?;
-            let value_blinder = secp256k1_zkp::SecretKey::from_slice(&unblinded.valueblinder)?;
+            let asset_blinder = secp256k1::SecretKey::from_slice(&unblinded.assetblinder)?;
+            let value_blinder = secp256k1::SecretKey::from_slice(&unblinded.valueblinder)?;
             let asset_generator =
                 secp256k1_zkp::Generator::new_blinded(&self.secp, asset_tag, asset_blinder);
             let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
@@ -596,12 +596,11 @@ impl WalletCtx {
             if !output.is_fee() {
                 match (output.value, output.asset, output.nonce) {
                     (Value::Explicit(value), Asset::Explicit(asset), Nonce::Confidential(_, _)) => {
-                        let receiver_blinding_pk = secp256k1_zkp::PublicKey::from_slice(
-                            &output.nonce.commitment().unwrap(),
-                        )?;
-                        let sender_sk = secp256k1_zkp::SecretKey::new(&mut rng);
+                        let receiver_blinding_pk =
+                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                        let sender_sk = secp256k1::SecretKey::new(&mut rng);
                         let sender_pk =
-                            secp256k1_zkp::PublicKey::from_secret_key(&self.secp, &sender_sk);
+                            secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
                         let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
 
                         let asset_blinder =
@@ -721,7 +720,7 @@ fn derive_blinder(
     hash_prevouts: &bitcoin::hashes::sha256d::Hash,
     vout: u32,
     assetblinder: bool,
-) -> Result<secp256k1_zkp::SecretKey, secp256k1_zkp::UpstreamError> {
+) -> Result<secp256k1::SecretKey, secp256k1_zkp::UpstreamError> {
     let key: &[u8] = &master_blinding_key.0[..];
     let mut engine: HmacEngine<sha256::Hash> = HmacEngine::new(key);
     engine.input(&hash_prevouts[..]);
@@ -739,5 +738,5 @@ fn derive_blinder(
     ];
     engine2.input(&msg);
     let blinder: bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
-    secp256k1_zkp::SecretKey::from_slice(&blinder.into_inner())
+    secp256k1::SecretKey::from_slice(&blinder.into_inner())
 }

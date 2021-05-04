@@ -385,7 +385,7 @@ impl Syncer {
                     &output.value.commitment().unwrap(),
                 )?;
                 let sender_pk =
-                    secp256k1_zkp::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                    secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
                 let rangeproof = secp256k1_zkp::RangeProof::from_slice(&output.witness.rangeproof)?;
 
                 let receiver_sk = self

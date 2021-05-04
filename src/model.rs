@@ -4,7 +4,6 @@ use elements::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::hashes::hex::FromHex;
 use elements::OutPoint;
 use std::fmt::{Debug, Display};
@@ -145,7 +144,7 @@ impl SPVVerifyResult {
 }
 
 impl Display for SPVVerifyResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SPVVerifyResult::InProgress => write!(f, "in_progress"),
             SPVVerifyResult::Verified => write!(f, "verified"),

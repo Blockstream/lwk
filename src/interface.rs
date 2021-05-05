@@ -1,10 +1,12 @@
 use crate::model::{GetTransactionsOpt, SPVVerifyResult};
-use bitcoin::hashes::hex::ToHex;
-use bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
-use bitcoin::secp256k1::{self, All, Secp256k1};
-use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::PublicKey;
 use elements;
+use elements::bitcoin::hashes::hex::ToHex;
+use elements::bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
+use elements::bitcoin::secp256k1::{self, All, Secp256k1};
+use elements::bitcoin::util::bip32::{
+    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
+};
+use elements::bitcoin::PublicKey;
 use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
@@ -45,7 +47,10 @@ fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
 
 fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Error> {
     let seed = mnemonic2seed(mnemonic)?;
-    let xprv = ExtendedPrivKey::new_master(bitcoin::network::constants::Network::Testnet, &seed)?;
+    let xprv = ExtendedPrivKey::new_master(
+        elements::bitcoin::network::constants::Network::Testnet,
+        &seed,
+    )?;
 
     // BIP44: m / purpose' / coin_type' / account' / change / address_index
     // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
@@ -81,7 +86,7 @@ pub fn make_shared_secret(
         };
         dh_secret[1..].copy_from_slice(&x);
 
-        bitcoin::hashes::sha256d::Hash::hash(&dh_secret)
+        elements::bitcoin::hashes::sha256d::Hash::hash(&dh_secret)
             .into_inner()
             .into()
     });
@@ -710,7 +715,7 @@ fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
     }
 }
 
-fn get_hash_prevout(tx: &elements::Transaction) -> bitcoin::hashes::sha256d::Hash {
+fn get_hash_prevout(tx: &elements::Transaction) -> elements::bitcoin::hashes::sha256d::Hash {
     elements::sighash::SigHashCache::new(tx).hash_prevouts()
 }
 
@@ -718,7 +723,7 @@ fn get_hash_prevout(tx: &elements::Transaction) -> bitcoin::hashes::sha256d::Has
 // TODO: add test vectors
 fn derive_blinder(
     master_blinding_key: &elements::slip77::MasterBlindingKey,
-    hash_prevouts: &bitcoin::hashes::sha256d::Hash,
+    hash_prevouts: &elements::bitcoin::hashes::sha256d::Hash,
     vout: u32,
     is_asset_blinder: bool,
 ) -> Result<secp256k1::SecretKey, secp256k1_zkp::UpstreamError> {
@@ -738,6 +743,6 @@ fn derive_blinder(
         (vout & 0xff) as u8,
     ];
     engine2.input(&msg);
-    let blinder: bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
+    let blinder: elements::bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
     secp256k1::SecretKey::from_slice(&blinder.into_inner())
 }

@@ -30,9 +30,9 @@ use crate::ElementsNetwork;
 
 use log::{debug, info, trace, warn};
 
-use bitcoin::hashes::hex::ToHex;
-use bitcoin::secp256k1;
-use bitcoin::util::bip32::DerivationPath;
+use elements::bitcoin::hashes::hex::ToHex;
+use elements::bitcoin::secp256k1;
+use elements::bitcoin::util::bip32::DerivationPath;
 use elements::{BlockHash, Script, Txid};
 
 use elements;
@@ -111,7 +111,7 @@ impl Headers {
         let mut txs_verified = HashMap::new();
         for (txid, height) in needs_proof {
             let proof = client.transaction_get_merkle(
-                &bitcoin::Txid::from_hash(txid.as_hash()),
+                &elements::bitcoin::Txid::from_hash(txid.as_hash()),
                 height as usize,
             )?;
             let verified = if let Some(header) = self.store.read()?.cache.headers.get(&height) {
@@ -156,12 +156,12 @@ impl Syncer {
             let mut batch_count = 0;
             loop {
                 let batch = self.store.read()?.get_script_batch(i, batch_count)?;
-                let scripts_bitcoin: Vec<bitcoin::Script> = batch
+                let scripts_bitcoin: Vec<elements::bitcoin::Script> = batch
                     .value
                     .iter()
-                    .map(|e| bitcoin::Script::from(e.0.clone().into_bytes()))
+                    .map(|e| elements::bitcoin::Script::from(e.0.clone().into_bytes()))
                     .collect();
-                let scripts_bitcoin: Vec<&bitcoin::Script> =
+                let scripts_bitcoin: Vec<&elements::bitcoin::Script> =
                     scripts_bitcoin.iter().map(|e| e).collect();
                 let result: Vec<Vec<GetHistoryRes>> =
                     client.batch_script_get_history(scripts_bitcoin)?;
@@ -303,11 +303,12 @@ impl Syncer {
         let mut txs_in_db = self.store.read()?.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<&Txid> = history_txs_id.difference(&txs_in_db).collect();
         if !txs_to_download.is_empty() {
-            let txs_bitcoin: Vec<bitcoin::Txid> = txs_to_download
+            let txs_bitcoin: Vec<elements::bitcoin::Txid> = txs_to_download
                 .iter()
-                .map(|t| bitcoin::Txid::from_hash(t.as_hash()))
+                .map(|t| elements::bitcoin::Txid::from_hash(t.as_hash()))
                 .collect();
-            let txs_bitcoin: Vec<&bitcoin::Txid> = txs_bitcoin.iter().map(|t| t).collect();
+            let txs_bitcoin: Vec<&elements::bitcoin::Txid> =
+                txs_bitcoin.iter().map(|t| t).collect();
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
             let mut txs_downloaded: Vec<elements::Transaction> = vec![];
             for vec in txs_bytes_downloaded {
@@ -350,11 +351,12 @@ impl Syncer {
             let txs_to_download: Vec<&Txid> =
                 previous_txs_to_download.difference(&txs_in_db).collect();
             if !txs_to_download.is_empty() {
-                let txs_bitcoin: Vec<bitcoin::Txid> = txs_to_download
+                let txs_bitcoin: Vec<elements::bitcoin::Txid> = txs_to_download
                     .iter()
-                    .map(|t| bitcoin::Txid::from_hash(t.as_hash()))
+                    .map(|t| elements::bitcoin::Txid::from_hash(t.as_hash()))
                     .collect();
-                let txs_bitcoin: Vec<&bitcoin::Txid> = txs_bitcoin.iter().map(|t| t).collect();
+                let txs_bitcoin: Vec<&elements::bitcoin::Txid> =
+                    txs_bitcoin.iter().map(|t| t).collect();
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
                 for vec in txs_bytes_downloaded {
                     let mut tx: elements::Transaction = elements::encode::deserialize(&vec)?;

@@ -3,10 +3,10 @@ use crate::scripts::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
-use bitcoin::hashes::sha256;
-use bitcoin::hashes::Hash;
-use bitcoin::secp256k1::{All, Secp256k1};
-use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
+use elements::bitcoin::hashes::sha256;
+use elements::bitcoin::hashes::Hash;
+use elements::bitcoin::secp256k1::{All, Secp256k1};
+use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use elements::{BlockHash, Script, Txid};
 use elements::{BlockHeader, OutPoint};
 use log::{info, warn};
@@ -252,8 +252,8 @@ impl StoreMeta {
 #[cfg(test)]
 mod tests {
     use crate::store::StoreMeta;
-    use bitcoin::hashes::hex::FromHex;
-    use bitcoin::util::bip32::ExtendedPubKey;
+    use elements::bitcoin::hashes::hex::FromHex;
+    use elements::bitcoin::util::bip32::ExtendedPubKey;
     use elements::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;

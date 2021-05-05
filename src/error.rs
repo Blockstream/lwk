@@ -21,10 +21,10 @@ pub enum Error {
     InvalidHeaders,
     SendAll,
     AddrParse(String),
-    Bitcoin(bitcoin::util::Error),
-    BitcoinHashes(bitcoin::hashes::error::Error),
-    BitcoinBIP32Error(bitcoin::util::bip32::Error),
-    BitcoinConsensus(bitcoin::consensus::encode::Error),
+    Bitcoin(elements::bitcoin::util::Error),
+    BitcoinHashes(elements::bitcoin::hashes::error::Error),
+    BitcoinBIP32Error(elements::bitcoin::util::bip32::Error),
+    BitcoinConsensus(elements::bitcoin::consensus::encode::Error),
     JSON(serde_json::error::Error),
     JsonFrom(serde_json::Error),
     StdIOError(std::io::Error),
@@ -33,7 +33,7 @@ pub enum Error {
     SliceConversionError(std::array::TryFromSliceError),
     ElementsEncode(elements::encode::Error),
     Send(std::sync::mpsc::SendError<()>),
-    Secp256k1(bitcoin::secp256k1::Error),
+    Secp256k1(elements::bitcoin::secp256k1::Error),
     Secp256k1Zkp(secp256k1_zkp::Error),
 }
 
@@ -101,16 +101,16 @@ macro_rules! impl_error {
 }
 
 impl_error!(&str);
-impl_error!(bitcoin::util::base58::Error);
+impl_error!(elements::bitcoin::util::base58::Error);
 impl_error!(elements::address::AddressError);
-impl_error!(bitcoin::util::address::Error);
+impl_error!(elements::bitcoin::util::address::Error);
 impl_error!(aead::Error);
 impl_error!(PoisonError<RwLockReadGuard<'_, StoreMeta>>);
 impl_error!(PoisonError<RwLockWriteGuard<'_, StoreMeta>>);
 impl_error!(serde_cbor::error::Error);
-impl_error!(bitcoin::hashes::hex::Error);
+impl_error!(elements::bitcoin::hashes::hex::Error);
 impl_error!(std::string::FromUtf8Error);
-impl_error!(bitcoin::util::key::Error);
+impl_error!(elements::bitcoin::util::key::Error);
 
 impl From<std::array::TryFromSliceError> for Error {
     fn from(err: std::array::TryFromSliceError) -> Self {
@@ -124,8 +124,8 @@ impl From<std::net::AddrParseError> for Error {
     }
 }
 
-impl From<bitcoin::util::bip32::Error> for Error {
-    fn from(err: bitcoin::util::bip32::Error) -> Self {
+impl From<elements::bitcoin::util::bip32::Error> for Error {
+    fn from(err: elements::bitcoin::util::bip32::Error) -> Self {
         Error::BitcoinBIP32Error(err)
     }
 }
@@ -142,8 +142,8 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<bitcoin::consensus::encode::Error> for Error {
-    fn from(err: bitcoin::consensus::encode::Error) -> Self {
+impl From<elements::bitcoin::consensus::encode::Error> for Error {
+    fn from(err: elements::bitcoin::consensus::encode::Error) -> Self {
         Error::BitcoinConsensus(err)
     }
 }
@@ -160,8 +160,8 @@ impl From<electrum_client::Error> for Error {
     }
 }
 
-impl From<bitcoin::hashes::error::Error> for Error {
-    fn from(err: bitcoin::hashes::error::Error) -> Self {
+impl From<elements::bitcoin::hashes::error::Error> for Error {
+    fn from(err: elements::bitcoin::hashes::error::Error) -> Self {
         Error::BitcoinHashes(err)
     }
 }
@@ -177,8 +177,8 @@ impl From<std::sync::mpsc::SendError<()>> for Error {
     }
 }
 
-impl From<bitcoin::secp256k1::Error> for Error {
-    fn from(err: bitcoin::secp256k1::Error) -> Self {
+impl From<elements::bitcoin::secp256k1::Error> for Error {
+    fn from(err: elements::bitcoin::secp256k1::Error) -> Self {
         Error::Secp256k1(err)
     }
 }

@@ -2,11 +2,11 @@ use elements::{self, BlockExtData};
 
 use crate::error::Error;
 use crate::ElementsNetwork;
-use bitcoin::hashes::hex::FromHex;
-use bitcoin::hashes::{sha256d, Hash};
-use bitcoin::secp256k1::{Message, Secp256k1, Signature, VerifyOnly};
-use bitcoin::PublicKey;
 use electrum_client::GetMerkleRes;
+use elements::bitcoin::hashes::hex::FromHex;
+use elements::bitcoin::hashes::{sha256d, Hash};
+use elements::bitcoin::secp256k1::{Message, Secp256k1, Signature, VerifyOnly};
+use elements::bitcoin::PublicKey;
 use elements::opcodes::Class;
 use elements::script::Instruction;
 use elements::TxMerkleNode;

@@ -1,6 +1,6 @@
-use bitcoin::hash_types::PubkeyHash;
-use bitcoin::hashes::Hash;
-use bitcoin::PublicKey;
+use elements::bitcoin::hash_types::PubkeyHash;
+use elements::bitcoin::hashes::Hash;
+use elements::bitcoin::PublicKey;
 use elements::script::Builder;
 use elements::{Address, AddressParams, Script};
 

@@ -1,11 +1,11 @@
 extern crate bewallet;
 
-use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::{self, Amount};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use chrono::Utc;
 use electrum_client::ElectrumApi;
 use elements;
+use elements::bitcoin::hashes::hex::{FromHex, ToHex};
+use elements::bitcoin::Amount;
 use elements::BlockHash;
 
 use bewallet::*;
@@ -57,7 +57,7 @@ fn node_sendtoaddress(
     asset: Option<String>,
 ) -> String {
     let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(bitcoin::util::amount::Denomination::Bitcoin);
+    let btc = amount.to_string_in(elements::bitcoin::util::amount::Denomination::Bitcoin);
     info!("node_sendtoaddress {} {}", address, btc);
     let r = match asset {
         Some(asset) => client
@@ -102,7 +102,7 @@ fn node_generate(client: &Client, block_num: u32) {
 
 fn node_issueasset(client: &Client, satoshi: u64) -> String {
     let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(bitcoin::util::amount::Denomination::Bitcoin);
+    let btc = amount.to_string_in(elements::bitcoin::util::amount::Denomination::Bitcoin);
     let r = client
         .call::<Value>("issueasset", &[btc.into(), 0.into()])
         .unwrap();

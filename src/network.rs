@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use bitcoin::hashes::hex::FromHex;
+use elements::bitcoin::hashes::hex::FromHex;
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =

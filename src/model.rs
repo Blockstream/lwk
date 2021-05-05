@@ -4,7 +4,7 @@ use elements::Script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bitcoin::hashes::hex::FromHex;
+use elements::bitcoin::hashes::hex::FromHex;
 use elements::OutPoint;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
@@ -12,8 +12,8 @@ use std::str::FromStr;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,
-    pub asset_blinder: bitcoin::secp256k1::SecretKey,
-    pub value_blinder: bitcoin::secp256k1::SecretKey,
+    pub asset_blinder: elements::bitcoin::secp256k1::SecretKey,
+    pub value_blinder: elements::bitcoin::secp256k1::SecretKey,
     pub value: u64,
 }
 
@@ -156,7 +156,7 @@ impl Display for SPVVerifyResult {
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::hashes::hex::{FromHex, ToHex};
+    use elements::bitcoin::hashes::hex::{FromHex, ToHex};
 
     #[test]
     fn test_asset_roundtrip() {

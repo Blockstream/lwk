@@ -33,7 +33,6 @@ pub enum Error {
     SliceConversionError(std::array::TryFromSliceError),
     ElementsEncode(elements::encode::Error),
     Send(std::sync::mpsc::SendError<()>),
-    Encryption(block_modes::BlockModeError),
     Secp256k1(bitcoin::secp256k1::Error),
     Secp256k1Zkp(secp256k1_zkp::Error),
 }
@@ -70,7 +69,6 @@ impl Display for Error {
             Error::SliceConversionError(ref slice_err) => write!(f, "slice: {}", slice_err),
             Error::ElementsEncode(ref el_err) => write!(f, "el_err: {}", el_err),
             Error::Send(ref send_err) => write!(f, "send_err: {:?}", send_err),
-            Error::Encryption(ref send_err) => write!(f, "encryption_err: {:?}", send_err),
             Error::Secp256k1(ref err) => write!(f, "Secp256k1_err: {:?}", err),
             Error::Secp256k1Zkp(ref err) => write!(f, "Secp256k1_zkp_err: {:?}", err),
         }
@@ -109,11 +107,9 @@ impl_error!(bitcoin::util::address::Error);
 impl_error!(aead::Error);
 impl_error!(PoisonError<RwLockReadGuard<'_, StoreMeta>>);
 impl_error!(PoisonError<RwLockWriteGuard<'_, StoreMeta>>);
-impl_error!(block_modes::InvalidKeyIvLength);
 impl_error!(serde_cbor::error::Error);
 impl_error!(bitcoin::hashes::hex::Error);
 impl_error!(std::string::FromUtf8Error);
-impl_error!(block_modes::BlockModeError);
 impl_error!(bitcoin::util::key::Error);
 
 impl From<std::array::TryFromSliceError> for Error {

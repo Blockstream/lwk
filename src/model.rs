@@ -12,8 +12,8 @@ use std::str::FromStr;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,
-    pub assetblinder: [u8; 32],
-    pub valueblinder: [u8; 32],
+    pub asset_blinder: secp256k1::SecretKey,
+    pub value_blinder: secp256k1::SecretKey,
     pub value: u64,
 }
 

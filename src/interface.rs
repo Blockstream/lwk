@@ -573,17 +573,18 @@ impl WalletCtx {
                 .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
 
             let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
-            let asset_blinder = secp256k1::SecretKey::from_slice(&unblinded.assetblinder)?;
-            let value_blinder = secp256k1::SecretKey::from_slice(&unblinded.valueblinder)?;
-            let asset_generator =
-                secp256k1_zkp::Generator::new_blinded(&self.secp, asset_tag, asset_blinder);
+            let asset_generator = secp256k1_zkp::Generator::new_blinded(
+                &self.secp,
+                asset_tag,
+                unblinded.asset_blinder,
+            );
             let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
                 unblinded.value,
-                value_blinder,
-                asset_blinder,
+                unblinded.value_blinder,
+                unblinded.asset_blinder,
             );
             input_commitment_secrets.push(commitment_secrets);
-            input_domain.push((asset_generator, asset_tag, asset_blinder));
+            input_domain.push((asset_generator, asset_tag, unblinded.asset_blinder));
         }
 
         let ct_exp = 0;
@@ -719,14 +720,14 @@ fn derive_blinder(
     master_blinding_key: &elements::slip77::MasterBlindingKey,
     hash_prevouts: &bitcoin::hashes::sha256d::Hash,
     vout: u32,
-    assetblinder: bool,
+    is_asset_blinder: bool,
 ) -> Result<secp256k1::SecretKey, secp256k1_zkp::UpstreamError> {
     let key: &[u8] = &master_blinding_key.0[..];
     let mut engine: HmacEngine<sha256::Hash> = HmacEngine::new(key);
     engine.input(&hash_prevouts[..]);
     let key2 = &Hmac::from_engine(engine)[..];
     let mut engine2: HmacEngine<sha256::Hash> = HmacEngine::new(key2);
-    let start = if assetblinder { b'A' } else { b'V' };
+    let start = if is_asset_blinder { b'A' } else { b'V' };
     let msg: [u8; 7] = [
         start,
         b'B',

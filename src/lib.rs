@@ -401,7 +401,7 @@ impl Syncer {
                     asset_commitment,
                 )?;
 
-                let (asset, assetblinder) = parse_rangeproof_message(&*opening.message)?;
+                let (asset, asset_blinder) = parse_rangeproof_message(&*opening.message)?;
 
                 info!(
                     "Unblinded outpoint:{} asset:{} value:{}",
@@ -413,8 +413,8 @@ impl Syncer {
                 let unblinded = Unblinded {
                     asset,
                     value: opening.value,
-                    assetblinder: *assetblinder.as_ref(),
-                    valueblinder: *opening.blinding_factor.as_ref(),
+                    asset_blinder,
+                    value_blinder: opening.blinding_factor,
                 };
                 Ok(unblinded)
             }

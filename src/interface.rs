@@ -1,12 +1,13 @@
 use crate::model::{GetTransactionsOpt, SPVVerifyResult};
 use elements;
 use elements::bitcoin::hashes::hex::ToHex;
-use elements::bitcoin::hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
+use elements::bitcoin::hashes::{sha256, sha256d, Hash, HashEngine, Hmac, HmacEngine};
 use elements::bitcoin::secp256k1::{self, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::bitcoin::PublicKey;
+use elements::encode::Encodable;
 use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
@@ -735,6 +736,31 @@ fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
 
 fn get_hash_prevout(tx: &elements::Transaction) -> elements::bitcoin::hashes::sha256d::Hash {
     elements::sighash::SigHashCache::new(tx).hash_prevouts()
+}
+
+fn _liquidex_derive_blinder(
+    master_blinding_key: &elements::slip77::MasterBlindingKey,
+    previous_outpoint: &elements::OutPoint,
+    is_asset_blinder: bool,
+) -> Result<secp256k1::SecretKey, secp256k1_zkp::UpstreamError> {
+    // LiquiDEX proposals do not know in advance all inputs of
+    // final transaction, compute the hash only from the previous
+    // outpoint we know is being spent.
+    let hash_prevout = {
+        let mut enc = sha256d::Hash::engine();
+        previous_outpoint.consensus_encode(&mut enc).unwrap();
+        sha256d::Hash::from_engine(enc)
+    };
+
+    // LiquiDEX proposals output vout is choosen by the taker,
+    // for the blinder computation use a vout that may not
+    // occur in a transaction.
+    derive_blinder(
+        master_blinding_key,
+        &hash_prevout,
+        u32::MAX,
+        is_asset_blinder,
+    )
 }
 
 // Derive blinders as Ledger and Jade do

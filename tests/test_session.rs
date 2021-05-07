@@ -764,4 +764,23 @@ impl TestElectrumWallet {
             "last output is not a fee"
         );
     }
+
+    pub fn liquidex_assets(&self) {
+        let asset = elements::issuance::AssetId::from_slice(&[0; 32]).unwrap();
+        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
+        assert!(self
+            .electrum_wallet
+            .liquidex_assets_insert(asset.clone())
+            .unwrap());
+        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 1);
+        assert!(!self
+            .electrum_wallet
+            .liquidex_assets_insert(asset.clone())
+            .unwrap());
+        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 1);
+        assert!(self.electrum_wallet.liquidex_assets_remove(&asset).unwrap());
+        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
+        assert!(!self.electrum_wallet.liquidex_assets_remove(&asset).unwrap());
+        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
+    }
 }

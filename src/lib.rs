@@ -602,4 +602,25 @@ impl ElectrumWallet {
         client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;
         Ok(())
     }
+
+    /// LiquiDEX assets that might be received from proposal made by the wallet.
+    pub fn liquidex_assets(&self) -> Result<HashSet<elements::issuance::AssetId>, Error> {
+        self.wallet.liquidex_assets()
+    }
+
+    /// Insert an asset in LiquiDEX assets, returns false if asset was already there.
+    pub fn liquidex_assets_insert(
+        &self,
+        asset: elements::issuance::AssetId,
+    ) -> Result<bool, Error> {
+        self.wallet.liquidex_assets_insert(asset)
+    }
+
+    /// Remove an asset in LiquiDEX assets, returns true if the asset was removed.
+    pub fn liquidex_assets_remove(
+        &self,
+        asset: &elements::issuance::AssetId,
+    ) -> Result<bool, Error> {
+        self.wallet.liquidex_assets_remove(asset)
+    }
 }

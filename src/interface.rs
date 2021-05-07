@@ -706,6 +706,24 @@ impl WalletCtx {
         };
         self.derive_address(&self.xpub, [0, pointer])
     }
+
+    pub fn liquidex_assets(&self) -> Result<HashSet<elements::issuance::AssetId>, Error> {
+        Ok(self.store.read()?.liquidex_assets())
+    }
+
+    pub fn liquidex_assets_insert(
+        &self,
+        asset: elements::issuance::AssetId,
+    ) -> Result<bool, Error> {
+        self.store.write()?.liquidex_assets_insert(asset)
+    }
+
+    pub fn liquidex_assets_remove(
+        &self,
+        asset: &elements::issuance::AssetId,
+    ) -> Result<bool, Error> {
+        self.store.write()?.liquidex_assets_remove(asset)
+    }
 }
 
 fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {

@@ -804,3 +804,29 @@ fn _liquidex_aes_key(
     engine.write(&script.as_bytes())?;
     Ok(sha256::Hash::from_engine(engine).into_inner())
 }
+
+fn _liquidex_aes_nonce(
+    master_blinding_key: &MasterBlindingKey,
+    previous_outpoint: &elements::OutPoint,
+    asset: &elements::confidential::Asset,
+    value: &elements::confidential::Value,
+    script: &elements::Script,
+) -> Result<[u8; 12], Error> {
+    if !asset.is_confidential() || !value.is_confidential() {
+        return Err(Error::Generic(
+            "Asset and Value must be confidential".to_string(),
+        ));
+    }
+    // TODO: consider using tagged hashes
+    const TAG: &[u8; 18] = b"liquidex_aes_nonce";
+    let mut engine = sha256::Hash::engine();
+    engine.write(TAG)?;
+    engine.write(&master_blinding_key.0[..])?;
+    previous_outpoint.consensus_encode(&mut engine)?;
+    engine.write(&asset.commitment().unwrap())?;
+    engine.write(&value.commitment().unwrap())?;
+    engine.write(&script.as_bytes())?;
+    let mut out = [0u8; 12];
+    out.copy_from_slice(&sha256::Hash::from_engine(engine).into_inner()[..12]);
+    Ok(out)
+}

@@ -190,7 +190,7 @@ pub fn liquidex_unblind(
 ) -> Result<Unblinded, Error> {
     // check vout is reasonable
     let vout = vout as usize;
-    if vout > tx.output.len() || vout > tx.input.len() {
+    if vout + 1 > tx.output.len() || vout + 1 > tx.input.len() {
         return Err(Error::Generic("LiquiDEX error".to_string()));
     }
     // check output is blinded

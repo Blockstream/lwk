@@ -6,6 +6,7 @@ mod network;
 mod scripts;
 mod store;
 mod transaction;
+mod utils;
 
 pub use crate::error::Error;
 pub use crate::model::{

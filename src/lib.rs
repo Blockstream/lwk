@@ -24,7 +24,7 @@ use std::time::Instant;
 
 use crate::headers::Verifier;
 use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
-use crate::liquidex::LiquidexProposal;
+use crate::liquidex::{liquidex_unblind, LiquidexProposal};
 use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
@@ -345,6 +345,13 @@ impl Syncer {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
                             Err(_) => info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
+                        // let unblinded = _liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
+
+                        // TODO: consider skipping this more frequently
+                        match self.try_liquidex_unblind(&tx, i as u32) {
+                            Ok(unblinded) => unblinds.push((outpoint, unblinded)),
+                            Err(_) => {}
+                        }
                     }
                 }
                 strip_witness(&mut tx);
@@ -427,6 +434,15 @@ impl Syncer {
                 "received unconfidential or null asset/value/nonce".into(),
             )),
         }
+    }
+
+    pub fn try_liquidex_unblind(
+        &self,
+        tx: &elements::Transaction,
+        vout: u32,
+    ) -> Result<Unblinded, Error> {
+        let assets = self.store.read()?.liquidex_assets();
+        liquidex_unblind(&self.master_blinding, &tx, vout, &self.secp, &assets)
     }
 }
 

@@ -181,7 +181,7 @@ pub fn liquidex_blind(
     })
 }
 
-pub fn _liquidex_unblind(
+pub fn liquidex_unblind(
     master_blinding_key: &MasterBlindingKey,
     tx: &elements::Transaction,
     vout: u32,
@@ -279,7 +279,7 @@ pub fn _liquidex_unblind(
 
 #[cfg(test)]
 mod tests {
-    use crate::liquidex::{LiquidexProposal, _liquidex_unblind, liquidex_blind};
+    use crate::liquidex::{liquidex_blind, liquidex_unblind, LiquidexProposal};
     use crate::transaction::add_input;
 
     #[test]
@@ -314,7 +314,7 @@ mod tests {
         liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
         let mut assets = std::collections::HashSet::<elements::issuance::AssetId>::new();
         assets.insert(asset.clone());
-        let unblinded = _liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
+        let unblinded = liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
         assert_eq!(unblinded.asset, asset);
         assert_eq!(unblinded.value, value);
     }

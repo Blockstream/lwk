@@ -817,10 +817,13 @@ fn _liquidex_aes_nonce(
     value: &elements::confidential::Value,
     script: &elements::Script,
 ) -> Result<[u8; 12], Error> {
-    if !asset.is_confidential() || !value.is_confidential() {
-        return Err(Error::Generic(
-            "Asset and Value must be confidential".to_string(),
-        ));
+    match (asset, value) {
+        (Asset::Confidential(_, _), Value::Confidential(_, _)) => {}
+        _ => {
+            return Err(Error::Generic(
+                "Asset and Value must be confidential".to_string(),
+            ));
+        }
     }
     // TODO: consider using tagged hashes
     const TAG: &[u8; 18] = b"liquidex_aes_nonce";
@@ -920,11 +923,15 @@ fn _liquidex_unblind(
         return Err(Error::Generic("LiquiDEX error".to_string()));
     }
     // check output is blinded
-    if !tx.output[vout].asset.is_confidential()
-        || !tx.output[vout].value.is_confidential()
-        || !tx.output[vout].nonce.is_confidential()
-    {
-        return Err(Error::Generic("LiquiDEX error".to_string()));
+    match (
+        tx.output[vout].asset,
+        tx.output[vout].value,
+        tx.output[vout].nonce,
+    ) {
+        (Asset::Confidential(_, _), Value::Confidential(_, _), Nonce::Confidential(_, _)) => {}
+        _ => {
+            return Err(Error::Generic("LiquiDEX error".to_string()));
+        }
     }
     // FIXME: check input has sighash single | anyonecanpay
     // FIXME: check input has a script belonging to the wallet

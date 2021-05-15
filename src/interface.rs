@@ -30,6 +30,11 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
+use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
+use aes_gcm_siv::Aes256GcmSiv;
+
+use rand::Rng;
+
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
     pub config: Config,
@@ -829,4 +834,75 @@ fn _liquidex_aes_nonce(
     let mut out = [0u8; 12];
     out.copy_from_slice(&sha256::Hash::from_engine(engine).into_inner()[..12]);
     Ok(out)
+}
+
+/// Blind a LiquiDEX maker transaction.
+/// The maker has no control on the rangeproof, thus it can't rely on it to recover the unblinding
+/// data. Use deterministic blinders and use the nonce field to encrypt the output value.
+fn _liquidex_blind(
+    master_blinding_key: &MasterBlindingKey,
+    tx: &mut elements::Transaction,
+    secp: &Secp256k1<All>,
+) -> Result<(), Error> {
+    if tx.input.len() != 1 || tx.output.len() != 1 {
+        return Err(Error::Generic(
+            "Unexpected LiquiDEX maker transaction".to_string(),
+        ));
+    }
+    let (asset, value) = match (tx.output[0].asset, tx.output[0].value, tx.output[0].nonce) {
+        (Asset::Explicit(asset), Value::Explicit(value), Nonce::Null) => (asset, value),
+        _ => {
+            return Err(Error::Generic(
+                "Unexpected LiquiDEX maker transaction".to_string(),
+            ));
+        }
+    };
+
+    let asset_blinder =
+        _liquidex_derive_blinder(master_blinding_key, &tx.input[0].previous_output, true)?;
+    let value_blinder =
+        _liquidex_derive_blinder(master_blinding_key, &tx.input[0].previous_output, false)?;
+
+    let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
+    let asset_generator = secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder);
+    let value_commitment =
+        secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, asset_generator);
+
+    tx.output[0].asset =
+        elements::confidential::Asset::from_commitment(&asset_generator.serialize())?;
+    tx.output[0].value =
+        elements::confidential::Value::from_commitment(&value_commitment.serialize())?;
+
+    let key = _liquidex_aes_key(master_blinding_key, &tx.output[0].script_pubkey)?;
+    let key = GenericArray::from_slice(&key);
+    let cipher = Aes256GcmSiv::new(&key);
+
+    let aes_nonce = _liquidex_aes_nonce(
+        master_blinding_key,
+        &tx.input[0].previous_output,
+        &tx.output[0].asset,
+        &tx.output[0].value,
+        &tx.output[0].script_pubkey,
+    )?;
+    let aes_nonce = GenericArray::from_slice(&aes_nonce);
+
+    let mut rng = rand::thread_rng();
+    let nonce_commitment = loop {
+        // On average does 2 loops.
+        let mut text = [0u8; 16];
+        text[..8].copy_from_slice(&value.to_le_bytes());
+        rng.fill(&mut text[8..]);
+        let mut text = text.to_vec();
+        cipher.encrypt_in_place(aes_nonce, b"", &mut text)?;
+        let mut candidate = [0u8; 33];
+        candidate[0] = 0x02;
+        candidate[1..].copy_from_slice(&text);
+        if let Ok(pk) = secp256k1_zkp::PublicKey::from_slice(&candidate) {
+            break pk.serialize();
+        }
+    };
+
+    tx.output[0].nonce = elements::confidential::Nonce::from_commitment(&nonce_commitment)?;
+
+    Ok(())
 }

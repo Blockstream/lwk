@@ -30,7 +30,7 @@ pub struct LiquidexProposal {
 }
 
 impl LiquidexProposal {
-    pub fn _new(tx: &elements::Transaction, input: Unblinded, output: Unblinded) -> Self {
+    pub fn new(tx: &elements::Transaction, input: Unblinded, output: Unblinded) -> Self {
         Self {
             version: 0,
             tx: hex::encode(elements::encode::serialize(tx)),
@@ -110,11 +110,11 @@ fn _liquidex_aes_nonce(
 /// Blind a LiquiDEX maker transaction.
 /// The maker has no control on the rangeproof, thus it can't rely on it to recover the unblinding
 /// data. Use deterministic blinders and use the nonce field to encrypt the output value.
-pub fn _liquidex_blind(
+pub fn liquidex_blind(
     master_blinding_key: &MasterBlindingKey,
     tx: &mut elements::Transaction,
     secp: &Secp256k1<All>,
-) -> Result<(), Error> {
+) -> Result<Unblinded, Error> {
     if tx.input.len() != 1 || tx.output.len() != 1 {
         return Err(Error::Generic(
             "Unexpected LiquiDEX maker transaction".to_string(),
@@ -173,7 +173,12 @@ pub fn _liquidex_blind(
 
     tx.output[0].nonce = elements::confidential::Nonce::from_commitment(&nonce_commitment)?;
 
-    Ok(())
+    Ok(Unblinded {
+        asset,
+        asset_blinder,
+        value_blinder,
+        value,
+    })
 }
 
 pub fn _liquidex_unblind(
@@ -274,7 +279,7 @@ pub fn _liquidex_unblind(
 
 #[cfg(test)]
 mod tests {
-    use crate::liquidex::{LiquidexProposal, _liquidex_blind, _liquidex_unblind};
+    use crate::liquidex::{LiquidexProposal, _liquidex_unblind, liquidex_blind};
     use crate::transaction::add_input;
 
     #[test]
@@ -306,7 +311,7 @@ mod tests {
         tx.output.push(new_out);
 
         let secp = secp256k1_zkp::Secp256k1::new();
-        _liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
+        liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
         let mut assets = std::collections::HashSet::<elements::issuance::AssetId>::new();
         assets.insert(asset.clone());
         let unblinded = _liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();

@@ -29,6 +29,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
+use crate::liquidex::{liquidex_blind, LiquidexProposal};
+
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
     pub config: Config,
@@ -461,13 +463,14 @@ impl WalletCtx {
         derivation_path: &DerivationPath,
         value: Value,
         xprv: ExtendedPrivKey,
+        sighash_type: Option<elements::SigHashType>,
     ) -> (Script, Vec<Vec<u8>>) {
         let xprv = xprv.derive_priv(&self.secp, &derivation_path).unwrap();
         let private_key = &xprv.private_key;
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
 
         let script_code = p2pkh_script(public_key);
-        let sighash_type = elements::SigHashType::All;
+        let sighash_type = sighash_type.unwrap_or(elements::SigHashType::All);
         let sighash = elements::sighash::SigHashCache::new(tx).segwitv0_sighash(
             input_index,
             &script_code,
@@ -525,7 +528,7 @@ impl WalletCtx {
                 .clone();
 
             let (script_sig, witness) =
-                self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv);
+                self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv, None);
 
             tx.input[i].script_sig = script_sig;
             tx.input[i].witness.script_witness = witness;
@@ -724,6 +727,59 @@ impl WalletCtx {
         asset: &elements::issuance::AssetId,
     ) -> Result<bool, Error> {
         self.store.write()?.liquidex_assets_remove(asset)
+    }
+
+    pub fn liquidex_make(
+        &self,
+        utxo: &elements::OutPoint,
+        asset: &elements::issuance::AssetId,
+        rate: f64,
+        mnemonic: &str,
+    ) -> Result<LiquidexProposal, Error> {
+        let store_read = self.store.read()?;
+        let unblinded_input = store_read
+            .cache
+            .unblinded
+            .get(utxo)
+            .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
+
+        let receive_value = (rate * unblinded_input.value as f64) as u64;
+        let mut tx = elements::Transaction {
+            version: 2,
+            lock_time: 0,
+            input: vec![],
+            output: vec![],
+        };
+        add_input(&mut tx, utxo.clone());
+        let address = self.get_address()?;
+        add_output(&mut tx, &address, receive_value, asset.to_hex())?;
+
+        let unblinded_output = liquidex_blind(&self.master_blinding, &mut tx, &self.secp)?;
+
+        // FIXME: sign with sighash single || anyonecanpay !!
+        let prev_tx = store_read
+            .cache
+            .all_txs
+            .get(&utxo.txid)
+            .ok_or_else(|| Error::Generic("expected tx".into()))?;
+        let out = prev_tx.output[utxo.vout as usize].clone();
+        let derivation_path: DerivationPath = store_read
+            .cache
+            .paths
+            .get(&out.script_pubkey)
+            .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
+            .clone();
+
+        let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
+        let sighash_type = Some(elements::SigHashType::SinglePlusAnyoneCanPay);
+        let (script_sig, witness) =
+            self.internal_sign_elements(&tx, 0, &derivation_path, out.value, xprv, sighash_type);
+
+        tx.input[0].script_sig = script_sig;
+        tx.input[0].witness.script_witness = witness;
+
+        let proposal = LiquidexProposal::new(&tx, unblinded_input.clone(), unblinded_output);
+        Ok(proposal)
     }
 }
 

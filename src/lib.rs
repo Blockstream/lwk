@@ -24,6 +24,7 @@ use std::time::Instant;
 
 use crate::headers::Verifier;
 use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
+use crate::liquidex::LiquidexProposal;
 use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
@@ -624,5 +625,18 @@ impl ElectrumWallet {
         asset: &elements::issuance::AssetId,
     ) -> Result<bool, Error> {
         self.wallet.liquidex_assets_remove(asset)
+    }
+
+    /// Create and sign a LiquiDEX proposal.
+    /// The utxo will be swapped with the asset at the rate (price asset to send/price asset to
+    /// receive).
+    pub fn liquidex_make(
+        &self,
+        utxo: &elements::OutPoint,
+        asset: &elements::issuance::AssetId,
+        rate: f64,
+        mnemonic: &str,
+    ) -> Result<LiquidexProposal, Error> {
+        self.wallet.liquidex_make(utxo, asset, rate, mnemonic)
     }
 }

@@ -25,6 +25,7 @@ use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -789,4 +790,17 @@ fn derive_blinder(
     engine2.input(&msg);
     let blinder: elements::bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
     secp256k1::SecretKey::from_slice(&blinder.into_inner())
+}
+
+fn _liquidex_aes_key(
+    master_blinding_key: &MasterBlindingKey,
+    script: &elements::Script,
+) -> Result<[u8; 32], Error> {
+    // TODO: consider using tagged hashes
+    const TAG: &[u8; 16] = b"liquidex_aes_key";
+    let mut engine = sha256::Hash::engine();
+    engine.write(TAG)?;
+    engine.write(&master_blinding_key.0[..])?;
+    engine.write(&script.as_bytes())?;
+    Ok(sha256::Hash::from_engine(engine).into_inner())
 }

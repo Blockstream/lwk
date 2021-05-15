@@ -12,7 +12,7 @@ use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
 
-use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{CreateTransactionOpt, TransactionDetails, Unblinded, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -905,4 +905,96 @@ fn _liquidex_blind(
     tx.output[0].nonce = elements::confidential::Nonce::from_commitment(&nonce_commitment)?;
 
     Ok(())
+}
+
+fn _liquidex_unblind(
+    master_blinding_key: &MasterBlindingKey,
+    tx: &elements::Transaction,
+    vout: u32,
+    secp: &Secp256k1<All>,
+    assets: &HashSet<elements::issuance::AssetId>,
+) -> Result<Unblinded, Error> {
+    // check vout is reasonable
+    let vout = vout as usize;
+    if vout > tx.output.len() || vout > tx.input.len() {
+        return Err(Error::Generic("LiquiDEX error".to_string()));
+    }
+    // check output is blinded
+    if !tx.output[vout].asset.is_confidential()
+        || !tx.output[vout].value.is_confidential()
+        || !tx.output[vout].nonce.is_confidential()
+    {
+        return Err(Error::Generic("LiquiDEX error".to_string()));
+    }
+    // FIXME: check input has sighash single | anyonecanpay
+    // FIXME: check input has a script belonging to the wallet
+    // compute blinders
+    let asset_blinder =
+        _liquidex_derive_blinder(master_blinding_key, &tx.input[vout].previous_output, true)?;
+    let value_blinder =
+        _liquidex_derive_blinder(master_blinding_key, &tx.input[vout].previous_output, false)?;
+
+    // compute key
+    let key = _liquidex_aes_key(master_blinding_key, &tx.output[vout].script_pubkey)?;
+    let key = GenericArray::from_slice(&key);
+    let cipher = Aes256GcmSiv::new(&key);
+
+    // compute aes nonce
+    let aes_nonce = _liquidex_aes_nonce(
+        master_blinding_key,
+        &tx.input[vout].previous_output,
+        &tx.output[vout].asset,
+        &tx.output[vout].value,
+        &tx.output[vout].script_pubkey,
+    )?;
+    let aes_nonce = GenericArray::from_slice(&aes_nonce);
+
+    // parse nonce_commitment
+    let nonce_commitment = tx.output[vout].nonce.commitment().unwrap();
+    let mut text = vec![];
+    text.extend(&nonce_commitment[1..]);
+
+    // decrypt value
+    cipher.decrypt_in_place(aes_nonce, b"", &mut text)?;
+    let mut value_bytes = [0u8; 8];
+    value_bytes.copy_from_slice(&text[..8]);
+    let value = u64::from_le_bytes(value_bytes);
+
+    // check value matches value commitment
+    let tx_asset_generator =
+        secp256k1_zkp::Generator::from_slice(&tx.output[vout].asset.commitment().unwrap())?;
+    let tx_value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
+        &tx.output[vout].value.commitment().unwrap(),
+    )?;
+    let value_commitment =
+        secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, tx_asset_generator);
+    if value_commitment != tx_value_commitment {
+        return Err(Error::Generic("LiquiDEX error".to_string()));
+    }
+
+    let mut asset: Option<elements::issuance::AssetId> = None;
+    // loop on assets
+    for candidate in assets {
+        // check asset matches asset commitment
+        let asset_tag = secp256k1_zkp::Tag::from(candidate.into_inner().into_inner());
+        let asset_generator = secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder);
+        if asset_generator == tx_asset_generator {
+            asset = Some(candidate.clone());
+            break;
+        }
+    }
+
+    // check a match happened
+    if asset.is_none() {
+        return Err(Error::Generic("LiquiDEX error".to_string()));
+    }
+    let asset = asset.unwrap();
+
+    // return unblinded
+    Ok(Unblinded {
+        asset,
+        asset_blinder,
+        value_blinder,
+        value,
+    })
 }

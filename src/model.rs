@@ -13,7 +13,9 @@ use std::str::FromStr;
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,
     pub asset_blinder: elements::bitcoin::secp256k1::SecretKey,
+    #[serde(rename = "amount_blinder")]
     pub value_blinder: elements::bitcoin::secp256k1::SecretKey,
+    #[serde(rename = "amount")]
     pub value: u64,
 }
 

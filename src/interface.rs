@@ -998,3 +998,45 @@ fn _liquidex_unblind(
         value,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::interface::{_liquidex_blind, _liquidex_unblind};
+
+    #[test]
+    fn test_liquidex_roundtrip() {
+        assert_eq!(2, 2);
+        let seed = [0u8; 32];
+        let master_blinding_key = elements::slip77::MasterBlindingKey::new(&seed);
+        let mut tx = elements::Transaction {
+            version: 2,
+            lock_time: 0,
+            input: vec![],
+            output: vec![],
+        };
+        // add input
+        let outpoint = elements::OutPoint::new(tx.txid(), 0);
+        crate::transaction::add_input(&mut tx, outpoint);
+        // add output
+        let asset = [1u8; 32];
+        let asset = elements::issuance::AssetId::from_slice(&asset).unwrap();
+        let value = 10;
+        let script = elements::Script::from(vec![0x51]);
+        let new_out = elements::TxOut {
+            asset: elements::confidential::Asset::Explicit(asset),
+            value: elements::confidential::Value::Explicit(value),
+            nonce: elements::confidential::Nonce::Null,
+            script_pubkey: script,
+            witness: elements::TxOutWitness::default(),
+        };
+        tx.output.push(new_out);
+
+        let secp = secp256k1_zkp::Secp256k1::new();
+        _liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
+        let mut assets = std::collections::HashSet::<elements::issuance::AssetId>::new();
+        assets.insert(asset.clone());
+        let unblinded = _liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
+        assert_eq!(unblinded.asset, asset);
+        assert_eq!(unblinded.value, value);
+    }
+}

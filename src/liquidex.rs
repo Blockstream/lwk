@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ use secp256k1_zkp::{All, Secp256k1};
 
 use crate::error::Error;
 use crate::model::Unblinded;
+use crate::transaction::{estimated_fee, DUST_VALUE};
 use crate::utils::derive_blinder;
 
 // TODO: use serde with to make tx a elements::Transaction
@@ -37,6 +38,54 @@ impl LiquidexProposal {
             inputs: vec![input],
             outputs: vec![output],
         }
+    }
+
+    pub fn transaction(&self) -> Result<elements::Transaction, Error> {
+        Ok(elements::encode::deserialize(&hex::decode(
+            self.tx.clone(),
+        )?)?)
+    }
+
+    pub fn get_input(&self) -> Result<Unblinded, Error> {
+        if self.inputs.len() != 1 {
+            return Err(Error::Generic("LiquiDEX error".to_string()));
+        }
+
+        Ok(self.inputs[0].clone())
+    }
+
+    pub fn verify_output_commitment(&self, secp: &Secp256k1<All>) -> Result<Unblinded, Error> {
+        let tx = self.transaction()?;
+        if tx.input.len() != 1
+            || tx.output.len() != 1
+            || self.inputs.len() != 1
+            || self.outputs.len() != 1
+        {
+            return Err(Error::Generic("LiquiDEX error".to_string()));
+        }
+
+        // check output is blinded
+        match (tx.output[0].asset, tx.output[0].value) {
+            (Asset::Confidential(_, _), Value::Confidential(_, _)) => {}
+            _ => {
+                return Err(Error::Generic("LiquiDEX error".to_string()));
+            }
+        }
+
+        // check is confidential
+        let tx_asset_generator =
+            secp256k1_zkp::Generator::from_slice(&tx.output[0].asset.commitment().unwrap())?;
+        let tx_value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
+            &tx.output[0].value.commitment().unwrap(),
+        )?;
+
+        let (asset_generator, value_commitment) = self.outputs[0].commitments(secp);
+
+        if asset_generator != tx_asset_generator || value_commitment != tx_value_commitment {
+            return Err(Error::Generic("LiquiDEX error".to_string()));
+        }
+
+        Ok(self.outputs[0].clone())
     }
 }
 
@@ -117,11 +166,12 @@ pub fn liquidex_blind(
 ) -> Result<Unblinded, Error> {
     if tx.input.len() != 1 || tx.output.len() != 1 {
         return Err(Error::Generic(
-            "Unexpected LiquiDEX maker transaction".to_string(),
+            "Unexpected LiquiDEX maker transaction num in/out".to_string(),
         ));
     }
     let (asset, value) = match (tx.output[0].asset, tx.output[0].value, tx.output[0].nonce) {
-        (Asset::Explicit(asset), Value::Explicit(value), Nonce::Null) => (asset, value),
+        //(Asset::Explicit(asset), Value::Explicit(value), Nonce::Null) => (asset, value),
+        (Asset::Explicit(asset), Value::Explicit(value), _) => (asset, value),
         _ => {
             return Err(Error::Generic(
                 "Unexpected LiquiDEX maker transaction".to_string(),
@@ -275,6 +325,122 @@ pub fn liquidex_unblind(
         value_blinder,
         value,
     })
+}
+
+fn outputs(
+    maker_output: &Unblinded,
+    tx: &elements::Transaction,
+) -> HashMap<elements::issuance::AssetId, u64> {
+    let mut outputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
+    for (idx, output) in tx.output.iter().enumerate() {
+        if idx == 0 {
+            *outputs.entry(maker_output.asset).or_insert(0) += maker_output.value;
+        } else {
+            match (output.asset, output.value) {
+                (Asset::Explicit(asset), Value::Explicit(value)) => {
+                    *outputs.entry(asset).or_insert(0) += value;
+                }
+                _ => panic!("asset and value should be explicit here"),
+            }
+        }
+    }
+    outputs
+}
+
+fn inputs(
+    maker_input: &Unblinded,
+    tx: &elements::Transaction,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> HashMap<elements::issuance::AssetId, u64> {
+    let mut inputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
+    for (idx, input) in tx.input.iter().enumerate() {
+        if idx == 0 {
+            *inputs.entry(maker_input.asset).or_insert(0) += maker_input.value;
+        } else {
+            let unblinded = unblinded.get(&input.previous_output).unwrap();
+            *inputs.entry(unblinded.asset).or_insert(0) += unblinded.value;
+        }
+    }
+    inputs
+}
+
+pub fn liquidex_needs(
+    maker_input: &Unblinded,
+    maker_output: &Unblinded,
+    tx: &elements::Transaction,
+    fee_rate: f64,
+    policy_asset: &elements::issuance::AssetId,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> Vec<(elements::issuance::AssetId, u64)> {
+    let mut outputs = outputs(maker_output, tx);
+    let mut inputs = inputs(maker_input, tx, unblinded);
+    let estimated_fee = estimated_fee(
+        &tx,
+        fee_rate,
+        liquidex_estimated_changes(maker_input, &tx, unblinded),
+    );
+    *outputs.entry(policy_asset.clone()).or_insert(0) += estimated_fee;
+
+    let mut result = vec![];
+    for (asset, value) in outputs.iter() {
+        if let Some(sum) = value.checked_sub(inputs.remove(asset).unwrap_or(0)) {
+            if sum > 0 {
+                result.push((*asset, sum));
+            }
+        }
+    }
+
+    result
+}
+
+pub fn liquidex_estimated_changes(
+    maker_input: &Unblinded,
+    tx: &elements::Transaction,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> u8 {
+    inputs(maker_input, tx, unblinded).len() as u8
+}
+
+pub fn liquidex_changes(
+    maker_input: &Unblinded,
+    maker_output: &Unblinded,
+    tx: &elements::Transaction,
+    estimated_fee: u64,
+    policy_asset: &elements::issuance::AssetId,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> HashMap<elements::issuance::AssetId, u64> {
+    let mut outputs_asset_amounts = outputs(maker_output, tx);
+    let inputs_asset_amounts = inputs(maker_input, tx, unblinded);
+    let mut result: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
+    for (asset, value) in inputs_asset_amounts.iter() {
+        let mut sum: u64 = value - outputs_asset_amounts.remove(asset).unwrap_or(0);
+        if asset == policy_asset {
+            // from a purely privacy perspective could make sense to always create the change output in liquid, so min change = 0
+            // however elements core use the dust anyway for 2 reasons: rebasing from core and economical considerations
+            sum -= estimated_fee;
+            if sum > DUST_VALUE {
+                // we apply dust rules for liquid bitcoin as elements do
+                result.insert(*asset, sum);
+            }
+        } else if sum > 0 {
+            result.insert(*asset, sum);
+        }
+    }
+    assert!(outputs_asset_amounts.is_empty());
+    result
+}
+
+pub fn liquidex_fee(
+    maker_input: &Unblinded,
+    maker_output: &Unblinded,
+    tx: &elements::Transaction,
+    policy_asset: &elements::issuance::AssetId,
+    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+) -> u64 {
+    assert!(!tx.output.iter().any(|o| o.is_fee()));
+    let outputs = outputs(maker_output, tx);
+    let inputs = inputs(maker_input, tx, unblinded);
+    inputs.get(policy_asset).unwrap() - outputs.get(policy_asset).unwrap()
 }
 
 #[cfg(test)]

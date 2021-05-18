@@ -19,6 +19,24 @@ pub struct Unblinded {
     pub value: u64,
 }
 
+impl Unblinded {
+    pub fn commitments(
+        &self,
+        secp: &secp256k1_zkp::Secp256k1<secp256k1_zkp::All>,
+    ) -> (secp256k1_zkp::Generator, secp256k1_zkp::PedersenCommitment) {
+        let asset_tag = secp256k1_zkp::Tag::from(self.asset.into_inner().into_inner());
+        let asset_generator =
+            secp256k1_zkp::Generator::new_blinded(secp, asset_tag, self.asset_blinder);
+        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+            secp,
+            self.value,
+            self.value_blinder,
+            asset_generator,
+        );
+        (asset_generator, value_commitment)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {
     pub outpoint: OutPoint,

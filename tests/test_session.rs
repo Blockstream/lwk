@@ -783,4 +783,46 @@ impl TestElectrumWallet {
         assert!(!self.electrum_wallet.liquidex_assets_remove(&asset).unwrap());
         assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
     }
+
+    pub fn liquidex_roundtrip(&mut self) {
+        // TODO: use 2 different wallets
+        // TODO: more test cases
+        let inserted = self
+            .electrum_wallet
+            .liquidex_assets_insert(self.policy_asset.clone())
+            .unwrap();
+        assert!(inserted);
+        let rate = 1.0;
+        let utxos = self.electrum_wallet.utxos().unwrap();
+        let utxos: Vec<&UnblindedTXO> = utxos
+            .iter()
+            .filter(|u| u.unblinded.asset != self.policy_asset)
+            .collect();
+        let asset_hex = utxos[0].unblinded.asset.to_hex();
+        let utxo = utxos[0].txo.outpoint;
+        let balance_asset_before = self.balance_asset(Some(asset_hex.clone()));
+        let balance_btc_before = self.balance_btc();
+
+        let proposal = self
+            .electrum_wallet
+            .liquidex_make(&utxo, &self.policy_asset, rate, &self.mnemonic)
+            .unwrap();
+
+        let tx = self
+            .electrum_wallet
+            .liquidex_take(&proposal, &self.mnemonic)
+            .unwrap();
+        self.electrum_wallet.broadcast_tx(&tx).unwrap();
+        self.wallet_wait_tx_status_change();
+
+        warn!(
+            "liquidex tx: {}",
+            hex::encode(elements::encode::serialize(&tx))
+        );
+
+        let balance_asset_after = self.balance_asset(Some(asset_hex.clone()));
+        let balance_btc_after = self.balance_btc();
+        assert!(balance_asset_before == balance_asset_after);
+        assert!(balance_btc_before > balance_btc_after);
+    }
 }

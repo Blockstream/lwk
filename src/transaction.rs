@@ -91,10 +91,12 @@ pub fn scramble(tx: &mut elements::Transaction) {
 pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8) -> u64 {
     let mut tx = tx.clone();
     for input in tx.input.iter_mut() {
-        let mut tx_wit = TxInWitness::default();
-        tx_wit.script_witness = vec![vec![0u8; 72], vec![0u8; 33]]; // considering signature sizes (72) and compressed public key (33)
-        input.witness = tx_wit;
-        input.script_sig = vec![0u8; 23].into(); // p2shwpkh redeem script size
+        if input.witness.is_empty() && input.script_sig.is_empty() {
+            let mut tx_wit = TxInWitness::default();
+            tx_wit.script_witness = vec![vec![0u8; 72], vec![0u8; 33]]; // considering signature sizes (72) and compressed public key (33)
+            input.witness = tx_wit;
+            input.script_sig = vec![0u8; 23].into(); // p2shwpkh redeem script size
+        }
     }
     for _ in 0..more_changes {
         let new_out = elements::TxOut {

@@ -41,6 +41,7 @@ fn liquid() {
     test_electrum_wallet.send_tx(&node_address, 1_000, None, Some(utxos));
 
     test_electrum_wallet.liquidex_assets();
+    test_electrum_wallet.liquidex_roundtrip();
 
     test_electrum_wallet.stop();
 }

@@ -655,4 +655,13 @@ impl ElectrumWallet {
     ) -> Result<LiquidexProposal, Error> {
         self.wallet.liquidex_make(utxo, asset, rate, mnemonic)
     }
+
+    /// Take a LiquiDEX proposal.
+    pub fn liquidex_take(
+        &self,
+        proposal: &LiquidexProposal,
+        mnemonic: &str,
+    ) -> Result<elements::Transaction, Error> {
+        self.wallet.liquidex_take(proposal, mnemonic)
+    }
 }

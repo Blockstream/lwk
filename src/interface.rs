@@ -11,7 +11,7 @@ use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
 
-use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{CreateTransactionOpt, TransactionDetails, Unblinded, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -29,7 +29,10 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use crate::liquidex::{liquidex_blind, LiquidexProposal};
+use crate::liquidex::{
+    liquidex_blind, liquidex_changes, liquidex_estimated_changes, liquidex_fee, liquidex_needs,
+    LiquidexProposal,
+};
 
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
@@ -736,6 +739,7 @@ impl WalletCtx {
         rate: f64,
         mnemonic: &str,
     ) -> Result<LiquidexProposal, Error> {
+        let address = self.get_address()?;
         let store_read = self.store.read()?;
         let unblinded_input = store_read
             .cache
@@ -751,7 +755,6 @@ impl WalletCtx {
             output: vec![],
         };
         add_input(&mut tx, utxo.clone());
-        let address = self.get_address()?;
         add_output(&mut tx, &address, receive_value, asset.to_hex())?;
 
         let unblinded_output = liquidex_blind(&self.master_blinding, &mut tx, &self.secp)?;
@@ -780,6 +783,348 @@ impl WalletCtx {
 
         let proposal = LiquidexProposal::new(&tx, unblinded_input.clone(), unblinded_output);
         Ok(proposal)
+    }
+
+    pub fn liquidex_take(
+        &self,
+        proposal: &LiquidexProposal,
+        mnemonic: &str,
+    ) -> Result<elements::Transaction, Error> {
+        let mut tx = proposal.transaction()?;
+        // verify output commitment
+        let maker_output = proposal.verify_output_commitment(&self.secp)?;
+
+        // TODO: verify previous output commitment
+        let maker_input = proposal.get_input()?;
+
+        let address = self.get_address()?;
+        add_output(
+            &mut tx,
+            &address,
+            maker_output.value,
+            maker_output.asset.to_hex(),
+        )?;
+
+        // satoshi/byte
+        let fee_rate = 0.1;
+
+        let utxos = self.utxos()?;
+
+        let store_read = self.store.read()?;
+        let mut used_utxo: HashSet<elements::OutPoint> = HashSet::new();
+        loop {
+            let mut needs = liquidex_needs(
+                &maker_input,
+                &maker_output,
+                &tx,
+                fee_rate,
+                &self.config.policy_asset(),
+                &store_read.cache.unblinded,
+            );
+            if needs.is_empty() {
+                break;
+            }
+
+            let (asset, _) = needs.pop().unwrap(); // safe to unwrap just checked it's not empty
+
+            let mut asset_utxos: Vec<&UnblindedTXO> = utxos
+                .iter()
+                .filter(|u| u.unblinded.asset == asset && !used_utxo.contains(&u.txo.outpoint))
+                .collect();
+
+            asset_utxos.sort_by(|a, b| a.unblinded.value.cmp(&b.unblinded.value));
+            let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
+
+            used_utxo.insert(utxo.txo.outpoint.clone());
+            add_input(&mut tx, utxo.txo.outpoint.clone());
+        }
+
+        let estimated_fee = estimated_fee(
+            &tx,
+            fee_rate,
+            liquidex_estimated_changes(&maker_input, &tx, &store_read.cache.unblinded),
+        );
+        let changes = liquidex_changes(
+            &maker_input,
+            &maker_output,
+            &tx,
+            estimated_fee,
+            &self.config.policy_asset(),
+            &store_read.cache.unblinded,
+        );
+        for (i, (asset, satoshi)) in changes.iter().enumerate() {
+            let change_index = store_read.cache.indexes.internal + i as u32 + 1;
+            let change_address = self.derive_address(&self.xpub, [1, change_index])?;
+            add_output(&mut tx, &change_address, *satoshi, asset.to_hex())?;
+        }
+
+        let fee_value = liquidex_fee(
+            &maker_input,
+            &maker_output,
+            &tx,
+            &self.config.policy_asset(),
+            &store_read.cache.unblinded,
+        );
+
+        let fee_output = elements::TxOut {
+            asset: Asset::Explicit(self.config.policy_asset()),
+            value: Value::Explicit(fee_value),
+            ..Default::default()
+        };
+        tx.output.push(fee_output);
+
+        // Blind tx
+        self.liquidex_take_blind(&maker_input, &maker_output, &mut tx)?;
+        // Sign inputs
+        self.liquidex_take_sign(&mut tx, mnemonic)?;
+        Ok(tx)
+    }
+
+    fn liquidex_take_blind(
+        &self,
+        maker_input: &Unblinded,
+        maker_output: &Unblinded,
+        tx: &mut elements::Transaction,
+    ) -> Result<(), Error> {
+        let mut input_domain = vec![];
+        let mut input_commitment_secrets = vec![];
+        let mut output_commitment_secrets = vec![];
+        let store_read = self.store.read()?;
+        for (idx, input) in tx.input.iter().enumerate() {
+            let unblinded = if idx == 0 {
+                maker_input
+            } else {
+                store_read
+                    .cache
+                    .unblinded
+                    .get(&input.previous_output)
+                    .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?
+            };
+
+            let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
+            let asset_generator = secp256k1_zkp::Generator::new_blinded(
+                &self.secp,
+                asset_tag,
+                unblinded.asset_blinder,
+            );
+            let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
+                unblinded.value,
+                unblinded.value_blinder,
+                unblinded.asset_blinder,
+            );
+            input_commitment_secrets.push(commitment_secrets);
+            input_domain.push((asset_generator, asset_tag, unblinded.asset_blinder));
+        }
+
+        let ct_exp = 0;
+        let ct_bits = 52;
+
+        let out_num = tx.output.len();
+        let hash_prevouts = get_hash_prevout(&tx);
+        let mut rng = rand::thread_rng();
+        for (i, mut output) in tx.output.iter_mut().enumerate() {
+            if !output.is_fee() {
+                match (i, output.value, output.asset, output.nonce) {
+                    (
+                        0,
+                        Value::Confidential(_, _),
+                        Asset::Confidential(_, _),
+                        Nonce::Confidential(_, _),
+                    ) => {
+                        let receiver_blinding_pk =
+                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                        let sender_sk = secp256k1::SecretKey::new(&mut rng);
+                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
+
+                        let asset = maker_output.asset;
+                        let asset_blinder = maker_output.asset_blinder;
+                        let value_blinder = maker_output.value_blinder;
+                        let value = maker_output.value;
+
+                        output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
+                            value,
+                            value_blinder,
+                            asset_blinder,
+                        ));
+
+                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
+                        let asset_generator = secp256k1_zkp::Generator::new_blinded(
+                            &self.secp,
+                            asset_tag,
+                            asset_blinder,
+                        );
+                        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+                            &self.secp,
+                            value,
+                            value_blinder,
+                            asset_generator,
+                        );
+                        let min_value = if output.script_pubkey.is_provably_unspendable() {
+                            0
+                        } else {
+                            1
+                        };
+
+                        let message = make_rangeproof_message(asset, asset_blinder);
+
+                        let rangeproof = secp256k1_zkp::RangeProof::new(
+                            &self.secp,
+                            min_value,
+                            value_commitment,
+                            value,
+                            value_blinder,
+                            &message,
+                            &output.script_pubkey.as_bytes(),
+                            shared_secret,
+                            ct_exp,
+                            ct_bits,
+                            asset_generator,
+                        )?;
+
+                        let surjectionproof = secp256k1_zkp::SurjectionProof::new(
+                            &self.secp,
+                            &mut rng,
+                            asset_tag,
+                            asset_blinder,
+                            &input_domain,
+                        )?;
+
+                        output.witness.surjection_proof = surjectionproof.serialize();
+                        output.witness.rangeproof = rangeproof.serialize();
+                    }
+                    (
+                        _,
+                        Value::Explicit(value),
+                        Asset::Explicit(asset),
+                        Nonce::Confidential(_, _),
+                    ) => {
+                        let receiver_blinding_pk =
+                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                        let sender_sk = secp256k1::SecretKey::new(&mut rng);
+                        let sender_pk =
+                            secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
+                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
+
+                        let asset_blinder =
+                            derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
+
+                        let value_blinder = if i < out_num - 2 {
+                            let value_blinder = derive_blinder(
+                                &self.master_blinding,
+                                &hash_prevouts,
+                                i as u32,
+                                false,
+                            )?;
+
+                            output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
+                                value,
+                                value_blinder,
+                                asset_blinder,
+                            ));
+
+                            value_blinder
+                        } else {
+                            // last value blinder is special and must be set to balance the transaction
+                            secp256k1_zkp::compute_adaptive_blinding_factor(
+                                &self.secp,
+                                value,
+                                asset_blinder,
+                                &input_commitment_secrets[..],
+                                &output_commitment_secrets[..],
+                            )
+                        };
+
+                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
+                        let asset_generator = secp256k1_zkp::Generator::new_blinded(
+                            &self.secp,
+                            asset_tag,
+                            asset_blinder,
+                        );
+                        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+                            &self.secp,
+                            value,
+                            value_blinder,
+                            asset_generator,
+                        );
+                        let min_value = if output.script_pubkey.is_provably_unspendable() {
+                            0
+                        } else {
+                            1
+                        };
+
+                        let message = make_rangeproof_message(asset, asset_blinder);
+
+                        let rangeproof = secp256k1_zkp::RangeProof::new(
+                            &self.secp,
+                            min_value,
+                            value_commitment,
+                            value,
+                            value_blinder,
+                            &message,
+                            &output.script_pubkey.as_bytes(),
+                            shared_secret,
+                            ct_exp,
+                            ct_bits,
+                            asset_generator,
+                        )?;
+
+                        let surjectionproof = secp256k1_zkp::SurjectionProof::new(
+                            &self.secp,
+                            &mut rng,
+                            asset_tag,
+                            asset_blinder,
+                            &input_domain,
+                        )?;
+
+                        output.nonce =
+                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
+                        output.asset = elements::confidential::Asset::from_commitment(
+                            &asset_generator.serialize(),
+                        )?;
+                        output.value = elements::confidential::Value::from_commitment(
+                            &value_commitment.serialize(),
+                        )?;
+                        output.witness.surjection_proof = surjectionproof.serialize();
+                        output.witness.rangeproof = rangeproof.serialize();
+                    }
+                    _ => panic!("create_tx created things not right"),
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn liquidex_take_sign(
+        &self,
+        tx: &mut elements::Transaction,
+        mnemonic: &str,
+    ) -> Result<(), Error> {
+        let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
+        let store_read = self.store.read()?;
+
+        for i in 1..tx.input.len() {
+            let prev_output = tx.input[i].previous_output;
+            let prev_tx = store_read
+                .cache
+                .all_txs
+                .get(&prev_output.txid)
+                .ok_or_else(|| Error::Generic("expected tx".into()))?;
+            let out = prev_tx.output[prev_output.vout as usize].clone();
+            let derivation_path: DerivationPath = store_read
+                .cache
+                .paths
+                .get(&out.script_pubkey)
+                .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
+                .clone();
+
+            let (script_sig, witness) =
+                self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv, None);
+
+            tx.input[i].script_sig = script_sig;
+            tx.input[i].witness.script_witness = witness;
+        }
+
+        Ok(())
     }
 }
 

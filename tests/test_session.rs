@@ -116,6 +116,239 @@ fn to_unconfidential(address: elements::Address) -> elements::Address {
     address_unconf
 }
 
+pub struct TestElectrumServer {
+    node: Client,
+    node_process: Child,
+    electrs_process: Child,
+    electrs_header: electrum_client::Client,
+}
+
+impl TestElectrumServer {
+    pub fn new(is_debug: bool, electrs_exec: String, node_exec: String) -> Self {
+        START.call_once(|| {
+            let filter = if is_debug {
+                LevelFilter::Info
+            } else {
+                LevelFilter::Off
+            };
+            log::set_logger(&LOGGER)
+                .map(|()| log::set_max_level(filter))
+                .expect("cannot initialize logging");
+        });
+
+        let node_work_dir = TempDir::new("electrum_integration_tests").unwrap();
+        let node_work_dir_str = format!("{}", &node_work_dir.path().display());
+        let sum_port = 1;
+
+        let rpc_port = 55363u16 + sum_port;
+        let p2p_port = 34975u16 + sum_port;
+        let socket = format!("127.0.0.1:{}", rpc_port);
+        let node_url = format!("http://{}", socket);
+
+        let test = TcpStream::connect(&socket);
+        assert!(
+            test.is_err(),
+            "check the port is not open with a previous instance of elementsd"
+        );
+
+        let datadir_arg = format!("-datadir={}", &node_work_dir.path().display());
+        let rpcport_arg = format!("-rpcport={}", rpc_port);
+        let p2pport_arg = format!("-port={}", p2p_port);
+        let mut args: Vec<&str> = vec![&datadir_arg, &rpcport_arg, &p2pport_arg];
+        args.push("-initialfreecoins=2100000000");
+        args.push("-chain=liquidregtest");
+        args.push("-validatepegin=0");
+        args.push("-fallbackfee=0.00001");
+        if !is_debug {
+            args.push("-daemon");
+        }
+        args.push("-dustrelayfee=0.00000001");
+        info!("LAUNCHING: {} {}", node_exec, args.join(" "));
+        let node_process = Command::new(node_exec).args(args).spawn().unwrap();
+        info!("node spawned");
+
+        let par_network = "liquidregtest";
+        let cookie_file = node_work_dir.path().join(par_network).join(".cookie");
+        // wait elementsd is ready, use default wallet
+        let mut i = 120;
+        let node: Client = loop {
+            assert!(i > 0, "1 minute without updates");
+            i -= 1;
+            thread::sleep(Duration::from_millis(500));
+            assert!(node_process.stderr.is_none());
+            let client_result =
+                Client::new(node_url.clone(), Auth::CookieFile(cookie_file.clone()));
+            match client_result {
+                Ok(client) => match client.call::<Value>("getblockchaininfo", &[]) {
+                    Ok(_) => break client,
+                    Err(e) => warn!("{:?}", e),
+                },
+                Err(e) => warn!("{:?}", e),
+            }
+        };
+        info!("Elements node started");
+        let cookie_value = std::fs::read_to_string(&cookie_file).unwrap();
+
+        let electrs_port = 62431u16 + sum_port;
+        let electrs_work_dir = TempDir::new("electrum_integration_tests").unwrap();
+        let electrs_work_dir_str = format!("{}", &electrs_work_dir.path().display());
+        let electrs_url = format!("127.0.0.1:{}", electrs_port);
+        let daemon_url = format!("127.0.0.1:{}", rpc_port);
+        let mut args: Vec<&str> = vec![
+            "--db-dir",
+            &electrs_work_dir_str,
+            "--daemon-dir",
+            &node_work_dir_str,
+            "--electrum-rpc-addr",
+            &electrs_url,
+            "--daemon-rpc-addr",
+            &daemon_url,
+            "--network",
+            par_network,
+            "--cookie",
+            &cookie_value,
+        ];
+        if is_debug {
+            args.push("-v");
+        }
+
+        info!("LAUNCHING: {} {}", electrs_exec, args.join(" "));
+        let electrs_process = Command::new(electrs_exec).args(args).spawn().unwrap();
+        info!("Electrs spawned");
+
+        node_generate(&node, 101);
+
+        info!("creating electrs client");
+        let mut i = 120;
+        let electrs_header = loop {
+            assert!(i > 0, "1 minute without updates");
+            i -= 1;
+            match electrum_client::Client::new(&electrs_url) {
+                Ok(c) => {
+                    let header = c.block_headers_subscribe_raw().unwrap();
+                    if header.height == 101 {
+                        break c;
+                    }
+                }
+                Err(e) => {
+                    warn!("{:?}", e);
+                    thread::sleep(Duration::from_millis(500));
+                }
+            }
+        };
+        let _electrs = electrum_client::Client::new(&electrs_url).unwrap();
+        info!("done creating electrs client");
+
+        let tls = false;
+        let validate_domain = false;
+        let spv_enabled = true;
+        let policy_asset_hex = &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset = elements::issuance::AssetId::from_hex(policy_asset_hex).unwrap();
+        let db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
+
+        let db_root = format!("{}", db_root_dir.path().display());
+
+        Self {
+            node,
+            node_process,
+            electrs_process,
+            electrs_header,
+        }
+    }
+
+    /// stop the bitcoin node in the test session
+    pub fn stop(&mut self) {
+        self.node.stop().unwrap();
+        self.node_process.wait().unwrap();
+        self.electrs_process.kill().unwrap();
+    }
+
+    pub fn node_getnewaddress(&self, kind: Option<&str>) -> String {
+        node_getnewaddress(&self.node, kind)
+    }
+
+    fn node_sendtoaddress(&self, address: &str, satoshi: u64, asset: Option<String>) -> String {
+        node_sendtoaddress(&self.node, address, satoshi, asset)
+    }
+    fn node_issueasset(&self, satoshi: u64) -> String {
+        node_issueasset(&self.node, satoshi)
+    }
+    fn node_generate(&self, block_num: u32) {
+        node_generate(&self.node, block_num)
+    }
+
+    pub fn fund_btc(&mut self, address: &str) -> String {
+        let satoshi: u64 = 1_000_000;
+        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, None);
+        txid
+    }
+
+    pub fn fund_asset(&mut self, address: &str) -> (String, String) {
+        let satoshi = 10_000;
+        let asset = self.node_issueasset(satoshi);
+        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, Some(asset.clone()));
+        (txid, asset)
+    }
+
+    /// balance in satoshi of the node
+    fn node_balance(&self, asset: Option<String>) -> u64 {
+        let balance: Value = self.node.call("getbalance", &[]).unwrap();
+        let unconfirmed_balance: Value = self.node.call("getunconfirmedbalance", &[]).unwrap();
+        let asset_or_policy = asset.or(Some("bitcoin".to_string())).unwrap();
+        let balance = match balance.get(&asset_or_policy) {
+            Some(Value::Number(s)) => s.as_f64().unwrap(),
+            _ => 0.0,
+        };
+        let unconfirmed_balance = match unconfirmed_balance.get(&asset_or_policy) {
+            Some(Value::Number(s)) => s.as_f64().unwrap(),
+            _ => 0.0,
+        };
+        ((balance + unconfirmed_balance) * 100_000_000.0) as u64
+    }
+
+    pub fn send_tx_to_unconf(&mut self, address: elements::Address) -> String {
+        let unconf_address = to_unconfidential(address);
+        let txid = self.node_sendtoaddress(&unconf_address.to_string(), 10_000, None);
+        txid
+    }
+
+    /// ask the blockcain tip to electrs
+    fn electrs_tip(&mut self) -> usize {
+        for _ in 0..10 {
+            match self.electrs_header.block_headers_subscribe_raw() {
+                Ok(header) => return header.height,
+                Err(e) => {
+                    warn!("electrs_tip {:?}", e); // fixme, for some reason it errors once every two try
+                    thread::sleep(Duration::from_millis(500));
+                }
+            }
+        }
+        panic!("electrs_tip always return error")
+    }
+
+    /// mine a block with the node
+    pub fn mine_block(&mut self) {
+        let initial_height = self.electrs_tip();
+        info!("mine_block initial_height {}", initial_height);
+        self.node_generate(1);
+        let mut i = 120;
+        let new_height = loop {
+            assert!(i > 0, "1 minute without updates");
+            i -= 1;
+            // apparently even if wallet status changed (thus new height come in)
+            // it could happend this is the old height (maybe due to caching) thus we loop wait
+            let new_height = self.electrs_tip();
+            if new_height != initial_height {
+                break new_height;
+            }
+            info!("height still the same");
+            thread::sleep(Duration::from_millis(500));
+        };
+        info!("mine_block new_height {}", new_height);
+        assert_eq!(initial_height + 1, new_height);
+    }
+}
+
 #[allow(unused)]
 pub struct TestElectrumWallet {
     node: Client,

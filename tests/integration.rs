@@ -40,6 +40,22 @@ fn liquid() {
     let utxos = test_electrum_wallet.utxos();
     test_electrum_wallet.send_tx(&node_address, 1_000, None, Some(utxos));
 
+    test_electrum_wallet.stop();
+}
+
+#[test]
+fn liquidex() {
+    let electrs_exec = env::var("ELECTRS_LIQUID_EXEC")
+        .expect("env ELECTRS_LIQUID_EXEC pointing to electrs executable is required");
+    let node_exec = env::var("ELEMENTSD_EXEC")
+        .expect("env ELEMENTSD_EXEC pointing to elementsd executable is required");
+    let debug = env::var("DEBUG").is_ok();
+
+    let mut test_electrum_wallet = test_session::setup_wallet(debug, electrs_exec, node_exec);
+
+    test_electrum_wallet.fund_btc();
+    test_electrum_wallet.fund_asset();
+
     test_electrum_wallet.liquidex_assets();
     test_electrum_wallet.liquidex_roundtrip();
 

@@ -180,8 +180,10 @@ impl TestElectrumServer {
             i -= 1;
             thread::sleep(Duration::from_millis(500));
             assert!(node_process.stderr.is_none());
-            let client_result =
-                bitcoincore_rpc::Client::new(node_url.clone(), Auth::CookieFile(cookie_file.clone()));
+            let client_result = bitcoincore_rpc::Client::new(
+                node_url.clone(),
+                Auth::CookieFile(cookie_file.clone()),
+            );
             match client_result {
                 Ok(client) => match client.call::<Value>("getblockchaininfo", &[]) {
                     Ok(_) => break client,
@@ -414,7 +416,6 @@ impl TestElectrumWallet2 {
             _db_root_dir,
         }
     }
-
 }
 
 #[allow(unused)]

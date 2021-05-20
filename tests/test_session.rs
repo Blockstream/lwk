@@ -356,6 +356,67 @@ impl TestElectrumServer {
     }
 }
 
+pub struct TestElectrumWallet2 {
+    server: TestElectrumServer,
+    policy_asset: elements::issuance::AssetId,
+    mnemonic: String,
+    electrum_wallet: ElectrumWallet,
+    tx_status: u64,
+    block_status: (u32, BlockHash),
+    _db_root_dir: TempDir,
+}
+
+impl TestElectrumWallet2 {
+    pub fn new(server: TestElectrumServer, mnemonic: String) -> Self {
+        let tls = false;
+        let validate_domain = false;
+        let spv_enabled = true;
+        let policy_asset_hex = &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset = elements::issuance::AssetId::from_hex(policy_asset_hex).unwrap();
+        let _db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
+
+        let db_root = format!("{}", _db_root_dir.path().display());
+
+        let electrum_wallet = ElectrumWallet::new_regtest(
+            policy_asset_hex,
+            &server.electrs_url,
+            tls,
+            validate_domain,
+            spv_enabled,
+            &db_root,
+            &mnemonic,
+        )
+        .unwrap();
+        electrum_wallet.update_fee_estimates();
+
+        let tx_status = electrum_wallet.tx_status().unwrap();
+        assert_eq!(tx_status, 15130871412783076140);
+        let mut i = 120;
+        let block_status = loop {
+            assert!(i > 0, "1 minute without updates");
+            i -= 1;
+            let block_status = electrum_wallet.block_status().unwrap();
+            if block_status.0 == 101 {
+                break block_status;
+            } else {
+                thread::sleep(Duration::from_millis(500));
+            }
+        };
+        assert_eq!(block_status.0, 101);
+
+        Self {
+            server,
+            policy_asset,
+            mnemonic,
+            electrum_wallet,
+            tx_status,
+            block_status,
+            _db_root_dir,
+        }
+    }
+
+}
+
 #[allow(unused)]
 pub struct TestElectrumWallet {
     node: Client,

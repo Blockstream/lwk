@@ -52,7 +52,7 @@ static START: Once = Once::new();
 
 fn node_sendtoaddress(
     client: &Client,
-    address: &str,
+    address: &elements::Address,
     satoshi: u64,
     asset: Option<String>,
 ) -> String {
@@ -64,7 +64,7 @@ fn node_sendtoaddress(
             .call::<Value>(
                 "sendtoaddress",
                 &[
-                    address.into(),
+                    address.to_string().into(),
                     btc.into(),
                     "".into(),
                     "".into(),
@@ -77,7 +77,7 @@ fn node_sendtoaddress(
             )
             .unwrap(),
         None => client
-            .call::<Value>("sendtoaddress", &[address.into(), btc.into()])
+            .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
             .unwrap(),
     };
     info!("node_sendtoaddress result {:?}", r);
@@ -267,7 +267,12 @@ impl TestElectrumServer {
         node_getnewaddress(&self.node, kind)
     }
 
-    fn node_sendtoaddress(&self, address: &str, satoshi: u64, asset: Option<String>) -> String {
+    fn node_sendtoaddress(
+        &self,
+        address: &elements::Address,
+        satoshi: u64,
+        asset: Option<String>,
+    ) -> String {
         node_sendtoaddress(&self.node, address, satoshi, asset)
     }
     fn node_issueasset(&self, satoshi: u64) -> String {
@@ -278,13 +283,13 @@ impl TestElectrumServer {
     }
 
     pub fn fund_btc(&mut self, address: &elements::Address, satoshi: u64) -> String {
-        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, None);
+        let txid = self.node_sendtoaddress(address, satoshi, None);
         txid
     }
 
     pub fn fund_asset(&mut self, address: &elements::Address, satoshi: u64) -> (String, String) {
         let asset = self.node_issueasset(satoshi);
-        let txid = self.node_sendtoaddress(&address.to_string(), satoshi, Some(asset.clone()));
+        let txid = self.node_sendtoaddress(address, satoshi, Some(asset.clone()));
         (txid, asset)
     }
 
@@ -306,7 +311,7 @@ impl TestElectrumServer {
 
     pub fn send_tx_to_unconf(&mut self, address: elements::Address) -> String {
         let unconf_address = to_unconfidential(address);
-        let txid = self.node_sendtoaddress(&unconf_address.to_string(), 10_000, None);
+        let txid = self.node_sendtoaddress(&unconf_address, 10_000, None);
         txid
     }
 

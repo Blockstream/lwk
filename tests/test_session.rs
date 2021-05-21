@@ -84,16 +84,16 @@ fn node_sendtoaddress(
     r.as_str().unwrap().to_string()
 }
 
-fn node_getnewaddress(client: &Client, kind: Option<&str>) -> String {
+fn node_getnewaddress(client: &Client, kind: Option<&str>) -> elements::Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client
         .call("getnewaddress", &["label".into(), kind.into()])
         .unwrap();
-    addr.as_str().unwrap().to_string()
+    elements::Address::from_str(&addr.to_string()).unwrap()
 }
 
 fn node_generate(client: &Client, block_num: u32) {
-    let address = node_getnewaddress(client, None);
+    let address = node_getnewaddress(client, None).to_string();
     let r = client
         .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
         .unwrap();
@@ -263,7 +263,7 @@ impl TestElectrumServer {
         self.electrs_process.kill().unwrap();
     }
 
-    pub fn node_getnewaddress(&self, kind: Option<&str>) -> String {
+    pub fn node_getnewaddress(&self, kind: Option<&str>) -> elements::Address {
         node_getnewaddress(&self.node, kind)
     }
 
@@ -520,7 +520,7 @@ impl TestElectrumWallet {
     /// send a tx from the wallet to the specified address
     pub fn send_tx(
         &mut self,
-        address: &str,
+        address: &elements::Address,
         satoshi: u64,
         asset: Option<elements::issuance::AssetId>,
         utxos: Option<Vec<UnblindedTXO>>,
@@ -532,7 +532,7 @@ impl TestElectrumWallet {
         create_opt.fee_rate = Some(fee_rate);
         create_opt.addressees.push(
             Destination::new(
-                address,
+                &address.to_string(),
                 satoshi,
                 &asset.unwrap_or(self.policy_asset).to_string(),
             )
@@ -629,7 +629,7 @@ impl TestElectrumWallet {
             };
             create_opt
                 .addressees
-                .push(Destination::new(&address, amount, &asset.to_hex()).unwrap());
+                .push(Destination::new(&address.to_string(), amount, &asset.to_hex()).unwrap());
             addressees.push(address);
         }
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
@@ -668,7 +668,7 @@ impl TestElectrumWallet {
         let init_sat = self.balance_btc();
         let mut create_opt = CreateTransactionOpt::default();
         let fee_rate = 1000;
-        let address = server.node_getnewaddress(None);
+        let address = server.node_getnewaddress(None).to_string();
         create_opt.fee_rate = Some(fee_rate);
         create_opt.addressees =
             vec![Destination::new(&address, 0, &self.policy_asset.to_hex()).unwrap()];

@@ -869,4 +869,15 @@ impl TestElectrumWallet {
         assert!(balance_asset_before == balance_asset_after);
         assert!(balance_btc_before > balance_btc_after);
     }
+
+    // TODO: liquidex tests
+    //       swap with different wallets
+    //       2 different asset (not policy)
+    //       maker sends policy asset
+    //       taker sends policy asset
+    //       swap with same wallet
+    //       same asset, or prevent
+    //       check number of outputs
+    //       decode from str
+    //       encode to str
 }

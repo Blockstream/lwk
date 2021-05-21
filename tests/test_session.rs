@@ -110,7 +110,7 @@ fn node_issueasset(client: &Client, satoshi: u64) -> String {
     r.get("asset").unwrap().as_str().unwrap().to_string()
 }
 
-fn to_unconfidential(address: elements::Address) -> elements::Address {
+fn to_unconfidential(address: &elements::Address) -> elements::Address {
     let mut address_unconf = address.clone();
     address_unconf.blinding_pubkey = None;
     address_unconf
@@ -314,7 +314,7 @@ impl TestElectrumServer {
         ((balance + unconfirmed_balance) * 100_000_000.0) as u64
     }
 
-    pub fn send_tx_to_unconf(&mut self, address: elements::Address) -> String {
+    pub fn send_tx_to_unconf(&mut self, address: &elements::Address) -> String {
         let unconf_address = to_unconfidential(address);
         let txid = self.node_sendtoaddress(&unconf_address, 10_000, None);
         txid
@@ -588,7 +588,7 @@ impl TestElectrumWallet {
     pub fn send_tx_to_unconf(&mut self, server: &mut TestElectrumServer) {
         let init_sat = self.balance_btc();
         let address = self.electrum_wallet.address().unwrap();
-        server.send_tx_to_unconf(address);
+        server.send_tx_to_unconf(&address);
         self.wallet_wait_tx_status_change();
         assert_eq!(init_sat, self.balance_btc());
     }

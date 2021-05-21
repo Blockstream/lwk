@@ -54,7 +54,7 @@ fn node_sendtoaddress(
     client: &Client,
     address: &elements::Address,
     satoshi: u64,
-    asset: Option<String>,
+    asset: Option<elements::issuance::AssetId>,
 ) -> String {
     let amount = Amount::from_sat(satoshi);
     let btc = amount.to_string_in(elements::bitcoin::util::amount::Denomination::Bitcoin);
@@ -72,7 +72,7 @@ fn node_sendtoaddress(
                     false.into(),
                     1.into(),
                     "UNSET".into(),
-                    asset.into(),
+                    asset.to_string().into(),
                 ],
             )
             .unwrap(),
@@ -271,12 +271,13 @@ impl TestElectrumServer {
         &self,
         address: &elements::Address,
         satoshi: u64,
-        asset: Option<String>,
+        asset: Option<elements::issuance::AssetId>,
     ) -> String {
         node_sendtoaddress(&self.node, address, satoshi, asset)
     }
-    fn node_issueasset(&self, satoshi: u64) -> String {
-        node_issueasset(&self.node, satoshi)
+    fn node_issueasset(&self, satoshi: u64) -> elements::issuance::AssetId {
+        let asset = node_issueasset(&self.node, satoshi);
+        elements::issuance::AssetId::from_hex(&asset).unwrap()
     }
     fn node_generate(&self, block_num: u32) {
         node_generate(&self.node, block_num)
@@ -287,7 +288,11 @@ impl TestElectrumServer {
         txid
     }
 
-    pub fn fund_asset(&mut self, address: &elements::Address, satoshi: u64) -> (String, String) {
+    pub fn fund_asset(
+        &mut self,
+        address: &elements::Address,
+        satoshi: u64,
+    ) -> (String, elements::issuance::AssetId) {
         let asset = self.node_issueasset(satoshi);
         let txid = self.node_sendtoaddress(address, satoshi, Some(asset.clone()));
         (txid, asset)
@@ -449,13 +454,10 @@ impl TestElectrumWallet {
     }
 
     /// asset balance in satoshi
-    fn balance_asset(&self, asset: Option<String>) -> u64 {
+    fn balance_asset(&self, asset: Option<elements::issuance::AssetId>) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
-        let asset = match asset {
-            Some(asset_str) => elements::issuance::AssetId::from_hex(&asset_str).unwrap(),
-            None => self.policy_asset,
-        };
+        let asset = asset.unwrap_or(self.policy_asset);
         *balance.get(&asset).unwrap_or(&0u64)
     }
 
@@ -499,7 +501,7 @@ impl TestElectrumWallet {
         assert_eq!(utxos.len(), 1);
     }
 
-    pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> String {
+    pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> elements::issuance::AssetId {
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
         let address = self.electrum_wallet.address().unwrap();
@@ -515,16 +517,12 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn policy_asset(&self) -> Option<String> {
-        Some(self.policy_asset.to_hex())
-    }
-
     /// send a tx from the wallet to the specified address
     pub fn send_tx(
         &mut self,
         address: &str,
         satoshi: u64,
-        asset: Option<String>,
+        asset: Option<elements::issuance::AssetId>,
         utxos: Option<Vec<UnblindedTXO>>,
     ) -> String {
         let init_sat = self.balance_asset(asset.clone());
@@ -536,7 +534,7 @@ impl TestElectrumWallet {
             Destination::new(
                 address,
                 satoshi,
-                asset.as_ref().unwrap_or(&self.policy_asset.to_hex()),
+                &asset.unwrap_or(self.policy_asset).to_string(),
             )
             .unwrap(),
         );
@@ -556,7 +554,7 @@ impl TestElectrumWallet {
 
         self.tx_checks(&tx);
 
-        let fee = if asset.is_none() || asset == self.policy_asset() {
+        let fee = if asset.is_none() || asset == Some(self.policy_asset) {
             tx_details.fee
         } else {
             0
@@ -606,7 +604,7 @@ impl TestElectrumWallet {
         &mut self,
         recipients: u8,
         amount: u64,
-        assets: &Vec<String>,
+        assets: &Vec<elements::issuance::AssetId>,
         server: &mut TestElectrumServer,
     ) {
         let init_sat = self.balance_btc();
@@ -653,12 +651,11 @@ impl TestElectrumWallet {
             );
         } else {
             assert_eq!(init_sat - fee, self.balance_btc());
-            for tag in assets {
-                let asset = elements::issuance::AssetId::from_hex(&tag).unwrap();
-                let outputs_for_this_asset = tags.iter().filter(|t| t == &&asset).count() as u64;
+            for asset in assets {
+                let outputs_for_this_asset = tags.iter().filter(|t| t == &asset).count() as u64;
                 assert_eq!(
                     *init_balances.get(&asset).unwrap() as u64 - outputs_for_this_asset * amount,
-                    self.balance_asset(Some(asset.to_hex()))
+                    self.balance_asset(Some(*asset))
                 );
             }
         }
@@ -845,9 +842,9 @@ impl TestElectrumWallet {
             .iter()
             .filter(|u| u.unblinded.asset != self.policy_asset)
             .collect();
-        let asset_hex = utxos[0].unblinded.asset.to_hex();
+        let asset = utxos[0].unblinded.asset;
         let utxo = utxos[0].txo.outpoint;
-        let balance_asset_before = self.balance_asset(Some(asset_hex.clone()));
+        let balance_asset_before = self.balance_asset(Some(asset.clone()));
         let balance_btc_before = self.balance_btc();
 
         let proposal = self
@@ -867,7 +864,7 @@ impl TestElectrumWallet {
             hex::encode(elements::encode::serialize(&tx))
         );
 
-        let balance_asset_after = self.balance_asset(Some(asset_hex.clone()));
+        let balance_asset_after = self.balance_asset(Some(asset.clone()));
         let balance_btc_after = self.balance_btc();
         assert!(balance_asset_before == balance_asset_after);
         assert!(balance_btc_before > balance_btc_after);

@@ -89,7 +89,7 @@ fn node_getnewaddress(client: &Client, kind: Option<&str>) -> elements::Address 
     let addr: Value = client
         .call("getnewaddress", &["label".into(), kind.into()])
         .unwrap();
-    elements::Address::from_str(&addr.to_string()).unwrap()
+    elements::Address::from_str(&addr.as_str().unwrap()).unwrap()
 }
 
 fn node_generate(client: &Client, block_num: u32) {

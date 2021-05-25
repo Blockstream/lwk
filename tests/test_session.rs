@@ -856,49 +856,6 @@ impl TestElectrumWallet {
             .unwrap());
     }
 
-    pub fn liquidex_roundtrip(&mut self) {
-        // TODO: use 2 different wallets
-        // TODO: more test cases
-        let policy_asset = self.policy_asset();
-        let inserted = self
-            .electrum_wallet
-            .liquidex_assets_insert(policy_asset.clone())
-            .unwrap();
-        assert!(inserted);
-        let rate = 1.0;
-        let utxos = self.electrum_wallet.utxos().unwrap();
-        let utxos: Vec<&UnblindedTXO> = utxos
-            .iter()
-            .filter(|u| u.unblinded.asset != policy_asset)
-            .collect();
-        let asset = utxos[0].unblinded.asset;
-        let utxo = utxos[0].txo.outpoint;
-        let balance_asset_before = self.balance(&asset);
-        let balance_btc_before = self.balance_btc();
-
-        let proposal = self
-            .electrum_wallet
-            .liquidex_make(&utxo, &policy_asset, rate, &self.mnemonic)
-            .unwrap();
-
-        let tx = self
-            .electrum_wallet
-            .liquidex_take(&proposal, &self.mnemonic)
-            .unwrap();
-        self.electrum_wallet.broadcast_tx(&tx).unwrap();
-        self.wallet_wait_tx_status_change();
-
-        warn!(
-            "liquidex tx: {}",
-            hex::encode(elements::encode::serialize(&tx))
-        );
-
-        let balance_asset_after = self.balance(&asset);
-        let balance_btc_after = self.balance_btc();
-        assert!(balance_asset_before == balance_asset_after);
-        assert!(balance_btc_before > balance_btc_after);
-    }
-
     pub fn liquidex_make(
         &self,
         utxo: &elements::OutPoint,
@@ -921,11 +878,6 @@ impl TestElectrumWallet {
     }
 
     // TODO: liquidex tests
-    //       swap with different wallets
-    //       maker sends policy asset
-    //       taker sends policy asset
-    //       swap with same wallet
-    //       same asset, or prevent
     //       check number of outputs
     //       decode from str
     //       encode to str

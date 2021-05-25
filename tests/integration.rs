@@ -62,7 +62,6 @@ fn dex() {
 
     // asset db tests
     wallet1.liquidex_assets_db_roundtrip();
-    wallet1.liquidex_roundtrip();
 
     let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();
     let mut wallet2 = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic2);

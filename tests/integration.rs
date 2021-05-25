@@ -60,8 +60,8 @@ fn dex() {
     wallet1.fund_btc(&mut server);
     let asset1 = wallet1.fund_asset(&mut server);
 
-    // TODO: replace
-    wallet1.liquidex_assets();
+    // asset db tests
+    wallet1.liquidex_assets_db_roundtrip();
     wallet1.liquidex_roundtrip();
 
     let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();

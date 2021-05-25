@@ -830,7 +830,7 @@ impl TestElectrumWallet {
         );
     }
 
-    pub fn liquidex_assets(&self) {
+    pub fn liquidex_assets_db_roundtrip(&self) {
         let asset = elements::issuance::AssetId::from_slice(&[0; 32]).unwrap();
         assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
         assert!(self

@@ -770,6 +770,16 @@ impl TestElectrumWallet {
         self.electrum_wallet.utxos().unwrap()
     }
 
+    pub fn asset_utxos(&self, asset: &elements::issuance::AssetId) -> Vec<UnblindedTXO> {
+        self.electrum_wallet
+            .utxos()
+            .unwrap()
+            .iter()
+            .cloned()
+            .filter(|u| u.unblinded.asset == *asset)
+            .collect()
+    }
+
     /// performs checks on transactions, like checking for address reuse in outputs and on liquid confidential commitments inequality
     pub fn tx_checks(&self, transaction: &elements::Transaction) {
         let output_nofee: Vec<&elements::TxOut> =

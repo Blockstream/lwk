@@ -89,5 +89,21 @@ fn dex() {
     assert_eq!(wallet2.balance(&asset1), 10_000);
     assert_eq!(wallet2.balance(&asset2), 0);
 
+    // asset1 10_000 <-> asset2 5_000 (maker creates change)
+    wallet2.liquidex_add_asset(&asset2);
+    let utxo = wallet2.asset_utxos(&asset1)[0].txo.outpoint;
+    let proposal = wallet2.liquidex_make(&utxo, &asset2, 0.5);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = wallet1.liquidex_take(&proposal);
+
+    wallet1.wait_for_tx(&txid);
+    wallet2.wait_for_tx(&txid);
+
+    assert_eq!(wallet1.balance(&asset1), 10_000);
+    assert_eq!(wallet1.balance(&asset2), 5_000);
+    assert_eq!(wallet2.balance(&asset1), 0);
+    assert_eq!(wallet2.balance(&asset2), 5_000);
+
     server.stop();
 }

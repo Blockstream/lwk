@@ -491,6 +491,10 @@ impl ElectrumWallet {
         Ok(Self { config, wallet })
     }
 
+    pub fn policy_asset(&self) -> elements::issuance::AssetId {
+        self.wallet.config.policy_asset()
+    }
+
     pub fn update_fee_estimates(&self) {
         info!("building client");
         if let Ok(fee_client) = self.config.electrum_url().build_client() {

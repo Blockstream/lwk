@@ -415,6 +415,20 @@ impl TestElectrumWallet {
         }
     }
 
+    /// Wait until tx appears in tx list (max 1 min)
+    pub fn wait_for_tx(&mut self, txid: &str) {
+        let mut opt = GetTransactionsOpt::default();
+        opt.count = 100;
+        for _ in 0..120 {
+            let list = self.electrum_wallet.transactions(&opt).unwrap();
+            if list.iter().any(|e| e.txid == txid) {
+                return;
+            }
+            thread::sleep(Duration::from_millis(500));
+        }
+        panic!("Wallet does not have {} in its list", txid);
+    }
+
     /// wait wallet tx status to change (max 1 min)
     fn wallet_wait_tx_status_change(&mut self) {
         for _ in 0..120 {

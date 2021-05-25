@@ -74,14 +74,15 @@ fn dex() {
     assert_eq!(wallet2.balance(&asset1), 0);
     assert_eq!(wallet2.balance(&asset2), 10_000);
 
+    // asset2 10_000 <-> asset1 10_000 (no change)
     wallet2.liquidex_add_asset(&asset1);
     let proposal = wallet2.liquidex_make(&utxo, &asset1, 1.0);
 
     log::warn!("proposal: {:?}", proposal);
-    let _txid = wallet1.liquidex_take(&proposal);
+    let txid = wallet1.liquidex_take(&proposal);
 
-    // FIXME: wait for tx
-    std::thread::sleep(std::time::Duration::from_millis(15000));
+    wallet1.wait_for_tx(&txid);
+    wallet2.wait_for_tx(&txid);
 
     assert_eq!(wallet1.balance(&asset1), 0);
     assert_eq!(wallet1.balance(&asset2), 10_000);

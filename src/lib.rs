@@ -10,6 +10,7 @@ mod transaction;
 mod utils;
 
 pub use crate::error::Error;
+pub use crate::liquidex::LiquidexProposal;
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
     Unblinded, UnblindedTXO, TXO,
@@ -24,7 +25,7 @@ use std::time::Instant;
 
 use crate::headers::Verifier;
 use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
-use crate::liquidex::{liquidex_unblind, LiquidexProposal};
+use crate::liquidex::liquidex_unblind;
 use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
@@ -350,7 +351,7 @@ impl Syncer {
                         // TODO: consider skipping this more frequently
                         match self.try_liquidex_unblind(&tx, i as u32) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => {}
+                            Err(_) => info!("LiquiDEX: {} cannot unblind, ignoring", outpoint),
                         }
                     }
                 }
@@ -441,6 +442,7 @@ impl Syncer {
         tx: &elements::Transaction,
         vout: u32,
     ) -> Result<Unblinded, Error> {
+        info!("LiquiDEX try unblind: {:?}:{}", tx.txid(), vout);
         let assets = self.store.read()?.liquidex_assets();
         liquidex_unblind(&self.master_blinding, &tx, vout, &self.secp, &assets)
     }

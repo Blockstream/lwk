@@ -48,7 +48,9 @@ impl LiquidexProposal {
 
     pub fn get_input(&self) -> Result<Unblinded, Error> {
         if self.inputs.len() != 1 {
-            return Err(Error::Generic("LiquiDEX error".to_string()));
+            return Err(Error::Generic(
+                "LiquiDEX error unexpected inputs".to_string(),
+            ));
         }
 
         Ok(self.inputs[0].clone())
@@ -68,7 +70,9 @@ impl LiquidexProposal {
         match (tx.output[0].asset, tx.output[0].value) {
             (Asset::Confidential(_, _), Value::Confidential(_, _)) => {}
             _ => {
-                return Err(Error::Generic("LiquiDEX error".to_string()));
+                return Err(Error::Generic(
+                    "LiquiDEX error unexpected outputs".to_string(),
+                ));
             }
         }
 
@@ -82,7 +86,9 @@ impl LiquidexProposal {
         let (asset_generator, value_commitment) = self.outputs[0].commitments(secp);
 
         if asset_generator != tx_asset_generator || value_commitment != tx_value_commitment {
-            return Err(Error::Generic("LiquiDEX error".to_string()));
+            return Err(Error::Generic(
+                "LiquiDEX error unexpected commitments".to_string(),
+            ));
         }
 
         Ok(self.outputs[0].clone())
@@ -241,7 +247,7 @@ pub fn liquidex_unblind(
     // check vout is reasonable
     let vout = vout as usize;
     if vout + 1 > tx.output.len() || vout + 1 > tx.input.len() {
-        return Err(Error::Generic("LiquiDEX error".to_string()));
+        return Err(Error::Generic("LiquiDEX error 1".to_string()));
     }
     // check output is blinded
     match (
@@ -251,7 +257,7 @@ pub fn liquidex_unblind(
     ) {
         (Asset::Confidential(_, _), Value::Confidential(_, _), Nonce::Confidential(_, _)) => {}
         _ => {
-            return Err(Error::Generic("LiquiDEX error".to_string()));
+            return Err(Error::Generic("LiquiDEX error 2".to_string()));
         }
     }
     // FIXME: check input has sighash single | anyonecanpay
@@ -297,7 +303,9 @@ pub fn liquidex_unblind(
     let value_commitment =
         secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, tx_asset_generator);
     if value_commitment != tx_value_commitment {
-        return Err(Error::Generic("LiquiDEX error".to_string()));
+        return Err(Error::Generic(
+            "LiquiDEX error value commitment".to_string(),
+        ));
     }
 
     let mut asset: Option<elements::issuance::AssetId> = None;
@@ -314,7 +322,7 @@ pub fn liquidex_unblind(
 
     // check a match happened
     if asset.is_none() {
-        return Err(Error::Generic("LiquiDEX error".to_string()));
+        return Err(Error::Generic("LiquiDEX error asset not found".to_string()));
     }
     let asset = asset.unwrap();
 

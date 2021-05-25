@@ -821,6 +821,7 @@ impl WalletCtx {
                 &self.config.policy_asset(),
                 &store_read.cache.unblinded,
             );
+            info!("needs: {:?}", needs);
             if needs.is_empty() {
                 break;
             }
@@ -832,6 +833,7 @@ impl WalletCtx {
                 .filter(|u| u.unblinded.asset == asset && !used_utxo.contains(&u.txo.outpoint))
                 .collect();
 
+            info!("asset utxos: {:?}", asset_utxos);
             asset_utxos.sort_by(|a, b| a.unblinded.value.cmp(&b.unblinded.value));
             let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
 

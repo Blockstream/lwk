@@ -143,5 +143,18 @@ fn dex() {
     assert_eq!(wallet2.balance(&asset2), 5_000);
     assert_eq!(wallet2.balance(&policy_asset), 0);
 
+    // asset2 5_000 <-> asset2 5_000
+    let utxo = wallet2.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = wallet2.liquidex_make(&utxo, &asset2, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = wallet1.liquidex_take(&proposal);
+
+    wallet1.wait_for_tx(&txid);
+    wallet2.wait_for_tx(&txid);
+
+    assert_eq!(wallet1.balance(&asset2), 5_000);
+    assert_eq!(wallet2.balance(&asset2), 5_000);
+
     server.stop();
 }

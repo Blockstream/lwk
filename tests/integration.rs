@@ -54,14 +54,39 @@ fn dex() {
     let debug = env::var("DEBUG").is_ok();
 
     let mut server = test_session::TestElectrumServer::new(debug, electrs_exec, node_exec);
-    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let mut wallet = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic);
+    let mnemonic1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
+    let mut wallet1 = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic1);
 
-    wallet.fund_btc(&mut server);
-    wallet.fund_asset(&mut server);
+    wallet1.fund_btc(&mut server);
+    let asset1 = wallet1.fund_asset(&mut server);
 
-    wallet.liquidex_assets();
-    wallet.liquidex_roundtrip();
+    // TODO: replace
+    wallet1.liquidex_assets();
+    wallet1.liquidex_roundtrip();
+
+    let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();
+    let mut wallet2 = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic2);
+    let asset2 = wallet2.fund_asset(&mut server);
+    let utxo = wallet2.utxos()[0].txo.outpoint;
+
+    assert_eq!(wallet1.balance(&asset1), 10_000);
+    assert_eq!(wallet1.balance(&asset2), 0);
+    assert_eq!(wallet2.balance(&asset1), 0);
+    assert_eq!(wallet2.balance(&asset2), 10_000);
+
+    wallet2.liquidex_add_asset(&asset1);
+    let proposal = wallet2.liquidex_make(&utxo, &asset1, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let _txid = wallet1.liquidex_take(&proposal);
+
+    // FIXME: wait for tx
+    std::thread::sleep(std::time::Duration::from_millis(15000));
+
+    assert_eq!(wallet1.balance(&asset1), 0);
+    assert_eq!(wallet1.balance(&asset2), 10_000);
+    assert_eq!(wallet2.balance(&asset1), 10_000);
+    assert_eq!(wallet2.balance(&asset2), 0);
 
     server.stop();
 }

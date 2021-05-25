@@ -454,15 +454,14 @@ impl TestElectrumWallet {
     }
 
     /// asset balance in satoshi
-    fn balance_asset(&self, asset: Option<elements::issuance::AssetId>) -> u64 {
+    pub fn balance(&self, asset: &elements::issuance::AssetId) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
-        let asset = asset.unwrap_or(self.policy_asset);
-        *balance.get(&asset).unwrap_or(&0u64)
+        *balance.get(asset).unwrap_or(&0u64)
     }
 
     fn balance_btc(&self) -> u64 {
-        self.balance_asset(None)
+        self.balance(&self.policy_asset)
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
@@ -508,7 +507,7 @@ impl TestElectrumWallet {
         let (txid, asset) = server.fund_asset(&address, satoshi);
         self.wallet_wait_tx_status_change();
 
-        let balance_asset = self.balance_asset(Some(asset.clone()));
+        let balance_asset = self.balance(&asset);
         assert_eq!(balance_asset, satoshi);
         let wallet_txid = self.get_tx_from_list(&txid).txid;
         assert_eq!(txid, wallet_txid);
@@ -525,19 +524,15 @@ impl TestElectrumWallet {
         asset: Option<elements::issuance::AssetId>,
         utxos: Option<Vec<UnblindedTXO>>,
     ) -> String {
-        let init_sat = self.balance_asset(asset.clone());
+        let asset = asset.unwrap_or(self.policy_asset);
+        let init_sat = self.balance(&asset);
         //let init_node_balance = self.node_balance(asset.clone());
         let mut create_opt = CreateTransactionOpt::default();
         let fee_rate = 100;
         create_opt.fee_rate = Some(fee_rate);
-        create_opt.addressees.push(
-            Destination::new(
-                &address.to_string(),
-                satoshi,
-                &asset.unwrap_or(self.policy_asset).to_string(),
-            )
-            .unwrap(),
-        );
+        create_opt
+            .addressees
+            .push(Destination::new(&address.to_string(), satoshi, &asset.to_string()).unwrap());
         create_opt.utxos = utxos;
         let tx_details = self.electrum_wallet.create_tx(&mut create_opt).unwrap();
         let mut tx = tx_details.transaction.clone();
@@ -554,7 +549,7 @@ impl TestElectrumWallet {
 
         self.tx_checks(&tx);
 
-        let fee = if asset.is_none() || asset == Some(self.policy_asset) {
+        let fee = if asset == self.policy_asset {
             tx_details.fee
         } else {
             0
@@ -567,16 +562,12 @@ impl TestElectrumWallet {
 
         let expected = init_sat - satoshi - fee;
         for _ in 0..5 {
-            if expected != self.balance_asset(asset.clone()) {
+            if expected != self.balance(&asset) {
                 // FIXME I should not wait again, but apparently after reconnect it's needed
                 self.wallet_wait_tx_status_change();
             }
         }
-        assert_eq!(
-            self.balance_asset(asset.clone()),
-            expected,
-            "gdk balance does not match"
-        );
+        assert_eq!(self.balance(&asset), expected, "gdk balance does not match");
 
         //self.list_tx_contains(&txid, &vec![address.to_string()], true);
         let wallet_txid = self.get_tx_from_list(&txid).txid;
@@ -655,7 +646,7 @@ impl TestElectrumWallet {
                 let outputs_for_this_asset = tags.iter().filter(|t| t == &asset).count() as u64;
                 assert_eq!(
                     *init_balances.get(&asset).unwrap() as u64 - outputs_for_this_asset * amount,
-                    self.balance_asset(Some(*asset))
+                    self.balance(asset)
                 );
             }
         }
@@ -828,6 +819,13 @@ impl TestElectrumWallet {
         assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
     }
 
+    pub fn liquidex_add_asset(&mut self, asset: &elements::issuance::AssetId) {
+        assert!(self
+            .electrum_wallet
+            .liquidex_assets_insert(asset.clone())
+            .unwrap());
+    }
+
     pub fn liquidex_roundtrip(&mut self) {
         // TODO: use 2 different wallets
         // TODO: more test cases
@@ -844,7 +842,7 @@ impl TestElectrumWallet {
             .collect();
         let asset = utxos[0].unblinded.asset;
         let utxo = utxos[0].txo.outpoint;
-        let balance_asset_before = self.balance_asset(Some(asset.clone()));
+        let balance_asset_before = self.balance(&asset);
         let balance_btc_before = self.balance_btc();
 
         let proposal = self
@@ -864,15 +862,35 @@ impl TestElectrumWallet {
             hex::encode(elements::encode::serialize(&tx))
         );
 
-        let balance_asset_after = self.balance_asset(Some(asset.clone()));
+        let balance_asset_after = self.balance(&asset);
         let balance_btc_after = self.balance_btc();
         assert!(balance_asset_before == balance_asset_after);
         assert!(balance_btc_before > balance_btc_after);
     }
 
+    pub fn liquidex_make(
+        &self,
+        utxo: &elements::OutPoint,
+        asset: &elements::issuance::AssetId,
+        rate: f64,
+    ) -> LiquidexProposal {
+        self.electrum_wallet
+            .liquidex_make(&utxo, &asset, rate, &self.mnemonic)
+            .unwrap()
+    }
+
+    pub fn liquidex_take(&mut self, proposal: &LiquidexProposal) -> String {
+        let tx = self
+            .electrum_wallet
+            .liquidex_take(proposal, &self.mnemonic)
+            .unwrap();
+        self.electrum_wallet.broadcast_tx(&tx).unwrap();
+        self.wallet_wait_tx_status_change();
+        tx.txid().to_string()
+    }
+
     // TODO: liquidex tests
     //       swap with different wallets
-    //       2 different asset (not policy)
     //       maker sends policy asset
     //       taker sends policy asset
     //       swap with same wallet

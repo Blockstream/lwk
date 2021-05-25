@@ -801,8 +801,8 @@ impl WalletCtx {
         add_output(
             &mut tx,
             &address,
-            maker_output.value,
-            maker_output.asset.to_hex(),
+            maker_input.value,
+            maker_input.asset.to_hex(),
         )?;
 
         // satoshi/byte

@@ -105,5 +105,25 @@ fn dex() {
     assert_eq!(wallet2.balance(&asset1), 0);
     assert_eq!(wallet2.balance(&asset2), 5_000);
 
+    // asset2 5_000 <-> L-BTC 5_000
+    let policy_asset = wallet1.policy_asset();
+    let sats_w1_policy_before = wallet1.balance(&policy_asset);
+    wallet2.liquidex_add_asset(&policy_asset);
+    let utxo = wallet2.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = wallet2.liquidex_make(&utxo, &policy_asset, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = wallet1.liquidex_take(&proposal);
+
+    wallet1.wait_for_tx(&txid);
+    wallet2.wait_for_tx(&txid);
+
+    let fee = wallet1.get_fee(&txid);
+    let sats_w1_policy_after = wallet1.balance(&policy_asset);
+    assert_eq!(sats_w1_policy_before - sats_w1_policy_after - fee, 5_000);
+    assert_eq!(wallet1.balance(&asset2), 10_000);
+    assert_eq!(wallet2.balance(&asset2), 0);
+    assert_eq!(wallet2.balance(&policy_asset), 5_000);
+
     server.stop();
 }

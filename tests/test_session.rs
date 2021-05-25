@@ -359,7 +359,6 @@ impl TestElectrumServer {
 }
 
 pub struct TestElectrumWallet {
-    policy_asset: elements::issuance::AssetId,
     mnemonic: String,
     electrum_wallet: ElectrumWallet,
     tx_status: u64,
@@ -373,7 +372,6 @@ impl TestElectrumWallet {
         let validate_domain = false;
         let spv_enabled = true;
         let policy_asset_hex = &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset = elements::issuance::AssetId::from_hex(policy_asset_hex).unwrap();
         let _db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
         let db_root = format!("{}", _db_root_dir.path().display());
@@ -406,13 +404,16 @@ impl TestElectrumWallet {
         assert_eq!(_block_status.0, 101);
 
         Self {
-            policy_asset,
             mnemonic,
             electrum_wallet,
             tx_status,
             _block_status,
             _db_root_dir,
         }
+    }
+
+    pub fn policy_asset(&self) -> elements::issuance::AssetId {
+        self.electrum_wallet.policy_asset()
     }
 
     /// Wait until tx appears in tx list (max 1 min)
@@ -475,7 +476,7 @@ impl TestElectrumWallet {
     }
 
     fn balance_btc(&self) -> u64 {
-        self.balance(&self.policy_asset)
+        self.balance(&self.policy_asset())
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
@@ -491,6 +492,10 @@ impl TestElectrumWallet {
             txid
         );
         filtered_list.first().unwrap().clone()
+    }
+
+    pub fn get_fee(&mut self, txid: &str) -> u64 {
+        self.get_tx_from_list(txid).fee
     }
 
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
@@ -538,7 +543,7 @@ impl TestElectrumWallet {
         asset: Option<elements::issuance::AssetId>,
         utxos: Option<Vec<UnblindedTXO>>,
     ) -> String {
-        let asset = asset.unwrap_or(self.policy_asset);
+        let asset = asset.unwrap_or(self.policy_asset());
         let init_sat = self.balance(&asset);
         //let init_node_balance = self.node_balance(asset.clone());
         let mut create_opt = CreateTransactionOpt::default();
@@ -563,7 +568,7 @@ impl TestElectrumWallet {
 
         self.tx_checks(&tx);
 
-        let fee = if asset == self.policy_asset {
+        let fee = if asset == self.policy_asset() {
             tx_details.fee
         } else {
             0
@@ -623,7 +628,7 @@ impl TestElectrumWallet {
         for _ in 0..recipients {
             let address = server.node_getnewaddress(None);
             let asset = if assets.is_empty() {
-                self.policy_asset
+                self.policy_asset()
             } else {
                 let current = elements::issuance::AssetId::from_hex(
                     &assets_cycle.next().unwrap().to_string(),
@@ -670,20 +675,21 @@ impl TestElectrumWallet {
 
     /// check create_tx failure reasons
     pub fn create_fails(&mut self, server: &mut TestElectrumServer) {
+        let policy_asset = self.policy_asset();
         let init_sat = self.balance_btc();
         let mut create_opt = CreateTransactionOpt::default();
         let fee_rate = 1000;
         let address = server.node_getnewaddress(None).to_string();
         create_opt.fee_rate = Some(fee_rate);
         create_opt.addressees =
-            vec![Destination::new(&address, 0, &self.policy_asset.to_hex()).unwrap()];
+            vec![Destination::new(&address, 0, &policy_asset.to_hex()).unwrap()];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::InvalidAmount)
         ));
 
         create_opt.addressees =
-            vec![Destination::new(&address, 200, &self.policy_asset.to_hex()).unwrap()];
+            vec![Destination::new(&address, 200, &policy_asset.to_hex()).unwrap()];
         assert!(matches!(
             self.electrum_wallet.create_tx(&mut create_opt),
             Err(Error::InvalidAmount)
@@ -692,7 +698,7 @@ impl TestElectrumWallet {
         create_opt.addressees = vec![Destination::new(
             &address,
             init_sat, // not enough to pay fee
-            &self.policy_asset.to_hex(),
+            &policy_asset.to_hex(),
         )
         .unwrap()];
         assert!(matches!(
@@ -701,7 +707,7 @@ impl TestElectrumWallet {
         ));
 
         assert!(matches!(
-            Destination::new("x", 200, &self.policy_asset.to_hex(),),
+            Destination::new("x", 200, &policy_asset.to_hex(),),
             Err(Error::InvalidAddress)
         ));
 
@@ -710,7 +716,7 @@ impl TestElectrumWallet {
                 Destination::new(
                     "38CMdevthTKYAtxaSkYYtcv5QgkHXdKKk5",
                     200,
-                    &self.policy_asset.to_hex(),
+                    &policy_asset.to_hex(),
                 ),
                 Err(Error::InvalidAddress)
             ),
@@ -720,7 +726,7 @@ impl TestElectrumWallet {
         create_opt.addressees = vec![Destination::new(
             "VJLCbLBTCdxhWyjVLdjcSmGAksVMtabYg15maSi93zknQD2ihC38R7CUd8KbDFnV8A4hiykxnRB3Uv6d",
             200,
-            &self.policy_asset.to_hex(),
+            &policy_asset.to_hex(),
         )
         .unwrap()];
         assert!(
@@ -737,7 +743,7 @@ impl TestElectrumWallet {
                 Destination::new(
                     "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
                     200,
-                    &self.policy_asset.to_hex(),
+                    &policy_asset.to_hex(),
                 ),
                 Err(Error::InvalidAddress)
             ),
@@ -750,7 +756,7 @@ impl TestElectrumWallet {
         .unwrap();
         addr.blinding_pubkey = None;
         create_opt.addressees =
-            vec![Destination::new(&addr.to_string(), 1000, &self.policy_asset.to_hex()).unwrap()];
+            vec![Destination::new(&addr.to_string(), 1000, &policy_asset.to_hex()).unwrap()];
         assert!(
             matches!(
                 self.electrum_wallet.create_tx(&mut create_opt),
@@ -853,16 +859,17 @@ impl TestElectrumWallet {
     pub fn liquidex_roundtrip(&mut self) {
         // TODO: use 2 different wallets
         // TODO: more test cases
+        let policy_asset = self.policy_asset();
         let inserted = self
             .electrum_wallet
-            .liquidex_assets_insert(self.policy_asset.clone())
+            .liquidex_assets_insert(policy_asset.clone())
             .unwrap();
         assert!(inserted);
         let rate = 1.0;
         let utxos = self.electrum_wallet.utxos().unwrap();
         let utxos: Vec<&UnblindedTXO> = utxos
             .iter()
-            .filter(|u| u.unblinded.asset != self.policy_asset)
+            .filter(|u| u.unblinded.asset != policy_asset)
             .collect();
         let asset = utxos[0].unblinded.asset;
         let utxo = utxos[0].txo.outpoint;
@@ -871,7 +878,7 @@ impl TestElectrumWallet {
 
         let proposal = self
             .electrum_wallet
-            .liquidex_make(&utxo, &self.policy_asset, rate, &self.mnemonic)
+            .liquidex_make(&utxo, &policy_asset, rate, &self.mnemonic)
             .unwrap();
 
         let tx = self

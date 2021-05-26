@@ -103,7 +103,7 @@ pub fn make_shared_secret(
 
 pub fn make_rangeproof_message(
     asset: elements::issuance::AssetId,
-    bf: secp256k1::SecretKey,
+    bf: secp256k1_zkp::Tweak,
 ) -> [u8; 64] {
     let mut message = [0u8; 64];
 
@@ -115,12 +115,12 @@ pub fn make_rangeproof_message(
 
 pub fn parse_rangeproof_message(
     message: &[u8],
-) -> Result<(elements::issuance::AssetId, secp256k1::SecretKey), Error> {
+) -> Result<(elements::issuance::AssetId, secp256k1_zkp::Tweak), Error> {
     if message.len() < 64 {
         return Err(Error::Generic("Unexpected rangeproof message".to_string()));
     }
     let asset = elements::issuance::AssetId::from_slice(&message[..32])?;
-    let asset_blinder = secp256k1::SecretKey::from_slice(&message[32..64])?;
+    let asset_blinder = secp256k1_zkp::Tweak::from_slice(&message[32..64])?;
 
     Ok((asset, asset_blinder))
 }

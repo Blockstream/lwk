@@ -99,7 +99,7 @@ fn _liquidex_derive_blinder(
     master_blinding_key: &MasterBlindingKey,
     previous_outpoint: &elements::OutPoint,
     is_asset_blinder: bool,
-) -> Result<secp256k1_zkp::SecretKey, secp256k1_zkp::UpstreamError> {
+) -> Result<secp256k1_zkp::Tweak, secp256k1_zkp::Error> {
     // LiquiDEX proposals do not know in advance all inputs of
     // final transaction, compute the hash only from the previous
     // outpoint we know is being spent.

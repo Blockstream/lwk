@@ -7,7 +7,7 @@ pub fn derive_blinder(
     hash_prevouts: &elements::bitcoin::hashes::sha256d::Hash,
     vout: u32,
     is_asset_blinder: bool,
-) -> Result<secp256k1_zkp::SecretKey, secp256k1_zkp::UpstreamError> {
+) -> Result<secp256k1_zkp::Tweak, secp256k1_zkp::Error> {
     let key: &[u8] = &master_blinding_key.0[..];
     let mut engine: HmacEngine<sha256::Hash> = HmacEngine::new(key);
     engine.input(&hash_prevouts[..]);
@@ -25,5 +25,5 @@ pub fn derive_blinder(
     ];
     engine2.input(&msg);
     let blinder: elements::bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
-    secp256k1_zkp::SecretKey::from_slice(&blinder.into_inner())
+    secp256k1_zkp::Tweak::from_slice(&blinder.into_inner())
 }

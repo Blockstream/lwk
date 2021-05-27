@@ -9,14 +9,129 @@ use elements::OutPoint;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Unblinded {
     pub asset: elements::issuance::AssetId,
+    #[serde(with = "hex_rev")]
     pub asset_blinder: secp256k1_zkp::Tweak,
+    #[serde(with = "hex_rev")]
     #[serde(rename = "amount_blinder")]
     pub value_blinder: secp256k1_zkp::Tweak,
     #[serde(rename = "amount")]
     pub value: u64,
+}
+
+mod hex_rev {
+    use std::fmt::Write;
+
+    // from secp256k1_zkp src/lib.rs
+    fn from_hex(hex: &str, target: &mut [u8]) -> Result<usize, ()> {
+        if hex.len() % 2 == 1 || hex.len() > target.len() * 2 {
+            return Err(());
+        }
+
+        let mut b = 0;
+        let mut idx = 0;
+        for c in hex.bytes() {
+            b <<= 4;
+            match c {
+                b'A'..=b'F' => b |= c - b'A' + 10,
+                b'a'..=b'f' => b |= c - b'a' + 10,
+                b'0'..=b'9' => b |= c - b'0',
+                _ => return Err(()),
+            }
+            if (idx & 1) == 1 {
+                target[idx / 2] = b;
+                b = 0;
+            }
+            idx += 1;
+        }
+        Ok(idx / 2)
+    }
+
+    fn hex2tweak_rev<E>(v: &str) -> Result<secp256k1_zkp::Tweak, E>
+    where
+        E: ::serde::de::Error,
+    {
+        let mut res = [0u8; 32];
+        match from_hex(v, &mut res) {
+            Ok(32) => {
+                res.reverse();
+                secp256k1_zkp::Tweak::from_inner(res).map_err(E::custom)
+            }
+            _ => Err(E::custom("invalid hex")),
+        }
+    }
+
+    // Adapted from rust-secp256k1-zkp src/zkp/generator.rs
+    pub fn serialize<S: ::serde::Serializer>(
+        blinder: &secp256k1_zkp::Tweak,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        if s.is_human_readable() {
+            let mut h = String::new();
+            for e in blinder.as_ref().iter().rev() {
+                write!(&mut h, "{:02x}", e).unwrap();
+            }
+            s.collect_str(&h)
+        } else {
+            s.serialize_bytes(blinder.as_ref())
+        }
+    }
+
+    pub fn deserialize<'de, D: ::serde::Deserializer<'de>>(
+        d: D,
+    ) -> Result<secp256k1_zkp::Tweak, D::Error> {
+        if d.is_human_readable() {
+            struct HexVisitor;
+
+            impl<'de> ::serde::de::Visitor<'de> for HexVisitor {
+                type Value = secp256k1_zkp::Tweak;
+
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("an ASCII hex string")
+                }
+
+                fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: ::serde::de::Error,
+                {
+                    if let Ok(hex) = std::str::from_utf8(v) {
+                        hex2tweak_rev::<E>(hex)
+                    } else {
+                        Err(E::invalid_value(::serde::de::Unexpected::Bytes(v), &self))
+                    }
+                }
+
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: ::serde::de::Error,
+                {
+                    hex2tweak_rev::<E>(v)
+                }
+            }
+            d.deserialize_str(HexVisitor)
+        } else {
+            struct BytesVisitor;
+
+            impl<'de> ::serde::de::Visitor<'de> for BytesVisitor {
+                type Value = secp256k1_zkp::Tweak;
+
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("a bytestring")
+                }
+
+                fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: ::serde::de::Error,
+                {
+                    secp256k1_zkp::Tweak::from_slice(v).map_err(E::custom)
+                }
+            }
+
+            d.deserialize_bytes(BytesVisitor)
+        }
+    }
 }
 
 impl Unblinded {

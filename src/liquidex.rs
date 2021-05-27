@@ -21,7 +21,7 @@ use crate::transaction::{estimated_fee, DUST_VALUE};
 use crate::utils::derive_blinder;
 
 // TODO: use serde with to make tx a elements::Transaction
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct LiquidexProposal {
     #[serde(default)]
     version: u32,
@@ -495,6 +495,8 @@ mod tests {
 
     #[test]
     fn test_liquidex_proposal() {
+        // Taken proposal:
+        // https://blockstream.info/liquid/tx/a43dafc00a6c488085bdf849ca954e4a82f80d56a1c8931873df83d5d22981a4
         let proposal_str = r#"
         {
             "tx": "020000000101071c86c2e1eff6245e3589dce4f98df081256f7143b20a71d1a11081f234808f01000000171600140b22d358af49422e133684f57d0eb49a9fca84e0ffffffff010a39e73aac4854ce1a1d0ec397db58ec6ce018413f6886abdcaaea3244cc2f803c099380bc1c9039e82a27df4217d54d8f107b8868ad5a947b802a4bfe48134fc6d2028e9004696ef308f97994ebe47294e5fa4273479f7e1a779f581a70f17f7b35be17a914f69b2673d97b6bdf04bbfee2afdf26056de39450870000000000000247304402201a3a6b57b7c70e8efbffd59c4b1e2402448436d97beb37fedc81897eade4f3f702202cce73b837719ac7d332aef7f9b2d7412ffbeffb677635458dc745b3190822bc83210249c7906961ac155d2a7f60429a4c8e90cc7b1857be5c7cb5c2f5fb736e3df8a4000000",
@@ -515,7 +517,13 @@ mod tests {
         let proposal: LiquidexProposal = serde_json::from_str(proposal_str).unwrap();
         assert_eq!(proposal.outputs[0].value, 175);
 
-        // TODO: tests for commitments
-        // https://blockstream.info/liquid/tx/a43dafc00a6c488085bdf849ca954e4a82f80d56a1c8931873df83d5d22981a4
+        // verify commitments matches the tx output and that the blinder are deserialized correctly
+        let secp = secp256k1_zkp::Secp256k1::new();
+        proposal.verify_output_commitment(&secp).unwrap();
+
+        // verify that the serialized proposal matches the deserialized one
+        let proposal_str2 = serde_json::to_string(&proposal).unwrap();
+        let proposal2: LiquidexProposal = serde_json::from_str(&proposal_str2).unwrap();
+        assert_eq!(proposal, proposal2);
     }
 }

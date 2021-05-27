@@ -54,122 +54,124 @@ fn dex() {
     let debug = env::var("DEBUG").is_ok();
 
     let mut server = test_session::TestElectrumServer::new(debug, electrs_exec, node_exec);
-    let mnemonic1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let mut wallet1 = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic1);
 
-    wallet1.fund_btc(&mut server);
-    let asset1 = wallet1.fund_asset(&mut server);
+    let mnemonic1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
+    let mut taker = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic1);
+
+    taker.fund_btc(&mut server);
+    let asset1 = taker.fund_asset(&mut server);
 
     // asset db tests
-    wallet1.liquidex_assets_db_roundtrip();
+    taker.liquidex_assets_db_roundtrip();
 
     let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();
-    let mut wallet2 = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic2);
-    let asset2 = wallet2.fund_asset(&mut server);
-    let utxo = wallet2.utxos()[0].txo.outpoint;
+    let mut maker = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic2);
 
-    assert_eq!(wallet1.balance(&asset1), 10_000);
-    assert_eq!(wallet1.balance(&asset2), 0);
-    assert_eq!(wallet2.balance(&asset1), 0);
-    assert_eq!(wallet2.balance(&asset2), 10_000);
+    let asset2 = maker.fund_asset(&mut server);
+
+    assert_eq!(taker.balance(&asset1), 10_000);
+    assert_eq!(taker.balance(&asset2), 0);
+    assert_eq!(maker.balance(&asset1), 0);
+    assert_eq!(maker.balance(&asset2), 10_000);
 
     // asset2 10_000 <-> asset1 10_000 (no change)
-    wallet2.liquidex_add_asset(&asset1);
-    let proposal = wallet2.liquidex_make(&utxo, &asset1, 1.0);
+    maker.liquidex_add_asset(&asset1);
+    let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &asset1, 1.0);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    assert_eq!(wallet1.balance(&asset1), 0);
-    assert_eq!(wallet1.balance(&asset2), 10_000);
-    assert_eq!(wallet2.balance(&asset1), 10_000);
-    assert_eq!(wallet2.balance(&asset2), 0);
+    assert_eq!(taker.balance(&asset1), 0);
+    assert_eq!(taker.balance(&asset2), 10_000);
+    assert_eq!(maker.balance(&asset1), 10_000);
+    assert_eq!(maker.balance(&asset2), 0);
 
     // asset1 10_000 <-> asset2 5_000 (maker creates change)
-    wallet2.liquidex_add_asset(&asset2);
-    let utxo = wallet2.asset_utxos(&asset1)[0].txo.outpoint;
-    let proposal = wallet2.liquidex_make(&utxo, &asset2, 0.5);
+    maker.liquidex_add_asset(&asset2);
+    let utxo = maker.asset_utxos(&asset1)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &asset2, 0.5);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    assert_eq!(wallet1.balance(&asset1), 10_000);
-    assert_eq!(wallet1.balance(&asset2), 5_000);
-    assert_eq!(wallet2.balance(&asset1), 0);
-    assert_eq!(wallet2.balance(&asset2), 5_000);
+    assert_eq!(taker.balance(&asset1), 10_000);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    assert_eq!(maker.balance(&asset1), 0);
+    assert_eq!(maker.balance(&asset2), 5_000);
 
     // asset2 5_000 <-> L-BTC 5_000
-    let policy_asset = wallet1.policy_asset();
-    let sats_w1_policy_before = wallet1.balance(&policy_asset);
-    wallet2.liquidex_add_asset(&policy_asset);
-    let utxo = wallet2.asset_utxos(&asset2)[0].txo.outpoint;
-    let proposal = wallet2.liquidex_make(&utxo, &policy_asset, 1.0);
+    let policy_asset = taker.policy_asset();
+    let sats_w1_policy_before = taker.balance(&policy_asset);
+    maker.liquidex_add_asset(&policy_asset);
+    let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &policy_asset, 1.0);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    let fee = wallet1.get_fee(&txid);
-    let sats_w1_policy_after = wallet1.balance(&policy_asset);
+    let fee = taker.get_fee(&txid);
+    let sats_w1_policy_after = taker.balance(&policy_asset);
     assert_eq!(sats_w1_policy_before - sats_w1_policy_after - fee, 5_000);
-    assert_eq!(wallet1.balance(&asset2), 10_000);
-    assert_eq!(wallet2.balance(&asset2), 0);
-    assert_eq!(wallet2.balance(&policy_asset), 5_000);
+    assert_eq!(taker.balance(&asset2), 10_000);
+    assert_eq!(maker.balance(&asset2), 0);
+    assert_eq!(maker.balance(&policy_asset), 5_000);
 
     // L-BTC 5_000 <-> L-BTC 10_000
-    let sats_w1_policy_before = wallet1.balance(&policy_asset);
-    let utxo = wallet2.asset_utxos(&policy_asset)[0].txo.outpoint;
-    let proposal = wallet2.liquidex_make(&utxo, &policy_asset, 2.0);
+    let sats_w1_policy_before = taker.balance(&policy_asset);
+    let utxo = maker.asset_utxos(&policy_asset)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &policy_asset, 2.0);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    let fee = wallet1.get_fee(&txid);
-    let sats_w1_policy_after = wallet1.balance(&policy_asset);
+    let fee = taker.get_fee(&txid);
+    let sats_w1_policy_after = taker.balance(&policy_asset);
     assert_eq!(sats_w1_policy_before - sats_w1_policy_after - fee, 5_000);
-    assert_eq!(wallet2.balance(&policy_asset), 10_000);
+    assert_eq!(maker.balance(&policy_asset), 10_000);
 
     // L-BTC 10_000 <-> asset2 5_000
-    let sats_w1_policy_before = wallet1.balance(&policy_asset);
-    let utxo = wallet2.asset_utxos(&policy_asset)[0].txo.outpoint;
-    let proposal = wallet2.liquidex_make(&utxo, &asset2, 0.5);
+    let sats_w1_policy_before = taker.balance(&policy_asset);
+    let utxo = maker.asset_utxos(&policy_asset)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &asset2, 0.5);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    let fee = wallet1.get_fee(&txid);
-    let sats_w1_policy_after = wallet1.balance(&policy_asset);
+    let fee = taker.get_fee(&txid);
+    let sats_w1_policy_after = taker.balance(&policy_asset);
     assert_eq!(sats_w1_policy_after - sats_w1_policy_before + fee, 10_000);
-    assert_eq!(wallet1.balance(&asset2), 5_000);
-    assert_eq!(wallet2.balance(&asset2), 5_000);
-    assert_eq!(wallet2.balance(&policy_asset), 0);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    assert_eq!(maker.balance(&asset2), 5_000);
+    assert_eq!(maker.balance(&policy_asset), 0);
 
     // asset2 5_000 <-> asset2 5_000
-    let utxo = wallet2.asset_utxos(&asset2)[0].txo.outpoint;
-    let proposal = wallet2.liquidex_make(&utxo, &asset2, 1.0);
+    let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = maker.liquidex_make(&utxo, &asset2, 1.0);
 
     log::warn!("proposal: {:?}", proposal);
-    let txid = wallet1.liquidex_take(&proposal);
+    let txid = taker.liquidex_take(&proposal);
 
-    wallet1.wait_for_tx(&txid);
-    wallet2.wait_for_tx(&txid);
+    taker.wait_for_tx(&txid);
+    maker.wait_for_tx(&txid);
 
-    assert_eq!(wallet1.balance(&asset2), 5_000);
-    assert_eq!(wallet2.balance(&asset2), 5_000);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    assert_eq!(maker.balance(&asset2), 5_000);
 
     server.stop();
 }

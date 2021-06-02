@@ -812,6 +812,12 @@ impl WalletCtx {
 
         let store_read = self.store.read()?;
         let mut used_utxo: HashSet<elements::OutPoint> = HashSet::new();
+        // If the wallet is taking a proposal made by the wallet itself,
+        // do not add the "maker" input again.
+        let input_outpoint = tx.input[0].previous_output.clone();
+        if utxos.iter().any(|u| u.txo.outpoint == input_outpoint) {
+            used_utxo.insert(input_outpoint);
+        }
         loop {
             let mut needs = liquidex_needs(
                 &maker_input,

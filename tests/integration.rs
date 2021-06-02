@@ -225,10 +225,13 @@ fn dex() {
     let balance_btc_3 = taker.balance(&policy_asset);
     assert_eq!(balance_btc_3, balance_btc_2 - fee);
 
-    /*
-    // got bad-txns-inputs-duplicate
     // L-BTC <-> L-BTC
-    let utxo = taker.asset_utxos(&policy_asset)[0].txo.outpoint;
+    let utxos = taker.asset_utxos(&policy_asset);
+    let utxo = if utxos[1].unblinded.value > utxos[0].unblinded.value {
+        utxos[0].txo.outpoint
+    } else {
+        utxos[1].txo.outpoint
+    };
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 
     log::warn!("proposal: {:?}", proposal);
@@ -239,8 +242,6 @@ fn dex() {
     let fee = taker.get_fee(&txid);
     let balance_btc_4 = taker.balance(&policy_asset);
     assert_eq!(balance_btc_4, balance_btc_3 - fee);
-     * */
-    let balance_btc_4 = balance_btc_3;
 
     // asset2 5_000 <-> asset2 5_000
     taker.liquidex_add_asset(&asset2);
@@ -257,8 +258,6 @@ fn dex() {
     let balance_btc_5 = taker.balance(&policy_asset);
     assert_eq!(balance_btc_5, balance_btc_4 - fee);
 
-    /*
-    // got bad-txns-inputs-duplicate
     // L-BTC <-> asset2 5_000
     let utxo = taker.asset_utxos(&policy_asset)[0].clone();
     let sats = utxo.unblinded.value;
@@ -274,7 +273,6 @@ fn dex() {
     let fee = taker.get_fee(&txid);
     let balance_btc_6 = taker.balance(&policy_asset);
     assert_eq!(balance_btc_6, balance_btc_5 - fee);
-     * */
 
     server.stop();
 }

@@ -524,7 +524,7 @@ impl TestElectrumWallet {
         let satoshi = 10_000;
         let address = self.electrum_wallet.address().unwrap();
         let (txid, asset) = server.fund_asset(&address, satoshi);
-        self.wallet_wait_tx_status_change();
+        self.wait_for_tx(&txid);
 
         let balance_asset = self.balance(&asset);
         assert_eq!(balance_asset, satoshi);

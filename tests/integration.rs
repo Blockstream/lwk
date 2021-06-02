@@ -173,5 +173,108 @@ fn dex() {
     assert_eq!(taker.balance(&asset2), 5_000);
     assert_eq!(maker.balance(&asset2), 5_000);
 
+    // swaps within the same wallet
+    assert_eq!(taker.balance(&asset1), 10_000);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    let balance_btc_0 = taker.balance(&policy_asset);
+    assert!(balance_btc_0 > 0);
+
+    // asset2 5_000 <-> asset1 10_000 (no change)
+    taker.liquidex_add_asset(&asset1);
+    let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = taker.liquidex_make(&utxo, &asset1, 2.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    assert_eq!(taker.balance(&asset1), 10_000);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    let balance_btc_1 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_1, balance_btc_0 - fee);
+
+    // asset2 5_000 <-> asset1 5_000 (change)
+    let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = taker.liquidex_make(&utxo, &asset1, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    assert_eq!(taker.balance(&asset1), 10_000);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    let balance_btc_2 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_2, balance_btc_1 - fee);
+
+    // asset2 5_000 <-> L-BTC 5_000
+    taker.liquidex_add_asset(&policy_asset);
+    let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    let balance_btc_3 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_3, balance_btc_2 - fee);
+
+    /*
+    // got bad-txns-inputs-duplicate
+    // L-BTC <-> L-BTC
+    let utxo = taker.asset_utxos(&policy_asset)[0].txo.outpoint;
+    let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    let balance_btc_4 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_4, balance_btc_3 - fee);
+     * */
+    let balance_btc_4 = balance_btc_3;
+
+    // asset2 5_000 <-> asset2 5_000
+    taker.liquidex_add_asset(&asset2);
+    let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
+    let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    assert_eq!(taker.balance(&asset2), 5_000);
+    let balance_btc_5 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_5, balance_btc_4 - fee);
+
+    /*
+    // got bad-txns-inputs-duplicate
+    // L-BTC <-> asset2 5_000
+    let utxo = taker.asset_utxos(&policy_asset)[0].clone();
+    let sats = utxo.unblinded.value;
+    let utxo = utxo.txo.outpoint;
+    let rate = 5_000.0 / sats as f64;
+    let proposal = taker.liquidex_make(&utxo, &policy_asset, rate);
+
+    log::warn!("proposal: {:?}", proposal);
+    let txid = taker.liquidex_take(&proposal);
+
+    taker.wait_for_tx(&txid);
+
+    let fee = taker.get_fee(&txid);
+    let balance_btc_6 = taker.balance(&policy_asset);
+    assert_eq!(balance_btc_6, balance_btc_5 - fee);
+     * */
+
     server.stop();
 }

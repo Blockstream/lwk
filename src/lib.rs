@@ -15,6 +15,7 @@ pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
     Unblinded, UnblindedTXO, TXO,
 };
+pub use crate::utils::tx_to_hex;
 
 use network::*;
 

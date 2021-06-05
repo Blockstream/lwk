@@ -27,3 +27,7 @@ pub fn derive_blinder(
     let blinder: elements::bitcoin::hashes::Hmac<sha256::Hash> = Hmac::from_engine(engine2).into();
     secp256k1_zkp::Tweak::from_slice(&blinder.into_inner())
 }
+
+pub fn tx_to_hex(tx: &elements::Transaction) -> String {
+    hex::encode(elements::encode::serialize(tx))
+}

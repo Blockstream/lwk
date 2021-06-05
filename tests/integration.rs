@@ -79,9 +79,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset1, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -95,9 +93,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&asset1)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset2, 0.5);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -113,9 +109,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &policy_asset, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -131,9 +125,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&policy_asset)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &policy_asset, 2.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -147,9 +139,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&policy_asset)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset2, 0.5);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -164,9 +154,7 @@ fn dex() {
     let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset2, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
     maker.wait_for_tx(&txid);
 
@@ -184,9 +172,7 @@ fn dex() {
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &asset1, 2.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);
@@ -199,9 +185,7 @@ fn dex() {
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &asset1, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);
@@ -215,9 +199,7 @@ fn dex() {
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);
@@ -234,9 +216,7 @@ fn dex() {
     };
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);
@@ -248,9 +228,7 @@ fn dex() {
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);
@@ -265,9 +243,7 @@ fn dex() {
     let rate = 5_000.0 / sats as f64;
     let proposal = taker.liquidex_make(&utxo, &policy_asset, rate);
 
-    log::warn!("proposal: {:?}", proposal);
     let txid = taker.liquidex_take(&proposal);
-
     taker.wait_for_tx(&txid);
 
     let fee = taker.get_fee(&txid);

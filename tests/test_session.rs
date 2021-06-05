@@ -876,9 +876,4 @@ impl TestElectrumWallet {
         self.wallet_wait_tx_status_change();
         tx.txid().to_string()
     }
-
-    // TODO: liquidex tests
-    //       check number of outputs
-    //       decode from str
-    //       encode to str
 }

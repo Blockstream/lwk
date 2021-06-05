@@ -31,7 +31,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::liquidex::{
     liquidex_blind, liquidex_changes, liquidex_estimated_changes, liquidex_fee, liquidex_needs,
-    LiquidexProposal,
+    LiquidexMakeOpt, LiquidexProposal,
 };
 
 pub struct WalletCtx {
@@ -734,9 +734,7 @@ impl WalletCtx {
 
     pub fn liquidex_make(
         &self,
-        utxo: &elements::OutPoint,
-        asset: &elements::issuance::AssetId,
-        rate: f64,
+        opt: &LiquidexMakeOpt,
         mnemonic: &str,
     ) -> Result<LiquidexProposal, Error> {
         let address = self.get_address()?;
@@ -744,18 +742,18 @@ impl WalletCtx {
         let unblinded_input = store_read
             .cache
             .unblinded
-            .get(utxo)
+            .get(&opt.utxo)
             .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
 
-        let receive_value = (rate * unblinded_input.value as f64) as u64;
+        let receive_value = (opt.rate * unblinded_input.value as f64) as u64;
         let mut tx = elements::Transaction {
             version: 2,
             lock_time: 0,
             input: vec![],
             output: vec![],
         };
-        add_input(&mut tx, utxo.clone());
-        add_output(&mut tx, &address, receive_value, asset.to_hex())?;
+        add_input(&mut tx, opt.utxo.clone());
+        add_output(&mut tx, &address, receive_value, opt.asset_id.to_hex())?;
 
         let unblinded_output = liquidex_blind(&self.master_blinding, &mut tx, &self.secp)?;
 
@@ -763,9 +761,9 @@ impl WalletCtx {
         let prev_tx = store_read
             .cache
             .all_txs
-            .get(&utxo.txid)
+            .get(&opt.utxo.txid)
             .ok_or_else(|| Error::Generic("expected tx".into()))?;
-        let out = prev_tx.output[utxo.vout as usize].clone();
+        let out = prev_tx.output[opt.utxo.vout as usize].clone();
         let derivation_path: DerivationPath = store_read
             .cache
             .paths

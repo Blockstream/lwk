@@ -10,7 +10,7 @@ mod transaction;
 mod utils;
 
 pub use crate::error::Error;
-pub use crate::liquidex::LiquidexProposal;
+pub use crate::liquidex::{LiquidexMakeOpt, LiquidexProposal};
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
     Unblinded, UnblindedTXO, TXO,
@@ -654,12 +654,10 @@ impl ElectrumWallet {
     /// receive).
     pub fn liquidex_make(
         &self,
-        utxo: &elements::OutPoint,
-        asset: &elements::issuance::AssetId,
-        rate: f64,
+        opt: &LiquidexMakeOpt,
         mnemonic: &str,
     ) -> Result<LiquidexProposal, Error> {
-        self.wallet.liquidex_make(utxo, asset, rate, mnemonic)
+        self.wallet.liquidex_make(opt, mnemonic)
     }
 
     /// Take a LiquiDEX proposal.

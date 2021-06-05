@@ -862,8 +862,13 @@ impl TestElectrumWallet {
         asset: &elements::issuance::AssetId,
         rate: f64,
     ) -> LiquidexProposal {
+        let opt = LiquidexMakeOpt {
+            utxo: utxo.clone(),
+            asset_id: asset.clone(),
+            rate,
+        };
         self.electrum_wallet
-            .liquidex_make(&utxo, &asset, rate, &self.mnemonic)
+            .liquidex_make(&opt, &self.mnemonic)
             .unwrap()
     }
 

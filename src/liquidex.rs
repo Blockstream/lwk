@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +20,26 @@ use crate::error::Error;
 use crate::model::Unblinded;
 use crate::transaction::{estimated_fee, DUST_VALUE};
 use crate::utils::derive_blinder;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct LiquidexMakeOpt {
+    pub utxo: elements::OutPoint,
+    pub asset_id: elements::issuance::AssetId,
+    pub rate: f64,
+}
+
+impl LiquidexMakeOpt {
+    pub fn new(txid: &str, vout: u32, asset_id: &str, rate: f64) -> Result<Self, Error> {
+        let txid = elements::Txid::from_str(txid)?;
+        let utxo = elements::OutPoint::new(txid, vout);
+        let asset_id = elements::issuance::AssetId::from_str(asset_id)?;
+        Ok(Self {
+            utxo,
+            asset_id,
+            rate,
+        })
+    }
+}
 
 // TODO: use serde with to make tx a elements::Transaction
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]

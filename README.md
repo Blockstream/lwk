@@ -41,6 +41,5 @@ To run them:
 export ELECTRS_LIQUID_EXEC=$PWD/server/electrs_liquid/bin/electrs
 export ELEMENTSD_EXEC=$PWD/server/elements-0.18.1.8/bin/elementsd
 
-DEBUG=1 ./launch_integration_tests.sh liquid
-DEBUG=1 ./launch_integration_tests.sh dex
+cargo test
 ```

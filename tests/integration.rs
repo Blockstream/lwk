@@ -13,7 +13,7 @@ fn liquid() {
 
     let mut server = test_session::TestElectrumServer::new(debug, electrs_exec, node_exec);
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let mut wallet = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic);
+    let mut wallet = test_session::TestElectrumWallet::new(&server.electrs.electrum_url, mnemonic);
 
     let node_address = server.node_getnewaddress(Some("p2sh-segwit"));
     let node_bech32_address = server.node_getnewaddress(Some("bech32"));
@@ -56,7 +56,7 @@ fn dex() {
     let mut server = test_session::TestElectrumServer::new(debug, electrs_exec, node_exec);
 
     let mnemonic1 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
-    let mut taker = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic1);
+    let mut taker = test_session::TestElectrumWallet::new(&server.electrs.electrum_url, mnemonic1);
 
     taker.fund_btc(&mut server);
     let asset1 = taker.fund_asset(&mut server);
@@ -65,7 +65,7 @@ fn dex() {
     taker.liquidex_assets_db_roundtrip();
 
     let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();
-    let mut maker = test_session::TestElectrumWallet::new(&server.electrs_url, mnemonic2);
+    let mut maker = test_session::TestElectrumWallet::new(&server.electrs.electrum_url, mnemonic2);
 
     let asset2 = maker.fund_asset(&mut server);
 

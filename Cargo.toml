@@ -25,6 +25,7 @@ elements = { version = "0.16", features = ["serde-feature"] }
 bitcoincore-rpc = "0.13"
 chrono = "0.4.11"
 tempdir = "0.3.7"
+electrsd = { version = "0.7.0", features = [ "legacy", "trigger" ] }
 
 [profile.release]
 lto = true

@@ -221,7 +221,8 @@ impl TestElectrumServer {
         elements::issuance::AssetId::from_hex(&asset).unwrap()
     }
     fn node_generate(&self, block_num: u32) {
-        node_generate(&self.node.client, block_num)
+        node_generate(&self.node.client, block_num);
+        self.electrs.trigger().unwrap();
     }
 
     pub fn fund_btc(&mut self, address: &elements::Address, satoshi: u64) -> String {

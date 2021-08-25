@@ -11,9 +11,11 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
 
-use std::convert::TryInto;
-
 pub const DUST_VALUE: u64 = 546;
+
+// Sizes used for fee estimation
+pub const SURJECTIONPROOF_SIZE: u64 = 135;
+pub const RANGEPROOF_SIZE: u64 = 4174;
 
 pub fn strip_witness(tx: &mut elements::Transaction) {
     for input in tx.input.iter_mut() {
@@ -66,13 +68,11 @@ pub fn add_output(
     asset_hex: String,
 ) -> Result<(), Error> {
     let blinding_pubkey = address.blinding_pubkey.ok_or(Error::InvalidAddress)?;
-    let bytes = blinding_pubkey.serialize();
-    let byte32: [u8; 32] = bytes[1..].as_ref().try_into().unwrap();
     let asset_id = issuance::AssetId::from_hex(&asset_hex)?;
     let new_out = elements::TxOut {
         asset: confidential::Asset::Explicit(asset_id),
         value: confidential::Value::Explicit(value),
-        nonce: confidential::Nonce::Confidential(bytes[0], byte32),
+        nonce: confidential::Nonce::Confidential(blinding_pubkey),
         script_pubkey: address.script_pubkey(),
         witness: TxOutWitness::default(),
     };
@@ -84,6 +84,23 @@ pub fn scramble(tx: &mut elements::Transaction) {
     let mut rng = thread_rng();
     tx.input.shuffle(&mut rng);
     tx.output.shuffle(&mut rng);
+}
+
+fn mock_generator() -> elements::secp256k1_zkp::Generator {
+    let mut a = [2u8; 33];
+    a[0] = 10;
+    elements::secp256k1_zkp::Generator::from_slice(&a).unwrap()
+}
+
+fn mock_pedersen_commitment() -> elements::secp256k1_zkp::PedersenCommitment {
+    let mut a = [2u8; 33];
+    a[0] = 8;
+    elements::secp256k1_zkp::PedersenCommitment::from_slice(&a).unwrap()
+}
+
+fn mock_pubkey() -> elements::secp256k1_zkp::PublicKey {
+    let a = [2u8; 33];
+    elements::secp256k1_zkp::PublicKey::from_slice(&a).unwrap()
 }
 
 /// estimates the fee of the final transaction given the `fee_rate`
@@ -100,23 +117,22 @@ pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8
     }
     for _ in 0..more_changes {
         let new_out = elements::TxOut {
-            asset: confidential::Asset::Confidential(0u8, [0u8; 32]),
-            value: confidential::Value::Confidential(0u8, [0u8; 32]),
-            nonce: confidential::Nonce::Confidential(0u8, [0u8; 32]),
+            asset: confidential::Asset::Confidential(mock_generator()),
+            value: confidential::Value::Confidential(mock_pedersen_commitment()),
+            nonce: confidential::Nonce::Confidential(mock_pubkey()),
             ..Default::default()
         };
         tx.output.push(new_out);
     }
+
+    let proofs_size = (SURJECTIONPROOF_SIZE + RANGEPROOF_SIZE) as usize * tx.output.len();
     for output in tx.output.iter_mut() {
-        output.witness = TxOutWitness {
-            surjection_proof: vec![0u8; 135],
-            rangeproof: vec![0u8; 4174],
-        };
         output.script_pubkey = vec![0u8; 21].into();
     }
 
     tx.output.push(elements::TxOut::default()); // mockup for the explicit fee output
-    let vbytes = tx.get_weight() as f64 / 4.0;
+                                                // proofs belongs to the witness, their size is discounted and thus is not scaled
+    let vbytes = (tx.get_weight() + proofs_size) as f64 / 4.0;
     let fee_val = (vbytes * fee_rate * 1.03) as u64; // increasing estimated fee by 3% to stay over relay fee, TODO improve fee estimation and lower this
     info!(
         "DUMMYTX inputs:{} outputs:{} num_changes:{} vbytes:{} fee_val:{}",

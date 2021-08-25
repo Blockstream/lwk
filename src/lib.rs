@@ -25,7 +25,8 @@ use std::hash::Hasher;
 use std::time::Instant;
 
 use crate::headers::Verifier;
-use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
+//use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
+use crate::interface::WalletCtx;
 use crate::liquidex::liquidex_unblind;
 use crate::model::*;
 use crate::network::Config;
@@ -389,46 +390,33 @@ impl Syncer {
     ) -> Result<Unblinded, Error> {
         match (output.asset, output.value, output.nonce) {
             (
-                Asset::Confidential(_, _),
-                confidential::Value::Confidential(_, _),
-                Nonce::Confidential(_, _),
+                Asset::Confidential(_),
+                confidential::Value::Confidential(_),
+                Nonce::Confidential(_),
             ) => {
-                let asset_commitment =
-                    secp256k1_zkp::Generator::from_slice(&output.asset.commitment().unwrap())?;
-                let value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
-                    &output.value.commitment().unwrap(),
-                )?;
-                let sender_pk =
-                    secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
-                let rangeproof = secp256k1_zkp::RangeProof::from_slice(&output.witness.rangeproof)?;
-
+                // TODO: use a shared ctx
+                let secp = elements::bitcoin::secp256k1::Secp256k1::new();
                 let receiver_sk = self
                     .master_blinding
                     .derive_blinding_key(&output.script_pubkey);
-                let shared_secret = make_shared_secret(&sender_pk, &receiver_sk);
-
-                let (opening, _) = rangeproof.rewind(
-                    &self.secp,
-                    value_commitment,
-                    shared_secret,
-                    output.script_pubkey.as_bytes(),
-                    asset_commitment,
-                )?;
-
-                let (asset, asset_blinder) = parse_rangeproof_message(&*opening.message)?;
+                // TODO: implement UnblindError and remove Generic
+                let txout_secrets = output
+                    .unblind(&secp, receiver_sk)
+                    .map_err(|_| Error::Generic("UnblindError".into()))?;
 
                 info!(
                     "Unblinded outpoint:{} asset:{} value:{}",
                     outpoint,
-                    &asset.to_hex(),
-                    opening.value,
+                    &txout_secrets.asset.to_hex(),
+                    txout_secrets.value,
                 );
 
+                // TODO: replace Unblinded with TxOutSecrets
                 let unblinded = Unblinded {
-                    asset,
-                    value: opening.value,
-                    asset_blinder,
-                    value_blinder: opening.blinding_factor,
+                    asset: txout_secrets.asset,
+                    value: txout_secrets.value,
+                    asset_blinder: txout_secrets.asset_bf.into_inner(),
+                    value_blinder: txout_secrets.value_bf.into_inner(),
                 };
                 Ok(unblinded)
             }

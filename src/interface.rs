@@ -7,6 +7,7 @@ use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::bitcoin::PublicKey;
+use elements::secp256k1_zkp;
 use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
@@ -113,6 +114,7 @@ pub fn make_rangeproof_message(
     message
 }
 
+#[allow(dead_code)]
 pub fn parse_rangeproof_message(
     message: &[u8],
 ) -> Result<(elements::issuance::AssetId, secp256k1_zkp::Tweak), Error> {
@@ -572,6 +574,7 @@ impl WalletCtx {
     }
 
     fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
+        // TODO: take a PSET and blind it with its method
         info!("blind_tx {}", tx.txid());
         let mut input_domain = vec![];
         let mut input_commitment_secrets = vec![];
@@ -608,9 +611,12 @@ impl WalletCtx {
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             if !output.is_fee() {
                 match (output.value, output.asset, output.nonce) {
-                    (Value::Explicit(value), Asset::Explicit(asset), Nonce::Confidential(_, _)) => {
-                        let receiver_blinding_pk =
-                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
+                    (
+                        Value::Explicit(value),
+                        Asset::Explicit(asset),
+                        Nonce::Confidential(nonce),
+                    ) => {
+                        let receiver_blinding_pk = nonce;
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
                         let sender_pk =
                             secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
@@ -695,8 +701,8 @@ impl WalletCtx {
                         output.value = elements::confidential::Value::from_commitment(
                             &value_commitment.serialize(),
                         )?;
-                        output.witness.surjection_proof = surjectionproof.serialize();
-                        output.witness.rangeproof = rangeproof.serialize();
+                        output.witness.surjection_proof = Some(surjectionproof);
+                        output.witness.rangeproof = Some(rangeproof);
                     }
                     _ => panic!("create_tx created things not right"),
                 }
@@ -933,12 +939,10 @@ impl WalletCtx {
                 match (i, output.value, output.asset, output.nonce) {
                     (
                         0,
-                        Value::Confidential(_, _),
-                        Asset::Confidential(_, _),
-                        Nonce::Confidential(_, _),
+                        Value::Confidential(_),
+                        Asset::Confidential(_),
+                        Nonce::Confidential(receiver_blinding_pk),
                     ) => {
-                        let receiver_blinding_pk =
-                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
                         let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
 
@@ -995,17 +999,15 @@ impl WalletCtx {
                             &input_domain,
                         )?;
 
-                        output.witness.surjection_proof = surjectionproof.serialize();
-                        output.witness.rangeproof = rangeproof.serialize();
+                        output.witness.surjection_proof = Some(surjectionproof);
+                        output.witness.rangeproof = Some(rangeproof);
                     }
                     (
                         _,
                         Value::Explicit(value),
                         Asset::Explicit(asset),
-                        Nonce::Confidential(_, _),
+                        Nonce::Confidential(receiver_blinding_pk),
                     ) => {
-                        let receiver_blinding_pk =
-                            secp256k1::PublicKey::from_slice(&output.nonce.commitment().unwrap())?;
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
                         let sender_pk =
                             secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
@@ -1090,8 +1092,8 @@ impl WalletCtx {
                         output.value = elements::confidential::Value::from_commitment(
                             &value_commitment.serialize(),
                         )?;
-                        output.witness.surjection_proof = surjectionproof.serialize();
-                        output.witness.rangeproof = rangeproof.serialize();
+                        output.witness.surjection_proof = Some(surjectionproof);
+                        output.witness.rangeproof = Some(rangeproof);
                     }
                     _ => panic!("create_tx created things not right"),
                 }

@@ -1,7 +1,7 @@
 extern crate bewallet;
 
-use bitcoincore_rpc::{Auth, Client, RpcApi};
 use chrono::Utc;
+use core_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements;
 use elements::bitcoin::hashes::hex::{FromHex, ToHex};
@@ -154,7 +154,7 @@ impl TestElectrumServer {
         // send initialfreecoins from wallet "" to the wallet created by BitcoinD::new
         let node_url = format!("http://127.0.0.1:{}/wallet/", node.params.rpc_socket.port());
         let client =
-            Client::new(node_url, Auth::CookieFile(node.params.cookie_file.clone())).unwrap();
+            Client::new(&node_url, Auth::CookieFile(node.params.cookie_file.clone())).unwrap();
         let address = node_getnewaddress(&node.client, None);
         client
             .call::<Value>(

@@ -12,9 +12,8 @@ use rand::Rng;
 use elements::bitcoin::hashes::{sha256, sha256d, Hash};
 use elements::confidential::{Asset, Nonce, Value};
 use elements::encode::Encodable;
+use elements::secp256k1_zkp::{self, All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
-
-use secp256k1_zkp::{All, Secp256k1};
 
 use crate::error::Error;
 use crate::model::Unblinded;
@@ -88,21 +87,17 @@ impl LiquidexProposal {
         }
 
         // check output is blinded
-        match (tx.output[0].asset, tx.output[0].value) {
-            (Asset::Confidential(_, _), Value::Confidential(_, _)) => {}
-            _ => {
-                return Err(Error::Generic(
-                    "LiquiDEX error unexpected outputs".to_string(),
-                ));
-            }
-        }
-
-        // check is confidential
-        let tx_asset_generator =
-            secp256k1_zkp::Generator::from_slice(&tx.output[0].asset.commitment().unwrap())?;
-        let tx_value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
-            &tx.output[0].value.commitment().unwrap(),
-        )?;
+        let (tx_asset_generator, tx_value_commitment) =
+            match (tx.output[0].asset, tx.output[0].value) {
+                (Asset::Confidential(generator), Value::Confidential(pedersen_commitment)) => {
+                    (generator, pedersen_commitment)
+                }
+                _ => {
+                    return Err(Error::Generic(
+                        "LiquiDEX error unexpected outputs".to_string(),
+                    ));
+                }
+            };
 
         let (asset_generator, value_commitment) = self.outputs[0].commitments(secp);
 
@@ -162,7 +157,7 @@ fn _liquidex_aes_nonce(
     script: &elements::Script,
 ) -> Result<[u8; 12], Error> {
     match (asset, value) {
-        (Asset::Confidential(_, _), Value::Confidential(_, _)) => {}
+        (Asset::Confidential(_), Value::Confidential(_)) => {}
         _ => {
             return Err(Error::Generic(
                 "Asset and Value must be confidential".to_string(),
@@ -175,8 +170,8 @@ fn _liquidex_aes_nonce(
     engine.write(TAG)?;
     engine.write(&master_blinding_key.0[..])?;
     previous_outpoint.consensus_encode(&mut engine)?;
-    engine.write(&asset.commitment().unwrap())?;
-    engine.write(&value.commitment().unwrap())?;
+    engine.write(&asset.commitment().unwrap().serialize())?;
+    engine.write(&value.commitment().unwrap().serialize())?;
     engine.write(&script.as_bytes())?;
     let mut out = [0u8; 12];
     out.copy_from_slice(&sha256::Hash::from_engine(engine).into_inner()[..12]);
@@ -276,7 +271,7 @@ pub fn liquidex_unblind(
         tx.output[vout].value,
         tx.output[vout].nonce,
     ) {
-        (Asset::Confidential(_, _), Value::Confidential(_, _), Nonce::Confidential(_, _)) => {}
+        (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {}
         _ => {
             return Err(Error::Generic("LiquiDEX error 2".to_string()));
         }
@@ -305,7 +300,7 @@ pub fn liquidex_unblind(
     let aes_nonce = GenericArray::from_slice(&aes_nonce);
 
     // parse nonce_commitment
-    let nonce_commitment = tx.output[vout].nonce.commitment().unwrap();
+    let nonce_commitment = tx.output[vout].nonce.commitment().unwrap().serialize();
     let mut text = vec![];
     text.extend(&nonce_commitment[1..]);
 
@@ -316,11 +311,8 @@ pub fn liquidex_unblind(
     let value = u64::from_le_bytes(value_bytes);
 
     // check value matches value commitment
-    let tx_asset_generator =
-        secp256k1_zkp::Generator::from_slice(&tx.output[vout].asset.commitment().unwrap())?;
-    let tx_value_commitment = secp256k1_zkp::PedersenCommitment::from_slice(
-        &tx.output[vout].value.commitment().unwrap(),
-    )?;
+    let tx_asset_generator = tx.output[vout].asset.commitment().unwrap();
+    let tx_value_commitment = tx.output[vout].value.commitment().unwrap();
     let value_commitment =
         secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, tx_asset_generator);
     if value_commitment != tx_value_commitment {
@@ -505,7 +497,7 @@ mod tests {
         };
         tx.output.push(new_out);
 
-        let secp = secp256k1_zkp::Secp256k1::new();
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
         liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
         let mut assets = std::collections::HashSet::<elements::issuance::AssetId>::new();
         assets.insert(asset.clone());
@@ -539,7 +531,7 @@ mod tests {
         assert_eq!(proposal.outputs[0].value, 175);
 
         // verify commitments matches the tx output and that the blinder are deserialized correctly
-        let secp = secp256k1_zkp::Secp256k1::new();
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
         proposal.verify_output_commitment(&secp).unwrap();
 
         // verify that the serialized proposal matches the deserialized one

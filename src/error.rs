@@ -34,7 +34,7 @@ pub enum Error {
     ElementsEncode(elements::encode::Error),
     Send(std::sync::mpsc::SendError<()>),
     Secp256k1(elements::bitcoin::secp256k1::Error),
-    Secp256k1Zkp(secp256k1_zkp::Error),
+    Secp256k1Zkp(elements::secp256k1_zkp::Error),
 }
 
 pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
@@ -183,8 +183,8 @@ impl From<elements::bitcoin::secp256k1::Error> for Error {
     }
 }
 
-impl From<secp256k1_zkp::Error> for Error {
-    fn from(err: secp256k1_zkp::Error) -> Self {
+impl From<elements::secp256k1_zkp::Error> for Error {
+    fn from(err: elements::secp256k1_zkp::Error) -> Self {
         Error::Secp256k1Zkp(err)
     }
 }

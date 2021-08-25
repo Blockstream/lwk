@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use elements::bitcoin::hashes::hex::FromHex;
+use elements::secp256k1_zkp;
 use elements::OutPoint;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
@@ -22,6 +23,7 @@ pub struct Unblinded {
 }
 
 mod hex_rev {
+    use elements::secp256k1_zkp;
     use std::fmt::Write;
 
     // from secp256k1_zkp src/lib.rs

@@ -16,16 +16,15 @@ serde_cbor = "0.11.1"
 hex = "0.4.0"
 log = "0.4.8"
 aes-gcm-siv = "0.5.0"
-electrum-client = "0.7.0"
-secp256k1-zkp = { version = "0.4", features = [ "global-context", "hashes", "serde" ] }
+electrum-client = "0.8.0"
 bip39 = "1.0.0-rc1"
-elements = { version = "0.16", features = ["serde-feature"] }
+elements = { version = "0.18", features = ["serde-feature"] }
 
 [dev-dependencies]
-bitcoincore-rpc = "0.13"
+core-rpc = "0.14"
 chrono = "0.4.11"
 tempdir = "0.3.7"
-electrsd = { version = "0.7.0", features = [ "legacy", "trigger" ] }
+electrsd = { version = "0.10.0", features = [ "legacy", "trigger" ] }
 
 [profile.release]
 lto = true

@@ -1,5 +1,4 @@
 use crate::error::Error;
-use crate::model::Unblinded;
 use elements::bitcoin::hashes::hex::{FromHex, ToHex};
 use elements::confidential::{Asset, Value};
 use elements::Script;
@@ -30,7 +29,7 @@ pub fn strip_witness(tx: &mut elements::Transaction) {
 fn get_output_satoshi(
     tx: &elements::Transaction,
     vout: u32,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> u64 {
     let outpoint = elements::OutPoint {
         txid: tx.txid(),
@@ -42,7 +41,7 @@ fn get_output_satoshi(
 fn get_output_asset(
     tx: &elements::Transaction,
     vout: u32,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Option<elements::issuance::AssetId> {
     let outpoint = elements::OutPoint {
         txid: tx.txid(),
@@ -57,7 +56,7 @@ fn get_output_asset(
 fn get_output_asset_hex(
     tx: &elements::Transaction,
     vout: u32,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Option<String> {
     get_output_asset(tx, vout, all_unblinded).and_then(|a| Some(a.to_hex()))
 }
@@ -151,7 +150,7 @@ pub fn needs(
     fee_rate: f64,
     policy_asset: elements::issuance::AssetId,
     all_txs: &HashMap<Txid, elements::Transaction>,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Vec<(elements::issuance::AssetId, u64)> {
     let mut outputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for output in tx.output.iter() {
@@ -189,7 +188,7 @@ pub fn needs(
 pub fn estimated_changes(
     tx: &elements::Transaction,
     all_txs: &HashMap<Txid, elements::Transaction>,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> u8 {
     let mut different_assets = HashSet::new();
     for input in tx.input.iter() {
@@ -211,7 +210,7 @@ pub fn changes(
     estimated_fee: u64,
     policy_asset: elements::issuance::AssetId,
     all_txs: &HashMap<Txid, elements::Transaction>,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut outputs_asset_amounts: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for output in tx.output.iter() {
@@ -285,7 +284,7 @@ pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
 pub fn fee(
     tx: &elements::Transaction,
     all_txs: &HashMap<Txid, elements::Transaction>,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
     policy_asset: &Option<Asset>,
 ) -> Result<u64, Error> {
     Ok({
@@ -318,7 +317,7 @@ pub fn fee(
 
 pub fn my_balance_changes(
     tx: &elements::Transaction,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> HashMap<elements::issuance::AssetId, i64> {
     trace!(
         "tx_id: {} my_balances elements all_unblinded.len(): {:?}",
@@ -363,7 +362,7 @@ pub fn my_balance_changes(
 pub fn get_previous_output_value(
     txs: &HashMap<Txid, elements::Transaction>,
     outpoint: &elements::OutPoint,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Option<u64> {
     txs.get(&outpoint.txid)
         .map(|tx| get_output_satoshi(&tx, outpoint.vout, &all_unblinded))
@@ -372,7 +371,7 @@ pub fn get_previous_output_value(
 pub fn get_previous_output_asset(
     txs: &HashMap<Txid, elements::Transaction>,
     outpoint: elements::OutPoint,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Option<elements::issuance::AssetId> {
     txs.get(&outpoint.txid)
         .map(|tx| get_output_asset(&tx, outpoint.vout, &all_unblinded).unwrap())
@@ -381,7 +380,7 @@ pub fn get_previous_output_asset(
 pub fn get_previous_output_asset_hex(
     txs: &HashMap<Txid, elements::Transaction>,
     outpoint: elements::OutPoint,
-    all_unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    all_unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Option<String> {
     get_previous_output_asset(txs, outpoint, all_unblinded).and_then(|a| Some(a.to_hex()));
     txs.get(&outpoint.txid)

@@ -13,7 +13,7 @@ pub use crate::error::Error;
 pub use crate::liquidex::{LiquidexMakeOpt, LiquidexProposal};
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
-    Unblinded, UnblindedTXO, TXO,
+    UnblindedTXO, TXO,
 };
 pub use crate::utils::tx_to_hex;
 
@@ -142,7 +142,7 @@ impl Headers {
 #[derive(Default)]
 struct DownloadTxResult {
     txs: Vec<(Txid, elements::Transaction)>,
-    unblinds: Vec<(elements::OutPoint, Unblinded)>,
+    unblinds: Vec<(elements::OutPoint, elements::TxOutSecrets)>,
 }
 
 impl Syncer {
@@ -387,7 +387,7 @@ impl Syncer {
         &self,
         outpoint: elements::OutPoint,
         output: elements::TxOut,
-    ) -> Result<Unblinded, Error> {
+    ) -> Result<elements::TxOutSecrets, Error> {
         match (output.asset, output.value, output.nonce) {
             (
                 Asset::Confidential(_),
@@ -411,14 +411,7 @@ impl Syncer {
                     txout_secrets.value,
                 );
 
-                // TODO: replace Unblinded with TxOutSecrets
-                let unblinded = Unblinded {
-                    asset: txout_secrets.asset,
-                    value: txout_secrets.value,
-                    asset_blinder: txout_secrets.asset_bf.into_inner(),
-                    value_blinder: txout_secrets.value_bf.into_inner(),
-                };
-                Ok(unblinded)
+                Ok(txout_secrets)
             }
             _ => Err(Error::Generic(
                 "received unconfidential or null asset/value/nonce".into(),
@@ -430,7 +423,7 @@ impl Syncer {
         &self,
         tx: &elements::Transaction,
         vout: u32,
-    ) -> Result<Unblinded, Error> {
+    ) -> Result<elements::TxOutSecrets, Error> {
         info!("LiquiDEX try unblind: {:?}:{}", tx.txid(), vout);
         let assets = self.store.read()?.liquidex_assets();
         liquidex_unblind(&self.master_blinding, &tx, vout, &self.secp, &assets)

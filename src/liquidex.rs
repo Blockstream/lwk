@@ -16,7 +16,6 @@ use elements::secp256k1_zkp::{self, All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
 
 use crate::error::Error;
-use crate::model::Unblinded;
 use crate::transaction::{estimated_fee, DUST_VALUE};
 use crate::utils::derive_blinder;
 
@@ -40,23 +39,59 @@ impl LiquidexMakeOpt {
     }
 }
 
+// Clone of TxOutSecrets, but with the name changed to match the previous struct.
+// This is a temporary solution since soon we should be able to migrate to PSET.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct LiquidexTxOutSecrets {
+    asset: elements::AssetId,
+    asset_blinder: elements::confidential::AssetBlindingFactor,
+    amount: u64,
+    amount_blinder: elements::confidential::ValueBlindingFactor,
+}
+
+impl LiquidexTxOutSecrets {
+    pub fn to_txoutsecrets(&self) -> elements::TxOutSecrets {
+        elements::TxOutSecrets {
+            asset: self.asset,
+            asset_bf: self.asset_blinder,
+            value: self.amount,
+            value_bf: self.amount_blinder,
+        }
+    }
+}
+
+impl From<elements::TxOutSecrets> for LiquidexTxOutSecrets {
+    fn from(txoutsecrets: elements::TxOutSecrets) -> Self {
+        Self {
+            asset: txoutsecrets.asset,
+            asset_blinder: txoutsecrets.asset_bf,
+            amount: txoutsecrets.value,
+            amount_blinder: txoutsecrets.value_bf,
+        }
+    }
+}
+
 // TODO: use serde with to make tx a elements::Transaction
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct LiquidexProposal {
     #[serde(default)]
     version: u32,
     tx: String,
-    inputs: Vec<Unblinded>,
-    outputs: Vec<Unblinded>,
+    inputs: Vec<LiquidexTxOutSecrets>,
+    outputs: Vec<LiquidexTxOutSecrets>,
 }
 
 impl LiquidexProposal {
-    pub fn new(tx: &elements::Transaction, input: Unblinded, output: Unblinded) -> Self {
+    pub fn new(
+        tx: &elements::Transaction,
+        input: elements::TxOutSecrets,
+        output: elements::TxOutSecrets,
+    ) -> Self {
         Self {
             version: 0,
             tx: hex::encode(elements::encode::serialize(tx)),
-            inputs: vec![input],
-            outputs: vec![output],
+            inputs: vec![input.into()],
+            outputs: vec![output.into()],
         }
     }
 
@@ -66,17 +101,20 @@ impl LiquidexProposal {
         )?)?)
     }
 
-    pub fn get_input(&self) -> Result<Unblinded, Error> {
+    pub fn get_input(&self) -> Result<elements::TxOutSecrets, Error> {
         if self.inputs.len() != 1 {
             return Err(Error::Generic(
                 "LiquiDEX error unexpected inputs".to_string(),
             ));
         }
 
-        Ok(self.inputs[0].clone())
+        Ok(self.inputs[0].to_txoutsecrets().clone())
     }
 
-    pub fn verify_output_commitment(&self, secp: &Secp256k1<All>) -> Result<Unblinded, Error> {
+    pub fn verify_output_commitment(
+        &self,
+        secp: &Secp256k1<All>,
+    ) -> Result<elements::TxOutSecrets, Error> {
         let tx = self.transaction()?;
         if tx.input.len() != 1
             || tx.output.len() != 1
@@ -85,6 +123,8 @@ impl LiquidexProposal {
         {
             return Err(Error::Generic("LiquiDEX error".to_string()));
         }
+
+        let output = self.outputs[0].to_txoutsecrets();
 
         // check output is blinded
         let (tx_asset_generator, tx_value_commitment) =
@@ -99,7 +139,15 @@ impl LiquidexProposal {
                 }
             };
 
-        let (asset_generator, value_commitment) = self.outputs[0].commitments(secp);
+        let asset_tag = secp256k1_zkp::Tag::from(output.asset.into_inner().into_inner());
+        let asset_generator =
+            secp256k1_zkp::Generator::new_blinded(secp, asset_tag, output.asset_bf.into_inner());
+        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+            secp,
+            output.value,
+            output.value_bf.into_inner(),
+            asset_generator,
+        );
 
         if asset_generator != tx_asset_generator || value_commitment != tx_value_commitment {
             return Err(Error::Generic(
@@ -107,7 +155,7 @@ impl LiquidexProposal {
             ));
         }
 
-        Ok(self.outputs[0].clone())
+        Ok(output)
     }
 }
 
@@ -134,6 +182,22 @@ fn _liquidex_derive_blinder(
         u32::MAX,
         is_asset_blinder,
     )
+}
+
+fn liquidex_derive_asset_blinder(
+    master_blinding_key: &MasterBlindingKey,
+    previous_outpoint: &elements::OutPoint,
+) -> Result<elements::confidential::AssetBlindingFactor, Error> {
+    let blinder = _liquidex_derive_blinder(master_blinding_key, previous_outpoint, true)?;
+    elements::confidential::AssetBlindingFactor::from_slice(&blinder[..]).map_err(Into::into)
+}
+
+fn liquidex_derive_value_blinder(
+    master_blinding_key: &MasterBlindingKey,
+    previous_outpoint: &elements::OutPoint,
+) -> Result<elements::confidential::ValueBlindingFactor, Error> {
+    let blinder = _liquidex_derive_blinder(master_blinding_key, previous_outpoint, false)?;
+    elements::confidential::ValueBlindingFactor::from_slice(&blinder[..]).map_err(Into::into)
 }
 
 fn _liquidex_aes_key(
@@ -185,7 +249,7 @@ pub fn liquidex_blind(
     master_blinding_key: &MasterBlindingKey,
     tx: &mut elements::Transaction,
     secp: &Secp256k1<All>,
-) -> Result<Unblinded, Error> {
+) -> Result<elements::TxOutSecrets, Error> {
     if tx.input.len() != 1 || tx.output.len() != 1 {
         return Err(Error::Generic(
             "Unexpected LiquiDEX maker transaction num in/out".to_string(),
@@ -202,14 +266,19 @@ pub fn liquidex_blind(
     };
 
     let asset_blinder =
-        _liquidex_derive_blinder(master_blinding_key, &tx.input[0].previous_output, true)?;
+        liquidex_derive_asset_blinder(master_blinding_key, &tx.input[0].previous_output)?;
     let value_blinder =
-        _liquidex_derive_blinder(master_blinding_key, &tx.input[0].previous_output, false)?;
+        liquidex_derive_value_blinder(master_blinding_key, &tx.input[0].previous_output)?;
 
     let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
-    let asset_generator = secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder);
-    let value_commitment =
-        secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, asset_generator);
+    let asset_generator =
+        secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder.into_inner());
+    let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+        secp,
+        value,
+        value_blinder.into_inner(),
+        asset_generator,
+    );
 
     tx.output[0].asset = Asset::from_commitment(&asset_generator.serialize())?;
     tx.output[0].value = Value::from_commitment(&value_commitment.serialize())?;
@@ -245,12 +314,12 @@ pub fn liquidex_blind(
 
     tx.output[0].nonce = elements::confidential::Nonce::from_commitment(&nonce_commitment)?;
 
-    Ok(Unblinded {
+    Ok(elements::TxOutSecrets::new(
         asset,
         asset_blinder,
-        value_blinder,
         value,
-    })
+        value_blinder,
+    ))
 }
 
 pub fn liquidex_unblind(
@@ -259,7 +328,7 @@ pub fn liquidex_unblind(
     vout: u32,
     secp: &Secp256k1<All>,
     assets: &HashSet<elements::issuance::AssetId>,
-) -> Result<Unblinded, Error> {
+) -> Result<elements::TxOutSecrets, Error> {
     // check vout is reasonable
     let vout = vout as usize;
     if vout + 1 > tx.output.len() || vout + 1 > tx.input.len() {
@@ -280,9 +349,9 @@ pub fn liquidex_unblind(
     // FIXME: check input has a script belonging to the wallet
     // compute blinders
     let asset_blinder =
-        _liquidex_derive_blinder(master_blinding_key, &tx.input[vout].previous_output, true)?;
+        liquidex_derive_asset_blinder(master_blinding_key, &tx.input[vout].previous_output)?;
     let value_blinder =
-        _liquidex_derive_blinder(master_blinding_key, &tx.input[vout].previous_output, false)?;
+        liquidex_derive_value_blinder(master_blinding_key, &tx.input[vout].previous_output)?;
 
     // compute key
     let key = _liquidex_aes_key(master_blinding_key, &tx.output[vout].script_pubkey)?;
@@ -313,8 +382,12 @@ pub fn liquidex_unblind(
     // check value matches value commitment
     let tx_asset_generator = tx.output[vout].asset.commitment().unwrap();
     let tx_value_commitment = tx.output[vout].value.commitment().unwrap();
-    let value_commitment =
-        secp256k1_zkp::PedersenCommitment::new(secp, value, value_blinder, tx_asset_generator);
+    let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+        secp,
+        value,
+        value_blinder.into_inner(),
+        tx_asset_generator,
+    );
     if value_commitment != tx_value_commitment {
         return Err(Error::Generic(
             "LiquiDEX error value commitment".to_string(),
@@ -326,7 +399,8 @@ pub fn liquidex_unblind(
     for candidate in assets {
         // check asset matches asset commitment
         let asset_tag = secp256k1_zkp::Tag::from(candidate.into_inner().into_inner());
-        let asset_generator = secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder);
+        let asset_generator =
+            secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder.into_inner());
         if asset_generator == tx_asset_generator {
             asset = Some(candidate.clone());
             break;
@@ -340,16 +414,16 @@ pub fn liquidex_unblind(
     let asset = asset.unwrap();
 
     // return unblinded
-    Ok(Unblinded {
+    Ok(elements::TxOutSecrets::new(
         asset,
         asset_blinder,
-        value_blinder,
         value,
-    })
+        value_blinder,
+    ))
 }
 
 fn outputs(
-    maker_output: &Unblinded,
+    maker_output: &elements::TxOutSecrets,
     tx: &elements::Transaction,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut outputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
@@ -369,9 +443,9 @@ fn outputs(
 }
 
 fn inputs(
-    maker_input: &Unblinded,
+    maker_input: &elements::TxOutSecrets,
     tx: &elements::Transaction,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut inputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for (idx, input) in tx.input.iter().enumerate() {
@@ -386,12 +460,12 @@ fn inputs(
 }
 
 pub fn liquidex_needs(
-    maker_input: &Unblinded,
-    maker_output: &Unblinded,
+    maker_input: &elements::TxOutSecrets,
+    maker_output: &elements::TxOutSecrets,
     tx: &elements::Transaction,
     fee_rate: f64,
     policy_asset: &elements::issuance::AssetId,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> Vec<(elements::issuance::AssetId, u64)> {
     let mut outputs = outputs(maker_output, tx);
     let mut inputs = inputs(maker_input, tx, unblinded);
@@ -415,20 +489,20 @@ pub fn liquidex_needs(
 }
 
 pub fn liquidex_estimated_changes(
-    maker_input: &Unblinded,
+    maker_input: &elements::TxOutSecrets,
     tx: &elements::Transaction,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> u8 {
     inputs(maker_input, tx, unblinded).len() as u8
 }
 
 pub fn liquidex_changes(
-    maker_input: &Unblinded,
-    maker_output: &Unblinded,
+    maker_input: &elements::TxOutSecrets,
+    maker_output: &elements::TxOutSecrets,
     tx: &elements::Transaction,
     estimated_fee: u64,
     policy_asset: &elements::issuance::AssetId,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut outputs_asset_amounts = outputs(maker_output, tx);
     let inputs_asset_amounts = inputs(maker_input, tx, unblinded);
@@ -452,11 +526,11 @@ pub fn liquidex_changes(
 }
 
 pub fn liquidex_fee(
-    maker_input: &Unblinded,
-    maker_output: &Unblinded,
+    maker_input: &elements::TxOutSecrets,
+    maker_output: &elements::TxOutSecrets,
     tx: &elements::Transaction,
     policy_asset: &elements::issuance::AssetId,
-    unblinded: &HashMap<elements::OutPoint, Unblinded>,
+    unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> u64 {
     assert!(!tx.output.iter().any(|o| o.is_fee()));
     let outputs = outputs(maker_output, tx);
@@ -528,7 +602,8 @@ mod tests {
         }"#;
 
         let proposal: LiquidexProposal = serde_json::from_str(proposal_str).unwrap();
-        assert_eq!(proposal.outputs[0].value, 175);
+        println!("{:#?}", proposal);
+        assert_eq!(proposal.outputs[0].amount, 175);
 
         // verify commitments matches the tx output and that the blinder are deserialized correctly
         let secp = elements::secp256k1_zkp::Secp256k1::new();

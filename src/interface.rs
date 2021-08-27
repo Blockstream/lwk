@@ -12,7 +12,7 @@ use elements::{BlockHash, Script, Txid};
 use hex;
 use log::{info, trace};
 
-use crate::model::{CreateTransactionOpt, TransactionDetails, Unblinded, UnblindedTXO, TXO};
+use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
 use bip39;
@@ -587,17 +587,7 @@ impl WalletCtx {
                 .unblinded
                 .get(&previous_output)
                 .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
-
-            inp_txout_sec.push(Some(elements::TxOutSecrets::new(
-                unblinded.asset,
-                elements::confidential::AssetBlindingFactor::from_slice(
-                    &unblinded.asset_blinder[..],
-                )?,
-                unblinded.value,
-                elements::confidential::ValueBlindingFactor::from_slice(
-                    &unblinded.value_blinder[..],
-                )?,
-            )));
+            inp_txout_sec.push(Some(unblinded.clone()));
 
             let prev_tx = store_read
                 .cache
@@ -808,8 +798,8 @@ impl WalletCtx {
 
     fn liquidex_take_blind(
         &self,
-        maker_input: &Unblinded,
-        maker_output: &Unblinded,
+        maker_input: &elements::TxOutSecrets,
+        maker_output: &elements::TxOutSecrets,
         tx: &mut elements::Transaction,
     ) -> Result<(), Error> {
         let mut input_domain = vec![];
@@ -831,15 +821,15 @@ impl WalletCtx {
             let asset_generator = secp256k1_zkp::Generator::new_blinded(
                 &self.secp,
                 asset_tag,
-                unblinded.asset_blinder,
+                unblinded.asset_bf.into_inner(),
             );
             let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
                 unblinded.value,
-                unblinded.value_blinder,
-                unblinded.asset_blinder,
+                unblinded.value_bf.into_inner(),
+                unblinded.asset_bf.into_inner(),
             );
             input_commitment_secrets.push(commitment_secrets);
-            input_domain.push((asset_generator, asset_tag, unblinded.asset_blinder));
+            input_domain.push((asset_generator, asset_tag, unblinded.asset_bf.into_inner()));
         }
 
         let ct_exp = 0;
@@ -861,8 +851,8 @@ impl WalletCtx {
                         let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
 
                         let asset = maker_output.asset;
-                        let asset_blinder = maker_output.asset_blinder;
-                        let value_blinder = maker_output.value_blinder;
+                        let asset_blinder = maker_output.asset_bf.into_inner();
+                        let value_blinder = maker_output.value_bf.into_inner();
                         let value = maker_output.value;
 
                         output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(

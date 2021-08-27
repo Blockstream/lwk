@@ -32,6 +32,8 @@ pub enum Error {
     ClientError(electrum_client::Error),
     SliceConversionError(std::array::TryFromSliceError),
     ElementsEncode(elements::encode::Error),
+    ElementsPset(elements::pset::Error),
+    PsetBlindError(elements::pset::PsetBlindError),
     Send(std::sync::mpsc::SendError<()>),
     Secp256k1(elements::bitcoin::secp256k1::Error),
     Secp256k1Zkp(elements::secp256k1_zkp::Error),
@@ -68,6 +70,8 @@ impl Display for Error {
             Error::ClientError(ref client_err) => write!(f, "client: {:?}", client_err),
             Error::SliceConversionError(ref slice_err) => write!(f, "slice: {}", slice_err),
             Error::ElementsEncode(ref el_err) => write!(f, "el_err: {}", el_err),
+            Error::ElementsPset(ref err) => write!(f, "el_pset_err: {}", err),
+            Error::PsetBlindError(ref err) => write!(f, "pset_blind_err: {}", err),
             Error::Send(ref send_err) => write!(f, "send_err: {:?}", send_err),
             Error::Secp256k1(ref err) => write!(f, "Secp256k1_err: {:?}", err),
             Error::Secp256k1Zkp(ref err) => write!(f, "Secp256k1_zkp_err: {:?}", err),
@@ -168,6 +172,18 @@ impl From<elements::bitcoin::hashes::error::Error> for Error {
 impl From<elements::encode::Error> for Error {
     fn from(err: elements::encode::Error) -> Self {
         Error::ElementsEncode(err)
+    }
+}
+
+impl From<elements::pset::Error> for Error {
+    fn from(err: elements::pset::Error) -> Self {
+        Error::ElementsPset(err)
+    }
+}
+
+impl From<elements::pset::PsetBlindError> for Error {
+    fn from(err: elements::pset::PsetBlindError) -> Self {
+        Error::PsetBlindError(err)
     }
 }
 

@@ -574,140 +574,54 @@ impl WalletCtx {
     }
 
     fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
-        // TODO: take a PSET and blind it with its method
-        info!("blind_tx {}", tx.txid());
-        let mut input_domain = vec![];
-        let mut input_commitment_secrets = vec![];
-        let mut output_commitment_secrets = vec![];
+        // TODO: take a PSET
+        let mut pset = elements::pset::PartiallySignedTransaction::from_tx(tx.clone());
+        let mut inp_txout_sec: Vec<Option<elements::TxOutSecrets>> = vec![];
+
         let store_read = self.store.read()?;
-        for input in tx.input.iter() {
+        for input in pset.inputs.iter_mut() {
+            let previous_output =
+                elements::OutPoint::new(input.previous_txid, input.previous_output_index);
             let unblinded = store_read
                 .cache
                 .unblinded
-                .get(&input.previous_output)
+                .get(&previous_output)
                 .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
 
-            let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
-            let asset_generator = secp256k1_zkp::Generator::new_blinded(
-                &self.secp,
-                asset_tag,
-                unblinded.asset_blinder,
-            );
-            let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
+            inp_txout_sec.push(Some(elements::TxOutSecrets::new(
+                unblinded.asset,
+                elements::confidential::AssetBlindingFactor::from_slice(
+                    &unblinded.asset_blinder[..],
+                )?,
                 unblinded.value,
-                unblinded.value_blinder,
-                unblinded.asset_blinder,
-            );
-            input_commitment_secrets.push(commitment_secrets);
-            input_domain.push((asset_generator, asset_tag, unblinded.asset_blinder));
+                elements::confidential::ValueBlindingFactor::from_slice(
+                    &unblinded.value_blinder[..],
+                )?,
+            )));
+
+            let prev_tx = store_read
+                .cache
+                .all_txs
+                .get(&input.previous_txid)
+                .ok_or_else(|| Error::Generic("expected tx".into()))?;
+            let txout = prev_tx.output[input.previous_output_index as usize].clone();
+            input.witness_utxo = Some(txout);
         }
 
-        let ct_exp = 0;
-        let ct_bits = 52;
-
-        let out_num = tx.output.len();
-        let hash_prevouts = get_hash_prevout(&tx);
-        let mut rng = rand::thread_rng();
-        for (i, mut output) in tx.output.iter_mut().enumerate() {
-            if !output.is_fee() {
-                match (output.value, output.asset, output.nonce) {
-                    (
-                        Value::Explicit(value),
-                        Asset::Explicit(asset),
-                        Nonce::Confidential(nonce),
-                    ) => {
-                        let receiver_blinding_pk = nonce;
-                        let sender_sk = secp256k1::SecretKey::new(&mut rng);
-                        let sender_pk =
-                            secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
-                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
-
-                        let asset_blinder =
-                            derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
-
-                        let value_blinder = if i < out_num - 2 {
-                            let value_blinder = derive_blinder(
-                                &self.master_blinding,
-                                &hash_prevouts,
-                                i as u32,
-                                false,
-                            )?;
-
-                            output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
-                                value,
-                                value_blinder,
-                                asset_blinder,
-                            ));
-
-                            value_blinder
-                        } else {
-                            // last value blinder is special and must be set to balance the transaction
-                            secp256k1_zkp::compute_adaptive_blinding_factor(
-                                &self.secp,
-                                value,
-                                asset_blinder,
-                                &input_commitment_secrets[..],
-                                &output_commitment_secrets[..],
-                            )
-                        };
-
-                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
-                        let asset_generator = secp256k1_zkp::Generator::new_blinded(
-                            &self.secp,
-                            asset_tag,
-                            asset_blinder,
-                        );
-                        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
-                            &self.secp,
-                            value,
-                            value_blinder,
-                            asset_generator,
-                        );
-                        let min_value = if output.script_pubkey.is_provably_unspendable() {
-                            0
-                        } else {
-                            1
-                        };
-
-                        let message = make_rangeproof_message(asset, asset_blinder);
-
-                        let rangeproof = secp256k1_zkp::RangeProof::new(
-                            &self.secp,
-                            min_value,
-                            value_commitment,
-                            value,
-                            value_blinder,
-                            &message,
-                            &output.script_pubkey.as_bytes(),
-                            shared_secret,
-                            ct_exp,
-                            ct_bits,
-                            asset_generator,
-                        )?;
-
-                        let surjectionproof = secp256k1_zkp::SurjectionProof::new(
-                            &self.secp,
-                            &mut rng,
-                            asset_tag,
-                            asset_blinder,
-                            &input_domain,
-                        )?;
-
-                        output.nonce =
-                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
-                        output.asset = elements::confidential::Asset::from_commitment(
-                            &asset_generator.serialize(),
-                        )?;
-                        output.value = elements::confidential::Value::from_commitment(
-                            &value_commitment.serialize(),
-                        )?;
-                        output.witness.surjection_proof = Some(surjectionproof);
-                        output.witness.rangeproof = Some(rangeproof);
-                    }
-                    _ => panic!("create_tx created things not right"),
-                }
-            }
+        for output in pset.outputs.iter_mut() {
+            // Elements Core when adding a new confidential output puts the receiver blinding key
+            // in the nonce field, then when blinding this is replaced by the sender ephemeral
+            // public key (ecdh_pubkey). We do the same in transaction creation. However when
+            // creating the PSET from the transaction, the value stored in the nonce field is the
+            // receiver blinding key not the ecdh_pubkey, so we swap them.
+            std::mem::swap(&mut output.blinding_key, &mut output.ecdh_pubkey);
+            // We are the owner of all inputs and outputs
+            output.blinder_index = Some(0);
         }
+
+        let inp_txout_sec: Vec<_> = inp_txout_sec.iter().map(|e| e.as_ref()).collect();
+        pset.blind_last(&mut rand::thread_rng(), &self.secp, &inp_txout_sec[..])?;
+        *tx = pset.extract_tx()?;
         Ok(())
     }
 

@@ -18,7 +18,8 @@ log = "0.4.8"
 aes-gcm-siv = "0.5.0"
 electrum-client = "0.8.0"
 bip39 = "1.0.0-rc1"
-elements = { version = "0.18", features = ["serde-feature"] }
+#elements = { version = "0.18", features = ["serde-feature"] }
+elements = { git = "https://github.com/ElementsProject/rust-elements", rev = "53d5729f8cdc3623f9f110edba86aeaa9059af5b", features = [ "serde-feature" ]}
 
 [dev-dependencies]
 core-rpc = "0.14"

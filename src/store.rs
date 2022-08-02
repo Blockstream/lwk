@@ -159,7 +159,7 @@ fn load_decrypt<P: AsRef<Path>>(
 impl StoreMeta {
     pub fn new<P: AsRef<Path>>(path: P, xpub: ExtendedPubKey) -> Result<StoreMeta, Error> {
         let mut enc_key_data = vec![];
-        enc_key_data.extend(&xpub.public_key.to_bytes());
+        enc_key_data.extend(&xpub.public_key.serialize());
         enc_key_data.extend(&xpub.chain_code.to_bytes());
         enc_key_data.extend(&xpub.network.magic().to_be_bytes());
         let key_bytes = sha256::Hash::hash(&enc_key_data).into_inner();
@@ -248,7 +248,7 @@ impl StoreMeta {
                     result.cached = false;
                     let second_path = [ChildNumber::from(j)];
                     let second_deriv = first_deriv.derive_pub(&self.secp, &second_path)?;
-                    p2shwpkh_script(&second_deriv.public_key)
+                    p2shwpkh_script(&second_deriv.to_pub())
                 }
             };
             result.value.push((script, path));

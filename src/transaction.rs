@@ -131,7 +131,7 @@ pub fn estimated_fee(tx: &elements::Transaction, fee_rate: f64, more_changes: u8
 
     tx.output.push(elements::TxOut::default()); // mockup for the explicit fee output
                                                 // proofs belongs to the witness, their size is discounted and thus is not scaled
-    let vbytes = (tx.get_weight() + proofs_size) as f64 / 4.0;
+    let vbytes = (tx.weight() + proofs_size) as f64 / 4.0;
     let fee_val = (vbytes * fee_rate * 1.03) as u64; // increasing estimated fee by 3% to stay over relay fee, TODO improve fee estimation and lower this
     info!(
         "DUMMYTX inputs:{} outputs:{} num_changes:{} vbytes:{} fee_val:{}",

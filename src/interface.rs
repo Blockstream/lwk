@@ -7,6 +7,7 @@ use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::bitcoin::PublicKey;
+use elements::encode::Encodable;
 use elements::secp256k1_zkp;
 use elements::{BlockHash, Script, Txid};
 use hex;
@@ -74,34 +75,6 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     Ok(xprv.derive_priv(&secp, &path)?)
 }
 
-// Copied from current elements master
-// TODO: remove when updating elements
-/// Create the shared secret.
-pub fn make_shared_secret(
-    pk: &secp256k1::PublicKey,
-    sk: &secp256k1::SecretKey,
-) -> secp256k1::SecretKey {
-    let shared_secret = secp256k1_zkp::ecdh::SharedSecret::new_with_hash(pk, sk, |x, y| {
-        // Yes, what follows is the compressed representation of a Bitcoin public key.
-        // However, this is more by accident then by design, see here: https://github.com/rust-bitcoin/rust-secp256k1/pull/255#issuecomment-744146282
-
-        let mut dh_secret = [0u8; 33];
-        dh_secret[0] = if y.last().unwrap() % 2 == 0 {
-            0x02
-        } else {
-            0x03
-        };
-        dh_secret[1..].copy_from_slice(&x);
-
-        elements::bitcoin::hashes::sha256d::Hash::hash(&dh_secret)
-            .into_inner()
-            .into()
-    });
-
-    secp256k1::SecretKey::from_slice(&shared_secret.as_ref()[..32])
-        .expect("always has exactly 32 bytes")
-}
-
 pub fn make_rangeproof_message(
     asset: elements::issuance::AssetId,
     bf: secp256k1_zkp::Tweak,
@@ -131,7 +104,7 @@ impl WalletCtx {
     pub fn from_mnemonic(mnemonic: &str, data_root: &str, config: Config) -> Result<Self, Error> {
         let xprv = mnemonic2xprv(mnemonic, config.clone())?;
         let secp = Secp256k1::new();
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
+        let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
 
         let wallet_desc = format!("{}{:?}", xpub, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
@@ -167,12 +140,12 @@ impl WalletCtx {
             .map(|x| ChildNumber::Normal { index: *x })
             .collect();
         let derived = xpub.derive_pub(&self.secp, &path)?;
-        let script = p2shwpkh_script(&derived.public_key);
+        let script = p2shwpkh_script(&derived.to_pub());
         let blinding_key = self.master_blinding.derive_blinding_key(&script);
         let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
         let blinder = Some(public_key);
         let addr = elements::Address::p2shwpkh(
-            &derived.public_key,
+            &derived.to_pub(),
             blinder,
             address_params(self.config.network()),
         );
@@ -468,14 +441,14 @@ impl WalletCtx {
         derivation_path: &DerivationPath,
         value: Value,
         xprv: ExtendedPrivKey,
-        sighash_type: Option<elements::SigHashType>,
+        sighash_type: Option<elements::EcdsaSigHashType>,
     ) -> (Script, Vec<Vec<u8>>) {
         let xprv = xprv.derive_priv(&self.secp, &derivation_path).unwrap();
-        let private_key = &xprv.private_key;
+        let private_key = &xprv.to_priv();
         let public_key = &PublicKey::from_private_key(&self.secp, private_key);
 
         let script_code = p2pkh_script(public_key);
-        let sighash_type = sighash_type.unwrap_or(elements::SigHashType::All);
+        let sighash_type = sighash_type.unwrap_or(elements::EcdsaSigHashType::All);
         let sighash = elements::sighash::SigHashCache::new(tx).segwitv0_sighash(
             input_index,
             &script_code,
@@ -483,7 +456,7 @@ impl WalletCtx {
             sighash_type,
         );
         let message = secp256k1::Message::from_slice(&sighash[..]).unwrap();
-        let signature = self.secp.sign(&message, &private_key.key);
+        let signature = self.secp.sign_ecdsa(&message, &private_key.inner);
         let mut signature = signature.serialize_der().to_vec();
         signature.push(sighash_type as u8);
 
@@ -547,8 +520,8 @@ impl WalletCtx {
             .sum();
         info!(
             "transaction final size is {} bytes and {} vbytes and fee is {}",
-            tx.get_size(),
-            tx.get_weight() / 4,
+            tx.size(),
+            tx.weight() / 4,
             fee
         );
         info!(
@@ -579,7 +552,7 @@ impl WalletCtx {
         let mut inp_txout_sec: Vec<Option<elements::TxOutSecrets>> = vec![];
 
         let store_read = self.store.read()?;
-        for input in pset.inputs.iter_mut() {
+        for input in pset.inputs_mut().iter_mut() {
             let previous_output =
                 elements::OutPoint::new(input.previous_txid, input.previous_output_index);
             let unblinded = store_read
@@ -598,13 +571,7 @@ impl WalletCtx {
             input.witness_utxo = Some(txout);
         }
 
-        for output in pset.outputs.iter_mut() {
-            // Elements Core when adding a new confidential output puts the receiver blinding key
-            // in the nonce field, then when blinding this is replaced by the sender ephemeral
-            // public key (ecdh_pubkey). We do the same in transaction creation. However when
-            // creating the PSET from the transaction, the value stored in the nonce field is the
-            // receiver blinding key not the ecdh_pubkey, so we swap them.
-            std::mem::swap(&mut output.blinding_key, &mut output.ecdh_pubkey);
+        for output in pset.outputs_mut().iter_mut() {
             // We are the owner of all inputs and outputs
             output.blinder_index = Some(0);
         }
@@ -682,7 +649,7 @@ impl WalletCtx {
             .clone();
 
         let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
-        let sighash_type = Some(elements::SigHashType::SinglePlusAnyoneCanPay);
+        let sighash_type = Some(elements::EcdsaSigHashType::SinglePlusAnyoneCanPay);
         let (script_sig, witness) =
             self.internal_sign_elements(&tx, 0, &derivation_path, out.value, xprv, sighash_type);
 
@@ -841,14 +808,12 @@ impl WalletCtx {
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             if !output.is_fee() {
                 match (i, output.value, output.asset, output.nonce) {
-                    (
-                        0,
-                        Value::Confidential(_),
-                        Asset::Confidential(_),
-                        Nonce::Confidential(receiver_blinding_pk),
-                    ) => {
+                    (0, Value::Confidential(_), Asset::Confidential(_), Nonce::Confidential(_)) => {
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
-                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
+                        let shared_secret = output
+                            .nonce
+                            .shared_secret(&sender_sk)
+                            .expect("always confidential");
 
                         let asset = maker_output.asset;
                         let asset_blinder = maker_output.asset_bf.into_inner();
@@ -903,19 +868,19 @@ impl WalletCtx {
                             &input_domain,
                         )?;
 
-                        output.witness.surjection_proof = Some(surjectionproof);
-                        output.witness.rangeproof = Some(rangeproof);
+                        output.witness.surjection_proof = Some(Box::new(surjectionproof));
+                        output.witness.rangeproof = Some(Box::new(rangeproof));
                     }
-                    (
-                        _,
-                        Value::Explicit(value),
-                        Asset::Explicit(asset),
-                        Nonce::Confidential(receiver_blinding_pk),
-                    ) => {
+                    (_, Value::Explicit(value), Asset::Explicit(asset), Nonce::Confidential(_)) => {
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
                         let sender_pk =
                             secp256k1::PublicKey::from_secret_key(&self.secp, &sender_sk);
-                        let shared_secret = make_shared_secret(&receiver_blinding_pk, &sender_sk);
+                        let shared_secret = output
+                            .nonce
+                            .shared_secret(&sender_sk)
+                            .expect("always confidential");
+                        output.nonce =
+                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
 
                         let asset_blinder =
                             derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
@@ -988,16 +953,14 @@ impl WalletCtx {
                             &input_domain,
                         )?;
 
-                        output.nonce =
-                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
                         output.asset = elements::confidential::Asset::from_commitment(
                             &asset_generator.serialize(),
                         )?;
                         output.value = elements::confidential::Value::from_commitment(
                             &value_commitment.serialize(),
                         )?;
-                        output.witness.surjection_proof = Some(surjectionproof);
-                        output.witness.rangeproof = Some(rangeproof);
+                        output.witness.surjection_proof = Some(Box::new(surjectionproof));
+                        output.witness.rangeproof = Some(Box::new(rangeproof));
                     }
                     _ => panic!("create_tx created things not right"),
                 }
@@ -1048,5 +1011,9 @@ fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
 }
 
 fn get_hash_prevout(tx: &elements::Transaction) -> elements::bitcoin::hashes::sha256d::Hash {
-    elements::sighash::SigHashCache::new(tx).hash_prevouts()
+    let mut enc = elements::bitcoin::hashes::sha256d::Hash::engine();
+    for txin in &tx.input {
+        txin.previous_output.consensus_encode(&mut enc).unwrap();
+    }
+    elements::bitcoin::hashes::sha256d::Hash::from_engine(enc)
 }

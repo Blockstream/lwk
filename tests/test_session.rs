@@ -1,7 +1,7 @@
 extern crate bewallet;
 
 use chrono::Utc;
-use core_rpc::{Auth, Client, RpcApi};
+use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements;
 use elements::bitcoin::hashes::hex::{FromHex, ToHex};
@@ -140,12 +140,11 @@ impl TestElectrumServer {
         ];
         let network = "liquidregtest";
 
-        let conf = electrsd::bitcoind::Conf {
-            args,
-            view_stdout: is_debug,
-            p2p: electrsd::bitcoind::P2P::Yes,
-            network,
-        };
+        let mut conf = electrsd::bitcoind::Conf::default();
+        conf.args = args;
+        conf.view_stdout = is_debug;
+        conf.p2p = electrsd::bitcoind::P2P::Yes;
+        conf.network = network;
 
         let node = electrsd::bitcoind::BitcoinD::with_conf(&node_exec, &conf).unwrap();
         info!("node spawned");
@@ -170,12 +169,11 @@ impl TestElectrumServer {
             .unwrap();
 
         let args = if is_debug { vec!["-v"] } else { vec![] };
-        let conf = electrsd::Conf {
-            args,
-            view_stderr: is_debug,
-            http_enabled: false,
-            network,
-        };
+        let mut conf = electrsd::Conf::default();
+        conf.args = args;
+        conf.view_stderr = is_debug;
+        conf.http_enabled = false;
+        conf.network = network;
         let electrs = electrsd::ElectrsD::with_conf(&electrs_exec, &node, &conf).unwrap();
         info!("Electrs spawned");
 

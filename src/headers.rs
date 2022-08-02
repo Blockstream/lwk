@@ -5,9 +5,9 @@ use crate::ElementsNetwork;
 use electrum_client::GetMerkleRes;
 use elements::bitcoin::hashes::hex::FromHex;
 use elements::bitcoin::hashes::{sha256d, Hash};
-use elements::bitcoin::secp256k1::{Message, Secp256k1, Signature, VerifyOnly};
+use elements::bitcoin::secp256k1::{ecdsa::Signature, Message, Secp256k1, VerifyOnly};
 use elements::bitcoin::PublicKey;
-use elements::opcodes::Class;
+use elements::opcodes::{Class, ClassifyContext};
 use elements::script::Instruction;
 use elements::TxMerkleNode;
 use elements::{opcodes, script};
@@ -140,7 +140,7 @@ impl Verifier {
         hash: &BlockHash,
         stack: &mut Vec<Vec<u8>>,
     ) -> Result<(), Error> {
-        if let Class::PushNum(val) = op.classify() {
+        if let Class::PushNum(val) = op.classify(ClassifyContext::Legacy) {
             return Ok(stack.push(vec![val as u8]));
         } else if *op == opcodes::all::OP_CHECKMULTISIG {
             let total_pubkeys = stack.pop().ok_or_else(|| Error::InvalidHeaders)?[0] as usize;
@@ -168,7 +168,11 @@ impl Verifier {
             for signature in signatures.iter() {
                 for pubkey in pubkeys[pubkey_index..].iter() {
                     pubkey_index += 1;
-                    if self.secp.verify(&msg, signature, &pubkey.key).is_ok() {
+                    if self
+                        .secp
+                        .verify_ecdsa(&msg, signature, &pubkey.inner)
+                        .is_ok()
+                    {
                         verified += 1;
                         break;
                     }

@@ -54,13 +54,11 @@ use rand::thread_rng;
 struct Syncer {
     pub store: Store,
     pub master_blinding: MasterBlindingKey,
-    pub config: Config,
     secp: secp256k1::Secp256k1<secp256k1::All>,
 }
 
 struct Tipper {
     pub store: Store,
-    pub config: Config,
 }
 
 struct Headers {
@@ -493,7 +491,6 @@ impl ElectrumWallet {
         // consider not using Tipper
         let tipper = Tipper {
             store: self.wallet.store.clone(),
-            config: self.config.clone(),
         };
         let tipper_url = self.config.electrum_url();
         if let Ok(client) = tipper_url.build_client() {
@@ -534,7 +531,6 @@ impl ElectrumWallet {
         let syncer = Syncer {
             store: self.wallet.store.clone(),
             master_blinding: self.wallet.master_blinding.clone(),
-            config: self.config.clone(),
             secp: secp256k1::Secp256k1::new(),
         };
 

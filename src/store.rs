@@ -26,7 +26,7 @@ pub type Store = Arc<RwLock<StoreMeta>>;
 
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
 /// It is fully reconstructable from xpub and data from electrum server (plus master blinding for elements)
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
     pub all_txs: HashMap<Txid, elements::Transaction>,
@@ -59,16 +59,25 @@ pub struct RawCache {
     pub indexes: Indexes,
 }
 
-/// RawStore contains data that are not extractable from xpub+blockchain
-#[derive(Default, Serialize, Deserialize)]
-pub struct RawStore {
-    /// Assets that might be received by a LiquiDEX maker
-    liquidex_assets: HashSet<elements::issuance::AssetId>,
+impl Default for RawCache {
+    fn default() -> Self {
+        Self {
+            all_txs: HashMap::default(),
+            paths: HashMap::default(),
+            scripts: HashMap::default(),
+            heights: HashMap::default(),
+            headers: HashMap::default(),
+            unblinded: HashMap::default(),
+            txs_verif: HashMap::default(),
+            fee_estimates: Vec::default(),
+            tip: (0, BlockHash::all_zeros()),
+            indexes: Indexes::default(),
+        }
+    }
 }
 
 pub struct StoreMeta {
     pub cache: RawCache,
-    pub store: RawStore,
     secp: Secp256k1<All>,
     path: PathBuf,
     cipher: Aes256GcmSiv,
@@ -105,23 +114,6 @@ impl RawCache {
 
     fn try_new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Result<Self, Error> {
         let decrypted = load_decrypt("cache", path, cipher)?;
-        let store = serde_cbor::from_slice(&decrypted)?;
-        Ok(store)
-    }
-}
-
-impl RawStore {
-    /// create a new RawStore, loading data from a file if any and if there is no error in reading
-    /// errors such as corrupted file or model change in the db, result in a empty store that will be repopulated
-    fn new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Self {
-        Self::try_new(path, cipher).unwrap_or_else(|e| {
-            warn!("Initialize store as default {:?}", e);
-            Default::default()
-        })
-    }
-
-    fn try_new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Result<Self, Error> {
-        let decrypted = load_decrypt("store", path, cipher)?;
         let store = serde_cbor::from_slice(&decrypted)?;
         Ok(store)
     }
@@ -166,7 +158,6 @@ impl StoreMeta {
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(&key);
         let cache = RawCache::new(path.as_ref(), &cipher);
-        let store = RawStore::new(path.as_ref(), &cipher);
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
@@ -180,7 +171,6 @@ impl StoreMeta {
 
         Ok(StoreMeta {
             cache,
-            store,
             cipher,
             secp,
             path,
@@ -219,13 +209,7 @@ impl StoreMeta {
         Ok(())
     }
 
-    fn flush_store(&self) -> Result<(), Error> {
-        self.flush_serializable("store", &self.store)?;
-        Ok(())
-    }
-
     pub fn flush(&self) -> Result<(), Error> {
-        self.flush_store()?;
         self.flush_cache()?;
         Ok(())
     }
@@ -272,28 +256,6 @@ impl StoreMeta {
         } else {
             self.cache.fee_estimates.clone()
         }
-    }
-
-    pub fn liquidex_assets(&self) -> HashSet<elements::issuance::AssetId> {
-        self.store.liquidex_assets.clone()
-    }
-
-    pub fn liquidex_assets_insert(
-        &mut self,
-        asset: elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        let inserted = self.store.liquidex_assets.insert(asset);
-        self.flush_store()?;
-        Ok(inserted)
-    }
-
-    pub fn liquidex_assets_remove(
-        &mut self,
-        asset: &elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        let removed = self.store.liquidex_assets.remove(asset);
-        self.flush_store()?;
-        Ok(removed)
     }
 }
 

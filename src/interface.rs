@@ -7,7 +7,6 @@ use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::bitcoin::PublicKey;
-use elements::encode::Encodable;
 use elements::secp256k1_zkp;
 use elements::{BlockHash, Script, Txid};
 use hex;
@@ -20,10 +19,9 @@ use bip39;
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
-use crate::utils::derive_blinder;
 
 use crate::transaction::*;
-use elements::confidential::{Asset, Nonce, Value};
+use elements::confidential::{Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor};
 use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -32,8 +30,8 @@ use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use crate::liquidex::{
-    liquidex_blind, liquidex_changes, liquidex_estimated_changes, liquidex_fee, liquidex_needs,
-    LiquidexMakeOpt, LiquidexProposal,
+    liquidex_changes, liquidex_estimated_changes, liquidex_fee, liquidex_make_blind,
+    liquidex_needs, LiquidexMakeOpt, LiquidexProposal, LiquidexTxOutSecrets,
 };
 
 pub struct WalletCtx {
@@ -173,9 +171,7 @@ impl WalletCtx {
             }
         });
 
-        let policy_asset = Some(elements::confidential::Asset::Explicit(
-            self.config.policy_asset(),
-        ));
+        let policy_asset = Some(Asset::Explicit(self.config.policy_asset()));
         for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
             trace!("tx_id {}", tx_id);
 
@@ -398,9 +394,7 @@ impl WalletCtx {
         // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption
         scramble(&mut tx);
 
-        let policy_asset = Some(elements::confidential::Asset::Explicit(
-            self.config.policy_asset(),
-        ));
+        let policy_asset = Some(Asset::Explicit(self.config.policy_asset()));
         let fee_val = fee(
             &tx,
             &store_read.cache.all_txs,
@@ -544,10 +538,10 @@ impl WalletCtx {
     fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
         // TODO: take a PSET
         let mut pset = elements::pset::PartiallySignedTransaction::from_tx(tx.clone());
-        let mut inp_txout_sec: Vec<Option<elements::TxOutSecrets>> = vec![];
+        let mut inp_txout_sec: HashMap<usize, elements::TxOutSecrets> = HashMap::new();
 
         let store_read = self.store.read()?;
-        for input in pset.inputs_mut().iter_mut() {
+        for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
             let previous_output =
                 elements::OutPoint::new(input.previous_txid, input.previous_output_index);
             let unblinded = store_read
@@ -555,7 +549,7 @@ impl WalletCtx {
                 .unblinded
                 .get(&previous_output)
                 .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
-            inp_txout_sec.push(Some(unblinded.clone()));
+            inp_txout_sec.insert(i, unblinded.clone());
 
             let prev_tx = store_read
                 .cache
@@ -571,8 +565,7 @@ impl WalletCtx {
             output.blinder_index = Some(0);
         }
 
-        let inp_txout_sec: Vec<_> = inp_txout_sec.iter().map(|e| e.as_ref()).collect();
-        pset.blind_last(&mut rand::thread_rng(), &self.secp, &inp_txout_sec[..])?;
+        pset.blind_last(&mut rand::thread_rng(), &self.secp, &inp_txout_sec)?;
         *tx = pset.extract_tx()?;
         Ok(())
     }
@@ -584,24 +577,6 @@ impl WalletCtx {
             store.indexes.external
         };
         self.derive_address(&self.xpub, [0, pointer])
-    }
-
-    pub fn liquidex_assets(&self) -> Result<HashSet<elements::issuance::AssetId>, Error> {
-        Ok(self.store.read()?.liquidex_assets())
-    }
-
-    pub fn liquidex_assets_insert(
-        &self,
-        asset: elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        self.store.write()?.liquidex_assets_insert(asset)
-    }
-
-    pub fn liquidex_assets_remove(
-        &self,
-        asset: &elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        self.store.write()?.liquidex_assets_remove(asset)
     }
 
     pub fn liquidex_make(
@@ -627,7 +602,7 @@ impl WalletCtx {
         add_input(&mut tx, opt.utxo.clone());
         add_output(&mut tx, &address, receive_value, opt.asset_id.to_hex())?;
 
-        let unblinded_output = liquidex_blind(&self.master_blinding, &mut tx, &self.secp)?;
+        let unblinded_output = liquidex_make_blind(&mut tx, &self.secp)?;
 
         // FIXME: sign with sighash single || anyonecanpay !!
         let prev_tx = store_read
@@ -651,8 +626,7 @@ impl WalletCtx {
         tx.input[0].script_sig = script_sig;
         tx.input[0].witness.script_witness = witness;
 
-        let proposal = LiquidexProposal::new(&tx, unblinded_input.clone(), unblinded_output);
-        Ok(proposal)
+        LiquidexProposal::new(&tx, unblinded_input.clone(), unblinded_output, &self.secp)
     }
 
     pub fn liquidex_take(
@@ -671,7 +645,7 @@ impl WalletCtx {
         add_output(
             &mut tx,
             &address,
-            maker_input.value,
+            maker_input.satoshi,
             maker_input.asset.to_hex(),
         )?;
 
@@ -752,7 +726,8 @@ impl WalletCtx {
         tx.output.push(fee_output);
 
         // Blind tx
-        self.liquidex_take_blind(&maker_input, &maker_output, &mut tx)?;
+        let scalar = proposal.get_scalar()?;
+        self.liquidex_take_blind(&maker_input, &maker_output, &scalar, &mut tx)?;
         // Sign inputs
         self.liquidex_take_sign(&mut tx, mnemonic)?;
         Ok(tx)
@@ -760,111 +735,57 @@ impl WalletCtx {
 
     fn liquidex_take_blind(
         &self,
-        maker_input: &elements::TxOutSecrets,
-        maker_output: &elements::TxOutSecrets,
+        maker_input: &LiquidexTxOutSecrets,
+        maker_output: &LiquidexTxOutSecrets,
+        scalar: &secp256k1_zkp::Tweak,
         tx: &mut elements::Transaction,
     ) -> Result<(), Error> {
         let mut input_domain = vec![];
-        let mut input_commitment_secrets = vec![];
-        let mut output_commitment_secrets = vec![];
+        let mut inp_secrets = vec![];
+        let mut exp_out_secrets = vec![];
         let store_read = self.store.read()?;
         for (idx, input) in tx.input.iter().enumerate() {
-            let unblinded = if idx == 0 {
-                maker_input
+            let (asset, abf) = if idx == 0 {
+                (maker_input.asset, maker_input.asset_blinder)
             } else {
-                store_read
+                let unblinded = store_read
                     .cache
                     .unblinded
                     .get(&input.previous_output)
-                    .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?
+                    .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
+
+                // We don't have the value bf for the maker input
+                inp_secrets.push((unblinded.value, unblinded.asset_bf, unblinded.value_bf));
+                (unblinded.asset, unblinded.asset_bf)
             };
 
-            let asset_tag = secp256k1_zkp::Tag::from(unblinded.asset.into_inner().into_inner());
-            let asset_generator = secp256k1_zkp::Generator::new_blinded(
-                &self.secp,
-                asset_tag,
-                unblinded.asset_bf.into_inner(),
-            );
-            let commitment_secrets = secp256k1_zkp::CommitmentSecrets::new(
-                unblinded.value,
-                unblinded.value_bf.into_inner(),
-                unblinded.asset_bf.into_inner(),
-            );
-            input_commitment_secrets.push(commitment_secrets);
-            input_domain.push((asset_generator, asset_tag, unblinded.asset_bf.into_inner()));
+            let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
+            let asset_generator =
+                secp256k1_zkp::Generator::new_blinded(&self.secp, asset_tag, abf.into_inner());
+            input_domain.push((asset_generator, asset_tag, abf.into_inner()));
         }
 
         let ct_exp = 0;
         let ct_bits = 52;
 
         let out_num = tx.output.len();
-        let hash_prevouts = get_hash_prevout(&tx);
         let mut rng = rand::thread_rng();
         for (i, mut output) in tx.output.iter_mut().enumerate() {
             if !output.is_fee() {
                 match (i, output.value, output.asset, output.nonce) {
                     (0, Value::Confidential(_), Asset::Confidential(_), Nonce::Confidential(_)) => {
-                        let sender_sk = secp256k1::SecretKey::new(&mut rng);
-                        let shared_secret = output
-                            .nonce
-                            .shared_secret(&sender_sk)
-                            .expect("always confidential");
-
-                        let asset = maker_output.asset;
-                        let asset_blinder = maker_output.asset_bf.into_inner();
-                        let value_blinder = maker_output.value_bf.into_inner();
-                        let value = maker_output.value;
-
-                        output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
-                            value,
-                            value_blinder,
-                            asset_blinder,
-                        ));
-
-                        let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
-                        let asset_generator = secp256k1_zkp::Generator::new_blinded(
-                            &self.secp,
-                            asset_tag,
-                            asset_blinder,
-                        );
-                        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
-                            &self.secp,
-                            value,
-                            value_blinder,
-                            asset_generator,
-                        );
-                        let min_value = if output.script_pubkey.is_provably_unspendable() {
-                            0
-                        } else {
-                            1
-                        };
-
-                        let message = make_rangeproof_message(asset, asset_blinder);
-
-                        let rangeproof = secp256k1_zkp::RangeProof::new(
-                            &self.secp,
-                            min_value,
-                            value_commitment,
-                            value,
-                            value_blinder,
-                            &message,
-                            &output.script_pubkey.as_bytes(),
-                            shared_secret,
-                            ct_exp,
-                            ct_bits,
-                            asset_generator,
-                        )?;
+                        let asset_tag =
+                            secp256k1_zkp::Tag::from(maker_output.asset.into_inner().into_inner());
 
                         let surjectionproof = secp256k1_zkp::SurjectionProof::new(
                             &self.secp,
                             &mut rng,
                             asset_tag,
-                            asset_blinder,
+                            maker_output.asset_blinder.into_inner(),
                             &input_domain,
                         )?;
 
                         output.witness.surjection_proof = Some(Box::new(surjectionproof));
-                        output.witness.rangeproof = Some(Box::new(rangeproof));
                     }
                     (_, Value::Explicit(value), Asset::Explicit(asset), Nonce::Confidential(_)) => {
                         let sender_sk = secp256k1::SecretKey::new(&mut rng);
@@ -874,48 +795,41 @@ impl WalletCtx {
                             .nonce
                             .shared_secret(&sender_sk)
                             .expect("always confidential");
-                        output.nonce =
-                            elements::confidential::Nonce::from_commitment(&sender_pk.serialize())?;
+                        output.nonce = Nonce::from_commitment(&sender_pk.serialize())?;
 
-                        let asset_blinder =
-                            derive_blinder(&self.master_blinding, &hash_prevouts, i as u32, true)?;
+                        let asset_blinder = AssetBlindingFactor::new(&mut rng);
 
                         let value_blinder = if i < out_num - 2 {
-                            let value_blinder = derive_blinder(
-                                &self.master_blinding,
-                                &hash_prevouts,
-                                i as u32,
-                                false,
-                            )?;
-
-                            output_commitment_secrets.push(secp256k1_zkp::CommitmentSecrets::new(
-                                value,
-                                value_blinder,
-                                asset_blinder,
-                            ));
-
+                            let value_blinder = ValueBlindingFactor::new(&mut rng);
+                            exp_out_secrets.push((value, asset_blinder, value_blinder));
                             value_blinder
                         } else {
                             // last value blinder is special and must be set to balance the transaction
-                            secp256k1_zkp::compute_adaptive_blinding_factor(
+                            let mut last_vbf = ValueBlindingFactor::last(
                                 &self.secp,
                                 value,
                                 asset_blinder,
-                                &input_commitment_secrets[..],
-                                &output_commitment_secrets[..],
-                            )
+                                &inp_secrets[..],
+                                &exp_out_secrets[..],
+                            );
+
+                            // Add the scalar offset from the maker input and outputs
+                            last_vbf += ValueBlindingFactor::from_slice(scalar.as_ref())
+                                .expect("from scalar");
+
+                            last_vbf
                         };
 
                         let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
                         let asset_generator = secp256k1_zkp::Generator::new_blinded(
                             &self.secp,
                             asset_tag,
-                            asset_blinder,
+                            asset_blinder.into_inner(),
                         );
                         let value_commitment = secp256k1_zkp::PedersenCommitment::new(
                             &self.secp,
                             value,
-                            value_blinder,
+                            value_blinder.into_inner(),
                             asset_generator,
                         );
                         let min_value = if output.script_pubkey.is_provably_unspendable() {
@@ -924,14 +838,14 @@ impl WalletCtx {
                             1
                         };
 
-                        let message = make_rangeproof_message(asset, asset_blinder);
+                        let message = make_rangeproof_message(asset, asset_blinder.into_inner());
 
                         let rangeproof = secp256k1_zkp::RangeProof::new(
                             &self.secp,
                             min_value,
                             value_commitment,
                             value,
-                            value_blinder,
+                            value_blinder.into_inner(),
                             &message,
                             &output.script_pubkey.as_bytes(),
                             shared_secret,
@@ -944,16 +858,12 @@ impl WalletCtx {
                             &self.secp,
                             &mut rng,
                             asset_tag,
-                            asset_blinder,
+                            asset_blinder.into_inner(),
                             &input_domain,
                         )?;
 
-                        output.asset = elements::confidential::Asset::from_commitment(
-                            &asset_generator.serialize(),
-                        )?;
-                        output.value = elements::confidential::Value::from_commitment(
-                            &value_commitment.serialize(),
-                        )?;
+                        output.asset = Asset::from_commitment(&asset_generator.serialize())?;
+                        output.value = Value::from_commitment(&value_commitment.serialize())?;
                         output.witness.surjection_proof = Some(Box::new(surjectionproof));
                         output.witness.rangeproof = Some(Box::new(rangeproof));
                     }
@@ -996,12 +906,4 @@ impl WalletCtx {
 
         Ok(())
     }
-}
-
-fn get_hash_prevout(tx: &elements::Transaction) -> elements::bitcoin::hashes::sha256d::Hash {
-    let mut enc = elements::bitcoin::hashes::sha256d::Hash::engine();
-    for txin in &tx.input {
-        txin.previous_output.consensus_encode(&mut enc).unwrap();
-    }
-    elements::bitcoin::hashes::sha256d::Hash::from_engine(enc)
 }

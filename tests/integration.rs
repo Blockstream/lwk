@@ -61,9 +61,6 @@ fn dex() {
     taker.fund_btc(&mut server);
     let asset1 = taker.fund_asset(&mut server);
 
-    // asset db tests
-    taker.liquidex_assets_db_roundtrip();
-
     let mnemonic2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon actual".to_string();
     let mut maker = test_session::TestElectrumWallet::new(&server.electrs.electrum_url, mnemonic2);
 
@@ -75,7 +72,6 @@ fn dex() {
     assert_eq!(maker.balance(&asset2), 10_000);
 
     // asset2 10_000 <-> asset1 10_000 (no change)
-    maker.liquidex_add_asset(&asset1);
     let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset1, 1.0);
 
@@ -89,7 +85,6 @@ fn dex() {
     assert_eq!(maker.balance(&asset2), 0);
 
     // asset1 10_000 <-> asset2 5_000 (maker creates change)
-    maker.liquidex_add_asset(&asset2);
     let utxo = maker.asset_utxos(&asset1)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &asset2, 0.5);
 
@@ -105,7 +100,6 @@ fn dex() {
     // asset2 5_000 <-> L-BTC 5_000
     let policy_asset = taker.policy_asset();
     let sats_w1_policy_before = taker.balance(&policy_asset);
-    maker.liquidex_add_asset(&policy_asset);
     let utxo = maker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = maker.liquidex_make(&utxo, &policy_asset, 1.0);
 
@@ -168,7 +162,6 @@ fn dex() {
     assert!(balance_btc_0 > 0);
 
     // asset2 5_000 <-> asset1 10_000 (no change)
-    taker.liquidex_add_asset(&asset1);
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &asset1, 2.0);
 
@@ -195,7 +188,6 @@ fn dex() {
     assert_eq!(balance_btc_2, balance_btc_1 - fee);
 
     // asset2 5_000 <-> L-BTC 5_000
-    taker.liquidex_add_asset(&policy_asset);
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 
@@ -224,7 +216,6 @@ fn dex() {
     assert_eq!(balance_btc_4, balance_btc_3 - fee);
 
     // asset2 5_000 <-> asset2 5_000
-    taker.liquidex_add_asset(&asset2);
     let utxo = taker.asset_utxos(&asset2)[0].txo.outpoint;
     let proposal = taker.liquidex_make(&utxo, &policy_asset, 1.0);
 

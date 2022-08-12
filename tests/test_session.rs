@@ -771,32 +771,6 @@ impl TestElectrumWallet {
         );
     }
 
-    pub fn liquidex_assets_db_roundtrip(&self) {
-        let asset = elements::issuance::AssetId::from_slice(&[0; 32]).unwrap();
-        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
-        assert!(self
-            .electrum_wallet
-            .liquidex_assets_insert(asset.clone())
-            .unwrap());
-        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 1);
-        assert!(!self
-            .electrum_wallet
-            .liquidex_assets_insert(asset.clone())
-            .unwrap());
-        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 1);
-        assert!(self.electrum_wallet.liquidex_assets_remove(&asset).unwrap());
-        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
-        assert!(!self.electrum_wallet.liquidex_assets_remove(&asset).unwrap());
-        assert_eq!(self.electrum_wallet.liquidex_assets().unwrap().len(), 0);
-    }
-
-    pub fn liquidex_add_asset(&mut self, asset: &elements::issuance::AssetId) {
-        assert!(self
-            .electrum_wallet
-            .liquidex_assets_insert(asset.clone())
-            .unwrap());
-    }
-
     pub fn liquidex_make(
         &self,
         utxo: &elements::OutPoint,

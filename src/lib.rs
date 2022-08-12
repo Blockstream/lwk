@@ -26,7 +26,6 @@ use std::time::Instant;
 use crate::headers::Verifier;
 //use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
 use crate::interface::WalletCtx;
-use crate::liquidex::liquidex_unblind;
 use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
@@ -35,7 +34,6 @@ use crate::transaction::*;
 use log::{debug, info, trace, warn};
 
 use elements::bitcoin::hashes::hex::ToHex;
-use elements::bitcoin::secp256k1;
 use elements::bitcoin::util::bip32::DerivationPath;
 use elements::{BlockHash, Script, Txid};
 
@@ -52,7 +50,6 @@ use rand::thread_rng;
 struct Syncer {
     pub store: Store,
     pub master_blinding: MasterBlindingKey,
-    secp: secp256k1::Secp256k1<secp256k1::All>,
 }
 
 struct Tipper {
@@ -344,13 +341,6 @@ impl Syncer {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
                             Err(_) => info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
-                        // let unblinded = _liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
-
-                        // TODO: consider skipping this more frequently
-                        match self.try_liquidex_unblind(&tx, i as u32) {
-                            Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => info!("LiquiDEX: {} cannot unblind, ignoring", outpoint),
-                        }
                     }
                 }
                 strip_witness(&mut tx);
@@ -413,16 +403,6 @@ impl Syncer {
                 "received unconfidential or null asset/value/nonce".into(),
             )),
         }
-    }
-
-    pub fn try_liquidex_unblind(
-        &self,
-        tx: &elements::Transaction,
-        vout: u32,
-    ) -> Result<elements::TxOutSecrets, Error> {
-        info!("LiquiDEX try unblind: {:?}:{}", tx.txid(), vout);
-        let assets = self.store.read()?.liquidex_assets();
-        liquidex_unblind(&self.master_blinding, &tx, vout, &self.secp, &assets)
     }
 }
 
@@ -545,7 +525,6 @@ impl ElectrumWallet {
         let syncer = Syncer {
             store: self.wallet.store.clone(),
             master_blinding: self.wallet.master_blinding.clone(),
-            secp: secp256k1::Secp256k1::new(),
         };
 
         if let Ok(client) = self.config.electrum_url().build_client() {
@@ -618,27 +597,6 @@ impl ElectrumWallet {
         let client = self.config.electrum_url().build_client()?;
         client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;
         Ok(())
-    }
-
-    /// LiquiDEX assets that might be received from proposal made by the wallet.
-    pub fn liquidex_assets(&self) -> Result<HashSet<elements::issuance::AssetId>, Error> {
-        self.wallet.liquidex_assets()
-    }
-
-    /// Insert an asset in LiquiDEX assets, returns false if asset was already there.
-    pub fn liquidex_assets_insert(
-        &self,
-        asset: elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        self.wallet.liquidex_assets_insert(asset)
-    }
-
-    /// Remove an asset in LiquiDEX assets, returns true if the asset was removed.
-    pub fn liquidex_assets_remove(
-        &self,
-        asset: &elements::issuance::AssetId,
-    ) -> Result<bool, Error> {
-        self.wallet.liquidex_assets_remove(asset)
     }
 
     /// Create and sign a LiquiDEX proposal.

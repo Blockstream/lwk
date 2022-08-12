@@ -266,7 +266,6 @@ pub fn add_input(tx: &mut elements::Transaction, outpoint: elements::OutPoint) {
     let new_in = elements::TxIn {
         previous_output: outpoint,
         is_pegin: false,
-        has_issuance: false,
         script_sig: Script::default(),
         sequence: 0xffff_fffe, // nSequence is disabled, nLocktime is enabled, RBF is not signaled.
         asset_issuance: Default::default(),

@@ -1,23 +1,15 @@
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
-use aes_gcm_siv::Aes256GcmSiv;
-
-use rand::Rng;
-
-use elements::bitcoin::hashes::{sha256, sha256d, Hash};
-use elements::confidential::{Asset, Nonce, Value};
-use elements::encode::Encodable;
+use elements::confidential::{Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor};
 use elements::secp256k1_zkp::{self, All, Secp256k1};
-use elements::slip77::MasterBlindingKey;
+use elements::BlindValueProofs;
 
 use crate::error::Error;
+use crate::interface::make_rangeproof_message;
 use crate::transaction::{estimated_fee, DUST_VALUE};
-use crate::utils::derive_blinder;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct LiquidexMakeOpt {
@@ -39,46 +31,89 @@ impl LiquidexMakeOpt {
     }
 }
 
-// Clone of TxOutSecrets, but with the name changed to match the previous struct.
-// This is a temporary solution since soon we should be able to migrate to PSET.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct LiquidexTxOutSecrets {
-    asset: elements::AssetId,
-    asset_blinder: elements::confidential::AssetBlindingFactor,
-    amount: u64,
-    amount_blinder: elements::confidential::ValueBlindingFactor,
+    pub asset: elements::AssetId,
+    pub asset_blinder: AssetBlindingFactor,
+    pub satoshi: u64,
+    blind_value_proof: Option<secp256k1_zkp::RangeProof>,
 }
 
 impl LiquidexTxOutSecrets {
-    pub fn to_txoutsecrets(&self) -> elements::TxOutSecrets {
-        elements::TxOutSecrets {
-            asset: self.asset,
-            asset_bf: self.asset_blinder,
-            value: self.amount,
-            value_bf: self.amount_blinder,
-        }
-    }
-}
+    fn from_txoutsecrets(txoutsecrets: elements::TxOutSecrets) -> Result<Self, Error> {
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
+        let asset_gen = Asset::new_confidential(&secp, txoutsecrets.asset, txoutsecrets.asset_bf)
+            .commitment()
+            .unwrap();
+        let value_commit =
+            Value::new_confidential(&secp, txoutsecrets.value, asset_gen, txoutsecrets.value_bf)
+                .commitment()
+                .unwrap();
+        let mut rng = rand::thread_rng();
+        let blind_value_proof = secp256k1_zkp::RangeProof::blind_value_proof(
+            &mut rng,
+            &secp,
+            txoutsecrets.value,
+            value_commit,
+            asset_gen,
+            txoutsecrets.value_bf,
+        )?;
 
-impl From<elements::TxOutSecrets> for LiquidexTxOutSecrets {
-    fn from(txoutsecrets: elements::TxOutSecrets) -> Self {
-        Self {
+        Ok(Self {
             asset: txoutsecrets.asset,
             asset_blinder: txoutsecrets.asset_bf,
-            amount: txoutsecrets.value,
-            amount_blinder: txoutsecrets.value_bf,
-        }
+            satoshi: txoutsecrets.value,
+            blind_value_proof: Some(blind_value_proof),
+        })
     }
 }
 
-// TODO: use serde with to make tx a elements::Transaction
+impl LiquidexTxOutSecrets {
+    fn blind_value_proof_verify(
+        &self,
+        secp: &Secp256k1<All>,
+        value_commit: secp256k1_zkp::PedersenCommitment,
+    ) -> bool {
+        if self.blind_value_proof.is_none() {
+            return false;
+        }
+        let rangeproof = self.blind_value_proof.as_ref().unwrap();
+        let asset_gen =
+            Asset::new_confidential(secp, self.asset.clone(), self.asset_blinder.clone())
+                .commitment()
+                .unwrap();
+        rangeproof.blind_value_proof_verify(secp, self.satoshi, asset_gen, value_commit)
+    }
+}
+
+/// Compute `abf * value + vbf (mod n)`
+fn scalar_offset(
+    txoutsecrets: elements::TxOutSecrets,
+    secp: &Secp256k1<All>,
+) -> secp256k1_zkp::Tweak {
+    // Compute the scalar offset corresponding to `txoutsecrets` using the
+    // ValueBlindingFactor::last, and knowing that the last vbf is such that:
+    // abf_i * value_i * + vbf_i = abf_last * value_last + vbf_last
+    // if value_last = 1 and abf_last = 0, then vbf_last = scalar_offset
+    let value_last = 1;
+    let abf_last = AssetBlindingFactor::zero();
+    let inputs = [(
+        txoutsecrets.value,
+        txoutsecrets.asset_bf,
+        txoutsecrets.value_bf,
+    )];
+    let outputs = [];
+    ValueBlindingFactor::last(secp, value_last, abf_last, &inputs, &outputs).into_inner()
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct LiquidexProposal {
-    #[serde(default)]
     version: u32,
+    // TODO: use serde with to make tx a elements::Transaction
     tx: String,
     inputs: Vec<LiquidexTxOutSecrets>,
     outputs: Vec<LiquidexTxOutSecrets>,
+    scalars: Vec<secp256k1_zkp::Tweak>,
 }
 
 impl LiquidexProposal {
@@ -86,13 +121,21 @@ impl LiquidexProposal {
         tx: &elements::Transaction,
         input: elements::TxOutSecrets,
         output: elements::TxOutSecrets,
-    ) -> Self {
-        Self {
-            version: 0,
+        secp: &Secp256k1<All>,
+    ) -> Result<Self, Error> {
+        let input_scalar_offset = scalar_offset(input.clone(), secp);
+        let output_scalar_offset = scalar_offset(output.clone(), secp);
+        // Compute the scalar offset to be added to the last vbf by the Taker to balance the transaction:
+        // abf_i * value_i + vbf_i - (abf_o * value_o + vbf_o)
+        let mut tweak = ValueBlindingFactor::from_slice(input_scalar_offset.as_ref()).unwrap();
+        tweak += -ValueBlindingFactor::from_slice(output_scalar_offset.as_ref()).unwrap();
+        Ok(Self {
+            version: 1,
             tx: hex::encode(elements::encode::serialize(tx)),
-            inputs: vec![input.into()],
-            outputs: vec![output.into()],
-        }
+            inputs: vec![LiquidexTxOutSecrets::from_txoutsecrets(input)?],
+            outputs: vec![LiquidexTxOutSecrets::from_txoutsecrets(output)?],
+            scalars: vec![tweak.into_inner()],
+        })
     }
 
     pub fn transaction(&self) -> Result<elements::Transaction, Error> {
@@ -101,20 +144,21 @@ impl LiquidexProposal {
         )?)?)
     }
 
-    pub fn get_input(&self) -> Result<elements::TxOutSecrets, Error> {
+    pub fn get_input(&self) -> Result<LiquidexTxOutSecrets, Error> {
+        // TODO: validate blind value proof
         if self.inputs.len() != 1 {
             return Err(Error::Generic(
                 "LiquiDEX error unexpected inputs".to_string(),
             ));
         }
 
-        Ok(self.inputs[0].to_txoutsecrets().clone())
+        Ok(self.inputs[0].clone())
     }
 
     pub fn verify_output_commitment(
         &self,
         secp: &Secp256k1<All>,
-    ) -> Result<elements::TxOutSecrets, Error> {
+    ) -> Result<LiquidexTxOutSecrets, Error> {
         let tx = self.transaction()?;
         if tx.input.len() != 1
             || tx.output.len() != 1
@@ -124,129 +168,40 @@ impl LiquidexProposal {
             return Err(Error::Generic("LiquiDEX error".to_string()));
         }
 
-        let output = self.outputs[0].to_txoutsecrets();
+        let output = self.outputs[0].clone();
 
-        // check output is blinded
-        let (tx_asset_generator, tx_value_commitment) =
-            match (tx.output[0].asset, tx.output[0].value) {
-                (Asset::Confidential(generator), Value::Confidential(pedersen_commitment)) => {
-                    (generator, pedersen_commitment)
-                }
-                _ => {
-                    return Err(Error::Generic(
-                        "LiquiDEX error unexpected outputs".to_string(),
-                    ));
-                }
-            };
-
-        let asset_tag = secp256k1_zkp::Tag::from(output.asset.into_inner().into_inner());
-        let asset_generator =
-            secp256k1_zkp::Generator::new_blinded(secp, asset_tag, output.asset_bf.into_inner());
-        let value_commitment = secp256k1_zkp::PedersenCommitment::new(
-            secp,
-            output.value,
-            output.value_bf.into_inner(),
-            asset_generator,
-        );
-
-        if asset_generator != tx_asset_generator || value_commitment != tx_value_commitment {
+        let asset_commitment =
+            Asset::new_confidential(secp, output.asset.clone(), output.asset_blinder.clone());
+        if asset_commitment != tx.output[0].asset || !tx.output[0].value.is_confidential() {
             return Err(Error::Generic(
                 "LiquiDEX error unexpected commitments".to_string(),
             ));
         }
 
-        Ok(output)
-    }
-}
-
-fn _liquidex_derive_blinder(
-    master_blinding_key: &MasterBlindingKey,
-    previous_outpoint: &elements::OutPoint,
-    is_asset_blinder: bool,
-) -> Result<secp256k1_zkp::Tweak, secp256k1_zkp::Error> {
-    // LiquiDEX proposals do not know in advance all inputs of
-    // final transaction, compute the hash only from the previous
-    // outpoint we know is being spent.
-    let hash_prevout = {
-        let mut enc = sha256d::Hash::engine();
-        previous_outpoint.consensus_encode(&mut enc).unwrap();
-        sha256d::Hash::from_engine(enc)
-    };
-
-    // LiquiDEX proposals output vout is choosen by the taker,
-    // for the blinder computation use a vout that may not
-    // occur in a transaction.
-    derive_blinder(
-        master_blinding_key,
-        &hash_prevout,
-        u32::MAX,
-        is_asset_blinder,
-    )
-}
-
-fn liquidex_derive_asset_blinder(
-    master_blinding_key: &MasterBlindingKey,
-    previous_outpoint: &elements::OutPoint,
-) -> Result<elements::confidential::AssetBlindingFactor, Error> {
-    let blinder = _liquidex_derive_blinder(master_blinding_key, previous_outpoint, true)?;
-    elements::confidential::AssetBlindingFactor::from_slice(&blinder[..]).map_err(Into::into)
-}
-
-fn liquidex_derive_value_blinder(
-    master_blinding_key: &MasterBlindingKey,
-    previous_outpoint: &elements::OutPoint,
-) -> Result<elements::confidential::ValueBlindingFactor, Error> {
-    let blinder = _liquidex_derive_blinder(master_blinding_key, previous_outpoint, false)?;
-    elements::confidential::ValueBlindingFactor::from_slice(&blinder[..]).map_err(Into::into)
-}
-
-fn _liquidex_aes_key(
-    master_blinding_key: &MasterBlindingKey,
-    script: &elements::Script,
-) -> Result<[u8; 32], Error> {
-    // TODO: consider using tagged hashes
-    const TAG: &[u8; 16] = b"liquidex_aes_key";
-    let mut engine = sha256::Hash::engine();
-    engine.write(TAG)?;
-    engine.write(&master_blinding_key.0[..])?;
-    engine.write(&script.as_bytes())?;
-    Ok(sha256::Hash::from_engine(engine).into_inner())
-}
-
-fn _liquidex_aes_nonce(
-    master_blinding_key: &MasterBlindingKey,
-    previous_outpoint: &elements::OutPoint,
-    asset: &elements::confidential::Asset,
-    value: &elements::confidential::Value,
-    script: &elements::Script,
-) -> Result<[u8; 12], Error> {
-    match (asset, value) {
-        (Asset::Confidential(_), Value::Confidential(_)) => {}
-        _ => {
+        let value_commit = tx.output[0].value.commitment().unwrap();
+        if !output.blind_value_proof_verify(secp, value_commit) {
             return Err(Error::Generic(
-                "Asset and Value must be confidential".to_string(),
+                "LiquiDEX error invalid blind value proof".to_string(),
             ));
         }
+
+        Ok(output)
     }
-    // TODO: consider using tagged hashes
-    const TAG: &[u8; 18] = b"liquidex_aes_nonce";
-    let mut engine = sha256::Hash::engine();
-    engine.write(TAG)?;
-    engine.write(&master_blinding_key.0[..])?;
-    previous_outpoint.consensus_encode(&mut engine)?;
-    engine.write(&asset.commitment().unwrap().serialize())?;
-    engine.write(&value.commitment().unwrap().serialize())?;
-    engine.write(&script.as_bytes())?;
-    let mut out = [0u8; 12];
-    out.copy_from_slice(&sha256::Hash::from_engine(engine).into_inner()[..12]);
-    Ok(out)
+
+    pub fn get_scalar(&self) -> Result<secp256k1_zkp::Tweak, Error> {
+        if self.scalars.len() != 1 {
+            return Err(Error::Generic(
+                "LiquiDEX error unexpected scalars".to_string(),
+            ));
+        }
+
+        Ok(self.scalars[0].clone())
+    }
 }
 
 /// Blind a LiquiDEX maker transaction.
-/// The maker has no control on the rangeproof, thus it can't rely on it to recover the unblinding
-/// data. Use deterministic blinders and use the nonce field to encrypt the output value.
-pub fn liquidex_blind(
-    master_blinding_key: &MasterBlindingKey,
+/// Maker can create the rangeproof but cannot create the surjection proof.
+pub fn liquidex_make_blind(
     tx: &mut elements::Transaction,
     secp: &Secp256k1<All>,
 ) -> Result<elements::TxOutSecrets, Error> {
@@ -255,21 +210,26 @@ pub fn liquidex_blind(
             "Unexpected LiquiDEX maker transaction num in/out".to_string(),
         ));
     }
-    let (asset, value) = match (tx.output[0].asset, tx.output[0].value, tx.output[0].nonce) {
-        //(Asset::Explicit(asset), Value::Explicit(value), Nonce::Null) => (asset, value),
-        (Asset::Explicit(asset), Value::Explicit(value), _) => (asset, value),
-        _ => {
-            return Err(Error::Generic(
-                "Unexpected LiquiDEX maker transaction".to_string(),
-            ));
-        }
-    };
+    let (asset, value, receiver_blinding_pk) =
+        match (tx.output[0].asset, tx.output[0].value, tx.output[0].nonce) {
+            (
+                Asset::Explicit(asset),
+                Value::Explicit(value),
+                Nonce::Confidential(receiver_blinding_pk),
+            ) => (asset, value, receiver_blinding_pk),
+            _ => {
+                return Err(Error::Generic(
+                    "Unexpected LiquiDEX maker transaction".to_string(),
+                ));
+            }
+        };
 
-    let asset_blinder =
-        liquidex_derive_asset_blinder(master_blinding_key, &tx.input[0].previous_output)?;
-    let value_blinder =
-        liquidex_derive_value_blinder(master_blinding_key, &tx.input[0].previous_output)?;
+    let mut rng = rand::thread_rng();
+    let asset_blinder = AssetBlindingFactor::new(&mut rng);
+    let value_blinder = ValueBlindingFactor::new(&mut rng);
+    let (nonce, shared_secret) = Nonce::new_confidential(&mut rng, secp, &receiver_blinding_pk);
 
+    // create rangeproof
     let asset_tag = secp256k1_zkp::Tag::from(asset.into_inner().into_inner());
     let asset_generator =
         secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder.into_inner());
@@ -279,141 +239,33 @@ pub fn liquidex_blind(
         value_blinder.into_inner(),
         asset_generator,
     );
-
-    tx.output[0].asset = Asset::from_commitment(&asset_generator.serialize())?;
-    tx.output[0].value = Value::from_commitment(&value_commitment.serialize())?;
-
-    let key = _liquidex_aes_key(master_blinding_key, &tx.output[0].script_pubkey)?;
-    let key = GenericArray::from_slice(&key);
-    let cipher = Aes256GcmSiv::new(&key);
-
-    let aes_nonce = _liquidex_aes_nonce(
-        master_blinding_key,
-        &tx.input[0].previous_output,
-        &tx.output[0].asset,
-        &tx.output[0].value,
-        &tx.output[0].script_pubkey,
-    )?;
-    let aes_nonce = GenericArray::from_slice(&aes_nonce);
-
-    let mut rng = rand::thread_rng();
-    let nonce_commitment = loop {
-        // On average does 2 loops.
-        let mut text = [0u8; 16];
-        text[..8].copy_from_slice(&value.to_le_bytes());
-        rng.fill(&mut text[8..]);
-        let mut text = text.to_vec();
-        cipher.encrypt_in_place(aes_nonce, b"", &mut text)?;
-        let mut candidate = [0u8; 33];
-        candidate[0] = 0x02;
-        candidate[1..].copy_from_slice(&text);
-        if let Ok(pk) = secp256k1_zkp::PublicKey::from_slice(&candidate) {
-            break pk.serialize();
-        }
+    let min_value = if tx.output[0].script_pubkey.is_provably_unspendable() {
+        0
+    } else {
+        1
     };
 
-    tx.output[0].nonce = elements::confidential::Nonce::from_commitment(&nonce_commitment)?;
+    let message = make_rangeproof_message(asset, asset_blinder.into_inner());
 
-    Ok(elements::TxOutSecrets::new(
-        asset,
-        asset_blinder,
-        value,
-        value_blinder,
-    ))
-}
-
-pub fn liquidex_unblind(
-    master_blinding_key: &MasterBlindingKey,
-    tx: &elements::Transaction,
-    vout: u32,
-    secp: &Secp256k1<All>,
-    assets: &HashSet<elements::issuance::AssetId>,
-) -> Result<elements::TxOutSecrets, Error> {
-    // check vout is reasonable
-    let vout = vout as usize;
-    if vout + 1 > tx.output.len() || vout + 1 > tx.input.len() {
-        return Err(Error::Generic("LiquiDEX error 1".to_string()));
-    }
-    // check output is blinded
-    match (
-        tx.output[vout].asset,
-        tx.output[vout].value,
-        tx.output[vout].nonce,
-    ) {
-        (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {}
-        _ => {
-            return Err(Error::Generic("LiquiDEX error 2".to_string()));
-        }
-    }
-    // FIXME: check input has sighash single | anyonecanpay
-    // FIXME: check input has a script belonging to the wallet
-    // compute blinders
-    let asset_blinder =
-        liquidex_derive_asset_blinder(master_blinding_key, &tx.input[vout].previous_output)?;
-    let value_blinder =
-        liquidex_derive_value_blinder(master_blinding_key, &tx.input[vout].previous_output)?;
-
-    // compute key
-    let key = _liquidex_aes_key(master_blinding_key, &tx.output[vout].script_pubkey)?;
-    let key = GenericArray::from_slice(&key);
-    let cipher = Aes256GcmSiv::new(&key);
-
-    // compute aes nonce
-    let aes_nonce = _liquidex_aes_nonce(
-        master_blinding_key,
-        &tx.input[vout].previous_output,
-        &tx.output[vout].asset,
-        &tx.output[vout].value,
-        &tx.output[vout].script_pubkey,
-    )?;
-    let aes_nonce = GenericArray::from_slice(&aes_nonce);
-
-    // parse nonce_commitment
-    let nonce_commitment = tx.output[vout].nonce.commitment().unwrap().serialize();
-    let mut text = vec![];
-    text.extend(&nonce_commitment[1..]);
-
-    // decrypt value
-    cipher.decrypt_in_place(aes_nonce, b"", &mut text)?;
-    let mut value_bytes = [0u8; 8];
-    value_bytes.copy_from_slice(&text[..8]);
-    let value = u64::from_le_bytes(value_bytes);
-
-    // check value matches value commitment
-    let tx_asset_generator = tx.output[vout].asset.commitment().unwrap();
-    let tx_value_commitment = tx.output[vout].value.commitment().unwrap();
-    let value_commitment = secp256k1_zkp::PedersenCommitment::new(
+    let rangeproof = secp256k1_zkp::RangeProof::new(
         secp,
+        min_value,
+        value_commitment,
         value,
         value_blinder.into_inner(),
-        tx_asset_generator,
-    );
-    if value_commitment != tx_value_commitment {
-        return Err(Error::Generic(
-            "LiquiDEX error value commitment".to_string(),
-        ));
-    }
+        &message,
+        &tx.output[0].script_pubkey.as_bytes(),
+        shared_secret,
+        0,
+        52,
+        asset_generator,
+    )?;
 
-    let mut asset: Option<elements::issuance::AssetId> = None;
-    // loop on assets
-    for candidate in assets {
-        // check asset matches asset commitment
-        let asset_tag = secp256k1_zkp::Tag::from(candidate.into_inner().into_inner());
-        let asset_generator =
-            secp256k1_zkp::Generator::new_blinded(secp, asset_tag, asset_blinder.into_inner());
-        if asset_generator == tx_asset_generator {
-            asset = Some(candidate.clone());
-            break;
-        }
-    }
+    tx.output[0].asset = Asset::Confidential(asset_generator);
+    tx.output[0].value = Value::Confidential(value_commitment);
+    tx.output[0].nonce = nonce;
+    tx.output[0].witness.rangeproof = Some(Box::new(rangeproof));
 
-    // check a match happened
-    if asset.is_none() {
-        return Err(Error::Generic("LiquiDEX error asset not found".to_string()));
-    }
-    let asset = asset.unwrap();
-
-    // return unblinded
     Ok(elements::TxOutSecrets::new(
         asset,
         asset_blinder,
@@ -423,13 +275,13 @@ pub fn liquidex_unblind(
 }
 
 fn outputs(
-    maker_output: &elements::TxOutSecrets,
+    maker_output: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut outputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for (idx, output) in tx.output.iter().enumerate() {
         if idx == 0 {
-            *outputs.entry(maker_output.asset).or_insert(0) += maker_output.value;
+            *outputs.entry(maker_output.asset).or_insert(0) += maker_output.satoshi;
         } else {
             match (output.asset, output.value) {
                 (Asset::Explicit(asset), Value::Explicit(value)) => {
@@ -443,14 +295,14 @@ fn outputs(
 }
 
 fn inputs(
-    maker_input: &elements::TxOutSecrets,
+    maker_input: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
     unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> HashMap<elements::issuance::AssetId, u64> {
     let mut inputs: HashMap<elements::issuance::AssetId, u64> = HashMap::new();
     for (idx, input) in tx.input.iter().enumerate() {
         if idx == 0 {
-            *inputs.entry(maker_input.asset).or_insert(0) += maker_input.value;
+            *inputs.entry(maker_input.asset).or_insert(0) += maker_input.satoshi;
         } else {
             let unblinded = unblinded.get(&input.previous_output).unwrap();
             *inputs.entry(unblinded.asset).or_insert(0) += unblinded.value;
@@ -460,8 +312,8 @@ fn inputs(
 }
 
 pub fn liquidex_needs(
-    maker_input: &elements::TxOutSecrets,
-    maker_output: &elements::TxOutSecrets,
+    maker_input: &LiquidexTxOutSecrets,
+    maker_output: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
     fee_rate: f64,
     policy_asset: &elements::issuance::AssetId,
@@ -489,7 +341,7 @@ pub fn liquidex_needs(
 }
 
 pub fn liquidex_estimated_changes(
-    maker_input: &elements::TxOutSecrets,
+    maker_input: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
     unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
 ) -> u8 {
@@ -497,8 +349,8 @@ pub fn liquidex_estimated_changes(
 }
 
 pub fn liquidex_changes(
-    maker_input: &elements::TxOutSecrets,
-    maker_output: &elements::TxOutSecrets,
+    maker_input: &LiquidexTxOutSecrets,
+    maker_output: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
     estimated_fee: u64,
     policy_asset: &elements::issuance::AssetId,
@@ -526,8 +378,8 @@ pub fn liquidex_changes(
 }
 
 pub fn liquidex_fee(
-    maker_input: &elements::TxOutSecrets,
-    maker_output: &elements::TxOutSecrets,
+    maker_input: &LiquidexTxOutSecrets,
+    maker_output: &LiquidexTxOutSecrets,
     tx: &elements::Transaction,
     policy_asset: &elements::issuance::AssetId,
     unblinded: &HashMap<elements::OutPoint, elements::TxOutSecrets>,
@@ -540,70 +392,32 @@ pub fn liquidex_fee(
 
 #[cfg(test)]
 mod tests {
-    use crate::liquidex::{liquidex_blind, liquidex_unblind, LiquidexProposal};
-    use crate::transaction::add_input;
-
-    #[test]
-    fn test_liquidex_roundtrip() {
-        assert_eq!(2, 2);
-        let seed = [0u8; 32];
-        let master_blinding_key = elements::slip77::MasterBlindingKey::new(&seed);
-        let mut tx = elements::Transaction {
-            version: 2,
-            lock_time: 0,
-            input: vec![],
-            output: vec![],
-        };
-        // add input
-        let outpoint = elements::OutPoint::new(tx.txid(), 0);
-        add_input(&mut tx, outpoint);
-        // add output
-        let asset = [1u8; 32];
-        let asset = elements::issuance::AssetId::from_slice(&asset).unwrap();
-        let value = 10;
-        let script = elements::Script::from(vec![0x51]);
-        let new_out = elements::TxOut {
-            asset: elements::confidential::Asset::Explicit(asset),
-            value: elements::confidential::Value::Explicit(value),
-            nonce: elements::confidential::Nonce::Null,
-            script_pubkey: script,
-            witness: elements::TxOutWitness::default(),
-        };
-        tx.output.push(new_out);
-
-        let secp = elements::secp256k1_zkp::Secp256k1::new();
-        liquidex_blind(&master_blinding_key, &mut tx, &secp).unwrap();
-        let mut assets = std::collections::HashSet::<elements::issuance::AssetId>::new();
-        assets.insert(asset.clone());
-        let unblinded = liquidex_unblind(&master_blinding_key, &tx, 0, &secp, &assets).unwrap();
-        assert_eq!(unblinded.asset, asset);
-        assert_eq!(unblinded.value, value);
-    }
+    use super::LiquidexProposal;
 
     #[test]
     fn test_liquidex_proposal() {
-        // Taken proposal:
-        // https://blockstream.info/liquid/tx/a43dafc00a6c488085bdf849ca954e4a82f80d56a1c8931873df83d5d22981a4
         let proposal_str = r#"
         {
-            "tx": "020000000101071c86c2e1eff6245e3589dce4f98df081256f7143b20a71d1a11081f234808f01000000171600140b22d358af49422e133684f57d0eb49a9fca84e0ffffffff010a39e73aac4854ce1a1d0ec397db58ec6ce018413f6886abdcaaea3244cc2f803c099380bc1c9039e82a27df4217d54d8f107b8868ad5a947b802a4bfe48134fc6d2028e9004696ef308f97994ebe47294e5fa4273479f7e1a779f581a70f17f7b35be17a914f69b2673d97b6bdf04bbfee2afdf26056de39450870000000000000247304402201a3a6b57b7c70e8efbffd59c4b1e2402448436d97beb37fedc81897eade4f3f702202cce73b837719ac7d332aef7f9b2d7412ffbeffb677635458dc745b3190822bc83210249c7906961ac155d2a7f60429a4c8e90cc7b1857be5c7cb5c2f5fb736e3df8a4000000",
+            "version": 1,
+            "tx": "020000000101f4475ec862d28d1070669b04194ad6231a3d2d82ee6e2f7c13b36a8212b5e3c30100000017160014fc00fbb07fd444bcb8047462f254094abbbd473dfeffffff010ba4b2b1d6fe2413ae6e52c735d0915f9970b61eeb9e2fbc8e037e3afaee6b67f409df6081d0481c20496a06e9b11a7c6d2e25197d1f29021ee5599f2ad17cdefea90397b5f87779df2794ac377f24bf2e250dcc18deba748ef53745757fb4040b924d17a9143bc057e5c67a79fe63275ca75b51ba745537b9a98700000000000002483045022100fa178538555d6d70b023611326d7759ed567e037aa5ca3897db90d744e2c24db02206c11231f6f98c01ef933c3097877956e6acd96e932a0a3d1bfb578e51f0f5823832102095beb25637d96dca562e725f6e9bf04e7a7dbd55b3c00bbd062a853fe57a4a10000fd4e10603300000000000000016c25c8018bb6a994544ba1e9ed92ead831670490648e7e726cd66357fc893933695a50f8328d8e967ee4988d2e10e5c2f98856eb5ce3c4e3b892593b85ef36d96b938066ce8f5b7742d8564a47dcf69e534d7d40d02762c6db015e5291434fc7765519480ae6149b273ef8bb9454f50281208535d3cbf7b0c29ef8d94e16a9b6bf3710ac51b3f9552687c719aba3a00d52789158225d3e7776d8e4001d914d5a926dbdef6eb34d1f7cd31ccfbea5151790d93ae0b5f3264ed0196a67cbd1fe2335eafd470014929920af971316fb06a83c059dc366cdb1aa9dd535a70aa257fd7ba9a67af43463bedfdf45c99845328e7149389f0dc8d470ab1120bb809f57244bd964974f0f6d13dd1aab2c6ce6276e891e48d5101d4aaeef57fa20ad10d255b4295b38886e6e089a1388af1ad75af176a05cb2fdb66a07f4692fb35d6f0a89b903d180317c011702e10b5c829b27c91fbee0d8342df7375ff725353ebf4804076f0553864cb1762e80f3eed98a6b78abaa336a4efa8273a286a0241e8e60462ee6cce6950af3e9e0bfdc2c28f486fd3f8ebe98196505e2a80e7241c1bb1078b15e6e10e833d8050caf91ef6f754feb50daacedb2a88ea5298af85cef44c19963b7a0fb23fd1ccf2c7b47135fd5d0c601fe200768cafffe3937675297ae8ef1ad19057bc7828e326ed9b2ee4925d00e0397e6076eaa194d7642f61589b6ce64d70836eb59d7467b8e90ef72f6496df39cfd19b793b5a52afa3f24da992403be03bbf5ce68aff53d84c305fb14c0071fb3f4bca1a3351632d8bee0872e14a2d4b4d30716f299d1e2692cfa663fc71d24f2f261264e615d4d44c068385f83b7fcb45433201fb35fc5c411cd14b7aa2ade2559c5a252e78b8891bca4d6372114fa57bf3d0165313ac5764f39c3c04849d10d7821e35780d5fc4bebcb271963c24b893ddf5d4c42251257a43ef06a4d5364478272e9d8345a298020307cb61a0cb933a3fce56a68e6a6dbd5dcbc3e0893b904360f8c28e7d4bf7e11a922c5c2cb3d8c97c7e5a2e6c6d513a1e0d5e2151486e9a5bfbc2a2d6cb5850da716461f50a01f83084b2022184dca5d1f555dd454084e0a37ab3d21dbe85033dc24bb3f0c51b2a8a021e6c4f34114cc90cd233bc35b8b5cefc59110f32ed180c42febd34b656fec85328235493eb3eabab5babac7e848ce1549b6e17d41eaaa93758ef21fe68c824227d3be38417fb4331ec04ee8d2e68b341b2d49f421c6a69de5f109347b720f965cf87f7b7393fd85db823f03b693aad6c7e168dd7ec07bbf67c24793acfead485152a59b39557ac775e1b3dc62276fb73e0e3a2bc315e98c15374f0062ba3642793269932cd2515a31a48ba6620abaeee1d4edd654169a5bc200069b624de5004db39cfb41946b3bc13f6b41ac15f0ae22d4c3ea1c0d611fa127dc8b66954e0319683ccd91ac0846ba1475dd63a17e049990e47119e85993be4d679bcd8ba4e39c784d0a9fa31e294cf58b4ddac96f3c4d905a3e6c9c7cbc6050db01a76f2938dccebeefff17b1e1492fefc728c358fb220145348d46deb545e400590ee1c940a75c52c2689c03d2335c18a4144f396b12d3ff624adec9d34dd7a9551d4e3a41c3911844fb2e7e379a08d3628dcbfbe240573ced0e87d438f10cb7f531ca16f86e7be5a60dca355623778b4db1b15f380256528d9bbe1953b5338d15a0253a6ef3844de7b5b61a7b358c3de936303bcec9424f72ac6611a1f3d561b8b407c8dccaaf10552303d1fdb6d99341ecb5080ce2a4d46f8c357472c34153b8607f4334c0140a607a903cbfedeacf7bc4b763764294d6538c97f3bdf4c96352a4fbea5af713bc3912747c7d263bd02c4a4362c4b9350c9363a56f710050b91b09798132782d4fd46d48c80bbe917eff83caebd8e4cba0c2e5e69f0d5646bf056e42f0457cabeebaddc5ba47296d030172f7abfe0ccc74bdde0bb11fe7e54b5777ef113281b084e206da9da7867c7b4aff587b3c6c6beb8ba422ba672afb18d1d84f8f28affb1a9891a6b4f5c267b98f02225bf732fb6a6813ee782b757e4fc2a83ed0bf5eb1f6fca00049493103b01afd767a6b12fdc66cf0ae18833d1439550b44a6543ab13d9ec9ddbb3fcd343a144538bb0aea6fccadf1415c3bbe4ba2a4250c1a658cfd01c64de8ce855362362d3a12a07b1da62f0a300a20f6cb85f8fece8bdbb020d5a0122dc32a46a694d24b10e2340ff92440dfc57123f76e6ecacd5b21ef20c59cfa1a2885976246c9c22055e22487f0b0b14c1a7270d7bdf0c26517a30328072ec46d55d927a214fe3a31de14a33fab59f2ec61c25ddce934817e3a8dd499576ef9e59e82f20fd37fabe7d2ed59ee2f4541ad6826e025792a4c104af408a3f84c417eddfdab2ed0957ddca28801b750c663ceb1d3756032b2e3714f79c4cc8e42d5bc38c1b1cc2294a522a331ebd382dbf1a4bd62f6e2b31fc2e77a2ddd25812f8796294495ed7e5f6c23a27e9454a021a59dae2c2852191b06b7d0d2d744ec36c769e7de3e40df2daac4fcc2c8e2e2ea32dd67ac10754d2094b734f7c7ba3d07668beb964e6b0ba465fe79d88ec1c7af855d0bcc327f9c8b44657ca8acea8b17635fb5f6064cb008a2f56aaaeb0968de9a228d7a792e07de45dfd6011cf895834689359d1ed8e98bfacb7ecc0745787872096fe99bb1c60da92d71f9b1bee1dae439d897b7bc460d166f24c2dee0f708092f9b46b2cdd3769532b2d170f5ca549ce9fdaa604fa947c1daecd9aef9a53b529d5fa329a0938c6d5fc137b295d04b8de44e7c89620f25b36db3ef7618f765e280f60c08331a8c0180ad5ed3adf06dd801ec534dfe08ed3b49531eabef2a7785d042f851429aea0215dc528d47beb543794672a2d8a692c87c1e9de20b78864b320b0fad9a2edc4eecaa09cfefb8634432088066aa2438a0821a421b568e0d41f5e388c03a456c2135d8057e6887adb3b295c3a46d975b71ec9361537dd5cead13edbf30dd5d67024609388a70735a385e041bb838a4f087e550b8aaf990ca18983aeebb9be0c21aad696097d5222fa19de998a325e0cb4c9cde204a2c22c5ef663b4dbca9fec95289226ddfb31e0641a873ed13382f1dbd56f8e42386ae3b38ca869e9b6d3248ff1ba093ab364a81bc920aaf4d835c5815a2b0942a608be946263e61f6da9e84aa33a199a321d24f1a241ac36c0f41cc3c46fc5d203809cf7c0fa53ad4e18b7c22451b9850ecab8716925d32df49cde2c8d7d3d9220fdc35e1b23ba31c26e1d7f4007d82c02cb7b414b139df3735381d191eac987a0f54f5ed1dc59979dcca6ec0e2b7decf439599488217e05b0076fb39371dc1d4f5777101c3462211610e4e440a19f40a778c684d462208f68db7f06156419d60e28dfc86ea026f443d9e7d811260a1f25cedd9449e0a8bf07c35599fc947062286b1d34f6910e54ec73c47ce8981bf3e57d48fde2ceae92f92a8a125831ac6b2bfdb0528f6f3930c08894df73589993715ec14ae42c282fa60949bdaa9a67a1869cdefd9b08fa17875e62a214ed6f0560922df7fa64d8abea31b719c0260e3a8082317ef4e70a25c00a21cfba05bf68bbe857959d541617bf200228a270da04494999d5d3d052bbff927c8964f2bdeff2dd2936b8716c12974e2d565c3b8418b1a5d47a535f1d3f5c6346d92c4a2077a84167892bd9fe0d91ba3d3be65bb965bfcae01ecce556c2551cb17b64ffa887310a167c29e44e702b178e067dfe54d219dd03e9eb1aeef1bb37260995987dc4fcdb26840a1453eabd09fe198bc365538b937a0cbc77f2dce0d28fa9f06836f9aadd0619554ced3299b1232bf0be9349474979cdd72fa9a34bd15597b9ef68f3b1f8a609ae4f226c09b2b82b0054b96fd2559530a64f1c0dffd60dc1509a6044a7b518550341fbf7a8929b995863717c99a0531a837d96f8cd1fc0c49de90f113593990bf69d748c84119f4d8ee4995b7442b0a0944f077b8df43d185625a15d81b1a6341c0d5985c82e3bccaade8331e6c18b3659231e1dacd553223b45009a880ae6233b1694c2a96b559be11a15b3a42762b50931672f772836ce86cf5fce0eb2697d1cd13bc51ff6722203096b00c1f5a97a1ce8566b4f34bb675001858fbc83f1dd05a9486212c9a5043ca1caa2aae70d12eea403fc572e5c54b668097132d286565479a534abc6849c6def484c6ceec191bf89b3a797793fdb0ded2ef3d947f573499415c13c93c2363f9e436d6da81a57690286183dac50b7c5fdb363982675b4755a25e308eb69523bab1f8db3fc22583be3b5aa45678b92fe7348e8789a2ab9d22efc18d23ea15a0bae311ffcad660ddb66b7b0dbb1654d6e3e0752a7a3849ead651d72cbb232ff51083b01900ef98734f3eabf596d8e1df35fa2a9bafa3bc900a6dd279fd806fea003aea40d4209229f93bb5720792c982d3101b1f54d1f873b83b2d75eebf89c428084a0b993bebacc999af90761ebe8995ba4f18be0ef0e0ccfb0e9a13e5352c46efba77e167ea16c6466e3aafb67d8b3d8e4c92c7790409484eb46491fbabb406d85f4220ce111fb4e5a581f327b1d8c3691551896050bd2e2a5e9fa17a52a5ecd9570c83d9fde2ad17c4679f1d7d5140f40ef54deac80c602aaf6694229ad13e8684ee322c629db011d1a977ad39f001b9ff0d9ba21d82887996a2d343d933b0997ef73a6a73e01254b5c56cb4781e2929e786579dba75f5fd9194450bd6eeccc96b295a2f6dc8f13f02a09d86113de7b05f6c9df5a2c603bb2f6023c4d4ae466ae558e919bc262508c329a39c6a8604ca0edc7338c0ead05fdabe960c033e8e4054724caf58c7f025ccdd9372e36d462195e27fba99d7ea56bc28e10e1938e617142fcaf5a9e0489bbf24f23b732311c593112ae9d88e3785e4c10553dd041b490185d01299dbb1ef0c33f3c307b116ad4c18a7d08d977730389fdfa5e82784b97a7596e19ed4e45db4ec36770503604afb2074ad9e809a0003d670a1bc34574fbc0cffdfdc08d3a9156ff5251b2d5ae471a73662ca175429404611601cdf8270daccd5dc831396f0a038c0fb2f828aa11212c470df3f738a482ccb6d5e0e6be20ffe87ec9317c2d8c0117dc82893e3e63deaaa2985e9e83672641f61320634a4a145cd6f8b8333de304c26b660437d08c9b368dad209cde46d9f5da8ce20de97a8e183e2ddcdb5736135dcd912602eca3d85b0573551b6a38ade0926487a58b8e66b41e7bbd3b7671901d4b8e82d25c0357f9485ad30d32ed5bfe1b0bab76a50e92acc53c50f3717e980b60a6431ab65afdf9e7afdf3e93d8deec8fb4fdf9e8071cb65da2bb91d415892bb59035db6486258308bfe623347607386e029aaf45f92fd9830df21752929c774a804176c3987ed27f6ff37ebccb7af8f989356e9959484302ca486214ba25c60ad0ec8e7e9629419d54d9b31ccf547452ac8a3ee1d9f5c51e98a55c4d5b3a7ad91aa2486b7689e4e8cf483bd3d64143422b61005fc2d52e7482c606969a611a340b0bfdde3d1ef15ae0a8ac6acb2e467bd63b485abf64cc953acb042201a473c3506a9763113e638ef76706ffa467a527a70ce70f7bdaee1332e61acd0afb226e67366d76952a3253af6da9529a4d5f4a8876a8a125799485221ace7fcf96694f4757109f955f33c7242863a1ccc270c69b67b7bacc81b34fcd6a8621c07925ad17c8d5836abf0b0c8cd89b0939aa5b0cd2158a9807bd69fcc23a89b49eb30baa61be977ceeb131f0d18a1e8b03dc584a97e09c242d6a4766592fbb2a93d017b4d766c202dae5885de8c6b990c8ccecaee429235950bcad7ce2d93b734d7e1f04a6f79954a23c6ec33",
             "inputs": [{
-                "asset": "8026fa969633b7b6f504f99dde71335d633b43d18314c501055fcd88b9fcb8de",
-                "amount": 175000000,
-                "asset_blinder": "e9fe8ff23076c01fe0e5b545807c01157c99501288d9479bfb7e7d24feba694d",
-                "amount_blinder": "6a80b9e7b887bdde8f23ebe48b307d9516259591681d71d376fb290b13df1674"
+                "asset":"6921c799f7b53585025ae8205e376bfd2a7c0571f781649fb360acece252a6a7",
+                "asset_blinder":"5bfa3c033ed871572f3012eda1d2c9ae2ec662be07ed267a09f1b44c06eee86f",
+                "satoshi":10000,
+                "blind_value_proof":"2000000000000027101988645f8abc1ef9086b5d8e4c41c0e42475b412fc22245779f597007c5f48cb9c61ff6535866ef5150b326bf69c0d8c291f8c8e6afc015311ed405b74baf9d4"
             }],
             "outputs": [{
-                "asset": "f638b720fe531bbba23a71495aebf55592f45adc6c89f00de38303f60c7b51d7",
-                "amount": 175,
-                "asset_blinder": "07b4a065649a9f57e07dba6d87672f5e9d617bca0b8593da593ec77eec746b9c",
-                "amount_blinder": "216f304aaadd2b62b81ac4d6ebc219b4d6b9b61611cf2103ab377944c9b69ae8"
-            }]
+                "asset":"f13806d2ab6ef8ba56fc4680c1689feb21d7596700af1871aef8c2d15d4bfd28",
+                "asset_blinder":"1e8c347f88a3e46e97a9a6556710812137a10b939983aef8a8f95da466abfae5",
+                "satoshi":10000,
+                "blind_value_proof":"200000000000002710c833ef127398975f30746b9ba1774f982d82dc658926f7d41fd52ff6cc34bc2282b168c578e337f667ad4c567ed4c39744021fc25486df3013ff2aa8b5b88a74"
+            }],
+            "scalars": [
+                "95e27208708a7b57e0ec3b562bbe0dd56548bb9d0359d7f9a8604dfd9ec02eba"
+            ]
         }"#;
-
         let proposal: LiquidexProposal = serde_json::from_str(proposal_str).unwrap();
-        println!("{:#?}", proposal);
-        assert_eq!(proposal.outputs[0].amount, 175);
+        assert_eq!(proposal.outputs[0].satoshi, 10000);
 
         // verify commitments matches the tx output and that the blinder are deserialized correctly
         let secp = elements::secp256k1_zkp::Secp256k1::new();

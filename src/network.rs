@@ -5,6 +5,8 @@ use elements::bitcoin::hashes::hex::FromHex;
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
+const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
+    "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
 
 #[derive(Debug, Clone)]
 pub enum ElectrumUrl {
@@ -37,6 +39,7 @@ pub struct Config {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElementsNetwork {
     Liquid,
+    LiquidTestnet,
     ElementsRegtest,
 }
 
@@ -57,6 +60,24 @@ impl Config {
             electrum_url,
             spv_enabled,
             policy_asset: elements::issuance::AssetId::from_hex(policy_asset)?,
+        })
+    }
+
+    pub fn new_testnet(
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        electrum_url: &str,
+    ) -> Result<Self, Error> {
+        let electrum_url = match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        };
+        Ok(Config {
+            network: ElementsNetwork::LiquidTestnet,
+            electrum_url,
+            spv_enabled,
+            policy_asset: elements::issuance::AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
         })
     }
 

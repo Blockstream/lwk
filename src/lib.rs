@@ -453,6 +453,18 @@ impl ElectrumWallet {
         Self::new(config, data_root, mnemonic)
     }
 
+    pub fn new_testnet(
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        spv_enabled: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_testnet(tls, validate_domain, spv_enabled, electrum_url)?;
+        Self::new(config, data_root, mnemonic)
+    }
+
     pub fn new_mainnet(
         electrum_url: &str,
         tls: bool,

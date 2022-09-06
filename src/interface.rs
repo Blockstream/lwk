@@ -65,6 +65,7 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     // slip44 suggest 1 for every testnet, so we are using it also for regtest
     let coin_type: u32 = match config.network() {
         ElementsNetwork::Liquid => 1776,
+        ElementsNetwork::LiquidTestnet => 1,
         ElementsNetwork::ElementsRegtest => 1,
     };
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
@@ -1003,9 +1004,18 @@ impl WalletCtx {
     }
 }
 
+pub const LIQUID_TESTNET: elements::AddressParams = elements::AddressParams {
+    p2pkh_prefix: 36,
+    p2sh_prefix: 19,
+    blinded_prefix: 23,
+    bech_hrp: "tex",
+    blech_hrp: "tlq",
+};
+
 fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
     match net {
         ElementsNetwork::Liquid => &elements::AddressParams::LIQUID,
+        ElementsNetwork::LiquidTestnet => &LIQUID_TESTNET,
         ElementsNetwork::ElementsRegtest => &elements::AddressParams::ELEMENTS,
     }
 }

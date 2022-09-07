@@ -27,6 +27,31 @@ impl ElectrumUrl {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ElementsNetwork {
+    Liquid,
+    LiquidTestnet,
+    ElementsRegtest,
+}
+
+pub const LIQUID_TESTNET: elements::AddressParams = elements::AddressParams {
+    p2pkh_prefix: 36,
+    p2sh_prefix: 19,
+    blinded_prefix: 23,
+    bech_hrp: "tex",
+    blech_hrp: "tlq",
+};
+
+impl ElementsNetwork {
+    pub fn address_params(&self) -> &'static elements::AddressParams {
+        match self {
+            ElementsNetwork::Liquid => &elements::AddressParams::LIQUID,
+            ElementsNetwork::LiquidTestnet => &LIQUID_TESTNET,
+            ElementsNetwork::ElementsRegtest => &elements::AddressParams::ELEMENTS,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
@@ -34,13 +59,6 @@ pub struct Config {
     electrum_url: ElectrumUrl,
 
     pub spv_enabled: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ElementsNetwork {
-    Liquid,
-    LiquidTestnet,
-    ElementsRegtest,
 }
 
 impl Config {

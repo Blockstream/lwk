@@ -15,9 +15,8 @@ pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
     UnblindedTXO, TXO,
 };
+pub use crate::network::ElementsNetwork;
 pub use crate::utils::tx_to_hex;
-
-use network::*;
 
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -32,7 +31,6 @@ use crate::model::*;
 use crate::network::Config;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
-use crate::ElementsNetwork;
 
 use log::{debug, info, trace, warn};
 
@@ -481,6 +479,10 @@ impl ElectrumWallet {
         let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
 
         Ok(Self { config, wallet })
+    }
+
+    pub fn network(&self) -> ElementsNetwork {
+        self.config.network()
     }
 
     pub fn policy_asset(&self) -> elements::issuance::AssetId {

@@ -148,7 +148,7 @@ impl WalletCtx {
         let addr = elements::Address::p2shwpkh(
             &derived.to_pub(),
             blinder,
-            address_params(self.config.network()),
+            self.config.network().address_params(),
         );
 
         Ok(addr)
@@ -288,12 +288,6 @@ impl WalletCtx {
 
         // TODO put checks into CreateTransaction::validate, add check asset are valid asset hex
         // eagerly check for address validity
-        let address_params = address_params(self.config.network());
-        for address in opt.addressees.iter().map(|a| a.address()) {
-            if address.params != address_params {
-                return Err(Error::InvalidAddress);
-            }
-        }
 
         if opt.addressees.is_empty() {
             return Err(Error::EmptyAddressees);
@@ -1001,22 +995,6 @@ impl WalletCtx {
         }
 
         Ok(())
-    }
-}
-
-pub const LIQUID_TESTNET: elements::AddressParams = elements::AddressParams {
-    p2pkh_prefix: 36,
-    p2sh_prefix: 19,
-    blinded_prefix: 23,
-    bech_hrp: "tex",
-    blech_hrp: "tlq",
-};
-
-fn address_params(net: ElementsNetwork) -> &'static elements::AddressParams {
-    match net {
-        ElementsNetwork::Liquid => &elements::AddressParams::LIQUID,
-        ElementsNetwork::LiquidTestnet => &LIQUID_TESTNET,
-        ElementsNetwork::ElementsRegtest => &elements::AddressParams::ELEMENTS,
     }
 }
 

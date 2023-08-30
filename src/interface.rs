@@ -770,7 +770,7 @@ impl WalletCtx {
 
         let out_num = tx.output.len();
         let mut rng = rand::thread_rng();
-        for (i, mut output) in tx.output.iter_mut().enumerate() {
+        for (i, output) in tx.output.iter_mut().enumerate() {
             if !output.is_fee() {
                 match (i, output.value, output.asset, output.nonce) {
                     (0, Value::Confidential(_), Asset::Confidential(_), Nonce::Confidential(_)) => {

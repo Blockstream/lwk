@@ -1,7 +1,6 @@
 mod error;
 mod headers;
 mod interface;
-mod liquidex;
 mod model;
 mod network;
 mod scripts;
@@ -10,7 +9,6 @@ mod transaction;
 mod utils;
 
 pub use crate::error::Error;
-pub use crate::liquidex::{LiquidexMakeOpt, LiquidexProposal};
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
     UnblindedTXO, TXO,
@@ -597,25 +595,5 @@ impl ElectrumWallet {
         let client = self.config.electrum_url().build_client()?;
         client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;
         Ok(())
-    }
-
-    /// Create and sign a LiquiDEX proposal.
-    /// The utxo will be swapped with the asset at the rate (price asset to send/price asset to
-    /// receive).
-    pub fn liquidex_make(
-        &self,
-        opt: &LiquidexMakeOpt,
-        mnemonic: &str,
-    ) -> Result<LiquidexProposal, Error> {
-        self.wallet.liquidex_make(opt, mnemonic)
-    }
-
-    /// Take a LiquiDEX proposal.
-    pub fn liquidex_take(
-        &self,
-        proposal: &LiquidexProposal,
-        mnemonic: &str,
-    ) -> Result<elements::Transaction, Error> {
-        self.wallet.liquidex_take(proposal, mnemonic)
     }
 }

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use elements::bitcoin::hashes::hex::FromHex;
 use elements::OutPoint;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TXO {
@@ -39,7 +39,6 @@ pub struct TransactionDetails {
     pub balances: HashMap<elements::issuance::AssetId, i64>,
     pub fee: u64,
     pub height: Option<u32>,
-    pub spv_verified: SPVVerifyResult,
 }
 
 impl TransactionDetails {
@@ -48,7 +47,6 @@ impl TransactionDetails {
         balances: HashMap<elements::issuance::AssetId, i64>,
         fee: u64,
         height: Option<u32>,
-        spv_verified: SPVVerifyResult,
     ) -> TransactionDetails {
         let txid = transaction.txid().to_string();
         TransactionDetails {
@@ -57,7 +55,6 @@ impl TransactionDetails {
             balances,
             fee,
             height,
-            spv_verified,
         }
     }
 
@@ -118,39 +115,9 @@ pub struct GetTransactionsOpt {
     pub num_confs: Option<usize>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum SPVVerifyResult {
-    InProgress,
-    Verified,
-    NotVerified,
-    Disabled,
-}
-
 // This one is simple enough to derive a serializer
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct FeeEstimate(pub u64);
-
-impl SPVVerifyResult {
-    pub fn as_i32(&self) -> i32 {
-        match self {
-            SPVVerifyResult::InProgress => 0,
-            SPVVerifyResult::Verified => 1,
-            SPVVerifyResult::NotVerified => 2,
-            SPVVerifyResult::Disabled => 3,
-        }
-    }
-}
-
-impl Display for SPVVerifyResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SPVVerifyResult::InProgress => write!(f, "in_progress"),
-            SPVVerifyResult::Verified => write!(f, "verified"),
-            SPVVerifyResult::NotVerified => write!(f, "not_verified"),
-            SPVVerifyResult::Disabled => write!(f, "disabled"),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

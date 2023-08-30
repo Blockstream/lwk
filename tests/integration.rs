@@ -1,4 +1,3 @@
-use bewallet::SPVVerifyResult;
 use std::env;
 
 mod test_session;
@@ -22,9 +21,8 @@ fn liquid() {
     wallet.fund_btc(&mut server);
     let asset = wallet.fund_asset(&mut server);
 
-    let txid = wallet.send_tx(&node_address, 10_000, None, None);
+    let _txid = wallet.send_tx(&node_address, 10_000, None, None);
     wallet.send_tx_to_unconf(&mut server);
-    wallet.is_verified(&txid, SPVVerifyResult::InProgress);
     wallet.send_tx(&node_bech32_address, 1_000, None, None);
     wallet.send_tx(&node_legacy_address, 1_000, None, None);
     wallet.send_tx(&node_address, 1_000, Some(asset.clone()), None);
@@ -38,7 +36,6 @@ fn liquid() {
     wallet.send_multi(10, 1_000, &assets, &mut server);
     wallet.wait_for_block(server.mine_block());
     wallet.create_fails(&mut server);
-    wallet.is_verified(&txid, SPVVerifyResult::Verified);
     let utxos = wallet.utxos();
     wallet.send_tx(&node_address, 1_000, None, Some(utxos));
 

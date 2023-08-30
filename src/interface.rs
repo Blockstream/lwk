@@ -1,4 +1,4 @@
-use crate::model::{GetTransactionsOpt, SPVVerifyResult};
+use crate::model::GetTransactionsOpt;
 use elements;
 use elements::bitcoin::hashes::hex::ToHex;
 use elements::bitcoin::hashes::{sha256, Hash};
@@ -175,21 +175,7 @@ impl WalletCtx {
             let balances = my_balance_changes(&tx, &store_read.cache.unblinded);
             trace!("tx_id {} balances {:?}", tx_id, balances);
 
-            let spv_verified = if self.config.spv_enabled {
-                store_read
-                    .cache
-                    .txs_verif
-                    .get(*tx_id)
-                    .unwrap_or(&SPVVerifyResult::InProgress)
-                    .clone()
-            } else {
-                SPVVerifyResult::Disabled
-            };
-
-            trace!("tx_id {} spv_verified {:?}", tx_id, spv_verified);
-
-            let tx_details =
-                TransactionDetails::new(tx.clone(), balances, fee, **height, spv_verified);
+            let tx_details = TransactionDetails::new(tx.clone(), balances, fee, **height);
 
             txs.push(tx_details);
         }
@@ -395,13 +381,7 @@ impl WalletCtx {
         }
 
         // Also return changes used?
-        Ok(TransactionDetails::new(
-            tx,
-            satoshi,
-            fee_val,
-            None,
-            SPVVerifyResult::NotVerified,
-        ))
+        Ok(TransactionDetails::new(tx, satoshi, fee_val, None))
     }
     // TODO when we can serialize psbt
     //pub fn sign(&self, psbt: PartiallySignedTransaction) -> Result<PartiallySignedTransaction, Error> { Err(Error::Generic("NotImplemented".to_string())) }

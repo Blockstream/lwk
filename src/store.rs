@@ -1,4 +1,4 @@
-use crate::model::{FeeEstimate, SPVVerifyResult};
+use crate::model::FeeEstimate;
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
@@ -46,9 +46,6 @@ pub struct RawCache {
     /// unblinded values (only for liquid)
     pub unblinded: HashMap<OutPoint, elements::TxOutSecrets>,
 
-    /// verification status of Txid (could be only Verified or NotVerified, absence means InProgress)
-    pub txs_verif: HashMap<Txid, SPVVerifyResult>,
-
     /// cached fee_estimates
     pub fee_estimates: Vec<FeeEstimate>,
 
@@ -68,7 +65,6 @@ impl Default for RawCache {
             heights: HashMap::default(),
             headers: HashMap::default(),
             unblinded: HashMap::default(),
-            txs_verif: HashMap::default(),
             fee_estimates: Vec::default(),
             tip: (0, BlockHash::all_zeros()),
             indexes: Indexes::default(),

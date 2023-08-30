@@ -311,7 +311,6 @@ impl TestElectrumWallet {
     pub fn new(electrs_url: &str, mnemonic: String) -> Self {
         let tls = false;
         let validate_domain = false;
-        let spv_enabled = true;
         let policy_asset_hex = &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let _db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
@@ -322,7 +321,6 @@ impl TestElectrumWallet {
             electrs_url,
             tls,
             validate_domain,
-            spv_enabled,
             &db_root,
             &mnemonic,
         )
@@ -421,7 +419,6 @@ impl TestElectrumWallet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
-        self.electrum_wallet.update_spv().unwrap();
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let list = self.electrum_wallet.transactions(&opt).unwrap();
@@ -539,11 +536,6 @@ impl TestElectrumWallet {
         server.send_tx_to_unconf(&address);
         self.wallet_wait_tx_status_change();
         assert_eq!(init_sat, self.balance_btc());
-    }
-
-    pub fn is_verified(&mut self, txid: &str, verified: SPVVerifyResult) {
-        let tx = self.get_tx_from_list(txid);
-        assert_eq!(tx.spv_verified.to_string(), verified.to_string());
     }
 
     /// send a tx with multiple recipients with same amount from the wallet to addresses generated

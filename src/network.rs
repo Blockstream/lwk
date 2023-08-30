@@ -57,15 +57,12 @@ pub struct Config {
     network: ElementsNetwork,
     policy_asset: elements::issuance::AssetId,
     electrum_url: ElectrumUrl,
-
-    pub spv_enabled: bool,
 }
 
 impl Config {
     pub fn new_regtest(
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         electrum_url: &str,
         policy_asset: &str,
     ) -> Result<Self, Error> {
@@ -76,7 +73,6 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::ElementsRegtest,
             electrum_url,
-            spv_enabled,
             policy_asset: elements::issuance::AssetId::from_hex(policy_asset)?,
         })
     }
@@ -84,7 +80,6 @@ impl Config {
     pub fn new_testnet(
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         electrum_url: &str,
     ) -> Result<Self, Error> {
         let electrum_url = match tls {
@@ -94,7 +89,6 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::LiquidTestnet,
             electrum_url,
-            spv_enabled,
             policy_asset: elements::issuance::AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
         })
     }
@@ -102,7 +96,6 @@ impl Config {
     pub fn new_mainnet(
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         electrum_url: &str,
     ) -> Result<Self, Error> {
         let electrum_url = match tls {
@@ -112,7 +105,6 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::Liquid,
             electrum_url,
-            spv_enabled,
             policy_asset: elements::issuance::AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
         })
     }

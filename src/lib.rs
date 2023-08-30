@@ -1,5 +1,4 @@
 mod error;
-mod headers;
 mod interface;
 mod model;
 mod network;
@@ -10,8 +9,7 @@ mod utils;
 
 pub use crate::error::Error;
 pub use crate::model::{
-    CreateTransactionOpt, Destination, GetTransactionsOpt, SPVVerifyResult, TransactionDetails,
-    UnblindedTXO, TXO,
+    CreateTransactionOpt, Destination, GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO,
 };
 pub use crate::network::ElementsNetwork;
 pub use crate::utils::tx_to_hex;
@@ -21,7 +19,6 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::time::Instant;
 
-use crate::headers::Verifier;
 //use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
 use crate::interface::WalletCtx;
 use crate::model::*;
@@ -54,11 +51,6 @@ struct Tipper {
     pub store: Store,
 }
 
-struct Headers {
-    pub store: Store,
-    pub verifier: Verifier,
-}
-
 fn try_get_fee_estimates(client: &Client) -> Result<Vec<FeeEstimate>, Error> {
     let relay_fee = (client.relay_fee()? * 100_000_000.0) as u64;
     let blocks: Vec<usize> = (1..25).collect();
@@ -86,47 +78,6 @@ impl Tipper {
             self.store.write()?.cache.tip = (height, hash);
         }
         Ok(height)
-    }
-}
-
-impl Headers {
-    pub fn get_proofs(&mut self, client: &Client) -> Result<usize, Error> {
-        let store_read = self.store.read()?;
-        let needs_proof: Vec<(Txid, u32)> = self
-            .store
-            .read()?
-            .cache
-            .heights
-            .iter()
-            .filter(|(_, opt)| opt.is_some())
-            .map(|(t, h)| (t, h.unwrap()))
-            .filter(|(t, _)| store_read.cache.txs_verif.get(*t).is_none())
-            .map(|(t, h)| (t.clone(), h))
-            .collect();
-        drop(store_read);
-
-        let mut txs_verified = HashMap::new();
-        for (txid, height) in needs_proof {
-            let proof = client.transaction_get_merkle(
-                &elements::bitcoin::Txid::from_hash(txid.as_hash()),
-                height as usize,
-            )?;
-            let verified = if let Some(header) = self.store.read()?.cache.headers.get(&height) {
-                self.verifier.verify_tx_proof(&txid, proof, &header).is_ok()
-            } else {
-                false
-            };
-            if verified {
-                info!("proof for {} verified!", txid);
-                txs_verified.insert(txid, SPVVerifyResult::Verified);
-            } else {
-                warn!("proof for {} not verified!", txid);
-                txs_verified.insert(txid, SPVVerifyResult::NotVerified);
-            }
-        }
-        let proofs_done = txs_verified.len();
-        self.store.write()?.cache.txs_verif.extend(txs_verified);
-        Ok(proofs_done)
     }
 }
 
@@ -415,17 +366,10 @@ impl ElectrumWallet {
         electrum_url: &str,
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_regtest(
-            tls,
-            validate_domain,
-            spv_enabled,
-            electrum_url,
-            policy_asset,
-        )?;
+        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset)?;
         Self::new(config, data_root, mnemonic)
     }
 
@@ -433,11 +377,10 @@ impl ElectrumWallet {
         electrum_url: &str,
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_testnet(tls, validate_domain, spv_enabled, electrum_url)?;
+        let config = Config::new_testnet(tls, validate_domain, electrum_url)?;
         Self::new(config, data_root, mnemonic)
     }
 
@@ -445,11 +388,10 @@ impl ElectrumWallet {
         electrum_url: &str,
         tls: bool,
         validate_domain: bool,
-        spv_enabled: bool,
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_mainnet(tls, validate_domain, spv_enabled, electrum_url)?;
+        let config = Config::new_mainnet(tls, validate_domain, electrum_url)?;
         Self::new(config, data_root, mnemonic)
     }
 
@@ -491,29 +433,6 @@ impl ElectrumWallet {
                 Err(e) => {
                     warn!("exception in tipper {:?}", e);
                 }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn update_spv(&self) -> Result<(), Error> {
-        let verifier = Verifier::new(self.config.network());
-
-        let mut headers = Headers {
-            store: self.wallet.store.clone(),
-            verifier,
-        };
-
-        self.update_tip()?;
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            info!("getting proofs");
-            match headers.get_proofs(&client) {
-                Ok(found) => {
-                    if found > 0 {
-                        info!("found proof {}", found)
-                    }
-                }
-                Err(e) => warn!("error in getting proofs {:?}", e),
             }
         }
         Ok(())

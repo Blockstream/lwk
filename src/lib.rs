@@ -8,39 +8,31 @@ mod transaction;
 mod utils;
 
 pub use crate::error::Error;
+use crate::interface::WalletCtx;
+use crate::model::*;
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO,
 };
+use crate::network::Config;
 pub use crate::network::ElementsNetwork;
+use crate::store::{Indexes, Store, BATCH_SIZE};
+use crate::transaction::*;
 pub use crate::utils::tx_to_hex;
-
+use electrum_client::GetHistoryRes;
+use electrum_client::{Client, ElectrumApi};
+use elements;
+use elements::bitcoin::hashes::hex::ToHex;
+use elements::bitcoin::util::bip32::DerivationPath;
+use elements::confidential::{self, Asset, Nonce};
+use elements::slip77::MasterBlindingKey;
+use elements::{BlockHash, Script, Txid};
+use log::{debug, info, trace, warn};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::time::Instant;
-
-//use crate::interface::{make_shared_secret, parse_rangeproof_message, WalletCtx};
-use crate::interface::WalletCtx;
-use crate::model::*;
-use crate::network::Config;
-use crate::store::{Indexes, Store, BATCH_SIZE};
-use crate::transaction::*;
-
-use log::{debug, info, trace, warn};
-
-use elements::bitcoin::hashes::hex::ToHex;
-use elements::bitcoin::util::bip32::DerivationPath;
-use elements::{BlockHash, Script, Txid};
-
-use elements;
-use elements::confidential::{self, Asset, Nonce};
-use elements::slip77::MasterBlindingKey;
-
-use electrum_client::GetHistoryRes;
-use electrum_client::{Client, ElectrumApi};
-
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 struct Syncer {
     pub store: Store,

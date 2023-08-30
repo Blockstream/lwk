@@ -435,10 +435,6 @@ impl TestElectrumWallet {
         filtered_list.first().unwrap().clone()
     }
 
-    pub fn get_fee(&mut self, txid: &str) -> u64 {
-        self.get_tx_from_list(txid).fee
-    }
-
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
         let init_balance = self.balance_btc();
         let satoshi: u64 = 1_000_000;
@@ -717,16 +713,6 @@ impl TestElectrumWallet {
         self.electrum_wallet.utxos().unwrap()
     }
 
-    pub fn asset_utxos(&self, asset: &elements::issuance::AssetId) -> Vec<UnblindedTXO> {
-        self.electrum_wallet
-            .utxos()
-            .unwrap()
-            .iter()
-            .cloned()
-            .filter(|u| u.unblinded.asset == *asset)
-            .collect()
-    }
-
     /// performs checks on transactions, like checking for address reuse in outputs and on liquid confidential commitments inequality
     pub fn tx_checks(&self, transaction: &elements::Transaction) {
         let output_nofee: Vec<&elements::TxOut> =
@@ -769,31 +755,5 @@ impl TestElectrumWallet {
             transaction.output.last().unwrap().is_fee(),
             "last output is not a fee"
         );
-    }
-
-    pub fn liquidex_make(
-        &self,
-        utxo: &elements::OutPoint,
-        asset: &elements::issuance::AssetId,
-        rate: f64,
-    ) -> LiquidexProposal {
-        let opt = LiquidexMakeOpt {
-            utxo: utxo.clone(),
-            asset_id: asset.clone(),
-            rate,
-        };
-        self.electrum_wallet
-            .liquidex_make(&opt, &self.mnemonic)
-            .unwrap()
-    }
-
-    pub fn liquidex_take(&mut self, proposal: &LiquidexProposal) -> String {
-        let tx = self
-            .electrum_wallet
-            .liquidex_take(proposal, &self.mnemonic)
-            .unwrap();
-        self.electrum_wallet.broadcast_tx(&tx).unwrap();
-        self.wallet_wait_tx_status_change();
-        tx.txid().to_string()
     }
 }

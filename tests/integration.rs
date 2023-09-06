@@ -4,10 +4,8 @@ mod test_session;
 
 #[test]
 fn liquid() {
-    let electrs_exec = env::var("ELECTRS_LIQUID_EXEC")
-        .expect("env ELECTRS_LIQUID_EXEC pointing to electrs executable is required");
-    let node_exec = env::var("ELEMENTSD_EXEC")
-        .expect("env ELEMENTSD_EXEC pointing to elementsd executable is required");
+    let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
+    let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     let debug = env::var("DEBUG").is_ok();
 
     let mut server = test_session::TestElectrumServer::new(debug, electrs_exec, node_exec);

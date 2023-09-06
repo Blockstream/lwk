@@ -1,4 +1,3 @@
-use crate::model::FeeEstimate;
 use crate::scripts::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
@@ -43,9 +42,6 @@ pub struct RawCache {
     /// unblinded values (only for liquid)
     pub unblinded: HashMap<OutPoint, elements::TxOutSecrets>,
 
-    /// cached fee_estimates
-    pub fee_estimates: Vec<FeeEstimate>,
-
     /// height and hash of tip of the blockchain
     pub tip: (u32, BlockHash),
 
@@ -61,7 +57,6 @@ impl Default for RawCache {
             scripts: HashMap::default(),
             heights: HashMap::default(),
             unblinded: HashMap::default(),
-            fee_estimates: Vec::default(),
             tip: (0, BlockHash::all_zeros()),
             indexes: Indexes::default(),
         }
@@ -239,15 +234,6 @@ impl StoreMeta {
             result.extend(outpoints.into_iter());
         }
         Ok(result)
-    }
-
-    pub fn fee_estimates(&self) -> Vec<FeeEstimate> {
-        if self.cache.fee_estimates.is_empty() {
-            let min_fee = 100;
-            vec![FeeEstimate(min_fee); 25]
-        } else {
-            self.cache.fee_estimates.clone()
-        }
     }
 }
 

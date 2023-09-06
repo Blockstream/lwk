@@ -9,7 +9,6 @@ mod utils;
 
 pub use crate::error::Error;
 use crate::interface::WalletCtx;
-use crate::model::*;
 pub use crate::model::{
     CreateTransactionOpt, Destination, GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO,
 };
@@ -41,20 +40,6 @@ struct Syncer {
 
 struct Tipper {
     pub store: Store,
-}
-
-fn try_get_fee_estimates(client: &Client) -> Result<Vec<FeeEstimate>, Error> {
-    let relay_fee = (client.relay_fee()? * 100_000_000.0) as u64;
-    let blocks: Vec<usize> = (1..25).collect();
-    // max is covering a rounding errors in production electrs which sometimes cause a fee
-    // estimates lower than relay fee
-    let mut estimates: Vec<FeeEstimate> = client
-        .batch_estimate_fee(blocks)?
-        .iter()
-        .map(|e| FeeEstimate(relay_fee.max((*e * 100_000_000.0) as u64)))
-        .collect();
-    estimates.insert(0, FeeEstimate(relay_fee));
-    Ok(estimates)
 }
 
 impl Tipper {
@@ -355,18 +340,6 @@ impl ElectrumWallet {
 
     pub fn policy_asset(&self) -> elements::issuance::AssetId {
         self.wallet.config.policy_asset()
-    }
-
-    pub fn update_fee_estimates(&self) {
-        info!("building client");
-        if let Ok(fee_client) = self.config.electrum_url().build_client() {
-            info!("building built end");
-            let fee_store = self.wallet.store.clone();
-            match try_get_fee_estimates(&fee_client) {
-                Ok(fee_estimates) => fee_store.write().unwrap().cache.fee_estimates = fee_estimates,
-                Err(e) => warn!("can't update fee estimates {:?}", e),
-            };
-        }
     }
 
     fn update_tip(&self) -> Result<(), Error> {

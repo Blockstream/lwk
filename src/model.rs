@@ -115,10 +115,6 @@ pub struct GetTransactionsOpt {
     pub num_confs: Option<usize>,
 }
 
-// This one is simple enough to derive a serializer
-#[derive(Serialize, Debug, Clone, Deserialize)]
-pub struct FeeEstimate(pub u64);
-
 #[cfg(test)]
 mod tests {
     use elements::bitcoin::hashes::hex::{FromHex, ToHex};

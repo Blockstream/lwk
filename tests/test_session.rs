@@ -325,7 +325,6 @@ impl TestElectrumWallet {
             &mnemonic,
         )
         .unwrap();
-        electrum_wallet.update_fee_estimates();
 
         let tx_status = electrum_wallet.tx_status().unwrap();
         assert_eq!(tx_status, 15130871412783076140);

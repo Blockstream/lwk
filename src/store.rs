@@ -7,8 +7,8 @@ use elements::bitcoin::hashes::sha256;
 use elements::bitcoin::hashes::Hash;
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
+use elements::OutPoint;
 use elements::{BlockHash, Script, Txid};
-use elements::{BlockHeader, OutPoint};
 use log::{info, warn};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -40,9 +40,6 @@ pub struct RawCache {
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<u32>>,
 
-    /// contains headers at the height of my txs (used to show tx timestamps)
-    pub headers: HashMap<u32, BlockHeader>,
-
     /// unblinded values (only for liquid)
     pub unblinded: HashMap<OutPoint, elements::TxOutSecrets>,
 
@@ -63,7 +60,6 @@ impl Default for RawCache {
             paths: HashMap::default(),
             scripts: HashMap::default(),
             heights: HashMap::default(),
-            headers: HashMap::default(),
             unblinded: HashMap::default(),
             fee_estimates: Vec::default(),
             tip: (0, BlockHash::all_zeros()),

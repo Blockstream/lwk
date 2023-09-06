@@ -96,16 +96,6 @@ fn node_generate(client: &Client, block_num: u32) {
     info!("generate result {:?}", r);
 }
 
-fn node_issueasset(client: &Client, satoshi: u64) -> String {
-    let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(Denomination::Bitcoin);
-    let r = client
-        .call::<Value>("issueasset", &[btc.into(), 0.into()])
-        .unwrap();
-    info!("node_issueasset result {:?}", r);
-    r.get("asset").unwrap().as_str().unwrap().to_string()
-}
-
 pub struct TestElectrumServer {
     node: electrsd::bitcoind::BitcoinD,
     pub electrs: electrsd::ElectrsD,
@@ -203,9 +193,16 @@ impl TestElectrumServer {
     ) -> String {
         node_sendtoaddress(&self.node.client, address, satoshi, asset)
     }
+
     fn node_issueasset(&self, satoshi: u64) -> AssetId {
-        let asset = node_issueasset(&self.node.client, satoshi);
-        //AssetId::from_hex(&asset).unwrap()
+        let amount = Amount::from_sat(satoshi);
+        let btc = amount.to_string_in(Denomination::Bitcoin);
+        let r = self
+            .node
+            .client
+            .call::<Value>("issueasset", &[btc.into(), 0.into()])
+            .unwrap();
+        let asset = r.get("asset").unwrap().as_str().unwrap().to_string();
         AssetId::from_str(&asset).unwrap()
     }
 

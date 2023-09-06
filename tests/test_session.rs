@@ -4,7 +4,7 @@ use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::util::amount::Denomination;
 use elements::bitcoin::Amount;
-use elements::{Address, AssetId, BlockHash};
+use elements::{Address, AssetId};
 
 use bewallet::*;
 
@@ -214,8 +214,6 @@ impl TestElectrumServer {
 pub struct TestElectrumWallet {
     _mnemonic: String,
     electrum_wallet: ElectrumWallet,
-    _tx_status: u64,
-    _block_status: (u32, BlockHash),
     _db_root_dir: TempDir,
 }
 
@@ -238,10 +236,12 @@ impl TestElectrumWallet {
         )
         .unwrap();
 
-        let _tx_status = electrum_wallet.tx_status().unwrap();
-        assert_eq!(_tx_status, 15130871412783076140);
+        let mut opt = GetTransactionsOpt::default();
+        opt.count = 100;
+        let list = electrum_wallet.transactions(&opt).unwrap();
+        assert_eq!(list.len(), 0);
         let mut i = 120;
-        let _block_status = loop {
+        let block_status = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
             let block_status = electrum_wallet.block_status().unwrap();
@@ -251,13 +251,11 @@ impl TestElectrumWallet {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        assert_eq!(_block_status.0, 101);
+        assert_eq!(block_status.0, 101);
 
         Self {
             _mnemonic,
             electrum_wallet,
-            _tx_status,
-            _block_status,
             _db_root_dir,
         }
     }

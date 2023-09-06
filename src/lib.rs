@@ -28,9 +28,7 @@ use elements::{BlockHash, BlockHeader, Script, Txid};
 use log::{debug, info, trace, warn};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
-use std::hash::Hasher;
 
 struct Syncer {
     pub store: Store,
@@ -350,20 +348,6 @@ impl ElectrumWallet {
         let tip = self.wallet.get_tip()?;
         info!("tip={:?}", tip);
         Ok(tip)
-    }
-
-    pub fn tx_status(&self) -> Result<u64, Error> {
-        self.sync()?;
-        let mut opt = GetTransactionsOpt::default();
-        opt.count = 100;
-        let txs = self.wallet.list_tx(&opt)?;
-        let mut hasher = DefaultHasher::new();
-        for tx in txs.iter() {
-            std::hash::Hash::hash(&tx.txid, &mut hasher);
-        }
-        let status = hasher.finish();
-        info!("txs.len={} status={}", txs.len(), status);
-        Ok(status)
     }
 
     pub fn balance(&self) -> Result<HashMap<elements::issuance::AssetId, u64>, Error> {

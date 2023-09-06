@@ -85,7 +85,6 @@ impl Syncer {
         let start = Instant::now();
 
         let mut history_txs_id = HashSet::new();
-        let mut heights_set = HashSet::new();
         let mut txid_height = HashMap::new();
         let mut scripts = HashMap::new();
 
@@ -134,7 +133,6 @@ impl Syncer {
                     // el.height =  0 means unconfirmed with confirmed parents
                     // but we threat those tx the same
                     let height = el.height.max(0);
-                    heights_set.insert(height as u32);
                     let txid = elements::Txid::from_hash(el.tx_hash.as_hash());
                     if height == 0 {
                         txid_height.insert(txid, None);
@@ -150,42 +148,36 @@ impl Syncer {
         }
 
         let new_txs = self.download_txs(&history_txs_id, &scripts, &client)?;
-        let headers = self.download_headers(&heights_set, &client)?;
 
         let store_indexes = self.store.read()?.cache.indexes.clone();
 
-        let changed = if !new_txs.txs.is_empty()
-            || !headers.is_empty()
-            || store_indexes != last_used
-            || !scripts.is_empty()
-        {
-            info!(
-                "There are changes in the store new_txs:{:?} headers:{:?} txid_height:{:?}",
-                new_txs.txs.iter().map(|tx| tx.0).collect::<Vec<Txid>>(),
-                headers,
-                txid_height
-            );
-            let mut store_write = self.store.write()?;
-            store_write.cache.indexes = last_used;
-            store_write.cache.all_txs.extend(new_txs.txs.into_iter());
-            store_write.cache.unblinded.extend(new_txs.unblinds);
-            store_write.cache.headers.extend(headers);
+        let changed =
+            if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
+                info!(
+                    "There are changes in the store new_txs:{:?} txid_height:{:?}",
+                    new_txs.txs.iter().map(|tx| tx.0).collect::<Vec<Txid>>(),
+                    txid_height
+                );
+                let mut store_write = self.store.write()?;
+                store_write.cache.indexes = last_used;
+                store_write.cache.all_txs.extend(new_txs.txs.into_iter());
+                store_write.cache.unblinded.extend(new_txs.unblinds);
 
-            // height map is used for the live list of transactions, since due to reorg or rbf tx
-            // could disappear from the list, we clear the list and keep only the last values returned by the server
-            store_write.cache.heights.clear();
-            store_write.cache.heights.extend(txid_height.into_iter());
+                // height map is used for the live list of transactions, since due to reorg or rbf tx
+                // could disappear from the list, we clear the list and keep only the last values returned by the server
+                store_write.cache.heights.clear();
+                store_write.cache.heights.extend(txid_height.into_iter());
 
-            store_write
-                .cache
-                .scripts
-                .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
-            store_write.cache.paths.extend(scripts.into_iter());
-            store_write.flush()?;
-            true
-        } else {
-            false
-        };
+                store_write
+                    .cache
+                    .scripts
+                    .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
+                store_write.cache.paths.extend(scripts.into_iter());
+                store_write.flush()?;
+                true
+            } else {
+                false
+            };
         trace!(
             "changes:{} elapsed {}",
             changed,
@@ -193,42 +185,6 @@ impl Syncer {
         );
 
         Ok(changed)
-    }
-
-    fn download_headers(
-        &self,
-        heights_set: &HashSet<u32>,
-        client: &Client,
-    ) -> Result<Vec<(u32, elements::BlockHeader)>, Error> {
-        let mut result = vec![];
-        let mut heights_in_db: HashSet<u32> = self
-            .store
-            .read()?
-            .cache
-            .heights
-            .iter()
-            .filter_map(|(_, h)| *h)
-            .collect();
-        heights_in_db.insert(0);
-        let heights_to_download: Vec<u32> =
-            heights_set.difference(&heights_in_db).cloned().collect();
-        if !heights_to_download.is_empty() {
-            let headers_bytes_downloaded =
-                client.batch_block_header_raw(heights_to_download.clone())?;
-            let mut headers_downloaded: Vec<elements::BlockHeader> = vec![];
-            for vec in headers_bytes_downloaded {
-                headers_downloaded.push(elements::encode::deserialize(&vec)?);
-            }
-            info!("headers_downloaded {:?}", &headers_downloaded);
-            for (header, height) in headers_downloaded
-                .into_iter()
-                .zip(heights_to_download.into_iter())
-            {
-                result.push((height, header));
-            }
-        }
-
-        Ok(result)
     }
 
     fn download_txs(

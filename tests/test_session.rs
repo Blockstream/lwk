@@ -1,15 +1,14 @@
 extern crate bewallet;
 
-use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
-use elements;
-use elements::bitcoin::hashes::hex::FromHex;
+use elements::bitcoin::util::amount::Denomination;
 use elements::bitcoin::Amount;
-use elements::BlockHash;
+use elements::{Address, AssetId, BlockHash};
 
 use bewallet::*;
 
+use chrono::Utc;
 use log::LevelFilter;
 use log::{info, warn, Metadata, Record};
 use serde_json::Value;
@@ -49,12 +48,12 @@ static START: Once = Once::new();
 
 fn node_sendtoaddress(
     client: &Client,
-    address: &elements::Address,
+    address: &Address,
     satoshi: u64,
-    asset: Option<elements::issuance::AssetId>,
+    asset: Option<AssetId>,
 ) -> String {
     let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(elements::bitcoin::util::amount::Denomination::Bitcoin);
+    let btc = amount.to_string_in(Denomination::Bitcoin);
     info!("node_sendtoaddress {} {}", address, btc);
     let r = match asset {
         Some(asset) => client
@@ -81,12 +80,12 @@ fn node_sendtoaddress(
     r.as_str().unwrap().to_string()
 }
 
-fn node_getnewaddress(client: &Client, kind: Option<&str>) -> elements::Address {
+fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client
         .call("getnewaddress", &["label".into(), kind.into()])
         .unwrap();
-    elements::Address::from_str(&addr.as_str().unwrap()).unwrap()
+    Address::from_str(&addr.as_str().unwrap()).unwrap()
 }
 
 fn node_generate(client: &Client, block_num: u32) {
@@ -99,7 +98,7 @@ fn node_generate(client: &Client, block_num: u32) {
 
 fn node_issueasset(client: &Client, satoshi: u64) -> String {
     let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(elements::bitcoin::util::amount::Denomination::Bitcoin);
+    let btc = amount.to_string_in(Denomination::Bitcoin);
     let r = client
         .call::<Value>("issueasset", &[btc.into(), 0.into()])
         .unwrap();
@@ -198,27 +197,24 @@ impl TestElectrumServer {
 
     fn node_sendtoaddress(
         &self,
-        address: &elements::Address,
+        address: &Address,
         satoshi: u64,
-        asset: Option<elements::issuance::AssetId>,
+        asset: Option<AssetId>,
     ) -> String {
         node_sendtoaddress(&self.node.client, address, satoshi, asset)
     }
-    fn node_issueasset(&self, satoshi: u64) -> elements::issuance::AssetId {
+    fn node_issueasset(&self, satoshi: u64) -> AssetId {
         let asset = node_issueasset(&self.node.client, satoshi);
-        elements::issuance::AssetId::from_hex(&asset).unwrap()
+        //AssetId::from_hex(&asset).unwrap()
+        AssetId::from_str(&asset).unwrap()
     }
 
-    pub fn fund_btc(&mut self, address: &elements::Address, satoshi: u64) -> String {
+    pub fn fund_btc(&mut self, address: &Address, satoshi: u64) -> String {
         let txid = self.node_sendtoaddress(address, satoshi, None);
         txid
     }
 
-    pub fn fund_asset(
-        &mut self,
-        address: &elements::Address,
-        satoshi: u64,
-    ) -> (String, elements::issuance::AssetId) {
+    pub fn fund_asset(&mut self, address: &Address, satoshi: u64) -> (String, AssetId) {
         let asset = self.node_issueasset(satoshi);
         let txid = self.node_sendtoaddress(address, satoshi, Some(asset.clone()));
         (txid, asset)
@@ -308,7 +304,7 @@ impl TestElectrumWallet {
     }
 
     /// asset balance in satoshi
-    fn balance(&self, asset: &elements::issuance::AssetId) -> u64 {
+    fn balance(&self, asset: &AssetId) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
         info!("balance: {:?}", balance);
         *balance.get(asset).unwrap_or(&0u64)
@@ -353,7 +349,7 @@ impl TestElectrumWallet {
         assert_eq!(utxos.len(), 1);
     }
 
-    pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> elements::issuance::AssetId {
+    pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
         let address = self.electrum_wallet.address().unwrap();

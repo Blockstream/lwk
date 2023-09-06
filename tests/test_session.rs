@@ -46,40 +46,6 @@ impl log::Log for SimpleLogger {
 
 static START: Once = Once::new();
 
-fn node_sendtoaddress(
-    client: &Client,
-    address: &Address,
-    satoshi: u64,
-    asset: Option<AssetId>,
-) -> String {
-    let amount = Amount::from_sat(satoshi);
-    let btc = amount.to_string_in(Denomination::Bitcoin);
-    info!("node_sendtoaddress {} {}", address, btc);
-    let r = match asset {
-        Some(asset) => client
-            .call::<Value>(
-                "sendtoaddress",
-                &[
-                    address.to_string().into(),
-                    btc.into(),
-                    "".into(),
-                    "".into(),
-                    false.into(),
-                    false.into(),
-                    1.into(),
-                    "UNSET".into(),
-                    asset.to_string().into(),
-                ],
-            )
-            .unwrap(),
-        None => client
-            .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
-            .unwrap(),
-    };
-    info!("node_sendtoaddress result {:?}", r);
-    r.as_str().unwrap().to_string()
-}
-
 fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client
@@ -191,7 +157,34 @@ impl TestElectrumServer {
         satoshi: u64,
         asset: Option<AssetId>,
     ) -> String {
-        node_sendtoaddress(&self.node.client, address, satoshi, asset)
+        let amount = Amount::from_sat(satoshi);
+        let btc = amount.to_string_in(Denomination::Bitcoin);
+        let r = match asset {
+            Some(asset) => self
+                .node
+                .client
+                .call::<Value>(
+                    "sendtoaddress",
+                    &[
+                        address.to_string().into(),
+                        btc.into(),
+                        "".into(),
+                        "".into(),
+                        false.into(),
+                        false.into(),
+                        1.into(),
+                        "UNSET".into(),
+                        asset.to_string().into(),
+                    ],
+                )
+                .unwrap(),
+            None => self
+                .node
+                .client
+                .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
+                .unwrap(),
+        };
+        r.as_str().unwrap().to_string()
     }
 
     fn node_issueasset(&self, satoshi: u64) -> AssetId {

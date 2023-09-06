@@ -31,7 +31,6 @@ use rand::thread_rng;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
-use std::time::Instant;
 
 struct Syncer {
     pub store: Store,
@@ -47,7 +46,6 @@ struct DownloadTxResult {
 impl Syncer {
     pub fn sync(&self, client: &Client) -> Result<bool, Error> {
         debug!("start sync");
-        let start = Instant::now();
 
         let mut history_txs_id = HashSet::new();
         let mut txid_height = HashMap::new();
@@ -143,11 +141,6 @@ impl Syncer {
             } else {
                 false
             };
-        trace!(
-            "changes:{} elapsed {}",
-            changed,
-            start.elapsed().as_millis()
-        );
 
         Ok(changed)
     }

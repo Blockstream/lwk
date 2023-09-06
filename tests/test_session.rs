@@ -209,23 +209,6 @@ impl TestElectrumServer {
         let txid = self.node_sendtoaddress(address, satoshi, Some(asset.clone()));
         (txid, asset)
     }
-
-    /// balance in satoshi of the node
-    fn _node_balance(&self, asset: Option<String>) -> u64 {
-        let balance: Value = self.node.client.call("getbalance", &[]).unwrap();
-        let unconfirmed_balance: Value =
-            self.node.client.call("getunconfirmedbalance", &[]).unwrap();
-        let asset_or_policy = asset.or(Some("bitcoin".to_string())).unwrap();
-        let balance = match balance.get(&asset_or_policy) {
-            Some(Value::Number(s)) => s.as_f64().unwrap(),
-            _ => 0.0,
-        };
-        let unconfirmed_balance = match unconfirmed_balance.get(&asset_or_policy) {
-            Some(Value::Number(s)) => s.as_f64().unwrap(),
-            _ => 0.0,
-        };
-        ((balance + unconfirmed_balance) * 100_000_000.0) as u64
-    }
 }
 
 pub struct TestElectrumWallet {

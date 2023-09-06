@@ -19,12 +19,16 @@ use crate::transaction::*;
 pub use crate::utils::tx_to_hex;
 use electrum_client::GetHistoryRes;
 use electrum_client::{Client, ElectrumApi};
-use elements;
 use elements::bitcoin::hashes::hex::ToHex;
+use elements::bitcoin::secp256k1::Secp256k1;
 use elements::bitcoin::util::bip32::DerivationPath;
-use elements::confidential::{self, Asset, Nonce};
+use elements::bitcoin::{Script as BitcoinScript, Txid as BitcoinTxid};
+use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
-use elements::{BlockHash, BlockHeader, Script, Txid};
+use elements::{
+    Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut, TxOutSecrets,
+    Txid,
+};
 use log::{debug, info, trace, warn};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -37,8 +41,8 @@ struct Syncer {
 
 #[derive(Default)]
 struct DownloadTxResult {
-    txs: Vec<(Txid, elements::Transaction)>,
-    unblinds: Vec<(elements::OutPoint, elements::TxOutSecrets)>,
+    txs: Vec<(Txid, Transaction)>,
+    unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
 impl Syncer {
@@ -56,12 +60,12 @@ impl Syncer {
             let mut batch_count = 0;
             loop {
                 let batch = self.store.read()?.get_script_batch(i, batch_count)?;
-                let scripts_bitcoin: Vec<elements::bitcoin::Script> = batch
+                let scripts_bitcoin: Vec<BitcoinScript> = batch
                     .value
                     .iter()
-                    .map(|e| elements::bitcoin::Script::from(e.0.clone().into_bytes()))
+                    .map(|e| BitcoinScript::from(e.0.clone().into_bytes()))
                     .collect();
-                let scripts_bitcoin: Vec<&elements::bitcoin::Script> =
+                let scripts_bitcoin: Vec<&BitcoinScript> =
                     scripts_bitcoin.iter().map(|e| e).collect();
                 let result: Vec<Vec<GetHistoryRes>> =
                     client.batch_script_get_history(scripts_bitcoin)?;
@@ -94,7 +98,7 @@ impl Syncer {
                     // el.height =  0 means unconfirmed with confirmed parents
                     // but we threat those tx the same
                     let height = el.height.max(0);
-                    let txid = elements::Txid::from_hash(el.tx_hash.as_hash());
+                    let txid = Txid::from_hash(el.tx_hash.as_hash());
                     if height == 0 {
                         txid_height.insert(txid, None);
                     } else {
@@ -155,16 +159,15 @@ impl Syncer {
         let mut txs_in_db = self.store.read()?.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<&Txid> = history_txs_id.difference(&txs_in_db).collect();
         if !txs_to_download.is_empty() {
-            let txs_bitcoin: Vec<elements::bitcoin::Txid> = txs_to_download
+            let txs_bitcoin: Vec<BitcoinTxid> = txs_to_download
                 .iter()
-                .map(|t| elements::bitcoin::Txid::from_hash(t.as_hash()))
+                .map(|t| BitcoinTxid::from_hash(t.as_hash()))
                 .collect();
-            let txs_bitcoin: Vec<&elements::bitcoin::Txid> =
-                txs_bitcoin.iter().map(|t| t).collect();
+            let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
-            let mut txs_downloaded: Vec<elements::Transaction> = vec![];
+            let mut txs_downloaded: Vec<Transaction> = vec![];
             for vec in txs_bytes_downloaded {
-                let tx: elements::Transaction = elements::encode::deserialize(&vec)?;
+                let tx: Transaction = elements::encode::deserialize(&vec)?;
                 txs_downloaded.push(tx);
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
@@ -185,7 +188,7 @@ impl Syncer {
                         || scripts.contains_key(&output.script_pubkey)
                     {
                         let vout = i as u32;
-                        let outpoint = elements::OutPoint {
+                        let outpoint = OutPoint {
                             txid: tx.txid(),
                             vout,
                         };
@@ -196,6 +199,7 @@ impl Syncer {
                         }
                     }
                 }
+
                 strip_witness(&mut tx);
                 txs.push((txid, tx));
             }
@@ -203,15 +207,14 @@ impl Syncer {
             let txs_to_download: Vec<&Txid> =
                 previous_txs_to_download.difference(&txs_in_db).collect();
             if !txs_to_download.is_empty() {
-                let txs_bitcoin: Vec<elements::bitcoin::Txid> = txs_to_download
+                let txs_bitcoin: Vec<BitcoinTxid> = txs_to_download
                     .iter()
-                    .map(|t| elements::bitcoin::Txid::from_hash(t.as_hash()))
+                    .map(|t| BitcoinTxid::from_hash(t.as_hash()))
                     .collect();
-                let txs_bitcoin: Vec<&elements::bitcoin::Txid> =
-                    txs_bitcoin.iter().map(|t| t).collect();
+                let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
                 for vec in txs_bytes_downloaded {
-                    let mut tx: elements::Transaction = elements::encode::deserialize(&vec)?;
+                    let mut tx: Transaction = elements::encode::deserialize(&vec)?;
                     strip_witness(&mut tx);
                     txs.push((tx.txid(), tx));
                 }
@@ -222,19 +225,11 @@ impl Syncer {
         }
     }
 
-    pub fn try_unblind(
-        &self,
-        outpoint: elements::OutPoint,
-        output: elements::TxOut,
-    ) -> Result<elements::TxOutSecrets, Error> {
+    pub fn try_unblind(&self, outpoint: OutPoint, output: TxOut) -> Result<TxOutSecrets, Error> {
         match (output.asset, output.value, output.nonce) {
-            (
-                Asset::Confidential(_),
-                confidential::Value::Confidential(_),
-                Nonce::Confidential(_),
-            ) => {
+            (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
                 // TODO: use a shared ctx
-                let secp = elements::bitcoin::secp256k1::Secp256k1::new();
+                let secp = Secp256k1::new();
                 let receiver_sk = self
                     .master_blinding
                     .derive_blinding_key(&output.script_pubkey);
@@ -309,7 +304,7 @@ impl ElectrumWallet {
         self.config.network()
     }
 
-    pub fn policy_asset(&self) -> elements::issuance::AssetId {
+    pub fn policy_asset(&self) -> AssetId {
         self.wallet.config.policy_asset()
     }
 
@@ -350,12 +345,12 @@ impl ElectrumWallet {
         Ok(tip)
     }
 
-    pub fn balance(&self) -> Result<HashMap<elements::issuance::AssetId, u64>, Error> {
+    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
         self.sync()?;
         self.wallet.balance()
     }
 
-    pub fn address(&self) -> Result<elements::Address, Error> {
+    pub fn address(&self) -> Result<Address, Error> {
         self.sync()?;
         self.wallet.get_address()
     }
@@ -376,15 +371,11 @@ impl ElectrumWallet {
         self.wallet.create_tx(opt)
     }
 
-    pub fn sign_tx(
-        &self,
-        transaction: &mut elements::Transaction,
-        mnemonic: &str,
-    ) -> Result<(), Error> {
+    pub fn sign_tx(&self, transaction: &mut Transaction, mnemonic: &str) -> Result<(), Error> {
         self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
 
-    pub fn broadcast_tx(&self, transaction: &elements::Transaction) -> Result<(), Error> {
+    pub fn broadcast_tx(&self, transaction: &Transaction) -> Result<(), Error> {
         info!("broadcast_transaction {:#?}", transaction.txid());
         let client = self.config.electrum_url().build_client()?;
         client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;

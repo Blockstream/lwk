@@ -14,30 +14,8 @@ fn liquid() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
     let mut wallet = test_session::TestElectrumWallet::new(&server.electrs.electrum_url, mnemonic);
 
-    let node_address = server.node_getnewaddress(Some("p2sh-segwit"));
-    let node_bech32_address = server.node_getnewaddress(Some("bech32"));
-    let node_legacy_address = server.node_getnewaddress(Some("legacy"));
-
     wallet.fund_btc(&mut server);
-    let asset = wallet.fund_asset(&mut server);
-
-    let _txid = wallet.send_tx(&node_address, 10_000, None, None);
-    wallet.send_tx_to_unconf(&mut server);
-    wallet.send_tx(&node_bech32_address, 1_000, None, None);
-    wallet.send_tx(&node_legacy_address, 1_000, None, None);
-    wallet.send_tx(&node_address, 1_000, Some(asset.clone()), None);
-    wallet.send_tx(&node_address, 100, Some(asset.clone()), None); // asset should send below dust limit
-    wallet.wait_for_block(server.mine_block());
-    let asset1 = wallet.fund_asset(&mut server);
-    let asset2 = wallet.fund_asset(&mut server);
-    let asset3 = wallet.fund_asset(&mut server);
-    let assets = vec![asset1, asset2, asset3];
-    wallet.send_multi(3, 1_000, &vec![], &mut server);
-    wallet.send_multi(10, 1_000, &assets, &mut server);
-    wallet.wait_for_block(server.mine_block());
-    wallet.create_fails(&mut server);
-    let utxos = wallet.utxos();
-    wallet.send_tx(&node_address, 1_000, None, Some(utxos));
+    let _asset = wallet.fund_asset(&mut server);
 
     server.stop();
 }

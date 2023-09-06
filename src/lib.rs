@@ -24,7 +24,7 @@ use elements::bitcoin::hashes::hex::ToHex;
 use elements::bitcoin::util::bip32::DerivationPath;
 use elements::confidential::{self, Asset, Nonce};
 use elements::slip77::MasterBlindingKey;
-use elements::{BlockHash, Script, Txid};
+use elements::{BlockHash, BlockHeader, Script, Txid};
 use log::{debug, info, trace, warn};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -36,26 +36,6 @@ use std::time::Instant;
 struct Syncer {
     pub store: Store,
     pub master_blinding: MasterBlindingKey,
-}
-
-struct Tipper {
-    pub store: Store,
-}
-
-impl Tipper {
-    pub fn tip(&self, client: &Client) -> Result<u32, Error> {
-        let header = client.block_headers_subscribe_raw()?;
-        let height = header.height as u32;
-        let tip_height = self.store.read()?.cache.tip.0;
-        if height != tip_height {
-            let block_header: elements::BlockHeader =
-                elements::encode::deserialize(&header.header)?;
-            let hash: BlockHash = block_header.block_hash();
-            info!("saving in store new tip {:?}", (height, hash));
-            self.store.write()?.cache.tip = (height, hash);
-        }
-        Ok(height)
-    }
 }
 
 #[derive(Default)]
@@ -343,17 +323,14 @@ impl ElectrumWallet {
     }
 
     fn update_tip(&self) -> Result<(), Error> {
-        // consider not using Tipper
-        let tipper = Tipper {
-            store: self.wallet.store.clone(),
-        };
-        let tipper_url = self.config.electrum_url();
-        if let Ok(client) = tipper_url.build_client() {
-            match tipper.tip(&client) {
-                Ok(_) => (),
-                Err(e) => {
-                    warn!("exception in tipper {:?}", e);
-                }
+        if let Ok(client) = self.config.electrum_url().build_client() {
+            let header = client.block_headers_subscribe_raw()?;
+            let height = header.height as u32;
+            let tip_height = self.wallet.store.read()?.cache.tip.0;
+            if height != tip_height {
+                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
+                let hash: BlockHash = block_header.block_hash();
+                self.wallet.store.write()?.cache.tip = (height, hash);
             }
         }
         Ok(())

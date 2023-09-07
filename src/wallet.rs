@@ -4,14 +4,12 @@ use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::p2shwpkh_script;
-use bip39;
 use electrum_client::ElectrumApi;
 use elements;
+use elements::bitcoin::hashes::hex::FromHex;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, PublicKey, Secp256k1};
-use elements::bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
-};
+use elements::bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use elements::slip77::MasterBlindingKey;
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Txid};
 use hex;
@@ -19,27 +17,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-
-fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
-    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
-    let seed = mnemonic.to_seed("");
-    Ok(seed.to_vec())
-}
-
-fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Error> {
-    let seed = mnemonic2seed(mnemonic)?;
-    let xprv = ExtendedPrivKey::new_master(
-        elements::bitcoin::network::constants::Network::Testnet,
-        &seed,
-    )?;
-
-    let coin_type = config.coin_type();
-    // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
-    let path_string = format!("m/49'/{}'/0'", coin_type);
-    let path = DerivationPath::from_str(&path_string)?;
-    let secp = Secp256k1::new();
-    Ok(xprv.derive_priv(&secp, &path)?)
-}
 
 pub struct ElectrumWallet {
     secp: Secp256k1<All>,
@@ -57,11 +34,12 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        mnemonic: &str,
+        xpub: &str,
+        master_blinding_key: &str,
     ) -> Result<Self, Error> {
         let config =
             Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
-        Self::new(config, mnemonic)
+        Self::new(config, xpub, master_blinding_key)
     }
 
     /// Create a new testnet wallet
@@ -70,10 +48,11 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        mnemonic: &str,
+        xpub: &str,
+        master_blinding_key: &str,
     ) -> Result<Self, Error> {
         let config = Config::new_testnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, mnemonic)
+        Self::new(config, xpub, master_blinding_key)
     }
 
     /// Create a new mainnet wallet
@@ -82,22 +61,25 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        mnemonic: &str,
+        xpub: &str,
+        master_blinding_key: &str,
     ) -> Result<Self, Error> {
         let config = Config::new_mainnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, mnemonic)
+        Self::new(config, xpub, master_blinding_key)
     }
 
-    fn new(config: Config, mnemonic: &str) -> Result<Self, Error> {
-        let xprv = mnemonic2xprv(mnemonic, config.clone())?;
+    fn new(config: Config, xpub: &str, master_blinding_key: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
-        let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
+        let xpub = ExtendedPubKey::from_str(&xpub)?;
 
         let wallet_desc = format!("{}{:?}", xpub, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let seed = mnemonic2seed(mnemonic)?;
-        let master_blinding = MasterBlindingKey::new(&seed);
+        let inner = elements::secp256k1_zkp::SecretKey::from_slice(
+            &Vec::<u8>::from_hex(master_blinding_key).unwrap(),
+        )
+        .unwrap();
+        let master_blinding = MasterBlindingKey(inner);
 
         let mut path: PathBuf = config.data_root().into();
         if !path.exists() {

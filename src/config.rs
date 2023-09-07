@@ -99,17 +99,6 @@ impl Config {
         })
     }
 
-    pub fn coin_type(self) -> u32 {
-        // BIP44: m / purpose' / coin_type' / account' / change / address_index
-        // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-        // slip44 suggest 1 for every testnet, so we are using it also for regtest
-        match self.network {
-            ElementsNetwork::Liquid => 1776,
-            ElementsNetwork::LiquidTestnet => 1,
-            ElementsNetwork::ElementsRegtest => 1,
-        }
-    }
-
     pub fn address_params(&self) -> &'static AddressParams {
         match self.network {
             ElementsNetwork::Liquid => &AddressParams::LIQUID,

@@ -142,11 +142,4 @@ impl ElectrumWallet {
     pub fn sign_tx(&self, transaction: &mut Transaction, mnemonic: &str) -> Result<(), Error> {
         self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
-
-    pub fn broadcast_tx(&self, transaction: &Transaction) -> Result<(), Error> {
-        info!("broadcast_transaction {:#?}", transaction.txid());
-        let client = self.config.electrum_url().build_client()?;
-        client.transaction_broadcast_raw(&elements::encode::serialize(transaction))?;
-        Ok(())
-    }
 }

@@ -12,7 +12,6 @@ use elements::bitcoin::secp256k1::{self, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
-use elements::confidential::Asset;
 use elements::secp256k1_zkp;
 use elements::slip77::MasterBlindingKey;
 use elements::{BlockHash, Txid};
@@ -149,7 +148,6 @@ impl WalletCtx {
             }
         });
 
-        let policy_asset = Some(Asset::Explicit(self.config.policy_asset()));
         for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
             trace!("tx_id {}", tx_id);
 
@@ -159,18 +157,10 @@ impl WalletCtx {
                 .get(*tx_id)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
-            let fee = fee(
-                &tx,
-                &store_read.cache.all_txs,
-                &store_read.cache.unblinded,
-                &policy_asset,
-            )?;
-            trace!("tx_id {} fee {}", tx_id, fee);
-
             let balances = my_balance_changes(&tx, &store_read.cache.unblinded);
             trace!("tx_id {} balances {:?}", tx_id, balances);
 
-            let tx_details = TransactionDetails::new(tx.clone(), balances, fee, **height);
+            let tx_details = TransactionDetails::new(tx.clone(), balances, **height);
 
             txs.push(tx_details);
         }

@@ -31,7 +31,6 @@ pub struct TransactionDetails {
     pub transaction: Transaction,
     pub txid: String,
     pub balances: HashMap<AssetId, i64>,
-    pub fee: u64,
     pub height: Option<u32>,
 }
 
@@ -39,7 +38,6 @@ impl TransactionDetails {
     pub fn new(
         transaction: Transaction,
         balances: HashMap<AssetId, i64>,
-        fee: u64,
         height: Option<u32>,
     ) -> TransactionDetails {
         let txid = transaction.txid().to_string();
@@ -47,7 +45,6 @@ impl TransactionDetails {
             transaction,
             txid,
             balances,
-            fee,
             height,
         }
     }

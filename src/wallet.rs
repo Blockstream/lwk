@@ -1,19 +1,19 @@
 use crate::error::Error;
 use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
-use crate::util::p2shwpkh_script;
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
+use crate::util::p2shwpkh_script;
 use bip39;
 use electrum_client::ElectrumApi;
 use elements;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::bitcoin::secp256k1::{PublicKey, All, Secp256k1};
+use elements::bitcoin::secp256k1::{All, PublicKey, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::slip77::MasterBlindingKey;
-use elements::{Address, AssetId, BlockHash, BlockHeader, Txid, OutPoint};
+use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Txid};
 use hex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -152,7 +152,7 @@ impl ElectrumWallet {
         Ok(())
     }
 
-    pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {
+    pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
         self.update_tip()?;
         Ok(self.store.read()?.cache.tip)
     }

@@ -230,17 +230,17 @@ impl TestElectrumWallet {
         let list = electrum_wallet.transactions(&opt).unwrap();
         assert_eq!(list.len(), 0);
         let mut i = 120;
-        let block_status = loop {
+        let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            let block_status = electrum_wallet.block_status().unwrap();
-            if block_status.0 == 101 {
-                break block_status;
+            let tip = electrum_wallet.tip().unwrap();
+            if tip.0 == 101 {
+                break tip.0;
             } else {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        assert_eq!(block_status.0, 101);
+        assert_eq!(tip, 101);
 
         Self {
             _mnemonic,

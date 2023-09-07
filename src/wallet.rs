@@ -180,7 +180,7 @@ impl ElectrumWallet {
         let addr = Address::p2shwpkh(
             &derived.to_pub(),
             blinder,
-            self.config.network().address_params(),
+            self.config.address_params(),
         );
         Ok(addr)
     }

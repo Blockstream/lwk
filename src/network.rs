@@ -35,16 +35,6 @@ pub enum ElementsNetwork {
     ElementsRegtest,
 }
 
-impl ElementsNetwork {
-    pub fn address_params(&self) -> &'static AddressParams {
-        match self {
-            ElementsNetwork::Liquid => &AddressParams::LIQUID,
-            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
@@ -113,8 +103,12 @@ impl Config {
         }
     }
 
-    pub fn network(&self) -> ElementsNetwork {
-        self.network
+    pub fn address_params(&self) -> &'static AddressParams {
+        match self.network {
+            ElementsNetwork::Liquid => &AddressParams::LIQUID,
+            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
+            ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
+        }
     }
 
     pub fn policy_asset(&self) -> AssetId {

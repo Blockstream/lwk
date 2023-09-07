@@ -1,5 +1,7 @@
 use crate::error::Error;
 use elements::bitcoin::hashes::hex::FromHex;
+use electrum_client::{Client, ConfigBuilder}; 
+use elements::{AddressParams, AssetId};
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -14,15 +16,15 @@ pub enum ElectrumUrl {
 }
 
 impl ElectrumUrl {
-    pub fn build_client(&self) -> Result<electrum_client::Client, Error> {
-        let builder = electrum_client::ConfigBuilder::new();
+    pub fn build_client(&self) -> Result<Client, Error> {
+        let builder = ConfigBuilder::new();
         let (url, builder) = match self {
             ElectrumUrl::Tls(url, validate) => {
                 (format!("ssl://{}", url), builder.validate_domain(*validate))
             }
             ElectrumUrl::Plaintext(url) => (format!("tcp://{}", url), builder),
         };
-        Ok(electrum_client::Client::from_config(&url, builder.build())?)
+        Ok(Client::from_config(&url, builder.build())?)
     }
 }
 
@@ -34,11 +36,11 @@ pub enum ElementsNetwork {
 }
 
 impl ElementsNetwork {
-    pub fn address_params(&self) -> &'static elements::AddressParams {
+    pub fn address_params(&self) -> &'static AddressParams {
         match self {
-            ElementsNetwork::Liquid => &elements::AddressParams::LIQUID,
-            ElementsNetwork::LiquidTestnet => &elements::AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::ElementsRegtest => &elements::AddressParams::ELEMENTS,
+            ElementsNetwork::Liquid => &AddressParams::LIQUID,
+            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
+            ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
         }
     }
 }
@@ -46,7 +48,7 @@ impl ElementsNetwork {
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    policy_asset: elements::issuance::AssetId,
+    policy_asset: AssetId,
     electrum_url: ElectrumUrl,
 }
 
@@ -64,7 +66,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::ElementsRegtest,
             electrum_url,
-            policy_asset: elements::issuance::AssetId::from_hex(policy_asset)?,
+            policy_asset: AssetId::from_hex(policy_asset)?,
         })
     }
 
@@ -80,7 +82,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::LiquidTestnet,
             electrum_url,
-            policy_asset: elements::issuance::AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
+            policy_asset: AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
         })
     }
 
@@ -96,7 +98,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::Liquid,
             electrum_url,
-            policy_asset: elements::issuance::AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
+            policy_asset: AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
         })
     }
 
@@ -104,7 +106,7 @@ impl Config {
         self.network
     }
 
-    pub fn policy_asset(&self) -> elements::issuance::AssetId {
+    pub fn policy_asset(&self) -> AssetId {
         self.policy_asset
     }
 

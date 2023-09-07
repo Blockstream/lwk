@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
+use elements::bitcoin::bip32::DerivationPath;
 use elements::bitcoin::secp256k1::Secp256k1;
-use elements::bitcoin::util::bip32::DerivationPath;
-use elements::bitcoin::{Script as BitcoinScript, Txid as BitcoinTxid};
+use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
 use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
@@ -40,8 +40,8 @@ impl Syncer {
                     .iter()
                     .map(|e| BitcoinScript::from(e.0.clone().into_bytes()))
                     .collect();
-                let scripts_bitcoin: Vec<&BitcoinScript> =
-                    scripts_bitcoin.iter().map(|e| e).collect();
+                let scripts_bitcoin: Vec<&_> =
+                    scripts_bitcoin.iter().map(|e| e.as_script()).collect();
                 let result: Vec<Vec<GetHistoryRes>> =
                     client.batch_script_get_history(scripts_bitcoin)?;
                 if !batch.cached {
@@ -72,7 +72,7 @@ impl Syncer {
                     // el.height =  0 means unconfirmed with confirmed parents
                     // but we threat those tx the same
                     let height = el.height.max(0);
-                    let txid = Txid::from_hash(el.tx_hash.as_hash());
+                    let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
                     if height == 0 {
                         txid_height.insert(txid, None);
                     } else {
@@ -130,7 +130,7 @@ impl Syncer {
         if !txs_to_download.is_empty() {
             let txs_bitcoin: Vec<BitcoinTxid> = txs_to_download
                 .iter()
-                .map(|t| BitcoinTxid::from_hash(t.as_hash()))
+                .map(|t| BitcoinTxid::from_raw_hash(t.to_raw_hash()))
                 .collect();
             let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
@@ -175,7 +175,7 @@ impl Syncer {
             if !txs_to_download.is_empty() {
                 let txs_bitcoin: Vec<BitcoinTxid> = txs_to_download
                     .iter()
-                    .map(|t| BitcoinTxid::from_hash(t.as_hash()))
+                    .map(|t| BitcoinTxid::from_raw_hash(t.to_raw_hash()))
                     .collect();
                 let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;

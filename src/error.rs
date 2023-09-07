@@ -12,9 +12,9 @@ pub enum Error {
     Generic(String),
     InvalidMnemonic(bip39::Error),
     AddrParse(String),
-    Bitcoin(elements::bitcoin::util::Error),
+    Bitcoin(elements::bitcoin::Error),
     BitcoinHashes(elements::bitcoin::hashes::error::Error),
-    BitcoinBIP32Error(elements::bitcoin::util::bip32::Error),
+    BitcoinBIP32Error(elements::bitcoin::bip32::Error),
     BitcoinConsensus(elements::bitcoin::consensus::encode::Error),
     JSON(serde_json::error::Error),
     JsonFrom(serde_json::Error),
@@ -84,16 +84,16 @@ macro_rules! impl_error {
 }
 
 impl_error!(&str);
-impl_error!(elements::bitcoin::util::base58::Error);
+impl_error!(elements::bitcoin::base58::Error);
 impl_error!(elements::address::AddressError);
-impl_error!(elements::bitcoin::util::address::Error);
+impl_error!(elements::bitcoin::address::Error);
 impl_error!(aead::Error);
 impl_error!(PoisonError<RwLockReadGuard<'_, StoreMeta>>);
 impl_error!(PoisonError<RwLockWriteGuard<'_, StoreMeta>>);
 impl_error!(serde_cbor::error::Error);
 impl_error!(elements::bitcoin::hashes::hex::Error);
 impl_error!(std::string::FromUtf8Error);
-impl_error!(elements::bitcoin::util::key::Error);
+impl_error!(elements::bitcoin::key::Error);
 
 impl From<std::array::TryFromSliceError> for Error {
     fn from(err: std::array::TryFromSliceError) -> Self {
@@ -107,8 +107,8 @@ impl From<std::net::AddrParseError> for Error {
     }
 }
 
-impl From<elements::bitcoin::util::bip32::Error> for Error {
-    fn from(err: elements::bitcoin::util::bip32::Error) -> Self {
+impl From<elements::bitcoin::bip32::Error> for Error {
+    fn from(err: elements::bitcoin::bip32::Error) -> Self {
         Error::BitcoinBIP32Error(err)
     }
 }

@@ -1,7 +1,7 @@
 use crate::error::Error;
 use electrum_client::{Client, ConfigBuilder};
-use elements::bitcoin::hashes::hex::FromHex;
 use elements::{AddressParams, AssetId};
+use std::str::FromStr;
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -58,7 +58,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::ElementsRegtest,
             electrum_url,
-            policy_asset: AssetId::from_hex(policy_asset)?,
+            policy_asset: AssetId::from_str(policy_asset)?,
             data_root: data_root.into(),
         })
     }
@@ -76,7 +76,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::LiquidTestnet,
             electrum_url,
-            policy_asset: AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
+            policy_asset: AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR)?,
             data_root: data_root.into(),
         })
     }
@@ -94,7 +94,7 @@ impl Config {
         Ok(Config {
             network: ElementsNetwork::Liquid,
             electrum_url,
-            policy_asset: AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
+            policy_asset: AssetId::from_str(LIQUID_POLICY_ASSET_STR)?,
             data_root: data_root.into(),
         })
     }

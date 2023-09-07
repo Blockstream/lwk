@@ -3,9 +3,9 @@ use crate::Error;
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
+use elements::bitcoin::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
-use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use elements::{BlockHash, OutPoint, Script, Txid};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -135,8 +135,8 @@ impl StoreMeta {
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
         enc_key_data.extend(&xpub.chain_code.to_bytes());
-        enc_key_data.extend(&xpub.network.magic().to_be_bytes());
-        let key_bytes = sha256::Hash::hash(&enc_key_data).into_inner();
+        enc_key_data.extend(&xpub.network.magic().to_bytes());
+        let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(&key);
         let cache = RawCache::new(path.as_ref(), &cipher);
@@ -223,8 +223,7 @@ impl StoreMeta {
 #[cfg(test)]
 mod tests {
     use crate::store::StoreMeta;
-    use elements::bitcoin::hashes::hex::FromHex;
-    use elements::bitcoin::util::bip32::ExtendedPubKey;
+    use elements::bitcoin::bip32::ExtendedPubKey;
     use elements::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;
@@ -235,7 +234,7 @@ mod tests {
         dir.push("store");
         let xpub = ExtendedPubKey::from_str("tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU").unwrap();
         let txid =
-            Txid::from_hex("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
+            Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
         let mut store = StoreMeta::new(&dir, xpub).unwrap();

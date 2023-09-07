@@ -4,7 +4,7 @@ use bewallet::*;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
-use elements::bitcoin::util::amount::Denomination;
+use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
 use elements::{Address, AssetId};
 use log::{LevelFilter, Metadata, Record};

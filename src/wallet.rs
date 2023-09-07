@@ -33,9 +33,7 @@ pub struct WalletCtx {
 
 fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
     let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
-    // TODO: passphrase?
-    let passphrase: &str = "";
-    let seed = mnemonic.to_seed(passphrase);
+    let seed = mnemonic.to_seed("");
     Ok(seed.to_vec())
 }
 

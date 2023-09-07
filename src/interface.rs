@@ -6,22 +6,21 @@ use elements::bitcoin::secp256k1::{self, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
-use elements::bitcoin::PublicKey;
 use elements::secp256k1_zkp;
-use elements::{BlockHash, Script, Txid};
+use elements::{BlockHash, Txid};
 use hex;
 use log::{info, trace};
 
 use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
-use crate::scripts::{p2pkh_script, p2shwpkh_script, p2shwpkh_script_sig};
+use crate::scripts::p2shwpkh_script;
 use bip39;
 
 use crate::error::{fn_err, Error};
 use crate::store::{Store, StoreMeta};
 
 use crate::transaction::*;
-use elements::confidential::{Asset, Value};
+use elements::confidential::Asset;
 use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -382,155 +381,6 @@ impl WalletCtx {
 
         // Also return changes used?
         Ok(TransactionDetails::new(tx, satoshi, fee_val, None))
-    }
-    // TODO when we can serialize psbt
-    //pub fn sign(&self, psbt: PartiallySignedTransaction) -> Result<PartiallySignedTransaction, Error> { Err(Error::Generic("NotImplemented".to_string())) }
-
-    pub fn internal_sign_elements(
-        &self,
-        tx: &elements::Transaction,
-        input_index: usize,
-        derivation_path: &DerivationPath,
-        value: Value,
-        xprv: ExtendedPrivKey,
-        sighash_type: Option<elements::EcdsaSigHashType>,
-    ) -> (Script, Vec<Vec<u8>>) {
-        let xprv = xprv.derive_priv(&self.secp, &derivation_path).unwrap();
-        let private_key = &xprv.to_priv();
-        let public_key = &PublicKey::from_private_key(&self.secp, private_key);
-
-        let script_code = p2pkh_script(public_key);
-        let sighash_type = sighash_type.unwrap_or(elements::EcdsaSigHashType::All);
-        let sighash = elements::sighash::SigHashCache::new(tx).segwitv0_sighash(
-            input_index,
-            &script_code,
-            value,
-            sighash_type,
-        );
-        let message = secp256k1::Message::from_slice(&sighash[..]).unwrap();
-        let signature = self.secp.sign_ecdsa(&message, &private_key.inner);
-        let mut signature = signature.serialize_der().to_vec();
-        signature.push(sighash_type as u8);
-
-        let script_sig = p2shwpkh_script_sig(public_key);
-        let witness = vec![signature, public_key.to_bytes()];
-        info!(
-            "added size len: script_sig:{} witness:{}",
-            script_sig.len(),
-            witness.iter().map(|v| v.len()).sum::<usize>()
-        );
-        (script_sig, witness)
-    }
-
-    pub fn sign_with_mnemonic(
-        &self,
-        tx: &mut elements::Transaction,
-        mnemonic: &str,
-    ) -> Result<(), Error> {
-        let xprv = mnemonic2xprv(mnemonic, self.config.clone())?;
-        self.sign_with_xprv(tx, xprv)
-    }
-
-    pub fn sign_with_xprv(
-        &self,
-        tx: &mut elements::Transaction,
-        xprv: ExtendedPrivKey,
-    ) -> Result<(), Error> {
-        info!("sign");
-        let store_read = self.store.read()?;
-        // FIXME: is blinding here the right thing to do?
-        self.blind_tx(tx)?;
-
-        for i in 0..tx.input.len() {
-            let prev_output = tx.input[i].previous_output;
-            info!("input#{} prev_output:{:?}", i, prev_output);
-            let prev_tx = store_read
-                .cache
-                .all_txs
-                .get(&prev_output.txid)
-                .ok_or_else(|| Error::Generic("expected tx".into()))?;
-            let out = prev_tx.output[prev_output.vout as usize].clone();
-            let derivation_path: DerivationPath = store_read
-                .cache
-                .paths
-                .get(&out.script_pubkey)
-                .ok_or_else(|| Error::Generic("can't find derivation path".into()))?
-                .clone();
-
-            let (script_sig, witness) =
-                self.internal_sign_elements(&tx, i, &derivation_path, out.value, xprv, None);
-
-            tx.input[i].script_sig = script_sig;
-            tx.input[i].witness.script_witness = witness;
-        }
-
-        let fee: u64 = tx
-            .output
-            .iter()
-            .filter(|o| o.is_fee())
-            .map(|o| o.minimum_value())
-            .sum();
-        info!(
-            "transaction final size is {} bytes and {} vbytes and fee is {}",
-            tx.size(),
-            tx.weight() / 4,
-            fee
-        );
-        info!(
-            "FINALTX inputs:{} outputs:{}",
-            tx.input.len(),
-            tx.output.len()
-        );
-        /*
-        drop(store_read);
-        let mut store_write = self.store.write()?;
-
-        let changes_used = request.changes_used.unwrap_or(0);
-        if changes_used > 0 {
-            info!("tx used {} changes", changes_used);
-            // The next sync would update the internal index but we increment the internal index also
-            // here after sign so that if we immediately create another tx we are not reusing addresses
-            // This implies signing multiple times without broadcasting leads to gaps in the internal chain
-            store_write.cache.indexes.internal += changes_used;
-        }
-        */
-
-        Ok(())
-    }
-
-    fn blind_tx(&self, tx: &mut elements::Transaction) -> Result<(), Error> {
-        // TODO: take a PSET
-        let mut pset = elements::pset::PartiallySignedTransaction::from_tx(tx.clone());
-        let mut inp_txout_sec: HashMap<usize, elements::TxOutSecrets> = HashMap::new();
-
-        let store_read = self.store.read()?;
-        for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
-            let previous_output =
-                elements::OutPoint::new(input.previous_txid, input.previous_output_index);
-            let unblinded = store_read
-                .cache
-                .unblinded
-                .get(&previous_output)
-                .ok_or_else(|| Error::Generic("cannot find unblinded values".into()))?;
-            inp_txout_sec.insert(i, unblinded.clone());
-
-            let prev_tx = store_read
-                .cache
-                .all_txs
-                .get(&input.previous_txid)
-                .ok_or_else(|| Error::Generic("expected tx".into()))?;
-            let txout = prev_tx.output[input.previous_output_index as usize].clone();
-            input.witness_utxo = Some(txout);
-        }
-
-        for output in pset.outputs_mut().iter_mut() {
-            // We are the owner of all inputs and outputs
-            output.blinder_index = Some(0);
-        }
-
-        pset.blind_last(&mut rand::thread_rng(), &self.secp, &inp_txout_sec)?;
-        *tx = pset.extract_tx()?;
-        Ok(())
     }
 
     pub fn get_address(&self) -> Result<elements::Address, Error> {

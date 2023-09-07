@@ -18,7 +18,7 @@ pub use crate::network::ElementsNetwork;
 use crate::sync::Syncer;
 pub use crate::utils::tx_to_hex;
 use electrum_client::ElectrumApi;
-use elements::{Address, AssetId, BlockHash, BlockHeader, Transaction};
+use elements::{Address, AssetId, BlockHash, BlockHeader};
 use log::{info, warn};
 use std::collections::HashMap;
 
@@ -137,9 +137,5 @@ impl ElectrumWallet {
     pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
         self.sync()?;
         self.wallet.create_tx(opt)
-    }
-
-    pub fn sign_tx(&self, transaction: &mut Transaction, mnemonic: &str) -> Result<(), Error> {
-        self.wallet.sign_with_mnemonic(transaction, mnemonic)
     }
 }

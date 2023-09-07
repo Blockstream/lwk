@@ -16,7 +16,6 @@ use elements::bitcoin::util::bip32::{
 use elements::slip77::MasterBlindingKey;
 use elements::{Address, AssetId, BlockHash, BlockHeader, Txid};
 use hex;
-use log::{info, trace, warn};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -45,7 +44,6 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     };
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
     let path_string = format!("m/49'/{}'/0'", coin_type);
-    info!("Using derivation path {}/0|1/*", path_string);
     let path = DerivationPath::from_str(&path_string)?;
     let secp = Secp256k1::new();
     Ok(xprv.derive_priv(&secp, &path)?)
@@ -111,7 +109,6 @@ impl ElectrumWallet {
             std::fs::create_dir_all(&path)?;
         }
         path.push(wallet_id);
-        info!("Store root path: {:?}", path);
         let store = new_store(&path, xpub)?;
 
         Ok(ElectrumWallet {
@@ -154,9 +151,9 @@ impl ElectrumWallet {
 
         if let Ok(client) = self.config.electrum_url().build_client() {
             match syncer.sync(&client) {
-                Ok(true) => info!("there are new transcations"),
+                Ok(true) => log::info!("there are new transcations"),
                 Ok(false) => (),
-                Err(e) => warn!("Error during sync, {:?}", e),
+                Err(e) => log::warn!("Error during sync, {:?}", e),
             }
         }
         Ok(())
@@ -219,8 +216,6 @@ impl ElectrumWallet {
         });
 
         for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
-            trace!("tx_id {}", tx_id);
-
             let tx = store_read
                 .cache
                 .all_txs
@@ -228,13 +223,8 @@ impl ElectrumWallet {
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
             let tx_details = TransactionDetails::new(tx.clone(), **height);
-
             txs.push(tx_details);
         }
-        info!(
-            "list_tx {:?}",
-            txs.iter().map(|e| &e.txid).collect::<Vec<&String>>()
-        );
 
         Ok(txs)
     }

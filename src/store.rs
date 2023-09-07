@@ -8,7 +8,6 @@ use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use elements::OutPoint;
 use elements::{BlockHash, Script, Txid};
-use log::warn;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -37,7 +36,7 @@ pub struct RawCache {
     pub paths: HashMap<Script, DerivationPath>,
 
     /// inverse of `paths`
-    pub scripts: HashMap<DerivationPath, Script>, // TODO use DerivationPath once Hash gets merged
+    pub scripts: HashMap<DerivationPath, Script>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<u32>>,
@@ -97,7 +96,7 @@ impl RawCache {
     /// errors such as corrupted file or model change in the db, result in a empty store that will be repopulated
     fn new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Self {
         Self::try_new(path, cipher).unwrap_or_else(|e| {
-            warn!("Initialize cache as default {:?}", e);
+            log::warn!("Initialize cache as default {:?}", e);
             Default::default()
         })
     }

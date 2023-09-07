@@ -3,14 +3,12 @@ pub use crate::network::ElementsNetwork;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use electrum_client::GetHistoryRes;
 use electrum_client::{Client, ElectrumApi};
-use elements::bitcoin::hashes::hex::ToHex;
 use elements::bitcoin::secp256k1::Secp256k1;
 use elements::bitcoin::util::bip32::DerivationPath;
 use elements::bitcoin::{Script as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
 use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
-use log::{debug, info, trace};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
@@ -28,8 +26,6 @@ struct DownloadTxResult {
 
 impl Syncer {
     pub fn sync(&self, client: &Client) -> Result<bool, Error> {
-        debug!("start sync");
-
         let mut history_txs_id = HashSet::new();
         let mut txid_height = HashMap::new();
         let mut scripts = HashMap::new();
@@ -68,7 +64,6 @@ impl Syncer {
                 };
 
                 let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
-                trace!("{}/batch({}) {:?}", i, batch_count, flattened.len());
 
                 if flattened.is_empty() {
                     break;
@@ -99,11 +94,6 @@ impl Syncer {
 
         let changed =
             if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
-                info!(
-                    "There are changes in the store new_txs:{:?} txid_height:{:?}",
-                    new_txs.txs.iter().map(|tx| tx.0).collect::<Vec<Txid>>(),
-                    txid_height
-                );
                 let mut store_write = self.store.write()?;
                 store_write.cache.indexes = last_used;
                 store_write.cache.all_txs.extend(new_txs.txs.into_iter());
@@ -151,13 +141,11 @@ impl Syncer {
                 let tx: Transaction = elements::encode::deserialize(&vec)?;
                 txs_downloaded.push(tx);
             }
-            info!("txs_downloaded {:?}", txs_downloaded.len());
             let previous_txs_to_download = HashSet::new();
             for tx in txs_downloaded.into_iter() {
                 let txid = tx.txid();
                 txs_in_db.insert(txid);
 
-                info!("compute OutPoint Unblinded");
                 for (i, output) in tx.output.iter().enumerate() {
                     // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
                     if self
@@ -174,9 +162,9 @@ impl Syncer {
                             vout,
                         };
 
-                        match self.try_unblind(outpoint, output.clone()) {
+                        match self.try_unblind(output.clone()) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                            Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
                     }
                 }
@@ -204,7 +192,7 @@ impl Syncer {
         }
     }
 
-    pub fn try_unblind(&self, outpoint: OutPoint, output: TxOut) -> Result<TxOutSecrets, Error> {
+    pub fn try_unblind(&self, output: TxOut) -> Result<TxOutSecrets, Error> {
         match (output.asset, output.value, output.nonce) {
             (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
                 // TODO: use a shared ctx
@@ -216,13 +204,6 @@ impl Syncer {
                 let txout_secrets = output
                     .unblind(&secp, receiver_sk)
                     .map_err(|_| Error::Generic("UnblindError".into()))?;
-
-                info!(
-                    "Unblinded outpoint:{} asset:{} value:{}",
-                    outpoint,
-                    &txout_secrets.asset.to_hex(),
-                    txout_secrets.value,
-                );
 
                 Ok(txout_secrets)
             }

@@ -7,8 +7,7 @@ use electrum_client::ElectrumApi;
 use elements::bitcoin::util::amount::Denomination;
 use elements::bitcoin::Amount;
 use elements::{Address, AssetId};
-use log::LevelFilter;
-use log::{info, warn, Metadata, Record};
+use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
 use std::str::FromStr;
 use std::sync::Once;
@@ -52,10 +51,9 @@ fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
 
 fn node_generate(client: &Client, block_num: u32) {
     let address = node_getnewaddress(client, None).to_string();
-    let r = client
+    client
         .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
         .unwrap();
-    info!("generate result {:?}", r);
 }
 
 pub struct TestElectrumServer {
@@ -92,7 +90,6 @@ impl TestElectrumServer {
         conf.network = network;
 
         let node = electrsd::bitcoind::BitcoinD::with_conf(&node_exec, &conf).unwrap();
-        info!("node spawned");
 
         node_generate(&node.client, 1);
         // send initialfreecoins from wallet "" to the wallet created by BitcoinD::new
@@ -120,7 +117,6 @@ impl TestElectrumServer {
         conf.http_enabled = false;
         conf.network = network;
         let electrs = electrsd::ElectrsD::with_conf(&electrs_exec, &node, &conf).unwrap();
-        info!("Electrs spawned");
 
         node_generate(&node.client, 100);
         electrs.trigger().unwrap();
@@ -132,12 +128,9 @@ impl TestElectrumServer {
             let height = electrs.client.block_headers_subscribe_raw().unwrap().height;
             if height == 101 {
                 break;
-            } else {
-                warn!("height: {}", height);
             }
             thread::sleep(Duration::from_millis(500));
         }
-        info!("Electrs synced with node");
 
         Self { node, electrs }
     }
@@ -273,7 +266,6 @@ impl TestElectrumWallet {
     /// asset balance in satoshi
     fn balance(&self, asset: &AssetId) -> u64 {
         let balance = self.electrum_wallet.balance().unwrap();
-        info!("balance: {:?}", balance);
         *balance.get(asset).unwrap_or(&0u64)
     }
 

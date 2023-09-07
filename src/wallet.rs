@@ -115,6 +115,7 @@ impl ElectrumWallet {
         })
     }
 
+    /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
         self.config.policy_asset()
     }
@@ -133,6 +134,7 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    /// Sync the wallet transactions
     pub fn sync(&self) -> Result<(), Error> {
         let syncer = Syncer {
             store: self.store.clone(),
@@ -149,11 +151,13 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    /// Get the blockchain tip
     pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
         self.update_tip()?;
         Ok(self.store.read()?.cache.tip)
     }
 
+    /// Get the wallet balance
     pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
         self.sync()?;
         let mut result = HashMap::new();
@@ -164,6 +168,7 @@ impl ElectrumWallet {
         Ok(result)
     }
 
+    /// Get a new wallet address
     pub fn address(&self) -> Result<Address, Error> {
         self.sync()?;
         let pointer = {
@@ -185,6 +190,7 @@ impl ElectrumWallet {
         Ok(addr)
     }
 
+    /// Get the wallet transactions
     pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
         self.sync()?;
         let store_read = self.store.read()?;
@@ -215,7 +221,7 @@ impl ElectrumWallet {
         Ok(txs)
     }
 
-    // actually should list all coins, not only the unspent ones
+    /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
         self.sync()?;
         let store_read = self.store.read()?;

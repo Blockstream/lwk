@@ -11,7 +11,6 @@ use elements::bitcoin::secp256k1::{self, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
-use elements::secp256k1_zkp;
 use elements::slip77::MasterBlindingKey;
 use elements::{BlockHash, Txid};
 use hex;
@@ -60,19 +59,6 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     let path = DerivationPath::from_str(&path_string)?;
     let secp = Secp256k1::new();
     Ok(xprv.derive_priv(&secp, &path)?)
-}
-
-#[allow(dead_code)]
-pub fn parse_rangeproof_message(
-    message: &[u8],
-) -> Result<(elements::issuance::AssetId, secp256k1_zkp::Tweak), Error> {
-    if message.len() < 64 {
-        return Err(Error::Generic("Unexpected rangeproof message".to_string()));
-    }
-    let asset = elements::issuance::AssetId::from_slice(&message[..32])?;
-    let asset_blinder = secp256k1_zkp::Tweak::from_slice(&message[32..64])?;
-
-    Ok((asset, asset_blinder))
 }
 
 impl WalletCtx {

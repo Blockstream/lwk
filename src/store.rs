@@ -1,13 +1,12 @@
 use crate::util::p2shwpkh_script;
 use crate::Error;
-use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
-use elements::bitcoin::hashes::sha256;
-use elements::bitcoin::hashes::Hash;
+use aes_gcm_siv::aead::{AeadInPlace, NewAead};
+use aes_gcm_siv::aead::generic_array::GenericArray;
+use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
-use elements::OutPoint;
-use elements::{BlockHash, Script, Txid};
+use elements::{OutPoint, BlockHash, Script, Txid};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

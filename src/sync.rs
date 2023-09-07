@@ -1,8 +1,6 @@
-pub use crate::error::Error;
-pub use crate::network::ElementsNetwork;
+use crate::error::Error;
 use crate::store::{Indexes, Store, BATCH_SIZE};
-use electrum_client::GetHistoryRes;
-use electrum_client::{Client, ElectrumApi};
+use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements::bitcoin::secp256k1::Secp256k1;
 use elements::bitcoin::util::bip32::DerivationPath;
 use elements::bitcoin::{Script as BitcoinScript, Txid as BitcoinTxid};

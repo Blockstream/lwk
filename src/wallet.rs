@@ -1,6 +1,5 @@
 use crate::error::Error;
-use crate::model::GetTransactionsOpt;
-use crate::model::{TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::util::p2shwpkh_script;
 use crate::store::{new_store, Store};
@@ -9,12 +8,12 @@ use bip39;
 use electrum_client::ElectrumApi;
 use elements;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::bitcoin::secp256k1::{self, All, Secp256k1};
+use elements::bitcoin::secp256k1::{PublicKey, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey,
 };
 use elements::slip77::MasterBlindingKey;
-use elements::{Address, AssetId, BlockHash, BlockHeader, Txid};
+use elements::{Address, AssetId, BlockHash, BlockHeader, Txid, OutPoint};
 use hex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -55,7 +54,6 @@ pub struct ElectrumWallet {
     pub store: Store,
     pub xpub: ExtendedPubKey,
     pub master_blinding: MasterBlindingKey,
-    pub change_max_deriv: u32,
 }
 
 impl ElectrumWallet {
@@ -117,7 +115,6 @@ impl ElectrumWallet {
             secp,
             xpub,
             master_blinding,
-            change_max_deriv: 0,
         })
     }
 
@@ -189,9 +186,9 @@ impl ElectrumWallet {
         let derived = self.xpub.derive_pub(&self.secp, &path)?;
         let script = p2shwpkh_script(&derived.to_pub());
         let blinding_key = self.master_blinding.derive_blinding_key(&script);
-        let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
+        let public_key = PublicKey::from_secret_key(&self.secp, &blinding_key);
         let blinder = Some(public_key);
-        let addr = elements::Address::p2shwpkh(
+        let addr = Address::p2shwpkh(
             &derived.to_pub(),
             blinder,
             self.config.network().address_params(),
@@ -248,7 +245,7 @@ impl ElectrumWallet {
                     .enumerate()
                     .map(|(vout, output)| {
                         (
-                            elements::OutPoint {
+                            OutPoint {
                                 txid: tx.txid(),
                                 vout: vout as u32,
                             },

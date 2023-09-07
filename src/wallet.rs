@@ -73,7 +73,6 @@ impl ElectrumWallet {
         Self::new(config, data_root, mnemonic)
     }
 
-    /*
     pub fn new_testnet(
         electrum_url: &str,
         tls: bool,
@@ -95,7 +94,6 @@ impl ElectrumWallet {
         let config = Config::new_mainnet(tls, validate_domain, electrum_url)?;
         Self::new(config, data_root, mnemonic)
     }
-     * */
 
     fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let xprv = mnemonic2xprv(mnemonic, config.clone())?;

@@ -1,6 +1,5 @@
-use elements::{AssetId, OutPoint, Script, Transaction, TxOutSecrets};
+use elements::{OutPoint, Script, Transaction, TxOutSecrets};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -30,21 +29,15 @@ pub struct UnblindedTXO {
 pub struct TransactionDetails {
     pub transaction: Transaction,
     pub txid: String,
-    pub balances: HashMap<AssetId, i64>,
     pub height: Option<u32>,
 }
 
 impl TransactionDetails {
-    pub fn new(
-        transaction: Transaction,
-        balances: HashMap<AssetId, i64>,
-        height: Option<u32>,
-    ) -> TransactionDetails {
+    pub fn new(transaction: Transaction, height: Option<u32>) -> TransactionDetails {
         let txid = transaction.txid().to_string();
         TransactionDetails {
             transaction,
             txid,
-            balances,
             height,
         }
     }

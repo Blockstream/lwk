@@ -157,10 +157,7 @@ impl WalletCtx {
                 .get(*tx_id)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
-            let balances = my_balance_changes(&tx, &store_read.cache.unblinded);
-            trace!("tx_id {} balances {:?}", tx_id, balances);
-
-            let tx_details = TransactionDetails::new(tx.clone(), balances, **height);
+            let tx_details = TransactionDetails::new(tx.clone(), **height);
 
             txs.push(tx_details);
         }

@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
-use crate::network::{Config, ElementsNetwork};
+use crate::network::Config;
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::p2shwpkh_script;
@@ -33,14 +33,7 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
         &seed,
     )?;
 
-    // BIP44: m / purpose' / coin_type' / account' / change / address_index
-    // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-    // slip44 suggest 1 for every testnet, so we are using it also for regtest
-    let coin_type: u32 = match config.network() {
-        ElementsNetwork::Liquid => 1776,
-        ElementsNetwork::LiquidTestnet => 1,
-        ElementsNetwork::ElementsRegtest => 1,
-    };
+    let coin_type = config.coin_type();
     // since we use P2WPKH-nested-in-P2SH it is 49 https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
     let path_string = format!("m/49'/{}'/0'", coin_type);
     let path = DerivationPath::from_str(&path_string)?;

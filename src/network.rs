@@ -1,6 +1,6 @@
 use crate::error::Error;
+use electrum_client::{Client, ConfigBuilder};
 use elements::bitcoin::hashes::hex::FromHex;
-use electrum_client::{Client, ConfigBuilder}; 
 use elements::{AddressParams, AssetId};
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise
@@ -100,6 +100,17 @@ impl Config {
             electrum_url,
             policy_asset: AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
         })
+    }
+
+    pub fn coin_type(self) -> u32 {
+        // BIP44: m / purpose' / coin_type' / account' / change / address_index
+        // coin_type = 1776 liquid bitcoin as defined in https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+        // slip44 suggest 1 for every testnet, so we are using it also for regtest
+        match self.network {
+            ElementsNetwork::Liquid => 1776,
+            ElementsNetwork::LiquidTestnet => 1,
+            ElementsNetwork::ElementsRegtest => 1,
+        }
     }
 
     pub fn network(&self) -> ElementsNetwork {

@@ -1,12 +1,6 @@
-use crate::error::Error;
-use crate::network::ElementsNetwork;
-
-use elements::Script;
+use elements::{AssetId, OutPoint, Script, Transaction, TxOutSecrets};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-use elements::bitcoin::hashes::hex::FromHex;
-use elements::OutPoint;
 use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,22 +23,22 @@ impl TXO {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UnblindedTXO {
     pub txo: TXO,
-    pub unblinded: elements::TxOutSecrets,
+    pub unblinded: TxOutSecrets,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionDetails {
-    pub transaction: elements::Transaction,
+    pub transaction: Transaction,
     pub txid: String,
-    pub balances: HashMap<elements::issuance::AssetId, i64>,
+    pub balances: HashMap<AssetId, i64>,
     pub fee: u64,
     pub height: Option<u32>,
 }
 
 impl TransactionDetails {
     pub fn new(
-        transaction: elements::Transaction,
-        balances: HashMap<elements::issuance::AssetId, i64>,
+        transaction: Transaction,
+        balances: HashMap<AssetId, i64>,
         fee: u64,
         height: Option<u32>,
     ) -> TransactionDetails {
@@ -63,50 +57,6 @@ impl TransactionDetails {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Destination {
-    address: elements::Address,
-    satoshi: u64,
-    asset: elements::issuance::AssetId,
-}
-
-impl Destination {
-    pub fn new(
-        address: &str,
-        satoshi: u64,
-        asset: &str,
-        network: ElementsNetwork,
-    ) -> Result<Self, Error> {
-        let address = elements::Address::parse_with_params(address, &network.address_params())
-            .map_err(|_| Error::InvalidAddress)?;
-        let asset = elements::issuance::AssetId::from_hex(asset)?;
-        Ok(Destination {
-            address,
-            satoshi,
-            asset,
-        })
-    }
-
-    pub fn address(&self) -> elements::Address {
-        self.address.clone()
-    }
-
-    pub fn satoshi(&self) -> u64 {
-        self.satoshi
-    }
-
-    pub fn asset(&self) -> elements::issuance::AssetId {
-        self.asset
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct CreateTransactionOpt {
-    // TODO: chage type to hold SendAll and be valid
-    pub addressees: Vec<Destination>,
-    pub fee_rate: Option<u64>, // in satoshi/kbyte
-    pub utxos: Option<Vec<UnblindedTXO>>,
-}
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct GetTransactionsOpt {
     pub first: usize,

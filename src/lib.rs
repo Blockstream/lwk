@@ -10,9 +10,7 @@ mod utils;
 
 pub use crate::error::Error;
 use crate::interface::WalletCtx;
-pub use crate::model::{
-    CreateTransactionOpt, Destination, GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO,
-};
+pub use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::network::Config;
 pub use crate::network::ElementsNetwork;
 use crate::sync::Syncer;
@@ -132,10 +130,5 @@ impl ElectrumWallet {
     pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
         self.sync()?;
         self.wallet.utxos()
-    }
-
-    pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
-        self.sync()?;
-        self.wallet.create_tx(opt)
     }
 }

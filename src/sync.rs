@@ -1,7 +1,4 @@
 pub use crate::error::Error;
-pub use crate::model::{
-    CreateTransactionOpt, Destination, GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO,
-};
 pub use crate::network::ElementsNetwork;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;

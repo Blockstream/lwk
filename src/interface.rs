@@ -1,6 +1,5 @@
 use crate::model::GetTransactionsOpt;
 use elements;
-use elements::bitcoin::hashes::hex::ToHex;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{self, All, Secp256k1};
 use elements::bitcoin::util::bip32::{
@@ -11,7 +10,7 @@ use elements::{BlockHash, Txid};
 use hex;
 use log::{info, trace};
 
-use crate::model::{CreateTransactionOpt, TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::p2shwpkh_script;
 use bip39;
@@ -23,7 +22,7 @@ use crate::transaction::*;
 use elements::confidential::Asset;
 use elements::slip77::MasterBlindingKey;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -244,143 +243,6 @@ impl WalletCtx {
             *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
         }
         Ok(result)
-    }
-
-    #[allow(clippy::cognitive_complexity)]
-    pub fn create_tx(&self, opt: &mut CreateTransactionOpt) -> Result<TransactionDetails, Error> {
-        info!("create_tx {:?}", opt);
-
-        // TODO put checks into CreateTransaction::validate, add check asset are valid asset hex
-        // eagerly check for address validity
-
-        if opt.addressees.is_empty() {
-            return Err(Error::EmptyAddressees);
-        }
-
-        if opt.addressees.iter().any(|a| a.satoshi() == 0) {
-            return Err(Error::InvalidAmount);
-        }
-
-        for address_amount in opt.addressees.iter() {
-            if address_amount.satoshi() <= DUST_VALUE {
-                if address_amount.asset() == self.config.policy_asset() {
-                    // we apply dust rules for liquid bitcoin as elements do
-                    return Err(Error::InvalidAmount);
-                }
-            }
-        }
-
-        // convert from satoshi/kbyte to satoshi/byte
-        let default_value = 100;
-        let fee_rate = (opt.fee_rate.unwrap_or(default_value) as f64) / 1000.0;
-        info!("target fee_rate {:?} satoshi/byte", fee_rate);
-
-        let utxos = match &opt.utxos {
-            None => self.utxos()?,
-            Some(utxos) => utxos.clone(),
-        };
-        info!("utxos len:{}", utxos.len());
-
-        let mut tx = elements::Transaction {
-            version: 2,
-            lock_time: 0,
-            input: vec![],
-            output: vec![],
-        };
-        // transaction is created in 3 steps:
-        // 1) adding requested outputs to tx outputs
-        // 2) adding enough utxso to inputs such that tx outputs and estimated fees are covered
-        // 3) adding change(s)
-
-        // STEP 1) add the outputs requested for this transactions
-        for out in opt.addressees.iter() {
-            add_output(&mut tx, &out.address(), out.satoshi(), out.asset().to_hex())
-                .map_err(|_| Error::InvalidAddress)?;
-        }
-
-        // STEP 2) add utxos until tx outputs are covered (including fees) or fail
-        let store_read = self.store.read()?;
-        let mut used_utxo: HashSet<elements::OutPoint> = HashSet::new();
-        loop {
-            let mut needs = needs(
-                &tx,
-                fee_rate,
-                self.config.policy_asset(),
-                &store_read.cache.all_txs,
-                &store_read.cache.unblinded,
-            );
-            info!("needs: {:?}", needs);
-            if needs.is_empty() {
-                // SUCCESS tx doesn't need other inputs
-                break;
-            }
-
-            let (asset, _) = needs.pop().unwrap(); // safe to unwrap just checked it's not empty
-
-            // taking only utxos of current asset considered, filters also utxos used in this loop
-            let mut asset_utxos: Vec<&UnblindedTXO> = utxos
-                .iter()
-                .filter(|u| u.unblinded.asset == asset && !used_utxo.contains(&u.txo.outpoint))
-                .collect();
-
-            // sort by biggest utxo, random maybe another option, but it should be deterministically random (purely random breaks send_all algorithm)
-            asset_utxos.sort_by(|a, b| a.unblinded.value.cmp(&b.unblinded.value));
-            let utxo = asset_utxos.pop().ok_or(Error::InsufficientFunds)?;
-
-            // Don't spend same script together in liquid. This would allow an attacker
-            // to cheaply send assets without value to the target, which will have to
-            // waste fees for the extra tx inputs and (eventually) outputs.
-            // While blinded address are required and not public knowledge,
-            // they are still available to whom transacted with us in the past
-            used_utxo.insert(utxo.txo.outpoint.clone());
-            add_input(&mut tx, utxo.txo.outpoint.clone());
-        }
-
-        // STEP 3) adding change(s)
-        let estimated_fee = estimated_fee(
-            &tx,
-            fee_rate,
-            estimated_changes(&tx, &store_read.cache.all_txs, &store_read.cache.unblinded),
-        );
-        let changes = changes(
-            &tx,
-            estimated_fee,
-            self.config.policy_asset(),
-            &store_read.cache.all_txs,
-            &store_read.cache.unblinded,
-        );
-        for (i, (asset, satoshi)) in changes.iter().enumerate() {
-            let change_index = store_read.cache.indexes.internal + i as u32 + 1;
-            let change_address = self.derive_address(&self.xpub, [1, change_index])?;
-            info!(
-                "adding change to {} of {} asset {:?}",
-                &change_address, satoshi, asset
-            );
-            add_output(&mut tx, &change_address, *satoshi, asset.to_hex())?;
-        }
-
-        // randomize inputs and outputs, BIP69 has been rejected because lacks wallets adoption
-        scramble(&mut tx);
-
-        let policy_asset = Some(Asset::Explicit(self.config.policy_asset()));
-        let fee_val = fee(
-            &tx,
-            &store_read.cache.all_txs,
-            &store_read.cache.unblinded,
-            &policy_asset,
-        )?; // recompute exact fee_val from built tx
-        add_fee_output(&mut tx, fee_val, &policy_asset)?;
-
-        info!("created tx fee {:?}", fee_val);
-
-        let mut satoshi = my_balance_changes(&tx, &store_read.cache.unblinded);
-
-        for (_, v) in satoshi.iter_mut() {
-            *v = v.abs();
-        }
-
-        // Also return changes used?
-        Ok(TransactionDetails::new(tx, satoshi, fee_val, None))
     }
 
     pub fn get_address(&self) -> Result<elements::Address, Error> {

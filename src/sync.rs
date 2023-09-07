@@ -2,7 +2,6 @@ pub use crate::error::Error;
 pub use crate::network::ElementsNetwork;
 use crate::store::{Indexes, Store, BATCH_SIZE};
 use crate::transaction::*;
-pub use crate::utils::tx_to_hex;
 use electrum_client::GetHistoryRes;
 use electrum_client::{Client, ElectrumApi};
 use elements::bitcoin::hashes::hex::ToHex;

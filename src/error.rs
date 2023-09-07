@@ -1,11 +1,10 @@
-use std::string::ToString;
-
 use crate::store::StoreMeta;
 use aes_gcm_siv::aead;
 use bip39;
 use serde::ser::Serialize;
 use std::convert::From;
 use std::fmt::Display;
+use std::string::ToString;
 use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Debug)]

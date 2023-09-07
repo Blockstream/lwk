@@ -6,7 +6,6 @@ mod scripts;
 mod store;
 mod sync;
 mod transaction;
-mod utils;
 
 pub use crate::error::Error;
 use crate::interface::WalletCtx;
@@ -14,7 +13,6 @@ pub use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO
 use crate::network::Config;
 pub use crate::network::ElementsNetwork;
 use crate::sync::Syncer;
-pub use crate::utils::tx_to_hex;
 use electrum_client::ElectrumApi;
 use elements::{Address, AssetId, BlockHash, BlockHeader};
 use log::{info, warn};

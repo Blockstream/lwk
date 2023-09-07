@@ -1,5 +1,4 @@
 use crate::error::Error;
-
 use elements::bitcoin::hashes::hex::FromHex;
 
 // TODO: policy asset should only be set for ElementsRegtest, fail otherwise

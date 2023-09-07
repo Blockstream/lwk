@@ -1,14 +1,12 @@
 extern crate bewallet;
 
+use bewallet::*;
+use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::util::amount::Denomination;
 use elements::bitcoin::Amount;
 use elements::{Address, AssetId};
-
-use bewallet::*;
-
-use chrono::Utc;
 use log::LevelFilter;
 use log::{info, warn, Metadata, Record};
 use serde_json::Value;
@@ -17,8 +15,6 @@ use std::sync::Once;
 use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
-
-const DUST_VALUE: u64 = 546;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
@@ -306,13 +302,7 @@ impl TestElectrumWallet {
         let txid = server.fund_btc(&address, satoshi);
         self.wait_for_tx(&txid);
         let balance = init_balance + self.balance_btc();
-        // node is allowed to make tx below dust with dustrelayfee, but wallet should not see
-        // this as spendable, thus the balance should not change
-        let satoshi = if satoshi < DUST_VALUE {
-            init_balance
-        } else {
-            init_balance + satoshi
-        };
+        let satoshi = init_balance + satoshi;
         assert_eq!(balance, satoshi);
         let wallet_txid = self.get_tx_from_list(&txid).txid;
         assert_eq!(txid, wallet_txid);

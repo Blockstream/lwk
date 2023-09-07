@@ -5,7 +5,6 @@ mod network;
 mod scripts;
 mod store;
 mod sync;
-mod transaction;
 
 pub use crate::error::Error;
 use crate::interface::WalletCtx;

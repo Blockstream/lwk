@@ -4,7 +4,6 @@ use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::p2shwpkh_script;
 use crate::store::{Store, StoreMeta};
-use crate::transaction::*;
 use bip39;
 use elements;
 use elements::bitcoin::hashes::{sha256, Hash};
@@ -182,7 +181,6 @@ impl WalletCtx {
                 .get(tx_id)
                 .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<UnblindedTXO> = {
-                let policy_asset = self.config.policy_asset();
                 tx.output
                     .clone()
                     .into_iter()
@@ -199,9 +197,6 @@ impl WalletCtx {
                     .filter(|(outpoint, _)| !spent.contains(&outpoint))
                     .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
-                            if unblinded.value < DUST_VALUE && unblinded.asset == policy_asset {
-                                return None;
-                            }
                             let txo = TXO::new(outpoint, output.script_pubkey, height.clone());
                             return Some(UnblindedTXO {
                                 txo: txo,

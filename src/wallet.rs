@@ -50,6 +50,7 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
+    /// Create a new regtest wallet
     pub fn new_regtest(
         policy_asset: &str,
         electrum_url: &str,
@@ -63,6 +64,7 @@ impl ElectrumWallet {
         Self::new(config, mnemonic)
     }
 
+    /// Create a new testnet wallet
     pub fn new_testnet(
         electrum_url: &str,
         tls: bool,
@@ -74,6 +76,7 @@ impl ElectrumWallet {
         Self::new(config, mnemonic)
     }
 
+    /// Create a new mainnet wallet
     pub fn new_mainnet(
         electrum_url: &str,
         tls: bool,

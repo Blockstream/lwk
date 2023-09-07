@@ -118,10 +118,6 @@ impl ElectrumWallet {
         })
     }
 
-    pub fn network(&self) -> ElementsNetwork {
-        self.config.network()
-    }
-
     pub fn policy_asset(&self) -> AssetId {
         self.config.policy_asset()
     }

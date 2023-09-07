@@ -1,7 +1,6 @@
 pub use crate::error::Error;
 pub use crate::network::ElementsNetwork;
 use crate::store::{Indexes, Store, BATCH_SIZE};
-use crate::transaction::*;
 use electrum_client::GetHistoryRes;
 use electrum_client::{Client, ElectrumApi};
 use elements::bitcoin::hashes::hex::ToHex;
@@ -154,7 +153,7 @@ impl Syncer {
             }
             info!("txs_downloaded {:?}", txs_downloaded.len());
             let previous_txs_to_download = HashSet::new();
-            for mut tx in txs_downloaded.into_iter() {
+            for tx in txs_downloaded.into_iter() {
                 let txid = tx.txid();
                 txs_in_db.insert(txid);
 
@@ -182,7 +181,6 @@ impl Syncer {
                     }
                 }
 
-                strip_witness(&mut tx);
                 txs.push((txid, tx));
             }
 
@@ -196,8 +194,7 @@ impl Syncer {
                 let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
                 for vec in txs_bytes_downloaded {
-                    let mut tx: Transaction = elements::encode::deserialize(&vec)?;
-                    strip_witness(&mut tx);
+                    let tx: Transaction = elements::encode::deserialize(&vec)?;
                     txs.push((tx.txid(), tx));
                 }
             }

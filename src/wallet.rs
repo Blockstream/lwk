@@ -1,6 +1,6 @@
+use crate::config::Config;
 use crate::error::Error;
 use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
-use crate::network::Config;
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::p2shwpkh_script;
@@ -58,7 +58,8 @@ impl ElectrumWallet {
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
+        let config =
+            Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
         Self::new(config, mnemonic)
     }
 
@@ -177,11 +178,7 @@ impl ElectrumWallet {
         let blinding_key = self.master_blinding.derive_blinding_key(&script);
         let public_key = PublicKey::from_secret_key(&self.secp, &blinding_key);
         let blinder = Some(public_key);
-        let addr = Address::p2shwpkh(
-            &derived.to_pub(),
-            blinder,
-            self.config.address_params(),
-        );
+        let addr = Address::p2shwpkh(&derived.to_pub(), blinder, self.config.address_params());
         Ok(addr)
     }
 

@@ -1,6 +1,6 @@
+mod config;
 mod error;
 mod model;
-mod network;
 mod store;
 mod sync;
 mod util;

@@ -181,13 +181,8 @@ impl StoreMeta {
         Ok(())
     }
 
-    fn flush_cache(&self) -> Result<(), Error> {
-        self.flush_serializable("cache", &self.cache)?;
-        Ok(())
-    }
-
     pub fn flush(&self) -> Result<(), Error> {
-        self.flush_cache()?;
+        self.flush_serializable("cache", &self.cache)?;
         Ok(())
     }
 

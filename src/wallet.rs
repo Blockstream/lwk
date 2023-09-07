@@ -58,8 +58,8 @@ impl ElectrumWallet {
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset)?;
-        Self::new(config, data_root, mnemonic)
+        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
+        Self::new(config, mnemonic)
     }
 
     pub fn new_testnet(
@@ -69,8 +69,8 @@ impl ElectrumWallet {
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_testnet(tls, validate_domain, electrum_url)?;
-        Self::new(config, data_root, mnemonic)
+        let config = Config::new_testnet(tls, validate_domain, electrum_url, data_root)?;
+        Self::new(config, mnemonic)
     }
 
     pub fn new_mainnet(
@@ -80,11 +80,11 @@ impl ElectrumWallet {
         data_root: &str,
         mnemonic: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new_mainnet(tls, validate_domain, electrum_url)?;
-        Self::new(config, data_root, mnemonic)
+        let config = Config::new_mainnet(tls, validate_domain, electrum_url, data_root)?;
+        Self::new(config, mnemonic)
     }
 
-    fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
+    fn new(config: Config, mnemonic: &str) -> Result<Self, Error> {
         let xprv = mnemonic2xprv(mnemonic, config.clone())?;
         let secp = Secp256k1::new();
         let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
@@ -95,7 +95,7 @@ impl ElectrumWallet {
         let seed = mnemonic2seed(mnemonic)?;
         let master_blinding = MasterBlindingKey::new(&seed);
 
-        let mut path: PathBuf = data_root.into();
+        let mut path: PathBuf = config.data_root().into();
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
         }

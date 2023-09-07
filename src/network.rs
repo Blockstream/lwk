@@ -40,6 +40,7 @@ pub struct Config {
     network: ElementsNetwork,
     policy_asset: AssetId,
     electrum_url: ElectrumUrl,
+    data_root: String,
 }
 
 impl Config {
@@ -48,6 +49,7 @@ impl Config {
         validate_domain: bool,
         electrum_url: &str,
         policy_asset: &str,
+        data_root: &str,
     ) -> Result<Self, Error> {
         let electrum_url = match tls {
             true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
@@ -57,6 +59,7 @@ impl Config {
             network: ElementsNetwork::ElementsRegtest,
             electrum_url,
             policy_asset: AssetId::from_hex(policy_asset)?,
+            data_root: data_root.into(),
         })
     }
 
@@ -64,6 +67,7 @@ impl Config {
         tls: bool,
         validate_domain: bool,
         electrum_url: &str,
+        data_root: &str,
     ) -> Result<Self, Error> {
         let electrum_url = match tls {
             true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
@@ -73,6 +77,7 @@ impl Config {
             network: ElementsNetwork::LiquidTestnet,
             electrum_url,
             policy_asset: AssetId::from_hex(LIQUID_TESTNET_POLICY_ASSET_STR)?,
+            data_root: data_root.into(),
         })
     }
 
@@ -80,6 +85,7 @@ impl Config {
         tls: bool,
         validate_domain: bool,
         electrum_url: &str,
+        data_root: &str,
     ) -> Result<Self, Error> {
         let electrum_url = match tls {
             true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
@@ -89,6 +95,7 @@ impl Config {
             network: ElementsNetwork::Liquid,
             electrum_url,
             policy_asset: AssetId::from_hex(LIQUID_POLICY_ASSET_STR)?,
+            data_root: data_root.into(),
         })
     }
 
@@ -117,5 +124,9 @@ impl Config {
 
     pub fn electrum_url(&self) -> ElectrumUrl {
         self.electrum_url.clone()
+    }
+
+    pub fn data_root(&self) -> String {
+        self.data_root.clone()
     }
 }

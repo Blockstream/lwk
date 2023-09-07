@@ -11,11 +11,7 @@ use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
 #[derive(Debug)]
 pub enum Error {
     Generic(String),
-    InvalidAddress,
-    UnknownCall,
     InvalidMnemonic(bip39::Error),
-    InsufficientFunds,
-    InvalidAmount,
     EmptyAddressees,
     AssetEmpty,
     SendAll,
@@ -49,13 +45,9 @@ impl Display for Error {
             Error::InvalidMnemonic(ref mnemonic_err) => {
                 write!(f, "invalid mnemonic: {}", mnemonic_err)
             }
-            Error::InsufficientFunds => write!(f, "insufficient funds"),
             Error::SendAll => write!(f, "sendall error"),
-            Error::InvalidAddress => write!(f, "invalid address"),
-            Error::InvalidAmount => write!(f, "invalid amount"),
             Error::EmptyAddressees => write!(f, "addressees cannot be empty"),
             Error::AssetEmpty => write!(f, "asset_tag cannot be empty in liquid"),
-            Error::UnknownCall => write!(f, "unknown call"),
             Error::AddrParse(ref addr) => write!(f, "could not parse SocketAddr `{}`", addr),
             Error::Bitcoin(ref btcerr) => write!(f, "bitcoin: {}", btcerr),
             Error::BitcoinHashes(ref btcerr) => write!(f, "bitcoin_hashes: {}", btcerr),

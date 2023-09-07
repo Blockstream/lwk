@@ -245,3 +245,28 @@ impl ElectrumWallet {
         Ok(txs)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
+    use elements_miniscript::elements::AddressParams;
+    use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
+    use std::str::FromStr;
+
+    #[test]
+    fn test_desc() {
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let master_blinding_key =
+            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let checksum = "qw2qy2ml";
+        let desc_str = format!(
+            "ct(slip77({}),elwpkh({}))#{}",
+            master_blinding_key, xpub, checksum
+        );
+        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
+        let secp = Secp256k1::new();
+        let addr = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
+        let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
+        assert_eq!(addr.to_string(), expected_addr.to_string());
+    }
+}

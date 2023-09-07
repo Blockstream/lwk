@@ -33,19 +33,11 @@ pub enum ElementsNetwork {
     ElementsRegtest,
 }
 
-pub const LIQUID_TESTNET: elements::AddressParams = elements::AddressParams {
-    p2pkh_prefix: 36,
-    p2sh_prefix: 19,
-    blinded_prefix: 23,
-    bech_hrp: "tex",
-    blech_hrp: "tlq",
-};
-
 impl ElementsNetwork {
     pub fn address_params(&self) -> &'static elements::AddressParams {
         match self {
             ElementsNetwork::Liquid => &elements::AddressParams::LIQUID,
-            ElementsNetwork::LiquidTestnet => &LIQUID_TESTNET,
+            ElementsNetwork::LiquidTestnet => &elements::AddressParams::LIQUID_TESTNET,
             ElementsNetwork::ElementsRegtest => &elements::AddressParams::ELEMENTS,
         }
     }

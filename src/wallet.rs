@@ -22,15 +22,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub struct WalletCtx {
-    pub secp: Secp256k1<All>,
-    pub config: Config,
-    pub store: Store,
-    pub xpub: ExtendedPubKey,
-    pub master_blinding: MasterBlindingKey,
-    pub change_max_deriv: u32,
-}
-
 fn mnemonic2seed(mnemonic: &str) -> Result<Vec<u8>, Error> {
     let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, mnemonic)?;
     let seed = mnemonic.to_seed("");
@@ -60,8 +51,53 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
     Ok(xprv.derive_priv(&secp, &path)?)
 }
 
-impl WalletCtx {
-    pub fn from_mnemonic(mnemonic: &str, data_root: &str, config: Config) -> Result<Self, Error> {
+pub struct ElectrumWallet {
+    pub secp: Secp256k1<All>,
+    pub config: Config,
+    pub store: Store,
+    pub xpub: ExtendedPubKey,
+    pub master_blinding: MasterBlindingKey,
+    pub change_max_deriv: u32,
+}
+
+impl ElectrumWallet {
+    pub fn new_regtest(
+        policy_asset: &str,
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset)?;
+        Self::new(config, data_root, mnemonic)
+    }
+
+    /*
+    pub fn new_testnet(
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_testnet(tls, validate_domain, electrum_url)?;
+        Self::new(config, data_root, mnemonic)
+    }
+
+    pub fn new_mainnet(
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+        data_root: &str,
+        mnemonic: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new_mainnet(tls, validate_domain, electrum_url)?;
+        Self::new(config, data_root, mnemonic)
+    }
+     * */
+
+    fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
         let xprv = mnemonic2xprv(mnemonic, config.clone())?;
         let secp = Secp256k1::new();
         let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
@@ -80,9 +116,9 @@ impl WalletCtx {
         info!("Store root path: {:?}", path);
         let store = new_store(&path, xpub)?;
 
-        Ok(WalletCtx {
+        Ok(ElectrumWallet {
             store,
-            config, // TODO: from db
+            config,
             secp,
             xpub,
             master_blinding,
@@ -90,16 +126,72 @@ impl WalletCtx {
         })
     }
 
-    fn derive_address(
-        &self,
-        xpub: &ExtendedPubKey,
-        path: [u32; 2],
-    ) -> Result<elements::Address, Error> {
+    pub fn network(&self) -> ElementsNetwork {
+        self.config.network()
+    }
+
+    pub fn policy_asset(&self) -> AssetId {
+        self.config.policy_asset()
+    }
+
+    fn update_tip(&self) -> Result<(), Error> {
+        if let Ok(client) = self.config.electrum_url().build_client() {
+            let header = client.block_headers_subscribe_raw()?;
+            let height = header.height as u32;
+            let tip_height = self.store.read()?.cache.tip.0;
+            if height != tip_height {
+                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
+                let hash: BlockHash = block_header.block_hash();
+                self.store.write()?.cache.tip = (height, hash);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn sync(&self) -> Result<(), Error> {
+        let syncer = Syncer {
+            store: self.store.clone(),
+            master_blinding: self.master_blinding.clone(),
+        };
+
+        if let Ok(client) = self.config.electrum_url().build_client() {
+            match syncer.sync(&client) {
+                Ok(true) => info!("there are new transcations"),
+                Ok(false) => (),
+                Err(e) => warn!("Error during sync, {:?}", e),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {
+        self.update_tip()?;
+        Ok(self.store.read()?.cache.tip)
+    }
+
+    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
+        self.sync()?;
+        let mut result = HashMap::new();
+        result.entry(self.config.policy_asset()).or_insert(0);
+        for u in self.utxos()?.iter() {
+            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
+        }
+        Ok(result)
+    }
+
+    pub fn address(&self) -> Result<Address, Error> {
+        self.sync()?;
+        let pointer = {
+            let store = &mut self.store.write()?.cache;
+            store.indexes.external += 1;
+            store.indexes.external
+        };
+        let path = [0, pointer];
         let path: Vec<ChildNumber> = path
             .iter()
             .map(|x| ChildNumber::Normal { index: *x })
             .collect();
-        let derived = xpub.derive_pub(&self.secp, &path)?;
+        let derived = self.xpub.derive_pub(&self.secp, &path)?;
         let script = p2shwpkh_script(&derived.to_pub());
         let blinding_key = self.master_blinding.derive_blinding_key(&script);
         let public_key = secp256k1::PublicKey::from_secret_key(&self.secp, &blinding_key);
@@ -109,15 +201,11 @@ impl WalletCtx {
             blinder,
             self.config.network().address_params(),
         );
-
         Ok(addr)
     }
 
-    pub fn get_tip(&self) -> Result<(u32, BlockHash), Error> {
-        Ok(self.store.read()?.cache.tip)
-    }
-
-    pub fn list_tx(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
+    pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
+        self.sync()?;
         let store_read = self.store.read()?;
 
         let mut txs = vec![];
@@ -153,9 +241,9 @@ impl WalletCtx {
         Ok(txs)
     }
 
+    // actually should list all coins, not only the unspent ones
     pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
-        info!("start utxos");
-
+        self.sync()?;
         let store_read = self.store.read()?;
         let mut txos = vec![];
         let spent = store_read.spent()?;
@@ -197,139 +285,5 @@ impl WalletCtx {
         txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
-    }
-
-    pub fn balance(&self) -> Result<HashMap<elements::issuance::AssetId, u64>, Error> {
-        info!("start balance");
-        let mut result = HashMap::new();
-        result.entry(self.config.policy_asset()).or_insert(0);
-        for u in self.utxos()?.iter() {
-            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
-        }
-        Ok(result)
-    }
-
-    pub fn get_address(&self) -> Result<elements::Address, Error> {
-        let pointer = {
-            let store = &mut self.store.write()?.cache;
-            store.indexes.external += 1;
-            store.indexes.external
-        };
-        self.derive_address(&self.xpub, [0, pointer])
-    }
-}
-
-pub struct ElectrumWallet {
-    config: Config,
-    wallet: WalletCtx,
-}
-
-impl ElectrumWallet {
-    pub fn new_regtest(
-        policy_asset: &str,
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        mnemonic: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new_regtest(tls, validate_domain, electrum_url, policy_asset)?;
-        Self::new(config, data_root, mnemonic)
-    }
-
-    /*
-    pub fn new_testnet(
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        mnemonic: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new_testnet(tls, validate_domain, electrum_url)?;
-        Self::new(config, data_root, mnemonic)
-    }
-
-    pub fn new_mainnet(
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        mnemonic: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new_mainnet(tls, validate_domain, electrum_url)?;
-        Self::new(config, data_root, mnemonic)
-    }
-     * */
-
-    fn new(config: Config, data_root: &str, mnemonic: &str) -> Result<Self, Error> {
-        let wallet = WalletCtx::from_mnemonic(mnemonic, &data_root, config.clone())?;
-
-        Ok(Self { config, wallet })
-    }
-
-    pub fn network(&self) -> ElementsNetwork {
-        self.config.network()
-    }
-
-    pub fn policy_asset(&self) -> AssetId {
-        self.wallet.config.policy_asset()
-    }
-
-    fn update_tip(&self) -> Result<(), Error> {
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            let header = client.block_headers_subscribe_raw()?;
-            let height = header.height as u32;
-            let tip_height = self.wallet.store.read()?.cache.tip.0;
-            if height != tip_height {
-                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
-                let hash: BlockHash = block_header.block_hash();
-                self.wallet.store.write()?.cache.tip = (height, hash);
-            }
-        }
-        Ok(())
-    }
-
-    pub fn sync(&self) -> Result<(), Error> {
-        let syncer = Syncer {
-            store: self.wallet.store.clone(),
-            master_blinding: self.wallet.master_blinding.clone(),
-        };
-
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            match syncer.sync(&client) {
-                Ok(true) => info!("there are new transcations"),
-                Ok(false) => (),
-                Err(e) => warn!("Error during sync, {:?}", e),
-            }
-        }
-        Ok(())
-    }
-
-    pub fn block_status(&self) -> Result<(u32, BlockHash), Error> {
-        self.update_tip()?;
-        let tip = self.wallet.get_tip()?;
-        info!("tip={:?}", tip);
-        Ok(tip)
-    }
-
-    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
-        self.sync()?;
-        self.wallet.balance()
-    }
-
-    pub fn address(&self) -> Result<Address, Error> {
-        self.sync()?;
-        self.wallet.get_address()
-    }
-
-    pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
-        self.sync()?;
-        self.wallet.list_tx(opt)
-    }
-
-    // actually should list all coins, not only the unspent ones
-    pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
-        self.sync()?;
-        self.wallet.utxos()
     }
 }

@@ -12,9 +12,6 @@ use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
 pub enum Error {
     Generic(String),
     InvalidMnemonic(bip39::Error),
-    EmptyAddressees,
-    AssetEmpty,
-    SendAll,
     AddrParse(String),
     Bitcoin(elements::bitcoin::util::Error),
     BitcoinHashes(elements::bitcoin::hashes::error::Error),
@@ -45,9 +42,6 @@ impl Display for Error {
             Error::InvalidMnemonic(ref mnemonic_err) => {
                 write!(f, "invalid mnemonic: {}", mnemonic_err)
             }
-            Error::SendAll => write!(f, "sendall error"),
-            Error::EmptyAddressees => write!(f, "addressees cannot be empty"),
-            Error::AssetEmpty => write!(f, "asset_tag cannot be empty in liquid"),
             Error::AddrParse(ref addr) => write!(f, "could not parse SocketAddr `{}`", addr),
             Error::Bitcoin(ref btcerr) => write!(f, "bitcoin: {}", btcerr),
             Error::BitcoinHashes(ref btcerr) => write!(f, "bitcoin_hashes: {}", btcerr),

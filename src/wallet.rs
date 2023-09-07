@@ -102,22 +102,8 @@ impl ElectrumWallet {
         self.config.policy_asset()
     }
 
-    fn update_tip(&self) -> Result<(), Error> {
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            let header = client.block_headers_subscribe_raw()?;
-            let height = header.height as u32;
-            let tip_height = self.store.read()?.cache.tip.0;
-            if height != tip_height {
-                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
-                let hash: BlockHash = block_header.block_hash();
-                self.store.write()?.cache.tip = (height, hash);
-            }
-        }
-        Ok(())
-    }
-
     /// Sync the wallet transactions
-    pub fn sync(&self) -> Result<(), Error> {
+    pub fn sync_txs(&self) -> Result<(), Error> {
         let syncer = Syncer {
             store: self.store.clone(),
             master_blinding: self.master_blinding.clone(),
@@ -133,26 +119,28 @@ impl ElectrumWallet {
         Ok(())
     }
 
-    /// Get the blockchain tip
-    pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
-        self.update_tip()?;
-        Ok(self.store.read()?.cache.tip)
+    /// Sync the blockchain tip
+    pub fn sync_tip(&self) -> Result<(), Error> {
+        if let Ok(client) = self.config.electrum_url().build_client() {
+            let header = client.block_headers_subscribe_raw()?;
+            let height = header.height as u32;
+            let tip_height = self.store.read()?.cache.tip.0;
+            if height != tip_height {
+                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
+                let hash: BlockHash = block_header.block_hash();
+                self.store.write()?.cache.tip = (height, hash);
+            }
+        }
+        Ok(())
     }
 
-    /// Get the wallet balance
-    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
-        self.sync()?;
-        let mut result = HashMap::new();
-        result.entry(self.config.policy_asset()).or_insert(0);
-        for u in self.utxos()?.iter() {
-            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
-        }
-        Ok(result)
+    /// Get the blockchain tip
+    pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
+        Ok(self.store.read()?.cache.tip)
     }
 
     /// Get a new wallet address
     pub fn address(&self) -> Result<Address, Error> {
-        self.sync()?;
         let pointer = {
             let store = &mut self.store.write()?.cache;
             store.indexes.external += 1;
@@ -172,40 +160,8 @@ impl ElectrumWallet {
         Ok(addr)
     }
 
-    /// Get the wallet transactions
-    pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
-        self.sync()?;
-        let store_read = self.store.read()?;
-
-        let mut txs = vec![];
-        let mut my_txids: Vec<(&Txid, &Option<u32>)> = store_read.cache.heights.iter().collect();
-        my_txids.sort_by(|a, b| {
-            let height_cmp =
-                b.1.unwrap_or(std::u32::MAX)
-                    .cmp(&a.1.unwrap_or(std::u32::MAX));
-            match height_cmp {
-                Ordering::Equal => b.0.cmp(a.0),
-                h @ _ => h,
-            }
-        });
-
-        for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
-            let tx = store_read
-                .cache
-                .all_txs
-                .get(*tx_id)
-                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
-
-            let tx_details = TransactionDetails::new(tx.clone(), **height);
-            txs.push(tx_details);
-        }
-
-        Ok(txs)
-    }
-
     /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
-        self.sync()?;
         let store_read = self.store.read()?;
         let mut txos = vec![];
         let spent = store_read.spent()?;
@@ -247,5 +203,45 @@ impl ElectrumWallet {
         txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
+    }
+
+    /// Get the wallet balance
+    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
+        let mut result = HashMap::new();
+        result.entry(self.config.policy_asset()).or_insert(0);
+        for u in self.utxos()?.iter() {
+            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
+        }
+        Ok(result)
+    }
+
+    /// Get the wallet transactions
+    pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
+        let store_read = self.store.read()?;
+
+        let mut txs = vec![];
+        let mut my_txids: Vec<(&Txid, &Option<u32>)> = store_read.cache.heights.iter().collect();
+        my_txids.sort_by(|a, b| {
+            let height_cmp =
+                b.1.unwrap_or(std::u32::MAX)
+                    .cmp(&a.1.unwrap_or(std::u32::MAX));
+            match height_cmp {
+                Ordering::Equal => b.0.cmp(a.0),
+                h @ _ => h,
+            }
+        });
+
+        for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
+            let tx = store_read
+                .cache
+                .all_txs
+                .get(*tx_id)
+                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
+
+            let tx_details = TransactionDetails::new(tx.clone(), **height);
+            txs.push(tx_details);
+        }
+
+        Ok(txs)
     }
 }

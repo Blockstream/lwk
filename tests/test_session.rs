@@ -225,6 +225,7 @@ impl TestElectrumWallet {
         )
         .unwrap();
 
+        electrum_wallet.sync_txs().unwrap();
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let list = electrum_wallet.transactions(&opt).unwrap();
@@ -233,6 +234,7 @@ impl TestElectrumWallet {
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
+            electrum_wallet.sync_tip().unwrap();
             let tip = electrum_wallet.tip().unwrap();
             if tip.0 == 101 {
                 break tip.0;
@@ -253,6 +255,7 @@ impl TestElectrumWallet {
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         for _ in 0..120 {
+            self.electrum_wallet.sync_txs().unwrap();
             let list = self.electrum_wallet.transactions(&opt).unwrap();
             if list.iter().any(|e| e.txid == txid) {
                 return;
@@ -264,6 +267,7 @@ impl TestElectrumWallet {
 
     /// asset balance in satoshi
     fn balance(&self, asset: &AssetId) -> u64 {
+        self.electrum_wallet.sync_txs().unwrap();
         let balance = self.electrum_wallet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }
@@ -273,6 +277,7 @@ impl TestElectrumWallet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
+        self.electrum_wallet.sync_txs().unwrap();
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let list = self.electrum_wallet.transactions(&opt).unwrap();

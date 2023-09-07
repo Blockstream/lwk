@@ -49,11 +49,11 @@ fn mnemonic2xprv(mnemonic: &str, config: Config) -> Result<ExtendedPrivKey, Erro
 }
 
 pub struct ElectrumWallet {
-    pub secp: Secp256k1<All>,
-    pub config: Config,
-    pub store: Store,
-    pub xpub: ExtendedPubKey,
-    pub master_blinding: MasterBlindingKey,
+    secp: Secp256k1<All>,
+    config: Config,
+    store: Store,
+    xpub: ExtendedPubKey,
+    master_blinding: MasterBlindingKey,
 }
 
 impl ElectrumWallet {

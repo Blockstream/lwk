@@ -18,6 +18,16 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+// FIXME: extract from descriptor struct
+#[allow(dead_code)]
+fn extract_master_blinding(desc: &str) -> Result<MasterBlindingKey, Error> {
+    let start = "ct(slip77(".len();
+    let end = start + 64;
+    let inner =
+        elements::secp256k1_zkp::SecretKey::from_slice(&Vec::<u8>::from_hex(&desc[start..end])?)?;
+    Ok(MasterBlindingKey(inner))
+}
+
 pub struct ElectrumWallet {
     secp: Secp256k1<All>,
     config: Config,
@@ -248,6 +258,7 @@ impl ElectrumWallet {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
     use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
@@ -268,5 +279,7 @@ mod tests {
         let addr = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
+
+        extract_master_blinding(&desc_str).unwrap();
     }
 }

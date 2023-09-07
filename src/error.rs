@@ -31,10 +31,6 @@ pub enum Error {
     Secp256k1Zkp(elements::secp256k1_zkp::Error),
 }
 
-pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
-    move || Error::Generic(str.into())
-}
-
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {

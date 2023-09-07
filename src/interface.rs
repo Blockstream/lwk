@@ -15,7 +15,7 @@ use crate::network::{Config, ElementsNetwork};
 use crate::scripts::p2shwpkh_script;
 use bip39;
 
-use crate::error::{fn_err, Error};
+use crate::error::Error;
 use crate::store::{Store, StoreMeta};
 
 use crate::transaction::*;
@@ -160,7 +160,7 @@ impl WalletCtx {
                 .cache
                 .all_txs
                 .get(*tx_id)
-                .ok_or_else(fn_err(&format!("list_tx no tx {}", tx_id)))?;
+                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
             let fee = fee(
                 &tx,
@@ -196,7 +196,7 @@ impl WalletCtx {
                 .cache
                 .all_txs
                 .get(tx_id)
-                .ok_or_else(fn_err(&format!("txos no tx {}", tx_id)))?;
+                .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
             let tx_txos: Vec<UnblindedTXO> = {
                 let policy_asset = self.config.policy_asset();
                 tx.output

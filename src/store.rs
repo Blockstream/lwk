@@ -8,7 +8,7 @@ use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use elements::OutPoint;
 use elements::{BlockHash, Script, Txid};
-use log::{info, warn};
+use log::warn;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -17,7 +17,6 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
 
 pub const BATCH_SIZE: u32 = 20;
 
@@ -115,7 +114,6 @@ fn load_decrypt<P: AsRef<Path>>(
     path: P,
     cipher: &Aes256GcmSiv,
 ) -> Result<Vec<u8>, Error> {
-    let now = Instant::now();
     let mut store_path = PathBuf::from(path.as_ref());
     store_path.push(name);
     if !store_path.exists() {
@@ -131,11 +129,6 @@ fn load_decrypt<P: AsRef<Path>>(
     cipher.decrypt_in_place(nonce, b"", &mut ciphertext)?;
     let plaintext = ciphertext;
 
-    info!(
-        "loading {:?} took {}ms",
-        &store_path,
-        now.elapsed().as_millis()
-    );
     Ok(plaintext)
 }
 
@@ -170,7 +163,6 @@ impl StoreMeta {
     }
 
     fn flush_serializable<T: serde::Serialize>(&self, name: &str, value: &T) -> Result<(), Error> {
-        let now = Instant::now();
         let mut nonce_bytes = [0u8; 12];
         thread_rng().fill(&mut nonce_bytes);
         let nonce = GenericArray::from_slice(&nonce_bytes);
@@ -186,12 +178,6 @@ impl StoreMeta {
         let mut file = File::create(&store_path)?;
         file.write(&nonce_bytes)?;
         file.write(&ciphertext)?;
-        info!(
-            "flushing {} bytes on {:?} took {}ms",
-            ciphertext.len() + 16,
-            &store_path,
-            now.elapsed().as_millis()
-        );
         Ok(())
     }
 

@@ -3,7 +3,7 @@ use crate::model::GetTransactionsOpt;
 use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::p2shwpkh_script;
-use crate::store::{Store, new_store};
+use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use bip39;
 use electrum_client::ElectrumApi;

@@ -227,13 +227,6 @@ impl StoreMeta {
     }
 }
 
-impl StoreMeta {
-    pub fn export_cache(&self) -> Result<RawCache, Error> {
-        self.flush_cache()?;
-        RawCache::try_new(&self.path, &self.cipher)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::store::StoreMeta;

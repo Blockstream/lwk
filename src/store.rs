@@ -23,6 +23,10 @@ pub const BATCH_SIZE: u32 = 20;
 
 pub type Store = Arc<RwLock<StoreMeta>>;
 
+pub fn new_store<P: AsRef<Path>>(path: P, xpub: ExtendedPubKey) -> Result<Store, Error> {
+    Ok(Arc::new(RwLock::new(StoreMeta::new(&path, xpub)?)))
+}
+
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
 /// It is fully reconstructable from xpub and data from electrum server (plus master blinding for elements)
 #[derive(Serialize, Deserialize)]

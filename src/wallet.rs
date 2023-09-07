@@ -3,7 +3,7 @@ use crate::model::GetTransactionsOpt;
 use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
 use crate::scripts::p2shwpkh_script;
-use crate::store::{Store, StoreMeta};
+use crate::store::{Store, new_store};
 use crate::sync::Syncer;
 use bip39;
 use electrum_client::ElectrumApi;
@@ -21,7 +21,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
 
 pub struct WalletCtx {
     pub secp: Secp256k1<All>,
@@ -81,7 +80,7 @@ impl WalletCtx {
         }
         path.push(wallet_id);
         info!("Store root path: {:?}", path);
-        let store = Arc::new(RwLock::new(StoreMeta::new(&path, xpub)?));
+        let store = new_store(&path, xpub)?;
 
         Ok(WalletCtx {
             store,

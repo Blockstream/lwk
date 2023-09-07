@@ -1,4 +1,4 @@
-use crate::scripts::p2shwpkh_script;
+use crate::util::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;

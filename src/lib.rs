@@ -1,7 +1,7 @@
 mod error;
 mod model;
 mod network;
-mod scripts;
+mod util;
 mod store;
 mod sync;
 mod wallet;

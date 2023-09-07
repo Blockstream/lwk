@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::model::GetTransactionsOpt;
 use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::network::{Config, ElementsNetwork};
-use crate::scripts::p2shwpkh_script;
+use crate::util::p2shwpkh_script;
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use bip39;

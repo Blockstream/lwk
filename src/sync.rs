@@ -66,6 +66,7 @@ impl Syncer {
                 if flattened.is_empty() {
                     break;
                 }
+                let found_some = !flattened.is_empty();
 
                 for el in flattened {
                     // el.height = -1 means unconfirmed with unconfirmed parents
@@ -80,6 +81,11 @@ impl Syncer {
                     }
 
                     history_txs_id.insert(txid);
+                }
+
+                // FIXME: restore looking for multiple scripts
+                if found_some {
+                    break;
                 }
 
                 batch_count += 1;

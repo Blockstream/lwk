@@ -3,15 +3,14 @@ use crate::error::Error;
 use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
-use crate::util::p2shwpkh_script;
 use electrum_client::ElectrumApi;
 use elements;
-use elements::bitcoin::bip32::{ChildNumber, ExtendedPubKey};
 use elements::bitcoin::hashes::hex::FromHex;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::bitcoin::secp256k1::{All, PublicKey, Secp256k1};
+use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Txid};
+use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
 use hex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -32,7 +31,7 @@ pub struct ElectrumWallet {
     secp: Secp256k1<All>,
     config: Config,
     store: Store,
-    xpub: ExtendedPubKey,
+    descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
     master_blinding: MasterBlindingKey,
 }
 
@@ -44,12 +43,11 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        xpub: &str,
-        master_blinding_key: &str,
+        desc: &str,
     ) -> Result<Self, Error> {
         let config =
             Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
-        Self::new(config, xpub, master_blinding_key)
+        Self::new(config, desc)
     }
 
     /// Create a new testnet wallet
@@ -58,11 +56,10 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        xpub: &str,
-        master_blinding_key: &str,
+        desc: &str,
     ) -> Result<Self, Error> {
         let config = Config::new_testnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, xpub, master_blinding_key)
+        Self::new(config, desc)
     }
 
     /// Create a new mainnet wallet
@@ -71,38 +68,33 @@ impl ElectrumWallet {
         tls: bool,
         validate_domain: bool,
         data_root: &str,
-        xpub: &str,
-        master_blinding_key: &str,
+        desc: &str,
     ) -> Result<Self, Error> {
         let config = Config::new_mainnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, xpub, master_blinding_key)
+        Self::new(config, desc)
     }
 
-    fn new(config: Config, xpub: &str, master_blinding_key: &str) -> Result<Self, Error> {
+    fn new(config: Config, desc: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
-        let xpub = ExtendedPubKey::from_str(&xpub)?;
+        let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc).unwrap();
 
-        let wallet_desc = format!("{}{:?}", xpub, config);
+        let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let inner = elements::secp256k1_zkp::SecretKey::from_slice(
-            &Vec::<u8>::from_hex(master_blinding_key).unwrap(),
-        )
-        .unwrap();
-        let master_blinding = MasterBlindingKey(inner);
+        let master_blinding = extract_master_blinding(desc)?;
 
         let mut path: PathBuf = config.data_root().into();
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
         }
         path.push(wallet_id);
-        let store = new_store(&path, xpub)?;
+        let store = new_store(&path, descriptor.clone())?;
 
         Ok(ElectrumWallet {
             store,
             config,
             secp,
-            xpub,
+            descriptor,
             master_blinding,
         })
     }
@@ -151,6 +143,12 @@ impl ElectrumWallet {
 
     /// Get a new wallet address
     pub fn address(&self) -> Result<Address, Error> {
+        // FIXME: generate different addresses
+        let addr = self
+            .descriptor
+            .address(&self.secp, self.config.address_params())
+            .unwrap();
+        /*
         let pointer = {
             let store = &mut self.store.write()?.cache;
             store.indexes.external += 1;
@@ -167,6 +165,7 @@ impl ElectrumWallet {
         let public_key = PublicKey::from_secret_key(&self.secp, &blinding_key);
         let blinder = Some(public_key);
         let addr = Address::p2shwpkh(&derived.to_pub(), blinder, self.config.address_params());
+         * */
         Ok(addr)
     }
 

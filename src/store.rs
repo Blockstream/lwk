@@ -1,12 +1,12 @@
-use crate::util::p2shwpkh_script;
 use crate::Error;
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
-use elements::bitcoin::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
+use elements::bitcoin::bip32::DerivationPath;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::{BlockHash, OutPoint, Script, Txid};
+use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -20,8 +20,11 @@ pub const BATCH_SIZE: u32 = 20;
 
 pub type Store = Arc<RwLock<StoreMeta>>;
 
-pub fn new_store<P: AsRef<Path>>(path: P, xpub: ExtendedPubKey) -> Result<Store, Error> {
-    Ok(Arc::new(RwLock::new(StoreMeta::new(&path, xpub)?)))
+pub fn new_store<P: AsRef<Path>>(
+    path: P,
+    desc: ConfidentialDescriptor<DefiniteDescriptorKey>,
+) -> Result<Store, Error> {
+    Ok(Arc::new(RwLock::new(StoreMeta::new(&path, desc)?)))
 }
 
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
@@ -69,7 +72,7 @@ pub struct StoreMeta {
     secp: Secp256k1<All>,
     path: PathBuf,
     cipher: Aes256GcmSiv,
-    first_deriv: [ExtendedPubKey; 2],
+    descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
 }
 
 impl Drop for StoreMeta {
@@ -131,12 +134,22 @@ fn load_decrypt<P: AsRef<Path>>(
 }
 
 impl StoreMeta {
-    pub fn new<P: AsRef<Path>>(path: P, xpub: ExtendedPubKey) -> Result<StoreMeta, Error> {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
+    ) -> Result<StoreMeta, Error> {
+        /*
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
         enc_key_data.extend(&xpub.chain_code.to_bytes());
         enc_key_data.extend(&xpub.network.magic().to_bytes());
         let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
+         * */
+        let script_pubkey = descriptor
+            .unconfidential_address(&elements::AddressParams::ELEMENTS)
+            .unwrap()
+            .script_pubkey();
+        let key_bytes = sha256::Hash::hash(&script_pubkey.as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(&key);
         let cache = RawCache::new(path.as_ref(), &cipher);
@@ -146,17 +159,12 @@ impl StoreMeta {
         }
         let secp = Secp256k1::new();
 
-        let first_deriv = [
-            xpub.derive_pub(&secp, &[ChildNumber::from(0)])?,
-            xpub.derive_pub(&secp, &[ChildNumber::from(1)])?,
-        ];
-
         Ok(StoreMeta {
             cache,
             cipher,
             secp,
             path,
-            first_deriv,
+            descriptor,
         })
     }
 
@@ -184,11 +192,19 @@ impl StoreMeta {
         Ok(())
     }
 
-    pub fn get_script_batch(&self, int_or_ext: u32, batch: u32) -> Result<ScriptBatch, Error> {
+    pub fn get_script_batch(&self, _int_or_ext: u32, _batch: u32) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch::default();
-        result.cached = true;
+        result.cached = false;
+        // FIXME: derive different scripts
+        let script = self
+            .descriptor
+            .address(&self.secp, &elements::AddressParams::ELEMENTS)
+            .unwrap()
+            .script_pubkey();
+        let path = DerivationPath::from_str(&"m")?;
+        result.value.push((script, path));
 
-        //TODO cache m/0 and m/1
+        /*
         let first_deriv = &self.first_deriv[int_or_ext as usize];
 
         let start = batch * BATCH_SIZE;
@@ -207,6 +223,7 @@ impl StoreMeta {
             };
             result.value.push((script, path));
         }
+         * */
         Ok(result)
     }
 
@@ -222,8 +239,8 @@ impl StoreMeta {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::store::StoreMeta;
-    use elements::bitcoin::bip32::ExtendedPubKey;
     use elements::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;
@@ -232,16 +249,24 @@ mod tests {
     fn test_db_roundtrip() {
         let mut dir = TempDir::new("unit_test").unwrap().into_path();
         dir.push("store");
-        let xpub = ExtendedPubKey::from_str("tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU").unwrap();
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let master_blinding_key =
+            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let checksum = "qw2qy2ml";
+        let desc_str = format!(
+            "ct(slip77({}),elwpkh({}))#{}",
+            master_blinding_key, xpub, checksum
+        );
+        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let txid =
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let mut store = StoreMeta::new(&dir, xpub).unwrap();
+        let mut store = StoreMeta::new(&dir, desc.clone()).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, xpub).unwrap();
+        let store = StoreMeta::new(&dir, desc).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 }

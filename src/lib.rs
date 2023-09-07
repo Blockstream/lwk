@@ -9,7 +9,7 @@ mod transaction;
 
 pub use crate::error::Error;
 use crate::interface::WalletCtx;
-pub use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
+pub use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO};
 use crate::network::Config;
 pub use crate::network::ElementsNetwork;
 use crate::sync::Syncer;

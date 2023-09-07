@@ -58,7 +58,6 @@ impl TransactionDetails {
 pub struct GetTransactionsOpt {
     pub first: usize,
     pub count: usize,
-    pub subaccount: usize,
     pub num_confs: Option<usize>,
 }
 

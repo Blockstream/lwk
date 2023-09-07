@@ -19,6 +19,7 @@ aes-gcm-siv = "0.10.0"
 electrum-client = "0.12.0"
 bip39 = "1.0.0-rc1"
 elements = { version = "0.20.0", features = ["serde"] }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4fafddc2c9192c56037912ecc0fe027e4850fca3" }
 
 [dev-dependencies]
 chrono = "0.4.11"

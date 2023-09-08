@@ -17,7 +17,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 // FIXME: extract from descriptor struct
-#[allow(dead_code)]
 fn extract_master_blinding(desc: &str) -> Result<MasterBlindingKey, Error> {
     let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
     match descriptor.key {

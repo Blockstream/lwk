@@ -62,17 +62,15 @@ pub struct TestElectrumServer {
 }
 
 impl TestElectrumServer {
-    pub fn new(is_debug: bool, electrs_exec: String, node_exec: String) -> Self {
+    pub fn new(electrs_exec: String, node_exec: String) -> Self {
+        let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
+            .unwrap_or(LevelFilter::Off);
         START.call_once(|| {
-            let filter = if is_debug {
-                LevelFilter::Info
-            } else {
-                LevelFilter::Off
-            };
             log::set_logger(&LOGGER)
                 .map(|()| log::set_max_level(filter))
                 .expect("cannot initialize logging");
         });
+        let view_stdout = filter != LevelFilter::Off;
 
         let args = vec![
             "-fallbackfee=0.0001",
@@ -85,7 +83,7 @@ impl TestElectrumServer {
 
         let mut conf = electrsd::bitcoind::Conf::default();
         conf.args = args;
-        conf.view_stdout = is_debug;
+        conf.view_stdout = view_stdout;
         conf.p2p = electrsd::bitcoind::P2P::Yes;
         conf.network = network;
 
@@ -110,10 +108,10 @@ impl TestElectrumServer {
             )
             .unwrap();
 
-        let args = if is_debug { vec!["-v"] } else { vec![] };
+        let args = if view_stdout { vec!["-v"] } else { vec![] };
         let mut conf = electrsd::Conf::default();
         conf.args = args;
-        conf.view_stderr = is_debug;
+        conf.view_stderr = view_stdout;
         conf.http_enabled = false;
         conf.network = network;
         let electrs = electrsd::ElectrsD::with_conf(&electrs_exec, &node, &conf).unwrap();

@@ -25,7 +25,7 @@ cargo test --lib
 End to end tests needs local servers:
 
 ```
-mkdir bin
+mkdir -p bin
 cd bin
 
 # electrs

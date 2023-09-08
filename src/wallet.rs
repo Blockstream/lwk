@@ -5,7 +5,6 @@ use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use electrum_client::ElectrumApi;
 use elements;
-use elements::bitcoin::hashes::hex::FromHex;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
@@ -20,11 +19,15 @@ use std::str::FromStr;
 // FIXME: extract from descriptor struct
 #[allow(dead_code)]
 fn extract_master_blinding(desc: &str) -> Result<MasterBlindingKey, Error> {
-    let start = "ct(slip77(".len();
-    let end = start + 64;
-    let inner =
-        elements::secp256k1_zkp::SecretKey::from_slice(&Vec::<u8>::from_hex(&desc[start..end])?)?;
-    Ok(MasterBlindingKey(inner))
+    let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
+    match descriptor.key {
+        elements_miniscript::confidential::Key::Slip77(k) => {
+            let inner = elements::secp256k1_zkp::SecretKey::from_slice(k.as_bytes())?;
+            Ok(MasterBlindingKey(inner))
+        }
+        elements_miniscript::confidential::Key::Bare(_k) => todo!(),
+        elements_miniscript::confidential::Key::View(_k) => todo!(),
+    }
 }
 
 pub struct ElectrumWallet {

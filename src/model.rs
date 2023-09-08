@@ -39,11 +39,6 @@ impl TransactionDetails {
         }
     }
 
-    pub fn hex(&self) -> String {
-        hex::encode(elements::encode::serialize(&self.transaction))
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct GetTransactionsOpt {
     pub first: usize,

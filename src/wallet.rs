@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
 use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
@@ -36,45 +36,20 @@ pub struct ElectrumWallet {
 }
 
 impl ElectrumWallet {
-    /// Create a new regtest wallet
-    pub fn new_regtest(
-        policy_asset: &str,
+    /// Create a new  wallet
+    pub fn new(
+        network: ElementsNetwork,
         electrum_url: &str,
         tls: bool,
         validate_domain: bool,
         data_root: &str,
         desc: &str,
     ) -> Result<Self, Error> {
-        let config =
-            Config::new_regtest(tls, validate_domain, electrum_url, policy_asset, data_root)?;
-        Self::new(config, desc)
+        let config = Config::new(network, tls, validate_domain, electrum_url, data_root)?;
+        Self::inner_new(config, desc)
     }
 
-    /// Create a new testnet wallet
-    pub fn new_testnet(
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        desc: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new_testnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, desc)
-    }
-
-    /// Create a new mainnet wallet
-    pub fn new_mainnet(
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        desc: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new_mainnet(tls, validate_domain, electrum_url, data_root)?;
-        Self::new(config, desc)
-    }
-
-    fn new(config: Config, desc: &str) -> Result<Self, Error> {
+    fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
         let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc).unwrap();
 

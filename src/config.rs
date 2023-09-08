@@ -28,42 +28,37 @@ impl ElectrumUrl {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ElementsNetwork {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,
-    ElementsRegtest,
+    ElementsRegtest { policy_asset: AssetId },
+}
+
+impl ElementsNetwork {
+    pub fn policy_asset(&self) -> AssetId {
+        match self {
+            ElementsNetwork::Liquid => {
+                AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("can't fail on const")
+            }
+            ElementsNetwork::LiquidTestnet => {
+                AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("can't fail on const")
+            }
+            ElementsNetwork::ElementsRegtest { policy_asset } => *policy_asset,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    policy_asset: AssetId,
     electrum_url: ElectrumUrl,
     data_root: String,
 }
 
 impl Config {
-    pub fn new_regtest(
-        tls: bool,
-        validate_domain: bool,
-        electrum_url: &str,
-        policy_asset: &str,
-        data_root: &str,
-    ) -> Result<Self, Error> {
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
-        };
-        Ok(Config {
-            network: ElementsNetwork::ElementsRegtest,
-            electrum_url,
-            policy_asset: AssetId::from_str(policy_asset)?,
-            data_root: data_root.into(),
-        })
-    }
-
-    pub fn new_testnet(
+    pub fn new(
+        network: ElementsNetwork,
         tls: bool,
         validate_domain: bool,
         electrum_url: &str,
@@ -74,27 +69,8 @@ impl Config {
             false => ElectrumUrl::Plaintext(electrum_url.into()),
         };
         Ok(Config {
-            network: ElementsNetwork::LiquidTestnet,
+            network,
             electrum_url,
-            policy_asset: AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR)?,
-            data_root: data_root.into(),
-        })
-    }
-
-    pub fn new_mainnet(
-        tls: bool,
-        validate_domain: bool,
-        electrum_url: &str,
-        data_root: &str,
-    ) -> Result<Self, Error> {
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
-        };
-        Ok(Config {
-            network: ElementsNetwork::Liquid,
-            electrum_url,
-            policy_asset: AssetId::from_str(LIQUID_POLICY_ASSET_STR)?,
             data_root: data_root.into(),
         })
     }
@@ -103,12 +79,12 @@ impl Config {
         match self.network {
             ElementsNetwork::Liquid => &AddressParams::LIQUID,
             ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::ElementsRegtest => &AddressParams::ELEMENTS,
+            ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
         }
     }
 
     pub fn policy_asset(&self) -> AssetId {
-        self.policy_asset
+        self.network.policy_asset()
     }
 
     pub fn electrum_url(&self) -> ElectrumUrl {

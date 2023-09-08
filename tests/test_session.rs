@@ -209,13 +209,15 @@ impl TestElectrumWallet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
         let tls = false;
         let validate_domain = false;
-        let policy_asset_hex = &"5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset =
+            AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
+                .unwrap();
         let _db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let electrum_wallet = ElectrumWallet::new_regtest(
-            policy_asset_hex,
+        let electrum_wallet = ElectrumWallet::new(
+            ElementsNetwork::ElementsRegtest { policy_asset },
             electrs_url,
             tls,
             validate_domain,

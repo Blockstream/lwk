@@ -236,7 +236,7 @@ mod tests {
     use elements::secp256k1_zkp::SecretKey;
     use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
-    use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
+    use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
     use std::str::FromStr;
 
     #[test]
@@ -253,6 +253,49 @@ mod tests {
         let secp = Secp256k1::new();
         let addr = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
+        assert_eq!(addr.to_string(), expected_addr.to_string());
+
+        let master_blinding = extract_master_blinding(&desc).unwrap();
+        assert_eq!(
+            master_blinding.0,
+            SecretKey::from_str(master_blinding_key).unwrap()
+        )
+    }
+
+    #[test]
+    fn test_address_from_desc_wildcard() {
+        let xpub = "tpubDC2Q4xK4XH72GLdvD62W5NsFiD3HmTScXpopTsf3b4AUqkQwBd7wmWAJki61sov1MVuyU4MuGLJHF7h3j1b3e1FY2wvUVVx7vagmxdPvVsv";
+        let master_blinding_key =
+            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let checksum = "yfhwtmd8";
+        let desc_str = format!(
+            "ct(slip77({}),elsh(wpkh({}/0/*)))#{}",
+            master_blinding_key, xpub, checksum
+        );
+        let desc = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc_str).unwrap();
+        let secp = Secp256k1::new();
+
+        let derived_non_conf = desc.descriptor.at_derivation_index(0).unwrap();
+
+        // TODO sound non-sense right? the type has a different generic type and by doing this is transformed
+        let key = match desc.key {
+            elements_miniscript::confidential::Key::Slip77(x) => {
+                elements_miniscript::confidential::Key::Slip77(x)
+            }
+            elements_miniscript::confidential::Key::Bare(_) => todo!(),
+            elements_miniscript::confidential::Key::View(_) => todo!(),
+        };
+
+        let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
+            key,
+            descriptor: derived_non_conf,
+        };
+
+        let addr = derived_conf
+            .address(&secp, &AddressParams::LIQUID_TESTNET)
+            .unwrap();
+        let expected_addr =
+            "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji";
         assert_eq!(addr.to_string(), expected_addr.to_string());
 
         let master_blinding = extract_master_blinding(&desc).unwrap();

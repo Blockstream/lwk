@@ -2,7 +2,7 @@ extern crate bewallet;
 
 use bewallet::*;
 use chrono::Utc;
-use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
+use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
@@ -90,12 +90,10 @@ impl TestElectrumServer {
         let node = electrsd::bitcoind::BitcoinD::with_conf(&node_exec, &conf).unwrap();
 
         node_generate(&node.client, 1);
-        // send initialfreecoins from wallet "" to the wallet created by BitcoinD::new
-        let node_url = format!("http://127.0.0.1:{}/wallet/", node.params.rpc_socket.port());
-        let client =
-            Client::new(&node_url, Auth::CookieFile(node.params.cookie_file.clone())).unwrap();
+        node.client.call::<Value>("rescanblockchain", &[]).unwrap();
+        // send initialfreecoins to the node wallet
         let address = node_getnewaddress(&node.client, None);
-        client
+        node.client
             .call::<Value>(
                 "sendtoaddress",
                 &[
@@ -156,6 +154,7 @@ impl TestElectrumServer {
                         false.into(),
                         1.into(),
                         "UNSET".into(),
+                        false.into(),
                         asset.to_string().into(),
                     ],
                 )

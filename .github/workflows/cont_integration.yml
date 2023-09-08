@@ -28,9 +28,9 @@ jobs:
           chmod +x electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid
           echo "ELECTRS_LIQUID_EXEC=$(realpath electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid)" >> $GITHUB_ENV
           # elementsd
-          wget https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.12/elements-0.18.1.12-x86_64-linux-gnu.tar.gz
-          tar -xzf elements-0.18.1.12-x86_64-linux-gnu.tar.gz
-          echo "ELEMENTSD_EXEC=$(realpath elements-0.18.1.12/bin/elementsd)" >> $GITHUB_ENV
+          wget https://github.com/ElementsProject/elements/releases/download/elements-22.1.1/elements-22.1.1-x86_64-linux-gnu.tar.gz
+          tar -xzf elements-22.1.1-x86_64-linux-gnu.tar.gz
+          echo "ELEMENTSD_EXEC=$(realpath elements-22.1.12/bin/elementsd)" >> $GITHUB_ENV
       - name: Test BEWallet
         uses: actions-rs/cargo@v1
         with:

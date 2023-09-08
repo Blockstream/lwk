@@ -9,14 +9,14 @@ use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
-use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
+use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, MiniscriptKey};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-fn extract_master_blinding(
-    descriptor: &ConfidentialDescriptor<DefiniteDescriptorKey>,
+fn extract_master_blinding<T: MiniscriptKey>(
+    descriptor: &ConfidentialDescriptor<T>,
 ) -> Result<MasterBlindingKey, Error> {
     match &descriptor.key {
         elements_miniscript::confidential::Key::Slip77(k) => {

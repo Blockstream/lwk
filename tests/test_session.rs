@@ -227,9 +227,7 @@ impl TestElectrumWallet {
         .unwrap();
 
         electrum_wallet.sync_txs().unwrap();
-        let mut opt = GetTransactionsOpt::default();
-        opt.count = 100;
-        let list = electrum_wallet.transactions(&opt).unwrap();
+        let list = electrum_wallet.transactions().unwrap();
         assert_eq!(list.len(), 0);
         let mut i = 120;
         let tip = loop {
@@ -253,11 +251,9 @@ impl TestElectrumWallet {
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
-        let mut opt = GetTransactionsOpt::default();
-        opt.count = 100;
         for _ in 0..120 {
             self.electrum_wallet.sync_txs().unwrap();
-            let list = self.electrum_wallet.transactions(&opt).unwrap();
+            let list = self.electrum_wallet.transactions().unwrap();
             if list
                 .iter()
                 .any(|e| &e.transaction.txid().to_string() == txid)
@@ -282,9 +278,7 @@ impl TestElectrumWallet {
 
     fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
         self.electrum_wallet.sync_txs().unwrap();
-        let mut opt = GetTransactionsOpt::default();
-        opt.count = 100;
-        let list = self.electrum_wallet.transactions(&opt).unwrap();
+        let list = self.electrum_wallet.transactions().unwrap();
         let filtered_list: Vec<TransactionDetails> = list
             .iter()
             .filter(|e| &e.transaction.txid().to_string() == txid)

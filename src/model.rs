@@ -38,12 +38,6 @@ impl TransactionDetails {
             height,
         }
     }
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct GetTransactionsOpt {
-    pub first: usize,
-    pub count: usize,
-    pub num_confs: Option<usize>,
 }
 
 #[cfg(test)]

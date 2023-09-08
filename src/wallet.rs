@@ -1,6 +1,6 @@
 use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
-use crate::model::{GetTransactionsOpt, TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{TransactionDetails, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use electrum_client::ElectrumApi;
@@ -200,7 +200,7 @@ impl ElectrumWallet {
     }
 
     /// Get the wallet transactions
-    pub fn transactions(&self, opt: &GetTransactionsOpt) -> Result<Vec<TransactionDetails>, Error> {
+    pub fn transactions(&self) -> Result<Vec<TransactionDetails>, Error> {
         let store_read = self.store.read()?;
 
         let mut txs = vec![];
@@ -215,7 +215,7 @@ impl ElectrumWallet {
             }
         });
 
-        for (tx_id, height) in my_txids.iter().skip(opt.first).take(opt.count) {
+        for (tx_id, height) in my_txids.iter() {
             let tx = store_read
                 .cache
                 .all_txs

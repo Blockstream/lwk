@@ -65,6 +65,9 @@ pub enum Error {
 
     #[error(transparent)]
     SerdeCbor(#[from] serde_cbor::Error),
+
+    #[error(transparent)]
+    ElementsMiniscript(#[from] elements_miniscript::Error),
 }
 
 impl serde::Serialize for Error {

@@ -51,7 +51,7 @@ impl ElectrumWallet {
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
-        let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc).unwrap();
+        let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));

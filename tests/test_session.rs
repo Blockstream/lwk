@@ -135,11 +135,6 @@ impl TestElectrumServer {
         Self { node, electrs }
     }
 
-    /// stop the bitcoin node in the test session
-    pub fn stop(&mut self) {
-        self.node.client.stop().unwrap();
-    }
-
     fn node_sendtoaddress(
         &self,
         address: &Address,

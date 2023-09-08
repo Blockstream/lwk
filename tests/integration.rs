@@ -20,6 +20,4 @@ fn liquid() {
 
     wallet.fund_btc(&mut server);
     let _asset = wallet.fund_asset(&mut server);
-
-    server.stop();
 }

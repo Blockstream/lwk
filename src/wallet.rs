@@ -232,6 +232,7 @@ impl ElectrumWallet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elements::secp256k1_zkp::SecretKey;
     use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
     use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
@@ -253,6 +254,10 @@ mod tests {
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
 
-        extract_master_blinding(&desc_str).unwrap();
+        let master_blinding = extract_master_blinding(&desc_str).unwrap();
+        assert_eq!(
+            master_blinding.0,
+            SecretKey::from_str(master_blinding_key).unwrap()
+        )
     }
 }

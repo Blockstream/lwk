@@ -1,4 +1,4 @@
-use elements::{OutPoint, Script, Transaction, TxOutSecrets};
+use elements::{OutPoint, Script, TxOutSecrets};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -23,21 +23,6 @@ impl TXO {
 pub struct UnblindedTXO {
     pub txo: TXO,
     pub unblinded: TxOutSecrets,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionDetails {
-    pub transaction: Transaction,
-    pub height: Option<u32>,
-}
-
-impl TransactionDetails {
-    pub fn new(transaction: Transaction, height: Option<u32>) -> TransactionDetails {
-        TransactionDetails {
-            transaction,
-            height,
-        }
-    }
 }
 
 #[cfg(test)]

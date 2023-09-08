@@ -1,6 +1,6 @@
 use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
-use crate::model::{TransactionDetails, UnblindedTXO, TXO};
+use crate::model::{UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use electrum_client::ElectrumApi;
@@ -9,7 +9,7 @@ use elements::bitcoin::hashes::hex::FromHex;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
-use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Txid};
+use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
 use hex;
 use std::cmp::Ordering;
@@ -199,8 +199,8 @@ impl ElectrumWallet {
         Ok(result)
     }
 
-    /// Get the wallet transactions
-    pub fn transactions(&self) -> Result<Vec<TransactionDetails>, Error> {
+    /// Get the wallet transactions with their heights (if confirmed)
+    pub fn transactions(&self) -> Result<Vec<(Transaction, Option<u32>)>, Error> {
         let store_read = self.store.read()?;
 
         let mut txs = vec![];
@@ -222,8 +222,7 @@ impl ElectrumWallet {
                 .get(*tx_id)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
-            let tx_details = TransactionDetails::new(tx.clone(), **height);
-            txs.push(tx_details);
+            txs.push((tx.clone(), **height));
         }
 
         Ok(txs)

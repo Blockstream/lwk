@@ -6,7 +6,7 @@ use electrsd::bitcoind::bitcoincore_rpc::{Auth, Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
-use elements::{Address, AssetId};
+use elements::{Address, AssetId, Transaction};
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
 use std::str::FromStr;
@@ -254,10 +254,7 @@ impl TestElectrumWallet {
         for _ in 0..120 {
             self.electrum_wallet.sync_txs().unwrap();
             let list = self.electrum_wallet.transactions().unwrap();
-            if list
-                .iter()
-                .any(|e| &e.transaction.txid().to_string() == txid)
-            {
+            if list.iter().any(|e| &e.0.txid().to_string() == txid) {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -276,12 +273,12 @@ impl TestElectrumWallet {
         self.balance(&self.electrum_wallet.policy_asset())
     }
 
-    fn get_tx_from_list(&mut self, txid: &str) -> TransactionDetails {
+    fn get_tx_from_list(&mut self, txid: &str) -> Transaction {
         self.electrum_wallet.sync_txs().unwrap();
         let list = self.electrum_wallet.transactions().unwrap();
-        let filtered_list: Vec<TransactionDetails> = list
+        let filtered_list: Vec<_> = list
             .iter()
-            .filter(|e| &e.transaction.txid().to_string() == txid)
+            .filter(|e| &e.0.txid().to_string() == txid)
             .cloned()
             .collect();
         assert!(
@@ -289,7 +286,7 @@ impl TestElectrumWallet {
             "just made tx {} is not in tx list",
             txid
         );
-        filtered_list.first().unwrap().clone()
+        filtered_list.first().unwrap().clone().0
     }
 
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
@@ -301,7 +298,7 @@ impl TestElectrumWallet {
         let balance = init_balance + self.balance_btc();
         let satoshi = init_balance + satoshi;
         assert_eq!(balance, satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).transaction.txid().to_string();
+        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
         assert_eq!(txid, wallet_txid);
         let utxos = self.electrum_wallet.utxos().unwrap();
         assert_eq!(utxos.len(), 1);
@@ -316,7 +313,7 @@ impl TestElectrumWallet {
 
         let balance_asset = self.balance(&asset);
         assert_eq!(balance_asset, satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).transaction.txid().to_string();
+        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
         assert_eq!(txid, wallet_txid);
         let utxos = self.electrum_wallet.utxos().unwrap();
         assert_eq!(utxos.len(), num_utxos_before + 1);

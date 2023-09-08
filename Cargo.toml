@@ -1,7 +1,12 @@
 [package]
 name = "bewallet"
 version = "0.1.0"
-authors = ["Riccardo Casatta <riccardo@casatta.it>", "Nadav Ivgi <nadav@shesek.info>", "William Casarin <jb55@jb55.com>", "Leonardo Comandini <leo@leocomandini.org>"]
+authors = [
+    "Riccardo Casatta <riccardo@casatta.it>",
+    "Nadav Ivgi <nadav@shesek.info>",
+    "William Casarin <jb55@jb55.com>",
+    "Leonardo Comandini <leo@leocomandini.org>",
+]
 license = "(MIT)"
 edition = "2018"
 
@@ -13,7 +18,6 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_cbor = "0.11.1"
-hex = "0.4.0"
 log = "0.4.8"
 aes-gcm-siv = "0.10.0"
 electrum-client = "0.15.0"
@@ -25,7 +29,7 @@ thiserror = "1.0.48"
 [dev-dependencies]
 chrono = "0.4.11"
 tempdir = "0.3.7"
-electrsd = { version = "0.25.0", features = [ "legacy" ] }
+electrsd = { version = "0.25.0", features = ["legacy"] }
 
 [profile.release]
 lto = true

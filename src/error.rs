@@ -34,9 +34,6 @@ pub enum Error {
     StdIOError(#[from] std::io::Error),
 
     #[error(transparent)]
-    Hex(#[from] hex::FromHexError),
-
-    #[error(transparent)]
     ClientError(#[from] electrum_client::Error),
 
     #[error(transparent)]

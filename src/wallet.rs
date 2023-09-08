@@ -10,7 +10,6 @@ use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
-use hex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -56,7 +55,7 @@ impl ElectrumWallet {
         let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
-        let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
+        let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
 
         let master_blinding = extract_master_blinding(&descriptor)?;
 

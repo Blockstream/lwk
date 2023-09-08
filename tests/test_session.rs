@@ -258,7 +258,10 @@ impl TestElectrumWallet {
         for _ in 0..120 {
             self.electrum_wallet.sync_txs().unwrap();
             let list = self.electrum_wallet.transactions(&opt).unwrap();
-            if list.iter().any(|e| e.txid == txid) {
+            if list
+                .iter()
+                .any(|e| &e.transaction.txid().to_string() == txid)
+            {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -282,8 +285,11 @@ impl TestElectrumWallet {
         let mut opt = GetTransactionsOpt::default();
         opt.count = 100;
         let list = self.electrum_wallet.transactions(&opt).unwrap();
-        let filtered_list: Vec<TransactionDetails> =
-            list.iter().filter(|e| e.txid == txid).cloned().collect();
+        let filtered_list: Vec<TransactionDetails> = list
+            .iter()
+            .filter(|e| &e.transaction.txid().to_string() == txid)
+            .cloned()
+            .collect();
         assert!(
             !filtered_list.is_empty(),
             "just made tx {} is not in tx list",
@@ -301,7 +307,7 @@ impl TestElectrumWallet {
         let balance = init_balance + self.balance_btc();
         let satoshi = init_balance + satoshi;
         assert_eq!(balance, satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).txid;
+        let wallet_txid = self.get_tx_from_list(&txid).transaction.txid().to_string();
         assert_eq!(txid, wallet_txid);
         let utxos = self.electrum_wallet.utxos().unwrap();
         assert_eq!(utxos.len(), 1);
@@ -316,7 +322,7 @@ impl TestElectrumWallet {
 
         let balance_asset = self.balance(&asset);
         assert_eq!(balance_asset, satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).txid;
+        let wallet_txid = self.get_tx_from_list(&txid).transaction.txid().to_string();
         assert_eq!(txid, wallet_txid);
         let utxos = self.electrum_wallet.utxos().unwrap();
         assert_eq!(utxos.len(), num_utxos_before + 1);

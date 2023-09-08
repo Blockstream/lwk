@@ -28,16 +28,13 @@ pub struct UnblindedTXO {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionDetails {
     pub transaction: Transaction,
-    pub txid: String,
     pub height: Option<u32>,
 }
 
 impl TransactionDetails {
     pub fn new(transaction: Transaction, height: Option<u32>) -> TransactionDetails {
-        let txid = transaction.txid().to_string();
         TransactionDetails {
             transaction,
-            txid,
             height,
         }
     }

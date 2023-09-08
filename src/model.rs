@@ -27,13 +27,12 @@ pub struct UnblindedTXO {
 
 #[cfg(test)]
 mod tests {
-    use elements::hex::ToHex;
     use std::str::FromStr;
 
     #[test]
     fn test_asset_roundtrip() {
         let hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let asset = elements::issuance::AssetId::from_str(&hex).unwrap();
-        assert_eq!(asset.to_hex(), hex);
+        let asset = elements::AssetId::from_str(&hex).unwrap();
+        assert_eq!(asset.to_string(), hex);
     }
 }

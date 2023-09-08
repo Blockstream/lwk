@@ -16,10 +16,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-// FIXME: extract from descriptor struct
-fn extract_master_blinding(desc: &str) -> Result<MasterBlindingKey, Error> {
-    let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
-    match descriptor.key {
+fn extract_master_blinding(
+    descriptor: &ConfidentialDescriptor<DefiniteDescriptorKey>,
+) -> Result<MasterBlindingKey, Error> {
+    match &descriptor.key {
         elements_miniscript::confidential::Key::Slip77(k) => {
             let inner = elements::secp256k1_zkp::SecretKey::from_slice(k.as_bytes())?;
             Ok(MasterBlindingKey(inner))
@@ -58,7 +58,7 @@ impl ElectrumWallet {
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = hex::encode(sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let master_blinding = extract_master_blinding(desc)?;
+        let master_blinding = extract_master_blinding(&descriptor)?;
 
         let mut path: PathBuf = config.data_root().into();
         if !path.exists() {
@@ -256,7 +256,7 @@ mod tests {
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
 
-        let master_blinding = extract_master_blinding(&desc_str).unwrap();
+        let master_blinding = extract_master_blinding(&desc).unwrap();
         assert_eq!(
             master_blinding.0,
             SecretKey::from_str(master_blinding_key).unwrap()

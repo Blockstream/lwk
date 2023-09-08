@@ -20,6 +20,7 @@ electrum-client = "0.15.0"
 bip39 = "1.0.0-rc1"
 elements = { version = "0.22.0", features = ["serde"] }
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4fafddc2c9192c56037912ecc0fe027e4850fca3" }
+thiserror = "1.0.48"
 
 [dev-dependencies]
 chrono = "0.4.11"

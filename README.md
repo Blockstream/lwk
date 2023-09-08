@@ -22,24 +22,28 @@ Run unit tests:
 cargo test --lib
 ```
 
-Integration tests needs local servers:
+End to end tests needs local servers:
+
 ```
-PROJECT_DIR=$PWD
-mkdir -p server
-cd ..
-git clone https://github.com/Blockstream/electrs
-cd electrs
-git checkout 5bae341585f70699cf12b587a1e9d392df43d674
-cargo install --debug --root $PROJECT_DIR/server/electrs_liquid --locked --path . --features liquid
-cd $PROJECT_DIR/server
-curl -L https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.8/elements-0.18.1.8-x86_64-linux-gnu.tar.gz | tar -xvz elements-0.18.1.8/bin/elementsd
-cd $PROJECT_DIR
+mkdir bin
+cd bin
+
+# electrs
+wget https://github.com/RCasatta/electrsd/releases/download/electrs_releases/electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid.gz
+gunzip electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid.gz
+chmod +x electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid
+export ELECTRS_LIQUID_EXEC=$(realpath electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid)
+
+# elementsd
+wget https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.12/elements-0.18.1.12-x86_64-linux-gnu.tar.gz
+tar -xzf elements-0.18.1.12-x86_64-linux-gnu.tar.gz
+export ELEMENTSD_EXEC=$(realpath elements-0.18.1.12/bin/elementsd)
 ```
 
-To run them:
-```
-export ELECTRS_LIQUID_EXEC=$PWD/server/electrs_liquid/bin/electrs
-export ELEMENTSD_EXEC=$PWD/server/elements-0.18.1.8/bin/elementsd
+If you use direnv a convenient `.envrc` is in the repo (after inspection needs `direnv allow`)
 
+To run end to end tests:
+
+```
 cargo test
 ```

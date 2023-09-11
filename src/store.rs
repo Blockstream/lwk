@@ -49,8 +49,8 @@ pub struct RawCache {
     /// height and hash of tip of the blockchain
     pub tip: (u32, BlockHash),
 
-    /// max used indexes for external derivation /0/* and internal derivation /1/* (change)
-    pub indexes: Indexes,
+    /// max used indexes for current descriptor
+    pub last_index: u32,
 }
 
 impl Default for RawCache {
@@ -62,7 +62,7 @@ impl Default for RawCache {
             heights: HashMap::default(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
-            indexes: Indexes::default(),
+            last_index: 0,
         }
     }
 }
@@ -79,12 +79,6 @@ impl Drop for StoreMeta {
     fn drop(&mut self) {
         self.flush().unwrap();
     }
-}
-
-#[derive(Debug, PartialEq, Eq, Default, Clone, Serialize, Deserialize)]
-pub struct Indexes {
-    pub external: u32, // m/0/*
-    pub internal: u32, // m/1/*
 }
 
 #[derive(Default, Debug)]
@@ -189,7 +183,7 @@ impl StoreMeta {
         Ok(())
     }
 
-    pub fn get_script_batch(&self, _int_or_ext: u32, batch: u32) -> Result<ScriptBatch, Error> {
+    pub fn get_script_batch(&self, batch: u32) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch::default();
         result.cached = false;
 
@@ -273,7 +267,7 @@ mod tests {
 
         let store = StoreMeta::new(&dir, desc.clone()).unwrap();
 
-        let x = store.get_script_batch(0, 0).unwrap();
+        let x = store.get_script_batch(0).unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");
         assert_ne!(x.value[0], x.value[1]);
     }

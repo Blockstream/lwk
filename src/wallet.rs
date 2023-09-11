@@ -156,8 +156,8 @@ impl ElectrumWallet {
     pub fn address(&self) -> Result<Address, Error> {
         let pointer = {
             let store = &mut self.store.write()?.cache;
-            store.indexes.external += 1;
-            store.indexes.external
+            store.last_index += 1;
+            store.last_index
         };
         self.derive_address(pointer)
     }

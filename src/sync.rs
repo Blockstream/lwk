@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::store::{Indexes, Store, BATCH_SIZE};
+use crate::store::{Store, BATCH_SIZE};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements::bitcoin::secp256k1::Secp256k1;
@@ -7,8 +7,6 @@ use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
 use elements::slip77::MasterBlindingKey;
 use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
 
 pub struct Syncer {
@@ -28,77 +26,69 @@ impl Syncer {
         let mut txid_height = HashMap::new();
         let mut scripts = HashMap::new();
 
-        let mut last_used = Indexes::default();
-        let mut wallet_chains = vec![0, 1];
-        wallet_chains.shuffle(&mut thread_rng());
-        for i in wallet_chains {
-            let mut batch_count = 0;
-            loop {
-                let batch = self.store.read()?.get_script_batch(i, batch_count)?;
-                let scripts_bitcoin: Vec<BitcoinScript> = batch
-                    .value
-                    .iter()
-                    .map(|e| BitcoinScript::from(e.0.clone().into_bytes()))
-                    .collect();
-                let scripts_bitcoin: Vec<&_> =
-                    scripts_bitcoin.iter().map(|e| e.as_script()).collect();
-                let result: Vec<Vec<GetHistoryRes>> =
-                    client.batch_script_get_history(scripts_bitcoin)?;
-                if !batch.cached {
-                    scripts.extend(batch.value);
-                }
-                let max = result
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, v)| !v.is_empty())
-                    .map(|(i, _)| i as u32)
-                    .max();
-                if let Some(max) = max {
-                    if i == 0 {
-                        last_used.external = max + batch_count * BATCH_SIZE;
-                    } else {
-                        last_used.internal = max + batch_count * BATCH_SIZE;
-                    }
-                };
+        let mut last_used = 0;
 
-                let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
-
-                if flattened.is_empty() {
-                    break;
-                }
-                let found_some = !flattened.is_empty();
-
-                for el in flattened {
-                    // el.height = -1 means unconfirmed with unconfirmed parents
-                    // el.height =  0 means unconfirmed with confirmed parents
-                    // but we threat those tx the same
-                    let height = el.height.max(0);
-                    let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
-                    if height == 0 {
-                        txid_height.insert(txid, None);
-                    } else {
-                        txid_height.insert(txid, Some(height as u32));
-                    }
-
-                    history_txs_id.insert(txid);
-                }
-
-                if found_some {
-                    break;
-                }
-
-                batch_count += 1;
+        let mut batch_count = 0;
+        loop {
+            let batch = self.store.read()?.get_script_batch(batch_count)?;
+            let scripts_bitcoin: Vec<BitcoinScript> = batch
+                .value
+                .iter()
+                .map(|e| BitcoinScript::from(e.0.clone().into_bytes()))
+                .collect();
+            let scripts_bitcoin: Vec<&_> = scripts_bitcoin.iter().map(|e| e.as_script()).collect();
+            let result: Vec<Vec<GetHistoryRes>> =
+                client.batch_script_get_history(scripts_bitcoin)?;
+            if !batch.cached {
+                scripts.extend(batch.value);
             }
+            let max = result
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| !v.is_empty())
+                .map(|(i, _)| i as u32)
+                .max();
+            if let Some(max) = max {
+                last_used = max + batch_count * BATCH_SIZE;
+            };
+
+            let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
+
+            if flattened.is_empty() {
+                break;
+            }
+            let found_some = !flattened.is_empty();
+
+            for el in flattened {
+                // el.height = -1 means unconfirmed with unconfirmed parents
+                // el.height =  0 means unconfirmed with confirmed parents
+                // but we threat those tx the same
+                let height = el.height.max(0);
+                let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
+                if height == 0 {
+                    txid_height.insert(txid, None);
+                } else {
+                    txid_height.insert(txid, Some(height as u32));
+                }
+
+                history_txs_id.insert(txid);
+            }
+
+            if found_some {
+                break;
+            }
+
+            batch_count += 1;
         }
 
         let new_txs = self.download_txs(&history_txs_id, &scripts, &client)?;
 
-        let store_indexes = self.store.read()?.cache.indexes.clone();
+        let store_indexes = self.store.read()?.cache.last_index.clone();
 
         let changed =
             if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
                 let mut store_write = self.store.write()?;
-                store_write.cache.indexes = last_used;
+                store_write.cache.last_index = last_used;
                 store_write.cache.all_txs.extend(new_txs.txs.into_iter());
                 store_write.cache.unblinded.extend(new_txs.unblinds);
 

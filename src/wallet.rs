@@ -45,7 +45,7 @@ pub(crate) fn derive_address(
         descriptor: derived_non_conf,
     };
 
-    Ok(derived_conf.address(&secp, address_params)?)
+    Ok(derived_conf.address(secp, address_params)?)
 }
 
 pub(crate) fn convert_blinding_key(
@@ -53,7 +53,7 @@ pub(crate) fn convert_blinding_key(
 ) -> Result<Key<DefiniteDescriptorKey>, Error> {
     match key {
         Key::Slip77(x) => Ok(Key::Slip77(*x)),
-        Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
+        Key::Bare(_) => Err(Error::BlindingBareUnsupported),
         Key::View(x) => Ok(Key::View(x.clone())),
     }
 }
@@ -81,7 +81,7 @@ impl ElectrumWallet {
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
-        let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc)?;
+        let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
@@ -192,13 +192,13 @@ impl ElectrumWallet {
                             output,
                         )
                     })
-                    .filter(|(outpoint, _)| !spent.contains(&outpoint))
+                    .filter(|(outpoint, _)| !spent.contains(outpoint))
                     .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
-                            let txo = TXO::new(outpoint, output.script_pubkey, height.clone());
+                            let txo = TXO::new(outpoint, output.script_pubkey, *height);
                             return Some(UnblindedTXO {
-                                txo: txo,
-                                unblinded: unblinded.clone(),
+                                txo,
+                                unblinded: *unblinded,
                             });
                         }
                         None
@@ -234,7 +234,7 @@ impl ElectrumWallet {
                     .cmp(&a.1.unwrap_or(std::u32::MAX));
             match height_cmp {
                 Ordering::Equal => b.0.cmp(a.0),
-                h @ _ => h,
+                h => h,
             }
         });
 

@@ -140,9 +140,9 @@ impl StoreMeta {
         let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
          * */
 
-        let key_bytes = sha256::Hash::hash(&descriptor.to_string().as_bytes()).to_byte_array();
+        let key_bytes = sha256::Hash::hash(descriptor.to_string().as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);
-        let cipher = Aes256GcmSiv::new(&key);
+        let cipher = Aes256GcmSiv::new(key);
         let cache = RawCache::new(path.as_ref(), &cipher);
         let path = path.as_ref().to_path_buf();
         if !path.exists() {

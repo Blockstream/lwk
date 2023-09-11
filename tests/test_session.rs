@@ -46,7 +46,7 @@ fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     let addr: Value = client
         .call("getnewaddress", &["label".into(), kind.into()])
         .unwrap();
-    Address::from_str(&addr.as_str().unwrap()).unwrap()
+    Address::from_str(addr.as_str().unwrap()).unwrap()
 }
 
 fn node_generate(client: &Client, block_num: u32) {
@@ -181,13 +181,13 @@ impl TestElectrumServer {
     }
 
     pub fn fund_btc(&mut self, address: &Address, satoshi: u64) -> String {
-        let txid = self.node_sendtoaddress(address, satoshi, None);
-        txid
+        
+        self.node_sendtoaddress(address, satoshi, None)
     }
 
     pub fn fund_asset(&mut self, address: &Address, satoshi: u64) -> (String, AssetId) {
         let asset = self.node_issueasset(satoshi);
-        let txid = self.node_sendtoaddress(address, satoshi, Some(asset.clone()));
+        let txid = self.node_sendtoaddress(address, satoshi, Some(asset));
         (txid, asset)
     }
 }

@@ -87,9 +87,9 @@ impl Syncer {
             batch_count += 1;
         }
 
-        let new_txs = self.download_txs(&history_txs_id, &scripts, &client)?;
+        let new_txs = self.download_txs(&history_txs_id, &scripts, client)?;
 
-        let store_indexes = self.store.read()?.cache.last_index.clone();
+        let store_indexes = self.store.read()?.cache.last_index;
 
         let changed =
             if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
@@ -133,7 +133,7 @@ impl Syncer {
                 .iter()
                 .map(|t| BitcoinTxid::from_raw_hash(t.to_raw_hash()))
                 .collect();
-            let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
+            let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().collect();
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
             let mut txs_downloaded: Vec<Transaction> = vec![];
             for vec in txs_bytes_downloaded {
@@ -178,7 +178,7 @@ impl Syncer {
                     .iter()
                     .map(|t| BitcoinTxid::from_raw_hash(t.to_raw_hash()))
                     .collect();
-                let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().map(|t| t).collect();
+                let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().collect();
                 let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
                 for vec in txs_bytes_downloaded {
                     let tx: Transaction = elements::encode::deserialize(&vec)?;

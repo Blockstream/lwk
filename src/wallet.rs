@@ -38,12 +38,11 @@ pub(crate) fn derive_address(
 ) -> Result<Address, Error> {
     let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
 
-    // TODO sound non-sense right? the type has a different generic type and by doing this is transformed
     use elements_miniscript::confidential::Key as K;
     let key = match &descriptor.key {
         K::Slip77(x) => K::Slip77(*x),
-        K::Bare(_x) => todo!(),
-        K::View(_xx) => todo!(),
+        K::Bare(_) => return Err(Error::BlindingBareUnsupported),
+        K::View(x) => K::View(x.clone()),
     };
 
     let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {

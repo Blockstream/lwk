@@ -12,6 +12,9 @@ pub enum Error {
     #[error("Aes {0}")]
     Aes(String),
 
+    #[error("Blinding bare key unsupported")]
+    BlindingBareUnsupported,
+
     #[error(transparent)]
     InvalidMnemonic(#[from] bip39::Error),
 

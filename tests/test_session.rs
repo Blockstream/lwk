@@ -181,7 +181,6 @@ impl TestElectrumServer {
     }
 
     pub fn fund_btc(&mut self, address: &Address, satoshi: u64) -> String {
-        
         self.node_sendtoaddress(address, satoshi, None)
     }
 

@@ -31,7 +31,7 @@ pub(crate) fn derive_address(
     Ok(derived_conf.address(secp, address_params)?)
 }
 
-pub(crate) fn convert_blinding_key(
+fn convert_blinding_key(
     key: &Key<DescriptorPublicKey>,
 ) -> Result<Key<DefiniteDescriptorKey>, Error> {
     match key {

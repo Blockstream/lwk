@@ -40,18 +40,22 @@ pub(crate) fn derive_address(
 ) -> Result<Address, Error> {
     let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
 
-    let key = match &descriptor.key {
-        Key::Slip77(x) => Key::Slip77(*x),
-        Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
-        Key::View(x) => Key::View(x.clone()),
-    };
-
     let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
-        key,
+        key: convert_blinding_key(&descriptor.key)?,
         descriptor: derived_non_conf,
     };
 
     Ok(derived_conf.address(&secp, address_params)?)
+}
+
+pub(crate) fn convert_blinding_key(
+    key: &Key<DescriptorPublicKey>,
+) -> Result<Key<DefiniteDescriptorKey>, Error> {
+    match key {
+        Key::Slip77(x) => Ok(Key::Slip77(*x)),
+        Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
+        Key::View(x) => Ok(Key::View(x.clone())),
+    }
 }
 
 pub struct ElectrumWallet {
@@ -98,11 +102,8 @@ impl ElectrumWallet {
     }
 
     fn descriptor_blinding_key(&self) -> Key<DefiniteDescriptorKey> {
-        match &self.descriptor.key {
-            Key::Slip77(x) => Key::Slip77(*x),
-            Key::Bare(_) => panic!("No private blinding keys for bare variant"),
-            Key::View(x) => Key::View(x.clone()),
-        }
+        convert_blinding_key(&self.descriptor.key)
+            .expect("No private blinding keys for bare variant")
     }
 
     /// Get the network policy asset

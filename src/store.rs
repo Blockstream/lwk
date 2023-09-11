@@ -173,8 +173,8 @@ impl StoreMeta {
         //TODO should avoid rewriting if not changed? it involves saving plaintext (or struct hash)
         // in the front of the file
         let mut file = File::create(&store_path)?;
-        file.write(&nonce_bytes)?;
-        file.write(&ciphertext)?;
+        file.write_all(&nonce_bytes)?;
+        file.write_all(&ciphertext)?;
         Ok(())
     }
 

@@ -219,10 +219,7 @@ impl Syncer {
                 // TODO: use a shared ctx
                 let secp = Secp256k1::new();
                 let receiver_sk = self.derive_blinding_key(&output.script_pubkey);
-                // TODO: implement UnblindError and remove Generic
-                let txout_secrets = output
-                    .unblind(&secp, receiver_sk)
-                    .map_err(|_| Error::Generic("UnblindError".into()))?;
+                let txout_secrets = output.unblind(&secp, receiver_sk)?;
 
                 Ok(txout_secrets)
             }

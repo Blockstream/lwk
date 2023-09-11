@@ -1,3 +1,5 @@
+use elements::UnblindError;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("{0}")]
@@ -71,6 +73,9 @@ pub enum Error {
 
     #[error(transparent)]
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
+
+    #[error(transparent)]
+    Unblind(#[from] UnblindError),
 }
 
 // cannot derive automatically with this error because of lifetime

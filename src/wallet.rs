@@ -4,12 +4,14 @@ use crate::model::{UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use electrum_client::ElectrumApi;
-use elements;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
+use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
-use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, MiniscriptKey};
+use elements_miniscript::{
+    ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, MiniscriptKey,
+};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -26,6 +28,31 @@ fn extract_master_blinding<T: MiniscriptKey>(
         elements_miniscript::confidential::Key::Bare(_k) => todo!(),
         elements_miniscript::confidential::Key::View(_k) => todo!(),
     }
+}
+
+#[allow(dead_code)]
+fn derive_address(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    index: u32,
+    secp: &Secp256k1<All>,
+    address_params: &'static AddressParams,
+) -> Result<Address, Error> {
+    let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
+
+    // TODO sound non-sense right? the type has a different generic type and by doing this is transformed
+    use elements_miniscript::confidential::Key as K;
+    let key = match &descriptor.key {
+        K::Slip77(x) => K::Slip77(*x),
+        K::Bare(_x) => todo!(),
+        K::View(_xx) => todo!(),
+    };
+
+    let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
+        key,
+        descriptor: derived_non_conf,
+    };
+
+    Ok(derived_conf.address(&secp, address_params)?)
 }
 
 pub struct ElectrumWallet {
@@ -275,25 +302,8 @@ mod tests {
         let desc = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc_str).unwrap();
         let secp = Secp256k1::new();
 
-        let derived_non_conf = desc.descriptor.at_derivation_index(0).unwrap();
+        let addr = derive_address(&desc, 0, &secp, &AddressParams::LIQUID_TESTNET).unwrap();
 
-        // TODO sound non-sense right? the type has a different generic type and by doing this is transformed
-        let key = match desc.key {
-            elements_miniscript::confidential::Key::Slip77(x) => {
-                elements_miniscript::confidential::Key::Slip77(x)
-            }
-            elements_miniscript::confidential::Key::Bare(_) => todo!(),
-            elements_miniscript::confidential::Key::View(_) => todo!(),
-        };
-
-        let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
-            key,
-            descriptor: derived_non_conf,
-        };
-
-        let addr = derived_conf
-            .address(&secp, &AddressParams::LIQUID_TESTNET)
-            .unwrap();
         let expected_addr =
             "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji";
         assert_eq!(addr.to_string(), expected_addr.to_string());

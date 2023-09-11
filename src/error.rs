@@ -65,6 +65,9 @@ pub enum Error {
 
     #[error(transparent)]
     ElementsMiniscript(#[from] elements_miniscript::Error),
+
+    #[error(transparent)]
+    DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
 }
 
 // cannot derive automatically with this error because of lifetime

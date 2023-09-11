@@ -2,16 +2,22 @@ use crate::error::Error;
 use crate::store::{Store, BATCH_SIZE};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
-use elements::bitcoin::secp256k1::Secp256k1;
+use elements::bitcoin::hashes::Hash;
+use elements::bitcoin::secp256k1::{Secp256k1, SecretKey};
 use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
-use elements::slip77::MasterBlindingKey;
+use elements::encode::Encodable;
+use elements::secp256k1_zkp::Scalar;
 use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
+use elements_miniscript::confidential::bare::TweakHash;
+use elements_miniscript::confidential::Key;
+use elements_miniscript::descriptor::DescriptorSecretKey;
+use elements_miniscript::DefiniteDescriptorKey;
 use std::collections::{HashMap, HashSet};
 
 pub struct Syncer {
     pub store: Store,
-    pub master_blinding: MasterBlindingKey,
+    pub descriptor_blinding_key: Key<DefiniteDescriptorKey>,
 }
 
 #[derive(Default)]
@@ -185,14 +191,34 @@ impl Syncer {
         }
     }
 
+    fn derive_blinding_key(&self, script_pubkey: &Script) -> SecretKey {
+        match &self.descriptor_blinding_key {
+            Key::Slip77(k) => k.blinding_private_key(script_pubkey),
+            Key::View(DescriptorSecretKey::XPrv(dxk)) => {
+                let k = dxk.xkey.to_priv();
+                // FIXME: use tweak_private_key once fixed upstread
+                let mut eng = TweakHash::engine();
+                let secp = Secp256k1::new();
+                k.public_key(&secp)
+                    .write_into(&mut eng)
+                    .expect("engines don't error");
+                script_pubkey
+                    .consensus_encode(&mut eng)
+                    .expect("engines don't error");
+                let hash_bytes = TweakHash::from_engine(eng).to_byte_array();
+                let hash_scalar = Scalar::from_be_bytes(hash_bytes).expect("bytes from hash");
+                k.inner.add_tweak(&hash_scalar).unwrap()
+            }
+            _ => panic!("Unsupported descriptor blinding key"),
+        }
+    }
+
     pub fn try_unblind(&self, output: TxOut) -> Result<TxOutSecrets, Error> {
         match (output.asset, output.value, output.nonce) {
             (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
                 // TODO: use a shared ctx
                 let secp = Secp256k1::new();
-                let receiver_sk = self
-                    .master_blinding
-                    .derive_blinding_key(&output.script_pubkey);
+                let receiver_sk = self.derive_blinding_key(&output.script_pubkey);
                 // TODO: implement UnblindError and remove Generic
                 let txout_secrets = output
                     .unblind(&secp, receiver_sk)

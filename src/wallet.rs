@@ -9,6 +9,7 @@ use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::slip77::MasterBlindingKey;
 use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
+use elements_miniscript::confidential::Key;
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, MiniscriptKey,
 };
@@ -16,8 +17,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use elements_miniscript::confidential::Key;
 
+#[allow(dead_code)]
 fn extract_master_blinding<T: MiniscriptKey>(
     descriptor: &ConfidentialDescriptor<T>,
 ) -> Result<MasterBlindingKey, Error> {
@@ -58,7 +59,6 @@ pub struct ElectrumWallet {
     config: Config,
     store: Store,
     descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
-    master_blinding: MasterBlindingKey,
 }
 
 impl ElectrumWallet {
@@ -82,8 +82,6 @@ impl ElectrumWallet {
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let master_blinding = extract_master_blinding(&descriptor)?;
-
         let mut path: PathBuf = config.data_root().into();
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
@@ -96,8 +94,15 @@ impl ElectrumWallet {
             config,
             secp,
             descriptor,
-            master_blinding,
         })
+    }
+
+    fn descriptor_blinding_key(&self) -> Key<DefiniteDescriptorKey> {
+        match &self.descriptor.key {
+            Key::Slip77(x) => Key::Slip77(*x),
+            Key::Bare(_) => panic!("No private blinding keys for bare variant"),
+            Key::View(x) => Key::View(x.clone()),
+        }
     }
 
     /// Get the network policy asset
@@ -109,7 +114,7 @@ impl ElectrumWallet {
     pub fn sync_txs(&self) -> Result<(), Error> {
         let syncer = Syncer {
             store: self.store.clone(),
-            master_blinding: self.master_blinding.clone(),
+            descriptor_blinding_key: self.descriptor_blinding_key(),
         };
 
         if let Ok(client) = self.config.electrum_url().build_client() {
@@ -327,6 +332,7 @@ mod tests {
         let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
+        println!("{}", desc_str);
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let address = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
         // and extract the public blinding key

@@ -184,8 +184,10 @@ impl StoreMeta {
     }
 
     pub fn get_script_batch(&self, batch: u32) -> Result<ScriptBatch, Error> {
-        let mut result = ScriptBatch::default();
-        result.cached = false;
+        let mut result = ScriptBatch {
+            cached: true,
+            ..Default::default()
+        };
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;

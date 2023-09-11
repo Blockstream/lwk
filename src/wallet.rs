@@ -6,31 +6,14 @@ use crate::sync::Syncer;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
-use elements::slip77::MasterBlindingKey;
 use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::confidential::Key;
-use elements_miniscript::{
-    ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, MiniscriptKey,
-};
+use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-
-#[allow(dead_code)]
-fn extract_master_blinding<T: MiniscriptKey>(
-    descriptor: &ConfidentialDescriptor<T>,
-) -> Result<MasterBlindingKey, Error> {
-    match &descriptor.key {
-        Key::Slip77(k) => {
-            let inner = elements::secp256k1_zkp::SecretKey::from_slice(k.as_bytes())?;
-            Ok(MasterBlindingKey(inner))
-        }
-        Key::Bare(_k) => todo!(),
-        Key::View(_k) => todo!(),
-    }
-}
 
 pub(crate) fn derive_address(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
@@ -255,7 +238,6 @@ impl ElectrumWallet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elements::secp256k1_zkp::SecretKey;
     use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
     use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
@@ -276,12 +258,6 @@ mod tests {
         let addr = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
-
-        let master_blinding = extract_master_blinding(&desc).unwrap();
-        assert_eq!(
-            master_blinding.0,
-            SecretKey::from_str(master_blinding_key).unwrap()
-        )
     }
 
     #[test]
@@ -302,12 +278,6 @@ mod tests {
         let expected_addr =
             "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji";
         assert_eq!(addr.to_string(), expected_addr.to_string());
-
-        let master_blinding = extract_master_blinding(&desc).unwrap();
-        assert_eq!(
-            master_blinding.0,
-            SecretKey::from_str(master_blinding_key).unwrap()
-        );
 
         let addr = derive_address(&desc, 1, &secp, &AddressParams::LIQUID_TESTNET).unwrap();
 

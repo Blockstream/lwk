@@ -16,17 +16,18 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
+use elements_miniscript::confidential::Key;
 
 fn extract_master_blinding<T: MiniscriptKey>(
     descriptor: &ConfidentialDescriptor<T>,
 ) -> Result<MasterBlindingKey, Error> {
     match &descriptor.key {
-        elements_miniscript::confidential::Key::Slip77(k) => {
+        Key::Slip77(k) => {
             let inner = elements::secp256k1_zkp::SecretKey::from_slice(k.as_bytes())?;
             Ok(MasterBlindingKey(inner))
         }
-        elements_miniscript::confidential::Key::Bare(_k) => todo!(),
-        elements_miniscript::confidential::Key::View(_k) => todo!(),
+        Key::Bare(_k) => todo!(),
+        Key::View(_k) => todo!(),
     }
 }
 
@@ -38,11 +39,10 @@ pub(crate) fn derive_address(
 ) -> Result<Address, Error> {
     let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
 
-    use elements_miniscript::confidential::Key as K;
     let key = match &descriptor.key {
-        K::Slip77(x) => K::Slip77(*x),
-        K::Bare(_) => return Err(Error::BlindingBareUnsupported),
-        K::View(x) => K::View(x.clone()),
+        Key::Slip77(x) => Key::Slip77(*x),
+        Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
+        Key::View(x) => Key::View(x.clone()),
     };
 
     let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {

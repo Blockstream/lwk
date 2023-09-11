@@ -1,19 +1,19 @@
+use crate::wallet::derive_address;
 use crate::Error;
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
-use elements::bitcoin::bip32::DerivationPath;
+use electrum_client::bitcoin::bip32::ChildNumber;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::bitcoin::secp256k1::{All, Secp256k1};
-use elements::{BlockHash, OutPoint, Script, Txid};
-use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey};
+use elements::{AddressParams, BlockHash, OutPoint, Script, Txid};
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 pub const BATCH_SIZE: u32 = 20;
@@ -22,7 +22,7 @@ pub type Store = Arc<RwLock<StoreMeta>>;
 
 pub fn new_store<P: AsRef<Path>>(
     path: P,
-    desc: ConfidentialDescriptor<DefiniteDescriptorKey>,
+    desc: ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<Store, Error> {
     Ok(Arc::new(RwLock::new(StoreMeta::new(&path, desc)?)))
 }
@@ -35,10 +35,10 @@ pub struct RawCache {
     pub all_txs: HashMap<Txid, elements::Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
-    pub paths: HashMap<Script, DerivationPath>,
+    pub paths: HashMap<Script, ChildNumber>,
 
     /// inverse of `paths`
-    pub scripts: HashMap<DerivationPath, Script>,
+    pub scripts: HashMap<ChildNumber, Script>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<u32>>,
@@ -72,7 +72,7 @@ pub struct StoreMeta {
     secp: Secp256k1<All>,
     path: PathBuf,
     cipher: Aes256GcmSiv,
-    descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
+    descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
 }
 
 impl Drop for StoreMeta {
@@ -87,10 +87,10 @@ pub struct Indexes {
     pub internal: u32, // m/1/*
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
-    pub value: Vec<(Script, DerivationPath)>,
+    pub value: Vec<(Script, ChildNumber)>,
 }
 
 impl RawCache {
@@ -136,7 +136,7 @@ fn load_decrypt<P: AsRef<Path>>(
 impl StoreMeta {
     pub fn new<P: AsRef<Path>>(
         path: P,
-        descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
+        descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
     ) -> Result<StoreMeta, Error> {
         /*
         let mut enc_key_data = vec![];
@@ -145,11 +145,8 @@ impl StoreMeta {
         enc_key_data.extend(&xpub.network.magic().to_bytes());
         let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
          * */
-        let script_pubkey = descriptor
-            .unconfidential_address(&elements::AddressParams::ELEMENTS)
-            .unwrap()
-            .script_pubkey();
-        let key_bytes = sha256::Hash::hash(&script_pubkey.as_bytes()).to_byte_array();
+
+        let key_bytes = sha256::Hash::hash(&descriptor.to_string().as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(&key);
         let cache = RawCache::new(path.as_ref(), &cipher);
@@ -192,38 +189,28 @@ impl StoreMeta {
         Ok(())
     }
 
-    pub fn get_script_batch(&self, _int_or_ext: u32, _batch: u32) -> Result<ScriptBatch, Error> {
+    pub fn get_script_batch(&self, _int_or_ext: u32, batch: u32) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch::default();
         result.cached = false;
-        // FIXME: derive different scripts
-        let script = self
-            .descriptor
-            .address(&self.secp, &elements::AddressParams::ELEMENTS)
-            .unwrap()
-            .script_pubkey();
-        let path = DerivationPath::from_str(&"m")?;
-        result.value.push((script, path));
-
-        /*
-        let first_deriv = &self.first_deriv[int_or_ext as usize];
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
         for j in start..end {
-            let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, j))?;
-            let opt_script = self.cache.scripts.get(&path);
+            let child = ChildNumber::from_normal_idx(j)?;
+            let opt_script = self.cache.scripts.get(&child);
             let script = match opt_script {
                 Some(script) => script.clone(),
                 None => {
                     result.cached = false;
-                    let second_path = [ChildNumber::from(j)];
-                    let second_deriv = first_deriv.derive_pub(&self.secp, &second_path)?;
-                    p2shwpkh_script(&second_deriv.to_pub())
+
+                    // address params network doesn't matter since we are interested only in the script
+                    derive_address(&self.descriptor, j, &self.secp, &AddressParams::ELEMENTS)?
+                        .script_pubkey()
                 }
             };
-            result.value.push((script, path));
+            result.value.push((script, child));
         }
-         * */
+
         Ok(result)
     }
 
@@ -257,7 +244,7 @@ mod tests {
             "ct(slip77({}),elwpkh({}))#{}",
             master_blinding_key, xpub, checksum
         );
-        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
+        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
         let txid =
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
@@ -268,5 +255,26 @@ mod tests {
 
         let store = StoreMeta::new(&dir, desc).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
+    }
+
+    #[test]
+    fn test_address_derivation() {
+        let mut dir = TempDir::new("unit_test").unwrap().into_path();
+        dir.push("store");
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        let master_blinding_key =
+            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let checksum = "8w7cjcha";
+        let desc_str = format!(
+            "ct(slip77({}),elwpkh({}/*))#{}",
+            master_blinding_key, xpub, checksum
+        );
+        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
+
+        let store = StoreMeta::new(&dir, desc.clone()).unwrap();
+
+        let x = store.get_script_batch(0, 0).unwrap();
+        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");
+        assert_ne!(x.value[0], x.value[1]);
     }
 }

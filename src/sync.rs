@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::store::{Indexes, Store, BATCH_SIZE};
+use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
-use elements::bitcoin::bip32::DerivationPath;
 use elements::bitcoin::secp256k1::Secp256k1;
 use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
@@ -83,7 +83,6 @@ impl Syncer {
                     history_txs_id.insert(txid);
                 }
 
-                // FIXME: restore looking for multiple scripts
                 if found_some {
                     break;
                 }
@@ -125,7 +124,7 @@ impl Syncer {
     fn download_txs(
         &self,
         history_txs_id: &HashSet<Txid>,
-        scripts: &HashMap<Script, DerivationPath>,
+        scripts: &HashMap<Script, ChildNumber>,
         client: &Client,
     ) -> Result<DownloadTxResult, Error> {
         let mut txs = vec![];

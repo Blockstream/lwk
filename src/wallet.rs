@@ -30,8 +30,7 @@ fn extract_master_blinding<T: MiniscriptKey>(
     }
 }
 
-#[allow(dead_code)]
-fn derive_address(
+pub(crate) fn derive_address(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,
     secp: &Secp256k1<All>,
@@ -59,7 +58,7 @@ pub struct ElectrumWallet {
     secp: Secp256k1<All>,
     config: Config,
     store: Store,
-    descriptor: ConfidentialDescriptor<DefiniteDescriptorKey>,
+    descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
     master_blinding: MasterBlindingKey,
 }
 
@@ -79,7 +78,7 @@ impl ElectrumWallet {
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let secp = Secp256k1::new();
-        let descriptor = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc)?;
+        let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
@@ -144,32 +143,23 @@ impl ElectrumWallet {
         Ok(self.store.read()?.cache.tip)
     }
 
+    fn derive_address(&self, index: u32) -> Result<Address, Error> {
+        derive_address(
+            &self.descriptor,
+            index,
+            &self.secp,
+            self.config.address_params(),
+        )
+    }
+
     /// Get a new wallet address
     pub fn address(&self) -> Result<Address, Error> {
-        // FIXME: generate different addresses
-        let addr = self
-            .descriptor
-            .address(&self.secp, self.config.address_params())
-            .unwrap();
-        /*
         let pointer = {
             let store = &mut self.store.write()?.cache;
             store.indexes.external += 1;
             store.indexes.external
         };
-        let path = [0, pointer];
-        let path: Vec<ChildNumber> = path
-            .iter()
-            .map(|x| ChildNumber::Normal { index: *x })
-            .collect();
-        let derived = self.xpub.derive_pub(&self.secp, &path)?;
-        let script = p2shwpkh_script(&derived.to_pub());
-        let blinding_key = self.master_blinding.derive_blinding_key(&script);
-        let public_key = PublicKey::from_secret_key(&self.secp, &blinding_key);
-        let blinder = Some(public_key);
-        let addr = Address::p2shwpkh(&derived.to_pub(), blinder, self.config.address_params());
-         * */
-        Ok(addr)
+        self.derive_address(pointer)
     }
 
     /// Get the wallet UTXOs
@@ -312,6 +302,12 @@ mod tests {
         assert_eq!(
             master_blinding.0,
             SecretKey::from_str(master_blinding_key).unwrap()
-        )
+        );
+
+        let addr = derive_address(&desc, 1, &secp, &AddressParams::LIQUID_TESTNET).unwrap();
+
+        let expected_addr =
+            "vjTuhaPWWbywbSy2EeRWWQ8bN2pPLmM4gFQTkA7DPX7uaCApKuav1e6LW1GKHuLUHdbv9Eag5MybsZoy";
+        assert_eq!(addr.to_string(), expected_addr.to_string());
     }
 }

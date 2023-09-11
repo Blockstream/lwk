@@ -41,6 +41,15 @@ impl log::Log for SimpleLogger {
 
 static START: Once = Once::new();
 
+use elements_miniscript::descriptor::checksum::desc_checksum;
+fn add_checksum(desc: &str) -> String {
+    if desc.find('#').is_some() {
+        desc.into()
+    } else {
+        format!("{}#{}", desc, desc_checksum(desc).unwrap())
+    }
+}
+
 fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client
@@ -213,7 +222,7 @@ impl TestElectrumWallet {
             tls,
             validate_domain,
             &db_root,
-            desc,
+            &add_checksum(desc),
         )
         .unwrap();
 

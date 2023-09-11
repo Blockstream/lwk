@@ -309,4 +309,48 @@ mod tests {
             "vjTuhaPWWbywbSy2EeRWWQ8bN2pPLmM4gFQTkA7DPX7uaCApKuav1e6LW1GKHuLUHdbv9Eag5MybsZoy";
         assert_eq!(addr.to_string(), expected_addr.to_string());
     }
+
+    #[test]
+    fn test_blinding_private() {
+        use elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
+        use elements::bitcoin::network::constants::Network;
+        use elements::encode::Encodable;
+        use elements::secp256k1_zkp::Scalar;
+        use elements_miniscript::confidential::bare::TweakHash;
+        use elements_miniscript::confidential::Key;
+        use elements_miniscript::descriptor::DescriptorSecretKey;
+
+        // Get a confidential address from a "view" descriptor
+        let secp = Secp256k1::new();
+        let seed = [0u8; 16];
+        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap();
+        let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
+        let checksum = "h0ej28gv";
+        let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
+        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
+        let address = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
+        // and extract the public blinding key
+        let pk_from_addr = address.blinding_pubkey.unwrap();
+
+        // Get the public blinding key from the descriptor blinding key
+        let key = match desc.key {
+            Key::View(DescriptorSecretKey::XPrv(dxk)) => dxk.xkey.to_priv(),
+            _ => todo!(),
+        };
+        // tweaked_private_key needs fixes upstream
+        let mut eng = TweakHash::engine();
+        key.public_key(&secp)
+            .write_into(&mut eng)
+            .expect("engines don't error");
+        address
+            .script_pubkey()
+            .consensus_encode(&mut eng)
+            .expect("engines don't error");
+        let hash_bytes = TweakHash::from_engine(eng).to_byte_array();
+        let hash_scalar = Scalar::from_be_bytes(hash_bytes).expect("bytes from hash");
+        let tweaked_key = key.inner.add_tweak(&hash_scalar).unwrap();
+        let pk_from_view = tweaked_key.public_key(&secp);
+
+        assert_eq!(pk_from_addr, pk_from_view);
+    }
 }

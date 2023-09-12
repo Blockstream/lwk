@@ -8,7 +8,9 @@ use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::pset::{Input, Output, PartiallySignedTransaction};
 use elements::{self, AddressParams};
-use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
+use elements::{
+    Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut, Txid,
+};
 use elements_miniscript::confidential::Key;
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
 use rand::thread_rng;
@@ -235,6 +237,12 @@ impl ElectrumWallet {
             .collect())
     }
 
+    fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
+        let store = self.store.read()?;
+        let tx = store.cache.all_txs.get(&outpoint.txid).unwrap();
+        Ok(tx.output[outpoint.vout as usize].clone())
+    }
+
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
         &self,
@@ -251,7 +259,8 @@ impl ElectrumWallet {
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
         for (idx, utxo) in utxos.iter().enumerate() {
-            let input = Input::from_prevout(utxo.txo.outpoint);
+            let mut input = Input::from_prevout(utxo.txo.outpoint);
+            input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
             // TODO: fill more fields
             pset.add_input(input);
             inp_txout_sec.insert(idx, utxo.unblinded);

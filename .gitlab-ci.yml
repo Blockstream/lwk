@@ -14,7 +14,7 @@ fmt:
   extends: .base
   script:
     - rustup component add rustfmt
-    - cargo fmt
+    - cargo fmt --check
 
 build:
   extends: .base

@@ -6,9 +6,9 @@ use crate::sync::Syncer;
 use crate::util::EC;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::pset::{Input, PartiallySignedTransaction};
+use elements::pset::{Input, Output, PartiallySignedTransaction};
 use elements::{self, AddressParams};
-use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
+use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
 use elements_miniscript::confidential::Key;
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
 use std::cmp::Ordering;
@@ -253,8 +253,31 @@ impl ElectrumWallet {
             // TODO: fill more fields
             pset.add_input(input);
         }
+        let blinding_pubkey = address.blinding_pubkey.map(convert_pubkey);
+        let output = Output::new_explicit(
+            address.script_pubkey(),
+            satoshi,
+            self.policy_asset(),
+            blinding_pubkey,
+        );
+        pset.add_output(output);
+        let change_address = self.address()?;
+        let blinding_pubkey = change_address.blinding_pubkey.map(convert_pubkey);
+        let change_output = Output::new_explicit(
+            change_address.script_pubkey(),
+            tot - satoshi - fee,
+            self.policy_asset(),
+            blinding_pubkey,
+        );
+        pset.add_output(change_output);
+        let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
+        pset.add_output(fee_output);
         Ok(pset)
     }
+}
+
+fn convert_pubkey(pk: elements::secp256k1_zkp::PublicKey) -> elements::bitcoin::key::PublicKey {
+    elements::bitcoin::key::PublicKey::new(pk)
 }
 
 #[cfg(test)]

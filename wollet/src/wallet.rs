@@ -11,6 +11,7 @@ use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
 use elements_miniscript::confidential::Key;
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
+use rand::thread_rng;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -248,10 +249,12 @@ impl ElectrumWallet {
         let address = Address::parse_with_params(address, params).unwrap();
         assert!(address.blinding_pubkey.is_some());
         let mut pset = PartiallySignedTransaction::new_v2();
-        for utxo in utxos {
+        let mut inp_txout_sec = HashMap::new();
+        for (idx, utxo) in utxos.iter().enumerate() {
             let input = Input::from_prevout(utxo.txo.outpoint);
             // TODO: fill more fields
             pset.add_input(input);
+            inp_txout_sec.insert(idx, utxo.unblinded);
         }
         let blinding_pubkey = address.blinding_pubkey.map(convert_pubkey);
         let output = Output::new_explicit(
@@ -272,6 +275,8 @@ impl ElectrumWallet {
         pset.add_output(change_output);
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec).unwrap();
         Ok(pset)
     }
 }

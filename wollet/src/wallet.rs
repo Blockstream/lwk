@@ -226,12 +226,21 @@ impl ElectrumWallet {
         Ok(txs)
     }
 
+    fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<UnblindedTXO>, Error> {
+        Ok(self
+            .utxos()?
+            .into_iter()
+            .filter(|utxo| &utxo.unblinded.asset == asset)
+            .collect())
+    }
+
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
         &self,
         _satoshi: u64,
         _address: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
+        let _utxos = self.asset_utxos(&self.policy_asset())?;
         todo!();
     }
 }

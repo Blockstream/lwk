@@ -95,19 +95,19 @@ impl Syncer {
             if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
                 let mut store_write = self.store.write()?;
                 store_write.cache.last_index = last_used;
-                store_write.cache.all_txs.extend(new_txs.txs.into_iter());
+                store_write.cache.all_txs.extend(new_txs.txs);
                 store_write.cache.unblinded.extend(new_txs.unblinds);
 
                 // height map is used for the live list of transactions, since due to reorg or rbf tx
                 // could disappear from the list, we clear the list and keep only the last values returned by the server
                 store_write.cache.heights.clear();
-                store_write.cache.heights.extend(txid_height.into_iter());
+                store_write.cache.heights.extend(txid_height);
 
                 store_write
                     .cache
                     .scripts
                     .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
-                store_write.cache.paths.extend(scripts.into_iter());
+                store_write.cache.paths.extend(scripts);
                 store_write.flush()?;
                 true
             } else {

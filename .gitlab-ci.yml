@@ -16,6 +16,12 @@ fmt:
     - rustup component add rustfmt
     - cargo fmt --check
 
+clippy:
+  extends: .base
+  script:
+    - rustup component add clippy
+    - cargo clippy --all-targets -- -D warnings
+
 build:
   extends: .base
   script:

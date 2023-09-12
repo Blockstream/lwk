@@ -254,7 +254,7 @@ impl TestElectrumWallet {
         for _ in 0..120 {
             self.electrum_wallet.sync_txs().unwrap();
             let list = self.electrum_wallet.transactions().unwrap();
-            if list.iter().any(|e| &e.0.txid().to_string() == txid) {
+            if list.iter().any(|e| e.0.txid().to_string() == txid) {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -278,7 +278,7 @@ impl TestElectrumWallet {
         let list = self.electrum_wallet.transactions().unwrap();
         let filtered_list: Vec<_> = list
             .iter()
-            .filter(|e| &e.0.txid().to_string() == txid)
+            .filter(|e| e.0.txid().to_string() == txid)
             .cloned()
             .collect();
         assert!(

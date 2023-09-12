@@ -267,7 +267,7 @@ mod tests {
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
 
-        let store = StoreMeta::new(&dir, desc.clone()).unwrap();
+        let store = StoreMeta::new(&dir, desc).unwrap();
 
         let x = store.get_script_batch(0).unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");

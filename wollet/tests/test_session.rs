@@ -1,6 +1,5 @@
-extern crate bewallet;
+extern crate wollet;
 
-use bewallet::*;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
@@ -16,6 +15,7 @@ use std::sync::Once;
 use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
+use wollet::*;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 

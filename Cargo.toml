@@ -1,39 +1,7 @@
-[package]
-name = "bewallet"
-version = "0.1.0"
-authors = [
-    "Riccardo Casatta <riccardo@casatta.it>",
-    "Nadav Ivgi <nadav@shesek.info>",
-    "William Casarin <jb55@jb55.com>",
-    "Leonardo Comandini <leo@leocomandini.org>",
+[workspace]
+
+members = [
+    "wollet",
+    "software_signer",
 ]
-license = "(MIT)"
-edition = "2018"
 
-[lib]
-crate-type = ["lib"]
-
-[dependencies]
-rand = "0.8"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_cbor = "0.11.1"
-log = "0.4.8"
-aes-gcm-siv = "0.10.0"
-electrum-client = "0.15.0"
-bip39 = "1.0.0-rc1"
-elements = { version = "0.22.0", features = ["serde"] }
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4fafddc2c9192c56037912ecc0fe027e4850fca3" }
-thiserror = "1.0.48"
-
-[dev-dependencies]
-chrono = "0.4.11"
-tempdir = "0.3.7"
-electrsd = { version = "0.25.0", features = ["legacy"] }
-
-[profile.release]
-lto = true
-panic = 'abort'
-opt-level = 'z'
-codegen-units = 1
-incremental = false

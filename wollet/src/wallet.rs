@@ -3,9 +3,9 @@ use crate::error::Error;
 use crate::model::{UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
+use crate::util::EC;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::confidential::Key;
@@ -18,7 +18,6 @@ use std::str::FromStr;
 pub(crate) fn derive_address(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,
-    secp: &Secp256k1<All>,
     address_params: &'static AddressParams,
 ) -> Result<Address, Error> {
     let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
@@ -28,7 +27,7 @@ pub(crate) fn derive_address(
         descriptor: derived_non_conf,
     };
 
-    Ok(derived_conf.address(secp, address_params)?)
+    Ok(derived_conf.address(&EC, address_params)?)
 }
 
 fn convert_blinding_key(
@@ -42,7 +41,6 @@ fn convert_blinding_key(
 }
 
 pub struct ElectrumWallet {
-    secp: Secp256k1<All>,
     config: Config,
     store: Store,
     descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
@@ -63,7 +61,6 @@ impl ElectrumWallet {
     }
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
-        let secp = Secp256k1::new();
         let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
@@ -79,7 +76,6 @@ impl ElectrumWallet {
         Ok(ElectrumWallet {
             store,
             config,
-            secp,
             descriptor,
         })
     }
@@ -132,12 +128,7 @@ impl ElectrumWallet {
     }
 
     fn derive_address(&self, index: u32) -> Result<Address, Error> {
-        derive_address(
-            &self.descriptor,
-            index,
-            &self.secp,
-            self.config.address_params(),
-        )
+        derive_address(&self.descriptor, index, self.config.address_params())
     }
 
     /// Get a new wallet address
@@ -245,7 +236,6 @@ mod tests {
     use elements_miniscript::confidential::bare::TweakHash;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::DescriptorSecretKey;
-    use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
     use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
     use std::str::FromStr;
@@ -261,8 +251,7 @@ mod tests {
             master_blinding_key, xpub, checksum
         );
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
-        let secp = Secp256k1::new();
-        let addr = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
+        let addr = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
     }
@@ -278,16 +267,13 @@ mod tests {
             master_blinding_key, xpub, checksum
         );
         let desc = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc_str).unwrap();
-        let secp = Secp256k1::new();
 
-        let addr = derive_address(&desc, 0, &secp, &AddressParams::LIQUID_TESTNET).unwrap();
-
+        let addr = derive_address(&desc, 0, &AddressParams::LIQUID_TESTNET).unwrap();
         let expected_addr =
             "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji";
         assert_eq!(addr.to_string(), expected_addr.to_string());
 
-        let addr = derive_address(&desc, 1, &secp, &AddressParams::LIQUID_TESTNET).unwrap();
-
+        let addr = derive_address(&desc, 1, &AddressParams::LIQUID_TESTNET).unwrap();
         let expected_addr =
             "vjTuhaPWWbywbSy2EeRWWQ8bN2pPLmM4gFQTkA7DPX7uaCApKuav1e6LW1GKHuLUHdbv9Eag5MybsZoy";
         assert_eq!(addr.to_string(), expected_addr.to_string());
@@ -296,15 +282,14 @@ mod tests {
     #[test]
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
-        let secp = Secp256k1::new();
         let seed = [0u8; 16];
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap();
-        let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
+        let xpub = ExtendedPubKey::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
         println!("{}", desc_str);
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
-        let address = desc.address(&secp, &AddressParams::ELEMENTS).unwrap();
+        let address = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         // and extract the public blinding key
         let pk_from_addr = address.blinding_pubkey.unwrap();
 
@@ -315,7 +300,7 @@ mod tests {
         };
         // tweaked_private_key needs fixes upstream
         let mut eng = TweakHash::engine();
-        key.public_key(&secp)
+        key.public_key(&EC)
             .write_into(&mut eng)
             .expect("engines don't error");
         address
@@ -325,7 +310,7 @@ mod tests {
         let hash_bytes = TweakHash::from_engine(eng).to_byte_array();
         let hash_scalar = Scalar::from_be_bytes(hash_bytes).expect("bytes from hash");
         let tweaked_key = key.inner.add_tweak(&hash_scalar).unwrap();
-        let pk_from_view = tweaked_key.public_key(&secp);
+        let pk_from_view = tweaked_key.public_key(&EC);
 
         assert_eq!(pk_from_addr, pk_from_view);
     }

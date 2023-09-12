@@ -3,6 +3,7 @@ mod error;
 mod model;
 mod store;
 mod sync;
+mod util;
 mod wallet;
 
 pub use crate::config::ElementsNetwork;

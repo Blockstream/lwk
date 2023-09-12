@@ -1,9 +1,10 @@
 use crate::error::Error;
 use crate::store::{Store, BATCH_SIZE};
+use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements::bitcoin::hashes::Hash;
-use elements::bitcoin::secp256k1::{Secp256k1, SecretKey};
+use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
 use elements::encode::Encodable;
@@ -200,8 +201,7 @@ impl Syncer {
                 let k = dxk.xkey.to_priv();
                 // FIXME: use tweak_private_key once fixed upstread
                 let mut eng = TweakHash::engine();
-                let secp = Secp256k1::new();
-                k.public_key(&secp)
+                k.public_key(&EC)
                     .write_into(&mut eng)
                     .expect("engines don't error");
                 script_pubkey
@@ -218,10 +218,8 @@ impl Syncer {
     pub fn try_unblind(&self, output: TxOut) -> Result<TxOutSecrets, Error> {
         match (output.asset, output.value, output.nonce) {
             (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
-                // TODO: use a shared ctx
-                let secp = Secp256k1::new();
                 let receiver_sk = self.derive_blinding_key(&output.script_pubkey);
-                let txout_secrets = output.unblind(&secp, receiver_sk)?;
+                let txout_secrets = output.unblind(&EC, receiver_sk)?;
 
                 Ok(txout_secrets)
             }

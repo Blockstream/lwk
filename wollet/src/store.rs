@@ -5,7 +5,6 @@ use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::bitcoin::secp256k1::{All, Secp256k1};
 use elements::{AddressParams, BlockHash, OutPoint, Script, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::{thread_rng, Rng};
@@ -69,7 +68,6 @@ impl Default for RawCache {
 
 pub struct StoreMeta {
     pub cache: RawCache,
-    secp: Secp256k1<All>,
     path: PathBuf,
     cipher: Aes256GcmSiv,
     descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
@@ -148,12 +146,10 @@ impl StoreMeta {
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
         }
-        let secp = Secp256k1::new();
 
         Ok(StoreMeta {
             cache,
             cipher,
-            secp,
             path,
             descriptor,
         })
@@ -200,8 +196,7 @@ impl StoreMeta {
                     result.cached = false;
 
                     // address params network doesn't matter since we are interested only in the script
-                    derive_address(&self.descriptor, j, &self.secp, &AddressParams::ELEMENTS)?
-                        .script_pubkey()
+                    derive_address(&self.descriptor, j, &AddressParams::ELEMENTS)?.script_pubkey()
                 }
             };
             result.value.push((script, child));

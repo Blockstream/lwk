@@ -257,21 +257,23 @@ impl ElectrumWallet {
             inp_txout_sec.insert(idx, utxo.unblinded);
         }
         let blinding_pubkey = address.blinding_pubkey.map(convert_pubkey);
-        let output = Output::new_explicit(
+        let mut output = Output::new_explicit(
             address.script_pubkey(),
             satoshi,
             self.policy_asset(),
             blinding_pubkey,
         );
+        output.blinder_index = Some(0);
         pset.add_output(output);
         let change_address = self.address()?;
         let blinding_pubkey = change_address.blinding_pubkey.map(convert_pubkey);
-        let change_output = Output::new_explicit(
+        let mut change_output = Output::new_explicit(
             change_address.script_pubkey(),
             tot - satoshi - fee,
             self.policy_asset(),
             blinding_pubkey,
         );
+        change_output.blinder_index = Some(0);
         pset.add_output(change_output);
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);

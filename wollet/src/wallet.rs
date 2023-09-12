@@ -7,9 +7,9 @@ use crate::util::EC;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::pset::{Input, Output, PartiallySignedTransaction};
-use elements::{self, AddressParams};
 use elements::{
-    Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut, Txid,
+    self, Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction,
+    TxOut, Txid,
 };
 use elements_miniscript::confidential::Key;
 use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};

@@ -6,7 +6,7 @@ use crate::sync::Syncer;
 use crate::util::EC;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
-use elements::pset::PartiallySignedTransaction;
+use elements::pset::{Input, PartiallySignedTransaction};
 use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::confidential::Key;
@@ -247,7 +247,13 @@ impl ElectrumWallet {
         let params = self.config.address_params();
         let address = Address::parse_with_params(address, params).unwrap();
         assert!(address.blinding_pubkey.is_some());
-        todo!();
+        let mut pset = PartiallySignedTransaction::new_v2();
+        for utxo in utxos {
+            let input = Input::from_prevout(utxo.txo.outpoint);
+            // TODO: fill more fields
+            pset.add_input(input);
+        }
+        Ok(pset)
     }
 }
 

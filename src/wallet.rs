@@ -238,6 +238,13 @@ impl ElectrumWallet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
+    use elements::bitcoin::network::constants::Network;
+    use elements::encode::Encodable;
+    use elements::secp256k1_zkp::Scalar;
+    use elements_miniscript::confidential::bare::TweakHash;
+    use elements_miniscript::confidential::Key;
+    use elements_miniscript::descriptor::DescriptorSecretKey;
     use elements_miniscript::elements::bitcoin::secp256k1::Secp256k1;
     use elements_miniscript::elements::AddressParams;
     use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
@@ -288,14 +295,6 @@ mod tests {
 
     #[test]
     fn test_blinding_private() {
-        use elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
-        use elements::bitcoin::network::constants::Network;
-        use elements::encode::Encodable;
-        use elements::secp256k1_zkp::Scalar;
-        use elements_miniscript::confidential::bare::TweakHash;
-        use elements_miniscript::confidential::Key;
-        use elements_miniscript::descriptor::DescriptorSecretKey;
-
         // Get a confidential address from a "view" descriptor
         let secp = Secp256k1::new();
         let seed = [0u8; 16];

@@ -7,6 +7,7 @@ use electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
 use elements::{Address, AssetId, Transaction};
+use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
 use std::env;
@@ -42,7 +43,6 @@ impl log::Log for SimpleLogger {
 
 static START: Once = Once::new();
 
-use elements_miniscript::descriptor::checksum::desc_checksum;
 fn add_checksum(desc: &str) -> String {
     if desc.find('#').is_some() {
         desc.into()

@@ -9,6 +9,7 @@ use elements::bitcoin::Amount;
 use elements::{Address, AssetId, Transaction};
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
+use std::env;
 use std::str::FromStr;
 use std::sync::Once;
 use std::thread;
@@ -319,4 +320,10 @@ impl TestElectrumWallet {
         assert_eq!(utxos.len(), num_utxos_before + 1);
         asset
     }
+}
+
+pub fn setup() -> TestElectrumServer {
+    let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
+    let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
+    TestElectrumServer::new(electrs_exec, node_exec)
 }

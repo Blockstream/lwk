@@ -26,7 +26,7 @@ End to end tests needs local servers:
 
 ```
 ./download_bins.sh # needed once unless server binaries changes
-. .envrc  # not needed if yoy use direnv and you executed `direnv allow`
+. .envrc  # not needed if you use direnv and you executed `direnv allow`
 ```
 
 To run end to end tests:

@@ -6,3 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bip39 = "2.0.0"
+bitcoind = "0.33.1"
+elements = "0.23.0"
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4ed7605dcab6282113d0dd9dbc8c86139c934765" }
+thiserror = "1.0.48"
+base64 = "0.13.0"

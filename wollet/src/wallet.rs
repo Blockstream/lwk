@@ -237,10 +237,16 @@ impl ElectrumWallet {
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
         &self,
-        _satoshi: u64,
-        _address: &str,
+        satoshi: u64,
+        address: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let _utxos = self.asset_utxos(&self.policy_asset())?;
+        let utxos = self.asset_utxos(&self.policy_asset())?;
+        let fee = 1_000;
+        let tot: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
+        assert!(tot > satoshi + fee);
+        let params = self.config.address_params();
+        let address = Address::parse_with_params(address, params).unwrap();
+        assert!(address.blinding_pubkey.is_some());
         todo!();
     }
 }

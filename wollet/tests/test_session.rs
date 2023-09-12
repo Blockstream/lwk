@@ -320,6 +320,15 @@ impl TestElectrumWallet {
         assert_eq!(utxos.len(), num_utxos_before + 1);
         asset
     }
+
+    pub fn send_btc(&mut self) {
+        let satoshi: u64 = 10_000;
+        let address = self.electrum_wallet.address().unwrap();
+        let _pset = self
+            .electrum_wallet
+            .sendlbtc(satoshi, &address.to_string())
+            .unwrap();
+    }
 }
 
 pub fn setup() -> TestElectrumServer {

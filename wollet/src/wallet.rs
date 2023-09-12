@@ -6,6 +6,7 @@ use crate::sync::Syncer;
 use crate::util::EC;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
+use elements::pset::PartiallySignedTransaction;
 use elements::{self, AddressParams};
 use elements::{Address, AssetId, BlockHash, BlockHeader, OutPoint, Transaction, Txid};
 use elements_miniscript::confidential::Key;
@@ -223,6 +224,15 @@ impl ElectrumWallet {
         }
 
         Ok(txs)
+    }
+
+    /// Create a PSET sending some satoshi to an address
+    pub fn sendlbtc(
+        &self,
+        _satoshi: u64,
+        _address: &str,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        todo!();
     }
 }
 

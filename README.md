@@ -5,7 +5,7 @@
 BEWallet is a library for Elements wallets.
 
 BEWallet is based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
-Basically, it took all GDK Rust pieces and moved them to their own project.
+Essentially all GDK Rust pieces were moved to this project.
 
 BEWallet uses Electrum backends.
 
@@ -26,7 +26,7 @@ End to end tests needs local servers:
 
 ```
 ./download_bins.sh # needed once unless server binaries changes
-. .envrc  # not needed if yoy use direnv and you executed `direnv allow` 
+. .envrc  # not needed if yoy use direnv and you executed `direnv allow`
 ```
 
 To run end to end tests:

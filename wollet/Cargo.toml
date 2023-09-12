@@ -21,9 +21,9 @@ serde_cbor = "0.11.1"
 log = "0.4.8"
 aes-gcm-siv = "0.10.0"
 electrum-client = "0.15.0"
-bip39 = "1.0.0-rc1"
-elements = { version = "0.22.0", features = ["serde"] }
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4fafddc2c9192c56037912ecc0fe027e4850fca3" }
+bip39 = "2.0.0"
+elements = { version = "0.23.0", features = ["serde"] }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "4ed7605dcab6282113d0dd9dbc8c86139c934765" }
 thiserror = "1.0.48"
 
 [dev-dependencies]

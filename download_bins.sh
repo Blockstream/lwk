@@ -1,5 +1,7 @@
+#!/bin/sh
+
 mkdir -p bin
-cd bin
+cd bin || exit 1
 
 # electrs
 wget https://github.com/RCasatta/electrsd/releases/download/electrs_releases/electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid.gz

@@ -2,12 +2,15 @@ use bip39::Mnemonic;
 use elements::{
     bitcoin::{
         bip32::{self, ExtendedPrivKey, Fingerprint},
-        Network,
+        Network, PrivateKey,
     },
-    encode::deserialize,
+    encode::{deserialize, serialize},
+    hashes::Hash,
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{All, Secp256k1},
+    sighash::SighashCache,
 };
+use elements_miniscript::{elementssig_to_rawsig, psbt::PsbtExt};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
@@ -22,55 +25,94 @@ pub enum SignError {
 
     #[error(transparent)]
     Base64Encode(#[from] base64::DecodeError),
+
+    #[error(transparent)]
+    Bip32(#[from] bip32::Error),
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum NewError {
     #[error(transparent)]
     Bip39(#[from] bip39::Error),
+
+    #[error(transparent)]
+    Bip32(#[from] bip32::Error),
 }
 
 #[allow(dead_code)]
 pub struct Signer<'a> {
-    mnemonic: Mnemonic,
+    xprv: ExtendedPrivKey,
     secp: &'a Secp256k1<All>, // could be sign only, but it is hihgly likely the caller has already the All context.
-}
-
-fn fingerprint(mnemonic: &Mnemonic, secp: &Secp256k1<All>) -> Result<Fingerprint, bip32::Error> {
-    let xprv = ExtendedPrivKey::new_master(Network::Bitcoin, &mnemonic.to_seed(""))?;
-    let fingerprint = xprv.fingerprint(secp);
-    Ok(fingerprint)
 }
 
 impl<'a> core::fmt::Debug for Signer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Signer({})",
-            fingerprint(&self.mnemonic, self.secp).expect("negligible prob to panic")
-        )
+        write!(f, "Signer({})", self.fingerprint())
     }
 }
 
 impl<'a> Signer<'a> {
     pub fn new(mnemonic: &str, secp: &'a Secp256k1<All>) -> Result<Self, NewError> {
-        Ok(Self {
-            mnemonic: mnemonic.parse()?,
-            secp,
-        })
+        let mnemonic: Mnemonic = mnemonic.parse()?;
+        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
+
+        Ok(Self { xprv, secp })
+    }
+
+    fn fingerprint(&self) -> Fingerprint {
+        self.xprv.fingerprint(self.secp)
     }
 
     pub fn sign(&self, pset: &str) -> Result<String, SignError> {
-        let _pset = psbt_from_base64(pset)?;
+        let mut pset = pset_from_base64(pset)?;
 
-        todo!()
+        let tx = pset.extract_tx()?;
+        let mut sighash_cache = SighashCache::new(&tx);
+
+        // genesis hash is not used at all for sighash calculation
+        let genesis_hash = elements::BlockHash::all_zeros();
+
+        // Fixme: Take a parameter
+        let hash_ty = elements::EcdsaSighashType::All;
+
+        let signer_fingerprint = self.fingerprint();
+        let mut signatures = vec![];
+        for (i, input) in pset.inputs().iter().enumerate() {
+            let msg = pset
+                .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
+                .to_secp_msg();
+
+            for (public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
+                if fingerprint == &signer_fingerprint {
+                    let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
+                    // fixme: get the privatekey according to information from the pset input
+                    let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
+
+                    // fixme: for taproot use schnorr
+                    let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);
+                    let sig = elementssig_to_rawsig(&(sig, hash_ty));
+                    signatures.push((*public_key, sig))
+                }
+            }
+        }
+        for (input, (pk, sig)) in pset.inputs_mut().iter_mut().zip(signatures) {
+            input.partial_sigs.insert(pk, sig);
+        }
+
+        Ok(pset_to_base64(&pset))
     }
 }
 
 // TODO push upstream FromStr???
-fn psbt_from_base64(base64: &str) -> Result<PartiallySignedTransaction, SignError> {
+pub fn pset_from_base64(base64: &str) -> Result<PartiallySignedTransaction, SignError> {
     let bytes = base64::decode(base64)?;
     Ok(deserialize(&bytes)?)
+}
+
+// TODO push upstream Display???
+pub fn pset_to_base64(pset: &PartiallySignedTransaction) -> String {
+    let serialized = serialize(pset);
+    base64::encode(serialized)
 }
 
 #[cfg(test)]

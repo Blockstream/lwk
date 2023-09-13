@@ -9,4 +9,5 @@ mod wallet;
 pub use crate::config::ElementsNetwork;
 pub use crate::error::Error;
 pub use crate::model::{UnblindedTXO, TXO};
+pub use crate::util::EC;
 pub use crate::wallet::ElectrumWallet;

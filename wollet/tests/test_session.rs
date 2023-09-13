@@ -5,6 +5,7 @@ use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
+use elements::pset::PartiallySignedTransaction;
 use elements::{Address, AssetId, Transaction};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
@@ -321,13 +322,12 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self) {
+    pub fn send_btc(&mut self) -> PartiallySignedTransaction {
         let satoshi: u64 = 10_000;
         let address = self.electrum_wallet.address().unwrap();
-        let _pset = self
-            .electrum_wallet
+        self.electrum_wallet
             .sendlbtc(satoshi, &address.to_string())
-            .unwrap();
+            .unwrap()
     }
 }
 

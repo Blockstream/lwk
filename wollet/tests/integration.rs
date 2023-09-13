@@ -5,7 +5,8 @@ use test_session::*;
 #[test]
 fn liquid() {
     let mut server = setup();
-    let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let xpub = "tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s"; // tprv8ZgxMBicQKsPe5YMU9gHen4Ez3ApihUfykaqUorj9t6FDqy3nP6eoXiAo2ssvpAjoLroQxHqr3R5nE3a5dU3DHTjTgJDd7zrbniJr6nrCzd
     let master_blinding_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", master_blinding_key, xpub);
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
@@ -13,7 +14,17 @@ fn liquid() {
     wallet.fund_btc(&mut server);
     let _asset = wallet.fund_asset(&mut server);
 
-    wallet.send_btc();
+    let pset = wallet.send_btc();
+
+    let signer = software_signer::Signer::new(mnemonic, &wollet::EC).unwrap();
+    let pset_base64 = software_signer::pset_to_base64(&pset);
+    let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+    //assert_ne!(pset_base64, signed_pset_base64); // TODO bip32 derivation not populated
+    let _signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
+    //let genesis_hash = elements::BlockHash::all_zeros(); // TODO use elements regtest genesis hash
+    //let finalised_pset = signed_pset.finalize(&wollet::EC, genesis_hash).unwrap();
+    //let _tx = finalised_pset.extract_tx().unwrap();
+    //TODO broadcast tx
 }
 
 #[test]

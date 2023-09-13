@@ -14,15 +14,7 @@ fn liquid() {
     wallet.fund_btc(&mut server);
     let _asset = wallet.fund_asset(&mut server);
 
-    let pset = wallet.send_btc();
-
-    let signer = software_signer::Signer::new(mnemonic, &wollet::EC).unwrap();
-    let pset_base64 = software_signer::pset_to_base64(&pset);
-    let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
-    assert_ne!(pset_base64, signed_pset_base64);
-    let mut signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
-    let tx = wallet.electrum_wallet.finalize(&mut signed_pset).unwrap();
-    let _txid = wallet.electrum_wallet.broadcast(&tx).unwrap();
+    wallet.send_btc(&mnemonic);
 }
 
 #[test]

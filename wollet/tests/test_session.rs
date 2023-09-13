@@ -203,7 +203,7 @@ impl TestElectrumServer {
 }
 
 pub struct TestElectrumWallet {
-    pub electrum_wallet: ElectrumWallet,
+    electrum_wallet: ElectrumWallet,
     _db_root_dir: TempDir,
 }
 
@@ -322,12 +322,25 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self) -> PartiallySignedTransaction {
+    pub fn send_btc(&mut self, mnemonic: &str) {
+        let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.electrum_wallet.address().unwrap();
-        self.electrum_wallet
+        let pset = self
+            .electrum_wallet
             .sendlbtc(satoshi, &address.to_string())
-            .unwrap()
+            .unwrap();
+
+        let signer = software_signer::Signer::new(mnemonic, &wollet::EC).unwrap();
+        let pset_base64 = software_signer::pset_to_base64(&pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        let mut signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
+        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+        let balance_after = self.balance_btc();
+        assert!(balance_before > balance_after);
     }
 }
 

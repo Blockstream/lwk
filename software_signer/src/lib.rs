@@ -1,7 +1,7 @@
 use bip39::Mnemonic;
 use elements::{
     bitcoin::{
-        bip32::{self, ExtendedPrivKey, Fingerprint},
+        bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
         Network, PrivateKey,
     },
     encode::{deserialize, serialize},
@@ -57,6 +57,10 @@ impl<'a> Signer<'a> {
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
 
         Ok(Self { xprv, secp })
+    }
+
+    pub fn xpub(&self) -> ExtendedPubKey {
+        ExtendedPubKey::from_priv(self.secp, &self.xprv)
     }
 
     fn fingerprint(&self) -> Fingerprint {

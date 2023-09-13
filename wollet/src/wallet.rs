@@ -12,7 +12,9 @@ use elements::{
     TxOut, Txid,
 };
 use elements_miniscript::confidential::Key;
-use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
+use elements_miniscript::{
+    ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, ForEachKey,
+};
 use rand::thread_rng;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -32,6 +34,19 @@ pub(crate) fn derive_address(
     };
 
     Ok(derived_conf.address(&EC, address_params)?)
+}
+
+pub(crate) fn derive_public_keys(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    index: u32,
+) -> Result<Vec<elements::bitcoin::PublicKey>, Error> {
+    let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
+    let mut keys = vec![];
+    derived_non_conf.for_each_key(|k| {
+        keys.push(k.derive_public_key(&EC).unwrap());
+        true
+    });
+    Ok(keys)
 }
 
 fn convert_blinding_key(

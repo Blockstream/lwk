@@ -371,6 +371,11 @@ impl ElectrumWallet {
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
         Ok(pset)
     }
+
+    pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
+        elements_miniscript::psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
+        Ok(pset.extract_tx()?)
+    }
 }
 
 fn convert_pubkey(pk: elements::secp256k1_zkp::PublicKey) -> elements::bitcoin::key::PublicKey {

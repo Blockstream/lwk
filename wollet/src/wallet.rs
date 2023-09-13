@@ -449,6 +449,17 @@ impl ElectrumWallet {
         self.createpset(addressees, None)
     }
 
+    /// Create a PSET sending some satoshi of an asset to an address
+    pub fn sendasset(
+        &self,
+        satoshi: u64,
+        address: &str,
+        asset: &str,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let addressees = vec![(satoshi, address, asset)];
+        self.createpset(addressees, None)
+    }
+
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         elements_miniscript::psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();

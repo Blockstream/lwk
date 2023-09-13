@@ -244,7 +244,11 @@ impl ElectrumWallet {
             .all_txs
             .get(&outpoint.txid)
             .ok_or_else(|| Error::MissingTransaction)?;
-        Ok(tx.output[outpoint.vout as usize].clone())
+        Ok(tx
+            .output
+            .get(outpoint.vout as usize)
+            .ok_or_else(|| Error::MissingVout)?
+            .clone())
     }
 
     /// Create a PSET sending some satoshi to an address

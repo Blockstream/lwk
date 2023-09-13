@@ -86,6 +86,9 @@ pub enum Error {
 
     #[error("Missing transaction")]
     MissingTransaction,
+
+    #[error("Missing vout")]
+    MissingVout,
 }
 
 // cannot derive automatically with this error because of lifetime

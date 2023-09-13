@@ -134,5 +134,6 @@ mod tests {
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
             Signer::new("bad", &secp).unwrap_err().to_string()
         );
+        assert_eq!("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s", &signer.xpub().to_string())
     }
 }

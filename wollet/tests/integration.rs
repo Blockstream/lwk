@@ -13,9 +13,11 @@ fn liquid() {
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&mut server);
-    let _asset = wallet.fund_asset(&mut server);
+    let asset = wallet.fund_asset(&mut server);
 
     wallet.send_btc(&signer);
+    let node_address = server.node_getnewaddress();
+    wallet.send_asset(&signer, &node_address, &asset);
 }
 
 #[test]

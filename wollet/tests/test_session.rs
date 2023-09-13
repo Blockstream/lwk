@@ -346,6 +346,25 @@ impl TestElectrumWallet {
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
     }
+
+    pub fn send_asset(&mut self, signer: &Signer, node_address: &Address, asset: &AssetId) {
+        let balance_before = self.balance(asset);
+        let satoshi: u64 = 10;
+        let pset = self
+            .electrum_wallet
+            .sendasset(satoshi, &node_address.to_string(), &asset.to_string())
+            .unwrap();
+
+        let pset_base64 = pset_to_base64(&pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        let mut signed_pset = pset_from_base64(&signed_pset_base64).unwrap();
+        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+        let balance_after = self.balance(asset);
+        assert!(balance_before > balance_after);
+    }
 }
 
 pub fn setup() -> TestElectrumServer {

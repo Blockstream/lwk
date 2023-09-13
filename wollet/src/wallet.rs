@@ -4,7 +4,7 @@ use crate::model::{UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::EC;
-use electrum_client::bitcoin::bip32::ChildNumber;
+use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::pset::{Input, Output, PartiallySignedTransaction};
@@ -267,24 +267,28 @@ impl ElectrumWallet {
             .clone())
     }
 
-    #[allow(dead_code)]
-    fn script_public_keys(
+    fn script_info(
         &self,
         script: &Script,
-    ) -> Result<Vec<elements::bitcoin::PublicKey>, Error> {
+    ) -> Result<(DerivationPath, Vec<elements::bitcoin::PublicKey>), Error> {
         let store = self.store.read()?;
         let index = store
             .cache
             .paths
             .get(script)
             .ok_or_else(|| Error::Generic(format!("{script} isn't in cache")))?;
+        let derivation_path = vec![*index].into();
         let index = match index {
             ChildNumber::Normal { index } => *index,
             ChildNumber::Hardened { index: _ } => {
                 return Err(Error::Generic("unexpected hardened derivation".into()))
             }
         };
-        derive_public_keys(&self.descriptor, index)
+
+        Ok((
+            derivation_path,
+            derive_public_keys(&self.descriptor, index)?,
+        ))
     }
 
     /// Create a PSET sending some satoshi to an address
@@ -321,7 +325,14 @@ impl ElectrumWallet {
 
             // TODO: fill more fields
 
-            // input.bip32_derivation
+            let (derivation_path, public_keys) = self.script_info(&utxo.txo.script_pubkey)?;
+            for public_key in public_keys {
+                // FIXME fingerprint
+                input.bip32_derivation.insert(
+                    public_key,
+                    (Fingerprint::default(), derivation_path.clone()),
+                );
+            }
 
             pset.add_input(input);
             inp_txout_sec.insert(idx, utxo.unblinded);

@@ -73,7 +73,7 @@ impl<'a> Signer<'a> {
         let genesis_hash = elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for i in 0..pset.inputs().len() {
-            // computing all the message to sign, is it not necessary if we are going to not sign
+            // computing all the message to sign, it is not necessary if we are going to not sign
             // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for
             let msg = pset
                 .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
@@ -88,7 +88,7 @@ impl<'a> Signer<'a> {
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
             for (want_public_key, (_fingerprint, derivation_path)) in input.bip32_derivation.iter()
             {
-                // if fingerprint == &signer_fingerprint {  // TODO let;s ignore the fingerprint for now
+                // if fingerprint == &signer_fingerprint {  // TODO let's ignore the fingerprint for now
                 let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
                 let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
                 let public_key = private_key.public_key(self.secp);

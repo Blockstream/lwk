@@ -336,3 +336,20 @@ pub fn setup() -> TestElectrumServer {
     let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     TestElectrumServer::new(electrs_exec, node_exec)
 }
+
+#[allow(dead_code)]
+pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction {
+    let mut pset = pset.clone();
+    for i in pset.inputs_mut() {
+        if let Some(utxo) = &mut i.witness_utxo {
+            utxo.witness = elements::TxOutWitness::default();
+        }
+    }
+    for o in pset.outputs_mut() {
+        o.value_rangeproof = None;
+        o.asset_surjection_proof = None;
+        o.blind_value_proof = None;
+        o.blind_asset_proof = None;
+    }
+    pset
+}

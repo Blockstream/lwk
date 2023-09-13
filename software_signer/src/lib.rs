@@ -71,32 +71,34 @@ impl<'a> Signer<'a> {
 
         // genesis hash is not used at all for sighash calculation
         let genesis_hash = elements::BlockHash::all_zeros();
+        let mut messages = vec![];
+        for i in 0..pset.inputs().len() {
+            // computing all the message to sign, is it not necessary if we are going to not sign
+            // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for
+            let msg = pset
+                .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
+                .to_secp_msg();
+            messages.push(msg);
+        }
 
         // Fixme: Take a parameter
         let hash_ty = elements::EcdsaSighashType::All;
 
-        let signer_fingerprint = self.fingerprint();
-        let mut signatures = vec![];
-        for (i, input) in pset.inputs().iter().enumerate() {
-            let msg = pset
-                .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
-                .to_secp_msg();
-
-            for (public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
-                if fingerprint == &signer_fingerprint {
-                    let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
-                    // fixme: get the privatekey according to information from the pset input
-                    let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-
+        // let signer_fingerprint = self.fingerprint();
+        for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
+            for (want_public_key, (_fingerprint, derivation_path)) in input.bip32_derivation.iter()
+            {
+                // if fingerprint == &signer_fingerprint {  // TODO let;s ignore the fingerprint for now
+                let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
+                let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
+                let public_key = private_key.public_key(&self.secp);
+                if want_public_key == &public_key {
                     // fixme: for taproot use schnorr
                     let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);
                     let sig = elementssig_to_rawsig(&(sig, hash_ty));
-                    signatures.push((*public_key, sig))
+                    input.partial_sigs.insert(public_key, sig);
                 }
             }
-        }
-        for (input, (pk, sig)) in pset.inputs_mut().iter_mut().zip(signatures) {
-            input.partial_sigs.insert(pk, sig);
         }
 
         Ok(pset_to_base64(&pset))

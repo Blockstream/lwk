@@ -80,6 +80,9 @@ pub enum Error {
 
     #[error("Address must be confidential")]
     NotConfidentialAddress,
+
+    #[error("Insufficient funds")]
+    InsufficientFunds,
 }
 
 // cannot derive automatically with this error because of lifetime

@@ -257,7 +257,9 @@ impl ElectrumWallet {
 
         // Check user inputs
         let tot: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
-        assert!(tot > satoshi + fee);
+        if tot < satoshi + fee {
+            return Err(Error::InsufficientFunds);
+        }
         let params = self.config.address_params();
         let address = Address::parse_with_params(address, params)?;
         if address.blinding_pubkey.is_none() {

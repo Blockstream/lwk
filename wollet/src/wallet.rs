@@ -376,6 +376,12 @@ impl ElectrumWallet {
         elements_miniscript::psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
         Ok(pset.extract_tx()?)
     }
+
+    pub fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
+        let client = self.config.electrum_url().build_client()?;
+        let txid = client.transaction_broadcast_raw(&elements::encode::serialize(tx))?;
+        Ok(Txid::from_raw_hash(txid.to_raw_hash()))
+    }
 }
 
 fn convert_pubkey(pk: elements::secp256k1_zkp::PublicKey) -> elements::bitcoin::key::PublicKey {

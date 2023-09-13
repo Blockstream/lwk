@@ -313,10 +313,14 @@ impl ElectrumWallet {
         let fee = 1_000;
 
         // Check user inputs
-        let tot: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
-        if tot < satoshi + fee {
+        let tot_in: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
+        let tot_out = satoshi
+            .checked_add(fee)
+            .ok_or_else(|| Error::InvalidAmount)?;
+        if tot_in < tot_out {
             return Err(Error::InsufficientFunds);
         }
+        let change_satoshi = tot_in - tot_out;
         let address = self.validate_address(address)?;
 
         // Init PSET
@@ -359,7 +363,7 @@ impl ElectrumWallet {
         let change_address = self.address()?;
         let change_output = Output {
             script_pubkey: change_address.script_pubkey(),
-            amount: Some(tot - satoshi - fee),
+            amount: Some(change_satoshi),
             asset: Some(self.policy_asset()),
             blinding_key: change_address.blinding_pubkey.map(convert_pubkey),
             blinder_index: Some(0),

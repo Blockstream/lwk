@@ -89,6 +89,9 @@ pub enum Error {
 
     #[error("Missing vout")]
     MissingVout,
+
+    #[error("Invalid amount")]
+    InvalidAmount,
 }
 
 // cannot derive automatically with this error because of lifetime

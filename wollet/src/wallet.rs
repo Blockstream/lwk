@@ -291,6 +291,15 @@ impl ElectrumWallet {
         ))
     }
 
+    fn validate_address(&self, address: &str) -> Result<Address, Error> {
+        let params = self.config.address_params();
+        let address = Address::parse_with_params(address, params)?;
+        if address.blinding_pubkey.is_none() {
+            return Err(Error::NotConfidentialAddress);
+        };
+        Ok(address)
+    }
+
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
         &self,
@@ -308,11 +317,7 @@ impl ElectrumWallet {
         if tot < satoshi + fee {
             return Err(Error::InsufficientFunds);
         }
-        let params = self.config.address_params();
-        let address = Address::parse_with_params(address, params)?;
-        if address.blinding_pubkey.is_none() {
-            return Err(Error::NotConfidentialAddress);
-        };
+        let address = self.validate_address(address)?;
 
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();

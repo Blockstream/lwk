@@ -10,6 +10,7 @@ use elements::{Address, AssetId, Transaction};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
+use software_signer::*;
 use std::env;
 use std::str::FromStr;
 use std::sync::Once;
@@ -322,7 +323,7 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self, mnemonic: &str) {
+    pub fn send_btc(&mut self, signer: &Signer) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.electrum_wallet.address().unwrap();
@@ -331,11 +332,10 @@ impl TestElectrumWallet {
             .sendlbtc(satoshi, &address.to_string())
             .unwrap();
 
-        let signer = software_signer::Signer::new(mnemonic, &wollet::EC).unwrap();
-        let pset_base64 = software_signer::pset_to_base64(&pset);
+        let pset_base64 = pset_to_base64(&pset);
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
-        let mut signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
+        let mut signed_pset = pset_from_base64(&signed_pset_base64).unwrap();
         let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
         let txid = self.electrum_wallet.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());

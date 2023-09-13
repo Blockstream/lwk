@@ -373,6 +373,7 @@ impl ElectrumWallet {
     }
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
+        // genesis_hash is only used for BIP341 (taproot) sighash computation
         elements_miniscript::psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
         Ok(pset.extract_tx()?)
     }

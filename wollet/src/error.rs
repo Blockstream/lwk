@@ -83,6 +83,9 @@ pub enum Error {
 
     #[error("Insufficient funds")]
     InsufficientFunds,
+
+    #[error("Missing transaction")]
+    MissingTransaction,
 }
 
 // cannot derive automatically with this error because of lifetime

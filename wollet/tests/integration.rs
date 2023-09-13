@@ -20,11 +20,9 @@ fn liquid() {
     let pset_base64 = software_signer::pset_to_base64(&pset);
     let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
     assert_ne!(pset_base64, signed_pset_base64);
-    let _signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
-    //let genesis_hash = elements::BlockHash::all_zeros(); // TODO use elements regtest genesis hash
-    //let finalised_pset = signed_pset.finalize(&wollet::EC, genesis_hash).unwrap();
-    //let _tx = finalised_pset.extract_tx().unwrap();
-    //TODO broadcast tx
+    let mut signed_pset = software_signer::pset_from_base64(&signed_pset_base64).unwrap();
+    let tx = wallet.electrum_wallet.finalize(&mut signed_pset).unwrap();
+    let _txid = wallet.electrum_wallet.broadcast(&tx).unwrap();
 }
 
 #[test]

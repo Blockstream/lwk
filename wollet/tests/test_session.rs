@@ -203,7 +203,7 @@ impl TestElectrumServer {
 }
 
 pub struct TestElectrumWallet {
-    electrum_wallet: ElectrumWallet,
+    pub electrum_wallet: ElectrumWallet,
     _db_root_dir: TempDir,
 }
 

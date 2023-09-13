@@ -259,7 +259,7 @@ impl ElectrumWallet {
         let tot: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
         assert!(tot > satoshi + fee);
         let params = self.config.address_params();
-        let address = Address::parse_with_params(address, params).unwrap();
+        let address = Address::parse_with_params(address, params)?;
         assert!(address.blinding_pubkey.is_some());
 
         // Init PSET

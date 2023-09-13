@@ -74,6 +74,9 @@ pub enum Error {
 
     #[error(transparent)]
     Unblind(#[from] elements::UnblindError),
+
+    #[error(transparent)]
+    AddressError(#[from] elements::AddressError),
 }
 
 // cannot derive automatically with this error because of lifetime

@@ -192,6 +192,10 @@ impl TestElectrumServer {
         AssetId::from_str(&asset).unwrap()
     }
 
+    pub fn node_getnewaddress(&self) -> Address {
+        node_getnewaddress(&self.node.client, None)
+    }
+
     pub fn fund_btc(&mut self, address: &Address, satoshi: u64) -> String {
         self.node_sendtoaddress(address, satoshi, None)
     }

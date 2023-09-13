@@ -305,7 +305,7 @@ impl ElectrumWallet {
 
         // Blind the transaction
         let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec).unwrap();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
         Ok(pset)
     }
 }

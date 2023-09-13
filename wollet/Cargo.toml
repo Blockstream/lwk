@@ -31,10 +31,3 @@ once_cell = "1.18.0"
 chrono = "0.4.11"
 tempdir = "0.3.7"
 electrsd = { version = "0.25.0", features = ["legacy"] }
-
-[profile.release]
-lto = true
-panic = 'abort'
-opt-level = 'z'
-codegen-units = 1
-incremental = false

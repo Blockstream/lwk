@@ -91,7 +91,7 @@ impl<'a> Signer<'a> {
                 // if fingerprint == &signer_fingerprint {  // TODO let;s ignore the fingerprint for now
                 let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
                 let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                let public_key = private_key.public_key(&self.secp);
+                let public_key = private_key.public_key(self.secp);
                 if want_public_key == &public_key {
                     // fixme: for taproot use schnorr
                     let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);

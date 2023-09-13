@@ -4,6 +4,7 @@ use crate::model::{UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::EC;
+use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::pset::{Input, Output, PartiallySignedTransaction};
@@ -266,6 +267,26 @@ impl ElectrumWallet {
             .clone())
     }
 
+    #[allow(dead_code)]
+    fn script_public_keys(
+        &self,
+        script: &Script,
+    ) -> Result<Vec<elements::bitcoin::PublicKey>, Error> {
+        let store = self.store.read()?;
+        let index = store
+            .cache
+            .paths
+            .get(script)
+            .ok_or_else(|| Error::Generic(format!("{script} isn't in cache")))?;
+        let index = match index {
+            ChildNumber::Normal { index } => *index,
+            ChildNumber::Hardened { index: _ } => {
+                return Err(Error::Generic("unexpected hardened derivation".into()))
+            }
+        };
+        derive_public_keys(&self.descriptor, index)
+    }
+
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
         &self,
@@ -297,7 +318,11 @@ impl ElectrumWallet {
         for (idx, utxo) in utxos.iter().enumerate() {
             let mut input = Input::from_prevout(utxo.txo.outpoint);
             input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
+
             // TODO: fill more fields
+
+            // input.bip32_derivation
+
             pset.add_input(input);
             inp_txout_sec.insert(idx, utxo.unblinded);
         }

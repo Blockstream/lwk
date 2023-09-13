@@ -77,6 +77,9 @@ pub enum Error {
 
     #[error(transparent)]
     AddressError(#[from] elements::AddressError),
+
+    #[error("Address must be confidential")]
+    NotConfidentialAddress,
 }
 
 // cannot derive automatically with this error because of lifetime

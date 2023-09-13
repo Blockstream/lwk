@@ -260,7 +260,9 @@ impl ElectrumWallet {
         assert!(tot > satoshi + fee);
         let params = self.config.address_params();
         let address = Address::parse_with_params(address, params)?;
-        assert!(address.blinding_pubkey.is_some());
+        if address.blinding_pubkey.is_none() {
+            return Err(Error::NotConfidentialAddress);
+        };
 
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();

@@ -206,14 +206,19 @@ impl ElectrumWallet {
         Ok(txos)
     }
 
+    fn balance_from_utxos(&self, utxos: &[UnblindedTXO]) -> Result<HashMap<AssetId, u64>, Error> {
+        let mut r = HashMap::new();
+        r.entry(self.policy_asset()).or_insert(0);
+        for u in utxos.iter() {
+            *r.entry(u.unblinded.asset).or_default() += u.unblinded.value;
+        }
+        Ok(r)
+    }
+
     /// Get the wallet balance
     pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
-        let mut result = HashMap::new();
-        result.entry(self.config.policy_asset()).or_insert(0);
-        for u in self.utxos()?.iter() {
-            *result.entry(u.unblinded.asset).or_default() += u.unblinded.value;
-        }
-        Ok(result)
+        let utxos = self.utxos()?;
+        self.balance_from_utxos(&utxos)
     }
 
     /// Get the wallet transactions with their heights (if confirmed)
@@ -245,6 +250,7 @@ impl ElectrumWallet {
         Ok(txs)
     }
 
+    #[allow(dead_code)]
     fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<UnblindedTXO>, Error> {
         Ok(self
             .utxos()?
@@ -300,28 +306,94 @@ impl ElectrumWallet {
         Ok(address)
     }
 
-    /// Create a PSET sending some satoshi to an address
-    pub fn sendlbtc(
-        &self,
-        satoshi: u64,
-        address: &str,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        // Get utxos
-        let utxos = self.asset_utxos(&self.policy_asset())?;
-
-        // Use a fixed fee
-        let fee = 1_000;
-
-        // Check user inputs
-        let tot_in: u64 = utxos.iter().map(|utxo| utxo.unblinded.value).sum();
-        let tot_out = satoshi
-            .checked_add(fee)
-            .ok_or_else(|| Error::InvalidAmount)?;
-        if tot_in < tot_out {
-            return Err(Error::InsufficientFunds);
+    fn validate_asset(&self, asset: &str) -> Result<AssetId, Error> {
+        if asset.is_empty() {
+            Ok(self.policy_asset())
+        } else {
+            Ok(AssetId::from_str(asset)?)
         }
-        let change_satoshi = tot_in - tot_out;
+    }
+
+    fn validate_addressee(
+        &self,
+        addressee: &(u64, &str, &str),
+    ) -> Result<(u64, Address, AssetId), Error> {
+        let (satoshi, address, asset) = addressee;
         let address = self.validate_address(address)?;
+        let asset = self.validate_asset(asset)?;
+        Ok((*satoshi, address, asset))
+    }
+
+    fn validate_addressees(
+        &self,
+        addressees: Vec<(u64, &str, &str)>,
+    ) -> Result<Vec<(u64, Address, AssetId)>, Error> {
+        addressees
+            .iter()
+            .map(|a| self.validate_addressee(a))
+            .collect()
+    }
+
+    fn tot_out(
+        &self,
+        addressees: &Vec<(u64, Address, AssetId)>,
+    ) -> Result<HashMap<AssetId, u64>, Error> {
+        let mut r = HashMap::new();
+        r.entry(self.policy_asset()).or_insert(0);
+        for (satoshi, _, asset) in addressees {
+            *r.entry(*asset).or_default() += satoshi;
+        }
+        Ok(r)
+    }
+
+    fn add_output(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+        addressee: (u64, Address, AssetId),
+    ) -> Result<(), Error> {
+        let (satoshi, address, asset) = addressee;
+        let output = Output {
+            script_pubkey: address.script_pubkey(),
+            amount: Some(satoshi),
+            asset: Some(asset),
+            blinding_key: address.blinding_pubkey.map(convert_pubkey),
+            blinder_index: Some(0),
+            ..Default::default()
+        };
+        pset.add_output(output);
+        Ok(())
+    }
+
+    fn createpset(
+        &self,
+        addressees: Vec<(u64, &str, &str)>,
+        fee: Option<u64>,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        // Check user inputs
+        let addressees = self.validate_addressees(addressees)?;
+
+        // Get utxos
+        let utxos = self.utxos()?;
+
+        // Set fee
+        let fee = fee.unwrap_or(1_000);
+
+        // Check if we have enough funds and compute change
+        let tot_in = self.balance_from_utxos(&utxos)?;
+        let mut tot_out = self.tot_out(&addressees)?;
+        *tot_out.entry(self.policy_asset()).or_default() += fee;
+        let mut addressees_change = vec![];
+        for (asset, satoshi_out) in tot_out.clone() {
+            let satoshi_in: u64 = *tot_in.get(&asset).unwrap_or(&0);
+            if satoshi_in < satoshi_out {
+                return Err(Error::InsufficientFunds);
+            }
+            let satoshi_change = satoshi_in - satoshi_out;
+            if satoshi_change > 0 {
+                let address_change = self.address()?;
+                addressees_change.push((satoshi_change, address_change, asset));
+            }
+        }
 
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
@@ -329,6 +401,10 @@ impl ElectrumWallet {
 
         // Add inputs
         for (idx, utxo) in utxos.iter().enumerate() {
+            if tot_out.get(&utxo.unblinded.asset).is_none() {
+                // Do not add utxos if the we are not sending the asset
+                continue;
+            }
             let mut input = Input::from_prevout(utxo.txo.outpoint);
             input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
 
@@ -348,30 +424,12 @@ impl ElectrumWallet {
         }
 
         // Add outputs
-        // Output we are sending to
-        let output = Output {
-            script_pubkey: address.script_pubkey(),
-            amount: Some(satoshi),
-            asset: Some(self.policy_asset()),
-            blinding_key: address.blinding_pubkey.map(convert_pubkey),
-            blinder_index: Some(0),
-            ..Default::default()
-        };
-        pset.add_output(output);
-
-        // Change output
-        let change_address = self.address()?;
-        let change_output = Output {
-            script_pubkey: change_address.script_pubkey(),
-            amount: Some(change_satoshi),
-            asset: Some(self.policy_asset()),
-            blinding_key: change_address.blinding_pubkey.map(convert_pubkey),
-            blinder_index: Some(0),
-            ..Default::default()
-        };
-        pset.add_output(change_output);
-
-        // Fee
+        for addressee in addressees {
+            self.add_output(&mut pset, addressee)?;
+        }
+        for addressee in addressees_change {
+            self.add_output(&mut pset, addressee)?;
+        }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
 
@@ -379,6 +437,16 @@ impl ElectrumWallet {
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
         Ok(pset)
+    }
+
+    /// Create a PSET sending some satoshi to an address
+    pub fn sendlbtc(
+        &self,
+        satoshi: u64,
+        address: &str,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let addressees = vec![(satoshi, address, "")];
+        self.createpset(addressees, None)
     }
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {

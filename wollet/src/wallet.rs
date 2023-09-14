@@ -1,6 +1,6 @@
 use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
-use crate::model::{UnblindedTXO, TXO};
+use crate::model::{Addressee, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::Syncer;
 use crate::util::EC;
@@ -314,34 +314,32 @@ impl ElectrumWallet {
         }
     }
 
-    fn validate_addressee(
-        &self,
-        addressee: &(u64, &str, &str),
-    ) -> Result<(u64, Address, AssetId), Error> {
+    fn validate_addressee(&self, addressee: &(u64, &str, &str)) -> Result<Addressee, Error> {
         let (satoshi, address, asset) = addressee;
         let address = self.validate_address(address)?;
         let asset = self.validate_asset(asset)?;
-        Ok((*satoshi, address, asset))
+        Ok(Addressee {
+            satoshi: *satoshi,
+            address,
+            asset,
+        })
     }
 
     fn validate_addressees(
         &self,
         addressees: Vec<(u64, &str, &str)>,
-    ) -> Result<Vec<(u64, Address, AssetId)>, Error> {
+    ) -> Result<Vec<Addressee>, Error> {
         addressees
             .iter()
             .map(|a| self.validate_addressee(a))
             .collect()
     }
 
-    fn tot_out(
-        &self,
-        addressees: &Vec<(u64, Address, AssetId)>,
-    ) -> Result<HashMap<AssetId, u64>, Error> {
+    fn tot_out(&self, addressees: &Vec<Addressee>) -> Result<HashMap<AssetId, u64>, Error> {
         let mut r = HashMap::new();
         r.entry(self.policy_asset()).or_insert(0);
-        for (satoshi, _, asset) in addressees {
-            *r.entry(*asset).or_default() += satoshi;
+        for addressee in addressees {
+            *r.entry(addressee.asset).or_default() += addressee.satoshi;
         }
         Ok(r)
     }
@@ -349,14 +347,13 @@ impl ElectrumWallet {
     fn add_output(
         &self,
         pset: &mut PartiallySignedTransaction,
-        addressee: (u64, Address, AssetId),
+        addressee: Addressee,
     ) -> Result<(), Error> {
-        let (satoshi, address, asset) = addressee;
         let output = Output {
-            script_pubkey: address.script_pubkey(),
-            amount: Some(satoshi),
-            asset: Some(asset),
-            blinding_key: address.blinding_pubkey.map(convert_pubkey),
+            script_pubkey: addressee.address.script_pubkey(),
+            amount: Some(addressee.satoshi),
+            asset: Some(addressee.asset),
+            blinding_key: addressee.address.blinding_pubkey.map(convert_pubkey),
             blinder_index: Some(0),
             ..Default::default()
         };
@@ -391,7 +388,11 @@ impl ElectrumWallet {
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
                 let address_change = self.address()?;
-                addressees_change.push((satoshi_change, address_change, asset));
+                addressees_change.push(Addressee {
+                    satoshi: satoshi_change,
+                    address: address_change,
+                    asset,
+                });
             }
         }
 

@@ -1,4 +1,4 @@
-use elements::{OutPoint, Script, TxOutSecrets};
+use elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -23,6 +23,13 @@ impl TXO {
 pub struct UnblindedTXO {
     pub txo: TXO,
     pub unblinded: TxOutSecrets,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Addressee {
+    pub satoshi: u64,
+    pub address: Address,
+    pub asset: AssetId,
 }
 
 #[cfg(test)]

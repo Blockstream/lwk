@@ -18,6 +18,15 @@ fn liquid() {
     wallet.send_btc(&signer);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(&signer, &node_address, &asset);
+    let node_address1 = server.node_getnewaddress();
+    let node_address2 = server.node_getnewaddress();
+    wallet.send_many(
+        &signer,
+        &node_address1,
+        &asset,
+        &node_address2,
+        &wallet.policy_asset(),
+    );
 }
 
 #[test]

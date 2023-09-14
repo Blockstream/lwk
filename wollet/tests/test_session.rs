@@ -369,6 +369,39 @@ impl TestElectrumWallet {
         let balance_after = self.balance(asset);
         assert!(balance_before > balance_after);
     }
+
+    pub fn send_many(
+        &mut self,
+        signer: &Signer,
+        addr1: &Address,
+        asset1: &AssetId,
+        addr2: &Address,
+        asset2: &AssetId,
+    ) {
+        let balance1_before = self.balance(asset1);
+        let balance2_before = self.balance(asset2);
+        let satoshi1: u64 = 1_000;
+        let satoshi2: u64 = 2_000;
+        let addr1 = addr1.to_string();
+        let addr2 = addr2.to_string();
+        let ass1 = asset1.to_string();
+        let ass2 = asset2.to_string();
+        let addressees: Vec<(u64, &str, &str)> =
+            vec![(satoshi1, &addr1, &ass1), (satoshi2, &addr2, &ass2)];
+        let pset = self.electrum_wallet.sendmany(addressees).unwrap();
+
+        let pset_base64 = pset_to_base64(&pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        let mut signed_pset = pset_from_base64(&signed_pset_base64).unwrap();
+        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+        let balance1_after = self.balance(asset1);
+        let balance2_after = self.balance(asset2);
+        assert!(balance1_before > balance1_after);
+        assert!(balance2_before > balance2_after);
+    }
 }
 
 pub fn setup() -> TestElectrumServer {

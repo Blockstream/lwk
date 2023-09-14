@@ -13,17 +13,14 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
 
 pub const BATCH_SIZE: u32 = 20;
-
-pub type Store = Arc<RwLock<StoreMeta>>;
 
 pub fn new_store<P: AsRef<Path>>(
     path: P,
     desc: ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<Store, Error> {
-    Ok(Arc::new(RwLock::new(StoreMeta::new(&path, desc)?)))
+    Store::new(&path, desc)
 }
 
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
@@ -66,14 +63,14 @@ impl Default for RawCache {
     }
 }
 
-pub struct StoreMeta {
+pub struct Store {
     pub cache: RawCache,
     path: PathBuf,
     cipher: Aes256GcmSiv,
     descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
 }
 
-impl Drop for StoreMeta {
+impl Drop for Store {
     fn drop(&mut self) {
         self.flush().unwrap();
     }
@@ -125,11 +122,11 @@ fn load_decrypt<P: AsRef<Path>>(
     Ok(plaintext)
 }
 
-impl StoreMeta {
+impl Store {
     pub fn new<P: AsRef<Path>>(
         path: P,
         descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
-    ) -> Result<StoreMeta, Error> {
+    ) -> Result<Store, Error> {
         /*
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
@@ -147,7 +144,7 @@ impl StoreMeta {
             std::fs::create_dir_all(&path)?;
         }
 
-        Ok(StoreMeta {
+        Ok(Store {
             cache,
             cipher,
             path,
@@ -218,7 +215,7 @@ impl StoreMeta {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store::StoreMeta;
+    use crate::store::Store;
     use elements::Txid;
     use std::str::FromStr;
     use tempdir::TempDir;
@@ -240,11 +237,11 @@ mod tests {
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let mut store = StoreMeta::new(&dir, desc.clone()).unwrap();
+        let mut store = Store::new(&dir, desc.clone()).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = StoreMeta::new(&dir, desc).unwrap();
+        let store = Store::new(&dir, desc).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 
@@ -262,7 +259,7 @@ mod tests {
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
 
-        let store = StoreMeta::new(&dir, desc).unwrap();
+        let store = Store::new(&dir, desc).unwrap();
 
         let x = store.get_script_batch(0).unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");

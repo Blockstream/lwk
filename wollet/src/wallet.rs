@@ -2,7 +2,7 @@ use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
 use crate::model::{Addressee, UnblindedTXO, TXO};
 use crate::store::{new_store, Store};
-use crate::sync::Syncer;
+use crate::sync::sync;
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use electrum_client::ElectrumApi;
@@ -111,14 +111,10 @@ impl ElectrumWallet {
     }
 
     /// Sync the wallet transactions
-    pub fn sync_txs(&self) -> Result<(), Error> {
-        let syncer = Syncer {
-            store: self.store.clone(),
-            descriptor_blinding_key: self.descriptor_blinding_key(),
-        };
-
+    pub fn sync_txs(&mut self) -> Result<(), Error> {
         if let Ok(client) = self.config.electrum_url().build_client() {
-            match syncer.sync(&client) {
+            let blinding_key = self.descriptor_blinding_key();
+            match sync(&client, &mut self.store, blinding_key) {
                 Ok(true) => log::info!("there are new transcations"),
                 Ok(false) => (),
                 Err(e) => log::warn!("Error during sync, {:?}", e),
@@ -128,15 +124,15 @@ impl ElectrumWallet {
     }
 
     /// Sync the blockchain tip
-    pub fn sync_tip(&self) -> Result<(), Error> {
+    pub fn sync_tip(&mut self) -> Result<(), Error> {
         if let Ok(client) = self.config.electrum_url().build_client() {
             let header = client.block_headers_subscribe_raw()?;
             let height = header.height as u32;
-            let tip_height = self.store.read()?.cache.tip.0;
+            let tip_height = self.store.cache.tip.0;
             if height != tip_height {
                 let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
                 let hash: BlockHash = block_header.block_hash();
-                self.store.write()?.cache.tip = (height, hash);
+                self.store.cache.tip = (height, hash);
             }
         }
         Ok(())
@@ -144,7 +140,7 @@ impl ElectrumWallet {
 
     /// Get the blockchain tip
     pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
-        Ok(self.store.read()?.cache.tip)
+        Ok(self.store.cache.tip)
     }
 
     fn derive_address(&self, index: u32) -> Result<Address, Error> {
@@ -152,22 +148,19 @@ impl ElectrumWallet {
     }
 
     /// Get a new wallet address
-    pub fn address(&self) -> Result<Address, Error> {
-        let pointer = {
-            let store = &mut self.store.write()?.cache;
-            store.last_index += 1;
-            store.last_index
-        };
-        self.derive_address(pointer)
+    pub fn address(&mut self) -> Result<Address, Error> {
+        self.store.cache.last_index += 1;
+
+        self.derive_address(self.store.cache.last_index)
     }
 
     /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
-        let store_read = self.store.read()?;
         let mut txos = vec![];
-        let spent = store_read.spent()?;
-        for (tx_id, height) in store_read.cache.heights.iter() {
-            let tx = store_read
+        let spent = self.store.spent()?;
+        for (tx_id, height) in self.store.cache.heights.iter() {
+            let tx = self
+                .store
                 .cache
                 .all_txs
                 .get(tx_id)
@@ -188,7 +181,7 @@ impl ElectrumWallet {
                     })
                     .filter(|(outpoint, _)| !spent.contains(outpoint))
                     .filter_map(|(outpoint, output)| {
-                        if let Some(unblinded) = store_read.cache.unblinded.get(&outpoint) {
+                        if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
                             let txo = TXO::new(outpoint, output.script_pubkey, *height);
                             return Some(UnblindedTXO {
                                 txo,
@@ -223,10 +216,8 @@ impl ElectrumWallet {
 
     /// Get the wallet transactions with their heights (if confirmed)
     pub fn transactions(&self) -> Result<Vec<(Transaction, Option<u32>)>, Error> {
-        let store_read = self.store.read()?;
-
         let mut txs = vec![];
-        let mut my_txids: Vec<(&Txid, &Option<u32>)> = store_read.cache.heights.iter().collect();
+        let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();
         my_txids.sort_by(|a, b| {
             let height_cmp =
                 b.1.unwrap_or(std::u32::MAX)
@@ -238,7 +229,8 @@ impl ElectrumWallet {
         });
 
         for (tx_id, height) in my_txids.iter() {
-            let tx = store_read
+            let tx = self
+                .store
                 .cache
                 .all_txs
                 .get(*tx_id)
@@ -260,8 +252,8 @@ impl ElectrumWallet {
     }
 
     fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
-        let store = self.store.read()?;
-        let tx = store
+        let tx = self
+            .store
             .cache
             .all_txs
             .get(&outpoint.txid)
@@ -277,8 +269,8 @@ impl ElectrumWallet {
         &self,
         script: &Script,
     ) -> Result<(DerivationPath, Vec<elements::bitcoin::PublicKey>), Error> {
-        let store = self.store.read()?;
-        let index = store
+        let index = self
+            .store
             .cache
             .paths
             .get(script)
@@ -362,7 +354,7 @@ impl ElectrumWallet {
     }
 
     fn createpset(
-        &self,
+        &mut self,
         addressees: Vec<(u64, &str, &str)>,
         fee: Option<u64>,
     ) -> Result<PartiallySignedTransaction, Error> {
@@ -442,7 +434,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
-        &self,
+        &mut self,
         satoshi: u64,
         address: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
@@ -452,7 +444,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending some satoshi of an asset to an address
     pub fn sendasset(
-        &self,
+        &mut self,
         satoshi: u64,
         address: &str,
         asset: &str,
@@ -463,7 +455,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending to many outputs
     pub fn sendmany(
-        &self,
+        &mut self,
         addressees: Vec<(u64, &str, &str)>,
     ) -> Result<PartiallySignedTransaction, Error> {
         self.createpset(addressees, None)
@@ -471,7 +463,7 @@ impl ElectrumWallet {
 
     /// Create a PSET issuing an asset
     pub fn issueasset(
-        &self,
+        &mut self,
         satoshi_asset: u64,
         satoshi_token: u64,
     ) -> Result<PartiallySignedTransaction, Error> {

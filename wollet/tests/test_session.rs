@@ -223,7 +223,7 @@ impl TestElectrumWallet {
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let electrum_wallet = ElectrumWallet::new(
+        let mut electrum_wallet = ElectrumWallet::new(
             ElementsNetwork::ElementsRegtest { policy_asset },
             electrs_url,
             tls,
@@ -274,13 +274,13 @@ impl TestElectrumWallet {
     }
 
     /// asset balance in satoshi
-    fn balance(&self, asset: &AssetId) -> u64 {
+    fn balance(&mut self, asset: &AssetId) -> u64 {
         self.electrum_wallet.sync_txs().unwrap();
         let balance = self.electrum_wallet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }
 
-    fn balance_btc(&self) -> u64 {
+    fn balance_btc(&mut self) -> u64 {
         self.balance(&self.electrum_wallet.policy_asset())
     }
 

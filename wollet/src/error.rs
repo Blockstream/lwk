@@ -6,9 +6,6 @@ pub enum Error {
     #[error("could not parse SocketAddr `{0}`")]
     AddrParse(String),
 
-    #[error("Poison {0}")]
-    Poison(String),
-
     #[error("Aes {0}")]
     Aes(String),
 
@@ -92,13 +89,6 @@ pub enum Error {
 
     #[error("Invalid amount")]
     InvalidAmount,
-}
-
-// cannot derive automatically with this error because of lifetime
-impl<T> From<std::sync::PoisonError<T>> for Error {
-    fn from(err: std::sync::PoisonError<T>) -> Self {
-        Self::Poison(err.to_string())
-    }
 }
 
 // cannot derive automatically with this error because of trait bound

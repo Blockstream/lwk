@@ -256,6 +256,10 @@ impl TestElectrumWallet {
         }
     }
 
+    pub fn policy_asset(&self) -> AssetId {
+        self.electrum_wallet.policy_asset()
+    }
+
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
         for _ in 0..120 {

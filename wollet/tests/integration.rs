@@ -27,6 +27,7 @@ fn liquid() {
         &node_address2,
         &wallet.policy_asset(),
     );
+    wallet.issueasset(&signer, 10, 1);
 }
 
 #[test]

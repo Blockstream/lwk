@@ -402,6 +402,34 @@ impl TestElectrumWallet {
         assert!(balance1_before > balance1_after);
         assert!(balance2_before > balance2_after);
     }
+
+    pub fn issueasset(
+        &mut self,
+        signer: &Signer,
+        satoshi_asset: u64,
+        satoshi_token: u64,
+    ) -> (AssetId, AssetId) {
+        let balance_before = self.balance_btc();
+        let pset = self
+            .electrum_wallet
+            .issueasset(satoshi_asset, satoshi_token)
+            .unwrap();
+        let pset_base64 = pset_to_base64(&pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        let mut signed_pset = pset_from_base64(&signed_pset_base64).unwrap();
+        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+
+        let (asset, token) = pset.inputs()[0].issuance_ids();
+        assert_eq!(self.balance(&asset), satoshi_asset);
+        assert_eq!(self.balance(&token), satoshi_token);
+        let balance_after = self.balance_btc();
+        assert!(balance_before > balance_after);
+
+        (asset, token)
+    }
 }
 
 pub fn setup() -> TestElectrumServer {

@@ -640,6 +640,10 @@ impl ElectrumWallet {
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
 
+        for output in pset.outputs_mut() {
+            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
+        }
+
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;

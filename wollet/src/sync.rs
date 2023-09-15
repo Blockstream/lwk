@@ -15,6 +15,7 @@ use elements_miniscript::confidential::Key;
 use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::DefiniteDescriptorKey;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic;
 
 #[derive(Default)]
 struct DownloadTxResult {
@@ -87,10 +88,13 @@ pub fn sync(
 
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, &blinding_key)?;
 
-    let store_indexes = store.cache.last_index;
+    let store_indexes = store.cache.last_index.load(atomic::Ordering::Relaxed);
 
     let changed = if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
-        store.cache.last_index = last_used;
+        store
+            .cache
+            .last_index
+            .store(last_used, atomic::Ordering::Relaxed);
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
 

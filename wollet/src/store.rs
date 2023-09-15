@@ -13,6 +13,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;
 
@@ -46,7 +47,7 @@ pub struct RawCache {
     pub tip: (u32, BlockHash),
 
     /// max used indexes for current descriptor
-    pub last_index: u32,
+    pub last_index: AtomicU32,
 }
 
 impl Default for RawCache {
@@ -58,7 +59,7 @@ impl Default for RawCache {
             heights: HashMap::default(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
-            last_index: 0,
+            last_index: 0.into(),
         }
     }
 }

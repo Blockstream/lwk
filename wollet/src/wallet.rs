@@ -21,6 +21,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::atomic;
 
 pub(crate) fn derive_address(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
@@ -148,10 +149,14 @@ impl ElectrumWallet {
     }
 
     /// Get a new wallet address
-    pub fn address(&mut self) -> Result<Address, Error> {
-        self.store.cache.last_index += 1;
+    pub fn address(&self) -> Result<Address, Error> {
+        let previous_value = self
+            .store
+            .cache
+            .last_index
+            .fetch_add(1, atomic::Ordering::Relaxed);
 
-        self.derive_address(self.store.cache.last_index)
+        self.derive_address(previous_value + 1)
     }
 
     /// Get the wallet UTXOs
@@ -354,7 +359,7 @@ impl ElectrumWallet {
     }
 
     fn createpset(
-        &mut self,
+        &self,
         addressees: Vec<(u64, &str, &str)>,
         fee: Option<u64>,
     ) -> Result<PartiallySignedTransaction, Error> {
@@ -434,7 +439,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending some satoshi to an address
     pub fn sendlbtc(
-        &mut self,
+        &self,
         satoshi: u64,
         address: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
@@ -444,7 +449,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending some satoshi of an asset to an address
     pub fn sendasset(
-        &mut self,
+        &self,
         satoshi: u64,
         address: &str,
         asset: &str,
@@ -455,7 +460,7 @@ impl ElectrumWallet {
 
     /// Create a PSET sending to many outputs
     pub fn sendmany(
-        &mut self,
+        &self,
         addressees: Vec<(u64, &str, &str)>,
     ) -> Result<PartiallySignedTransaction, Error> {
         self.createpset(addressees, None)
@@ -463,7 +468,7 @@ impl ElectrumWallet {
 
     /// Create a PSET issuing an asset
     pub fn issueasset(
-        &mut self,
+        &self,
         satoshi_asset: u64,
         satoshi_token: u64,
     ) -> Result<PartiallySignedTransaction, Error> {

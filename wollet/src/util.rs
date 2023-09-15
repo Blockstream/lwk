@@ -8,3 +8,12 @@ pub static EC: once_cell::sync::Lazy<secp256k1::Secp256k1<secp256k1::All>> =
         ctx.randomize(&mut rng);
         ctx
     });
+
+pub fn ciborium_to_vec<T>(value: &T) -> Result<Vec<u8>, ciborium::ser::Error<std::io::Error>>
+where
+    T: serde::ser::Serialize,
+{
+    let mut v = Vec::new();
+    ciborium::ser::into_writer(value, &mut v)?;
+    Ok(v)
+}

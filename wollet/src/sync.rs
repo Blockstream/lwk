@@ -3,14 +3,11 @@ use crate::store::{Store, BATCH_SIZE};
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
-use elements::bitcoin::hashes::Hash;
 use elements::bitcoin::secp256k1::SecretKey;
 use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
 use elements::confidential::{Asset, Nonce, Value};
-use elements::encode::Encodable;
-use elements::secp256k1_zkp::Scalar;
 use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
-use elements_miniscript::confidential::bare::TweakHash;
+use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;
 use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::DefiniteDescriptorKey;
@@ -196,17 +193,7 @@ fn derive_blinding_key(
         Key::Slip77(k) => k.blinding_private_key(script_pubkey),
         Key::View(DescriptorSecretKey::XPrv(dxk)) => {
             let k = dxk.xkey.to_priv();
-            // FIXME: use tweak_private_key once fixed upstread
-            let mut eng = TweakHash::engine();
-            k.public_key(&EC)
-                .write_into(&mut eng)
-                .expect("engines don't error");
-            script_pubkey
-                .consensus_encode(&mut eng)
-                .expect("engines don't error");
-            let hash_bytes = TweakHash::from_engine(eng).to_byte_array();
-            let hash_scalar = Scalar::from_be_bytes(hash_bytes).expect("bytes from hash");
-            k.inner.add_tweak(&hash_scalar).unwrap()
+            tweak_private_key(&EC, script_pubkey, &k.inner)
         }
         _ => panic!("Unsupported descriptor blinding key"),
     }

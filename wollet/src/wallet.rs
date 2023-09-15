@@ -668,9 +668,7 @@ mod tests {
     use super::*;
     use elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
     use elements::bitcoin::network::constants::Network;
-    use elements::encode::Encodable;
-    use elements::secp256k1_zkp::Scalar;
-    use elements_miniscript::confidential::bare::TweakHash;
+    use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::DescriptorSecretKey;
     use elements_miniscript::elements::AddressParams;
@@ -735,18 +733,7 @@ mod tests {
             Key::View(DescriptorSecretKey::XPrv(dxk)) => dxk.xkey.to_priv(),
             _ => todo!(),
         };
-        // tweaked_private_key needs fixes upstream
-        let mut eng = TweakHash::engine();
-        key.public_key(&EC)
-            .write_into(&mut eng)
-            .expect("engines don't error");
-        address
-            .script_pubkey()
-            .consensus_encode(&mut eng)
-            .expect("engines don't error");
-        let hash_bytes = TweakHash::from_engine(eng).to_byte_array();
-        let hash_scalar = Scalar::from_be_bytes(hash_bytes).expect("bytes from hash");
-        let tweaked_key = key.inner.add_tweak(&hash_scalar).unwrap();
+        let tweaked_key = tweak_private_key(&EC, &address.script_pubkey(), &key.inner);
         let pk_from_view = tweaked_key.public_key(&EC);
 
         assert_eq!(pk_from_addr, pk_from_view);

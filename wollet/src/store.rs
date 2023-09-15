@@ -219,11 +219,12 @@ mod tests {
     use crate::store::Store;
     use elements::Txid;
     use std::str::FromStr;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_db_roundtrip() {
-        let mut dir = TempDir::new("unit_test").unwrap().into_path();
+        let tempdir = TempDir::new().unwrap();
+        let mut dir = tempdir.path().to_path_buf();
         dir.push("store");
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
         let master_blinding_key =
@@ -248,7 +249,8 @@ mod tests {
 
     #[test]
     fn test_address_derivation() {
-        let mut dir = TempDir::new("unit_test").unwrap().into_path();
+        let tempdir = TempDir::new().unwrap();
+        let mut dir = tempdir.path().to_path_buf();
         dir.push("store");
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
         let master_blinding_key =

@@ -16,7 +16,7 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::thread;
 use std::time::Duration;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use wollet::*;
 
 static LOGGER: SimpleLogger = SimpleLogger;
@@ -219,7 +219,7 @@ impl TestElectrumWallet {
         let policy_asset =
             AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
                 .unwrap();
-        let _db_root_dir = TempDir::new("electrum_integration_tests").unwrap();
+        let _db_root_dir = TempDir::new().unwrap();
 
         let db_root = format!("{}", _db_root_dir.path().display());
 

@@ -6,6 +6,7 @@ use crate::sync::sync;
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use electrum_client::ElectrumApi;
+use elements::bitcoin;
 use elements::bitcoin::hashes::{sha256, Hash};
 use elements::pset::{Input, Output, PartiallySignedTransaction};
 use elements::{
@@ -18,7 +19,7 @@ use elements_miniscript::{
 };
 use rand::thread_rng;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
@@ -407,14 +408,7 @@ impl ElectrumWallet {
 
             // TODO: fill more fields
 
-            let (derivation_path, public_keys) = self.script_info(&utxo.txo.script_pubkey)?;
-            for public_key in public_keys {
-                // FIXME fingerprint
-                input.bip32_derivation.insert(
-                    public_key,
-                    (Fingerprint::default(), derivation_path.clone()),
-                );
-            }
+            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation)?;
 
             pset.add_input(input);
             inp_txout_sec.insert(idx, utxo.unblinded);
@@ -434,6 +428,22 @@ impl ElectrumWallet {
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
         Ok(pset)
+    }
+
+    fn insert_bip32_derivation(
+        &self,
+        script_pubkey: &Script,
+        bip32_derivation: &mut BTreeMap<bitcoin::PublicKey, bitcoin::bip32::KeySource>,
+    ) -> Result<(), Error> {
+        let (derivation_path, public_keys) = self.script_info(&script_pubkey)?;
+        for public_key in public_keys {
+            // FIXME fingerprint
+            bip32_derivation.insert(
+                public_key,
+                (Fingerprint::default(), derivation_path.clone()),
+            );
+        }
+        Ok(())
     }
 
     /// Create a PSET sending some satoshi to an address
@@ -494,13 +504,7 @@ impl ElectrumWallet {
         let mut input = Input::from_prevout(utxo.txo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
 
-        let (derivation_path, public_keys) = self.script_info(&utxo.txo.script_pubkey)?;
-        for public_key in public_keys {
-            input.bip32_derivation.insert(
-                public_key,
-                (Fingerprint::default(), derivation_path.clone()),
-            );
-        }
+        self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation)?;
 
         // Set issuance data
         input.issuance_value_amount = Some(satoshi_asset);

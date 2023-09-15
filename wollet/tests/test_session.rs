@@ -10,7 +10,7 @@ use elements_miniscript::elements::bitcoin::hashes::Hash;
 use elements_miniscript::elements::bitcoin::Amount;
 use elements_miniscript::elements::issuance::ContractHash;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use elements_miniscript::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness};
+use elements_miniscript::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness, Txid};
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
 use software_signer::*;
@@ -344,9 +344,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         let mut signed_pset = self.sign(signer, &pset);
-        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.send(&mut signed_pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
     }
@@ -360,9 +358,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         let mut signed_pset = self.sign(signer, &pset);
-        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.send(&mut signed_pset);
         let balance_after = self.balance(asset);
         assert!(balance_before > balance_after);
     }
@@ -396,9 +392,7 @@ impl TestElectrumWallet {
         let pset = self.electrum_wallet.sendmany(addressees).unwrap();
 
         let mut signed_pset = self.sign(signer, &pset);
-        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.send(&mut signed_pset);
         let balance1_after = self.balance(asset1);
         let balance2_after = self.balance(asset2);
         assert!(balance1_before > balance1_after);
@@ -424,9 +418,7 @@ impl TestElectrumWallet {
         let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
 
         let mut signed_pset = self.sign(signer, &pset);
-        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.send(&mut signed_pset);
 
         let (asset, token) = pset.inputs()[0].issuance_ids();
         assert_eq!(self.balance(&asset), satoshi_asset);
@@ -455,9 +447,7 @@ impl TestElectrumWallet {
             .reissueasset(&entropy, satoshi_asset)
             .unwrap();
         let mut signed_pset = self.sign(signer, &pset);
-        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.send(&mut signed_pset);
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
         assert_eq!(self.balance(token), balance_token_before);
@@ -473,6 +463,13 @@ impl TestElectrumWallet {
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
         pset_from_base64(&signed_pset_base64).unwrap()
+    }
+
+    fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
+        let tx = self.electrum_wallet.finalize(pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+        txid
     }
 }
 

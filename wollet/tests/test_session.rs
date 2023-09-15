@@ -380,14 +380,22 @@ impl TestElectrumWallet {
     ) {
         let balance1_before = self.balance(asset1);
         let balance2_before = self.balance(asset2);
-        let satoshi1: u64 = 1_000;
-        let satoshi2: u64 = 2_000;
         let addr1 = addr1.to_string();
         let addr2 = addr2.to_string();
         let ass1 = asset1.to_string();
         let ass2 = asset2.to_string();
-        let addressees: Vec<(u64, &str, &str)> =
-            vec![(satoshi1, &addr1, &ass1), (satoshi2, &addr2, &ass2)];
+        let addressees: Vec<UnvalidatedAddressee> = vec![
+            UnvalidatedAddressee {
+                satoshi: 1_000,
+                address: &addr1,
+                asset: &ass1,
+            },
+            UnvalidatedAddressee {
+                satoshi: 2_000,
+                address: &addr2,
+                asset: &ass2,
+            },
+        ];
         let pset = self.electrum_wallet.sendmany(addressees).unwrap();
 
         let pset_base64 = pset_to_base64(&pset);

@@ -1,6 +1,6 @@
 use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
-use crate::model::{Addressee, UnblindedTXO, TXO};
+use crate::model::{Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -311,12 +311,11 @@ impl ElectrumWallet {
         }
     }
 
-    fn validate_addressee(&self, addressee: &(u64, &str, &str)) -> Result<Addressee, Error> {
-        let (satoshi, address, asset) = addressee;
-        let address = self.validate_address(address)?;
-        let asset = self.validate_asset(asset)?;
+    fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
+        let address = self.validate_address(addressee.address)?;
+        let asset = self.validate_asset(addressee.asset)?;
         Ok(Addressee {
-            satoshi: *satoshi,
+            satoshi: addressee.satoshi,
             address,
             asset,
         })
@@ -324,7 +323,7 @@ impl ElectrumWallet {
 
     fn validate_addressees(
         &self,
-        addressees: Vec<(u64, &str, &str)>,
+        addressees: Vec<UnvalidatedAddressee>,
     ) -> Result<Vec<Addressee>, Error> {
         addressees
             .iter()
@@ -360,7 +359,7 @@ impl ElectrumWallet {
 
     fn createpset(
         &self,
-        addressees: Vec<(u64, &str, &str)>,
+        addressees: Vec<UnvalidatedAddressee>,
         fee: Option<u64>,
     ) -> Result<PartiallySignedTransaction, Error> {
         // Check user inputs
@@ -443,7 +442,11 @@ impl ElectrumWallet {
         satoshi: u64,
         address: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![(satoshi, address, "")];
+        let addressees = vec![UnvalidatedAddressee {
+            satoshi,
+            address,
+            asset: "",
+        }];
         self.createpset(addressees, None)
     }
 
@@ -454,14 +457,18 @@ impl ElectrumWallet {
         address: &str,
         asset: &str,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![(satoshi, address, asset)];
+        let addressees = vec![UnvalidatedAddressee {
+            satoshi,
+            address,
+            asset,
+        }];
         self.createpset(addressees, None)
     }
 
     /// Create a PSET sending to many outputs
     pub fn sendmany(
         &self,
-        addressees: Vec<(u64, &str, &str)>,
+        addressees: Vec<UnvalidatedAddressee>,
     ) -> Result<PartiallySignedTransaction, Error> {
         self.createpset(addressees, None)
     }

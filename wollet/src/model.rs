@@ -32,6 +32,12 @@ pub struct Addressee {
     pub asset: AssetId,
 }
 
+pub struct UnvalidatedAddressee<'a> {
+    pub satoshi: u64,
+    pub address: &'a str,
+    pub asset: &'a str,
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

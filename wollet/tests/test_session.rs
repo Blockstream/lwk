@@ -4,6 +4,7 @@ use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
+use elements::bitcoin::hashes::sha256;
 use elements::bitcoin::Amount;
 use elements::pset::PartiallySignedTransaction;
 use elements::{Address, AssetId, Transaction};
@@ -416,12 +417,20 @@ impl TestElectrumWallet {
         signer: &Signer,
         satoshi_asset: u64,
         satoshi_token: u64,
-    ) -> (AssetId, AssetId) {
+    ) -> (AssetId, AssetId, [u8; 32]) {
         let balance_before = self.balance_btc();
         let pset = self
             .electrum_wallet
             .issueasset(satoshi_asset, satoshi_token)
             .unwrap();
+
+        let input = &pset.inputs()[0];
+        let asset_entropy = input.issuance_asset_entropy.unwrap();
+        use elements::bitcoin::hashes::Hash;
+        let contract_hash = elements::issuance::ContractHash::from_byte_array(asset_entropy);
+        let prevout = elements::OutPoint::new(input.previous_txid, input.previous_output_index);
+        let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
+
         let pset_base64 = pset_to_base64(&pset);
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
@@ -436,7 +445,37 @@ impl TestElectrumWallet {
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
 
-        (asset, token)
+        (asset, token, entropy.to_byte_array())
+    }
+
+    pub fn reissueasset(
+        &mut self,
+        signer: &Signer,
+        satoshi_asset: u64,
+        asset: &AssetId,
+        token: &AssetId,
+        entropy: &[u8; 32],
+    ) {
+        let entropy = sha256::Midstate::from_slice(&entropy[..]).unwrap();
+        let entropy = entropy.to_string();
+        let balance_btc_before = self.balance_btc();
+        let balance_asset_before = self.balance(asset);
+        let balance_token_before = self.balance(token);
+        let pset = self
+            .electrum_wallet
+            .reissueasset(&entropy, satoshi_asset)
+            .unwrap();
+        let pset_base64 = pset_to_base64(&pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        let mut signed_pset = pset_from_base64(&signed_pset_base64).unwrap();
+        let tx = self.electrum_wallet.finalize(&mut signed_pset).unwrap();
+        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        self.wait_for_tx(&txid.to_string());
+
+        assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
+        assert_eq!(self.balance(token), balance_token_before);
+        assert!(self.balance_btc() < balance_btc_before);
     }
 }
 

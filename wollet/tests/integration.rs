@@ -27,7 +27,8 @@ fn liquid() {
         &node_address2,
         &wallet.policy_asset(),
     );
-    wallet.issueasset(&signer, 10, 1);
+    let (asset, token, entropy) = wallet.issueasset(&signer, 10, 1);
+    wallet.reissueasset(&signer, 10, &asset, &token, &entropy);
 }
 
 #[test]

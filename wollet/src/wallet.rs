@@ -280,7 +280,7 @@ impl ElectrumWallet {
             .cache
             .paths
             .get(script)
-            .ok_or_else(|| Error::Generic(format!("{script} isn't in cache")))?;
+            .ok_or_else(|| Error::ScriptNotMine)?;
         let derivation_path = vec![*index].into();
         let index = match index {
             ChildNumber::Normal { index } => *index,
@@ -408,7 +408,7 @@ impl ElectrumWallet {
 
             // TODO: fill more fields
 
-            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation)?;
+            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
 
             pset.add_input(input);
             inp_txout_sec.insert(idx, utxo.unblinded);
@@ -424,6 +424,10 @@ impl ElectrumWallet {
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
 
+        for output in pset.outputs_mut() {
+            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
+        }
+
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
@@ -434,16 +438,16 @@ impl ElectrumWallet {
         &self,
         script_pubkey: &Script,
         bip32_derivation: &mut BTreeMap<bitcoin::PublicKey, bitcoin::bip32::KeySource>,
-    ) -> Result<(), Error> {
-        let (derivation_path, public_keys) = self.script_info(&script_pubkey)?;
-        for public_key in public_keys {
-            // FIXME fingerprint
-            bip32_derivation.insert(
-                public_key,
-                (Fingerprint::default(), derivation_path.clone()),
-            );
+    ) {
+        if let Ok((derivation_path, public_keys)) = self.script_info(script_pubkey) {
+            for public_key in public_keys {
+                // FIXME fingerprint
+                bip32_derivation.insert(
+                    public_key,
+                    (Fingerprint::default(), derivation_path.clone()),
+                );
+            }
         }
-        Ok(())
     }
 
     /// Create a PSET sending some satoshi to an address
@@ -504,7 +508,7 @@ impl ElectrumWallet {
         let mut input = Input::from_prevout(utxo.txo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
 
-        self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation)?;
+        self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
 
         // Set issuance data
         input.issuance_value_amount = Some(satoshi_asset);
@@ -548,6 +552,10 @@ impl ElectrumWallet {
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
+
+        for output in pset.outputs_mut() {
+            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
+        }
 
         // Blind the transaction
         let mut rng = thread_rng();

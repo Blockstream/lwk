@@ -92,6 +92,9 @@ pub enum Error {
 
     #[error("Invalid amount")]
     InvalidAmount,
+
+    #[error("The script is not owned by this wallet")]
+    ScriptNotMine,
 }
 
 // cannot derive automatically with this error because of trait bound

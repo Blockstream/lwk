@@ -3,13 +3,14 @@ use crate::store::{Store, BATCH_SIZE};
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
-use elements::bitcoin::secp256k1::SecretKey;
-use elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
-use elements::confidential::{Asset, Nonce, Value};
-use elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;
 use elements_miniscript::descriptor::DescriptorSecretKey;
+use elements_miniscript::elements::bitcoin::secp256k1::SecretKey;
+use elements_miniscript::elements::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
+use elements_miniscript::elements::confidential::{Asset, Nonce, Value};
+use elements_miniscript::elements::encode::deserialize as elements_deserialize;
+use elements_miniscript::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use elements_miniscript::DefiniteDescriptorKey;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
@@ -135,7 +136,7 @@ fn download_txs(
         let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
         let mut txs_downloaded: Vec<Transaction> = vec![];
         for vec in txs_bytes_downloaded {
-            let tx: Transaction = elements::encode::deserialize(&vec)?;
+            let tx: Transaction = elements_deserialize(&vec)?;
             txs_downloaded.push(tx);
         }
         let previous_txs_to_download = HashSet::new();
@@ -175,7 +176,7 @@ fn download_txs(
             let txs_bitcoin: Vec<&BitcoinTxid> = txs_bitcoin.iter().collect();
             let txs_bytes_downloaded = client.batch_transaction_get_raw(txs_bitcoin)?;
             for vec in txs_bytes_downloaded {
-                let tx: Transaction = elements::encode::deserialize(&vec)?;
+                let tx: Transaction = elements_deserialize(&vec)?;
                 txs.push((tx.txid(), tx));
             }
         }

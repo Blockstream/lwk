@@ -1,4 +1,4 @@
-use elements::bitcoin::secp256k1;
+use elements_miniscript::elements::bitcoin::secp256k1;
 use rand::thread_rng;
 
 pub static EC: once_cell::sync::Lazy<secp256k1::Secp256k1<secp256k1::All>> =

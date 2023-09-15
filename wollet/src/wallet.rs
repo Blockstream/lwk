@@ -6,14 +6,20 @@ use crate::sync::sync;
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use electrum_client::ElectrumApi;
-use elements::bitcoin;
-use elements::bitcoin::hashes::{sha256, Hash};
-use elements::pset::{Input, Output, PartiallySignedTransaction};
-use elements::{
-    self, Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction,
-    TxOut, Txid,
-};
 use elements_miniscript::confidential::Key;
+use elements_miniscript::elements::bitcoin;
+use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash};
+use elements_miniscript::elements::bitcoin::PublicKey as BitcoinPublicKey;
+use elements_miniscript::elements::encode::{
+    deserialize as elements_deserialize, serialize as elements_serialize,
+};
+use elements_miniscript::elements::issuance::ContractHash;
+use elements_miniscript::elements::pset::{Input, Output, PartiallySignedTransaction};
+use elements_miniscript::elements::{
+    Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut,
+    Txid,
+};
+use elements_miniscript::psbt;
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, ForEachKey,
 };
@@ -42,7 +48,7 @@ pub(crate) fn derive_address(
 pub(crate) fn derive_public_keys(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,
-) -> Result<Vec<elements::bitcoin::PublicKey>, Error> {
+) -> Result<Vec<BitcoinPublicKey>, Error> {
     let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
     let mut keys = vec![];
     derived_non_conf.for_each_key(|k| {
@@ -132,7 +138,7 @@ impl ElectrumWallet {
             let height = header.height as u32;
             let tip_height = self.store.cache.tip.0;
             if height != tip_height {
-                let block_header: BlockHeader = elements::encode::deserialize(&header.header)?;
+                let block_header: BlockHeader = elements_deserialize(&header.header)?;
                 let hash: BlockHash = block_header.block_hash();
                 self.store.cache.tip = (height, hash);
             }
@@ -274,7 +280,7 @@ impl ElectrumWallet {
     fn script_info(
         &self,
         script: &Script,
-    ) -> Result<(DerivationPath, Vec<elements::bitcoin::PublicKey>), Error> {
+    ) -> Result<(DerivationPath, Vec<BitcoinPublicKey>), Error> {
         let index = self
             .store
             .cache
@@ -516,7 +522,7 @@ impl ElectrumWallet {
             input.issuance_inflation_keys = Some(satoshi_token);
         }
         let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
-        let contract_hash = elements::issuance::ContractHash::from_slice(&[0u8; 32]).unwrap();
+        let contract_hash = ContractHash::from_slice(&[0u8; 32]).unwrap();
         let asset_entropy =
             Some(AssetId::generate_asset_entropy(prevout, contract_hash).to_byte_array());
         input.issuance_asset_entropy = asset_entropy;
@@ -652,32 +658,28 @@ impl ElectrumWallet {
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
-        elements_miniscript::psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
+        psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
         Ok(pset.extract_tx()?)
     }
 
     pub fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
         let client = self.config.electrum_url().build_client()?;
-        let txid = client.transaction_broadcast_raw(&elements::encode::serialize(tx))?;
+        let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
 }
 
-fn convert_pubkey(pk: elements::secp256k1_zkp::PublicKey) -> elements::bitcoin::key::PublicKey {
-    elements::bitcoin::key::PublicKey::new(pk)
+fn convert_pubkey(pk: elements_miniscript::elements::secp256k1_zkp::PublicKey) -> BitcoinPublicKey {
+    BitcoinPublicKey::new(pk)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
-    use elements::bitcoin::network::constants::Network;
     use elements_miniscript::confidential::bare::tweak_private_key;
-    use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::DescriptorSecretKey;
-    use elements_miniscript::elements::AddressParams;
-    use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
-    use std::str::FromStr;
+    use elements_miniscript::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
+    use elements_miniscript::elements::bitcoin::network::constants::Network;
 
     #[test]
     fn test_desc() {

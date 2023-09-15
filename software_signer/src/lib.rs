@@ -1,5 +1,5 @@
 use bip39::Mnemonic;
-use elements::{
+use elements_miniscript::elements::{
     bitcoin::{
         bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
         Network, PrivateKey,
@@ -15,10 +15,10 @@ use elements_miniscript::{elementssig_to_rawsig, psbt::PsbtExt};
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
     #[error(transparent)]
-    Pset(#[from] elements::pset::Error),
+    Pset(#[from] elements_miniscript::elements::pset::Error),
 
     #[error(transparent)]
-    ElementsEncode(#[from] elements::encode::Error),
+    ElementsEncode(#[from] elements_miniscript::elements::encode::Error),
 
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
@@ -74,7 +74,7 @@ impl<'a> Signer<'a> {
         let mut sighash_cache = SighashCache::new(&tx);
 
         // genesis hash is not used at all for sighash calculation
-        let genesis_hash = elements::BlockHash::all_zeros();
+        let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for i in 0..pset.inputs().len() {
             // computing all the message to sign, it is not necessary if we are going to not sign
@@ -86,7 +86,7 @@ impl<'a> Signer<'a> {
         }
 
         // Fixme: Take a parameter
-        let hash_ty = elements::EcdsaSighashType::All;
+        let hash_ty = elements_miniscript::elements::EcdsaSighashType::All;
 
         // let signer_fingerprint = self.fingerprint();
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {

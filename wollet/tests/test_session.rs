@@ -3,12 +3,14 @@ extern crate wollet;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
-use elements::bitcoin::amount::Denomination;
-use elements::bitcoin::hashes::sha256;
-use elements::bitcoin::Amount;
-use elements::pset::PartiallySignedTransaction;
-use elements::{Address, AssetId, Transaction};
 use elements_miniscript::descriptor::checksum::desc_checksum;
+use elements_miniscript::elements::bitcoin::amount::Denomination;
+use elements_miniscript::elements::bitcoin::hashes::sha256;
+use elements_miniscript::elements::bitcoin::hashes::Hash;
+use elements_miniscript::elements::bitcoin::Amount;
+use elements_miniscript::elements::issuance::ContractHash;
+use elements_miniscript::elements::pset::PartiallySignedTransaction;
+use elements_miniscript::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness};
 use log::{LevelFilter, Metadata, Record};
 use serde_json::Value;
 use software_signer::*;
@@ -426,9 +428,8 @@ impl TestElectrumWallet {
 
         let input = &pset.inputs()[0];
         let asset_entropy = input.issuance_asset_entropy.unwrap();
-        use elements::bitcoin::hashes::Hash;
-        let contract_hash = elements::issuance::ContractHash::from_byte_array(asset_entropy);
-        let prevout = elements::OutPoint::new(input.previous_txid, input.previous_output_index);
+        let contract_hash = ContractHash::from_byte_array(asset_entropy);
+        let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
         let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
 
         let pset_base64 = pset_to_base64(&pset);
@@ -490,7 +491,7 @@ pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransac
     let mut pset = pset.clone();
     for i in pset.inputs_mut() {
         if let Some(utxo) = &mut i.witness_utxo {
-            utxo.witness = elements::TxOutWitness::default();
+            utxo.witness = TxOutWitness::default();
         }
     }
     for o in pset.outputs_mut() {

@@ -16,16 +16,16 @@ pub enum Error {
     InvalidMnemonic(#[from] bip39::Error),
 
     #[error(transparent)]
-    Bitcoin(#[from] elements::bitcoin::Error),
+    Bitcoin(#[from] elements_miniscript::elements::bitcoin::Error),
 
     #[error(transparent)]
-    BitcoinHashes(#[from] elements::bitcoin::hashes::error::Error),
+    BitcoinHashes(#[from] elements_miniscript::elements::bitcoin::hashes::error::Error),
 
     #[error(transparent)]
-    BitcoinBIP32Error(#[from] elements::bitcoin::bip32::Error),
+    BitcoinBIP32Error(#[from] elements_miniscript::elements::bitcoin::bip32::Error),
 
     #[error(transparent)]
-    BitcoinConsensus(#[from] elements::bitcoin::consensus::encode::Error),
+    BitcoinConsensus(#[from] elements_miniscript::elements::bitcoin::consensus::encode::Error),
 
     #[error(transparent)]
     JsonFrom(#[from] serde_json::Error),
@@ -40,25 +40,25 @@ pub enum Error {
     SliceConversionError(#[from] std::array::TryFromSliceError),
 
     #[error(transparent)]
-    ElementsEncode(#[from] elements::encode::Error),
+    ElementsEncode(#[from] elements_miniscript::elements::encode::Error),
 
     #[error(transparent)]
-    ElementsPset(#[from] elements::pset::Error),
+    ElementsPset(#[from] elements_miniscript::elements::pset::Error),
 
     #[error(transparent)]
-    PsetBlindError(#[from] elements::pset::PsetBlindError),
+    PsetBlindError(#[from] elements_miniscript::elements::pset::PsetBlindError),
 
     #[error(transparent)]
     Send(#[from] std::sync::mpsc::SendError<()>),
 
     #[error(transparent)]
-    Secp256k1(#[from] elements::bitcoin::secp256k1::Error),
+    Secp256k1(#[from] elements_miniscript::elements::bitcoin::secp256k1::Error),
 
     #[error(transparent)]
-    Secp256k1Zkp(#[from] elements::secp256k1_zkp::Error),
+    Secp256k1Zkp(#[from] elements_miniscript::elements::secp256k1_zkp::Error),
 
     #[error(transparent)]
-    HexBitcoinHashes(#[from] elements::bitcoin::hashes::hex::Error),
+    HexBitcoinHashes(#[from] elements_miniscript::elements::bitcoin::hashes::hex::Error),
 
     #[error(transparent)]
     DeserializeCBORError(#[from] ciborium::de::Error<std::io::Error>),
@@ -73,10 +73,10 @@ pub enum Error {
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
 
     #[error(transparent)]
-    Unblind(#[from] elements::UnblindError),
+    Unblind(#[from] elements_miniscript::elements::UnblindError),
 
     #[error(transparent)]
-    AddressError(#[from] elements::AddressError),
+    AddressError(#[from] elements_miniscript::elements::AddressError),
 
     #[error("Address must be confidential")]
     NotConfidentialAddress,

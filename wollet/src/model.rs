@@ -1,4 +1,4 @@
-use elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
+use elements_miniscript::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -40,12 +40,13 @@ pub struct UnvalidatedAddressee<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::str::FromStr;
 
     #[test]
     fn test_asset_roundtrip() {
         let hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let asset = elements::AssetId::from_str(hex).unwrap();
+        let asset = AssetId::from_str(hex).unwrap();
         assert_eq!(asset.to_string(), hex);
     }
 }

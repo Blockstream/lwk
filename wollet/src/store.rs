@@ -5,8 +5,10 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
-use elements::bitcoin::hashes::{sha256, Hash};
-use elements::{AddressParams, BlockHash, OutPoint, Script, Txid};
+use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash};
+use elements_miniscript::elements::{
+    AddressParams, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid,
+};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -30,7 +32,7 @@ pub fn new_store<P: AsRef<Path>>(
 #[derive(Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
-    pub all_txs: HashMap<Txid, elements::Transaction>,
+    pub all_txs: HashMap<Txid, Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, ChildNumber>,
@@ -42,7 +44,7 @@ pub struct RawCache {
     pub heights: HashMap<Txid, Option<u32>>,
 
     /// unblinded values (only for liquid)
-    pub unblinded: HashMap<OutPoint, elements::TxOutSecrets>,
+    pub unblinded: HashMap<OutPoint, TxOutSecrets>,
 
     /// height and hash of tip of the blockchain
     pub tip: (u32, BlockHash),
@@ -218,7 +220,6 @@ impl Store {
 mod tests {
     use super::*;
     use crate::store::Store;
-    use elements::Txid;
     use std::str::FromStr;
     use tempfile::TempDir;
 

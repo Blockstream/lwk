@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 bip39 = "2.0.0"
 bitcoind = "0.33.1"
-elements = "0.23.0"
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "27b6e37af2cc850b20b5c4322b3673dcd452cd08" }
 thiserror = "1.0.48"
 base64 = "0.13.0"

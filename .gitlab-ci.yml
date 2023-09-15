@@ -33,3 +33,9 @@ test:
     - ./download_bins.sh
     - . .envrc
     - cargo test
+
+audit:
+  extends: .base
+  script:
+    - cargo install cargo-audit
+    - cargo audit -D warnings

@@ -37,9 +37,7 @@ fn view() {
     let mut server = setup();
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
-    // Ideally here we would use a single view key (32 bytes) but this is not supported by
-    // elements_miniscript
-    let descriptor_blinding_key = "tprv8ZgxMBicQKsPd7qLuJ7yJhzbwSrNfh9MF5qR4tJRPCs63xksUdTAF79dUHADNygu5kLTsXC6jtq4Cibsy6QCVBEboRzAH48vw5zoLkJTuso";
+    let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 

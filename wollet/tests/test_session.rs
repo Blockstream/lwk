@@ -343,6 +343,15 @@ impl TestElectrumWallet {
             .sendlbtc(satoshi, &address.to_string())
             .unwrap();
 
+        let balance = pset_balance(
+            &pset,
+            self.electrum_wallet.unblinded(),
+            self.electrum_wallet.descriptor(),
+        )
+        .unwrap();
+        assert_eq!(balance.fee, 1_000);
+        assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-1000));
+
         let mut signed_pset = self.sign(signer, &pset);
         self.send(&mut signed_pset);
         let balance_after = self.balance_btc();

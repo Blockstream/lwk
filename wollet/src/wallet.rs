@@ -770,6 +770,7 @@ fn convert_pubkey(pk: elements_miniscript::elements::secp256k1_zkp::PublicKey) -
 mod tests {
     use super::*;
     use elements_miniscript::confidential::bare::tweak_private_key;
+    use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
     use elements_miniscript::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
     use elements_miniscript::elements::bitcoin::network::constants::Network;
@@ -840,21 +841,10 @@ mod tests {
 
     #[test]
     fn test_view_single() {
-        // elements_miniscript does not support single "view" blinding keys and exteneded keys in
-        // the "bitcoin" descriptor"
-        let descriptor_blinding_key =
-            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
-        let checksum = "scscm6zj";
-        let desc_str = format!(
-            "ct({},elwpkh({}))#{}",
-            descriptor_blinding_key, xpub, checksum
-        );
-        let expected_err =
-            elements_miniscript::Error::Unexpected("Error while parsing xkey.".into());
-        let err = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap_err();
-        assert_eq!(err, expected_err);
-        let err = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc_str).unwrap_err();
-        assert_eq!(err, expected_err);
+        let desc_str = format!("ct({},elwpkh({}))", descriptor_blinding_key, xpub);
+        let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).unwrap());
+        let _desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
     }
 }

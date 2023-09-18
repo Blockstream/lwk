@@ -125,6 +125,10 @@ impl ElectrumWallet {
         self.config.policy_asset()
     }
 
+    pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
+        &self.descriptor
+    }
+
     /// Sync the wallet transactions
     pub fn sync_txs(&mut self) -> Result<(), Error> {
         if let Ok(client) = self.config.electrum_url().build_client() {
@@ -751,6 +755,10 @@ impl ElectrumWallet {
         let client = self.config.electrum_url().build_client()?;
         let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
+    }
+
+    pub fn unblinded(&self) -> &HashMap<OutPoint, elements_miniscript::elements::TxOutSecrets> {
+        &self.store.cache.unblinded
     }
 }
 

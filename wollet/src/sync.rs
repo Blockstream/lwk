@@ -196,6 +196,9 @@ fn derive_blinding_key(
             let k = dxk.xkey.to_priv();
             tweak_private_key(&EC, script_pubkey, &k.inner)
         }
+        Key::View(DescriptorSecretKey::Single(k)) => {
+            tweak_private_key(&EC, script_pubkey, &k.key.inner)
+        }
         _ => panic!("Unsupported descriptor blinding key"),
     }
 }

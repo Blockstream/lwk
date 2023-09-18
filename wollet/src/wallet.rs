@@ -656,6 +656,84 @@ impl ElectrumWallet {
         Ok(pset)
     }
 
+    /// Create a PSET burning an asset
+    pub fn burnasset(
+        &self,
+        asset: &str,
+        satoshi_asset: u64,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let asset = AssetId::from_str(asset)?;
+
+        // Get utxos
+        let mut utxos = self.asset_utxos(&asset)?;
+        let tot_asset: u64 = utxos.iter().map(|u| u.unblinded.value).sum();
+        let mut utxos_btc = self.asset_utxos(&self.policy_asset())?;
+        let tot_btc: u64 = utxos_btc.iter().map(|u| u.unblinded.value).sum();
+        utxos.append(&mut utxos_btc);
+
+        if tot_asset < satoshi_asset {
+            return Err(Error::InsufficientFunds);
+        }
+        let satoshi_change = tot_asset - satoshi_asset;
+
+        // Set fee
+        let fee = 1_000;
+        if tot_btc < fee {
+            return Err(Error::InsufficientFunds);
+        }
+        let satoshi_btc = tot_btc - fee;
+
+        // Init PSET
+        let mut pset = PartiallySignedTransaction::new_v2();
+        let mut inp_txout_sec = HashMap::new();
+
+        // Add inputs
+        for (idx, utxo) in utxos.iter().enumerate() {
+            let mut input = Input::from_prevout(utxo.txo.outpoint);
+            input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
+            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
+            pset.add_input(input);
+            inp_txout_sec.insert(idx, utxo.unblinded);
+        }
+
+        // Add outputs
+        let burn_script = Script::new_op_return(&[]);
+        let burn_output = Output::new_explicit(burn_script, satoshi_asset, asset, None);
+        pset.add_output(burn_output);
+
+        // Add outputs
+        let mut addressees = vec![];
+        if satoshi_asset > 0 {
+            addressees.push(Addressee {
+                satoshi: satoshi_change,
+                address: self.address()?,
+                asset,
+            });
+        }
+        if satoshi_btc > 0 {
+            addressees.push(Addressee {
+                satoshi: satoshi_btc,
+                address: self.address()?,
+                asset: self.policy_asset(),
+            });
+        }
+
+        for addressee in addressees {
+            self.add_output(&mut pset, addressee)?;
+        }
+        let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
+        pset.add_output(fee_output);
+
+        for output in pset.outputs_mut() {
+            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
+        }
+
+        // Blind the transaction
+        let mut rng = thread_rng();
+        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+        Ok(pset)
+    }
+
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();

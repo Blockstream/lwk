@@ -29,6 +29,7 @@ fn liquid() {
     );
     let (asset, token, entropy) = wallet.issueasset(&signer, 10, 1);
     wallet.reissueasset(&signer, 10, &asset, &token, &entropy);
+    wallet.burnasset(&signer, 5, &asset);
 }
 
 #[test]

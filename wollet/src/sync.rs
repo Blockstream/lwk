@@ -94,6 +94,10 @@ pub fn sync(
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
 
+        // Prune transactions that do not contain any input or output that we have unblinded
+        let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
+        txid_height.retain(|txid, _| txids_unblinded.contains(txid));
+
         // height map is used for the live list of transactions, since due to reorg or rbf tx
         // could disappear from the list, we clear the list and keep only the last values returned by the server
         store.cache.heights.clear();

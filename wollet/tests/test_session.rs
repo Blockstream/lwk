@@ -8,7 +8,7 @@ use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::elements::bitcoin::amount::Denomination;
 use elements_miniscript::elements::bitcoin::hashes::sha256;
 use elements_miniscript::elements::bitcoin::hashes::Hash;
-use elements_miniscript::elements::bitcoin::Amount;
+use elements_miniscript::elements::bitcoin::{Amount, Network, PrivateKey};
 use elements_miniscript::elements::hex::ToHex;
 use elements_miniscript::elements::issuance::ContractHash;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
@@ -531,4 +531,12 @@ pub fn generate_slip77() -> String {
     let mut bytes = [0u8; 32];
     thread_rng().fill(&mut bytes);
     bytes.to_hex()
+}
+
+pub fn generate_view_key() -> String {
+    let mut bytes = [0u8; 32];
+    thread_rng().fill(&mut bytes);
+    PrivateKey::from_slice(&bytes, Network::Regtest)
+        .unwrap()
+        .to_wif()
 }

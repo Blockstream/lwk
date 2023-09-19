@@ -9,6 +9,7 @@ use elements_miniscript::elements::bitcoin::amount::Denomination;
 use elements_miniscript::elements::bitcoin::hashes::sha256;
 use elements_miniscript::elements::bitcoin::hashes::Hash;
 use elements_miniscript::elements::bitcoin::Amount;
+use elements_miniscript::elements::hex::ToHex;
 use elements_miniscript::elements::issuance::ContractHash;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness, Txid};
@@ -524,4 +525,10 @@ pub fn generate_mnemonic() -> String {
     let mut bytes = [0u8; 16];
     thread_rng().fill(&mut bytes);
     Mnemonic::from_entropy(&bytes).unwrap().to_string()
+}
+
+pub fn generate_slip77() -> String {
+    let mut bytes = [0u8; 32];
+    thread_rng().fill(&mut bytes);
+    bytes.to_hex()
 }

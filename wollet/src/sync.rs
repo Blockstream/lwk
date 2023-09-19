@@ -26,7 +26,6 @@ pub fn sync(
     store: &mut Store,
     blinding_key: Key<DefiniteDescriptorKey>,
 ) -> Result<bool, Error> {
-    let mut history_txs_id = HashSet::new();
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
 
@@ -73,8 +72,6 @@ pub fn sync(
             } else {
                 txid_height.insert(txid, Some(height as u32));
             }
-
-            history_txs_id.insert(txid);
         }
 
         if found_some {
@@ -84,6 +81,7 @@ pub fn sync(
         batch_count += 1;
     }
 
+    let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, &blinding_key)?;
 
     let store_indexes = store.cache.last_index.load(atomic::Ordering::Relaxed);

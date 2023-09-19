@@ -43,4 +43,11 @@ fn view() {
 
     wallet.fund_btc(&mut server);
     let _asset = wallet.fund_asset(&mut server);
+
+    let descriptor_blinding_key =
+        "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
+    let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    wallet.fund_btc(&mut server);
 }

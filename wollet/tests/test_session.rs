@@ -1,5 +1,6 @@
 extern crate wollet;
 
+use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
@@ -12,6 +13,7 @@ use elements_miniscript::elements::issuance::ContractHash;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness, Txid};
 use log::{LevelFilter, Metadata, Record};
+use rand::{thread_rng, Rng};
 use serde_json::Value;
 use software_signer::*;
 use std::env;
@@ -516,4 +518,10 @@ pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransac
         o.blind_asset_proof = None;
     }
     pset
+}
+
+pub fn generate_mnemonic() -> String {
+    let mut bytes = [0u8; 16];
+    thread_rng().fill(&mut bytes);
+    Mnemonic::from_entropy(&bytes).unwrap().to_string()
 }

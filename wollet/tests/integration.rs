@@ -64,7 +64,11 @@ fn roundtrip() {
     let signer2 = generate_signer();
     let desc2 = format!("ct({},elwpkh({}/*))", view_key, signer2.xpub());
 
-    for (signer, desc) in vec![(signer1, desc1), (signer2, desc2)] {
+    let view_key3 = generate_view_key();
+    let signer3 = generate_signer();
+    let desc3 = format!("ct({},elsh(wpkh({}/*)))", view_key3, signer3.xpub());
+
+    for (signer, desc) in vec![(signer1, desc1), (signer2, desc2), (signer3, desc3)] {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
         wallet.fund_btc(&mut server);
         wallet.send_btc(&signer);

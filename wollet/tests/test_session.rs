@@ -521,7 +521,7 @@ pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransac
     pset
 }
 
-pub fn generate_mnemonic() -> String {
+fn generate_mnemonic() -> String {
     let mut bytes = [0u8; 16];
     thread_rng().fill(&mut bytes);
     Mnemonic::from_entropy(&bytes).unwrap().to_string()
@@ -539,4 +539,9 @@ pub fn generate_view_key() -> String {
     PrivateKey::from_slice(&bytes, Network::Regtest)
         .unwrap()
         .to_wif()
+}
+
+pub fn generate_signer() -> Signer<'static> {
+    let mnemonic = generate_mnemonic();
+    Signer::new(&mnemonic, &wollet::EC).unwrap()
 }

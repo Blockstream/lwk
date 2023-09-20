@@ -17,7 +17,7 @@ fn liquid() {
 
     wallet.send_btc(&[&signer]);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(&signer, &node_address, &asset);
+    wallet.send_asset(&[&signer], &node_address, &asset);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
@@ -83,7 +83,7 @@ fn roundtrip() {
         wallet.send_btc(&[&signer]);
         let (asset, token, entropy) = wallet.issueasset(&signer, 100_000, 1);
         let node_address = server.node_getnewaddress();
-        wallet.send_asset(&signer, &node_address, &asset);
+        wallet.send_asset(&[&signer], &node_address, &asset);
         let node_address1 = server.node_getnewaddress();
         let node_address2 = server.node_getnewaddress();
         wallet.send_many(
@@ -121,7 +121,12 @@ fn multi() {
     let signer1 = generate_signer();
     let signer2 = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwsh(multi(2,{}/*,{}/*)))", view_key, signer1.xpub(), signer2.xpub());
+    let desc = format!(
+        "ct({},elwsh(multi(2,{}/*,{}/*)))",
+        view_key,
+        signer1.xpub(),
+        signer2.xpub()
+    );
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&mut server);

@@ -366,16 +366,18 @@ impl TestElectrumWallet {
         assert!(balance_before > balance_after);
     }
 
-    pub fn send_asset(&mut self, signer: &Signer, node_address: &Address, asset: &AssetId) {
+    pub fn send_asset(&mut self, signers: &[&Signer], node_address: &Address, asset: &AssetId) {
         let balance_before = self.balance(asset);
         let satoshi: u64 = 10;
-        let pset = self
+        let mut pset = self
             .electrum_wallet
             .sendasset(satoshi, &node_address.to_string(), &asset.to_string())
             .unwrap();
 
-        let mut signed_pset = self.sign(signer, &pset);
-        self.send(&mut signed_pset);
+        for signer in signers {
+            self.sign2(signer, &mut pset);
+        }
+        self.send(&mut pset);
         let balance_after = self.balance(asset);
         assert!(balance_before > balance_after);
     }

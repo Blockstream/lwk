@@ -68,7 +68,16 @@ fn roundtrip() {
     let signer3 = generate_signer();
     let desc3 = format!("ct({},elsh(wpkh({}/*)))", view_key3, signer3.xpub());
 
-    for (signer, desc) in vec![(signer1, desc1), (signer2, desc2), (signer3, desc3)] {
+    let view_key = generate_view_key();
+    let signer4 = generate_signer();
+    let desc4 = format!("ct({},elwpkh({}/9/*))", view_key, signer4.xpub());
+
+    for (signer, desc) in vec![
+        (signer1, desc1),
+        (signer2, desc2),
+        (signer3, desc3),
+        (signer4, desc4),
+    ] {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
         wallet.fund_btc(&mut server);
         wallet.send_btc(&signer);
@@ -88,23 +97,6 @@ fn roundtrip() {
         wallet.burnasset(&signer, 5_000, &asset);
         server.generate(2);
     }
-}
-
-#[test]
-fn derivation() {
-    // Signer must have the xprv at the wildcard level
-    let mut server = setup();
-
-    let signer = generate_signer();
-    let _derived_signer = signer.derive_signer("m/9").unwrap();
-
-    let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/9/*))", view_key, signer.xpub());
-
-    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&mut server);
-    // FIXME: broken by update_input_with_descriptor
-    //wallet.send_btc(&derived_signer);
 }
 
 #[test]

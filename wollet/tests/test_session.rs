@@ -494,6 +494,13 @@ impl TestElectrumWallet {
         pset_from_base64(&signed_pset_base64).unwrap()
     }
 
+    fn sign2(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
+        let pset_base64 = pset_to_base64(pset);
+        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
+        assert_ne!(pset_base64, signed_pset_base64);
+        *pset = pset_from_base64(&signed_pset_base64).unwrap();
+    }
+
     fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         let tx = self.electrum_wallet.finalize(pset).unwrap();
         let txid = self.electrum_wallet.broadcast(&tx).unwrap();

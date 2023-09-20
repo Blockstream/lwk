@@ -1,7 +1,7 @@
 use bip39::Mnemonic;
 use elements_miniscript::elements::{
     bitcoin::{
-        bip32::{self, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
+        bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
         Network, PrivateKey,
     },
     encode::{deserialize, serialize},
@@ -11,7 +11,6 @@ use elements_miniscript::elements::{
     sighash::SighashCache,
 };
 use elements_miniscript::{elementssig_to_rawsig, psbt::PsbtExt};
-use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
@@ -58,14 +57,6 @@ impl<'a> Signer<'a> {
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
 
         Ok(Self { xprv, secp })
-    }
-
-    pub fn derive_signer(&self, path: &str) -> Result<Self, NewError> {
-        let path = DerivationPath::from_str(path)?;
-        Ok(Self {
-            xprv: self.xprv.derive_priv(self.secp, &path)?,
-            secp: self.secp,
-        })
     }
 
     pub fn xpub(&self) -> ExtendedPubKey {

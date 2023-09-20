@@ -21,7 +21,7 @@ use elements_miniscript::elements::{
 };
 use elements_miniscript::psbt;
 use elements_miniscript::{
-    ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey, ForEachKey,
+    ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey, ForEachKey,
 };
 use rand::thread_rng;
 use std::cmp::Ordering;
@@ -297,24 +297,36 @@ impl ElectrumWallet {
         &self,
         script: &Script,
     ) -> Result<(DerivationPath, Vec<BitcoinPublicKey>), Error> {
-        let index = self
-            .store
-            .cache
-            .paths
-            .get(script)
-            .ok_or_else(|| Error::ScriptNotMine)?;
-        let derivation_path = vec![*index].into();
-        let index = match index {
-            ChildNumber::Normal { index } => *index,
-            ChildNumber::Hardened { index: _ } => {
-                return Err(Error::Generic("unexpected hardened derivation".into()))
-            }
-        };
+        let index = self.index(script)?;
+        let derivation_path = vec![ChildNumber::Normal { index }].into();
 
         Ok((
             derivation_path,
             derive_public_keys(&self.descriptor, index)?,
         ))
+    }
+
+    fn index(&self, script_pubkey: &Script) -> Result<u32, Error> {
+        let index = self
+            .store
+            .cache
+            .paths
+            .get(script_pubkey)
+            .ok_or_else(|| Error::ScriptNotMine)?;
+        match index {
+            ChildNumber::Normal { index } => Ok(*index),
+            ChildNumber::Hardened { index: _ } => {
+                Err(Error::Generic("unexpected hardened derivation".into()))
+            }
+        }
+    }
+
+    fn definite_descriptor(
+        &self,
+        script_pubkey: &Script,
+    ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
+        let utxo_index = self.index(script_pubkey)?;
+        Ok(self.descriptor.descriptor.at_derivation_index(utxo_index)?)
     }
 
     fn validate_address(&self, address: &str) -> Result<Address, Error> {

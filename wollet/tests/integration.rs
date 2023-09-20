@@ -101,3 +101,18 @@ fn derivation() {
     wallet.fund_btc(&mut server);
     wallet.send_btc(&derived_signer);
 }
+
+#[test]
+fn pkh() {
+    let mut server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elpkh({}/*))", view_key, signer.xpub());
+
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    wallet.fund_btc(&mut server);
+    wallet.send_btc(&signer);
+    // FIXME: issuance does not work with p2pkh
+    //let (_asset, _token, _entropy) = wallet.issueasset(&signer, 100_000, 1);
+}

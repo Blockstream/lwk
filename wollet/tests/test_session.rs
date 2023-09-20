@@ -422,12 +422,12 @@ impl TestElectrumWallet {
 
     pub fn issueasset(
         &mut self,
-        signer: &Signer,
+        signers: &[&Signer],
         satoshi_asset: u64,
         satoshi_token: u64,
     ) -> (AssetId, AssetId, [u8; 32]) {
         let balance_before = self.balance_btc();
-        let pset = self
+        let mut pset = self
             .electrum_wallet
             .issueasset(satoshi_asset, satoshi_token)
             .unwrap();
@@ -438,8 +438,10 @@ impl TestElectrumWallet {
         let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
         let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
 
-        let mut signed_pset = self.sign(signer, &pset);
-        self.send(&mut signed_pset);
+        for signer in signers {
+            self.sign2(signer, &mut pset);
+        }
+        self.send(&mut pset);
 
         let (asset, token) = pset.inputs()[0].issuance_ids();
         assert_eq!(self.balance(&asset), satoshi_asset);

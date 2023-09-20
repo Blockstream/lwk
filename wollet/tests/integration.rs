@@ -27,7 +27,7 @@ fn liquid() {
         &node_address2,
         &wallet.policy_asset(),
     );
-    let (asset, token, entropy) = wallet.issueasset(&signer, 10, 1);
+    let (asset, token, entropy) = wallet.issueasset(&[&signer], 10, 1);
     wallet.reissueasset(&signer, 10, &asset, &token, &entropy);
     wallet.burnasset(&signer, 5, &asset);
 }
@@ -81,7 +81,7 @@ fn roundtrip() {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
         wallet.fund_btc(&mut server);
         wallet.send_btc(&[&signer]);
-        let (asset, token, entropy) = wallet.issueasset(&signer, 100_000, 1);
+        let (asset, token, entropy) = wallet.issueasset(&[&signer], 100_000, 1);
         let node_address = server.node_getnewaddress();
         wallet.send_asset(&[&signer], &node_address, &asset);
         let node_address1 = server.node_getnewaddress();
@@ -111,7 +111,7 @@ fn pkh() {
     wallet.fund_btc(&mut server);
     wallet.send_btc(&[&signer]);
     // FIXME: issuance does not work with p2pkh
-    //let (_asset, _token, _entropy) = wallet.issueasset(&signer, 100_000, 1);
+    //let (_asset, _token, _entropy) = wallet.issueasset(&[&signer], 100_000, 1);
 }
 
 #[test]

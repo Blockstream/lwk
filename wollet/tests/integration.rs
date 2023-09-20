@@ -21,7 +21,7 @@ fn liquid() {
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        &signer,
+        &[&signer],
         &node_address1,
         &asset,
         &node_address2,
@@ -87,7 +87,7 @@ fn roundtrip() {
         let node_address1 = server.node_getnewaddress();
         let node_address2 = server.node_getnewaddress();
         wallet.send_many(
-            &signer,
+            &[&signer],
             &node_address1,
             &asset,
             &node_address2,

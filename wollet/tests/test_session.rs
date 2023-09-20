@@ -384,7 +384,7 @@ impl TestElectrumWallet {
 
     pub fn send_many(
         &mut self,
-        signer: &Signer,
+        signers: &[&Signer],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -408,10 +408,12 @@ impl TestElectrumWallet {
                 asset: &ass2,
             },
         ];
-        let pset = self.electrum_wallet.sendmany(addressees).unwrap();
+        let mut pset = self.electrum_wallet.sendmany(addressees).unwrap();
 
-        let mut signed_pset = self.sign(signer, &pset);
-        self.send(&mut signed_pset);
+        for signer in signers {
+            self.sign2(signer, &mut pset);
+        }
+        self.send(&mut pset);
         let balance1_after = self.balance(asset1);
         let balance2_after = self.balance(asset2);
         assert!(balance1_before > balance1_after);

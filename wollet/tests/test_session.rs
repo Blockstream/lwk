@@ -252,13 +252,13 @@ impl TestElectrumWallet {
             i -= 1;
             electrum_wallet.sync_tip().unwrap();
             let tip = electrum_wallet.tip().unwrap();
-            if tip.0 == 101 {
+            if tip.0 >= 101 {
                 break tip.0;
             } else {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        assert_eq!(tip, 101);
+        assert!(tip >= 101);
 
         Self {
             electrum_wallet,

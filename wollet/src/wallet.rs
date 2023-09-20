@@ -20,6 +20,7 @@ use elements_miniscript::elements::{
     Txid,
 };
 use elements_miniscript::psbt;
+use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey, ForEachKey,
 };
@@ -439,12 +440,11 @@ impl ElectrumWallet {
             }
             let mut input = Input::from_prevout(utxo.txo.outpoint);
             input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-
-            // TODO: fill more fields
-
-            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
+            input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
 
             pset.add_input(input);
+            let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+            pset.update_input_with_descriptor(idx, &desc).unwrap();
             inp_txout_sec.insert(idx, utxo.unblinded);
         }
 
@@ -541,8 +541,7 @@ impl ElectrumWallet {
         // Add a policy asset input
         let mut input = Input::from_prevout(utxo.txo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-
-        self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
+        input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
 
         // Set issuance data
         input.issuance_value_amount = Some(satoshi_asset);
@@ -558,6 +557,8 @@ impl ElectrumWallet {
 
         pset.add_input(input);
         let idx = 0;
+        let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+        pset.update_input_with_descriptor(idx, &desc).unwrap();
         inp_txout_sec.insert(idx, utxo.unblinded);
         let satoshi_change = utxo.unblinded.value - fee;
 
@@ -624,8 +625,8 @@ impl ElectrumWallet {
         // Add the reissuance token input
         let mut input = Input::from_prevout(utxo_token.txo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo_token.txo.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo_token.txo.outpoint.txid)?);
 
-        self.insert_bip32_derivation(&utxo_token.txo.script_pubkey, &mut input.bip32_derivation);
         let satoshi_token = utxo_token.unblinded.value;
 
         // Set issuance data
@@ -636,15 +637,19 @@ impl ElectrumWallet {
 
         pset.add_input(input);
         let idx = 0;
+        let desc = self.definite_descriptor(&utxo_token.txo.script_pubkey)?;
+        pset.update_input_with_descriptor(idx, &desc).unwrap();
         inp_txout_sec.insert(idx, utxo_token.unblinded);
 
         // Add a policy asset input
         let mut input = Input::from_prevout(utxo_btc.txo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo_btc.txo.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo_btc.txo.outpoint.txid)?);
 
-        self.insert_bip32_derivation(&utxo_btc.txo.script_pubkey, &mut input.bip32_derivation);
         pset.add_input(input);
         let idx = 1;
+        let desc = self.definite_descriptor(&utxo_btc.txo.script_pubkey)?;
+        pset.update_input_with_descriptor(idx, &desc).unwrap();
         inp_txout_sec.insert(idx, utxo_btc.unblinded);
         let satoshi_change = utxo_btc.unblinded.value - fee;
 
@@ -719,8 +724,10 @@ impl ElectrumWallet {
         for (idx, utxo) in utxos.iter().enumerate() {
             let mut input = Input::from_prevout(utxo.txo.outpoint);
             input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-            self.insert_bip32_derivation(&utxo.txo.script_pubkey, &mut input.bip32_derivation);
+            input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
             pset.add_input(input);
+            let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+            pset.update_input_with_descriptor(idx, &desc).unwrap();
             inp_txout_sec.insert(idx, utxo.unblinded);
         }
 

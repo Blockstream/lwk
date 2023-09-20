@@ -274,14 +274,19 @@ impl ElectrumWallet {
             .collect())
     }
 
-    fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
-        let tx = self
+    fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
+        Ok(self
             .store
             .cache
             .all_txs
-            .get(&outpoint.txid)
-            .ok_or_else(|| Error::MissingTransaction)?;
-        Ok(tx
+            .get(txid)
+            .ok_or_else(|| Error::MissingTransaction)?
+            .clone())
+    }
+
+    fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
+        Ok(self
+            .get_tx(&outpoint.txid)?
             .output
             .get(outpoint.vout as usize)
             .ok_or_else(|| Error::MissingVout)?

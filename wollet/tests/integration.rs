@@ -113,3 +113,17 @@ fn pkh() {
     // FIXME: issuance does not work with p2pkh
     //let (_asset, _token, _entropy) = wallet.issueasset(&signer, 100_000, 1);
 }
+
+#[test]
+fn multi() {
+    let mut server = setup();
+
+    let signer1 = generate_signer();
+    let signer2 = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwsh(multi(2,{}/*,{}/*)))", view_key, signer1.xpub(), signer2.xpub());
+
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    wallet.fund_btc(&mut server);
+    wallet.send_btc(&[&signer1, &signer2]);
+}

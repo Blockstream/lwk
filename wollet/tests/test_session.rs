@@ -149,6 +149,10 @@ impl TestElectrumServer {
         Self { node, electrs }
     }
 
+    pub fn generate(&self, blocks: u32) {
+        node_generate(&self.node.client, blocks);
+    }
+
     fn node_sendtoaddress(
         &self,
         address: &Address,

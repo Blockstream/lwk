@@ -11,25 +11,26 @@ fn liquid() {
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+    let signers = &[&signer];
 
     wallet.fund_btc(&mut server);
     let asset = wallet.fund_asset(&mut server);
 
-    wallet.send_btc(&[&signer]);
+    wallet.send_btc(signers);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(&[&signer], &node_address, &asset);
+    wallet.send_asset(signers, &node_address, &asset);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        &[&signer],
+        signers,
         &node_address1,
         &asset,
         &node_address2,
         &wallet.policy_asset(),
     );
-    let (asset, token, entropy) = wallet.issueasset(&[&signer], 10, 1);
-    wallet.reissueasset(&[&signer], 10, &asset, &token, &entropy);
-    wallet.burnasset(&[&signer], 5, &asset);
+    let (asset, token, entropy) = wallet.issueasset(signers, 10, 1);
+    wallet.reissueasset(signers, 10, &asset, &token, &entropy);
+    wallet.burnasset(signers, 5, &asset);
 }
 
 #[test]
@@ -72,29 +73,29 @@ fn roundtrip() {
     let signer4 = generate_signer();
     let desc4 = format!("ct({},elwpkh({}/9/*))", view_key, signer4.xpub());
 
-    for (signer, desc) in vec![
-        (signer1, desc1),
-        (signer2, desc2),
-        (signer3, desc3),
-        (signer4, desc4),
+    for (signers, desc) in [
+        (&[&signer1], desc1),
+        (&[&signer2], desc2),
+        (&[&signer3], desc3),
+        (&[&signer4], desc4),
     ] {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
         wallet.fund_btc(&mut server);
-        wallet.send_btc(&[&signer]);
-        let (asset, token, entropy) = wallet.issueasset(&[&signer], 100_000, 1);
+        wallet.send_btc(signers);
+        let (asset, token, entropy) = wallet.issueasset(signers, 100_000, 1);
         let node_address = server.node_getnewaddress();
-        wallet.send_asset(&[&signer], &node_address, &asset);
+        wallet.send_asset(signers, &node_address, &asset);
         let node_address1 = server.node_getnewaddress();
         let node_address2 = server.node_getnewaddress();
         wallet.send_many(
-            &[&signer],
+            signers,
             &node_address1,
             &asset,
             &node_address2,
             &wallet.policy_asset(),
         );
-        wallet.reissueasset(&[&signer], 10_000, &asset, &token, &entropy);
-        wallet.burnasset(&[&signer], 5_000, &asset);
+        wallet.reissueasset(signers, 10_000, &asset, &token, &entropy);
+        wallet.burnasset(signers, 5_000, &asset);
         server.generate(2);
     }
 }
@@ -106,12 +107,13 @@ fn pkh() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elpkh({}/*))", view_key, signer.xpub());
+    let signers = &[&signer];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&mut server);
-    wallet.send_btc(&[&signer]);
+    wallet.send_btc(signers);
     // FIXME: issuance does not work with p2pkh
-    //let (_asset, _token, _entropy) = wallet.issueasset(&[&signer], 100_000, 1);
+    //let (_asset, _token, _entropy) = wallet.issueasset(signers, 100_000, 1);
 }
 
 #[test]
@@ -127,8 +129,9 @@ fn multi() {
         signer1.xpub(),
         signer2.xpub()
     );
+    let signers = &[&signer1, &signer2];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&mut server);
-    wallet.send_btc(&[&signer1, &signer2]);
+    wallet.send_btc(signers);
 }

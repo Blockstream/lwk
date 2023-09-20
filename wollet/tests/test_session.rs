@@ -479,15 +479,17 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    pub fn burnasset(&mut self, signer: &Signer, satoshi_asset: u64, asset: &AssetId) {
+    pub fn burnasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
-        let pset = self
+        let mut pset = self
             .electrum_wallet
             .burnasset(&asset.to_string(), satoshi_asset)
             .unwrap();
-        let mut signed_pset = self.sign(signer, &pset);
-        self.send(&mut signed_pset);
+        for signer in signers {
+            self.sign2(signer, &mut pset);
+        }
+        self.send(&mut pset);
 
         assert_eq!(self.balance(asset), balance_asset_before - satoshi_asset);
         assert!(self.balance_btc() < balance_btc_before);

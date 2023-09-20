@@ -29,7 +29,7 @@ fn liquid() {
     );
     let (asset, token, entropy) = wallet.issueasset(&[&signer], 10, 1);
     wallet.reissueasset(&[&signer], 10, &asset, &token, &entropy);
-    wallet.burnasset(&signer, 5, &asset);
+    wallet.burnasset(&[&signer], 5, &asset);
 }
 
 #[test]
@@ -94,7 +94,7 @@ fn roundtrip() {
             &wallet.policy_asset(),
         );
         wallet.reissueasset(&[&signer], 10_000, &asset, &token, &entropy);
-        wallet.burnasset(&signer, 5_000, &asset);
+        wallet.burnasset(&[&signer], 5_000, &asset);
         server.generate(2);
     }
 }

@@ -304,18 +304,17 @@ impl TestElectrumWallet {
     }
 
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
-        let init_balance = self.balance_btc();
+        let utxos_before = self.electrum_wallet.utxos().unwrap().len();
+        let balance_before = self.balance_btc();
         let satoshi: u64 = 1_000_000;
         let address = self.electrum_wallet.address().unwrap();
         let txid = server.fund_btc(&address, satoshi);
         self.wait_for_tx(&txid);
-        let balance = init_balance + self.balance_btc();
-        let satoshi = init_balance + satoshi;
-        assert_eq!(balance, satoshi);
+        assert_eq!(self.balance_btc(), balance_before + satoshi);
         let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
         assert_eq!(txid, wallet_txid);
         let utxos = self.electrum_wallet.utxos().unwrap();
-        assert_eq!(utxos.len(), 1);
+        assert_eq!(utxos.len(), utxos_before + 1);
     }
 
     pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {

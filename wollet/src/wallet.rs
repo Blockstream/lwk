@@ -822,7 +822,6 @@ mod tests {
         let xpub = ExtendedPubKey::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
-        println!("{}", desc_str);
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let address = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         // and extract the public blinding key

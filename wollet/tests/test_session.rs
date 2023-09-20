@@ -359,7 +359,7 @@ impl TestElectrumWallet {
         assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-1000));
 
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
         let balance_after = self.balance_btc();
@@ -375,7 +375,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
         let balance_after = self.balance(asset);
@@ -411,7 +411,7 @@ impl TestElectrumWallet {
         let mut pset = self.electrum_wallet.sendmany(addressees).unwrap();
 
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
         let balance1_after = self.balance(asset1);
@@ -439,7 +439,7 @@ impl TestElectrumWallet {
         let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
 
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
 
@@ -470,7 +470,7 @@ impl TestElectrumWallet {
             .reissueasset(&entropy, satoshi_asset)
             .unwrap();
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
 
@@ -487,7 +487,7 @@ impl TestElectrumWallet {
             .burnasset(&asset.to_string(), satoshi_asset)
             .unwrap();
         for signer in signers {
-            self.sign2(signer, &mut pset);
+            self.sign(signer, &mut pset);
         }
         self.send(&mut pset);
 
@@ -495,18 +495,7 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    fn sign(
-        &self,
-        signer: &Signer,
-        pset: &PartiallySignedTransaction,
-    ) -> PartiallySignedTransaction {
-        let pset_base64 = pset_to_base64(pset);
-        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
-        assert_ne!(pset_base64, signed_pset_base64);
-        pset_from_base64(&signed_pset_base64).unwrap()
-    }
-
-    fn sign2(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
+    fn sign(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
         let pset_base64 = pset_to_base64(pset);
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);

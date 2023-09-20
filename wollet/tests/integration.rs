@@ -51,3 +51,37 @@ fn view() {
 
     wallet.fund_btc(&mut server);
 }
+
+#[test]
+fn roundtrip() {
+    let mut server = setup();
+
+    let signer1 = generate_signer();
+    let slip77_key = generate_slip77();
+    let desc1 = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer1.xpub());
+
+    let view_key = generate_view_key();
+    let signer2 = generate_signer();
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key, signer2.xpub());
+
+    for (signer, desc) in vec![(signer1, desc1), (signer2, desc2)] {
+        let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+        wallet.fund_btc(&mut server);
+        wallet.send_btc(&signer);
+        let (asset, token, entropy) = wallet.issueasset(&signer, 100_000, 1);
+        let node_address = server.node_getnewaddress();
+        wallet.send_asset(&signer, &node_address, &asset);
+        let node_address1 = server.node_getnewaddress();
+        let node_address2 = server.node_getnewaddress();
+        wallet.send_many(
+            &signer,
+            &node_address1,
+            &asset,
+            &node_address2,
+            &wallet.policy_asset(),
+        );
+        wallet.reissueasset(&signer, 10_000, &asset, &token, &entropy);
+        wallet.burnasset(&signer, 5_000, &asset);
+        server.generate(2);
+    }
+}

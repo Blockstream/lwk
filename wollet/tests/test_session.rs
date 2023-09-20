@@ -340,11 +340,11 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self, signer: &Signer) {
+    pub fn send_btc(&mut self, signers: &[&Signer]) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.electrum_wallet.address().unwrap();
-        let pset = self
+        let mut pset = self
             .electrum_wallet
             .sendlbtc(satoshi, &address.to_string())
             .unwrap();
@@ -358,8 +358,10 @@ impl TestElectrumWallet {
         assert_eq!(balance.fee, 1_000);
         assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-1000));
 
-        let mut signed_pset = self.sign(signer, &pset);
-        self.send(&mut signed_pset);
+        for signer in signers {
+            self.sign2(signer, &mut pset);
+        }
+        self.send(&mut pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
     }

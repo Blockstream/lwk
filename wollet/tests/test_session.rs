@@ -190,7 +190,7 @@ impl TestElectrumServer {
         r.as_str().unwrap().to_string()
     }
 
-    fn node_issueasset(&self, satoshi: u64) -> AssetId {
+    pub fn node_issueasset(&self, satoshi: u64) -> AssetId {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);
         let r = self
@@ -204,12 +204,6 @@ impl TestElectrumServer {
 
     pub fn node_getnewaddress(&self) -> Address {
         node_getnewaddress(&self.node.client, None)
-    }
-
-    pub fn fund_asset(&mut self, address: &Address, satoshi: u64) -> (String, AssetId) {
-        let asset = self.node_issueasset(satoshi);
-        let txid = self.node_sendtoaddress(address, satoshi, Some(asset));
-        (txid, asset)
     }
 }
 
@@ -341,18 +335,9 @@ impl TestElectrumWallet {
     }
 
     pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {
-        let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
-        let address = self.address();
-        let (txid, asset) = server.fund_asset(&address, satoshi);
-        self.wait_for_tx(&txid);
-
-        let balance_asset = self.balance(&asset);
-        assert_eq!(balance_asset, satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
-        assert_eq!(txid, wallet_txid);
-        let utxos = self.electrum_wallet.utxos().unwrap();
-        assert_eq!(utxos.len(), num_utxos_before + 1);
+        let asset = server.node_issueasset(satoshi);
+        self.fund(server, satoshi, Some(self.address()), Some(asset));
         asset
     }
 

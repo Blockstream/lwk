@@ -1,3 +1,5 @@
+use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
+use crate::hashes::{sha256, Hash};
 use crate::util::ciborium_to_vec;
 use crate::wallet::derive_script_pubkey;
 use crate::Error;
@@ -5,8 +7,6 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
-use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash};
-use elements_miniscript::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-use elements_miniscript::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
+use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 

@@ -13,3 +13,6 @@ pub use crate::model::{AddressResult, UnblindedTXO, UnvalidatedAddressee, TXO};
 pub use crate::pset_details::*;
 pub use crate::util::EC;
 pub use crate::wallet::ElectrumWallet;
+
+pub use elements_miniscript::elements;
+pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

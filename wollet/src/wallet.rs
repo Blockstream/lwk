@@ -1,5 +1,17 @@
+use crate::bitcoin;
+use crate::bitcoin::PublicKey as BitcoinPublicKey;
 use crate::config::{Config, ElementsNetwork};
+use crate::elements::encode::{
+    deserialize as elements_deserialize, serialize as elements_serialize,
+};
+use crate::elements::issuance::ContractHash;
+use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
+use crate::elements::{
+    Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut,
+    Txid,
+};
 use crate::error::Error;
+use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
@@ -7,18 +19,6 @@ use crate::util::EC;
 use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
-use elements_miniscript::elements::bitcoin;
-use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash};
-use elements_miniscript::elements::bitcoin::PublicKey as BitcoinPublicKey;
-use elements_miniscript::elements::encode::{
-    deserialize as elements_deserialize, serialize as elements_serialize,
-};
-use elements_miniscript::elements::issuance::ContractHash;
-use elements_miniscript::elements::pset::{Input, Output, PartiallySignedTransaction};
-use elements_miniscript::elements::{
-    Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut,
-    Txid,
-};
 use elements_miniscript::psbt;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
@@ -793,11 +793,11 @@ fn convert_pubkey(pk: elements_miniscript::elements::secp256k1_zkp::PublicKey) -
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
+    use crate::elements::bitcoin::network::constants::Network;
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
-    use elements_miniscript::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
-    use elements_miniscript::elements::bitcoin::network::constants::Network;
 
     #[test]
     fn test_desc() {

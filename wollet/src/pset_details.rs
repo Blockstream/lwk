@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
-use elements_miniscript::{
-    elements::{
-        confidential::{Asset, Value},
-        pset::PartiallySignedTransaction,
-        AssetId, OutPoint, TxOutSecrets,
-    },
-    ConfidentialDescriptor, DescriptorPublicKey,
+use crate::elements::{
+    confidential::{Asset, Value},
+    pset::PartiallySignedTransaction,
+    AssetId, OutPoint, TxOutSecrets,
 };
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
 use crate::wallet::derive_script_pubkey;
 

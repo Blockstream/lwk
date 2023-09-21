@@ -38,6 +38,12 @@ pub struct UnvalidatedAddressee<'a> {
     pub asset: &'a str,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AddressResult {
+    pub address: Address,
+    pub index: u32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

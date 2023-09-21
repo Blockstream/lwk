@@ -264,7 +264,7 @@ impl TestElectrumWallet {
         self.electrum_wallet.address().unwrap().address
     }
 
-    pub fn full_address(&self) -> AddressResult {
+    pub fn address_result(&self) -> AddressResult {
         self.electrum_wallet.address().unwrap()
     }
 

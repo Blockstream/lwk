@@ -140,7 +140,7 @@ fn address() {
 
     let gap_limit: u32 = 20;
     let addresses: Vec<_> = (0..(gap_limit + 1))
-        .map(|_| wallet.full_address())
+        .map(|_| wallet.address_result())
         .collect();
 
     // First address has index 0

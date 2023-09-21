@@ -25,6 +25,7 @@ bip39 = "2.0.0"
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "27b6e37af2cc850b20b5c4322b3673dcd452cd08", features = ["serde"] }
 thiserror = "1.0.48"
 once_cell = "1.18.0"
+elements = { version = "0.23.0", features = ["base64"] }
 
 [dev-dependencies]
 chrono = "0.4.11"

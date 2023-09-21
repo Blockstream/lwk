@@ -379,7 +379,7 @@ impl ElectrumWallet {
     fn add_output(
         &self,
         pset: &mut PartiallySignedTransaction,
-        addressee: Addressee,
+        addressee: &Addressee,
     ) -> Result<(), Error> {
         let output = Output {
             script_pubkey: addressee.address.script_pubkey(),
@@ -450,10 +450,10 @@ impl ElectrumWallet {
 
         // Add outputs
         for addressee in addressees {
-            self.add_output(&mut pset, addressee)?;
+            self.add_output(&mut pset, &addressee)?;
         }
         for addressee in addressees_change {
-            self.add_output(&mut pset, addressee)?;
+            self.add_output(&mut pset, &addressee)?;
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
@@ -582,15 +582,14 @@ impl ElectrumWallet {
             asset: self.policy_asset(),
         });
 
-        for addressee in addressees {
+        for (output_index, addressee) in addressees.iter().enumerate() {
             self.add_output(&mut pset, addressee)?;
+            let desc = self.definite_descriptor(&addressee.address.script_pubkey())?;
+            pset.update_output_with_descriptor(output_index, &desc)
+                .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
-
-        for output in pset.outputs_mut() {
-            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
-        }
 
         // Blind the transaction
         let mut rng = thread_rng();
@@ -674,7 +673,7 @@ impl ElectrumWallet {
         });
 
         for addressee in addressees {
-            self.add_output(&mut pset, addressee)?;
+            self.add_output(&mut pset, &addressee)?;
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
@@ -754,7 +753,7 @@ impl ElectrumWallet {
         }
 
         for addressee in addressees {
-            self.add_output(&mut pset, addressee)?;
+            self.add_output(&mut pset, &addressee)?;
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);

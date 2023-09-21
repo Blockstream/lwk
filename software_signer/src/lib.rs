@@ -4,7 +4,7 @@ use elements_miniscript::elements::{
         bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
         Network, PrivateKey,
     },
-    encode::{deserialize, serialize},
+    encode::deserialize,
     hashes::Hash,
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{All, Secp256k1},
@@ -105,7 +105,7 @@ impl<'a> Signer<'a> {
             }
         }
 
-        Ok(pset_to_base64(&pset))
+        Ok(pset.to_string())
     }
 }
 
@@ -113,12 +113,6 @@ impl<'a> Signer<'a> {
 pub fn pset_from_base64(base64: &str) -> Result<PartiallySignedTransaction, SignError> {
     let bytes = base64::decode(base64)?;
     Ok(deserialize(&bytes)?)
-}
-
-// TODO push upstream Display???
-pub fn pset_to_base64(pset: &PartiallySignedTransaction) -> String {
-    let serialized = serialize(pset);
-    base64::encode(serialized)
 }
 
 #[cfg(test)]

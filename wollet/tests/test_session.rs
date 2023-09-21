@@ -497,7 +497,7 @@ impl TestElectrumWallet {
     }
 
     fn sign(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
-        let pset_base64 = pset_to_base64(pset);
+        let pset_base64 = pset.to_string();
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
         *pset = pset_from_base64(&signed_pset_base64).unwrap();

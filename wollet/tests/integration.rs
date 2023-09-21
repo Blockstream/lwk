@@ -145,14 +145,14 @@ fn address() {
 
     // First address has index 0
     for i in 0..(gap_limit + 1) {
-        assert_eq!(addresses[i as usize].index, i);
+        assert_eq!(addresses[i as usize].index(), i);
     }
 
     // We get all different addresses
-    let set: HashSet<_> = addresses.iter().map(|a| a.address.clone()).collect();
+    let set: HashSet<_> = addresses.iter().map(|a| a.address()).collect();
     assert_eq!(addresses.len(), set.len());
 
-    let max = addresses.iter().map(|a| a.index).max().unwrap();
+    let max = addresses.iter().map(|a| a.index()).max().unwrap();
     assert_eq!(max, gap_limit);
 
     // Fund an address beyond the gap limit
@@ -161,9 +161,9 @@ fn address() {
     let satoshi = 10_000;
     let mid_address = addresses[(gap_limit / 2) as usize].clone();
     let last_address = addresses[gap_limit as usize].clone();
-    assert_eq!(last_address.index, gap_limit);
-    let mid_address = Some(mid_address.address);
-    let last_address = Some(last_address.address);
+    assert_eq!(last_address.index(), gap_limit);
+    let mid_address = Some(mid_address.address().clone());
+    let last_address = Some(last_address.address().clone());
     wallet.fund(&mut server, satoshi, mid_address, None);
     wallet.fund(&mut server, satoshi, last_address, None);
 }

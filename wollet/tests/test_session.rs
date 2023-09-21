@@ -261,7 +261,7 @@ impl TestElectrumWallet {
     }
 
     fn address(&self) -> Address {
-        self.electrum_wallet.address().unwrap().address
+        self.electrum_wallet.address().unwrap().address().clone()
     }
 
     pub fn address_result(&self) -> AddressResult {

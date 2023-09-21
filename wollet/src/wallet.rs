@@ -175,10 +175,7 @@ impl ElectrumWallet {
             .last_index
             .fetch_add(1, atomic::Ordering::Relaxed);
 
-        Ok(AddressResult {
-            address: self.derive_address(index)?,
-            index,
-        })
+        Ok(AddressResult::new(self.derive_address(index)?, index))
     }
 
     /// Get the wallet UTXOs
@@ -422,7 +419,7 @@ impl ElectrumWallet {
             }
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
-                let address_change = self.address()?.address;
+                let address_change = self.address()?.address().clone();
                 addressees_change.push(Addressee {
                     satoshi: satoshi_change,
                     address: address_change,
@@ -569,19 +566,19 @@ impl ElectrumWallet {
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?.address,
+            address: self.address()?.address().clone(),
             asset,
         });
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?.address,
+                address: self.address()?.address().clone(),
                 asset: token,
             });
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?.address,
+            address: self.address()?.address().clone(),
             asset: self.policy_asset(),
         });
 
@@ -660,19 +657,19 @@ impl ElectrumWallet {
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?.address,
+            address: self.address()?.address().clone(),
             asset,
         });
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?.address,
+                address: self.address()?.address().clone(),
                 asset: token,
             });
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?.address,
+            address: self.address()?.address().clone(),
             asset: self.policy_asset(),
         });
 
@@ -744,14 +741,14 @@ impl ElectrumWallet {
         if satoshi_asset > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_change,
-                address: self.address()?.address,
+                address: self.address()?.address().clone(),
                 asset,
             });
         }
         if satoshi_btc > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_btc,
-                address: self.address()?.address,
+                address: self.address()?.address().clone(),
                 asset: self.policy_asset(),
             });
         }

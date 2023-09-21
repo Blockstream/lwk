@@ -40,8 +40,22 @@ pub struct UnvalidatedAddressee<'a> {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AddressResult {
-    pub address: Address,
-    pub index: u32,
+    address: Address,
+    index: u32,
+}
+
+impl AddressResult {
+    pub fn new(address: Address, index: u32) -> Self {
+        Self { address, index }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn index(&self) -> u32 {
+        self.index
+    }
 }
 
 #[cfg(test)]

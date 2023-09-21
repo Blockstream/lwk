@@ -130,13 +130,13 @@ fn pkh() {
 
 #[test]
 fn address() {
-    let server = setup();
+    let mut server = setup();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
 
     let gap_limit: u32 = 20;
     let addresses: Vec<_> = (0..(gap_limit + 1))
@@ -154,4 +154,16 @@ fn address() {
 
     let max = addresses.iter().map(|a| a.index).max().unwrap();
     assert_eq!(max, gap_limit);
+
+    // Fund an address beyond the gap limit
+    // Note that we need to find and address before it,
+    // otherwise the sync mechanism will not look for those funds
+    let satoshi = 10_000;
+    let mid_address = addresses[(gap_limit / 2) as usize].clone();
+    let last_address = addresses[gap_limit as usize].clone();
+    assert_eq!(last_address.index, gap_limit);
+    let mid_address = Some(mid_address.address);
+    let last_address = Some(last_address.address);
+    wallet.fund(&mut server, satoshi, mid_address, None);
+    wallet.fund(&mut server, satoshi, last_address, None);
 }

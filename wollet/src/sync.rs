@@ -59,7 +59,6 @@ pub fn sync(
         if flattened.is_empty() {
             break;
         }
-        let found_some = !flattened.is_empty();
 
         for el in flattened {
             // el.height = -1 means unconfirmed with unconfirmed parents
@@ -72,10 +71,6 @@ pub fn sync(
             } else {
                 txid_height.insert(txid, Some(height as u32));
             }
-        }
-
-        if found_some {
-            break;
         }
 
         batch_count += 1;

@@ -1,6 +1,7 @@
 mod test_session;
 
 use software_signer::*;
+use std::collections::HashSet;
 use test_session::*;
 
 #[test]
@@ -136,9 +137,21 @@ fn address() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
     let wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    let address0 = wallet.full_address();
-    assert_eq!(address0.index, 0);
-    let address1 = wallet.full_address();
-    assert_eq!(address1.index, 1);
-    assert_ne!(address0.address, address1.address);
+
+    let gap_limit: u32 = 20;
+    let addresses: Vec<_> = (0..(gap_limit + 1))
+        .map(|_| wallet.full_address())
+        .collect();
+
+    // First address has index 0
+    for i in 0..(gap_limit + 1) {
+        assert_eq!(addresses[i as usize].index, i);
+    }
+
+    // We get all different addresses
+    let set: HashSet<_> = addresses.iter().map(|a| a.address.clone()).collect();
+    assert_eq!(addresses.len(), set.len());
+
+    let max = addresses.iter().map(|a| a.index).max().unwrap();
+    assert_eq!(max, gap_limit);
 }

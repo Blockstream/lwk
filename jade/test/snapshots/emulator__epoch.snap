@@ -1,0 +1,6 @@
+---
+source: crates/jade/test/emulator.rs
+expression: result
+---
+true
+

@@ -1,0 +1,2 @@
+[advisories]
+ignore = ["RUSTSEC-2020-0168"] # mach is unmaintained, still required by serialport-rs: https://github.com/serialport/serialport-rs/issues/112

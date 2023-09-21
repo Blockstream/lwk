@@ -42,7 +42,7 @@ pub enum NewError {
 #[allow(dead_code)]
 pub struct Signer<'a> {
     xprv: ExtendedPrivKey,
-    secp: &'a Secp256k1<All>, // could be sign only, but it is hihgly likely the caller has already the All context.
+    secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
 }
 
 impl<'a> core::fmt::Debug for Signer<'a> {
@@ -77,8 +77,8 @@ impl<'a> Signer<'a> {
         let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for i in 0..pset.inputs().len() {
-            // computing all the message to sign, it is not necessary if we are going to not sign
-            // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for
+            // computing all the messages to sign, it is not necessary if we are not going to sign
+            // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for loop
             let msg = pset
                 .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
                 .to_secp_msg();

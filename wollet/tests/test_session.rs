@@ -318,6 +318,28 @@ impl TestElectrumWallet {
         filtered_list.first().unwrap().clone().0
     }
 
+    pub fn fund(
+        &mut self,
+        server: &mut TestElectrumServer,
+        satoshi: u64,
+        address: Option<Address>,
+        asset: Option<AssetId>,
+    ) {
+        let utxos_before = self.electrum_wallet.utxos().unwrap().len();
+        let balance_before = self.balance(&asset.unwrap_or(self.policy_asset()));
+
+        let address = address.unwrap_or_else(|| self.address());
+        let txid = server.node_sendtoaddress(&address, satoshi, asset);
+        self.wait_for_tx(&txid);
+        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
+        assert_eq!(txid, wallet_txid);
+
+        let utxos_after = self.electrum_wallet.utxos().unwrap().len();
+        let balance_after = self.balance(&asset.unwrap_or(self.policy_asset()));
+        assert_eq!(utxos_after, utxos_before + 1);
+        assert_eq!(balance_before + satoshi, balance_after);
+    }
+
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
         let utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let balance_before = self.balance_btc();

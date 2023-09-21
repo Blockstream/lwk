@@ -206,10 +206,6 @@ impl TestElectrumServer {
         node_getnewaddress(&self.node.client, None)
     }
 
-    pub fn fund_btc(&mut self, address: &Address, satoshi: u64) -> String {
-        self.node_sendtoaddress(address, satoshi, None)
-    }
-
     pub fn fund_asset(&mut self, address: &Address, satoshi: u64) -> (String, AssetId) {
         let asset = self.node_issueasset(satoshi);
         let txid = self.node_sendtoaddress(address, satoshi, Some(asset));
@@ -341,17 +337,7 @@ impl TestElectrumWallet {
     }
 
     pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
-        let utxos_before = self.electrum_wallet.utxos().unwrap().len();
-        let balance_before = self.balance_btc();
-        let satoshi: u64 = 1_000_000;
-        let address = self.address();
-        let txid = server.fund_btc(&address, satoshi);
-        self.wait_for_tx(&txid);
-        assert_eq!(self.balance_btc(), balance_before + satoshi);
-        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
-        assert_eq!(txid, wallet_txid);
-        let utxos = self.electrum_wallet.utxos().unwrap();
-        assert_eq!(utxos.len(), utxos_before + 1);
+        self.fund(server, 1_000_000, Some(self.address()), None);
     }
 
     pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {

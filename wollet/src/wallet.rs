@@ -172,7 +172,7 @@ impl ElectrumWallet {
         let index = self
             .store
             .cache
-            .last_index
+            .last_unused
             .fetch_add(1, atomic::Ordering::Relaxed);
 
         Ok(AddressResult::new(self.derive_address(index)?, index))

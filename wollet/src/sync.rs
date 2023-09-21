@@ -29,7 +29,7 @@ pub fn sync(
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
 
-    let mut last_used = 0;
+    let mut last_unused = 0;
 
     let mut batch_count = 0;
     loop {
@@ -51,7 +51,7 @@ pub fn sync(
             .map(|(i, _)| i as u32)
             .max();
         if let Some(max) = max {
-            last_used = max + batch_count * BATCH_SIZE;
+            last_unused = 1 + max + batch_count * BATCH_SIZE;
         };
 
         let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
@@ -79,13 +79,14 @@ pub fn sync(
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, &blinding_key)?;
 
-    let store_indexes = store.cache.last_index.load(atomic::Ordering::Relaxed);
+    let store_last_unused = store.cache.last_unused.load(atomic::Ordering::Relaxed);
+    let last_unused_changed = store_last_unused != last_unused;
 
-    let changed = if !new_txs.txs.is_empty() || store_indexes != last_used || !scripts.is_empty() {
+    let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
         store
             .cache
-            .last_index
-            .store(last_used, atomic::Ordering::Relaxed);
+            .last_unused
+            .store(last_unused, atomic::Ordering::Relaxed);
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
 

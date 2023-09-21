@@ -47,8 +47,8 @@ pub struct RawCache {
     /// height and hash of tip of the blockchain
     pub tip: (u32, BlockHash),
 
-    /// max used indexes for current descriptor
-    pub last_index: AtomicU32,
+    /// last unused index for current descriptor
+    pub last_unused: AtomicU32,
 }
 
 impl Default for RawCache {
@@ -60,7 +60,7 @@ impl Default for RawCache {
             heights: HashMap::default(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
-            last_index: 0.into(),
+            last_unused: 0.into(),
         }
     }
 }

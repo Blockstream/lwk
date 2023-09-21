@@ -1,6 +1,6 @@
 use crate::config::{Config, ElementsNetwork};
 use crate::error::Error;
-use crate::model::{Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
+use crate::model::{AddressResult, Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -168,14 +168,18 @@ impl ElectrumWallet {
     }
 
     /// Get a new wallet address
-    pub fn address(&self) -> Result<Address, Error> {
-        let previous_value = self
+    pub fn address(&self) -> Result<AddressResult, Error> {
+        let previous_index = self
             .store
             .cache
             .last_index
             .fetch_add(1, atomic::Ordering::Relaxed);
 
-        self.derive_address(previous_value + 1)
+        let index = previous_index + 1;
+        Ok(AddressResult {
+            address: self.derive_address(index)?,
+            index,
+        })
     }
 
     /// Get the wallet UTXOs
@@ -419,7 +423,7 @@ impl ElectrumWallet {
             }
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
-                let address_change = self.address()?;
+                let address_change = self.address()?.address;
                 addressees_change.push(Addressee {
                     satoshi: satoshi_change,
                     address: address_change,
@@ -566,19 +570,19 @@ impl ElectrumWallet {
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?,
+            address: self.address()?.address,
             asset,
         });
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?,
+                address: self.address()?.address,
                 asset: token,
             });
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?,
+            address: self.address()?.address,
             asset: self.policy_asset(),
         });
 
@@ -657,19 +661,19 @@ impl ElectrumWallet {
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?,
+            address: self.address()?.address,
             asset,
         });
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?,
+                address: self.address()?.address,
                 asset: token,
             });
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?,
+            address: self.address()?.address,
             asset: self.policy_asset(),
         });
 
@@ -741,14 +745,14 @@ impl ElectrumWallet {
         if satoshi_asset > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_change,
-                address: self.address()?,
+                address: self.address()?.address,
                 asset,
             });
         }
         if satoshi_btc > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_btc,
-                address: self.address()?,
+                address: self.address()?.address,
                 asset: self.policy_asset(),
             });
         }

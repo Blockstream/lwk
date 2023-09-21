@@ -169,13 +169,12 @@ impl ElectrumWallet {
 
     /// Get a new wallet address
     pub fn address(&self) -> Result<AddressResult, Error> {
-        let previous_index = self
+        let index = self
             .store
             .cache
             .last_index
             .fetch_add(1, atomic::Ordering::Relaxed);
 
-        let index = previous_index + 1;
         Ok(AddressResult {
             address: self.derive_address(index)?,
             index,

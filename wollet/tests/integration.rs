@@ -136,6 +136,9 @@ fn address() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
     let wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    let address = wallet.full_address();
-    assert_eq!(address.index, 1);
+    let address0 = wallet.full_address();
+    assert_eq!(address0.index, 0);
+    let address1 = wallet.full_address();
+    assert_eq!(address1.index, 1);
+    assert_ne!(address0.address, address1.address);
 }

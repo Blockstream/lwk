@@ -270,6 +270,10 @@ impl TestElectrumWallet {
         self.electrum_wallet.policy_asset()
     }
 
+    fn address(&self) -> Address {
+        self.electrum_wallet.address().unwrap().address
+    }
+
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
         for _ in 0..120 {
@@ -314,7 +318,7 @@ impl TestElectrumWallet {
         let utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let balance_before = self.balance_btc();
         let satoshi: u64 = 1_000_000;
-        let address = self.electrum_wallet.address().unwrap().address;
+        let address = self.address();
         let txid = server.fund_btc(&address, satoshi);
         self.wait_for_tx(&txid);
         assert_eq!(self.balance_btc(), balance_before + satoshi);
@@ -327,7 +331,7 @@ impl TestElectrumWallet {
     pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {
         let num_utxos_before = self.electrum_wallet.utxos().unwrap().len();
         let satoshi = 10_000;
-        let address = self.electrum_wallet.address().unwrap().address;
+        let address = self.address();
         let (txid, asset) = server.fund_asset(&address, satoshi);
         self.wait_for_tx(&txid);
 
@@ -343,7 +347,7 @@ impl TestElectrumWallet {
     pub fn send_btc(&mut self, signers: &[&Signer]) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
-        let address = self.electrum_wallet.address().unwrap().address;
+        let address = self.address();
         let mut pset = self
             .electrum_wallet
             .sendlbtc(satoshi, &address.to_string())

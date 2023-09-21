@@ -274,6 +274,10 @@ impl TestElectrumWallet {
         self.electrum_wallet.address().unwrap().address
     }
 
+    pub fn full_address(&self) -> AddressResult {
+        self.electrum_wallet.address().unwrap()
+    }
+
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
         for _ in 0..120 {

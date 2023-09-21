@@ -126,3 +126,16 @@ fn pkh() {
     // FIXME: issuance does not work with p2pkh
     //let (_asset, _token, _entropy) = wallet.issueasset(signers, 100_000, 1);
 }
+
+#[test]
+fn address() {
+    let server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    let address = wallet.full_address();
+    assert_eq!(address.index, 1);
+}

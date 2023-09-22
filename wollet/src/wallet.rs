@@ -167,13 +167,15 @@ impl ElectrumWallet {
         derive_address(&self.descriptor, index, self.config.address_params())
     }
 
-    /// Get a new wallet address
-    pub fn address(&self) -> Result<AddressResult, Error> {
-        let index = self
-            .store
-            .cache
-            .last_unused
-            .fetch_add(1, atomic::Ordering::Relaxed);
+    /// Get a wallet address
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
+    pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
+        let index = match index {
+            Some(i) => i,
+            None => self.store.cache.last_unused.load(atomic::Ordering::Relaxed),
+        };
 
         Ok(AddressResult::new(self.derive_address(index)?, index))
     }
@@ -411,6 +413,8 @@ impl ElectrumWallet {
         let tot_in = self.balance_from_utxos(&utxos)?;
         let mut tot_out = self.tot_out(&addressees)?;
         *tot_out.entry(self.policy_asset()).or_default() += fee;
+
+        let mut last_unused = self.address(None)?.index();
         let mut addressees_change = vec![];
         for (asset, satoshi_out) in tot_out.clone() {
             let satoshi_in: u64 = *tot_in.get(&asset).unwrap_or(&0);
@@ -419,10 +423,11 @@ impl ElectrumWallet {
             }
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
-                let address_change = self.address()?.address().clone();
+                let address_change = self.address(Some(last_unused))?;
+                last_unused += 1;
                 addressees_change.push(Addressee {
                     satoshi: satoshi_change,
-                    address: address_change,
+                    address: address_change.address().clone(),
                     asset,
                 });
             }
@@ -563,22 +568,25 @@ impl ElectrumWallet {
         let satoshi_change = utxo.unblinded.value - fee;
 
         // Add outputs
+        let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?.address().clone(),
+            address: self.address(Some(last_unused))?.address().clone(),
             asset,
         });
+        last_unused += 1;
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?.address().clone(),
+                address: self.address(Some(last_unused))?.address().clone(),
                 asset: token,
             });
+            last_unused += 1;
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?.address().clone(),
+            address: self.address(Some(last_unused))?.address().clone(),
             asset: self.policy_asset(),
         });
 
@@ -653,22 +661,25 @@ impl ElectrumWallet {
         let satoshi_change = utxo_btc.unblinded.value - fee;
 
         // Add outputs
+        let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
         addressees.push(Addressee {
             satoshi: satoshi_asset,
-            address: self.address()?.address().clone(),
+            address: self.address(Some(last_unused))?.address().clone(),
             asset,
         });
+        last_unused += 1;
         if satoshi_token > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_token,
-                address: self.address()?.address().clone(),
+                address: self.address(Some(last_unused))?.address().clone(),
                 asset: token,
             });
+            last_unused += 1;
         }
         addressees.push(Addressee {
             satoshi: satoshi_change,
-            address: self.address()?.address().clone(),
+            address: self.address(Some(last_unused))?.address().clone(),
             asset: self.policy_asset(),
         });
 
@@ -736,18 +747,20 @@ impl ElectrumWallet {
         pset.add_output(burn_output);
 
         // Add outputs
+        let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
         if satoshi_asset > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_change,
-                address: self.address()?.address().clone(),
+                address: self.address(Some(last_unused))?.address().clone(),
                 asset,
             });
+            last_unused += 1;
         }
         if satoshi_btc > 0 {
             addressees.push(Addressee {
                 satoshi: satoshi_btc,
-                address: self.address()?.address().clone(),
+                address: self.address(Some(last_unused))?.address().clone(),
                 asset: self.policy_asset(),
             });
         }

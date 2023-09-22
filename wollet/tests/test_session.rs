@@ -261,11 +261,15 @@ impl TestElectrumWallet {
     }
 
     fn address(&self) -> Address {
-        self.electrum_wallet.address().unwrap().address().clone()
+        self.electrum_wallet
+            .address(None)
+            .unwrap()
+            .address()
+            .clone()
     }
 
-    pub fn address_result(&self) -> AddressResult {
-        self.electrum_wallet.address().unwrap()
+    pub fn address_result(&self, last_unused: Option<u32>) -> AddressResult {
+        self.electrum_wallet.address(last_unused).unwrap()
     }
 
     /// Wait until tx appears in tx list (max 1 min)

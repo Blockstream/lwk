@@ -140,10 +140,12 @@ fn address() {
 
     let gap_limit: u32 = 20;
     let addresses: Vec<_> = (0..(gap_limit + 1))
-        .map(|_| wallet.address_result())
+        .map(|i| wallet.address_result(Some(i)))
         .collect();
 
-    // First address has index 0
+    // First unused address has index 0
+    let address = wallet.address_result(None);
+    assert_eq!(address.index(), 0);
     for i in 0..(gap_limit + 1) {
         assert_eq!(addresses[i as usize].index(), i);
     }

@@ -805,7 +805,7 @@ impl ElectrumWallet {
     }
 }
 
-fn convert_pubkey(pk: elements_miniscript::elements::secp256k1_zkp::PublicKey) -> BitcoinPublicKey {
+fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPublicKey {
     BitcoinPublicKey::new(pk)
 }
 

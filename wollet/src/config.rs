@@ -1,6 +1,6 @@
+use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
 use electrum_client::{Client, ConfigBuilder};
-use elements_miniscript::elements::{AddressParams, AssetId};
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =

@@ -403,6 +403,18 @@ impl ElectrumWallet {
             ..Default::default()
         };
         pset.add_output(output);
+
+        let last_output_index = pset.n_outputs() - 1;
+
+        match self.definite_descriptor(&addressee.address.script_pubkey()) {
+            Ok(desc) => {
+                pset.update_output_with_descriptor(last_output_index, &desc)
+                    .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+            }
+            Err(Error::ScriptNotMine) => (),
+            Err(e) => return Err(e),
+        }
+
         Ok(())
     }
 
@@ -601,11 +613,8 @@ impl ElectrumWallet {
             asset: self.policy_asset(),
         });
 
-        for (output_index, addressee) in addressees.iter().enumerate() {
-            self.add_output(&mut pset, addressee)?;
-            let desc = self.definite_descriptor(&addressee.address.script_pubkey())?;
-            pset.update_output_with_descriptor(output_index, &desc)
-                .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+        for addressee in addressees {
+            self.add_output(&mut pset, &addressee)?;
         }
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);

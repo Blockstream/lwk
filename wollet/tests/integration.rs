@@ -169,3 +169,26 @@ fn address() {
     wallet.fund(&mut server, satoshi, mid_address, None);
     wallet.fund(&mut server, satoshi, last_address, None);
 }
+
+#[test]
+fn different_blinding_keys() {
+    // Two wallet with same "bitcoin" descriptor but different blinding keys
+    let mut server = setup();
+
+    let signer = generate_signer();
+    let view_key1 = generate_view_key();
+    let view_key2 = generate_view_key();
+    let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer.xpub());
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer.xpub());
+
+    let mut wallet1 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc1);
+    wallet1.sync();
+    assert_eq!(wallet1.address_result(None).index(), 0);
+    wallet1.fund_btc(&mut server);
+    assert_eq!(wallet1.address_result(None).index(), 1);
+
+    let mut wallet2 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc2);
+    wallet2.sync();
+    // FIXME: the last unused address should be 0, not 1
+    assert_eq!(wallet2.address_result(None).index(), 1);
+}

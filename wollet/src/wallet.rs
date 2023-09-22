@@ -1,4 +1,3 @@
-use crate::bitcoin;
 use crate::bitcoin::PublicKey as BitcoinPublicKey;
 use crate::config::{Config, ElementsNetwork};
 use crate::elements::encode::{
@@ -17,17 +16,17 @@ use crate::pset_details::{pset_balance, PsetBalance};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
-use electrum_client::bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint};
+use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
 use elements_miniscript::psbt;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
-    ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey, ForEachKey,
+    ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
 use rand::thread_rng;
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
@@ -52,19 +51,6 @@ pub(crate) fn derive_script_pubkey(
     index: u32,
 ) -> Result<Script, Error> {
     Ok(derive_address(descriptor, index, &AddressParams::LIQUID)?.script_pubkey())
-}
-
-pub(crate) fn derive_public_keys(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-    index: u32,
-) -> Result<Vec<BitcoinPublicKey>, Error> {
-    let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
-    let mut keys = vec![];
-    derived_non_conf.for_each_key(|k| {
-        keys.push(k.derive_public_key(&EC).unwrap());
-        true
-    });
-    Ok(keys)
 }
 
 fn convert_blinding_key(
@@ -307,19 +293,6 @@ impl ElectrumWallet {
             .clone())
     }
 
-    fn script_info(
-        &self,
-        script: &Script,
-    ) -> Result<(DerivationPath, Vec<BitcoinPublicKey>), Error> {
-        let index = self.index(script)?;
-        let derivation_path = vec![ChildNumber::Normal { index }].into();
-
-        Ok((
-            derivation_path,
-            derive_public_keys(&self.descriptor, index)?,
-        ))
-    }
-
     fn index(&self, script_pubkey: &Script) -> Result<u32, Error> {
         let index = self
             .store
@@ -486,30 +459,10 @@ impl ElectrumWallet {
         let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
         pset.add_output(fee_output);
 
-        for output in pset.outputs_mut() {
-            self.insert_bip32_derivation(&output.script_pubkey, &mut output.bip32_derivation);
-        }
-
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
         Ok(pset)
-    }
-
-    fn insert_bip32_derivation(
-        &self,
-        script_pubkey: &Script,
-        bip32_derivation: &mut BTreeMap<bitcoin::PublicKey, bitcoin::bip32::KeySource>,
-    ) {
-        if let Ok((derivation_path, public_keys)) = self.script_info(script_pubkey) {
-            for public_key in public_keys {
-                // FIXME fingerprint
-                bip32_derivation.insert(
-                    public_key,
-                    (Fingerprint::default(), derivation_path.clone()),
-                );
-            }
-        }
     }
 
     /// Create a PSET sending some satoshi to an address

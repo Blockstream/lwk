@@ -260,6 +260,11 @@ impl TestElectrumWallet {
         self.electrum_wallet.policy_asset()
     }
 
+    pub fn sync(&mut self) {
+        self.electrum_wallet.sync_txs().unwrap();
+        self.electrum_wallet.sync_tip().unwrap();
+    }
+
     fn address(&self) -> Address {
         self.electrum_wallet
             .address(None)

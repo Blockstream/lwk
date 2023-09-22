@@ -126,6 +126,7 @@ impl ElectrumWallet {
         self.config.policy_asset()
     }
 
+    /// Get the wallet descriptor
     pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
         &self.descriptor
     }

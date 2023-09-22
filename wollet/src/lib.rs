@@ -9,7 +9,7 @@ mod wallet;
 
 pub use crate::config::ElementsNetwork;
 pub use crate::error::Error;
-pub use crate::model::{AddressResult, UnblindedTXO, UnvalidatedAddressee, TXO};
+pub use crate::model::{AddressResult, UnvalidatedAddressee, WalletTxOut};
 pub use crate::pset_details::*;
 pub use crate::util::EC;
 pub use crate::wallet::ElectrumWallet;

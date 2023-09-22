@@ -3,25 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TXO {
+pub struct WalletTxOut {
     pub outpoint: OutPoint,
     pub script_pubkey: Script,
     pub height: Option<u32>,
-}
-
-impl TXO {
-    pub fn new(outpoint: OutPoint, script_pubkey: Script, height: Option<u32>) -> TXO {
-        TXO {
-            outpoint,
-            script_pubkey,
-            height,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UnblindedTXO {
-    pub txo: TXO,
     pub unblinded: TxOutSecrets,
 }
 

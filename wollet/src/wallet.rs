@@ -11,7 +11,7 @@ use crate::elements::{
 };
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
-use crate::model::{AddressResult, Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
+use crate::model::{AddressResult, Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::pset_details::{pset_balance, PsetBalance};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
@@ -169,7 +169,7 @@ impl ElectrumWallet {
     }
 
     /// Get the wallet UTXOs
-    pub fn utxos(&self) -> Result<Vec<UnblindedTXO>, Error> {
+    pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
         let spent = self.store.spent()?;
         for (tx_id, height) in self.store.cache.heights.iter() {
@@ -179,7 +179,7 @@ impl ElectrumWallet {
                 .all_txs
                 .get(tx_id)
                 .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
-            let tx_txos: Vec<UnblindedTXO> = {
+            let tx_txos: Vec<WalletTxOut> = {
                 tx.output
                     .clone()
                     .into_iter()
@@ -196,9 +196,10 @@ impl ElectrumWallet {
                     .filter(|(outpoint, _)| !spent.contains(outpoint))
                     .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
-                            let txo = TXO::new(outpoint, output.script_pubkey, *height);
-                            return Some(UnblindedTXO {
-                                txo,
+                            return Some(WalletTxOut {
+                                outpoint,
+                                script_pubkey: output.script_pubkey,
+                                height: *height,
                                 unblinded: *unblinded,
                             });
                         }
@@ -213,7 +214,7 @@ impl ElectrumWallet {
         Ok(txos)
     }
 
-    fn balance_from_utxos(&self, utxos: &[UnblindedTXO]) -> Result<HashMap<AssetId, u64>, Error> {
+    fn balance_from_utxos(&self, utxos: &[WalletTxOut]) -> Result<HashMap<AssetId, u64>, Error> {
         let mut r = HashMap::new();
         r.entry(self.policy_asset()).or_insert(0);
         for u in utxos.iter() {
@@ -265,7 +266,7 @@ impl ElectrumWallet {
         )?)
     }
 
-    fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<UnblindedTXO>, Error> {
+    fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<WalletTxOut>, Error> {
         Ok(self
             .utxos()?
             .into_iter()
@@ -438,12 +439,12 @@ impl ElectrumWallet {
                 // Do not add utxos if the we are not sending the asset
                 continue;
             }
-            let mut input = Input::from_prevout(utxo.txo.outpoint);
-            input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-            input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
+            let mut input = Input::from_prevout(utxo.outpoint);
+            input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
+            input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
 
             pset.add_input(input);
-            let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+            let desc = self.definite_descriptor(&utxo.script_pubkey)?;
             pset.update_input_with_descriptor(idx, &desc)?;
             inp_txout_sec.insert(idx, utxo.unblinded);
         }
@@ -519,9 +520,9 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add a policy asset input
-        let mut input = Input::from_prevout(utxo.txo.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
+        let mut input = Input::from_prevout(utxo.outpoint);
+        input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
 
         // Set issuance data
         input.issuance_value_amount = Some(satoshi_asset);
@@ -537,7 +538,7 @@ impl ElectrumWallet {
 
         pset.add_input(input);
         let idx = 0;
-        let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+        let desc = self.definite_descriptor(&utxo.script_pubkey)?;
         pset.update_input_with_descriptor(idx, &desc)?;
         inp_txout_sec.insert(idx, utxo.unblinded);
         let satoshi_change = utxo.unblinded.value - fee;
@@ -602,9 +603,9 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add the reissuance token input
-        let mut input = Input::from_prevout(utxo_token.txo.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo_token.txo.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo_token.txo.outpoint.txid)?);
+        let mut input = Input::from_prevout(utxo_token.outpoint);
+        input.witness_utxo = Some(self.get_txout(&utxo_token.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo_token.outpoint.txid)?);
 
         let satoshi_token = utxo_token.unblinded.value;
 
@@ -616,18 +617,18 @@ impl ElectrumWallet {
 
         pset.add_input(input);
         let idx = 0;
-        let desc = self.definite_descriptor(&utxo_token.txo.script_pubkey)?;
+        let desc = self.definite_descriptor(&utxo_token.script_pubkey)?;
         pset.update_input_with_descriptor(idx, &desc)?;
         inp_txout_sec.insert(idx, utxo_token.unblinded);
 
         // Add a policy asset input
-        let mut input = Input::from_prevout(utxo_btc.txo.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo_btc.txo.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo_btc.txo.outpoint.txid)?);
+        let mut input = Input::from_prevout(utxo_btc.outpoint);
+        input.witness_utxo = Some(self.get_txout(&utxo_btc.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo_btc.outpoint.txid)?);
 
         pset.add_input(input);
         let idx = 1;
-        let desc = self.definite_descriptor(&utxo_btc.txo.script_pubkey)?;
+        let desc = self.definite_descriptor(&utxo_btc.script_pubkey)?;
         pset.update_input_with_descriptor(idx, &desc)?;
         inp_txout_sec.insert(idx, utxo_btc.unblinded);
         let satoshi_change = utxo_btc.unblinded.value - fee;
@@ -700,11 +701,11 @@ impl ElectrumWallet {
 
         // Add inputs
         for (idx, utxo) in utxos.iter().enumerate() {
-            let mut input = Input::from_prevout(utxo.txo.outpoint);
-            input.witness_utxo = Some(self.get_txout(&utxo.txo.outpoint)?);
-            input.non_witness_utxo = Some(self.get_tx(&utxo.txo.outpoint.txid)?);
+            let mut input = Input::from_prevout(utxo.outpoint);
+            input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
+            input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
             pset.add_input(input);
-            let desc = self.definite_descriptor(&utxo.txo.script_pubkey)?;
+            let desc = self.definite_descriptor(&utxo.script_pubkey)?;
             pset.update_input_with_descriptor(idx, &desc)?;
             inp_txout_sec.insert(idx, utxo.unblinded);
         }

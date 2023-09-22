@@ -196,11 +196,13 @@ impl ElectrumWallet {
                     .filter(|(outpoint, _)| !spent.contains(outpoint))
                     .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
+                            let wildcard_index = self.index(&output.script_pubkey).ok()?;
                             return Some(WalletTxOut {
                                 outpoint,
                                 script_pubkey: output.script_pubkey,
                                 height: *height,
                                 unblinded: *unblinded,
+                                wildcard_index,
                             });
                         }
                         None

@@ -8,6 +8,7 @@ pub struct WalletTxOut {
     pub script_pubkey: Script,
     pub height: Option<u32>,
     pub unblinded: TxOutSecrets,
+    pub wildcard_index: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

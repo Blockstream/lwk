@@ -265,7 +265,6 @@ impl ElectrumWallet {
         )?)
     }
 
-    #[allow(dead_code)]
     fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<UnblindedTXO>, Error> {
         Ok(self
             .utxos()?

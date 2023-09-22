@@ -78,6 +78,9 @@ pub enum Error {
     #[error(transparent)]
     AddressError(#[from] elements_miniscript::elements::AddressError),
 
+    #[error(transparent)]
+    PsetDetailsError(#[from] crate::pset_details::Error),
+
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 

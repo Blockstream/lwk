@@ -13,6 +13,7 @@ use crate::elements::{
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, Addressee, UnblindedTXO, UnvalidatedAddressee, TXO};
+use crate::pset_details::{pset_balance, PsetBalance};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -267,6 +268,15 @@ impl ElectrumWallet {
         }
 
         Ok(txs)
+    }
+
+    /// Get the PSET details with respect to the wallet
+    pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetBalance, Error> {
+        Ok(pset_balance(
+            pset,
+            &self.store.cache.unblinded,
+            self.descriptor(),
+        )?)
     }
 
     #[allow(dead_code)]
@@ -792,10 +802,6 @@ impl ElectrumWallet {
         let client = self.config.electrum_url().build_client()?;
         let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
-    }
-
-    pub fn unblinded(&self) -> &HashMap<OutPoint, elements_miniscript::elements::TxOutSecrets> {
-        &self.store.cache.unblinded
     }
 }
 

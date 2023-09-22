@@ -5,4 +5,4 @@ resolver = "2"
 
 
 [patch.crates-io]
-elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "ca1b5c439c4fb7ad729909aa6a3deb7d4b2b1ce9" }
+elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "5d80b940f023f468afb981f090681cf8622d3933" }

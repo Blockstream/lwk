@@ -1,16 +1,18 @@
 use bip39::Mnemonic;
-use elements_miniscript::elements::{
-    bitcoin::{
-        bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
-        Network, PrivateKey,
+use elements_miniscript::elementssig_to_rawsig;
+use elements_miniscript::{
+    elements::{
+        bitcoin::{
+            bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
+            Network, PrivateKey,
+        },
+        hashes::Hash,
+        pset::PartiallySignedTransaction,
+        secp256k1_zkp::{All, Secp256k1},
+        sighash::SighashCache,
     },
-    encode::deserialize,
-    hashes::Hash,
-    pset::PartiallySignedTransaction,
-    secp256k1_zkp::{All, Secp256k1},
-    sighash::SighashCache,
+    psbt::PsbtExt,
 };
-use elements_miniscript::{elementssig_to_rawsig, psbt::PsbtExt};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
@@ -24,7 +26,7 @@ pub enum SignError {
     Sighash(#[from] elements_miniscript::psbt::SighashError),
 
     #[error(transparent)]
-    Base64Encode(#[from] base64::DecodeError),
+    PsetParse(#[from] elements_miniscript::elements::pset::ParseError),
 
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
@@ -68,7 +70,7 @@ impl<'a> Signer<'a> {
     }
 
     pub fn sign(&self, pset: &str) -> Result<String, SignError> {
-        let mut pset = pset_from_base64(pset)?;
+        let mut pset: PartiallySignedTransaction = pset.parse()?;
 
         let tx = pset.extract_tx()?;
         let mut sighash_cache = SighashCache::new(&tx);
@@ -107,12 +109,6 @@ impl<'a> Signer<'a> {
 
         Ok(pset.to_string())
     }
-}
-
-// TODO push upstream FromStr???
-pub fn pset_from_base64(base64: &str) -> Result<PartiallySignedTransaction, SignError> {
-    let bytes = base64::decode(base64)?;
-    Ok(deserialize(&bytes)?)
 }
 
 #[cfg(test)]

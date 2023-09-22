@@ -499,7 +499,7 @@ impl TestElectrumWallet {
         let pset_base64 = pset.to_string();
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
-        *pset = pset_from_base64(&signed_pset_base64).unwrap();
+        *pset = signed_pset_base64.parse().unwrap();
     }
 
     fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {

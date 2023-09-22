@@ -79,9 +79,15 @@ pub fn pset_balance(
                             }
                             Value::Explicit(value) => {
                                 for (_, path) in input.bip32_derivation.values() {
-                                    // FIXME consider longer than 1 derivation path and fingerprint if available
+                                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
+                                    // TODO consider fingerprint if available
+                                    if path.is_empty() {
+                                        continue;
+                                    }
+                                    let wildcard_index = path[path.len() - 1];
                                     let mine =
-                                        derive_script_pubkey(descriptor, path[0].into()).unwrap();
+                                        derive_script_pubkey(descriptor, wildcard_index.into())
+                                            .unwrap();
                                     if mine == utxo.script_pubkey {
                                         *balances.entry(asset_id).or_default() -= value as i64;
                                         continue 'inputsfor;
@@ -111,8 +117,13 @@ pub fn pset_balance(
                     fee = Some(amount);
                 }
                 for (_, path) in output.bip32_derivation.values() {
-                    // FIXME consider longer than 1 derivation path and fingerprint if available
-                    let mine = derive_script_pubkey(descriptor, path[0].into()).unwrap();
+                    if path.is_empty() {
+                        continue;
+                    }
+                    let wildcard_index = path[path.len() - 1];
+                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
+                    // TODO consider fingerprint if available
+                    let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
                     if mine == output.script_pubkey {
                         *balances.entry(asset_id).or_default() += amount as i64;
                         continue 'outputsfor;

@@ -189,6 +189,7 @@ fn different_blinding_keys() {
 
     let mut wallet2 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc2);
     wallet2.sync();
-    // FIXME: the last unused address should be 0, not 1
+    assert_eq!(wallet2.address_result(None).index(), 0);
+    wallet2.fund_btc(&mut server);
     assert_eq!(wallet2.address_result(None).index(), 1);
 }

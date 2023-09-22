@@ -83,16 +83,36 @@ pub fn sync(
     let last_unused_changed = store_last_unused != last_unused;
 
     let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
-        store
-            .cache
-            .last_unused
-            .store(last_unused, atomic::Ordering::Relaxed);
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
 
         // Prune transactions that do not contain any input or output that we have unblinded
         let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
         txid_height.retain(|txid, _| txids_unblinded.contains(txid));
+
+        // Find the last used index in an output that we can unblind
+        let mut last_used = None;
+        for txid in txid_height.keys() {
+            if let Some(tx) = store.cache.all_txs.get(txid) {
+                for output in &tx.output {
+                    if let Some(ChildNumber::Normal { index }) =
+                        store.cache.paths.get(&output.script_pubkey)
+                    {
+                        match last_used {
+                            None => last_used = Some(index),
+                            Some(last) if index > last => last_used = Some(index),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(last_used) = last_used {
+            store
+                .cache
+                .last_unused
+                .store(last_used + 1, atomic::Ordering::Relaxed);
+        }
 
         // height map is used for the live list of transactions, since due to reorg or rbf tx
         // could disappear from the list, we clear the list and keep only the last values returned by the server

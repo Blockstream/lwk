@@ -45,6 +45,9 @@ build:
   extends: .base
   script:
     - cargo build
+    - apt update
+    - apt install -y libudev-dev
+    - cargo build --features serial
 
 test_wollet:
   extends: .base

@@ -48,7 +48,7 @@ const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator::default());
+    let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
@@ -60,7 +60,7 @@ fn entropy() {
 #[test]
 fn epoch() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator::default());
+    let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
@@ -76,7 +76,7 @@ fn epoch() {
 #[test]
 fn ping() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator::default());
+    let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
@@ -88,7 +88,7 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator::default());
+    let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());

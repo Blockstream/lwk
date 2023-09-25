@@ -30,6 +30,11 @@ path = "test/emulator.rs"
 name = "serial"
 path = "test/serial.rs"
 
+[[test]]
+name = "pin_server"
+path = "test/pin_server.rs"
+
 [dev-dependencies]
 insta = { version = "1.31.0", features = ["yaml"] }
+tempfile = "3.8.0"
 testcontainers = "0.14"

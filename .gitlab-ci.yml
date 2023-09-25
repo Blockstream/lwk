@@ -56,8 +56,7 @@ test_wollet:
 test_jade:
   extends: .docker
   script:
-    - echo $DOCKER_TOKEN | docker login glregistry.blockstream.io -u $DOCKER_USER --password-stdin
-    - docker pull glregistry.blockstream.io/byronhambly/jadeqemu:latest
+    - docker pull xenoky/local-jade-emulator:latest
     - cargo test -p jade
 
 test_jrpc:

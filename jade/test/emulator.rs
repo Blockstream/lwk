@@ -22,7 +22,7 @@ impl Image for JadeEmulator {
     type Args = ();
 
     fn name(&self) -> String {
-        "glregistry.blockstream.io/byronhambly/jadeqemu".into()
+        "xenoky/local-jade-emulator".into() // TODO Change with blockstream official jade emulator
     }
 
     fn tag(&self) -> String {

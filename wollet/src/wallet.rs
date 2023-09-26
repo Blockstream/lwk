@@ -11,7 +11,7 @@ use crate::elements::{
 };
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
-use crate::model::{AddressResult, Addressee, UnvalidatedAddressee, WalletTxOut};
+use crate::model::{AddressResult, Addressee, IssuanceDetails, UnvalidatedAddressee, WalletTxOut};
 use crate::pset_details::{pset_balance, PsetBalance};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
@@ -257,6 +257,35 @@ impl ElectrumWallet {
         }
 
         Ok(txs)
+    }
+
+    /// Get the wallet (re)issuances
+    pub fn issuances(&self) -> Result<Vec<IssuanceDetails>, Error> {
+        let mut r = vec![];
+        for (tx, _) in self.transactions()? {
+            for (vin, txin) in tx.input.iter().enumerate() {
+                if txin.has_issuance() {
+                    let contract_hash =
+                        ContractHash::from_byte_array(txin.asset_issuance.asset_entropy);
+                    let entropy =
+                        AssetId::generate_asset_entropy(txin.previous_output, contract_hash)
+                            .to_byte_array();
+                    let (asset, token) = txin.issuance_ids();
+                    r.push(IssuanceDetails {
+                        txid: tx.txid(),
+                        vin: vin as u32,
+                        entropy,
+                        asset,
+                        token,
+                        // FIXME: check fields below
+                        asset_amount: None,
+                        token_amount: None,
+                        is_reissuance: false,
+                    });
+                }
+            }
+        }
+        Ok(r)
     }
 
     /// Get the PSET details with respect to the wallet

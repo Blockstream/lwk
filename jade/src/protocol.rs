@@ -129,10 +129,10 @@ pub struct UpdatePinserverParams {
     pub reset_details: bool,
     pub reset_certificate: bool,
 
-    #[serde(rename = "pinA")]
+    #[serde(rename = "urlA")]
     pub url_a: String,
 
-    #[serde(rename = "pinB")]
+    #[serde(rename = "urlB")]
     pub url_b: String,
 
     pub pubkey: Vec<u8>,

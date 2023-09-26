@@ -288,6 +288,17 @@ impl ElectrumWallet {
         Ok(r)
     }
 
+    /// Get the issuance details for a certain asset
+    ///
+    /// This only works if the asset was issued by this wallet
+    pub fn issuance(&self, asset: &AssetId) -> Result<IssuanceDetails, Error> {
+        self.issuances()?
+            .iter()
+            .find(|d| &d.asset == asset)
+            .cloned()
+            .ok_or_else(|| Error::MissingIssuance)
+    }
+
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetBalance, Error> {
         Ok(pset_balance(

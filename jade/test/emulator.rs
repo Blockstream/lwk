@@ -1,7 +1,10 @@
+use jade::{protocol::UpdatePinserverParams, Jade};
 use std::time::UNIX_EPOCH;
-
-use jade::Jade;
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
+
+use crate::pin_server::PinServerEmulator;
+
+mod pin_server;
 
 const PORT: u16 = 30_121;
 
@@ -94,5 +97,31 @@ fn version() {
     let mut jade_api = Jade::new(stream.into());
 
     let result = jade_api.version_info().unwrap();
+    insta::assert_yaml_snapshot!(result);
+}
+
+#[test]
+fn update_pinserver() {
+    let docker = clients::Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(PORT);
+    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+    let mut jade_api = Jade::new(stream.into());
+
+    let pin_server = PinServerEmulator::default();
+    let pub_key = pin_server.pub_key().to_bytes();
+    let container = docker.run(pin_server);
+    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let url_a = format!("http://127.0.0.1:{}", port);
+
+    let params = UpdatePinserverParams {
+        reset_details: false,
+        reset_certificate: false,
+        url_a,
+        url_b: "".to_string(),
+        pubkey: pub_key,
+        certificate: "".into(),
+    };
+    let result = jade_api.update_pinserver(params).unwrap();
     insta::assert_yaml_snapshot!(result);
 }

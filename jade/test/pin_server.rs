@@ -5,7 +5,7 @@ use rand::{thread_rng, RngCore};
 use tempfile::{tempdir, TempDir};
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
 
-const PORT: u16 = 8_096;
+pub const PORT: u16 = 8_096;
 
 #[derive(Debug)]
 pub struct PinServerEmulator {

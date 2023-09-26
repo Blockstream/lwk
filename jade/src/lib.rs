@@ -6,7 +6,8 @@ use std::{
 use connection::Connection;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, HandshakeData,
-    HandshakeParams, Network, Params, PingResult, Request, Response, VersionInfoResult,
+    HandshakeParams, Network, Params, PingResult, Request, Response, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
@@ -66,6 +67,11 @@ impl Jade {
     pub fn handshake_init(&mut self, params: HandshakeParams) -> Result<AuthResult<HandshakeData>> {
         let params = Params::Handshake(params);
         self.send_request("handshake_init", Some(params))
+    }
+
+    pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<BoolResult> {
+        let params = Params::UpdatePinServer(params);
+        self.send_request("update_pinserver", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

@@ -90,6 +90,9 @@ pub enum Error {
     #[error("Insufficient funds")]
     InsufficientFunds,
 
+    #[error("Missing issuance")]
+    MissingIssuance,
+
     #[error("Missing transaction")]
     MissingTransaction,
 

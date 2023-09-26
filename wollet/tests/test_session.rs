@@ -1,7 +1,6 @@
 extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::hashes::sha256;
 use crate::bitcoin::hashes::Hash;
 use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hex::ToHex;
@@ -471,14 +470,12 @@ impl TestElectrumWallet {
         assert_eq!(&issuance.entropy, entropy);
         assert_eq!(issuance.vin, 0);
 
-        let entropy = sha256::Midstate::from_slice(&entropy[..]).unwrap();
-        let entropy = entropy.to_string();
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let balance_token_before = self.balance(token);
         let mut pset = self
             .electrum_wallet
-            .reissueasset(&entropy, satoshi_asset)
+            .reissueasset(asset.to_string().as_str(), satoshi_asset)
             .unwrap();
         for signer in signers {
             self.sign(signer, &mut pset);

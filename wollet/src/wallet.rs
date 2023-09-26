@@ -623,13 +623,12 @@ impl ElectrumWallet {
     /// Create a PSET reissuing an asset
     pub fn reissueasset(
         &self,
-        entropy: &str,
+        asset: &str,
         satoshi_asset: u64,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let entropy = sha256::Midstate::from_str(entropy).unwrap();
-        let asset = AssetId::from_entropy(entropy);
-        let confidential = false; // FIXME
-        let token = AssetId::reissuance_token_from_entropy(entropy, confidential);
+        let asset = AssetId::from_str(asset)?;
+        let issuance = self.issuance(&asset)?;
+        let token = issuance.token;
 
         // Get utxos
         let utxos_token = self.asset_utxos(&token)?;
@@ -655,7 +654,7 @@ impl ElectrumWallet {
         input.issuance_value_amount = Some(satoshi_asset);
         let nonce = utxo_token.unblinded.asset_bf.into_inner();
         input.issuance_blinding_nonce = Some(nonce);
-        input.issuance_asset_entropy = Some(entropy.to_byte_array());
+        input.issuance_asset_entropy = Some(issuance.entropy);
 
         pset.add_input(input);
         let idx = 0;

@@ -1,4 +1,4 @@
-use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets};
+use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets, Txid};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -42,6 +42,20 @@ impl AddressResult {
     pub fn index(&self) -> u32 {
         self.index
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IssuanceDetails {
+    pub txid: Txid,
+    pub vin: u32,
+    pub entropy: [u8; 32],
+    pub asset: AssetId,
+    pub token: AssetId,
+    pub asset_amount: Option<u64>,
+    pub token_amount: Option<u64>,
+    pub is_reissuance: bool,
+    // asset_blinder
+    // token_blinder
 }
 
 #[cfg(test)]

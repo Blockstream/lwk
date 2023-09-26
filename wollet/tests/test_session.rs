@@ -465,12 +465,11 @@ impl TestElectrumWallet {
         token: &AssetId,
         entropy: &[u8; 32],
     ) {
-        let issuances = self.electrum_wallet.issuances().unwrap();
-        assert_eq!(issuances.len(), 1);
-        assert_eq!(&issuances[0].asset, asset);
-        assert_eq!(&issuances[0].token, token);
-        assert_eq!(&issuances[0].entropy, entropy);
-        assert_eq!(issuances[0].vin, 0);
+        let issuance = self.electrum_wallet.issuance(asset).unwrap();
+        assert_eq!(&issuance.asset, asset);
+        assert_eq!(&issuance.token, token);
+        assert_eq!(&issuance.entropy, entropy);
+        assert_eq!(issuance.vin, 0);
 
         let entropy = sha256::Midstate::from_slice(&entropy[..]).unwrap();
         let entropy = entropy.to_string();

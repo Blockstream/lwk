@@ -1,3 +1,8 @@
+variables:
+  CI_DISPOSABLE_ENVIRONMENT: "true"
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_TLS_CERTDIR: ""
 
 .base:
   image: rust:1.70
@@ -9,6 +14,16 @@
       - runner_system_failure
       - unknown_failure
       - stuck_or_timeout_failure
+
+.docker:
+  extends: .base
+  before_script:
+    - curl -fsSL https://get.docker.com -o get-docker.sh
+    - sh get-docker.sh
+  tags:
+    - k8s-docker
+  services:
+    - docker:20.10.12-dind
 
 fmt:
   extends: .base
@@ -26,13 +41,27 @@ build:
   extends: .base
   script:
     - cargo build
+    - apt update
+    - apt install -y libudev-dev
+    - cargo build --features serial
 
-test:
+test_wollet:
   extends: .base
   script:
     - ./download_bins.sh
     - . .envrc
-    - cargo test
+    - cargo test -p wollet -p software_signer
+
+test_jade:
+  extends: .docker
+  script:
+    - docker pull xenoky/local-jade-emulator:latest
+    - cargo test -p jade
+
+test_jrpc:
+  extends: .base
+  script:
+    - cargo test -p tiny_jrpc
 
 audit:
   extends: .base

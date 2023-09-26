@@ -1,0 +1,14 @@
+---
+source: crates/jade/test/serial.rs
+expression: result
+---
+http_request:
+  params:
+    urls:
+      - "https://jadepin.blockstream.com/start_handshake"
+      - "http://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion/start_handshake"
+    method: POST
+    accept: json
+    data: ""
+  on-reply: handshake_init
+

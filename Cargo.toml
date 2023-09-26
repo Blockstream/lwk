@@ -1,8 +1,11 @@
 [workspace]
 
-members = ["hwi", "software_signer", "tiny_jrpc", "wollet"]
+members = ["hwi", "jade", "software_signer", "tiny_jrpc", "wollet"]
 resolver = "2"
 
 
 [patch.crates-io]
 elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "5d80b940f023f468afb981f090681cf8622d3933" }
+
+[profile.dev.package."*"]
+opt-level = 3

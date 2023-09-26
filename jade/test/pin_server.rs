@@ -1,5 +1,6 @@
 use std::{collections::HashMap, io::Write};
 
+use bitcoin::{secp256k1::Secp256k1, PrivateKey, PublicKey};
 use rand::{thread_rng, RngCore};
 use tempfile::{tempdir, TempDir};
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
@@ -10,6 +11,13 @@ const PORT: u16 = 8_096;
 pub struct PinServerEmulator {
     volumes: HashMap<String, String>,
     _dir: TempDir,
+    pub_key: PublicKey,
+}
+
+impl PinServerEmulator {
+    pub fn pub_key(&self) -> &PublicKey {
+        &self.pub_key
+    }
 }
 
 const SERVER_PRIVATE_KEY: &str = "server_private_key.key";
@@ -26,6 +34,10 @@ impl Default for PinServerEmulator {
         let mut rng = thread_rng();
         rng.fill_bytes(&mut random_buff);
         file.write_all(&random_buff).unwrap();
+
+        let prv_key = PrivateKey::from_slice(&random_buff, bitcoin::Network::Regtest).unwrap();
+        let pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
+
         let mut volumes = HashMap::new();
         volumes.insert(
             format!("{}", file_path.display()),
@@ -33,7 +45,11 @@ impl Default for PinServerEmulator {
         );
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
-        Self { volumes, _dir: dir }
+        Self {
+            volumes,
+            _dir: dir,
+            pub_key,
+        }
     }
 }
 

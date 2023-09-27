@@ -283,6 +283,7 @@ impl ElectrumWallet {
                         Value::Explicit(a) => Some(a),
                         _ => None,
                     };
+                    // FIXME: comment if the issuance is blinded
                     r.push(IssuanceDetails {
                         txid: tx.txid(),
                         vin: vin as u32,

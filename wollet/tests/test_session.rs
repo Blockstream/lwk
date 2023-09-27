@@ -445,14 +445,17 @@ impl TestElectrumWallet {
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
 
+        let issuance = self.electrum_wallet.issuance(&asset).unwrap();
+        assert_eq!(issuance.vin, 0);
+        assert!(!issuance.is_reissuance);
+        assert_eq!(issuance.asset_amount, Some(satoshi_asset));
+        assert_eq!(issuance.token_amount, Some(satoshi_token));
+
         (asset, token)
     }
 
     pub fn reissueasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {
         let issuance = self.electrum_wallet.issuance(asset).unwrap();
-        assert_eq!(issuance.vin, 0);
-        assert!(!issuance.is_reissuance);
-
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let balance_token_before = self.balance(&issuance.token);
@@ -473,6 +476,8 @@ impl TestElectrumWallet {
         assert!(issuances.len() > 1);
         let reissuance = issuances.iter().find(|e| e.txid == txid).unwrap();
         assert!(reissuance.is_reissuance);
+        assert_eq!(reissuance.asset_amount, Some(satoshi_asset));
+        assert!(reissuance.token_amount.is_none());
     }
 
     pub fn burnasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {

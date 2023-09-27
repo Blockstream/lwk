@@ -1,5 +1,6 @@
 use crate::bitcoin::PublicKey as BitcoinPublicKey;
 use crate::config::{Config, ElementsNetwork};
+use crate::elements::confidential::Value;
 use crate::elements::encode::{
     deserialize as elements_deserialize, serialize as elements_serialize,
 };
@@ -273,6 +274,15 @@ impl ElectrumWallet {
                             .to_byte_array();
                     let (asset, token) = txin.issuance_ids();
                     let is_reissuance = txin.asset_issuance.asset_blinding_nonce != ZERO_TWEAK;
+                    // FIXME: attempt to unblind if blinded
+                    let asset_amount = match txin.asset_issuance.amount {
+                        Value::Explicit(a) => Some(a),
+                        _ => None,
+                    };
+                    let token_amount = match txin.asset_issuance.inflation_keys {
+                        Value::Explicit(a) => Some(a),
+                        _ => None,
+                    };
                     r.push(IssuanceDetails {
                         txid: tx.txid(),
                         vin: vin as u32,
@@ -280,9 +290,8 @@ impl ElectrumWallet {
                         asset,
                         token,
                         is_reissuance,
-                        // FIXME: check fields below
-                        asset_amount: None,
-                        token_amount: None,
+                        asset_amount,
+                        token_amount,
                     });
                 }
             }

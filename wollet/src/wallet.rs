@@ -296,7 +296,7 @@ impl ElectrumWallet {
     pub fn issuance(&self, asset: &AssetId) -> Result<IssuanceDetails, Error> {
         self.issuances()?
             .iter()
-            .find(|d| &d.asset == asset)
+            .find(|d| &d.asset == asset && !d.is_reissuance)
             .cloned()
             .ok_or_else(|| Error::MissingIssuance)
     }

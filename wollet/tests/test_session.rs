@@ -456,23 +456,13 @@ impl TestElectrumWallet {
         (asset, token, entropy.to_byte_array())
     }
 
-    pub fn reissueasset(
-        &mut self,
-        signers: &[&Signer],
-        satoshi_asset: u64,
-        asset: &AssetId,
-        token: &AssetId,
-        entropy: &[u8; 32],
-    ) {
+    pub fn reissueasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {
         let issuance = self.electrum_wallet.issuance(asset).unwrap();
-        assert_eq!(&issuance.asset, asset);
-        assert_eq!(&issuance.token, token);
-        assert_eq!(&issuance.entropy, entropy);
         assert_eq!(issuance.vin, 0);
 
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
-        let balance_token_before = self.balance(token);
+        let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
             .electrum_wallet
             .reissueasset(asset.to_string().as_str(), satoshi_asset)
@@ -483,7 +473,7 @@ impl TestElectrumWallet {
         self.send(&mut pset);
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
-        assert_eq!(self.balance(token), balance_token_before);
+        assert_eq!(self.balance(&issuance.token), balance_token_before);
         assert!(self.balance_btc() < balance_btc_before);
     }
 

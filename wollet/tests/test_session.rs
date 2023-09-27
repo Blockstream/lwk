@@ -1,12 +1,10 @@
 extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::hashes::Hash;
 use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hex::ToHex;
-use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
-use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOutWitness, Txid};
+use crate::elements::{Address, AssetId, Transaction, TxOutWitness, Txid};
 use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
@@ -429,18 +427,12 @@ impl TestElectrumWallet {
         signers: &[&Signer],
         satoshi_asset: u64,
         satoshi_token: u64,
-    ) -> (AssetId, AssetId, [u8; 32]) {
+    ) -> (AssetId, AssetId) {
         let balance_before = self.balance_btc();
         let mut pset = self
             .electrum_wallet
             .issueasset(satoshi_asset, satoshi_token)
             .unwrap();
-
-        let input = &pset.inputs()[0];
-        let asset_entropy = input.issuance_asset_entropy.unwrap();
-        let contract_hash = ContractHash::from_byte_array(asset_entropy);
-        let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
-        let entropy = AssetId::generate_asset_entropy(prevout, contract_hash);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -453,7 +445,7 @@ impl TestElectrumWallet {
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
 
-        (asset, token, entropy.to_byte_array())
+        (asset, token)
     }
 
     pub fn reissueasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {

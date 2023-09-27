@@ -463,11 +463,16 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
-        self.send(&mut pset);
+        let txid = self.send(&mut pset);
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
         assert_eq!(self.balance(&issuance.token), balance_token_before);
         assert!(self.balance_btc() < balance_btc_before);
+
+        let issuances = self.electrum_wallet.issuances().unwrap();
+        assert!(issuances.len() > 1);
+        let reissuance = issuances.iter().find(|e| e.txid == txid).unwrap();
+        assert!(reissuance.is_reissuance);
     }
 
     pub fn burnasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {

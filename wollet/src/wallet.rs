@@ -5,6 +5,7 @@ use crate::elements::encode::{
 };
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
+use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{
     Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut,
     Txid,
@@ -271,16 +272,17 @@ impl ElectrumWallet {
                         AssetId::generate_asset_entropy(txin.previous_output, contract_hash)
                             .to_byte_array();
                     let (asset, token) = txin.issuance_ids();
+                    let is_reissuance = txin.asset_issuance.asset_blinding_nonce != ZERO_TWEAK;
                     r.push(IssuanceDetails {
                         txid: tx.txid(),
                         vin: vin as u32,
                         entropy,
                         asset,
                         token,
+                        is_reissuance,
                         // FIXME: check fields below
                         asset_amount: None,
                         token_amount: None,
-                        is_reissuance: false,
                     });
                 }
             }

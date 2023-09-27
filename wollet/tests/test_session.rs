@@ -451,6 +451,7 @@ impl TestElectrumWallet {
     pub fn reissueasset(&mut self, signers: &[&Signer], satoshi_asset: u64, asset: &AssetId) {
         let issuance = self.electrum_wallet.issuance(asset).unwrap();
         assert_eq!(issuance.vin, 0);
+        assert!(!issuance.is_reissuance);
 
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);

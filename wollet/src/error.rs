@@ -96,6 +96,9 @@ pub enum Error {
     #[error("Missing transaction")]
     MissingTransaction,
 
+    #[error("Missing vin")]
+    MissingVin,
+
     #[error("Missing vout")]
     MissingVout,
 

@@ -450,7 +450,7 @@ impl ElectrumWallet {
         pset: &mut PartiallySignedTransaction,
         inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,
         utxo: &WalletTxOut,
-    ) -> Result<(), Error> {
+    ) -> Result<usize, Error> {
         let mut input = Input::from_prevout(utxo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
         input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
@@ -460,7 +460,30 @@ impl ElectrumWallet {
         let desc = self.definite_descriptor(&utxo.script_pubkey)?;
         pset.update_input_with_descriptor(idx, &desc)?;
         inp_txout_sec.insert(idx, utxo.unblinded);
-        Ok(())
+        Ok(idx)
+    }
+
+    fn set_issuance(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+        idx: usize,
+        satoshi_asset: u64,
+        satoshi_token: u64,
+    ) -> Result<(AssetId, AssetId), Error> {
+        let input = pset
+            .inputs_mut()
+            .get_mut(idx)
+            .ok_or_else(|| Error::MissingVin)?;
+        input.issuance_value_amount = Some(satoshi_asset);
+        if satoshi_token > 0 {
+            input.issuance_inflation_keys = Some(satoshi_token);
+        }
+        let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
+        let contract_hash = ContractHash::from_slice(&[0u8; 32]).unwrap();
+        let asset_entropy =
+            Some(AssetId::generate_asset_entropy(prevout, contract_hash).to_byte_array());
+        input.issuance_asset_entropy = asset_entropy;
+        Ok(input.issuance_ids())
     }
 
     fn createpset(
@@ -585,27 +608,9 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add a policy asset input
-        let mut input = Input::from_prevout(utxo.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
-
+        let idx = self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
         // Set issuance data
-        input.issuance_value_amount = Some(satoshi_asset);
-        if satoshi_token > 0 {
-            input.issuance_inflation_keys = Some(satoshi_token);
-        }
-        let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
-        let contract_hash = ContractHash::from_slice(&[0u8; 32]).unwrap();
-        let asset_entropy =
-            Some(AssetId::generate_asset_entropy(prevout, contract_hash).to_byte_array());
-        input.issuance_asset_entropy = asset_entropy;
-        let (asset, token) = input.issuance_ids();
-
-        pset.add_input(input);
-        let idx = 0;
-        let desc = self.definite_descriptor(&utxo.script_pubkey)?;
-        pset.update_input_with_descriptor(idx, &desc)?;
-        inp_txout_sec.insert(idx, utxo.unblinded);
+        let (asset, token) = self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
         let satoshi_change = utxo.unblinded.value - fee;
 
         // Add outputs

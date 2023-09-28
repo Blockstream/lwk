@@ -1,4 +1,5 @@
 use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets, Txid};
+use crate::secp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -14,8 +15,20 @@ pub struct WalletTxOut {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Addressee {
     pub satoshi: u64,
-    pub address: Address,
+    pub script_pubkey: Script,
+    pub blinding_pubkey: Option<PublicKey>,
     pub asset: AssetId,
+}
+
+impl Addressee {
+    pub fn from_address(satoshi: u64, address: &Address, asset: AssetId) -> Self {
+        Self {
+            satoshi,
+            script_pubkey: address.script_pubkey(),
+            blinding_pubkey: address.blinding_pubkey,
+            asset,
+        }
+    }
 }
 
 pub struct UnvalidatedAddressee<'a> {

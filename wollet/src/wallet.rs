@@ -390,11 +390,7 @@ impl ElectrumWallet {
     fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
         let address = self.validate_address(addressee.address)?;
         let asset = self.validate_asset(addressee.asset)?;
-        Ok(Addressee {
-            satoshi: addressee.satoshi,
-            address,
-            asset,
-        })
+        Ok(Addressee::from_address(addressee.satoshi, &address, asset))
     }
 
     fn validate_addressees(
@@ -422,10 +418,10 @@ impl ElectrumWallet {
         addressee: &Addressee,
     ) -> Result<(), Error> {
         let output = Output {
-            script_pubkey: addressee.address.script_pubkey(),
+            script_pubkey: addressee.script_pubkey.clone(),
             amount: Some(addressee.satoshi),
             asset: Some(addressee.asset),
-            blinding_key: addressee.address.blinding_pubkey.map(convert_pubkey),
+            blinding_key: addressee.blinding_pubkey.map(convert_pubkey),
             blinder_index: Some(0),
             ..Default::default()
         };
@@ -433,7 +429,7 @@ impl ElectrumWallet {
 
         let last_output_index = pset.n_outputs() - 1;
 
-        match self.definite_descriptor(&addressee.address.script_pubkey()) {
+        match self.definite_descriptor(&addressee.script_pubkey) {
             Ok(desc) => {
                 pset.update_output_with_descriptor(last_output_index, &desc)
                     .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
@@ -535,9 +531,11 @@ impl ElectrumWallet {
             if satoshi_change > 0 {
                 let address_change = self.address(Some(last_unused))?;
                 last_unused += 1;
+                let address = address_change.address();
                 addressees_change.push(Addressee {
                     satoshi: satoshi_change,
-                    address: address_change.address().clone(),
+                    script_pubkey: address.script_pubkey(),
+                    blinding_pubkey: address.blinding_pubkey,
                     asset,
                 });
             }
@@ -635,25 +633,28 @@ impl ElectrumWallet {
         // Add outputs
         let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
-        addressees.push(Addressee {
-            satoshi: satoshi_asset,
-            address: self.address(Some(last_unused))?.address().clone(),
+        let address = self.address(Some(last_unused))?;
+        addressees.push(Addressee::from_address(
+            satoshi_asset,
+            address.address(),
             asset,
-        });
+        ));
         last_unused += 1;
         if satoshi_token > 0 {
-            addressees.push(Addressee {
-                satoshi: satoshi_token,
-                address: self.address(Some(last_unused))?.address().clone(),
-                asset: token,
-            });
+            let address = self.address(Some(last_unused))?;
+            addressees.push(Addressee::from_address(
+                satoshi_token,
+                address.address(),
+                token,
+            ));
             last_unused += 1;
         }
-        addressees.push(Addressee {
-            satoshi: satoshi_change,
-            address: self.address(Some(last_unused))?.address().clone(),
-            asset: self.policy_asset(),
-        });
+        let address = self.address(Some(last_unused))?;
+        addressees.push(Addressee::from_address(
+            satoshi_change,
+            address.address(),
+            self.policy_asset(),
+        ));
 
         for addressee in addressees {
             self.add_output(&mut pset, &addressee)?;
@@ -709,25 +710,28 @@ impl ElectrumWallet {
         // Add outputs
         let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
-        addressees.push(Addressee {
-            satoshi: satoshi_asset,
-            address: self.address(Some(last_unused))?.address().clone(),
+        let address = self.address(Some(last_unused))?;
+        addressees.push(Addressee::from_address(
+            satoshi_asset,
+            address.address(),
             asset,
-        });
+        ));
         last_unused += 1;
         if satoshi_token > 0 {
-            addressees.push(Addressee {
-                satoshi: satoshi_token,
-                address: self.address(Some(last_unused))?.address().clone(),
-                asset: token,
-            });
+            let address = self.address(Some(last_unused))?;
+            addressees.push(Addressee::from_address(
+                satoshi_token,
+                address.address(),
+                token,
+            ));
             last_unused += 1;
         }
-        addressees.push(Addressee {
-            satoshi: satoshi_change,
-            address: self.address(Some(last_unused))?.address().clone(),
-            asset: self.policy_asset(),
-        });
+        let address = self.address(Some(last_unused))?;
+        addressees.push(Addressee::from_address(
+            satoshi_change,
+            address.address(),
+            self.policy_asset(),
+        ));
 
         for addressee in addressees {
             self.add_output(&mut pset, &addressee)?;
@@ -786,19 +790,21 @@ impl ElectrumWallet {
         let mut last_unused = self.address(None)?.index();
         let mut addressees = vec![];
         if satoshi_asset > 0 {
-            addressees.push(Addressee {
-                satoshi: satoshi_change,
-                address: self.address(Some(last_unused))?.address().clone(),
+            let address = self.address(Some(last_unused))?;
+            addressees.push(Addressee::from_address(
+                satoshi_change,
+                address.address(),
                 asset,
-            });
+            ));
             last_unused += 1;
         }
         if satoshi_btc > 0 {
-            addressees.push(Addressee {
-                satoshi: satoshi_btc,
-                address: self.address(Some(last_unused))?.address().clone(),
-                asset: self.policy_asset(),
-            });
+            let address = self.address(Some(last_unused))?;
+            addressees.push(Addressee::from_address(
+                satoshi_btc,
+                address.address(),
+                self.policy_asset(),
+            ));
         }
 
         for addressee in addressees {

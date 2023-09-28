@@ -542,14 +542,12 @@ impl ElectrumWallet {
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
                 let address_change = self.address(Some(last_unused))?;
-                last_unused += 1;
-                let address = address_change.address();
-                addressees_change.push(Addressee {
-                    satoshi: satoshi_change,
-                    script_pubkey: address.script_pubkey(),
-                    blinding_pubkey: address.blinding_pubkey,
+                addressees_change.push(Addressee::from_address(
+                    satoshi_change,
+                    address_change.address(),
                     asset,
-                });
+                ));
+                last_unused += 1;
             }
         }
 

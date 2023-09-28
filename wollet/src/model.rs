@@ -19,8 +19,15 @@ pub struct Addressee {
 }
 
 pub struct UnvalidatedAddressee<'a> {
+    /// The amount to send in satoshi
     pub satoshi: u64,
+
+    /// The address to send to
     pub address: &'a str,
+
+    /// The asset to send
+    ///
+    /// If empty, the policy asset
     pub asset: &'a str,
 }
 

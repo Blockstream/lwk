@@ -486,6 +486,25 @@ impl ElectrumWallet {
         Ok(input.issuance_ids())
     }
 
+    fn set_reissuance(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+        idx: usize,
+        satoshi_asset: u64,
+        utxo_token: &WalletTxOut,
+        entropy: &[u8; 32],
+    ) -> Result<(), Error> {
+        let input = pset
+            .inputs_mut()
+            .get_mut(idx)
+            .ok_or_else(|| Error::MissingVin)?;
+        input.issuance_value_amount = Some(satoshi_asset);
+        let nonce = utxo_token.unblinded.asset_bf.into_inner();
+        input.issuance_blinding_nonce = Some(nonce);
+        input.issuance_asset_entropy = Some(*entropy);
+        Ok(())
+    }
+
     fn createpset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
@@ -672,23 +691,16 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add the reissuance token input
-        let mut input = Input::from_prevout(utxo_token.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo_token.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo_token.outpoint.txid)?);
-
+        let idx = self.add_input(&mut pset, &mut inp_txout_sec, &utxo_token)?;
         let satoshi_token = utxo_token.unblinded.value;
-
-        // Set issuance data
-        input.issuance_value_amount = Some(satoshi_asset);
-        let nonce = utxo_token.unblinded.asset_bf.into_inner();
-        input.issuance_blinding_nonce = Some(nonce);
-        input.issuance_asset_entropy = Some(issuance.entropy);
-
-        pset.add_input(input);
-        let idx = 0;
-        let desc = self.definite_descriptor(&utxo_token.script_pubkey)?;
-        pset.update_input_with_descriptor(idx, &desc)?;
-        inp_txout_sec.insert(idx, utxo_token.unblinded);
+        // Set reissuance data
+        self.set_reissuance(
+            &mut pset,
+            idx,
+            satoshi_asset,
+            &utxo_token,
+            &issuance.entropy,
+        )?;
 
         // Add a policy asset input
         self.add_input(&mut pset, &mut inp_txout_sec, &utxo_btc)?;

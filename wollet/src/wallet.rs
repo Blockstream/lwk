@@ -511,6 +511,17 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    fn addressee_change(
+        &self,
+        satoshi: u64,
+        asset: AssetId,
+        last_unused: &mut u32,
+    ) -> Result<Addressee, Error> {
+        let address = self.address(Some(*last_unused))?;
+        *last_unused += 1;
+        Ok(Addressee::from_address(satoshi, address.address(), asset))
+    }
+
     fn createpset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
@@ -541,13 +552,8 @@ impl ElectrumWallet {
             }
             let satoshi_change = satoshi_in - satoshi_out;
             if satoshi_change > 0 {
-                let address_change = self.address(Some(last_unused))?;
-                addressees_change.push(Addressee::from_address(
-                    satoshi_change,
-                    address_change.address(),
-                    asset,
-                ));
-                last_unused += 1;
+                let addressee = self.addressee_change(satoshi_change, asset, &mut last_unused)?;
+                addressees_change.push(addressee);
             }
         }
 
@@ -568,14 +574,11 @@ impl ElectrumWallet {
             let idx = 0;
             let (asset, token) = self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
 
-            let address = self.address(Some(last_unused))?;
-            let addressee = Addressee::from_address(satoshi_asset, address.address(), asset);
+            let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
             self.add_output(&mut pset, &addressee)?;
-            last_unused += 1;
 
             if satoshi_token > 0 {
-                let address = self.address(Some(last_unused))?;
-                let addressee = Addressee::from_address(satoshi_token, address.address(), token);
+                let addressee = self.addressee_change(satoshi_token, token, &mut last_unused)?;
                 self.add_output(&mut pset, &addressee)?;
             }
         } else if let Some((asset, satoshi_asset)) = reissuance {
@@ -598,13 +601,10 @@ impl ElectrumWallet {
                 &issuance.entropy,
             )?;
 
-            let address = self.address(Some(last_unused))?;
-            let addressee = Addressee::from_address(satoshi_asset, address.address(), asset);
+            let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
             self.add_output(&mut pset, &addressee)?;
-            last_unused += 1;
 
-            let address = self.address(Some(last_unused))?;
-            let addressee = Addressee::from_address(satoshi_token, address.address(), token);
+            let addressee = self.addressee_change(satoshi_token, token, &mut last_unused)?;
             self.add_output(&mut pset, &addressee)?;
         }
 

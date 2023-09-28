@@ -1,8 +1,12 @@
-use jade::{protocol::UpdatePinserverParams, Jade};
+use ciborium::Value;
+use jade::{
+    protocol::{HandshakeParams, Network, UpdatePinserverParams},
+    Jade,
+};
 use std::time::UNIX_EPOCH;
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
 
-use crate::pin_server::PinServerEmulator;
+use crate::pin_server::{verify, PinServerEmulator};
 
 mod pin_server;
 
@@ -109,7 +113,7 @@ fn update_pinserver() {
     let mut jade_api = Jade::new(stream.into());
 
     let pin_server = PinServerEmulator::default();
-    let pub_key = pin_server.pub_key().to_bytes();
+    let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(pin_server::PORT);
     let url_a = format!("http://127.0.0.1:{}", port);
@@ -119,9 +123,48 @@ fn update_pinserver() {
         reset_certificate: false,
         url_a,
         url_b: "".to_string(),
-        pubkey: pub_key,
+        pubkey: Value::Bytes(pub_key),
         certificate: "".into(),
     };
     let result = jade_api.update_pinserver(params).unwrap();
     insta::assert_yaml_snapshot!(result);
+}
+
+#[test]
+fn jade_initialization() {
+    let docker = clients::Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(PORT);
+    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+    let mut jade_api = Jade::new(stream.into());
+
+    let pin_server = PinServerEmulator::default();
+    let pin_server_pub_key = *pin_server.pub_key();
+    dbg!(hex::encode(&pin_server_pub_key.to_bytes()));
+    assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
+    let container = docker.run(pin_server);
+    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let url_a = format!("http://127.0.0.1:{}", port);
+
+    let params = UpdatePinserverParams {
+        reset_details: false,
+        reset_certificate: false,
+        url_a: url_a.clone(),
+        url_b: "".to_string(),
+        pubkey: Value::Bytes(pin_server_pub_key.to_bytes()),
+        certificate: "".into(),
+    };
+
+    let result = jade_api.update_pinserver(params).unwrap();
+    insta::assert_yaml_snapshot!(result);
+
+    let result = jade_api.auth_user(Network::Mainnet).unwrap();
+    let pin_server_url = &result.urls()[0];
+    assert_eq!(pin_server_url, &format!("{url_a}/start_handshake"));
+
+    let resp = ureq::post(pin_server_url).call().unwrap();
+    let params: HandshakeParams = resp.into_json().unwrap();
+    verify(&params, &pin_server_pub_key);
+
+    let _result = jade_api.handshake_init(params).unwrap();
 }

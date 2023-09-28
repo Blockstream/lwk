@@ -1,3 +1,4 @@
+use ciborium::Value;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
@@ -38,8 +39,8 @@ pub struct EntropyParams {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HandshakeParams {
-    sig: String,
-    ske: String,
+    pub sig: String,
+    pub ske: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -131,6 +132,6 @@ pub struct UpdatePinserverParams {
     #[serde(rename = "urlB")]
     pub url_b: String,
 
-    pub pubkey: Vec<u8>,
+    pub pubkey: Value, // Must be Value::Bytes
     pub certificate: String,
 }

@@ -515,6 +515,7 @@ impl ElectrumWallet {
         &self,
         addressees: Vec<UnvalidatedAddressee>,
         fee: Option<u64>,
+        issuance: Option<(u64, u64)>,
     ) -> Result<PartiallySignedTransaction, Error> {
         // Check user inputs
         let addressees = self.validate_addressees(addressees)?;
@@ -563,6 +564,22 @@ impl ElectrumWallet {
             }
             self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
         }
+        if let Some((satoshi_asset, satoshi_token)) = issuance {
+            // At least an input for the fee should have been added.
+            let idx = 0;
+            let (asset, token) = self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
+
+            let address = self.address(Some(last_unused))?;
+            let addressee = Addressee::from_address(satoshi_asset, address.address(), asset);
+            self.add_output(&mut pset, &addressee)?;
+            last_unused += 1;
+
+            if satoshi_token > 0 {
+                let address = self.address(Some(last_unused))?;
+                let addressee = Addressee::from_address(satoshi_token, address.address(), token);
+                self.add_output(&mut pset, &addressee)?;
+            }
+        }
 
         // Add outputs
         for addressee in addressees {
@@ -591,7 +608,7 @@ impl ElectrumWallet {
             address,
             asset: "",
         }];
-        self.createpset(addressees, None)
+        self.createpset(addressees, None, None)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -606,7 +623,7 @@ impl ElectrumWallet {
             address,
             asset,
         }];
-        self.createpset(addressees, None)
+        self.createpset(addressees, None, None)
     }
 
     /// Create a PSET sending to many outputs
@@ -614,7 +631,7 @@ impl ElectrumWallet {
         &self,
         addressees: Vec<UnvalidatedAddressee>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        self.createpset(addressees, None)
+        self.createpset(addressees, None, None)
     }
 
     /// Create a PSET burning an asset
@@ -628,7 +645,7 @@ impl ElectrumWallet {
             address: "burn",
             asset,
         }];
-        self.createpset(addressees, None)
+        self.createpset(addressees, None, None)
     }
 
     /// Create a PSET issuing an asset
@@ -637,59 +654,9 @@ impl ElectrumWallet {
         satoshi_asset: u64,
         satoshi_token: u64,
     ) -> Result<PartiallySignedTransaction, Error> {
-        // Get utxos
-        let utxos = self.asset_utxos(&self.policy_asset())?;
-        let utxo = utxos[0].clone();
-
-        // Set fee
-        let fee = 1_000;
-
-        // Init PSET
-        let mut pset = PartiallySignedTransaction::new_v2();
-        let mut inp_txout_sec = HashMap::new();
-
-        // Add a policy asset input
-        let idx = self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
-        // Set issuance data
-        let (asset, token) = self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
-        let satoshi_change = utxo.unblinded.value - fee;
-
-        // Add outputs
-        let mut last_unused = self.address(None)?.index();
-        let mut addressees = vec![];
-        let address = self.address(Some(last_unused))?;
-        addressees.push(Addressee::from_address(
-            satoshi_asset,
-            address.address(),
-            asset,
-        ));
-        last_unused += 1;
-        if satoshi_token > 0 {
-            let address = self.address(Some(last_unused))?;
-            addressees.push(Addressee::from_address(
-                satoshi_token,
-                address.address(),
-                token,
-            ));
-            last_unused += 1;
-        }
-        let address = self.address(Some(last_unused))?;
-        addressees.push(Addressee::from_address(
-            satoshi_change,
-            address.address(),
-            self.policy_asset(),
-        ));
-
-        for addressee in addressees {
-            self.add_output(&mut pset, &addressee)?;
-        }
-        let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
-        pset.add_output(fee_output);
-
-        // Blind the transaction
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        Ok(pset)
+        let addressees = vec![];
+        let issuance = Some((satoshi_asset, satoshi_token));
+        self.createpset(addressees, None, issuance)
     }
 
     /// Create a PSET reissuing an asset

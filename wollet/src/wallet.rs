@@ -388,9 +388,19 @@ impl ElectrumWallet {
     }
 
     fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
-        let address = self.validate_address(addressee.address)?;
         let asset = self.validate_asset(addressee.asset)?;
-        Ok(Addressee::from_address(addressee.satoshi, &address, asset))
+        if addressee.address == "burn" {
+            let burn_script = Script::new_op_return(&[]);
+            Ok(Addressee {
+                satoshi: addressee.satoshi,
+                script_pubkey: burn_script,
+                blinding_pubkey: None,
+                asset,
+            })
+        } else {
+            let address = self.validate_address(addressee.address)?;
+            Ok(Addressee::from_address(addressee.satoshi, &address, asset))
+        }
     }
 
     fn validate_addressees(
@@ -607,6 +617,20 @@ impl ElectrumWallet {
         self.createpset(addressees, None)
     }
 
+    /// Create a PSET burning an asset
+    pub fn burnasset(
+        &self,
+        asset: &str,
+        satoshi: u64,
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let addressees = vec![UnvalidatedAddressee {
+            satoshi,
+            address: "burn",
+            asset,
+        }];
+        self.createpset(addressees, None)
+    }
+
     /// Create a PSET issuing an asset
     pub fn issueasset(
         &self,
@@ -732,80 +756,6 @@ impl ElectrumWallet {
             address.address(),
             self.policy_asset(),
         ));
-
-        for addressee in addressees {
-            self.add_output(&mut pset, &addressee)?;
-        }
-        let fee_output = Output::new_explicit(Script::default(), fee, self.policy_asset(), None);
-        pset.add_output(fee_output);
-
-        // Blind the transaction
-        let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        Ok(pset)
-    }
-
-    /// Create a PSET burning an asset
-    pub fn burnasset(
-        &self,
-        asset: &str,
-        satoshi_asset: u64,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let asset = AssetId::from_str(asset)?;
-
-        // Get utxos
-        let mut utxos = self.asset_utxos(&asset)?;
-        let tot_asset: u64 = utxos.iter().map(|u| u.unblinded.value).sum();
-        let mut utxos_btc = self.asset_utxos(&self.policy_asset())?;
-        let tot_btc: u64 = utxos_btc.iter().map(|u| u.unblinded.value).sum();
-        utxos.append(&mut utxos_btc);
-
-        if tot_asset < satoshi_asset {
-            return Err(Error::InsufficientFunds);
-        }
-        let satoshi_change = tot_asset - satoshi_asset;
-
-        // Set fee
-        let fee = 1_000;
-        if tot_btc < fee {
-            return Err(Error::InsufficientFunds);
-        }
-        let satoshi_btc = tot_btc - fee;
-
-        // Init PSET
-        let mut pset = PartiallySignedTransaction::new_v2();
-        let mut inp_txout_sec = HashMap::new();
-
-        // Add inputs
-        for utxo in utxos {
-            self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
-        }
-
-        // Add outputs
-        let burn_script = Script::new_op_return(&[]);
-        let burn_output = Output::new_explicit(burn_script, satoshi_asset, asset, None);
-        pset.add_output(burn_output);
-
-        // Add outputs
-        let mut last_unused = self.address(None)?.index();
-        let mut addressees = vec![];
-        if satoshi_asset > 0 {
-            let address = self.address(Some(last_unused))?;
-            addressees.push(Addressee::from_address(
-                satoshi_change,
-                address.address(),
-                asset,
-            ));
-            last_unused += 1;
-        }
-        if satoshi_btc > 0 {
-            let address = self.address(Some(last_unused))?;
-            addressees.push(Addressee::from_address(
-                satoshi_btc,
-                address.address(),
-                self.policy_asset(),
-            ));
-        }
 
         for addressee in addressees {
             self.add_output(&mut pset, &addressee)?;

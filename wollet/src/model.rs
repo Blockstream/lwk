@@ -36,6 +36,8 @@ pub struct UnvalidatedAddressee<'a> {
     pub satoshi: u64,
 
     /// The address to send to
+    ///
+    /// If "burn", the output will be burned
     pub address: &'a str,
 
     /// The asset to send

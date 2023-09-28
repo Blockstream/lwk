@@ -1,5 +1,6 @@
 use std::time::SystemTimeError;
 
+use ciborium::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
@@ -10,13 +11,16 @@ pub enum Error {
     IoError(std::io::Error),
     #[error("SystemTime Error: {0}")]
     SystemTimeError(SystemTimeError),
+
+    #[error("Jade returned neither an error nor a result")]
+    JadeNeitherErrorNorResult,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ErrorDetails {
     code: i64,
     message: String,
-    data: Vec<u8>,
+    data: Value,
 }
 
 impl std::fmt::Display for ErrorDetails {

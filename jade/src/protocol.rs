@@ -46,7 +46,7 @@ pub struct HandshakeParams {
 pub struct Response<T> {
     pub id: String,
     pub result: Option<T>,
-    pub error: Option<JadeError>,
+    pub error: Option<ErrorDetails>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -117,11 +117,7 @@ pub struct HandshakeData {
     encrypted_data: String,
     hmac_encrypted_data: String,
     ske: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct JadeError {
-    pub error: ErrorDetails,
+    error: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

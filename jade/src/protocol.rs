@@ -17,6 +17,7 @@ pub enum Params {
     Entropy(EntropyParams),
     AuthUser(AuthUserParams),
     Handshake(HandshakeParams),
+    UpdatePinServer(UpdatePinserverParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -121,4 +122,19 @@ pub struct HandshakeData {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JadeError {
     pub error: ErrorDetails,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UpdatePinserverParams {
+    pub reset_details: bool,
+    pub reset_certificate: bool,
+
+    #[serde(rename = "pinA")]
+    pub url_a: String,
+
+    #[serde(rename = "pinB")]
+    pub url_b: String,
+
+    pub pubkey: Vec<u8>,
+    pub certificate: String,
 }

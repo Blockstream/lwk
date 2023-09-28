@@ -15,7 +15,6 @@ pub const PORT: u16 = 8_096;
 #[derive(Debug)]
 pub struct PinServerEmulator {
     volumes: HashMap<String, String>,
-    _dir: TempDir,
     pub_key: PublicKey,
 }
 
@@ -28,11 +27,10 @@ impl PinServerEmulator {
 const SERVER_PRIVATE_KEY: &str = "server_private_key.key";
 const PINS: &str = "pins";
 
-impl Default for PinServerEmulator {
-    fn default() -> Self {
+impl PinServerEmulator {
+    pub fn new(dir: &TempDir) -> Self {
         // docker run -v $PWD/server_private_key.key:/server_private_key.key -v $PWD/pinsdir:/pins -p 8096:8096 xenoky/dockerized_pinserver
 
-        let dir = tempdir().unwrap();
         let file_path = dir.path().join(SERVER_PRIVATE_KEY);
         let mut file = std::fs::File::create(&file_path).unwrap();
         let mut random_buff = [0u8; 32];
@@ -50,11 +48,7 @@ impl Default for PinServerEmulator {
         );
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
-        Self {
-            volumes,
-            _dir: dir,
-            pub_key,
-        }
+        Self { volumes, pub_key }
     }
 }
 
@@ -97,7 +91,9 @@ impl Image for PinServerEmulator {
 #[test]
 fn pin_server() {
     let docker = clients::Cli::default();
-    let pin_server = PinServerEmulator::default();
+
+    let tempdir = tempdir().unwrap();
+    let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);
 

@@ -4,6 +4,7 @@ use jade::{
     Jade,
 };
 use std::time::UNIX_EPOCH;
+use tempfile::tempdir;
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
 
 use crate::pin_server::{verify, PinServerEmulator};
@@ -112,7 +113,8 @@ fn update_pinserver() {
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
-    let pin_server = PinServerEmulator::default();
+    let tempdir = tempdir().unwrap();
+    let pin_server = PinServerEmulator::new(&tempdir);
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(pin_server::PORT);
@@ -138,7 +140,8 @@ fn jade_initialization() {
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
-    let pin_server = PinServerEmulator::default();
+    let tempdir = tempdir().unwrap();
+    let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     dbg!(hex::encode(&pin_server_pub_key.to_bytes()));
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);

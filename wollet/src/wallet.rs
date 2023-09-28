@@ -9,7 +9,7 @@ use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{
     Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, TxOut,
-    Txid,
+    TxOutSecrets, Txid,
 };
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
@@ -445,6 +445,24 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    fn add_input(
+        &self,
+        pset: &mut PartiallySignedTransaction,
+        inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,
+        utxo: &WalletTxOut,
+    ) -> Result<(), Error> {
+        let mut input = Input::from_prevout(utxo.outpoint);
+        input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
+        input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
+
+        pset.add_input(input);
+        let idx = pset.inputs().len() - 1;
+        let desc = self.definite_descriptor(&utxo.script_pubkey)?;
+        pset.update_input_with_descriptor(idx, &desc)?;
+        inp_txout_sec.insert(idx, utxo.unblinded);
+        Ok(())
+    }
+
     fn createpset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
@@ -488,19 +506,12 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add inputs
-        for (idx, utxo) in utxos.iter().enumerate() {
+        for utxo in utxos {
             if tot_out.get(&utxo.unblinded.asset).is_none() {
                 // Do not add utxos if the we are not sending the asset
                 continue;
             }
-            let mut input = Input::from_prevout(utxo.outpoint);
-            input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
-            input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
-
-            pset.add_input(input);
-            let desc = self.definite_descriptor(&utxo.script_pubkey)?;
-            pset.update_input_with_descriptor(idx, &desc)?;
-            inp_txout_sec.insert(idx, utxo.unblinded);
+            self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
         }
 
         // Add outputs
@@ -675,15 +686,7 @@ impl ElectrumWallet {
         inp_txout_sec.insert(idx, utxo_token.unblinded);
 
         // Add a policy asset input
-        let mut input = Input::from_prevout(utxo_btc.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo_btc.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo_btc.outpoint.txid)?);
-
-        pset.add_input(input);
-        let idx = 1;
-        let desc = self.definite_descriptor(&utxo_btc.script_pubkey)?;
-        pset.update_input_with_descriptor(idx, &desc)?;
-        inp_txout_sec.insert(idx, utxo_btc.unblinded);
+        self.add_input(&mut pset, &mut inp_txout_sec, &utxo_btc)?;
         let satoshi_change = utxo_btc.unblinded.value - fee;
 
         // Add outputs
@@ -753,14 +756,8 @@ impl ElectrumWallet {
         let mut inp_txout_sec = HashMap::new();
 
         // Add inputs
-        for (idx, utxo) in utxos.iter().enumerate() {
-            let mut input = Input::from_prevout(utxo.outpoint);
-            input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
-            input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
-            pset.add_input(input);
-            let desc = self.definite_descriptor(&utxo.script_pubkey)?;
-            pset.update_input_with_descriptor(idx, &desc)?;
-            inp_txout_sec.insert(idx, utxo.unblinded);
+        for utxo in utxos {
+            self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
         }
 
         // Add outputs

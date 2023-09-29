@@ -1,6 +1,13 @@
 [workspace]
 
-members = ["hwi", "jade", "software_signer", "tiny_jrpc", "wollet"]
+members = [
+    "hwi",
+    "jade",
+    "software_signer",
+    "tiny_jrpc",
+    "wollet",
+    "bs_containers",
+]
 resolver = "2"
 
 

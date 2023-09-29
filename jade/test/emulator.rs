@@ -1,3 +1,7 @@
+use bs_containers::{
+    jade::{JadeEmulator, EMULATOR_PORT},
+    pin_server::{PinServerEmulator, PIN_SERVER_PORT},
+};
 use ciborium::Value;
 use jade::{
     protocol::{HandshakeParams, Network, UpdatePinserverParams},
@@ -5,48 +9,11 @@ use jade::{
 };
 use std::time::UNIX_EPOCH;
 use tempfile::{tempdir, TempDir};
-use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
+use testcontainers::clients;
 
-use crate::pin_server::{verify, PinServerEmulator};
+use crate::pin_server::verify;
 
 mod pin_server;
-
-const PORT: u16 = 30_121;
-
-#[derive(Debug, Default)]
-pub struct JadeEmulator;
-
-#[derive(Clone, Debug, Default)]
-pub struct Args;
-
-impl ImageArgs for Args {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        let args = ["bash".to_string()];
-        Box::new(args.into_iter())
-    }
-}
-
-impl Image for JadeEmulator {
-    type Args = ();
-
-    fn name(&self) -> String {
-        "xenoky/local-jade-emulator".into() // TODO Change with blockstream official jade emulator
-    }
-
-    fn tag(&self) -> String {
-        "latest".into()
-    }
-
-    fn ready_conditions(&self) -> Vec<WaitFor> {
-        vec![WaitFor::StdOutMessage {
-            message: "char device redirected".into(),
-        }]
-    }
-
-    fn expose_ports(&self) -> Vec<u16> {
-        [PORT].into()
-    }
-}
 
 const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
                              useful method fence kidney chuckle party
@@ -57,7 +24,7 @@ const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
 fn entropy() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -69,7 +36,7 @@ fn entropy() {
 fn epoch() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -85,7 +52,7 @@ fn epoch() {
 fn ping() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -97,7 +64,7 @@ fn ping() {
 fn version() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -109,7 +76,7 @@ fn version() {
 fn update_pinserver() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -117,7 +84,7 @@ fn update_pinserver() {
     let pin_server = PinServerEmulator::new(&tempdir);
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let url_a = format!("http://127.0.0.1:{}", port);
 
     let params = UpdatePinserverParams {
@@ -136,7 +103,7 @@ fn update_pinserver() {
 fn jade_initialization() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -150,7 +117,7 @@ fn jade_initialization() {
     dbg!(hex::encode(&pin_server_pub_key.to_bytes()));
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
     let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let url_a = format!("http://127.0.0.1:{}", port);
 
     let params = UpdatePinserverParams {

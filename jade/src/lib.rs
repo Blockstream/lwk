@@ -13,6 +13,8 @@ use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
+use crate::error::Error;
+
 pub mod connection;
 pub mod error;
 pub mod protocol;
@@ -80,7 +82,6 @@ impl Jade {
     {
         let mut rng = rand::thread_rng();
         let id = rng.next_u32().to_string();
-        dbg!(&id);
         let req = Request {
             id,
             method: method.into(),
@@ -88,8 +89,12 @@ impl Jade {
         };
         let mut buf = Vec::new();
         ciborium::into_writer(&req, &mut buf).unwrap();
-        dbg!(buf.len());
-        dbg!(hex::encode(&buf));
+        println!(
+            "\n--->\t{:?}\n\t({} bytes) {}",
+            &req,
+            buf.len(),
+            hex::encode(&buf)
+        );
 
         self.conn.write_all(&buf).unwrap();
         thread::sleep(Duration::from_millis(1000));
@@ -100,14 +105,29 @@ impl Jade {
         loop {
             match self.conn.read(&mut rx[total..]) {
                 Ok(len) => {
-                    dbg!(&len);
                     total += len;
-                    dbg!(&total);
-                    dbg!(hex::encode(&rx[..total]));
                     match ciborium::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
-                        Ok(r) => return Ok(r.result.unwrap()),
+                        Ok(r) => {
+                            if let Some(result) = r.result {
+                                println!(
+                                    "\n<---\t{:?}\n\t({} bytes) {}",
+                                    &result,
+                                    total,
+                                    hex::encode(&rx[..total])
+                                );
+                                return Ok(result);
+                            }
+                            if let Some(error) = r.error {
+                                return Err(Error::JadeError(error));
+                            }
+                            return Err(Error::JadeNeitherErrorNorResult);
+                        }
                         Err(e) => {
                             dbg!(e);
+                            let generic =
+                                ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total]);
+                            dbg!(&generic);
+                            generic.unwrap();
                         }
                     }
                 }

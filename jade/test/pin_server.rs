@@ -1,6 +1,11 @@
 use std::{collections::HashMap, io::Write};
 
-use bitcoin::{secp256k1::Secp256k1, PrivateKey, PublicKey};
+use bitcoin::{
+    hashes::{hex::FromHex, sha256, Hash},
+    secp256k1::{ecdsa::Signature, Message, Secp256k1},
+    PrivateKey, PublicKey,
+};
+use jade::protocol::HandshakeParams;
 use rand::{thread_rng, RngCore};
 use tempfile::{tempdir, TempDir};
 use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
@@ -10,7 +15,6 @@ pub const PORT: u16 = 8_096;
 #[derive(Debug)]
 pub struct PinServerEmulator {
     volumes: HashMap<String, String>,
-    _dir: TempDir,
     pub_key: PublicKey,
 }
 
@@ -23,11 +27,10 @@ impl PinServerEmulator {
 const SERVER_PRIVATE_KEY: &str = "server_private_key.key";
 const PINS: &str = "pins";
 
-impl Default for PinServerEmulator {
-    fn default() -> Self {
+impl PinServerEmulator {
+    pub fn new(dir: &TempDir) -> Self {
         // docker run -v $PWD/server_private_key.key:/server_private_key.key -v $PWD/pinsdir:/pins -p 8096:8096 xenoky/dockerized_pinserver
 
-        let dir = tempdir().unwrap();
         let file_path = dir.path().join(SERVER_PRIVATE_KEY);
         let mut file = std::fs::File::create(&file_path).unwrap();
         let mut random_buff = [0u8; 32];
@@ -45,11 +48,7 @@ impl Default for PinServerEmulator {
         );
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
-        Self {
-            volumes,
-            _dir: dir,
-            pub_key,
-        }
+        Self { volumes, pub_key }
     }
 }
 
@@ -92,10 +91,37 @@ impl Image for PinServerEmulator {
 #[test]
 fn pin_server() {
     let docker = clients::Cli::default();
-    let container = docker.run(PinServerEmulator::default());
+    let tempdir = match std::env::var("CI_PROJECT_DIR") {
+        Ok(var) => TempDir::new_in(var),
+        Err(_) => tempdir(),
+    }
+    .unwrap();
+    let pin_server = PinServerEmulator::new(&tempdir);
+    let pin_server_pub_key = *pin_server.pub_key();
+    let container = docker.run(pin_server);
+
     let port = container.get_host_port_ipv4(PORT);
-    let result = ureq::get(&format!("http://127.0.0.1:{port}"))
-        .call()
-        .unwrap();
+    let pin_server_url = format!("http://127.0.0.1:{port}");
+    let result = ureq::get(&pin_server_url).call().unwrap();
     assert_eq!(result.status(), 200);
+
+    let start_handshake_url = format!("{pin_server_url}/start_handshake");
+    let resp = ureq::post(&start_handshake_url).call().unwrap();
+    let params: HandshakeParams = resp.into_json().unwrap();
+    verify(&params, &pin_server_pub_key);
+}
+
+pub fn verify(params: &HandshakeParams, pin_server_pub_key: &PublicKey) {
+    let ske_bytes = Vec::<u8>::from_hex(&params.ske).unwrap();
+    let ske_hash = sha256::Hash::hash(&ske_bytes);
+
+    let signature_bytes = Vec::<u8>::from_hex(&params.sig).unwrap();
+    let signature = Signature::from_compact(&signature_bytes).unwrap();
+
+    let message = Message::from_slice(&ske_hash[..]).unwrap();
+
+    let verify = Secp256k1::verification_only()
+        .verify_ecdsa(&message, &signature, &pin_server_pub_key.inner)
+        .is_ok();
+    assert!(verify);
 }

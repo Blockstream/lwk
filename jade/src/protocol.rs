@@ -1,3 +1,4 @@
+use ciborium::Value;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
@@ -38,15 +39,15 @@ pub struct EntropyParams {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HandshakeParams {
-    sig: String,
-    ske: String,
+    pub sig: String,
+    pub ske: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Response<T> {
     pub id: String,
     pub result: Option<T>,
-    pub error: Option<JadeError>,
+    pub error: Option<ErrorDetails>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -117,11 +118,7 @@ pub struct HandshakeData {
     encrypted_data: String,
     hmac_encrypted_data: String,
     ske: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct JadeError {
-    pub error: ErrorDetails,
+    error: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -129,12 +126,12 @@ pub struct UpdatePinserverParams {
     pub reset_details: bool,
     pub reset_certificate: bool,
 
-    #[serde(rename = "pinA")]
+    #[serde(rename = "urlA")]
     pub url_a: String,
 
-    #[serde(rename = "pinB")]
+    #[serde(rename = "urlB")]
     pub url_b: String,
 
-    pub pubkey: Vec<u8>,
+    pub pubkey: Value, // Must be Value::Bytes
     pub certificate: String,
 }

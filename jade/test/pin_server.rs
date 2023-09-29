@@ -91,8 +91,11 @@ impl Image for PinServerEmulator {
 #[test]
 fn pin_server() {
     let docker = clients::Cli::default();
-
-    let tempdir = tempdir().unwrap();
+    let tempdir = match std::env::var("CI_PROJECT_DIR") {
+        Ok(var) => TempDir::new_in(var),
+        Err(_) => tempdir(),
+    }
+    .unwrap();
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);

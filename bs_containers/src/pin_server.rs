@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Write};
+use std::{collections::HashMap, env, io::Write};
 
 use bitcoin::{secp256k1::Secp256k1, PrivateKey, PublicKey};
 use rand::{thread_rng, RngCore};
@@ -63,11 +63,11 @@ impl Image for PinServerEmulator {
     type Args = ();
 
     fn name(&self) -> String {
-        "tulipan81/blind_pin_server".into()
+        env::var("PIN_SERVER_IMAGE_NAME").unwrap_or("tulipan81/blind_pin_server".into())
     }
 
     fn tag(&self) -> String {
-        "v0.0.3".into()
+        env::var("PIN_SERVER_IMAGE_NAME").unwrap_or("v0.0.3".into())
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {

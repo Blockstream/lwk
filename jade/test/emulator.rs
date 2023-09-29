@@ -108,7 +108,7 @@ fn jade_initialization() {
     let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
-    dbg!(hex::encode(&pin_server_pub_key.to_bytes()));
+    dbg!(hex::encode(pin_server_pub_key.to_bytes()));
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);

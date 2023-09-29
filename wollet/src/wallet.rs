@@ -65,6 +65,13 @@ fn convert_blinding_key(
     }
 }
 
+// We make issuance and reissuance are mutually exclusive for simplicity
+enum IssuanceRequest {
+    None,
+    Issuance(u64, u64),
+    Reissuance(AssetId, u64),
+}
+
 pub struct ElectrumWallet {
     config: Config,
     store: Store,
@@ -526,8 +533,7 @@ impl ElectrumWallet {
         &self,
         addressees: Vec<UnvalidatedAddressee>,
         fee: Option<u64>,
-        issuance: Option<(u64, u64)>,
-        reissuance: Option<(AssetId, u64)>,
+        issuance_request: IssuanceRequest,
     ) -> Result<PartiallySignedTransaction, Error> {
         // Check user inputs
         let addressees = self.validate_addressees(addressees)?;
@@ -569,43 +575,48 @@ impl ElectrumWallet {
             }
             self.add_input(&mut pset, &mut inp_txout_sec, &utxo)?;
         }
-        if let Some((satoshi_asset, satoshi_token)) = issuance {
-            // At least an input for the fee should have been added.
-            let idx = 0;
-            let (asset, token) = self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
 
-            let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
-            self.add_output(&mut pset, &addressee)?;
+        match issuance_request {
+            IssuanceRequest::None => {}
+            IssuanceRequest::Issuance(satoshi_asset, satoshi_token) => {
+                // At least an input for the fee should have been added.
+                let idx = 0;
+                let (asset, token) =
+                    self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
 
-            if satoshi_token > 0 {
+                let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
+                self.add_output(&mut pset, &addressee)?;
+
+                if satoshi_token > 0 {
+                    let addressee =
+                        self.addressee_change(satoshi_token, token, &mut last_unused)?;
+                    self.add_output(&mut pset, &addressee)?;
+                }
+            }
+            IssuanceRequest::Reissuance(asset, satoshi_asset) => {
+                let issuance = self.issuance(&asset)?;
+                let token = issuance.token;
+                // Add input for the token
+                let utxos_token = self.asset_utxos(&token)?;
+                let utxo_token = utxos_token[0].clone();
+                let idx = self.add_input(&mut pset, &mut inp_txout_sec, &utxo_token)?;
+                let satoshi_token = utxo_token.unblinded.value;
+
+                // Set reissuance data
+                self.set_reissuance(
+                    &mut pset,
+                    idx,
+                    satoshi_asset,
+                    &utxo_token,
+                    &issuance.entropy,
+                )?;
+
+                let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
+                self.add_output(&mut pset, &addressee)?;
+
                 let addressee = self.addressee_change(satoshi_token, token, &mut last_unused)?;
                 self.add_output(&mut pset, &addressee)?;
             }
-        } else if let Some((asset, satoshi_asset)) = reissuance {
-            // We make issuance and reissuance are mutually exclusive for simplicity
-            // FIXME: handle this more explicitly
-            let issuance = self.issuance(&asset)?;
-            let token = issuance.token;
-            // Add input for the token
-            let utxos_token = self.asset_utxos(&token)?;
-            let utxo_token = utxos_token[0].clone();
-            let idx = self.add_input(&mut pset, &mut inp_txout_sec, &utxo_token)?;
-            let satoshi_token = utxo_token.unblinded.value;
-
-            // Set reissuance data
-            self.set_reissuance(
-                &mut pset,
-                idx,
-                satoshi_asset,
-                &utxo_token,
-                &issuance.entropy,
-            )?;
-
-            let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
-            self.add_output(&mut pset, &addressee)?;
-
-            let addressee = self.addressee_change(satoshi_token, token, &mut last_unused)?;
-            self.add_output(&mut pset, &addressee)?;
         }
 
         // Add outputs
@@ -635,7 +646,7 @@ impl ElectrumWallet {
             address,
             asset: "",
         }];
-        self.createpset(addressees, None, None, None)
+        self.createpset(addressees, None, IssuanceRequest::None)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -650,7 +661,7 @@ impl ElectrumWallet {
             address,
             asset,
         }];
-        self.createpset(addressees, None, None, None)
+        self.createpset(addressees, None, IssuanceRequest::None)
     }
 
     /// Create a PSET sending to many outputs
@@ -658,7 +669,7 @@ impl ElectrumWallet {
         &self,
         addressees: Vec<UnvalidatedAddressee>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        self.createpset(addressees, None, None, None)
+        self.createpset(addressees, None, IssuanceRequest::None)
     }
 
     /// Create a PSET burning an asset
@@ -672,7 +683,7 @@ impl ElectrumWallet {
             address: "burn",
             asset,
         }];
-        self.createpset(addressees, None, None, None)
+        self.createpset(addressees, None, IssuanceRequest::None)
     }
 
     /// Create a PSET issuing an asset
@@ -682,8 +693,8 @@ impl ElectrumWallet {
         satoshi_token: u64,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
-        let issuance = Some((satoshi_asset, satoshi_token));
-        self.createpset(addressees, None, issuance, None)
+        let issuance = IssuanceRequest::Issuance(satoshi_asset, satoshi_token);
+        self.createpset(addressees, None, issuance)
     }
 
     /// Create a PSET reissuing an asset
@@ -694,8 +705,8 @@ impl ElectrumWallet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
         let asset = AssetId::from_str(asset)?;
-        let reissuance = Some((asset, satoshi_asset));
-        self.createpset(addressees, None, None, reissuance)
+        let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset);
+        self.createpset(addressees, None, reissuance)
     }
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {

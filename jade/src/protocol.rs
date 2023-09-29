@@ -19,6 +19,7 @@ pub enum Params {
     AuthUser(AuthUserParams),
     Handshake(HandshakeParams),
     UpdatePinServer(UpdatePinserverParams),
+    HandshakeComplete(HandshakeCompleteParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +45,19 @@ pub struct HandshakeParams {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct HandshakeCompleteParams {
+    pub encrypted_key: String,
+    pub hmac: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct HandshakeComplete {
+    pub encrypted_data: String,
+    pub hmac_encrypted_data: String,
+    pub ske: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Response<T> {
     pub id: String,
     pub result: Option<T>,
@@ -55,6 +69,12 @@ pub struct PingResult(u8);
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BoolResult(bool);
+
+impl BoolResult {
+    pub fn get(&self) -> bool {
+        self.0
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Network {
@@ -96,6 +116,9 @@ pub struct AuthResult<T> {
 impl<T> AuthResult<T> {
     pub fn urls(&self) -> &[String] {
         self.http_request.params.urls.as_slice()
+    }
+    pub fn data(&self) -> &T {
+        &self.http_request.params.data
     }
 }
 #[derive(Debug, Deserialize, Serialize)]

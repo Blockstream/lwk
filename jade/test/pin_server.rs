@@ -3,7 +3,10 @@ use bitcoin::{
     secp256k1::{ecdsa::Signature, Message, Secp256k1},
     PublicKey,
 };
-use bs_containers::pin_server::{PinServerEmulator, PIN_SERVER_PORT};
+use bs_containers::{
+    pin_server::{PinServerEmulator, PIN_SERVER_PORT},
+    print_docker_logs_and_panic,
+};
 use jade::protocol::HandshakeParams;
 use tempfile::{tempdir, TempDir};
 use testcontainers::clients::Cli;
@@ -26,7 +29,9 @@ fn pin_server() {
     assert_eq!(result.status(), 200);
 
     let start_handshake_url = format!("{pin_server_url}/start_handshake");
-    let resp = ureq::post(&start_handshake_url).call().unwrap();
+    let resp = ureq::post(&start_handshake_url)
+        .call()
+        .unwrap_or_else(|_| print_docker_logs_and_panic(container.id()));
     let params: HandshakeParams = resp.into_json().unwrap();
     verify(&params, &pin_server_pub_key);
 }

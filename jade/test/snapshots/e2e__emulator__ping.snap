@@ -1,0 +1,6 @@
+---
+source: jade/test/emulator.rs
+expression: result
+---
+0
+

@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use bitcoin::{
     hashes::{hex::FromHex, sha256, Hash},
     secp256k1::{ecdsa::Signature, Message, Secp256k1},

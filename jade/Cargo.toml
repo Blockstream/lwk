@@ -26,16 +26,8 @@ ureq = { version = "2.7.1", features = ["json"] }
 serial = ["serialport"]
 
 [[test]]
-name = "emulator"
-path = "test/emulator.rs"
-
-[[test]]
-name = "serial"
-path = "test/serial.rs"
-
-[[test]]
-name = "pin_server"
-path = "test/pin_server.rs"
+name = "e2e"
+path = "test/e2e.rs"
 
 [dev-dependencies]
 bitcoin = "0.30.1"

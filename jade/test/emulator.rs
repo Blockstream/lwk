@@ -13,8 +13,6 @@ use testcontainers::clients;
 
 use crate::pin_server::verify;
 
-mod pin_server;
-
 const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
                              useful method fence kidney chuckle party
                              favorite sunset draw limb science crane

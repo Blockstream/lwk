@@ -1,6 +1,7 @@
 mod config;
 mod error;
 mod model;
+mod pset_create;
 mod pset_details;
 mod store;
 mod sync;

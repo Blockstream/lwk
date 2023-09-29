@@ -8,7 +8,7 @@ use jade::{
     Jade,
 };
 use std::time::UNIX_EPOCH;
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 use testcontainers::clients;
 
 use crate::pin_server::verify;
@@ -105,11 +105,7 @@ fn jade_initialization() {
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
-    let tempdir = match std::env::var("CI_PROJECT_DIR") {
-        Ok(var) => TempDir::new_in(var),
-        Err(_) => tempdir(),
-    }
-    .unwrap();
+    let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     dbg!(hex::encode(&pin_server_pub_key.to_bytes()));

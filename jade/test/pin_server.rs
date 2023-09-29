@@ -8,17 +8,12 @@ use bs_containers::{
     print_docker_logs_and_panic,
 };
 use jade::protocol::HandshakeParams;
-use tempfile::{tempdir, TempDir};
 use testcontainers::clients::Cli;
 
 #[test]
 fn pin_server() {
     let docker = Cli::default();
-    let tempdir = match std::env::var("CI_PROJECT_DIR") {
-        Ok(var) => TempDir::new_in(var),
-        Err(_) => tempdir(),
-    }
-    .unwrap();
+    let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);

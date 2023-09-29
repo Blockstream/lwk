@@ -23,6 +23,10 @@ const SERVER_PRIVATE_KEY: &str = "server_private_key.key";
 const PINS: &str = "pins";
 
 impl PinServerEmulator {
+    /// Create a PinServerEmulator
+    ///
+    /// takes the temporary directory as parameter to ensure it's not deleted when the
+    /// docker containers runtime convert the Image into RunnableImage, consuming the struct
     pub fn new(dir: &TempDir) -> Self {
         // docker run -v $PWD/server_private_key.key:/server_private_key.key -v $PWD/pinsdir:/pins -p 8096:8096 xenoky/dockerized_pinserver
 
@@ -46,6 +50,18 @@ impl PinServerEmulator {
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
         Self { volumes, pub_key }
+    }
+
+    /// Creates a tempdir
+    ///
+    /// under gitlab env using tempdir may cause issue, thus in this env the temp dir is created
+    /// under the project dir
+    pub fn tempdir() -> TempDir {
+        match std::env::var("CI_PROJECT_DIR") {
+            Ok(var) => TempDir::new_in(var),
+            Err(_) => tempfile::tempdir(),
+        }
+        .unwrap()
     }
 }
 

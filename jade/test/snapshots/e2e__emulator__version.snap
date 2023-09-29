@@ -1,6 +1,6 @@
 ---
-source: crates/jade/test/emulator.rs
-expression: version
+source: jade/test/emulator.rs
+expression: result
 ---
 JADE_VERSION: "1"
 JADE_OTA_MAX_CHUNK: 4096

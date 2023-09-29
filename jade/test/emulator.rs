@@ -1,52 +1,17 @@
+use bs_containers::{
+    jade::{JadeEmulator, EMULATOR_PORT},
+    pin_server::{PinServerEmulator, PIN_SERVER_PORT},
+};
 use ciborium::Value;
 use jade::{
-    protocol::{HandshakeParams, Network, UpdatePinserverParams},
+    protocol::{HandshakeCompleteParams, HandshakeParams, Network, UpdatePinserverParams},
     Jade,
 };
 use std::time::UNIX_EPOCH;
-use tempfile::{tempdir, TempDir};
-use testcontainers::{clients, core::WaitFor, Image, ImageArgs};
+use tempfile::tempdir;
+use testcontainers::clients;
 
-use crate::pin_server::{verify, PinServerEmulator};
-
-mod pin_server;
-
-const PORT: u16 = 30_121;
-
-#[derive(Debug, Default)]
-pub struct JadeEmulator;
-
-#[derive(Clone, Debug, Default)]
-pub struct Args;
-
-impl ImageArgs for Args {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        let args = ["bash".to_string()];
-        Box::new(args.into_iter())
-    }
-}
-
-impl Image for JadeEmulator {
-    type Args = ();
-
-    fn name(&self) -> String {
-        "xenoky/local-jade-emulator".into() // TODO Change with blockstream official jade emulator
-    }
-
-    fn tag(&self) -> String {
-        "latest".into()
-    }
-
-    fn ready_conditions(&self) -> Vec<WaitFor> {
-        vec![WaitFor::StdOutMessage {
-            message: "char device redirected".into(),
-        }]
-    }
-
-    fn expose_ports(&self) -> Vec<u16> {
-        [PORT].into()
-    }
-}
+use crate::pin_server::verify;
 
 const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
                              useful method fence kidney chuckle party
@@ -57,7 +22,7 @@ const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
 fn entropy() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -69,7 +34,7 @@ fn entropy() {
 fn epoch() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -85,7 +50,7 @@ fn epoch() {
 fn ping() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -97,7 +62,7 @@ fn ping() {
 fn version() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -109,7 +74,7 @@ fn version() {
 fn update_pinserver() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -117,7 +82,7 @@ fn update_pinserver() {
     let pin_server = PinServerEmulator::new(&tempdir);
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let url_a = format!("http://127.0.0.1:{}", port);
 
     let params = UpdatePinserverParams {
@@ -136,21 +101,17 @@ fn update_pinserver() {
 fn jade_initialization() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(PORT);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
-    let tempdir = match std::env::var("CI_PROJECT_DIR") {
-        Ok(var) => TempDir::new_in(var),
-        Err(_) => tempdir(),
-    }
-    .unwrap();
+    let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
-    dbg!(hex::encode(&pin_server_pub_key.to_bytes()));
+    dbg!(hex::encode(pin_server_pub_key.to_bytes()));
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
     let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(pin_server::PORT);
+    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let url_a = format!("http://127.0.0.1:{}", port);
 
     let params = UpdatePinserverParams {
@@ -163,15 +124,24 @@ fn jade_initialization() {
     };
 
     let result = jade_api.update_pinserver(params).unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert!(result.get());
 
     let result = jade_api.auth_user(Network::Mainnet).unwrap();
-    let pin_server_url = &result.urls()[0];
-    assert_eq!(pin_server_url, &format!("{url_a}/start_handshake"));
+    let start_handshake_url = &result.urls()[0];
+    assert_eq!(start_handshake_url, &format!("{url_a}/start_handshake"));
 
-    let resp = ureq::post(pin_server_url).call().unwrap();
+    let resp = ureq::post(start_handshake_url).call().unwrap();
     let params: HandshakeParams = resp.into_json().unwrap();
     verify(&params, &pin_server_pub_key);
 
-    let _result = jade_api.handshake_init(params).unwrap();
+    let result = jade_api.handshake_init(params).unwrap();
+    let handshake_data = result.data();
+    let next_url = &result.urls()[0];
+    assert_eq!(next_url, &format!("{url_a}/set_pin"));
+    let resp = ureq::post(next_url).send_json(handshake_data).unwrap();
+    assert_eq!(resp.status(), 200);
+    let params: HandshakeCompleteParams = resp.into_json().unwrap();
+
+    let result = jade_api.handshake_complete(params).unwrap();
+    assert!(result.get());
 }

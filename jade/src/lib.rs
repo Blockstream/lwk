@@ -76,6 +76,14 @@ impl Jade {
         self.send_request("update_pinserver", Some(params))
     }
 
+    pub fn handshake_complete(
+        &mut self,
+        params: protocol::HandshakeCompleteParams,
+    ) -> Result<BoolResult> {
+        let params = Params::HandshakeComplete(params);
+        self.send_request("handshake_complete", Some(params))
+    }
+
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,

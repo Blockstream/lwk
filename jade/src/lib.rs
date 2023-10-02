@@ -101,7 +101,7 @@ impl Jade {
             params,
         };
         let mut buf = Vec::new();
-        ciborium::into_writer(&req, &mut buf).unwrap();
+        ciborium::into_writer(&req, &mut buf)?;
         println!(
             "\n--->\t{:?}\n\t({} bytes) {}",
             &req,
@@ -136,11 +136,10 @@ impl Jade {
                             return Err(Error::JadeNeitherErrorNorResult);
                         }
                         Err(e) => {
-                            dbg!(e);
-                            let generic =
-                                ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total]);
-                            dbg!(&generic);
-                            generic.unwrap();
+                            let value =
+                                ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total])?;
+                            dbg!(&value);
+                            return Err(Error::Des(e));
                         }
                     }
                 }

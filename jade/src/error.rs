@@ -14,6 +14,12 @@ pub enum Error {
 
     #[error("Jade returned neither an error nor a result")]
     JadeNeitherErrorNorResult,
+
+    #[error(transparent)]
+    Ser(#[from] ciborium::ser::Error<std::io::Error>),
+
+    #[error(transparent)]
+    Des(#[from] ciborium::de::Error<std::io::Error>),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

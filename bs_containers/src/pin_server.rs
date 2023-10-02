@@ -38,7 +38,8 @@ impl PinServerEmulator {
         file.write_all(&random_buff).unwrap();
 
         let prv_key = PrivateKey::from_slice(&random_buff, bitcoin::Network::Regtest).unwrap();
-        let pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
+        let pin_server_pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
+        dbg!(pin_server_pub_key.to_string());
 
         assert!(file_path.is_absolute() && file_path.exists());
 
@@ -49,7 +50,10 @@ impl PinServerEmulator {
         );
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
-        Self { volumes, pub_key }
+        Self {
+            volumes,
+            pub_key: pin_server_pub_key,
+        }
     }
 
     /// Creates a tempdir

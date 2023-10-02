@@ -1,13 +1,16 @@
+use bitcoin::bip32::ExtendedPubKey;
 use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use ciborium::Value;
 use jade::{
-    protocol::{HandshakeCompleteParams, HandshakeParams, Network, UpdatePinserverParams},
+    protocol::{
+        GetXpubParams, HandshakeCompleteParams, HandshakeParams, Network, UpdatePinserverParams,
+    },
     Jade,
 };
-use std::time::UNIX_EPOCH;
+use std::{str::FromStr, time::UNIX_EPOCH};
 use tempfile::{tempdir, TempDir};
 use testcontainers::{
     clients::{self, Cli},
@@ -108,6 +111,30 @@ fn jade_initialization() {
     let result = initialized_jade.jade.version_info().unwrap();
     insta::assert_yaml_snapshot!(result);
     assert!(result.jade_has_pin);
+}
+
+#[test]
+fn jade_xpub() {
+    let docker = clients::Cli::default();
+
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let params = GetXpubParams {
+        network: "testnet".into(),
+        path: vec![],
+    };
+    let result = initialized_jade.jade.get_xpub(params).unwrap();
+    let xpub_master = ExtendedPubKey::from_str(result.get()).unwrap();
+    assert_eq!(xpub_master.depth, 0);
+    assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
+
+    let params = GetXpubParams {
+        network: "testnet".into(),
+        path: vec![0],
+    };
+    let result = initialized_jade.jade.get_xpub(params).unwrap();
+    let xpub = ExtendedPubKey::from_str(result.get()).unwrap();
+    assert_ne!(xpub_master, xpub);
+    assert_eq!(xpub.depth, 1);
 }
 
 #[allow(dead_code)]

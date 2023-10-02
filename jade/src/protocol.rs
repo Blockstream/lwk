@@ -20,6 +20,7 @@ pub enum Params {
     Handshake(HandshakeParams),
     UpdatePinServer(UpdatePinserverParams),
     HandshakeComplete(HandshakeCompleteParams),
+    GetXpub(GetXpubParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -51,6 +52,12 @@ pub struct HandshakeCompleteParams {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct GetXpubParams {
+    pub network: String,
+    pub path: Vec<u32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct HandshakeComplete {
     pub encrypted_data: String,
     pub hmac_encrypted_data: String,
@@ -73,6 +80,15 @@ pub struct BoolResult(bool);
 impl BoolResult {
     pub fn get(&self) -> bool {
         self.0
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StringResult(String);
+
+impl StringResult {
+    pub fn get(&self) -> &str {
+        &self.0
     }
 }
 

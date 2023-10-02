@@ -96,6 +96,7 @@ impl StringResult {
 pub enum Network {
     Mainnet,
     Testnet,
+    Localtest,
 }
 
 impl From<Network> for String {
@@ -103,6 +104,7 @@ impl From<Network> for String {
         match value {
             Network::Mainnet => "mainnet".into(),
             Network::Testnet => "testnet".into(),
+            Network::Localtest => "localtest".into(),
         }
     }
 }

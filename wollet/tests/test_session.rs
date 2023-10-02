@@ -22,6 +22,8 @@ use std::time::Duration;
 use tempfile::TempDir;
 use wollet::*;
 
+const DEFAULT_FEE_RATE: f32 = 100.0;
+
 static LOGGER: SimpleLogger = SimpleLogger;
 
 //TODO duplicated why I cannot import?
@@ -54,6 +56,18 @@ fn add_checksum(desc: &str) -> String {
     } else {
         format!("{}#{}", desc, desc_checksum(desc).unwrap())
     }
+}
+
+fn fee_rate(pset: &PartiallySignedTransaction) -> f32 {
+    let vsize = pset.extract_tx().unwrap().vsize();
+    let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
+    1000.0 * (fee_satoshi as f32 / vsize as f32)
+}
+
+fn assert_fee_rate(fee_rate: f32, expected: f32) {
+    let toll = 0.05;
+    assert!(fee_rate > expected * (1.0 - toll));
+    assert!(fee_rate < expected * (1.0 + toll));
 }
 
 fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
@@ -364,6 +378,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         self.send(&mut pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
@@ -380,6 +395,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         self.send(&mut pset);
         let balance_after = self.balance(asset);
         assert!(balance_before > balance_after);
@@ -416,6 +432,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         self.send(&mut pset);
         let balance1_after = self.balance(asset1);
         let balance2_after = self.balance(asset2);
@@ -438,6 +455,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         self.send(&mut pset);
 
         let (asset, token) = pset.inputs()[0].issuance_ids();
@@ -467,6 +485,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         let txid = self.send(&mut pset);
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
@@ -491,6 +510,7 @@ impl TestElectrumWallet {
         for signer in signers {
             self.sign(signer, &mut pset);
         }
+        assert_fee_rate(fee_rate(&pset), DEFAULT_FEE_RATE);
         self.send(&mut pset);
 
         assert_eq!(self.balance(asset), balance_asset_before - satoshi_asset);

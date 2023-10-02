@@ -62,10 +62,7 @@ impl Jade {
             .duration_since(UNIX_EPOCH)
             .map_err(error::Error::SystemTimeError)?
             .as_secs();
-        let params = Params::AuthUser(AuthUserParams {
-            network: network.into(),
-            epoch,
-        });
+        let params = Params::AuthUser(AuthUserParams { network, epoch });
         self.send_request("auth_user", Some(params))
     }
 

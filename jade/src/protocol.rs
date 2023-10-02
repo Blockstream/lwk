@@ -105,7 +105,7 @@ pub struct VersionInfoResult {
     battery_status: u8,
     jade_state: String,
     jade_networks: String,
-    jade_has_pin: bool,
+    pub jade_has_pin: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

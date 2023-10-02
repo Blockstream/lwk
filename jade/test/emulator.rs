@@ -104,7 +104,10 @@ fn update_pinserver() {
 fn jade_initialization() {
     let docker = clients::Cli::default();
 
-    let _initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let result = initialized_jade.jade.version_info().unwrap();
+    insta::assert_yaml_snapshot!(result);
+    assert!(result.jade_has_pin);
 }
 
 #[allow(dead_code)]
@@ -115,7 +118,7 @@ struct InitializedJade<'a> {
     jade: Jade,
 }
 
-fn inner_jade_initialization<'a>(docker: &'a Cli) -> InitializedJade<'a> {
+fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let jade_container = docker.run(JadeEmulator);
     let port = jade_container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();

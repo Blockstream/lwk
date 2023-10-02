@@ -31,7 +31,6 @@ path = "test/e2e.rs"
 
 [dev-dependencies]
 elements = "0.23.0"
-bitcoin = "0.30.1"
 insta = { version = "1.31.0", features = ["yaml"] }
 tempfile = "3.8.0"
 testcontainers = "0.14"

@@ -1,11 +1,11 @@
-use bitcoin::{
-    hashes::{hex::FromHex, sha256, Hash},
-    secp256k1::{ecdsa::Signature, Message, Secp256k1},
-    PublicKey,
-};
 use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
     print_docker_logs_and_panic,
+};
+use elements::bitcoin::{
+    hashes::{hex::FromHex, sha256, Hash},
+    secp256k1::{ecdsa::Signature, Message, Secp256k1},
+    PublicKey,
 };
 use jade::protocol::HandshakeParams;
 use testcontainers::clients::Cli;

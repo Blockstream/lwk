@@ -1,10 +1,10 @@
-use bitcoin::bip32::ExtendedPubKey;
 use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use ciborium::Value;
-use elements::AddressParams;
+use elements::bitcoin::bip32::ExtendedPubKey;
+use elements::{bitcoin, AddressParams};
 use jade::{
     protocol::{
         GetReceiveAddressParams, GetXpubParams, HandshakeCompleteParams, HandshakeParams,

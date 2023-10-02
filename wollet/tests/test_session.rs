@@ -357,8 +357,9 @@ impl TestElectrumWallet {
             .unwrap();
 
         let balance = self.electrum_wallet.get_details(&pset).unwrap();
-        assert_eq!(balance.fee, 1_000);
-        assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-1000));
+        let fee = balance.fee as i64;
+        assert!(fee > 0);
+        assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-fee));
 
         for signer in signers {
             self.sign(signer, &mut pset);

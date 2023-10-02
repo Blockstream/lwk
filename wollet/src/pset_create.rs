@@ -357,13 +357,14 @@ impl ElectrumWallet {
         &self,
         satoshi: u64,
         address: &str,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
             address,
             asset: "",
         }];
-        self.createpset(addressees, None, IssuanceRequest::None)
+        self.createpset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -372,21 +373,23 @@ impl ElectrumWallet {
         satoshi: u64,
         address: &str,
         asset: &str,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
             address,
             asset,
         }];
-        self.createpset(addressees, None, IssuanceRequest::None)
+        self.createpset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET sending to many outputs
     pub fn sendmany(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        self.createpset(addressees, None, IssuanceRequest::None)
+        self.createpset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET burning an asset
@@ -394,13 +397,14 @@ impl ElectrumWallet {
         &self,
         asset: &str,
         satoshi: u64,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
             address: "burn",
             asset,
         }];
-        self.createpset(addressees, None, IssuanceRequest::None)
+        self.createpset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET issuing an asset
@@ -408,10 +412,11 @@ impl ElectrumWallet {
         &self,
         satoshi_asset: u64,
         satoshi_token: u64,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
         let issuance = IssuanceRequest::Issuance(satoshi_asset, satoshi_token);
-        self.createpset(addressees, None, issuance)
+        self.createpset(addressees, fee_rate, issuance)
     }
 
     /// Create a PSET reissuing an asset
@@ -419,11 +424,12 @@ impl ElectrumWallet {
         &self,
         asset: &str,
         satoshi_asset: u64,
+        fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
         let asset = AssetId::from_str(asset)?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset);
-        self.createpset(addressees, None, reissuance)
+        self.createpset(addressees, fee_rate, reissuance)
     }
 }
 

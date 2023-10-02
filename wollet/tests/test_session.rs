@@ -367,7 +367,7 @@ impl TestElectrumWallet {
         let address = self.address();
         let mut pset = self
             .electrum_wallet
-            .sendlbtc(satoshi, &address.to_string())
+            .sendlbtc(satoshi, &address.to_string(), None)
             .unwrap();
 
         let balance = self.electrum_wallet.get_details(&pset).unwrap();
@@ -389,7 +389,7 @@ impl TestElectrumWallet {
         let satoshi: u64 = 10;
         let mut pset = self
             .electrum_wallet
-            .sendasset(satoshi, &node_address.to_string(), &asset.to_string())
+            .sendasset(satoshi, &node_address.to_string(), &asset.to_string(), None)
             .unwrap();
 
         for signer in signers {
@@ -427,7 +427,7 @@ impl TestElectrumWallet {
                 asset: &ass2,
             },
         ];
-        let mut pset = self.electrum_wallet.sendmany(addressees).unwrap();
+        let mut pset = self.electrum_wallet.sendmany(addressees, None).unwrap();
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -449,7 +449,7 @@ impl TestElectrumWallet {
         let balance_before = self.balance_btc();
         let mut pset = self
             .electrum_wallet
-            .issueasset(satoshi_asset, satoshi_token)
+            .issueasset(satoshi_asset, satoshi_token, None)
             .unwrap();
 
         for signer in signers {
@@ -480,7 +480,7 @@ impl TestElectrumWallet {
         let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
             .electrum_wallet
-            .reissueasset(asset.to_string().as_str(), satoshi_asset)
+            .reissueasset(asset.to_string().as_str(), satoshi_asset, None)
             .unwrap();
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -505,7 +505,7 @@ impl TestElectrumWallet {
         let balance_asset_before = self.balance(asset);
         let mut pset = self
             .electrum_wallet
-            .burnasset(&asset.to_string(), satoshi_asset)
+            .burnasset(&asset.to_string(), satoshi_asset, None)
             .unwrap();
         for signer in signers {
             self.sign(signer, &mut pset);

@@ -6,7 +6,8 @@ use bs_containers::{
 use ciborium::Value;
 use jade::{
     protocol::{
-        GetXpubParams, HandshakeCompleteParams, HandshakeParams, Network, UpdatePinserverParams,
+        GetReceiveAddressParams, GetXpubParams, HandshakeCompleteParams, HandshakeParams, Network,
+        UpdatePinserverParams,
     },
     Jade,
 };
@@ -135,6 +136,21 @@ fn jade_xpub() {
     let xpub = ExtendedPubKey::from_str(result.get()).unwrap();
     assert_ne!(xpub_master, xpub);
     assert_eq!(xpub.depth, 1);
+}
+
+#[test]
+fn jade_receive_address() {
+    let docker = clients::Cli::default();
+
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let params = GetReceiveAddressParams {
+        network: "localtest".into(),
+        variant: "sh(wpkh(k))".into(),
+        path: [2147483697, 2147483648, 2147483648, 0, 143].to_vec(),
+    };
+    let result = initialized_jade.jade.get_receive_address(params).unwrap();
+    let address = bitcoin::Address::from_str(result.get()).unwrap();
+    assert_eq!(address.network, bitcoin::Network::Testnet);
 }
 
 #[allow(dead_code)]

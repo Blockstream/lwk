@@ -5,9 +5,9 @@ use std::{
 
 use connection::Connection;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, GetXpubParams,
-    HandshakeData, HandshakeParams, Network, Params, PingResult, Request, Response, StringResult,
-    UpdatePinserverParams, VersionInfoResult,
+    AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, GetReceiveAddressParams,
+    GetXpubParams, HandshakeData, HandshakeParams, Network, Params, PingResult, Request, Response,
+    StringResult, UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
@@ -87,6 +87,11 @@ impl Jade {
     pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<StringResult> {
         let params = Params::GetXpub(params);
         self.send_request("get_xpub", Some(params))
+    }
+
+    pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {
+        let params = Params::GetReceiveAddress(params);
+        self.send_request("get_receive_address", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

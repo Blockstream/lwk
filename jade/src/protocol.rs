@@ -21,6 +21,7 @@ pub enum Params {
     UpdatePinServer(UpdatePinserverParams),
     HandshakeComplete(HandshakeCompleteParams),
     GetXpub(GetXpubParams),
+    GetReceiveAddress(GetReceiveAddressParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -54,6 +55,13 @@ pub struct HandshakeCompleteParams {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetXpubParams {
     pub network: String,
+    pub path: Vec<u32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GetReceiveAddressParams {
+    pub network: String,
+    pub variant: String,
     pub path: Vec<u32>,
 }
 

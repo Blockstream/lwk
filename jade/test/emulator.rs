@@ -8,8 +8,11 @@ use jade::{
     Jade,
 };
 use std::time::UNIX_EPOCH;
-use tempfile::tempdir;
-use testcontainers::clients;
+use tempfile::{tempdir, TempDir};
+use testcontainers::{
+    clients::{self, Cli},
+    Container,
+};
 
 use crate::pin_server::verify;
 
@@ -100,8 +103,21 @@ fn update_pinserver() {
 #[test]
 fn jade_initialization() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+
+    let _initialized_jade = inner_jade_initialization(&docker);
+}
+
+#[allow(dead_code)]
+struct InitializedJade<'a> {
+    pin_server: Container<'a, PinServerEmulator>,
+    jade_emul: Container<'a, JadeEmulator>,
+    tempdir: TempDir,
+    jade: Jade,
+}
+
+fn inner_jade_initialization<'a>(docker: &'a Cli) -> InitializedJade<'a> {
+    let jade_container = docker.run(JadeEmulator);
+    let port = jade_container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
     let mut jade_api = Jade::new(stream.into());
 
@@ -109,14 +125,14 @@ fn jade_initialization() {
     let pin_server = PinServerEmulator::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
-    let container = docker.run(pin_server);
-    let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
-    let url_a = format!("http://127.0.0.1:{}", port);
+    let pin_container = docker.run(pin_server);
+    let port = pin_container.get_host_port_ipv4(PIN_SERVER_PORT);
+    let pin_server_url = format!("http://127.0.0.1:{}", port);
 
     let params = UpdatePinserverParams {
         reset_details: false,
         reset_certificate: false,
-        url_a: url_a.clone(),
+        url_a: pin_server_url.clone(),
         url_b: "".to_string(),
         pubkey: Value::Bytes(pin_server_pub_key.to_bytes()),
         certificate: "".into(),
@@ -127,7 +143,10 @@ fn jade_initialization() {
 
     let result = jade_api.auth_user(Network::Mainnet).unwrap();
     let start_handshake_url = &result.urls()[0];
-    assert_eq!(start_handshake_url, &format!("{url_a}/start_handshake"));
+    assert_eq!(
+        start_handshake_url,
+        &format!("{pin_server_url}/start_handshake")
+    );
 
     let resp = ureq::post(start_handshake_url).call().unwrap();
     let params: HandshakeParams = resp.into_json().unwrap();
@@ -136,11 +155,18 @@ fn jade_initialization() {
     let result = jade_api.handshake_init(params).unwrap();
     let handshake_data = result.data();
     let next_url = &result.urls()[0];
-    assert_eq!(next_url, &format!("{url_a}/set_pin"));
+    assert_eq!(next_url, &format!("{pin_server_url}/set_pin"));
     let resp = ureq::post(next_url).send_json(handshake_data).unwrap();
     assert_eq!(resp.status(), 200);
     let params: HandshakeCompleteParams = resp.into_json().unwrap();
 
     let result = jade_api.handshake_complete(params).unwrap();
     assert!(result.get());
+
+    InitializedJade {
+        pin_server: pin_container,
+        jade_emul: jade_container,
+        tempdir,
+        jade: jade_api,
+    }
 }

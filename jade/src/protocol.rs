@@ -26,7 +26,7 @@ pub enum Params {
 
 #[derive(Debug, Serialize)]
 pub struct AuthUserParams {
-    pub network: String,
+    pub network: crate::Network,
     pub epoch: u64,
 }
 
@@ -54,13 +54,13 @@ pub struct HandshakeCompleteParams {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetXpubParams {
-    pub network: String,
+    pub network: crate::Network,
     pub path: Vec<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetReceiveAddressParams {
-    pub network: String,
+    pub network: crate::Network,
     pub variant: String,
     pub path: Vec<u32>,
 }
@@ -97,23 +97,6 @@ pub struct StringResult(String);
 impl StringResult {
     pub fn get(&self) -> &str {
         &self.0
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum Network {
-    Mainnet,
-    Testnet,
-    Localtest,
-}
-
-impl From<Network> for String {
-    fn from(value: Network) -> Self {
-        match value {
-            Network::Mainnet => "mainnet".into(),
-            Network::Testnet => "testnet".into(),
-            Network::Localtest => "localtest".into(),
-        }
     }
 }
 

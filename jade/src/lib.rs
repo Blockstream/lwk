@@ -6,7 +6,7 @@ use std::{
 use connection::Connection;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, GetReceiveAddressParams,
-    GetXpubParams, HandshakeData, HandshakeParams, Network, Params, PingResult, Request, Response,
+    GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult, Request, Response,
     StringResult, UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
@@ -17,7 +17,10 @@ use crate::error::Error;
 
 pub mod connection;
 pub mod error;
+mod network;
 pub mod protocol;
+
+pub use network::Network;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 

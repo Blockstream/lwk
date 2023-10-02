@@ -4,9 +4,10 @@ use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use ciborium::Value;
+use elements::AddressParams;
 use jade::{
     protocol::{
-        GetReceiveAddressParams, GetXpubParams, HandshakeCompleteParams, HandshakeParams, Network,
+        GetReceiveAddressParams, GetXpubParams, HandshakeCompleteParams, HandshakeParams,
         UpdatePinserverParams,
     },
     Jade,
@@ -120,7 +121,7 @@ fn jade_xpub() {
 
     let mut initialized_jade = inner_jade_initialization(&docker);
     let params = GetXpubParams {
-        network: "testnet".into(),
+        network: jade::Network::TestnetLiquid,
         path: vec![],
     };
     let result = initialized_jade.jade.get_xpub(params).unwrap();
@@ -129,7 +130,7 @@ fn jade_xpub() {
     assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
 
     let params = GetXpubParams {
-        network: "testnet".into(),
+        network: jade::Network::TestnetLiquid,
         path: vec![0],
     };
     let result = initialized_jade.jade.get_xpub(params).unwrap();
@@ -144,13 +145,14 @@ fn jade_receive_address() {
 
     let mut initialized_jade = inner_jade_initialization(&docker);
     let params = GetReceiveAddressParams {
-        network: "localtest".into(),
+        network: jade::Network::LocaltestLiquid,
         variant: "sh(wpkh(k))".into(),
         path: [2147483697, 2147483648, 2147483648, 0, 143].to_vec(),
     };
     let result = initialized_jade.jade.get_receive_address(params).unwrap();
-    let address = bitcoin::Address::from_str(result.get()).unwrap();
-    assert_eq!(address.network, bitcoin::Network::Testnet);
+    let address = elements::Address::from_str(result.get()).unwrap();
+    assert!(address.blinding_pubkey.is_some());
+    assert_eq!(address.params, &AddressParams::ELEMENTS);
 }
 
 #[allow(dead_code)]
@@ -187,7 +189,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let result = jade_api.update_pinserver(params).unwrap();
     assert!(result.get());
 
-    let result = jade_api.auth_user(Network::Mainnet).unwrap();
+    let result = jade_api.auth_user(jade::Network::Liquid).unwrap();
     let start_handshake_url = &result.urls()[0];
     assert_eq!(
         start_handshake_url,

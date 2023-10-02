@@ -87,7 +87,7 @@ impl Image for PinServerEmulator {
     }
 
     fn tag(&self) -> String {
-        env::var("PIN_SERVER_IMAGE_NAME").unwrap_or("v0.0.3".into())
+        env::var("PIN_SERVER_IMAGE_VERSION").unwrap_or("v0.0.3".into())
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {

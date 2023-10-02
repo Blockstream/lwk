@@ -155,11 +155,12 @@ fn jade_receive_address() {
     assert_eq!(address.params, &AddressParams::ELEMENTS);
 }
 
-#[allow(dead_code)]
+/// Note underscore prefixed var must be there even if they are not read so that they are not
+/// dropped
 struct InitializedJade<'a> {
-    pin_server: Container<'a, PinServerEmulator>,
-    jade_emul: Container<'a, JadeEmulator>,
-    tempdir: TempDir,
+    _pin_server: Container<'a, PinServerEmulator>,
+    _jade_emul: Container<'a, JadeEmulator>,
+    _tempdir: TempDir,
     jade: Jade,
 }
 
@@ -212,9 +213,9 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     assert!(result.get());
 
     InitializedJade {
-        pin_server: pin_container,
-        jade_emul: jade_container,
-        tempdir,
+        _pin_server: pin_container,
+        _jade_emul: jade_container,
+        _tempdir: tempdir,
         jade: jade_api,
     }
 }

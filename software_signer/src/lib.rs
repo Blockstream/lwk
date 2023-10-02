@@ -44,7 +44,6 @@ pub enum NewError {
     Bip32(#[from] bip32::Error),
 }
 
-#[allow(dead_code)]
 pub struct Signer<'a> {
     xprv: ExtendedPrivKey,
     secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.

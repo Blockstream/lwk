@@ -35,10 +35,8 @@ pub struct Contract {
     pub version: u8,
 }
 
-#[allow(dead_code)]
 impl Contract {
-    #[allow(dead_code)]
-    fn from_value(value: &Value) -> Result<Self, Error> {
+    pub fn from_value(value: &Value) -> Result<Self, Error> {
         Ok(serde_json::from_value(value.clone())?)
     }
 

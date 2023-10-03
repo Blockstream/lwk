@@ -6,6 +6,7 @@ use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOut, Tx
 use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
+use crate::registry::Contract;
 use crate::util::EC;
 use crate::wallet::ElectrumWallet;
 use elements_miniscript::psbt::PsbtExt;
@@ -17,7 +18,7 @@ use std::str::FromStr;
 // We make issuance and reissuance are mutually exclusive for simplicity
 enum IssuanceRequest {
     None,
-    Issuance(u64, u64),
+    Issuance(u64, u64, Option<Contract>),
     Reissuance(AssetId, u64),
 }
 
@@ -155,6 +156,7 @@ impl ElectrumWallet {
         idx: usize,
         satoshi_asset: u64,
         satoshi_token: u64,
+        contract: Option<Contract>,
     ) -> Result<(AssetId, AssetId), Error> {
         let input = pset
             .inputs_mut()
@@ -165,7 +167,10 @@ impl ElectrumWallet {
             input.issuance_inflation_keys = Some(satoshi_token);
         }
         let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
-        let contract_hash = ContractHash::from_slice(&[0u8; 32]).unwrap();
+        let contract_hash = match contract {
+            Some(contract) => contract.contract_hash()?,
+            None => ContractHash::from_slice(&[0u8; 32]).unwrap(),
+        };
         let asset_entropy =
             Some(AssetId::generate_asset_entropy(prevout, contract_hash).to_byte_array());
         input.issuance_asset_entropy = asset_entropy;
@@ -268,11 +273,11 @@ impl ElectrumWallet {
         // Set (re)issuance data
         match issuance_request {
             IssuanceRequest::None => {}
-            IssuanceRequest::Issuance(satoshi_asset, satoshi_token) => {
+            IssuanceRequest::Issuance(satoshi_asset, satoshi_token, contract) => {
                 // At least a L-BTC input for the fee was added.
                 let idx = 0;
                 let (asset, token) =
-                    self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token)?;
+                    self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
 
                 let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
                 self.add_output(&mut pset, &addressee)?;
@@ -428,10 +433,19 @@ impl ElectrumWallet {
         &self,
         satoshi_asset: u64,
         satoshi_token: u64,
+        contract: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
-        let issuance = IssuanceRequest::Issuance(satoshi_asset, satoshi_token);
+        let contract = if contract.is_empty() {
+            None
+        } else {
+            let contract = serde_json::Value::from_str(contract)?;
+            let contract = Contract::from_value(&contract)?;
+            contract.validate()?;
+            Some(contract)
+        };
+        let issuance = IssuanceRequest::Issuance(satoshi_asset, satoshi_token, contract);
         self.createpset(addressees, fee_rate, issuance)
     }
 

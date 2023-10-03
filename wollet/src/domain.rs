@@ -13,7 +13,6 @@ static DOMAIN_LABEL: Lazy<RegexSet> = Lazy::new(|| {
     .unwrap()
 });
 
-#[allow(dead_code)]
 pub fn verify_domain_name(domain: &str) -> Result<(), Error> {
     if domain.starts_with('.')
         || idna_to_ascii(domain)? != *domain

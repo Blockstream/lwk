@@ -463,7 +463,7 @@ impl TestElectrumWallet {
         let balance_before = self.balance_btc();
         let mut pset = self
             .electrum_wallet
-            .issueasset(satoshi_asset, satoshi_token, fee_rate)
+            .issueasset(satoshi_asset, satoshi_token, "", fee_rate)
             .unwrap();
 
         for signer in signers {

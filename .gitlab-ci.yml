@@ -43,7 +43,7 @@ build:
     - cargo build
     - apt update
     - apt install -y libudev-dev
-    - cargo build --features serial
+    - cargo build --features serial --all-targets
 
 test_wollet:
   extends: .base

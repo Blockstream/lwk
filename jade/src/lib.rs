@@ -1,7 +1,4 @@
-use std::{
-    thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
 use protocol::{
@@ -115,7 +112,6 @@ impl Jade {
         );
 
         self.conn.write_all(&buf).unwrap();
-        thread::sleep(Duration::from_millis(1000));
 
         let mut rx = vec![0; 1000];
 

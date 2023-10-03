@@ -165,7 +165,10 @@ fn jade_receive_address() {
 
 #[test]
 fn jade_sign_message() {
-    // taken from jade tests, is the commitment sha256?
+    // TODO create anti exfil commitments
+    // The following are taken from jade tests, even though they may be random if we are not verifying.
+    // To create the commitment jade use wally_ae_host_commit_from_bytes, rust-secp at the moment
+    // doesn't expose exfil methods
     let ae_host_commitment =
         hex::decode("7b61fad27ce2d95abca09f76bd7226e50212a8542f3ca274ee546cec4bc5c3bb").unwrap();
     let ae_host_entropy =

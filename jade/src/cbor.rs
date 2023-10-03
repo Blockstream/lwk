@@ -9,6 +9,13 @@ impl Bytes {
     }
 }
 
+impl std::fmt::Debug for Bytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let hex = hex::encode(&self.0); // TODO avoid alloc
+        write!(f, "Bytes({hex})")
+    }
+}
+
 impl Serialize for Bytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

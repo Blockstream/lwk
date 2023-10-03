@@ -107,6 +107,9 @@ pub enum Error {
 
     #[error("The script is not owned by this wallet")]
     ScriptNotMine,
+
+    #[error("Invalid domain")]
+    InvalidDomain,
 }
 
 // cannot derive automatically with this error because of trait bound

@@ -1,4 +1,5 @@
 mod config;
+mod domain;
 mod error;
 mod model;
 mod pset_create;

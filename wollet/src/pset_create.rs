@@ -166,14 +166,11 @@ impl ElectrumWallet {
         if satoshi_token > 0 {
             input.issuance_inflation_keys = Some(satoshi_token);
         }
-        let prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
         let contract_hash = match contract {
             Some(contract) => contract.contract_hash()?,
             None => ContractHash::from_slice(&[0u8; 32]).unwrap(),
         };
-        let asset_entropy =
-            Some(AssetId::generate_asset_entropy(prevout, contract_hash).to_byte_array());
-        input.issuance_asset_entropy = asset_entropy;
+        input.issuance_asset_entropy = Some(contract_hash.to_byte_array());
         Ok(input.issuance_ids())
     }
 

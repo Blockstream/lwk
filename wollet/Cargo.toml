@@ -29,6 +29,7 @@ elements = { version = "0.23.0", features = ["base64"] }
 
 #registry
 idna = "0.4.0"
+regex = "1.9.6"
 
 [dev-dependencies]
 chrono = "0.4.11"

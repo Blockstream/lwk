@@ -1,7 +1,4 @@
-use jade::{
-    protocol::{HandshakeParams, Network},
-    Jade,
-};
+use jade::{protocol::HandshakeParams, Jade};
 use std::time::Duration;
 
 #[test]
@@ -17,7 +14,7 @@ fn auth_user() {
 
         let mut jade_api = Jade::new(port.into());
 
-        let result = jade_api.auth_user(Network::Mainnet).unwrap();
+        let result = jade_api.auth_user(jade::Network::Liquid).unwrap();
         dbg!(&result);
         // insta::assert_yaml_snapshot!(result);
 

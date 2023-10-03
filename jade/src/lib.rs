@@ -1,13 +1,11 @@
-use std::{
-    thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, GetReceiveAddressParams,
-    GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult, Request, Response,
-    StringResult, UpdatePinserverParams, VersionInfoResult,
+    AuthResult, AuthUserParams, BoolResult, ByteResult, EntropyParams, EpochParams,
+    GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams,
+    Params, PingResult, Request, Response, SignMessageParams, StringResult, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
@@ -94,6 +92,16 @@ impl Jade {
         self.send_request("get_receive_address", Some(params))
     }
 
+    pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteResult> {
+        let params = Params::SignMessage(params);
+        self.send_request("sign_message", Some(params))
+    }
+
+    pub fn get_signature(&mut self, params: GetSignatureParams) -> Result<StringResult> {
+        let params = Params::GetSignature(params);
+        self.send_request("get_signature", Some(params))
+    }
+
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,
@@ -115,7 +123,6 @@ impl Jade {
         );
 
         self.conn.write_all(&buf).unwrap();
-        thread::sleep(Duration::from_millis(1000));
 
         let mut rx = vec![0; 1000];
 

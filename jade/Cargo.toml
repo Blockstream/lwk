@@ -35,3 +35,5 @@ insta = { version = "1.31.0", features = ["yaml"] }
 tempfile = "3.8.0"
 testcontainers = "0.14"
 bs_containers = { path = "../bs_containers" }
+hex = "0.4.3"
+base64 = "0.21.4"

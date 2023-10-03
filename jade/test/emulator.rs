@@ -1,14 +1,22 @@
+use base64::Engine;
 use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use ciborium::Value;
-use elements::bitcoin::bip32::ExtendedPubKey;
-use elements::{bitcoin, AddressParams};
+use elements::{
+    bitcoin,
+    secp256k1_zkp::{ecdsa::Signature, Message},
+    AddressParams,
+};
+use elements::{
+    bitcoin::{bip32::ExtendedPubKey, sign_message::signed_msg_hash},
+    hashes::Hash,
+};
 use jade::{
     protocol::{
-        GetReceiveAddressParams, GetXpubParams, HandshakeCompleteParams, HandshakeParams,
-        UpdatePinserverParams,
+        GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
+        HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
     Jade,
 };
@@ -153,6 +161,48 @@ fn jade_receive_address() {
     let address = elements::Address::from_str(result.get()).unwrap();
     assert!(address.blinding_pubkey.is_some());
     assert_eq!(address.params, &AddressParams::ELEMENTS);
+}
+
+#[test]
+fn jade_sign_message() {
+    // taken from jade tests, is the commitment sha256?
+    let ae_host_commitment =
+        hex::decode("7b61fad27ce2d95abca09f76bd7226e50212a8542f3ca274ee546cec4bc5c3bb").unwrap();
+    let ae_host_entropy =
+        hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820").unwrap();
+    let docker = clients::Cli::default();
+    let message = "Hello world!";
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let params = SignMessageParams {
+        message: message.to_string(),
+        path: vec![0],
+        ae_host_commitment: Value::Bytes(ae_host_commitment),
+    };
+    let _signer_commitment = initialized_jade.jade.sign_message(params).unwrap().get();
+
+    let params = GetSignatureParams {
+        ae_host_entropy: Value::Bytes(ae_host_entropy),
+    };
+    let signature = initialized_jade.jade.get_signature(params).unwrap();
+    let signature_bytes = base64::engine::general_purpose::STANDARD
+        .decode(signature.get())
+        .unwrap();
+
+    let params = GetXpubParams {
+        network: jade::Network::TestnetLiquid,
+        path: vec![0],
+    };
+    let result = initialized_jade.jade.get_xpub(params).unwrap();
+    let xpub = ExtendedPubKey::from_str(result.get()).unwrap();
+    let msg_hash = signed_msg_hash(message);
+    let message = Message::from_slice(msg_hash.as_byte_array()).unwrap();
+    let signature = Signature::from_compact(&signature_bytes).unwrap();
+
+    assert!(elements::secp256k1_zkp::Secp256k1::verification_only()
+        .verify_ecdsa(&message, &signature, &xpub.public_key)
+        .is_ok());
+
+    //TODO verify anti-exfil
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

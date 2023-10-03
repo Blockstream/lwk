@@ -286,15 +286,31 @@ impl ElectrumWallet {
             IssuanceRequest::Reissuance(asset, satoshi_asset) => {
                 let issuance = self.issuance(&asset)?;
                 let token = issuance.token;
-                // Add input for the token
-                // TODO: handle case where we are already sending the token
-                // TODO: handle insufficient funds token
-                let utxos_token = self.asset_utxos(&token)?;
-                let utxo_token = utxos_token[0].clone();
-                let idx =
-                    self.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo_token)?;
-                let satoshi_token = utxo_token.unblinded.value;
-                let token_asset_bf = utxo_token.unblinded.asset_bf;
+                // Find or add input for the token
+                let (idx, token_asset_bf) =
+                    match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
+                        Some((idx, u)) => (*idx, u.asset_bf),
+                        None => {
+                            // Add an input sending the token,
+                            // TODO: handle insufficient funds token
+                            let utxos_token = self.asset_utxos(&token)?;
+                            let utxo_token = utxos_token[0].clone();
+                            let idx = self.add_input(
+                                &mut pset,
+                                &mut inp_txout_sec,
+                                &mut inp_weight,
+                                &utxo_token,
+                            )?;
+
+                            // and an outpout receiving the token
+                            let satoshi_token = utxo_token.unblinded.value;
+                            let addressee =
+                                self.addressee_change(satoshi_token, token, &mut last_unused)?;
+                            self.add_output(&mut pset, &addressee)?;
+
+                            (idx, utxo_token.unblinded.asset_bf)
+                        }
+                    };
 
                 // Set reissuance data
                 self.set_reissuance(
@@ -306,9 +322,6 @@ impl ElectrumWallet {
                 )?;
 
                 let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
-                self.add_output(&mut pset, &addressee)?;
-
-                let addressee = self.addressee_change(satoshi_token, token, &mut last_unused)?;
                 self.add_output(&mut pset, &addressee)?;
             }
         }

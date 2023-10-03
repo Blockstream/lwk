@@ -1,4 +1,5 @@
 use crate::bitcoin::PublicKey as BitcoinPublicKey;
+use crate::elements::confidential::AssetBlindingFactor;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
@@ -176,7 +177,7 @@ impl ElectrumWallet {
         pset: &mut PartiallySignedTransaction,
         idx: usize,
         satoshi_asset: u64,
-        utxo_token: &WalletTxOut,
+        token_asset_bf: &AssetBlindingFactor,
         entropy: &[u8; 32],
     ) -> Result<(), Error> {
         let input = pset
@@ -184,7 +185,7 @@ impl ElectrumWallet {
             .get_mut(idx)
             .ok_or_else(|| Error::MissingVin)?;
         input.issuance_value_amount = Some(satoshi_asset);
-        let nonce = utxo_token.unblinded.asset_bf.into_inner();
+        let nonce = token_asset_bf.into_inner();
         input.issuance_blinding_nonce = Some(nonce);
         input.issuance_asset_entropy = Some(*entropy);
         Ok(())
@@ -293,13 +294,14 @@ impl ElectrumWallet {
                 let idx =
                     self.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo_token)?;
                 let satoshi_token = utxo_token.unblinded.value;
+                let token_asset_bf = utxo_token.unblinded.asset_bf;
 
                 // Set reissuance data
                 self.set_reissuance(
                     &mut pset,
                     idx,
                     satoshi_asset,
-                    &utxo_token,
+                    &token_asset_bf,
                     &issuance.entropy,
                 )?;
 

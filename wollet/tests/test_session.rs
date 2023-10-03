@@ -4,11 +4,12 @@ use crate::bitcoin::amount::Denomination;
 use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
-use crate::elements::{Address, AssetId, Transaction, TxOutWitness, Txid};
+use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
 use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
+use elements::hashes::Hash;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
 use rand::{thread_rng, Rng};
@@ -458,12 +459,13 @@ impl TestElectrumWallet {
         signers: &[&Signer],
         satoshi_asset: u64,
         satoshi_token: u64,
+        contract: &str,
         fee_rate: Option<f32>,
     ) -> (AssetId, AssetId) {
         let balance_before = self.balance_btc();
         let mut pset = self
             .electrum_wallet
-            .issueasset(satoshi_asset, satoshi_token, "", fee_rate)
+            .issueasset(satoshi_asset, satoshi_token, contract, fee_rate)
             .unwrap();
 
         for signer in signers {
@@ -472,7 +474,8 @@ impl TestElectrumWallet {
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
 
-        let (asset, token) = pset.inputs()[0].issuance_ids();
+        let issuance_input = &pset.inputs()[0];
+        let (asset, token) = issuance_input.issuance_ids();
         assert_eq!(self.balance(&asset), satoshi_asset);
         assert_eq!(self.balance(&token), satoshi_token);
         let balance_after = self.balance_btc();
@@ -483,6 +486,17 @@ impl TestElectrumWallet {
         assert!(!issuance.is_reissuance);
         assert_eq!(issuance.asset_amount, Some(satoshi_asset));
         assert_eq!(issuance.token_amount, Some(satoshi_token));
+
+        let prevout = OutPoint::new(
+            issuance_input.previous_txid,
+            issuance_input.previous_output_index,
+        );
+        let contract_hash = if contract.is_empty() {
+            ContractHash::from_slice(&[0u8; 32]).unwrap()
+        } else {
+            ContractHash::from_json_contract(contract).unwrap()
+        };
+        assert_eq!(asset, AssetId::new_issuance(prevout, contract_hash));
 
         (asset, token)
     }

@@ -30,7 +30,7 @@ fn liquid() {
         &wallet.policy_asset(),
         None,
     );
-    let (asset, _token) = wallet.issueasset(signers, 10, 1, None);
+    let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 5, &asset, None);
 }
@@ -95,7 +95,7 @@ fn roundtrip() {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
         wallet.fund_btc(&mut server);
         wallet.send_btc(&signers, None);
-        let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None);
+        let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
         let node_address = server.node_getnewaddress();
         wallet.send_asset(&signers, &node_address, &asset, None);
         let node_address1 = server.node_getnewaddress();
@@ -127,7 +127,7 @@ fn pkh() {
     wallet.fund_btc(&mut server);
     wallet.send_btc(signers, None);
     // FIXME: issuance does not work with p2pkh
-    //let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, None);
+    //let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn fee_rate() {
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&mut server);
     wallet.send_btc(signers, fee_rate);
-    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, fee_rate);
+    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", fee_rate);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, fee_rate);
     let node_address1 = server.node_getnewaddress();
@@ -225,4 +225,21 @@ fn fee_rate() {
     );
     wallet.reissueasset(signers, 10_000, &asset, fee_rate);
     wallet.burnasset(signers, 5_000, &asset, fee_rate);
+}
+
+#[test]
+fn contract() {
+    // Issue an asset with a contract
+    let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
+
+    let mut server = setup();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let signers = &[&signer];
+
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    wallet.fund_btc(&mut server);
+    wallet.send_btc(signers, None);
+    let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, contract, None);
 }

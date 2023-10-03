@@ -292,14 +292,15 @@ impl ElectrumWallet {
                         Some((idx, u)) => (*idx, u.asset_bf),
                         None => {
                             // Add an input sending the token,
-                            // TODO: handle insufficient funds token
                             let utxos_token = self.asset_utxos(&token)?;
-                            let utxo_token = utxos_token[0].clone();
+                            let utxo_token = utxos_token
+                                .first()
+                                .ok_or_else(|| Error::InsufficientFunds)?;
                             let idx = self.add_input(
                                 &mut pset,
                                 &mut inp_txout_sec,
                                 &mut inp_weight,
-                                &utxo_token,
+                                utxo_token,
                             )?;
 
                             // and an outpout receiving the token

@@ -110,6 +110,21 @@ pub enum Error {
 
     #[error("Invalid domain")]
     InvalidDomain,
+
+    #[error("Invalid version")]
+    InvalidVersion,
+
+    #[error("Invalid precision")]
+    InvalidPrecision,
+
+    #[error("Invalid name")]
+    InvalidName,
+
+    #[error("Invalid ticker")]
+    InvalidTicker,
+
+    #[error("Invalid issuer pubkey")]
+    InvalidIssuerPubkey,
 }
 
 // cannot derive automatically with this error because of trait bound

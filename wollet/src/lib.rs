@@ -4,6 +4,7 @@ mod error;
 mod model;
 mod pset_create;
 mod pset_details;
+mod registry;
 mod store;
 mod sync;
 mod util;

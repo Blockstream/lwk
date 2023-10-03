@@ -3,6 +3,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 pub struct Bytes(Vec<u8>);
 
+// TODO impl also fixed size Bytes with const generic
+
 impl Bytes {
     pub fn new(vec: Vec<u8>) -> Self {
         Self(vec)

@@ -3,7 +3,6 @@ use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
-use ciborium::Value;
 use elements::{
     bitcoin,
     secp256k1_zkp::{ecdsa::Signature, Message},
@@ -14,6 +13,7 @@ use elements::{
     hashes::Hash,
 };
 use jade::{
+    cbor::Bytes,
     protocol::{
         GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
         HandshakeParams, SignMessageParams, UpdatePinserverParams,
@@ -106,7 +106,7 @@ fn update_pinserver() {
         reset_certificate: false,
         url_a,
         url_b: "".to_string(),
-        pubkey: Value::Bytes(pub_key),
+        pubkey: Bytes::new(pub_key),
         certificate: "".into(),
     };
     let result = jade_api.update_pinserver(params).unwrap();
@@ -176,12 +176,12 @@ fn jade_sign_message() {
     let params = SignMessageParams {
         message: message.to_string(),
         path: vec![0],
-        ae_host_commitment: Value::Bytes(ae_host_commitment),
+        ae_host_commitment: Bytes::new(ae_host_commitment),
     };
     let _signer_commitment = initialized_jade.jade.sign_message(params).unwrap().get();
 
     let params = GetSignatureParams {
-        ae_host_entropy: Value::Bytes(ae_host_entropy),
+        ae_host_entropy: Bytes::new(ae_host_entropy),
     };
     let signature = initialized_jade.jade.get_signature(params).unwrap();
     let signature_bytes = base64::engine::general_purpose::STANDARD
@@ -233,7 +233,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
         reset_certificate: false,
         url_a: pin_server_url.clone(),
         url_b: "".to_string(),
-        pubkey: Value::Bytes(pin_server_pub_key.to_bytes()),
+        pubkey: Bytes::new(pin_server_pub_key.to_bytes()),
         certificate: "".into(),
     };
 

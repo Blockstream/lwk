@@ -13,6 +13,7 @@ use serde_bytes::ByteBuf;
 
 use crate::error::Error;
 
+pub mod cbor;
 pub mod connection;
 pub mod error;
 mod network;

@@ -116,9 +116,9 @@ impl StringResult {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ByteResult(Bytes);
 
-impl ByteResult {
-    pub fn get(self) -> Vec<u8> {
-        self.0.into()
+impl From<ByteResult> for Vec<u8> {
+    fn from(value: ByteResult) -> Self {
+        value.0.into()
     }
 }
 

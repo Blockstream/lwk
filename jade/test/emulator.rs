@@ -178,7 +178,7 @@ fn jade_sign_message() {
         path: vec![0],
         ae_host_commitment: Bytes::new(ae_host_commitment),
     };
-    let _signer_commitment = initialized_jade.jade.sign_message(params).unwrap().get();
+    let _signer_commitment: Vec<u8> = initialized_jade.jade.sign_message(params).unwrap().into();
 
     let params = GetSignatureParams {
         ae_host_entropy: Bytes::new(ae_host_entropy),

@@ -2,9 +2,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, EntropyParams, EpochParams, GetReceiveAddressParams,
-    GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult, Request, Response,
-    StringResult, UpdatePinserverParams, VersionInfoResult,
+    AuthResult, AuthUserParams, BoolResult, ByteResult, EntropyParams, EpochParams,
+    GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams,
+    Params, PingResult, Request, Response, SignMessageParams, StringResult, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
@@ -89,6 +90,16 @@ impl Jade {
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {
         let params = Params::GetReceiveAddress(params);
         self.send_request("get_receive_address", Some(params))
+    }
+
+    pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteResult> {
+        let params = Params::SignMessage(params);
+        self.send_request("sign_message", Some(params))
+    }
+
+    pub fn get_signature(&mut self, params: GetSignatureParams) -> Result<StringResult> {
+        let params = Params::GetSignature(params);
+        self.send_request("get_signature", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

@@ -22,6 +22,8 @@ pub enum Params {
     HandshakeComplete(HandshakeCompleteParams),
     GetXpub(GetXpubParams),
     GetReceiveAddress(GetReceiveAddressParams),
+    SignMessage(SignMessageParams),
+    GetSignature(GetSignatureParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -66,6 +68,18 @@ pub struct GetReceiveAddressParams {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct SignMessageParams {
+    pub message: String,
+    pub path: Vec<u32>,
+    pub ae_host_commitment: Value, // must be bytes
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GetSignatureParams {
+    pub ae_host_entropy: Value, // must be bytes
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct HandshakeComplete {
     pub encrypted_data: String,
     pub hmac_encrypted_data: String,
@@ -97,6 +111,15 @@ pub struct StringResult(String);
 impl StringResult {
     pub fn get(&self) -> &str {
         &self.0
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ByteResult(Value);
+
+impl ByteResult {
+    pub fn get(&self) -> Vec<u8> {
+        self.0.as_bytes().expect("they weren't bytes!").to_vec()
     }
 }
 

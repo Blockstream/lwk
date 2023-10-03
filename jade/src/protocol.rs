@@ -1,8 +1,7 @@
-use ciborium::Value;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
-use crate::error::ErrorDetails;
+use crate::{cbor::Bytes, error::ErrorDetails};
 
 #[derive(Debug, Serialize)]
 pub struct Request<P> {
@@ -71,12 +70,12 @@ pub struct GetReceiveAddressParams {
 pub struct SignMessageParams {
     pub message: String,
     pub path: Vec<u32>,
-    pub ae_host_commitment: Value, // must be bytes
+    pub ae_host_commitment: Bytes,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetSignatureParams {
-    pub ae_host_entropy: Value, // must be bytes
+    pub ae_host_entropy: Bytes,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -115,11 +114,11 @@ impl StringResult {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ByteResult(Value);
+pub struct ByteResult(Bytes);
 
 impl ByteResult {
-    pub fn get(&self) -> Vec<u8> {
-        self.0.as_bytes().expect("they weren't bytes!").to_vec()
+    pub fn get(self) -> Vec<u8> {
+        self.0.into()
     }
 }
 
@@ -187,6 +186,6 @@ pub struct UpdatePinserverParams {
     #[serde(rename = "urlB")]
     pub url_b: String,
 
-    pub pubkey: Value, // Must be Value::Bytes
+    pub pubkey: Bytes,
     pub certificate: String,
 }

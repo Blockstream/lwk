@@ -29,7 +29,8 @@ use testcontainers::{
 
 use crate::pin_server::verify;
 
-const TEST_MNEMONIC: &str = "fish inner face ginger orchard permit useful method fence kidney chuckle party favorite sunset draw limb science crane oval letter slot invite sadness banana";
+const TEST_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 #[test]
 fn entropy() {
@@ -123,7 +124,7 @@ fn update_pinserver() {
 }
 
 #[test]
-fn jade_initialization() {
+fn jade_initialization_with_pin_server() {
     let docker = clients::Cli::default();
 
     let mut initialized_jade = inner_jade_initialization(&docker);
@@ -136,7 +137,7 @@ fn jade_initialization() {
 fn jade_xpub() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = GetXpubParams {
         network: jade::Network::TestnetLiquid,
         path: vec![],
@@ -160,7 +161,7 @@ fn jade_xpub() {
 fn jade_receive_address() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = GetReceiveAddressParams {
         network: jade::Network::LocaltestLiquid,
         variant: "sh(wpkh(k))".into(),
@@ -184,7 +185,7 @@ fn jade_sign_message() {
         hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820").unwrap();
     let docker = clients::Cli::default();
     let message = "Hello world!";
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = SignMessageParams {
         message: message.to_string(),
         path: vec![0],
@@ -218,7 +219,7 @@ fn jade_sign_message() {
 #[test]
 fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = SignLiquidTxParams {
         network: jade::Network::TestnetLiquid,
         txn: vec![], // TODO

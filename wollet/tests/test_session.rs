@@ -232,6 +232,21 @@ fn network_regtest() -> ElementsNetwork {
     ElementsNetwork::ElementsRegtest { policy_asset }
 }
 
+pub fn new_unsupported_wallet(desc: &str) {
+    let r = ElectrumWallet::new(
+        network_regtest(),
+        "",
+        false,
+        false,
+        "/tmp",
+        &add_checksum(desc),
+    );
+    match r {
+        Ok(_) => panic!("Expected unsupported descriptor"),
+        Err(err) => assert_eq!(err.to_string(), Error::UnsupportedDescriptor.to_string()),
+    }
+}
+
 impl TestElectrumWallet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
         let tls = false;

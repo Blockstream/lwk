@@ -3,9 +3,6 @@ pub enum Error {
     #[error("{0}")]
     Generic(String),
 
-    #[error("could not parse SocketAddr `{0}`")]
-    AddrParse(String),
-
     #[error("Aes {0}")]
     Aes(String),
 
@@ -13,19 +10,7 @@ pub enum Error {
     BlindingBareUnsupported,
 
     #[error(transparent)]
-    InvalidMnemonic(#[from] bip39::Error),
-
-    #[error(transparent)]
-    Bitcoin(#[from] crate::bitcoin::Error),
-
-    #[error(transparent)]
-    BitcoinHashes(#[from] crate::hashes::error::Error),
-
-    #[error(transparent)]
     BitcoinBIP32Error(#[from] crate::bitcoin::bip32::Error),
-
-    #[error(transparent)]
-    BitcoinConsensus(#[from] crate::bitcoin::consensus::encode::Error),
 
     #[error(transparent)]
     JsonFrom(#[from] serde_json::Error),
@@ -37,9 +22,6 @@ pub enum Error {
     ClientError(#[from] electrum_client::Error),
 
     #[error(transparent)]
-    SliceConversionError(#[from] std::array::TryFromSliceError),
-
-    #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
 
     #[error(transparent)]
@@ -49,13 +31,7 @@ pub enum Error {
     PsetBlindError(#[from] crate::elements::pset::PsetBlindError),
 
     #[error(transparent)]
-    Send(#[from] std::sync::mpsc::SendError<()>),
-
-    #[error(transparent)]
     Secp256k1(#[from] crate::secp256k1::Error),
-
-    #[error(transparent)]
-    Secp256k1Zkp(#[from] crate::elements::secp256k1_zkp::Error),
 
     #[error(transparent)]
     HexBitcoinHashes(#[from] crate::hashes::hex::Error),

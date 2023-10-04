@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
-use crate::{cbor::Bytes, error::ErrorDetails};
+use crate::error::ErrorDetails;
 
 #[derive(Debug, Serialize)]
 pub struct Request<P> {
@@ -38,7 +38,8 @@ pub struct EpochParams {
 
 #[derive(Debug, Serialize)]
 pub struct EntropyParams {
-    pub entropy: ByteBuf,
+    #[serde(with = "serde_bytes")]
+    pub entropy: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -70,12 +71,15 @@ pub struct GetReceiveAddressParams {
 pub struct SignMessageParams {
     pub message: String,
     pub path: Vec<u32>,
-    pub ae_host_commitment: Bytes,
+
+    #[serde(with = "serde_bytes")]
+    pub ae_host_commitment: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetSignatureParams {
-    pub ae_host_entropy: Bytes,
+    #[serde(with = "serde_bytes")]
+    pub ae_host_entropy: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -114,11 +118,11 @@ impl StringResult {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ByteResult(Bytes);
+pub struct ByteResult(ByteBuf);
 
 impl From<ByteResult> for Vec<u8> {
     fn from(value: ByteResult) -> Self {
-        value.0.into()
+        value.0.into_vec()
     }
 }
 
@@ -186,6 +190,7 @@ pub struct UpdatePinserverParams {
     #[serde(rename = "urlB")]
     pub url_b: String,
 
-    pub pubkey: Bytes,
+    #[serde(with = "serde_bytes")]
+    pub pubkey: Vec<u8>,
     pub certificate: String,
 }

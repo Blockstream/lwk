@@ -13,7 +13,6 @@ use elements::{
     hashes::Hash,
 };
 use jade::{
-    cbor::Bytes,
     protocol::{
         GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
         HandshakeParams, SignMessageParams, UpdatePinserverParams,
@@ -106,7 +105,7 @@ fn update_pinserver() {
         reset_certificate: false,
         url_a,
         url_b: "".to_string(),
-        pubkey: Bytes::new(pub_key),
+        pubkey: pub_key,
         certificate: "".into(),
     };
     let result = jade_api.update_pinserver(params).unwrap();
@@ -179,12 +178,12 @@ fn jade_sign_message() {
     let params = SignMessageParams {
         message: message.to_string(),
         path: vec![0],
-        ae_host_commitment: Bytes::new(ae_host_commitment),
+        ae_host_commitment: ae_host_commitment,
     };
     let _signer_commitment: Vec<u8> = initialized_jade.jade.sign_message(params).unwrap().into();
 
     let params = GetSignatureParams {
-        ae_host_entropy: Bytes::new(ae_host_entropy),
+        ae_host_entropy: ae_host_entropy,
     };
     let signature = initialized_jade.jade.get_signature(params).unwrap();
     let signature_bytes = base64::engine::general_purpose::STANDARD
@@ -236,7 +235,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
         reset_certificate: false,
         url_a: pin_server_url.clone(),
         url_b: "".to_string(),
-        pubkey: Bytes::new(pin_server_pub_key.to_bytes()),
+        pubkey: pin_server_pub_key.to_bytes(),
         certificate: "".into(),
     };
 

@@ -9,11 +9,9 @@ use protocol::{
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
-use serde_bytes::ByteBuf;
 
 use crate::error::Error;
 
-pub mod cbor;
 pub mod connection;
 pub mod error;
 mod network;
@@ -51,7 +49,7 @@ impl Jade {
 
     pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<BoolResult> {
         let params = Params::Entropy(EntropyParams {
-            entropy: ByteBuf::from(entropy),
+            entropy: entropy.to_vec(),
         });
         self.send_request("add_entropy", Some(params))
     }

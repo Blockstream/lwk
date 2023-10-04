@@ -57,6 +57,11 @@ fn debug_set_mnemonic() {
     };
     let result = jade_api.debug_set_mnemonic(params).unwrap();
     assert!(result.get());
+
+    let result = jade_api.version_info().unwrap();
+    insta::assert_yaml_snapshot!(result);
+    // TODO make Jade initialization of other testss via debug_set_mnemonic instead of setting the
+    // pin server every time
 }
 
 #[test]

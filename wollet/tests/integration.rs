@@ -115,19 +115,22 @@ fn roundtrip() {
 }
 
 #[test]
-fn pkh() {
-    let mut server = setup();
-
-    let signer = generate_signer();
+fn unsupported_descriptor() {
+    let signer1 = generate_signer();
+    let signer2 = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elpkh({}/*))", view_key, signer.xpub());
-    let signers = &[&signer];
+    let desc_p2pkh = format!("ct({},elpkh({}/*))", view_key, signer1.xpub());
+    let desc_p2sh = format!(
+        "ct({},elsh(multi(2,{}/*,{}/*)))",
+        view_key,
+        signer1.xpub(),
+        signer2.xpub()
+    );
+    let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.xpub());
 
-    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&mut server);
-    wallet.send_btc(signers, None);
-    // FIXME: issuance does not work with p2pkh
-    //let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
+    for desc in [desc_p2pkh, desc_p2sh, desc_p2tr] {
+        new_unsupported_wallet(&desc);
+    }
 }
 
 #[test]

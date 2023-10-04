@@ -81,12 +81,20 @@ impl ElectrumWallet {
         }
     }
 
+    fn validate_satoshi(&self, satoshi: u64) -> Result<u64, Error> {
+        if satoshi == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        Ok(satoshi)
+    }
+
     fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
+        let satoshi = self.validate_satoshi(addressee.satoshi)?;
         let asset = self.validate_asset(addressee.asset)?;
         if addressee.address == "burn" {
             let burn_script = Script::new_op_return(&[]);
             Ok(Addressee {
-                satoshi: addressee.satoshi,
+                satoshi,
                 script_pubkey: burn_script,
                 blinding_pubkey: None,
                 asset,

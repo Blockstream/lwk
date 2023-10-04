@@ -243,3 +243,58 @@ fn contract() {
     wallet.send_btc(signers, None);
     let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, contract, None);
 }
+
+#[test]
+fn multiple_descriptors() {
+    // Use a different descriptors for the asset and the reissuance token
+
+    let mut server = setup();
+    // Asset descriptor and signers
+    let signer_a = generate_signer();
+    let view_key_a = generate_view_key();
+    let desc_a = format!("ct({},elwpkh({}/*))", view_key_a, signer_a.xpub());
+    let mut wallet_a = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_a);
+    // Token descriptor and signers
+    let signer_t1 = generate_signer();
+    let signer_t2 = generate_signer();
+    let view_key_t = generate_view_key();
+    let desc_t = format!(
+        "ct({},elwsh(multi(2,{}/*,{}/*)))",
+        view_key_t,
+        signer_t1.xpub(),
+        signer_t2.xpub()
+    );
+    let mut wallet_t = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_t);
+
+    // Fund both wallets
+    wallet_a.fund_btc(&mut server);
+    wallet_t.fund_btc(&mut server);
+
+    // Issue an asset, sending the asset to asset wallet, and the token to the token wallet
+    let satoshi_a = 100_000;
+    let satoshi_t = 1;
+    let address_t = wallet_t.address().to_string();
+    let mut pset = wallet_a
+        .electrum_wallet
+        .issueasset(satoshi_a, "", satoshi_t, &address_t, "", None)
+        .unwrap();
+    let (asset, token) = &pset.inputs()[0].issuance_ids();
+    wallet_a.sign(&signer_a, &mut pset);
+    wallet_a.send(&mut pset);
+    assert_eq!(wallet_a.balance(asset), satoshi_a);
+    assert_eq!(wallet_t.balance(token), satoshi_t);
+
+    // Reissue the asset, sending the asset to asset wallet, and keeping the token in the token
+    // wallet
+    let satoshi_ar = 1_000;
+    let address_a = wallet_a.address().to_string();
+    let mut pset = wallet_t
+        .electrum_wallet
+        .reissueasset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
+        .unwrap();
+    wallet_t.sign(&signer_t1, &mut pset);
+    wallet_t.sign(&signer_t2, &mut pset);
+    wallet_t.send(&mut pset);
+    assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
+    assert_eq!(wallet_t.balance(token), satoshi_t);
+}

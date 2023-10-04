@@ -1,3 +1,4 @@
+use crate::bitcoin::address::WitnessVersion;
 use crate::config::{Config, ElementsNetwork};
 use crate::elements::confidential::Value;
 use crate::elements::encode::{
@@ -59,6 +60,13 @@ fn convert_blinding_key(
     }
 }
 
+fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
+    match desc.descriptor.desc_type().segwit_version() {
+        Some(WitnessVersion::V0) => Ok(()),
+        _ => Err(Error::UnsupportedDescriptor),
+    }
+}
+
 pub struct ElectrumWallet {
     pub(crate) config: Config,
     pub(crate) store: Store,
@@ -81,6 +89,7 @@ impl ElectrumWallet {
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(desc)?;
+        validate_descriptor(&descriptor)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));

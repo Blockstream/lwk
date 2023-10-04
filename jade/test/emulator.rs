@@ -14,8 +14,8 @@ use elements::{
 };
 use jade::{
     protocol::{
-        GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
-        HandshakeParams, SignMessageParams, UpdatePinserverParams,
+        DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
+        HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
     sign_liquid_tx::{AdditionalInfo, SignLiquidTxParams},
     Jade,
@@ -29,10 +29,7 @@ use testcontainers::{
 
 use crate::pin_server::verify;
 
-const _TEST_MNEMONIC: &str = "fish inner face ginger orchard permit
-                             useful method fence kidney chuckle party
-                             favorite sunset draw limb science crane
-                             oval letter slot invite sadness banana";
+const TEST_MNEMONIC: &str = "fish inner face ginger orchard permit useful method fence kidney chuckle party favorite sunset draw limb science crane oval letter slot invite sadness banana";
 
 #[test]
 fn entropy() {
@@ -44,6 +41,22 @@ fn entropy() {
 
     let result = jade_api.add_entropy(&[1, 2, 3, 4]).unwrap();
     insta::assert_yaml_snapshot!(result);
+}
+
+#[test]
+fn debug_set_mnemonic() {
+    let docker = clients::Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+    let mut jade_api = Jade::new(stream.into());
+    let params = DebugSetMnemonicParams {
+        mnemonic: TEST_MNEMONIC.to_string(),
+        passphrase: None,
+        temporary_wallet: false,
+    };
+    let result = jade_api.debug_set_mnemonic(params).unwrap();
+    assert!(result.get());
 }
 
 #[test]

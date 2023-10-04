@@ -24,6 +24,7 @@ pub enum Params {
     SignMessage(SignMessageParams),
     GetSignature(GetSignatureParams),
     SignLiquidTx(SignLiquidTxParams),
+    DebugSetMnemonic(DebugSetMnemonicParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -88,6 +89,13 @@ pub struct HandshakeComplete {
     pub encrypted_data: String,
     pub hmac_encrypted_data: String,
     pub ske: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DebugSetMnemonicParams {
+    pub mnemonic: String,
+    pub passphrase: Option<String>,
+    pub temporary_wallet: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

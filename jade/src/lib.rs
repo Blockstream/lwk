@@ -2,10 +2,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, ByteResult, EntropyParams, EpochParams,
-    GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams,
-    Params, PingResult, Request, Response, SignMessageParams, StringResult, UpdatePinserverParams,
-    VersionInfoResult,
+    AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
+    EpochParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData,
+    HandshakeParams, Params, PingResult, Request, Response, SignMessageParams, StringResult,
+    UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
@@ -107,6 +107,11 @@ impl Jade {
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<BoolResult> {
         let params = Params::SignLiquidTx(params);
         self.send_request("sign_liquid_tx", Some(params))
+    }
+
+    pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<BoolResult> {
+        let params = Params::DebugSetMnemonic(params);
+        self.send_request("debug_set_mnemonic", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

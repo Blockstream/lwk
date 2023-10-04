@@ -221,7 +221,7 @@ impl TestElectrumServer {
 }
 
 pub struct TestElectrumWallet {
-    electrum_wallet: ElectrumWallet,
+    pub electrum_wallet: ElectrumWallet,
     _db_root_dir: TempDir,
 }
 
@@ -278,7 +278,7 @@ impl TestElectrumWallet {
         self.electrum_wallet.sync_tip().unwrap();
     }
 
-    fn address(&self) -> Address {
+    pub fn address(&self) -> Address {
         self.electrum_wallet
             .address(None)
             .unwrap()
@@ -304,7 +304,7 @@ impl TestElectrumWallet {
     }
 
     /// asset balance in satoshi
-    fn balance(&mut self, asset: &AssetId) -> u64 {
+    pub fn balance(&mut self, asset: &AssetId) -> u64 {
         self.electrum_wallet.sync_txs().unwrap();
         let balance = self.electrum_wallet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
@@ -557,14 +557,14 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    fn sign(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
+    pub fn sign(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
         let pset_base64 = pset.to_string();
         let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
         assert_ne!(pset_base64, signed_pset_base64);
         *pset = signed_pset_base64.parse().unwrap();
     }
 
-    fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
+    pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         let tx = self.electrum_wallet.finalize(pset).unwrap();
         let txid = self.electrum_wallet.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());

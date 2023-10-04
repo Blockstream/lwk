@@ -61,6 +61,9 @@ fn convert_blinding_key(
 }
 
 fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
+    if !desc.descriptor.has_wildcard() {
+        return Err(Error::UnsupportedDescriptor);
+    }
     match desc.descriptor.desc_type().segwit_version() {
         Some(WitnessVersion::V0) => Ok(()),
         _ => Err(Error::UnsupportedDescriptor),

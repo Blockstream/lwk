@@ -127,8 +127,9 @@ fn unsupported_descriptor() {
         signer2.xpub()
     );
     let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.xpub());
+    let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.xpub());
 
-    for desc in [desc_p2pkh, desc_p2sh, desc_p2tr] {
+    for desc in [desc_p2pkh, desc_p2sh, desc_p2tr, desc_no_wildcard] {
         new_unsupported_wallet(&desc);
     }
 }

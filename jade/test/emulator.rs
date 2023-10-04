@@ -249,9 +249,9 @@ fn jade_sign_liquid_tx() {
 /// Note underscore prefixed var must be there even if they are not read so that they are not
 /// dropped
 struct InitializedJade<'a> {
-    _pin_server: Container<'a, PinServerEmulator>,
+    _pin_server: Option<Container<'a, PinServerEmulator>>,
     _jade_emul: Container<'a, JadeEmulator>,
-    _tempdir: TempDir,
+    _tempdir: Option<TempDir>,
     jade: Jade,
 }
 
@@ -304,9 +304,9 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     assert!(result.get());
 
     InitializedJade {
-        _pin_server: pin_container,
+        _pin_server: Some(pin_container),
         _jade_emul: jade_container,
-        _tempdir: tempdir,
+        _tempdir: Some(tempdir),
         jade: jade_api,
     }
 }

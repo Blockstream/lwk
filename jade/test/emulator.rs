@@ -46,19 +46,10 @@ fn entropy() {
 #[test]
 fn debug_set_mnemonic() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
-    let params = DebugSetMnemonicParams {
-        mnemonic: TEST_MNEMONIC.to_string(),
-        passphrase: None,
-        temporary_wallet: false,
-    };
-    let result = jade_api.debug_set_mnemonic(params).unwrap();
-    assert!(result.get());
 
-    let result = jade_api.version_info().unwrap();
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+
+    let result = initialized_jade.jade.version_info().unwrap();
     insta::assert_yaml_snapshot!(result);
     // TODO make Jade initialization of other testss via debug_set_mnemonic instead of setting the
     // pin server every time
@@ -307,6 +298,27 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
         _pin_server: Some(pin_container),
         _jade_emul: jade_container,
         _tempdir: Some(tempdir),
+        jade: jade_api,
+    }
+}
+
+fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+    let mut jade_api = Jade::new(stream.into());
+    let params = DebugSetMnemonicParams {
+        mnemonic: TEST_MNEMONIC.to_string(),
+        passphrase: None,
+        temporary_wallet: false,
+    };
+    let result = jade_api.debug_set_mnemonic(params).unwrap();
+    assert!(result.get());
+
+    InitializedJade {
+        _pin_server: None,
+        _jade_emul: container,
+        _tempdir: None,
         jade: jade_api,
     }
 }

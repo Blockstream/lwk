@@ -340,6 +340,11 @@ fn createpset_error() {
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&mut server);
+    let satoshi_a = 100_000;
+    let satoshi_t = 1;
+    let (asset, token) = wallet.issueasset(&[&signer], satoshi_a, satoshi_t, "", None);
+    let asset = asset.to_string();
+    let token = token.to_string();
 
     // Invalid address
     let addressees = vec![UnvalidatedAddressee {
@@ -398,4 +403,58 @@ fn createpset_error() {
         err.to_string(),
         "bad hex string length 4 (expected 64)".to_string()
     );
+
+    // Insufficient funds
+    // Not enough lbtc
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: 2_200_000_000_000_000,
+        address: &address,
+        asset: "",
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+
+    // Not enough asset
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: satoshi_a + 1,
+        address: &address,
+        asset: &asset,
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+
+    // Not enough token
+    let signer2 = generate_signer();
+    let view_key2 = generate_view_key();
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
+    let wallet2 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc2);
+
+    // Send token elsewhere
+    let address = wallet2.address();
+    let mut pset = wallet
+        .electrum_wallet
+        .sendasset(satoshi_t, &address.to_string(), &token, None)
+        .unwrap();
+    wallet.sign(&signer, &mut pset);
+    wallet.send(&mut pset);
+
+    let err = wallet
+        .electrum_wallet
+        .reissueasset(&asset, satoshi_a, "", None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+
+    // The other wallet is unaware of the issuance transaction,
+    // so it can't reissue the asset.
+    let err = wallet2
+        .electrum_wallet
+        .reissueasset(&asset, satoshi_a, "", None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }

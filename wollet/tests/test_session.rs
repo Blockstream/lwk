@@ -232,7 +232,7 @@ fn network_regtest() -> ElementsNetwork {
     ElementsNetwork::ElementsRegtest { policy_asset }
 }
 
-pub fn new_unsupported_wallet(desc: &str) {
+pub fn new_unsupported_wallet(desc: &str, expected: Error) {
     let r = ElectrumWallet::new(
         network_regtest(),
         "",
@@ -243,7 +243,7 @@ pub fn new_unsupported_wallet(desc: &str) {
     );
     match r {
         Ok(_) => panic!("Expected unsupported descriptor"),
-        Err(err) => assert_eq!(err.to_string(), Error::UnsupportedDescriptor.to_string()),
+        Err(err) => assert_eq!(err.to_string(), expected.to_string()),
     }
 }
 

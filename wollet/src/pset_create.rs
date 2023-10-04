@@ -18,7 +18,7 @@ use std::str::FromStr;
 // We make issuance and reissuance are mutually exclusive for simplicity
 enum IssuanceRequest {
     None,
-    Issuance(u64, u64, Option<Contract>),
+    Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
     Reissuance(AssetId, u64),
 }
 
@@ -270,18 +270,29 @@ impl ElectrumWallet {
         // Set (re)issuance data
         match issuance_request {
             IssuanceRequest::None => {}
-            IssuanceRequest::Issuance(satoshi_asset, satoshi_token, contract) => {
+            IssuanceRequest::Issuance(
+                satoshi_asset,
+                address_asset,
+                satoshi_token,
+                address_token,
+                contract,
+            ) => {
                 // At least a L-BTC input for the fee was added.
                 let idx = 0;
                 let (asset, token) =
                     self.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
 
-                let addressee = self.addressee_change(satoshi_asset, asset, &mut last_unused)?;
+                let addressee = match address_asset {
+                    Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
+                    None => self.addressee_change(satoshi_asset, asset, &mut last_unused)?,
+                };
                 self.add_output(&mut pset, &addressee)?;
 
                 if satoshi_token > 0 {
-                    let addressee =
-                        self.addressee_change(satoshi_token, token, &mut last_unused)?;
+                    let addressee = match address_token {
+                        Some(address) => Addressee::from_address(satoshi_token, &address, token),
+                        None => self.addressee_change(satoshi_token, token, &mut last_unused)?,
+                    };
                     self.add_output(&mut pset, &addressee)?;
                 }
             }
@@ -429,7 +440,9 @@ impl ElectrumWallet {
     pub fn issueasset(
         &self,
         satoshi_asset: u64,
+        address_asset: &str,
         satoshi_token: u64,
+        address_token: &str,
         contract: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
@@ -442,7 +455,23 @@ impl ElectrumWallet {
             contract.validate()?;
             Some(contract)
         };
-        let issuance = IssuanceRequest::Issuance(satoshi_asset, satoshi_token, contract);
+        let address_asset = if address_asset.is_empty() {
+            None
+        } else {
+            Some(self.validate_address(address_asset)?)
+        };
+        let address_token = if address_token.is_empty() {
+            None
+        } else {
+            Some(self.validate_address(address_token)?)
+        };
+        let issuance = IssuanceRequest::Issuance(
+            satoshi_asset,
+            address_asset,
+            satoshi_token,
+            address_token,
+            contract,
+        );
         self.createpset(addressees, fee_rate, issuance)
     }
 

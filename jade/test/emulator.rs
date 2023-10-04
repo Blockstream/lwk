@@ -5,6 +5,8 @@ use bs_containers::{
 };
 use elements::{
     bitcoin,
+    encode::serialize,
+    pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message},
     AddressParams,
 };
@@ -17,7 +19,7 @@ use jade::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
         HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
-    sign_liquid_tx::{AdditionalInfo, SignLiquidTxParams},
+    sign_liquid_tx::{AdditionalInfo, Commitment, SignLiquidTxParams},
     Jade,
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -218,22 +220,47 @@ fn jade_sign_message() {
 fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
+    let pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
+    let tx = pset.clone().extract_tx().unwrap();
+    let txn = serialize(&tx);
+
+    let mut trusted_commitments = vec![];
+    for output in pset.outputs().iter() {
+        let trusted_commitment = if output.script_pubkey.is_empty() {
+            // fee output
+            None
+        } else {
+            Some(Commitment {
+                abf: "".to_string(),
+                asset_generator: output.asset_comm.unwrap().to_string(),
+                asset_id: output.asset.unwrap().to_string(),
+                blinding_key: output.blinding_key.unwrap().to_string(),
+                value: output.amount.unwrap(),
+                value_commitment: output.amount_comm.unwrap().serialize().to_vec(),
+                vbf: vec![],
+            })
+        };
+        trusted_commitments.push(trusted_commitment);
+    }
+
     let params = SignLiquidTxParams {
         network: jade::Network::TestnetLiquid,
-        txn: vec![], // TODO
-        num_inputs: 0,
+        txn,
+        num_inputs: tx.input.len() as u32,
         use_ae_signatures: false,
         change: vec![],
         asset_info: vec![],
-        trusted_commitments: vec![],
+        trusted_commitments,
         additional_info: AdditionalInfo {
             tx_type: "swap".to_string(),
             wallet_input_summary: vec![],
             wallet_output_summary: vec![],
         },
     };
-    let _sign_response = initialized_jade.jade.sign_liquid_tx(params);
-    //assert!(sign_response); // TODO
+    println!("{:#?}", params);
+    // let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
+    // assert!(sign_response);
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

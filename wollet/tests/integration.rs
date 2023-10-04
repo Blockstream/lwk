@@ -251,6 +251,29 @@ fn contract() {
     wallet.fund_btc(&mut server);
     wallet.send_btc(signers, None);
     let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, contract, None);
+
+    // Error cases
+    let contract_d = "{\"entity\":{\"domain\":\"testcom\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
+    let contract_v = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":1}";
+    let contract_p = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":18,\"ticker\":\"TEST\",\"version\":0}";
+    let contract_n = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
+    let contract_t = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TT\",\"version\":0}";
+    let contract_i = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"37cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
+
+    for (contract, expected) in [
+        (contract_d, Error::InvalidDomain),
+        (contract_v, Error::InvalidVersion),
+        (contract_p, Error::InvalidPrecision),
+        (contract_n, Error::InvalidName),
+        (contract_t, Error::InvalidTicker),
+        (contract_i, Error::InvalidIssuerPubkey),
+    ] {
+        let err = wallet
+            .electrum_wallet
+            .issueasset(10, "", 1, "", contract, None)
+            .unwrap_err();
+        assert_eq!(err.to_string(), expected.to_string());
+    }
 }
 
 #[test]

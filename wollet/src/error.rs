@@ -125,6 +125,9 @@ pub enum Error {
 
     #[error("Invalid issuer pubkey")]
     InvalidIssuerPubkey,
+
+    #[error("Descriptor not supported")]
+    UnsupportedDescriptor,
 }
 
 // cannot derive automatically with this error because of trait bound

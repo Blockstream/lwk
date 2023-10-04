@@ -17,9 +17,10 @@ use jade::{
         GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
         HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
+    sign_liquid_tx::{AdditionalInfo, SignLiquidTxParams},
     Jade,
 };
-use std::{str::FromStr, time::UNIX_EPOCH};
+use std::{str::FromStr, time::UNIX_EPOCH, vec};
 use tempfile::{tempdir, TempDir};
 use testcontainers::{
     clients::{self, Cli},
@@ -203,6 +204,28 @@ fn jade_sign_message() {
         .is_ok());
 
     //TODO verify anti-exfil
+}
+
+#[test]
+fn jade_sign_liquid_tx() {
+    let docker = clients::Cli::default();
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let params = SignLiquidTxParams {
+        network: jade::Network::TestnetLiquid,
+        txn: vec![], // TODO
+        num_inputs: 0,
+        use_ae_signatures: false,
+        change: vec![],
+        asset_info: vec![],
+        trusted_commitments: vec![],
+        additional_info: AdditionalInfo {
+            tx_type: "swap".to_string(),
+            wallet_input_summary: vec![],
+            wallet_output_summary: vec![],
+        },
+    };
+    let _sign_response = initialized_jade.jade.sign_liquid_tx(params);
+    //assert!(sign_response); // TODO
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

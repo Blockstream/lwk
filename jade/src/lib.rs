@@ -9,6 +9,7 @@ use protocol::{
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
+use sign_liquid_tx::SignLiquidTxParams;
 
 use crate::error::Error;
 
@@ -17,7 +18,7 @@ pub mod error;
 mod network;
 pub mod protocol;
 
-mod sign_liquid_tx;
+pub mod sign_liquid_tx;
 
 pub use network::Network;
 
@@ -101,6 +102,11 @@ impl Jade {
     pub fn get_signature(&mut self, params: GetSignatureParams) -> Result<StringResult> {
         let params = Params::GetSignature(params);
         self.send_request("get_signature", Some(params))
+    }
+
+    pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<BoolResult> {
+        let params = Params::SignLiquidTx(params);
+        self.send_request("sign_liquid_tx", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

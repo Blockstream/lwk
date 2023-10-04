@@ -3,7 +3,7 @@ use serde_bytes::ByteBuf;
 
 use crate::error::ErrorDetails;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Request<P> {
     pub id: String,
     pub method: String,

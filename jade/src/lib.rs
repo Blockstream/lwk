@@ -17,6 +17,8 @@ pub mod error;
 mod network;
 pub mod protocol;
 
+mod sign_liquid_tx;
+
 pub use network::Network;
 
 pub type Result<T> = std::result::Result<T, error::Error>;

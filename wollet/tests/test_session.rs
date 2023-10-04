@@ -2,6 +2,7 @@ extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
 use crate::bitcoin::{Amount, Network, PrivateKey};
+use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
@@ -9,7 +10,6 @@ use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
-use elements::hashes::Hash;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
 use rand::{thread_rng, Rng};

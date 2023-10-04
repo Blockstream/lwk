@@ -1,8 +1,8 @@
 use crate::domain::verify_domain_name;
+use crate::elements::hashes::{sha256, Hash};
+use crate::elements::ContractHash;
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
-use elements::hashes::{sha256, Hash};
-use elements::ContractHash;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};

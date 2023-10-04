@@ -225,19 +225,23 @@ pub struct TestElectrumWallet {
     _db_root_dir: TempDir,
 }
 
+fn network_regtest() -> ElementsNetwork {
+    let policy_asset =
+        AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
+            .unwrap();
+    ElementsNetwork::ElementsRegtest { policy_asset }
+}
+
 impl TestElectrumWallet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
         let tls = false;
         let validate_domain = false;
-        let policy_asset =
-            AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
-                .unwrap();
         let _db_root_dir = TempDir::new().unwrap();
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
         let mut electrum_wallet = ElectrumWallet::new(
-            ElementsNetwork::ElementsRegtest { policy_asset },
+            network_regtest(),
             electrs_url,
             tls,
             validate_domain,

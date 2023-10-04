@@ -3,7 +3,7 @@ mod test_session;
 use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
-use wollet::Error;
+use wollet::*;
 
 #[test]
 fn liquid() {
@@ -329,4 +329,73 @@ fn multiple_descriptors() {
     wallet_t.send(&mut pset);
     assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
     assert_eq!(wallet_t.balance(token), satoshi_t);
+}
+
+#[test]
+fn createpset_error() {
+    let mut server = setup();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+    wallet.fund_btc(&mut server);
+
+    // Invalid address
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: 1_000,
+        address: "",
+        asset: "",
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "base58 error: base58ck data not even long enough for a checksum".to_string()
+    );
+
+    // Not confidential address
+    let mut address = wallet.address();
+    address.blinding_pubkey = None;
+    let not_conf_address = address.to_string();
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: 1_000,
+        address: &not_conf_address,
+        asset: "",
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
+
+    let address = wallet.address().to_string();
+    // Invalid amount
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: 0,
+        address: &address,
+        asset: "",
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
+
+    // Invalid asset
+    let addressees = vec![UnvalidatedAddressee {
+        satoshi: 1_000,
+        address: &address,
+        asset: "aaaa",
+    }];
+    let err = wallet
+        .electrum_wallet
+        .sendmany(addressees, None)
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "bad hex string length 4 (expected 64)".to_string()
+    );
 }

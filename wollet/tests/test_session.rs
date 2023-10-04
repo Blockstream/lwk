@@ -514,7 +514,7 @@ impl TestElectrumWallet {
         let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
             .electrum_wallet
-            .reissueasset(asset.to_string().as_str(), satoshi_asset, fee_rate)
+            .reissueasset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
         for signer in signers {
             self.sign(signer, &mut pset);

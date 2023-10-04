@@ -67,6 +67,12 @@ impl ElectrumWallet {
         Ok(address)
     }
 
+    fn validate_empty_address(&self, address: &str) -> Result<Option<Address>, Error> {
+        (!address.is_empty())
+            .then(|| self.validate_address(address))
+            .transpose()
+    }
+
     fn validate_asset(&self, asset: &str) -> Result<AssetId, Error> {
         if asset.is_empty() {
             Ok(self.policy_asset())
@@ -458,16 +464,8 @@ impl ElectrumWallet {
             contract.validate()?;
             Some(contract)
         };
-        let address_asset = if address_asset.is_empty() {
-            None
-        } else {
-            Some(self.validate_address(address_asset)?)
-        };
-        let address_token = if address_token.is_empty() {
-            None
-        } else {
-            Some(self.validate_address(address_token)?)
-        };
+        let address_asset = self.validate_empty_address(address_asset)?;
+        let address_token = self.validate_empty_address(address_token)?;
         let issuance = IssuanceRequest::Issuance(
             satoshi_asset,
             address_asset,
@@ -488,11 +486,7 @@ impl ElectrumWallet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
         let asset = AssetId::from_str(asset)?;
-        let address_asset = if address_asset.is_empty() {
-            None
-        } else {
-            Some(self.validate_address(address_asset)?)
-        };
+        let address_asset = self.validate_empty_address(address_asset)?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
         self.createpset(addressees, fee_rate, reissuance)
     }

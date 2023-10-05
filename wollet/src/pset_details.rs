@@ -40,6 +40,12 @@ pub enum Error {
 
     #[error("PSET doesn't contain a fee output")]
     MissingFee,
+
+    #[error("Multiple fee outputs")]
+    MultipleFee,
+
+    #[error("Fee output is blinded")]
+    BlindedFee,
 }
 
 pub fn pset_balance(
@@ -108,14 +114,26 @@ pub fn pset_balance(
     }
 
     'outputsfor: for (output_index, output) in pset.outputs().iter().enumerate() {
+        if output.script_pubkey.is_empty() {
+            // Candidate fee output
+            if fee.is_some() {
+                return Err(Error::MultipleFee);
+            }
+            if output.asset.is_none()
+                || output.asset_comm.is_some()
+                || output.amount.is_none()
+                || output.amount_comm.is_some()
+            {
+                return Err(Error::BlindedFee);
+            }
+            fee = Some(output.amount.unwrap());
+            continue 'outputsfor;
+        }
         match (output.amount, output.asset) {
             (None, None) => return Err(Error::OutputAssetValueNone { output_index }),
             (None, Some(_)) => return Err(Error::OutputValueNone { output_index }),
             (Some(_), None) => return Err(Error::OutputAssetNone { output_index }),
             (Some(amount), Some(asset_id)) => {
-                if output.script_pubkey.is_empty() {
-                    fee = Some(amount);
-                }
                 for (_, path) in output.bip32_derivation.values() {
                     if path.is_empty() {
                         continue;

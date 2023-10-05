@@ -323,11 +323,7 @@ impl ElectrumWallet {
 
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetBalance, Error> {
-        Ok(pset_balance(
-            pset,
-            &self.store.cache.unblinded,
-            self.descriptor(),
-        )?)
+        Ok(pset_balance(pset, self.descriptor())?)
     }
 
     pub(crate) fn index(&self, script_pubkey: &Script) -> Result<u32, Error> {

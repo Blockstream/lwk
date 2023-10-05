@@ -92,7 +92,6 @@ fn commitments(
 
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
-    _unblinded: &HashMap<OutPoint, TxOutSecrets>,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
     let descriptor_blinding_key =

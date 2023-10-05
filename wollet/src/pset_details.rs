@@ -100,9 +100,9 @@ pub fn pset_balance(
         };
 
         match unblinded.get(&previous_outpoint) {
-            Some(tx_out_secrets) => {
+            Some(txout_secrets) => {
                 // TODO CH&ECK, if they are in unblinded they are surely mine?
-                *balances.entry(tx_out_secrets.asset).or_default() -= tx_out_secrets.value as i64;
+                *balances.entry(txout_secrets.asset).or_default() -= txout_secrets.value as i64;
             }
             None => {
                 // Try to get asset id and value from previous output if they are explicit

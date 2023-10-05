@@ -153,7 +153,6 @@ impl ElectrumWallet {
     ) -> Result<usize, Error> {
         let mut input = Input::from_prevout(utxo.outpoint);
         input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
-        input.non_witness_utxo = Some(self.get_tx(&utxo.outpoint.txid)?);
 
         pset.add_input(input);
         let idx = pset.inputs().len() - 1;

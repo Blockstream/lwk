@@ -222,7 +222,7 @@ fn jade_sign_liquid_tx() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
     let pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
-    let tx = pset.clone().extract_tx().unwrap();
+    let tx = pset.extract_tx().unwrap();
     let txn = serialize(&tx);
 
     assert_eq!(tx.output.len(), 3);
@@ -230,6 +230,8 @@ fn jade_sign_liquid_tx() {
 
     let mut trusted_commitments = vec![];
     for output in pset.outputs().iter() {
+        let mut asset_id = serialize(&output.asset.unwrap());
+        asset_id.reverse(); // Jade want it reversed
         let trusted_commitment = if output.script_pubkey.is_empty() {
             // fee output
             None
@@ -237,7 +239,7 @@ fn jade_sign_liquid_tx() {
             Some(Commitment {
                 asset_blind_proof: output.blind_asset_proof.as_ref().unwrap().serialize(),
                 asset_generator: output.asset_comm.unwrap().serialize().to_vec(),
-                asset_id: serialize(&output.asset.unwrap()),
+                asset_id,
                 blinding_key: output.blinding_key.unwrap().to_bytes(),
                 value: output.amount.unwrap(),
                 value_commitment: output.amount_comm.unwrap().serialize().to_vec(),
@@ -249,7 +251,7 @@ fn jade_sign_liquid_tx() {
     assert_eq!(trusted_commitments.len(), 3);
 
     let params = SignLiquidTxParams {
-        network: jade::Network::TestnetLiquid,
+        network: jade::Network::LocaltestLiquid,
         txn,
         num_inputs: tx.input.len() as u32,
         use_ae_signatures: false,
@@ -259,8 +261,8 @@ fn jade_sign_liquid_tx() {
         additional_info: None,
     };
     // println!("{:#?}", params);
-    // let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
-    // assert!(sign_response);
+    let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
+    assert!(sign_response);
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

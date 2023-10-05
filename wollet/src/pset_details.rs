@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use crate::elements::{
     confidential::{Asset, Value},
     pset::PartiallySignedTransaction,
-    AssetId, OutPoint, TxOutSecrets,
+    secp256k1_zkp::Secp256k1,
+    AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, TxOutSecrets,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
@@ -46,6 +47,15 @@ pub enum Error {
 
     #[error("Fee output is blinded")]
     BlindedFee,
+
+    #[error("Output #{output_index} has invalid asset blind proof")]
+    InvalidAssetBlindProof { output_index: usize },
+
+    #[error("Output #{output_index} has invalid value blind proof")]
+    InvalidValueBlindProof { output_index: usize },
+
+    #[error("Output #{output_index} is not blinded")]
+    OutputNotBlinded { output_index: usize },
 }
 
 pub fn pset_balance(
@@ -53,6 +63,7 @@ pub fn pset_balance(
     unblinded: &HashMap<OutPoint, TxOutSecrets>,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
+    let secp = Secp256k1::new();
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     'inputsfor: for (input_index, input) in pset.inputs().iter().enumerate() {
@@ -129,11 +140,38 @@ pub fn pset_balance(
             fee = Some(output.amount.unwrap());
             continue 'outputsfor;
         }
-        match (output.amount, output.asset) {
-            (None, None) => return Err(Error::OutputAssetValueNone { output_index }),
-            (None, Some(_)) => return Err(Error::OutputValueNone { output_index }),
-            (Some(_), None) => return Err(Error::OutputAssetNone { output_index }),
-            (Some(amount), Some(asset_id)) => {
+
+        // Expect all outputs to be blinded and with blind proofs
+        match (
+            output.asset,
+            output.asset_comm,
+            output.blind_asset_proof.as_ref(),
+            output.amount,
+            output.amount_comm,
+            output.blind_value_proof.as_ref(),
+        ) {
+            (None, _, _, None, _, _) => return Err(Error::OutputAssetValueNone { output_index }),
+            (None, _, _, Some(_), _, _) => return Err(Error::OutputValueNone { output_index }),
+            (Some(_), _, _, None, _, _) => return Err(Error::OutputAssetNone { output_index }),
+            (
+                Some(asset),
+                Some(asset_comm),
+                Some(blind_asset_proof),
+                Some(amount),
+                Some(amount_comm),
+                Some(blind_value_proof),
+            ) => {
+                if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
+                    return Err(Error::InvalidAssetBlindProof { output_index });
+                }
+                if !blind_value_proof.blind_value_proof_verify(
+                    &secp,
+                    amount,
+                    asset_comm,
+                    amount_comm,
+                ) {
+                    return Err(Error::InvalidValueBlindProof { output_index });
+                }
                 for (_, path) in output.bip32_derivation.values() {
                     if path.is_empty() {
                         continue;
@@ -143,11 +181,17 @@ pub fn pset_balance(
                     // TODO consider fingerprint if available
                     let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
                     if mine == output.script_pubkey {
-                        *balances.entry(asset_id).or_default() += amount as i64;
+                        // TODO: for wallet outputs ensure that we can later unblind it, i.e.
+                        // * get the output private blinding key
+                        // * rewind the master output rangeproof
+                        // * extract the abf, vbf
+                        // * verify they match the commitments
+                        *balances.entry(asset).or_default() += amount as i64;
                         continue 'outputsfor;
                     }
                 }
             }
+            _ => return Err(Error::OutputNotBlinded { output_index }),
         }
     }
     let fee = fee.ok_or(Error::MissingFee)?;

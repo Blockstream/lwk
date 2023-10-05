@@ -121,6 +121,7 @@ pub fn pset_balance(
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
+        // TODO: handle (re)issuance
         match input.witness_utxo.as_ref() {
             None => {
                 let previous_outpoint = OutPoint {

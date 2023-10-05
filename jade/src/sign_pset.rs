@@ -36,6 +36,18 @@ pub enum Error {
 
     #[error("Missing blind value proof in output {0}")]
     MissingBlindValueProofInOutput(usize),
+
+    #[error("Missing witness utxo in input {0}")]
+    MissingWitnessUtxoInInput(usize),
+
+    #[error("Missing value commitment in input {0}")]
+    MissingValueCommInInput(usize),
+
+    #[error("Non confidential input {0}")]
+    NonConfidentialInput(usize),
+
+    #[error("Expecting bip 32 derivation for input {0}")]
+    MissingBip32DerivInput(usize),
 }
 
 impl Jade {
@@ -96,21 +108,30 @@ impl Jade {
         let sign_response = self.sign_liquid_tx(params)?.get();
         assert!(sign_response);
 
-        for input in pset.inputs_mut() {
-            let entry = input.bip32_derivation.clone().into_iter().next().unwrap();
+        for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
+            let entry = input
+                .bip32_derivation
+                .clone()
+                .into_iter()
+                .next()
+                .ok_or(Error::MissingBip32DerivInput(i))?;
             let params = TxInputParams {
                 is_witness: true,
                 script: input
                     .witness_utxo
                     .as_ref()
-                    .unwrap()
+                    .ok_or(Error::MissingWitnessUtxoInInput(i))?
                     .script_pubkey
-                    .clone()
-                    .into_bytes(),
-                value_commitment: match input.witness_utxo.as_ref().unwrap().value {
-                    Value::Null => panic!("null unexpected"),
-                    Value::Explicit(_) => panic!("explicit unexpected"),
+                    .as_bytes()
+                    .to_vec(),
+                value_commitment: match input
+                    .witness_utxo
+                    .as_ref()
+                    .ok_or(Error::MissingValueCommInInput(i))?
+                    .value
+                {
                     Value::Confidential(comm) => comm.serialize().to_vec(),
+                    _ => return Err(Error::NonConfidentialInput(i)),
                 },
                 path: entry
                     .1

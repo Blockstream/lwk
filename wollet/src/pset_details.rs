@@ -32,14 +32,14 @@ pub enum Error {
     #[error("There is no unblinding information and Input #{idx} has non explicit value {value}")]
     InputValueNotExplicit { idx: usize, value: Value },
 
-    #[error("Output #{output_index} has none asset")]
-    OutputAssetNone { output_index: usize },
+    #[error("Output #{idx} has none asset")]
+    OutputAssetNone { idx: usize },
 
-    #[error("Output #{output_index} has none value")]
-    OutputValueNone { output_index: usize },
+    #[error("Output #{idx} has none value")]
+    OutputValueNone { idx: usize },
 
-    #[error("Output #{output_index} has none value and none asset")]
-    OutputAssetValueNone { output_index: usize },
+    #[error("Output #{idx} has none value and none asset")]
+    OutputAssetValueNone { idx: usize },
 
     #[error("PSET doesn't contain a fee output")]
     MissingFee,
@@ -50,20 +50,22 @@ pub enum Error {
     #[error("Fee output is blinded")]
     BlindedFee,
 
-    #[error("Output #{output_index} has invalid asset blind proof")]
-    InvalidAssetBlindProof { output_index: usize },
+    #[error("Output #{idx} has invalid asset blind proof")]
+    InvalidAssetBlindProof { idx: usize },
 
-    #[error("Output #{output_index} has invalid value blind proof")]
-    InvalidValueBlindProof { output_index: usize },
+    #[error("Output #{idx} has invalid value blind proof")]
+    InvalidValueBlindProof { idx: usize },
 
-    #[error("Output #{output_index} is not blinded")]
-    OutputNotBlinded { output_index: usize },
+    #[error("Output #{idx} is not blinded")]
+    OutputNotBlinded { idx: usize },
 
-    #[error("Output #{output_index} belongs to the wallet but cannot be unblinded")]
-    OutputMineNotUnblindable { output_index: usize },
+    #[error("Output #{idx} belongs to the wallet but cannot be unblinded")]
+    OutputMineNotUnblindable { idx: usize },
 
-    #[error("Output #{output_index} belongs to the wallet but its commitments do not match the unblinded values")]
-    OutputCommitmentsMismatch { output_index: usize },
+    #[error(
+        "Output #{idx} belongs to the wallet but its commitments do not match the unblinded values"
+    )]
+    OutputCommitmentsMismatch { idx: usize },
 }
 
 fn commitments(
@@ -151,7 +153,7 @@ pub fn pset_balance(
         }
     }
 
-    'outputsfor: for (output_index, output) in pset.outputs().iter().enumerate() {
+    'outputsfor: for (idx, output) in pset.outputs().iter().enumerate() {
         if output.script_pubkey.is_empty() {
             // Candidate fee output
             if fee.is_some() {
@@ -177,9 +179,9 @@ pub fn pset_balance(
             output.amount_comm,
             output.blind_value_proof.as_ref(),
         ) {
-            (None, _, _, None, _, _) => return Err(Error::OutputAssetValueNone { output_index }),
-            (None, _, _, Some(_), _, _) => return Err(Error::OutputValueNone { output_index }),
-            (Some(_), _, _, None, _, _) => return Err(Error::OutputAssetNone { output_index }),
+            (None, _, _, None, _, _) => return Err(Error::OutputAssetValueNone { idx }),
+            (None, _, _, Some(_), _, _) => return Err(Error::OutputValueNone { idx }),
+            (Some(_), _, _, None, _, _) => return Err(Error::OutputAssetNone { idx }),
             (
                 Some(asset),
                 Some(asset_comm),
@@ -189,11 +191,11 @@ pub fn pset_balance(
                 Some(blind_value_proof),
             ) => {
                 if !blind_asset_proof.blind_asset_proof_verify(&EC, asset, asset_comm) {
-                    return Err(Error::InvalidAssetBlindProof { output_index });
+                    return Err(Error::InvalidAssetBlindProof { idx });
                 }
                 if !blind_value_proof.blind_value_proof_verify(&EC, amount, asset_comm, amount_comm)
                 {
-                    return Err(Error::InvalidValueBlindProof { output_index });
+                    return Err(Error::InvalidValueBlindProof { idx });
                 }
                 for (_, path) in output.bip32_derivation.values() {
                     if path.is_empty() {
@@ -210,9 +212,9 @@ pub fn pset_balance(
                         let txout_secrets = output
                             .to_txout()
                             .unblind(&EC, private_blinding_key)
-                            .map_err(|_| Error::OutputMineNotUnblindable { output_index })?;
+                            .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
                         if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
-                            return Err(Error::OutputCommitmentsMismatch { output_index });
+                            return Err(Error::OutputCommitmentsMismatch { idx });
                         }
 
                         *balances.entry(asset).or_default() += amount as i64;
@@ -220,7 +222,7 @@ pub fn pset_balance(
                     }
                 }
             }
-            _ => return Err(Error::OutputNotBlinded { output_index }),
+            _ => return Err(Error::OutputNotBlinded { idx }),
         }
     }
     let fee = fee.ok_or(Error::MissingFee)?;

@@ -390,14 +390,6 @@ impl TestElectrumWallet {
             .electrum_wallet
             .sendlbtc(satoshi, &address.to_string(), fee_rate)
             .unwrap();
-        let mut f = std::fs::File::create("/tmp/foo.base64").expect("Unable to create file");
-        std::io::Write::write_all(&mut f, pset.to_string().as_bytes())
-            .expect("Unable to write data");
-
-        let pruned_pset = prune_proofs(&pset);
-        let mut f = std::fs::File::create("/tmp/foo.pretty").expect("Unable to create file");
-
-        std::io::Write::write_all(&mut f, format!("{:#?}", pruned_pset).as_bytes()).unwrap();
 
         let balance = self.electrum_wallet.get_details(&pset).unwrap();
         let fee = balance.fee as i64;

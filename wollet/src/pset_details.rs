@@ -127,15 +127,6 @@ pub fn pset_balance(
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
-        if input.is_pegin() {
-            return Err(Error::InputPeginUnsupported { idx });
-        }
-        if input.has_issuance() {
-            let issuance = input.asset_issuance();
-            if issuance.amount.is_confidential() || issuance.inflation_keys.is_confidential() {
-                return Err(Error::InputBlindedIssuance { idx });
-            }
-        }
         match input.witness_utxo.as_ref() {
             None => {
                 let previous_outpoint = OutPoint {
@@ -151,6 +142,18 @@ pub fn pset_balance(
                 if !is_mine(&txout.script_pubkey, descriptor, &input.bip32_derivation) {
                     // Ignore outputs we don't own
                     continue;
+                }
+
+                if input.is_pegin() {
+                    return Err(Error::InputPeginUnsupported { idx });
+                }
+                if input.has_issuance() {
+                    let issuance = input.asset_issuance();
+                    if issuance.amount.is_confidential()
+                        || issuance.inflation_keys.is_confidential()
+                    {
+                        return Err(Error::InputBlindedIssuance { idx });
+                    }
                 }
 
                 // We expect the input to be blinded

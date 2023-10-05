@@ -4,7 +4,10 @@ use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     testcontainers::clients::Cli,
 };
-use jade::{protocol::DebugSetMnemonicParams, Jade};
+use jade::{
+    protocol::{DebugSetMnemonicParams, GetXpubParams},
+    Jade,
+};
 use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
@@ -488,6 +491,10 @@ fn jade_sign_wollet_pset() {
         .sendlbtc(1000, &my_addr.to_string(), None)
         .unwrap();
 
+    let mut software_signer_pset = pset.clone();
+    wallet.sign(&signer, &mut software_signer_pset);
+    wallet.send(&mut software_signer_pset);
+
     let docker = Cli::default();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
@@ -500,6 +507,14 @@ fn jade_sign_wollet_pset() {
             temporary_wallet: false,
         })
         .unwrap();
+    let jade_xpub = jade_api
+        .get_xpub(GetXpubParams {
+            network: jade::Network::LocaltestLiquid,
+            path: vec![],
+        })
+        .unwrap();
+    assert_eq!(jade_xpub.get(), signer.xpub().to_string());
+
     jade_api.sign_pset(&mut pset).unwrap();
 
     wallet.send(&mut pset);

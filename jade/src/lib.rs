@@ -132,11 +132,13 @@ impl Jade {
         };
         let mut buf = Vec::new();
         ciborium::into_writer(&req, &mut buf)?;
+        let req_str = format!("{:?}", req);
+        let hex_enc = hex::encode(&buf);
         println!(
             "\n--->\t{:?}\n\t({} bytes) {}",
-            &req,
+            &req_str[..req_str.len().min(1000)],
             buf.len(),
-            hex::encode(&buf)
+            &hex_enc[..hex_enc.len().min(1000)],
         );
 
         self.conn.write_all(&buf).unwrap();

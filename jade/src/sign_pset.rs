@@ -1,8 +1,7 @@
 use elements::{
     bitcoin::bip32::ChildNumber, confidential::Value, encode::serialize,
-    pset::PartiallySignedTransaction, secp256k1_zkp::ecdsa::Signature,
+    pset::PartiallySignedTransaction, Script,
 };
-use elements_miniscript::elementssig_to_rawsig;
 
 use crate::{
     sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
@@ -117,16 +116,26 @@ impl Jade {
             if iter.next().is_some() {
                 panic!("other bip32 derivations..."); // TODO
             }
+            let path: Vec<u32> = entry
+                .1
+                 .1
+                .into_iter()
+                .map(|e| match e {
+                    ChildNumber::Normal { index } => *index,
+                    ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
+                })
+                .collect();
+            dbg!(&path);
             // TODO multisig
+            let previous_output_script = &input
+                .witness_utxo
+                .as_ref()
+                .ok_or(Error::MissingWitnessUtxoInInput(i))?
+                .script_pubkey;
+
             let params = TxInputParams {
                 is_witness: true,
-                script: input
-                    .witness_utxo
-                    .as_ref()
-                    .ok_or(Error::MissingWitnessUtxoInInput(i))?
-                    .script_pubkey
-                    .as_bytes()
-                    .to_vec(),
+                script: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
                 value_commitment: match input
                     .witness_utxo
                     .as_ref()
@@ -136,23 +145,25 @@ impl Jade {
                     Value::Confidential(comm) => comm.serialize().to_vec(),
                     _ => return Err(Error::NonConfidentialInput(i)),
                 },
-                path: entry
-                    .1
-                     .1
-                    .into_iter()
-                    .map(|e| match e {
-                        ChildNumber::Normal { index } => *index,
-                        ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
-                    })
-                    .collect(),
+                path,
                 sighash: Some(1),
             };
             let sig: Vec<u8> = self.tx_input(params)?.into();
-            dbg!(sig.len());
 
             input.partial_sigs.insert(entry.0, sig);
         }
 
         Ok(())
     }
+}
+
+// Get a script from witness script pubkey hash
+fn script_code_wpkh(script: &Script) -> Script {
+    assert!(script.is_v0_p2wpkh());
+    // ugly segwit stuff
+    let mut script_code = vec![0x76u8, 0xa9, 0x14];
+    script_code.extend(&script.as_bytes()[2..]);
+    script_code.push(0x88);
+    script_code.push(0xac);
+    Script::from(script_code)
 }

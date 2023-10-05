@@ -104,6 +104,7 @@ impl<'a> Signer<'a> {
                     // fixme: for taproot use schnorr
                     let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);
                     let sig = elementssig_to_rawsig(&(sig, hash_ty));
+
                     input.partial_sigs.insert(public_key, sig);
                 }
             }

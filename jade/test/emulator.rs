@@ -4,9 +4,7 @@ use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use elements::{
-    bitcoin::{self, bip32::ChildNumber},
-    confidential::Value,
-    encode::serialize,
+    bitcoin,
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message},
     AddressParams,
@@ -20,7 +18,6 @@ use jade::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
         HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
-    sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -223,78 +220,9 @@ fn jade_sign_liquid_tx() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
     let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
-    let tx = pset.extract_tx().unwrap();
-    let txn = serialize(&tx);
-
-    assert_eq!(tx.output.len(), 3);
     assert_eq!(pset.outputs().len(), 3);
 
-    let mut trusted_commitments = vec![];
-    for output in pset.outputs().iter() {
-        let mut asset_id = serialize(&output.asset.unwrap());
-        asset_id.reverse(); // Jade want it reversed
-        let trusted_commitment = if output.script_pubkey.is_empty() {
-            // fee output
-            None
-        } else {
-            Some(Commitment {
-                asset_blind_proof: output.blind_asset_proof.as_ref().unwrap().serialize(),
-                asset_generator: output.asset_comm.unwrap().serialize().to_vec(),
-                asset_id,
-                blinding_key: output.blinding_key.unwrap().to_bytes(),
-                value: output.amount.unwrap(),
-                value_commitment: output.amount_comm.unwrap().serialize().to_vec(),
-                value_blind_proof: output.blind_value_proof.as_ref().unwrap().serialize(),
-            })
-        };
-        trusted_commitments.push(trusted_commitment);
-    }
-    assert_eq!(trusted_commitments.len(), 3);
-
-    let params = SignLiquidTxParams {
-        network: jade::Network::LocaltestLiquid,
-        txn,
-        num_inputs: tx.input.len() as u32,
-        use_ae_signatures: false,
-        change: vec![None, None, None],
-        asset_info: vec![],
-        trusted_commitments,
-        additional_info: None,
-    };
-    // println!("{:#?}", params);
-    let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
-    assert!(sign_response);
-
-    for input in pset.inputs_mut() {
-        let entry = input.bip32_derivation.clone().into_iter().next().unwrap();
-        let params = TxInputParams {
-            is_witness: true,
-            script: input
-                .witness_utxo
-                .as_ref()
-                .unwrap()
-                .script_pubkey
-                .clone()
-                .into_bytes(),
-            value_commitment: match input.witness_utxo.as_ref().unwrap().value {
-                Value::Null => panic!("null unexpected"),
-                Value::Explicit(_) => panic!("explicit unexpected"),
-                Value::Confidential(comm) => comm.serialize().to_vec(),
-            },
-            path: entry
-                .1
-                 .1
-                .into_iter()
-                .map(|e| match e {
-                    ChildNumber::Normal { index } => *index,
-                    ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
-                })
-                .collect(),
-            sighash: None,
-        };
-        let signature: Vec<u8> = initialized_jade.jade.tx_input(params).unwrap().into();
-        input.partial_sigs.insert(entry.0, signature);
-    }
+    initialized_jade.jade.sign_pset(&mut pset).unwrap();
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

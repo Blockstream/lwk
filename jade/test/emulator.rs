@@ -1,4 +1,8 @@
 use base64::Engine;
+use bs_containers::testcontainers::{
+    clients::{self, Cli},
+    Container,
+};
 use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
@@ -22,10 +26,6 @@ use jade::{
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
 use tempfile::{tempdir, TempDir};
-use testcontainers::{
-    clients::{self, Cli},
-    Container,
-};
 
 use crate::pin_server::verify;
 

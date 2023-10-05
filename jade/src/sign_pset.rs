@@ -1,7 +1,8 @@
 use elements::{
     bitcoin::bip32::ChildNumber, confidential::Value, encode::serialize,
-    pset::PartiallySignedTransaction,
+    pset::PartiallySignedTransaction, secp256k1_zkp::ecdsa::Signature,
 };
+use elements_miniscript::elementssig_to_rawsig;
 
 use crate::{
     sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
@@ -56,6 +57,7 @@ impl Jade {
         let txn = serialize(&tx);
 
         let mut trusted_commitments = vec![];
+        let mut change = vec![];
         for (i, output) in pset.outputs().iter().enumerate() {
             let mut asset_id = serialize(&output.asset.ok_or(Error::MissingAssetIdInOutput(i))?);
             asset_id.reverse(); // Jade want it reversed
@@ -93,6 +95,7 @@ impl Jade {
                 })
             };
             trusted_commitments.push(trusted_commitment);
+            change.push(None); //TODO
         }
 
         let params = SignLiquidTxParams {
@@ -100,8 +103,8 @@ impl Jade {
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: false,
-            change: vec![None, None, None], // TODO
-            asset_info: vec![],             // TODO
+            change,
+            asset_info: vec![], // TODO
             trusted_commitments,
             additional_info: None,
         };
@@ -109,12 +112,12 @@ impl Jade {
         assert!(sign_response);
 
         for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
-            let entry = input
-                .bip32_derivation
-                .clone()
-                .into_iter()
-                .next()
-                .ok_or(Error::MissingBip32DerivInput(i))?;
+            let mut iter = input.bip32_derivation.clone().into_iter();
+            let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
+            if iter.next().is_some() {
+                panic!("other bip32 derivations..."); // TODO
+            }
+            // TODO multisig
             let params = TxInputParams {
                 is_witness: true,
                 script: input
@@ -142,10 +145,12 @@ impl Jade {
                         ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
                     })
                     .collect(),
-                sighash: None,
+                sighash: Some(1),
             };
-            let signature: Vec<u8> = self.tx_input(params)?.into();
-            input.partial_sigs.insert(entry.0, signature);
+            let sig: Vec<u8> = self.tx_input(params)?.into();
+            dbg!(sig.len());
+
+            input.partial_sigs.insert(entry.0, sig);
         }
 
         Ok(())

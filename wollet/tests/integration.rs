@@ -1,5 +1,10 @@
 mod test_session;
 
+use bs_containers::{
+    jade::{JadeEmulator, EMULATOR_PORT},
+    testcontainers::clients::Cli,
+};
+use jade::{protocol::DebugSetMnemonicParams, Jade};
 use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
@@ -463,4 +468,39 @@ fn createpset_error() {
         .reissueasset(&asset, satoshi_a, "", None)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
+}
+
+#[test]
+fn jade_sign_wollet_pset() {
+    let server = setup();
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    wallet.fund_btc(&server);
+
+    let my_addr = wallet.address();
+
+    let mut pset = wallet
+        .electrum_wallet
+        .sendlbtc(1000, &my_addr.to_string(), None)
+        .unwrap();
+
+    let docker = Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+    let mut jade_api = Jade::new(stream.into());
+    jade_api
+        .debug_set_mnemonic(DebugSetMnemonicParams {
+            mnemonic: mnemonic.to_string(),
+            passphrase: None,
+            temporary_wallet: false,
+        })
+        .unwrap();
+    jade_api.sign_pset(&mut pset).unwrap();
+
+    wallet.send(&mut pset);
 }

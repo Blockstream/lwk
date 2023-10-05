@@ -1,3 +1,4 @@
+use bs_containers::testcontainers::clients::Cli;
 use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
     print_docker_logs_and_panic,
@@ -8,7 +9,6 @@ use elements::bitcoin::{
     PublicKey,
 };
 use jade::protocol::HandshakeParams;
-use testcontainers::clients::Cli;
 
 #[test]
 fn pin_server() {

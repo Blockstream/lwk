@@ -17,6 +17,7 @@ thiserror = "1"
 
 # FIXME: use minreq because it's the http client of the rust-bitcoin ecosystem
 ureq = { version = "2.7.1", features = ["json"] }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "27b6e37af2cc850b20b5c4322b3673dcd452cd08" }
 
 # tokio = { version = "1.32.0", features = ["rt", "macros"] }
 # tracing = "0.1.37"
@@ -32,7 +33,6 @@ path = "test/e2e.rs"
 [dev-dependencies]
 insta = { version = "1.31.0", features = ["yaml"] }
 tempfile = "3.8.0"
-testcontainers = "0.14"
 bs_containers = { path = "../bs_containers" }
 base64 = "0.21.4"
 serde_json = "1"

@@ -1,9 +1,11 @@
+use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
 use crate::elements::{
+    bitcoin::{bip32::KeySource, key::PublicKey},
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
-    AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, TxOutSecrets,
+    AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
@@ -90,6 +92,26 @@ fn commitments(
     (asset_comm, amount_comm)
 }
 
+fn is_mine(
+    script_pubkey: &Script,
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    bip32_derivation: &BTreeMap<PublicKey, KeySource>,
+) -> bool {
+    for (_, path) in bip32_derivation.values() {
+        // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
+        // TODO consider fingerprint if available
+        if path.is_empty() {
+            continue;
+        }
+        let wildcard_index = path[path.len() - 1];
+        let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
+        if &mine == script_pubkey {
+            return true;
+        }
+    }
+    false
+}
+
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
@@ -98,7 +120,7 @@ pub fn pset_balance(
         convert_blinding_key(&descriptor.key).expect("No private blinding keys for bare variant");
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
-    'inputsfor: for (idx, input) in pset.inputs().iter().enumerate() {
+    for (idx, input) in pset.inputs().iter().enumerate() {
         match input.witness_utxo.as_ref() {
             None => {
                 let previous_outpoint = OutPoint {
@@ -111,6 +133,11 @@ pub fn pset_balance(
                 });
             }
             Some(txout) => {
+                if !is_mine(&txout.script_pubkey, descriptor, &input.bip32_derivation) {
+                    // Ignore outputs we don't own
+                    continue;
+                }
+
                 // We expect the input to be blinded
                 if !(txout.asset.is_confidential() && txout.value.is_confidential()) {
                     return Err(Error::InputNotBlinded { idx });
@@ -118,35 +145,22 @@ pub fn pset_balance(
                 let asset_comm = txout.asset.commitment().unwrap();
                 let amount_comm = txout.value.commitment().unwrap();
 
-                for (_, path) in input.bip32_derivation.values() {
-                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
-                    // TODO consider fingerprint if available
-                    if path.is_empty() {
-                        continue;
-                    }
-                    let wildcard_index = path[path.len() - 1];
-                    let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
-                    if mine == txout.script_pubkey {
-                        // We expect the input to be unblindable with the descriptor blinding key
-                        let private_blinding_key =
-                            derive_blinding_key(&txout.script_pubkey, &descriptor_blinding_key);
-                        let txout_secrets = txout
-                            .unblind(&EC, private_blinding_key)
-                            .map_err(|_| Error::InputMineNotUnblindable { idx })?;
-                        if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
-                            return Err(Error::InputCommitmentsMismatch { idx });
-                        }
-
-                        *balances.entry(txout_secrets.asset).or_default() -=
-                            txout_secrets.value as i64;
-                        continue 'inputsfor;
-                    }
+                // We expect the input to be unblindable with the descriptor blinding key
+                let private_blinding_key =
+                    derive_blinding_key(&txout.script_pubkey, &descriptor_blinding_key);
+                let txout_secrets = txout
+                    .unblind(&EC, private_blinding_key)
+                    .map_err(|_| Error::InputMineNotUnblindable { idx })?;
+                if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
+                    return Err(Error::InputCommitmentsMismatch { idx });
                 }
+
+                *balances.entry(txout_secrets.asset).or_default() -= txout_secrets.value as i64;
             }
         }
     }
 
-    'outputsfor: for (idx, output) in pset.outputs().iter().enumerate() {
+    for (idx, output) in pset.outputs().iter().enumerate() {
         if output.script_pubkey.is_empty() {
             // Candidate fee output
             if fee.is_some() {
@@ -160,7 +174,12 @@ pub fn pset_balance(
                 return Err(Error::BlindedFee);
             }
             fee = Some(output.amount.unwrap());
-            continue 'outputsfor;
+            continue;
+        }
+
+        if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation) {
+            // Ignore outputs we don't own
+            continue;
         }
 
         // Expect all outputs to be blinded and with blind proofs
@@ -190,30 +209,19 @@ pub fn pset_balance(
                 {
                     return Err(Error::InvalidValueBlindProof { idx });
                 }
-                for (_, path) in output.bip32_derivation.values() {
-                    if path.is_empty() {
-                        continue;
-                    }
-                    let wildcard_index = path[path.len() - 1];
-                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
-                    // TODO consider fingerprint if available
-                    let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
-                    if mine == output.script_pubkey {
-                        // Check that we can later unblind the output
-                        let private_blinding_key =
-                            derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
-                        let txout_secrets = output
-                            .to_txout()
-                            .unblind(&EC, private_blinding_key)
-                            .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
-                        if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
-                            return Err(Error::OutputCommitmentsMismatch { idx });
-                        }
 
-                        *balances.entry(asset).or_default() += amount as i64;
-                        continue 'outputsfor;
-                    }
+                // Check that we can later unblind the output
+                let private_blinding_key =
+                    derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
+                let txout_secrets = output
+                    .to_txout()
+                    .unblind(&EC, private_blinding_key)
+                    .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
+                if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
+                    return Err(Error::OutputCommitmentsMismatch { idx });
                 }
+
+                *balances.entry(asset).or_default() += amount as i64;
             }
             _ => return Err(Error::OutputNotBlinded { idx }),
         }

@@ -30,6 +30,9 @@ pub enum Error {
     #[error("Input #{idx} has a pegin, but it's not supported")]
     InputPeginUnsupported { idx: usize },
 
+    #[error("Input #{idx} has a blinded issuance, but it's not supported")]
+    InputBlindedIssuance { idx: usize },
+
     #[error("Input #{idx} is not blinded")]
     InputNotBlinded { idx: usize },
 
@@ -127,7 +130,12 @@ pub fn pset_balance(
         if input.is_pegin() {
             return Err(Error::InputPeginUnsupported { idx });
         }
-        // TODO: handle (re)issuance
+        if input.has_issuance() {
+            let issuance = input.asset_issuance();
+            if issuance.amount.is_confidential() || issuance.inflation_keys.is_confidential() {
+                return Err(Error::InputBlindedIssuance { idx });
+            }
+        }
         match input.witness_utxo.as_ref() {
             None => {
                 let previous_outpoint = OutPoint {

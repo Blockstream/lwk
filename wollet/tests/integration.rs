@@ -7,7 +7,7 @@ use wollet::*;
 
 #[test]
 fn liquid() {
-    let mut server = setup();
+    let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
@@ -15,8 +15,8 @@ fn liquid() {
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
     let signers = &[&signer];
 
-    wallet.fund_btc(&mut server);
-    let asset = wallet.fund_asset(&mut server);
+    wallet.fund_btc(&server);
+    let asset = wallet.fund_asset(&server);
 
     wallet.send_btc(signers, None);
     let node_address = server.node_getnewaddress();
@@ -38,27 +38,27 @@ fn liquid() {
 
 #[test]
 fn view() {
-    let mut server = setup();
+    let server = setup();
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
-    wallet.fund_btc(&mut server);
-    let _asset = wallet.fund_asset(&mut server);
+    wallet.fund_btc(&server);
+    let _asset = wallet.fund_asset(&server);
 
     let descriptor_blinding_key =
         "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
-    wallet.fund_btc(&mut server);
+    wallet.fund_btc(&server);
 }
 
 #[test]
 fn roundtrip() {
-    let mut server = setup();
+    let server = setup();
 
     let signer1 = generate_signer();
     let slip77_key = generate_slip77();
@@ -94,7 +94,7 @@ fn roundtrip() {
         (vec![&signer51, &signer52], desc5),
     ] {
         let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-        wallet.fund_btc(&mut server);
+        wallet.fund_btc(&server);
         wallet.send_btc(&signers, None);
         let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
         let node_address = server.node_getnewaddress();
@@ -141,7 +141,7 @@ fn unsupported_descriptor() {
 
 #[test]
 fn address() {
-    let mut server = setup();
+    let server = setup();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -177,14 +177,14 @@ fn address() {
     assert_eq!(last_address.index(), gap_limit);
     let mid_address = Some(mid_address.address().clone());
     let last_address = Some(last_address.address().clone());
-    wallet.fund(&mut server, satoshi, mid_address, None);
-    wallet.fund(&mut server, satoshi, last_address, None);
+    wallet.fund(&server, satoshi, mid_address, None);
+    wallet.fund(&server, satoshi, last_address, None);
 }
 
 #[test]
 fn different_blinding_keys() {
     // Two wallet with same "bitcoin" descriptor but different blinding keys
-    let mut server = setup();
+    let server = setup();
 
     let signer = generate_signer();
     let view_key1 = generate_view_key();
@@ -195,13 +195,13 @@ fn different_blinding_keys() {
     let mut wallet1 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc1);
     wallet1.sync();
     assert_eq!(wallet1.address_result(None).index(), 0);
-    wallet1.fund_btc(&mut server);
+    wallet1.fund_btc(&server);
     assert_eq!(wallet1.address_result(None).index(), 1);
 
     let mut wallet2 = TestElectrumWallet::new(&server.electrs.electrum_url, &desc2);
     wallet2.sync();
     assert_eq!(wallet2.address_result(None).index(), 0);
-    wallet2.fund_btc(&mut server);
+    wallet2.fund_btc(&server);
     assert_eq!(wallet2.address_result(None).index(), 1);
 }
 
@@ -210,14 +210,14 @@ fn fee_rate() {
     // Use a fee rate different from the default one
     let fee_rate = Some(200.0);
 
-    let mut server = setup();
+    let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = &[&signer];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&mut server);
+    wallet.fund_btc(&server);
     wallet.send_btc(signers, fee_rate);
     let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", fee_rate);
     let node_address = server.node_getnewaddress();
@@ -241,14 +241,14 @@ fn contract() {
     // Issue an asset with a contract
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
-    let mut server = setup();
+    let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = &[&signer];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&mut server);
+    wallet.fund_btc(&server);
     wallet.send_btc(signers, None);
     let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, contract, None);
 
@@ -280,7 +280,7 @@ fn contract() {
 fn multiple_descriptors() {
     // Use a different descriptors for the asset and the reissuance token
 
-    let mut server = setup();
+    let server = setup();
     // Asset descriptor and signers
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
@@ -299,8 +299,8 @@ fn multiple_descriptors() {
     let mut wallet_t = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_t);
 
     // Fund both wallets
-    wallet_a.fund_btc(&mut server);
-    wallet_t.fund_btc(&mut server);
+    wallet_a.fund_btc(&server);
+    wallet_t.fund_btc(&server);
 
     // Issue an asset, sending the asset to asset wallet, and the token to the token wallet
     let satoshi_a = 100_000;
@@ -333,13 +333,13 @@ fn multiple_descriptors() {
 
 #[test]
 fn createpset_error() {
-    let mut server = setup();
+    let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&mut server);
+    wallet.fund_btc(&server);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
     let (asset, token) = wallet.issueasset(&[&signer], satoshi_a, satoshi_t, "", None);

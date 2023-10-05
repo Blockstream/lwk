@@ -351,7 +351,7 @@ impl TestElectrumWallet {
 
     pub fn fund(
         &mut self,
-        server: &mut TestElectrumServer,
+        server: &TestElectrumServer,
         satoshi: u64,
         address: Option<Address>,
         asset: Option<AssetId>,
@@ -371,11 +371,11 @@ impl TestElectrumWallet {
         assert_eq!(balance_before + satoshi, balance_after);
     }
 
-    pub fn fund_btc(&mut self, server: &mut TestElectrumServer) {
+    pub fn fund_btc(&mut self, server: &TestElectrumServer) {
         self.fund(server, 1_000_000, Some(self.address()), None);
     }
 
-    pub fn fund_asset(&mut self, server: &mut TestElectrumServer) -> AssetId {
+    pub fn fund_asset(&mut self, server: &TestElectrumServer) -> AssetId {
         let satoshi = 10_000;
         let asset = server.node_issueasset(satoshi);
         self.fund(server, satoshi, Some(self.address()), Some(asset));

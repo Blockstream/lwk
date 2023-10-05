@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::elements::{
     confidential::{Asset, Value},
     pset::PartiallySignedTransaction,
-    secp256k1_zkp::Secp256k1,
+    secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
     AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, TxOutSecrets,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
@@ -60,6 +60,27 @@ pub enum Error {
 
     #[error("Output #{output_index} belongs to the wallet but cannot be unblinded")]
     OutputMineNotUnblindable { output_index: usize },
+
+    #[error("Output #{output_index} belongs to the wallet but its commitments do not match the unblinded values")]
+    OutputCommitmentsMismatch { output_index: usize },
+}
+
+fn commitments(
+    secp: &Secp256k1<All>,
+    txout_secrets: &TxOutSecrets,
+) -> (Generator, PedersenCommitment) {
+    let asset_comm = Generator::new_blinded(
+        secp,
+        txout_secrets.asset.into_inner().to_byte_array().into(),
+        txout_secrets.asset_bf.into_inner(),
+    );
+    let amount_comm = PedersenCommitment::new(
+        secp,
+        txout_secrets.value,
+        txout_secrets.value_bf.into_inner(),
+        asset_comm,
+    );
+    (asset_comm, amount_comm)
 }
 
 pub fn pset_balance(
@@ -187,14 +208,17 @@ pub fn pset_balance(
                     // TODO consider fingerprint if available
                     let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
                     if mine == output.script_pubkey {
-                        // TODO: for wallet outputs ensure that we can later unblind it, i.e.
+                        // Check that we can later unblind the output
                         let private_blinding_key =
                             derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
-                        let txout = output.to_txout();
-                        let _txout_secrets = txout
+                        let txout_secrets = output
+                            .to_txout()
                             .unblind(&secp, private_blinding_key)
                             .map_err(|_| Error::OutputMineNotUnblindable { output_index })?;
-                        // * verify they match the commitments
+                        if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {
+                            return Err(Error::OutputCommitmentsMismatch { output_index });
+                        }
+
                         *balances.entry(asset).or_default() += amount as i64;
                         continue 'outputsfor;
                     }

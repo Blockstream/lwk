@@ -19,22 +19,30 @@ pub struct SignLiquidTxParams {
 
     pub trusted_commitments: Vec<Option<Commitment>>,
 
-    pub additional_info: AdditionalInfo,
+    pub additional_info: Option<AdditionalInfo>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Commitment {
-    pub abf: String,             //hex
-    pub asset_generator: String, //hex
-    pub asset_id: String,        //hex
-    pub blinding_key: String,    //hex
+    #[serde(with = "serde_bytes")]
+    pub asset_generator: Vec<u8>,
+
+    #[serde(with = "serde_bytes")]
+    pub asset_id: Vec<u8>,
+
+    #[serde(with = "serde_bytes")]
+    pub blinding_key: Vec<u8>,
+
     pub value: u64,
 
     #[serde(with = "serde_bytes")]
     pub value_commitment: Vec<u8>,
 
     #[serde(with = "serde_bytes")]
-    pub vbf: Vec<u8>,
+    pub value_blind_proof: Vec<u8>,
+
+    #[serde(with = "serde_bytes")]
+    pub asset_blind_proof: Vec<u8>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -46,7 +54,8 @@ pub struct Change {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AssetInfo {
-    pub asset_id: String, //hex
+    #[serde(with = "serde_bytes")]
+    pub asset_id: Vec<u8>,
     pub contract: Contract,
     pub issuance_prevout: Prevout,
 }
@@ -54,7 +63,8 @@ pub struct AssetInfo {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Contract {
     pub entity: Entity,
-    pub issuer_pubkey: String, //hex
+
+    pub issuer_pubkey: String,
     pub name: String,
     pub precision: u8,
     pub ticker: String,
@@ -70,13 +80,15 @@ pub struct AdditionalInfo {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Summary {
-    pub asset_id: String, //hex
+    #[serde(with = "serde_bytes")]
+    pub asset_id: Vec<u8>,
     pub satoshi: u64,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Prevout {
-    pub txid: String, //hex
+    #[serde(with = "serde_bytes")]
+    pub txid: Vec<u8>,
     pub vout: u32,
 }
 

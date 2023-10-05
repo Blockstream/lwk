@@ -19,7 +19,7 @@ use jade::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
         HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
-    sign_liquid_tx::{AdditionalInfo, Commitment, SignLiquidTxParams},
+    sign_liquid_tx::{Commitment, SignLiquidTxParams},
     Jade,
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -225,6 +225,9 @@ fn jade_sign_liquid_tx() {
     let tx = pset.clone().extract_tx().unwrap();
     let txn = serialize(&tx);
 
+    assert_eq!(tx.output.len(), 3);
+    assert_eq!(pset.outputs().len(), 3);
+
     let mut trusted_commitments = vec![];
     for output in pset.outputs().iter() {
         let trusted_commitment = if output.script_pubkey.is_empty() {
@@ -232,33 +235,30 @@ fn jade_sign_liquid_tx() {
             None
         } else {
             Some(Commitment {
-                abf: "".to_string(),
-                asset_generator: output.asset_comm.unwrap().to_string(),
-                asset_id: output.asset.unwrap().to_string(),
-                blinding_key: output.blinding_key.unwrap().to_string(),
+                asset_blind_proof: output.blind_asset_proof.as_ref().unwrap().serialize(),
+                asset_generator: output.asset_comm.unwrap().serialize().to_vec(),
+                asset_id: serialize(&output.asset.unwrap()),
+                blinding_key: output.blinding_key.unwrap().to_bytes(),
                 value: output.amount.unwrap(),
                 value_commitment: output.amount_comm.unwrap().serialize().to_vec(),
-                vbf: vec![],
+                value_blind_proof: output.blind_value_proof.as_ref().unwrap().serialize(),
             })
         };
         trusted_commitments.push(trusted_commitment);
     }
+    assert_eq!(trusted_commitments.len(), 3);
 
     let params = SignLiquidTxParams {
         network: jade::Network::TestnetLiquid,
         txn,
         num_inputs: tx.input.len() as u32,
         use_ae_signatures: false,
-        change: vec![],
+        change: vec![None, None, None],
         asset_info: vec![],
         trusted_commitments,
-        additional_info: AdditionalInfo {
-            tx_type: "swap".to_string(),
-            wallet_input_summary: vec![],
-            wallet_output_summary: vec![],
-        },
+        additional_info: None,
     };
-    println!("{:#?}", params);
+    // println!("{:#?}", params);
     // let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
     // assert!(sign_response);
 }

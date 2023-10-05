@@ -86,33 +86,38 @@ fn roundtrip() {
         signer52.xpub()
     );
 
-    for (signers, desc) in [
-        (vec![&signer1], desc1),
-        (vec![&signer2], desc2),
-        (vec![&signer3], desc3),
-        (vec![&signer4], desc4),
-        (vec![&signer51, &signer52], desc5),
-    ] {
-        let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-        wallet.fund_btc(&server);
-        wallet.send_btc(&signers, None);
-        let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
-        let node_address = server.node_getnewaddress();
-        wallet.send_asset(&signers, &node_address, &asset, None);
-        let node_address1 = server.node_getnewaddress();
-        let node_address2 = server.node_getnewaddress();
-        wallet.send_many(
-            &signers,
-            &node_address1,
-            &asset,
-            &node_address2,
-            &wallet.policy_asset(),
-            None,
-        );
-        wallet.reissueasset(&signers, 10_000, &asset, None);
-        wallet.burnasset(&signers, 5_000, &asset, None);
-        server.generate(2);
-    }
+    std::thread::scope(|s| {
+        for (signers, desc) in [
+            (vec![&signer1], desc1),
+            (vec![&signer2], desc2),
+            (vec![&signer3], desc3),
+            (vec![&signer4], desc4),
+            (vec![&signer51, &signer52], desc5),
+        ] {
+            let server = &server;
+            let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+            wallet.fund_btc(server);
+            s.spawn(move || {
+                wallet.send_btc(&signers, None);
+                let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
+                let node_address = server.node_getnewaddress();
+                wallet.send_asset(&signers, &node_address, &asset, None);
+                let node_address1 = server.node_getnewaddress();
+                let node_address2 = server.node_getnewaddress();
+                wallet.send_many(
+                    &signers,
+                    &node_address1,
+                    &asset,
+                    &node_address2,
+                    &wallet.policy_asset(),
+                    None,
+                );
+                wallet.reissueasset(&signers, 10_000, &asset, None);
+                wallet.burnasset(&signers, 5_000, &asset, None);
+                server.generate(2);
+            });
+        }
+    });
 }
 
 #[test]

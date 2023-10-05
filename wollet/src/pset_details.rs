@@ -27,6 +27,9 @@ pub enum Error {
         previous_outpoint: OutPoint,
     },
 
+    #[error("Input #{idx} has a pegin, but it's not supported")]
+    InputPeginUnsupported { idx: usize },
+
     #[error("Input #{idx} is not blinded")]
     InputNotBlinded { idx: usize },
 
@@ -121,6 +124,9 @@ pub fn pset_balance(
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
+        if input.is_pegin() {
+            return Err(Error::InputPeginUnsupported { idx });
+        }
         // TODO: handle (re)issuance
         match input.witness_utxo.as_ref() {
             None => {

@@ -20,17 +20,17 @@ pub struct PsetBalance {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("There is no unblinding information and Input #{input_index} is missing witness_utxo of outpoint {previous_outpoint}")]
+    #[error("There is no unblinding information and Input #{idx} is missing witness_utxo of outpoint {previous_outpoint}")]
     MissingPreviousOutput {
-        input_index: usize,
+        idx: usize,
         previous_outpoint: OutPoint,
     },
 
-    #[error("There is no unblinding information and Input #{input_index} has non explicit asset {asset}")]
-    InputAssetNotExplicit { input_index: usize, asset: Asset },
+    #[error("There is no unblinding information and Input #{idx} has non explicit asset {asset}")]
+    InputAssetNotExplicit { idx: usize, asset: Asset },
 
-    #[error("There is no unblinding information and Input #{input_index} has non explicit value {value}")]
-    InputValueNotExplicit { input_index: usize, value: Value },
+    #[error("There is no unblinding information and Input #{idx} has non explicit value {value}")]
+    InputValueNotExplicit { idx: usize, value: Value },
 
     #[error("Output #{output_index} has none asset")]
     OutputAssetNone { output_index: usize },
@@ -93,7 +93,7 @@ pub fn pset_balance(
         convert_blinding_key(&descriptor.key).expect("No private blinding keys for bare variant");
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
-    'inputsfor: for (input_index, input) in pset.inputs().iter().enumerate() {
+    'inputsfor: for (idx, input) in pset.inputs().iter().enumerate() {
         let previous_outpoint = OutPoint {
             txid: input.previous_txid,
             vout: input.previous_output_index,
@@ -110,14 +110,14 @@ pub fn pset_balance(
                     Some(utxo) => match utxo.asset {
                         Asset::Null | Asset::Confidential(_) => {
                             return Err(Error::InputAssetNotExplicit {
-                                input_index,
+                                idx,
                                 asset: utxo.asset,
                             })
                         }
                         Asset::Explicit(asset_id) => match utxo.value {
                             Value::Null | Value::Confidential(_) => {
                                 return Err(Error::InputValueNotExplicit {
-                                    input_index,
+                                    idx,
                                     value: utxo.value,
                                 })
                             }
@@ -142,7 +142,7 @@ pub fn pset_balance(
                     },
                     None => {
                         return Err(Error::MissingPreviousOutput {
-                            input_index,
+                            idx,
                             previous_outpoint,
                         })
                     }

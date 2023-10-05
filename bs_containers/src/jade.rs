@@ -26,7 +26,7 @@ impl Image for JadeEmulator {
     }
 
     fn tag(&self) -> String {
-        env::var("JADE_EMULATOR_IMAGE_VERSION").unwrap_or("latest".into())
+        env::var("JADE_EMULATOR_IMAGE_VERSION").unwrap_or("1.0.23".into())
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {

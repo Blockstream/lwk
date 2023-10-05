@@ -5,6 +5,8 @@ use bs_containers::{
 };
 use elements::{
     bitcoin,
+    encode::serialize,
+    pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message},
     AddressParams,
 };
@@ -17,7 +19,7 @@ use jade::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
         HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
-    sign_liquid_tx::{AdditionalInfo, SignLiquidTxParams},
+    sign_liquid_tx::{Commitment, SignLiquidTxParams},
     Jade,
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -52,8 +54,6 @@ fn debug_set_mnemonic() {
 
     let result = initialized_jade.jade.version_info().unwrap();
     insta::assert_yaml_snapshot!(result);
-    // TODO make Jade initialization of other testss via debug_set_mnemonic instead of setting the
-    // pin server every time
 }
 
 #[test]
@@ -220,22 +220,49 @@ fn jade_sign_message() {
 fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
+    let pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
+    let tx = pset.extract_tx().unwrap();
+    let txn = serialize(&tx);
+
+    assert_eq!(tx.output.len(), 3);
+    assert_eq!(pset.outputs().len(), 3);
+
+    let mut trusted_commitments = vec![];
+    for output in pset.outputs().iter() {
+        let mut asset_id = serialize(&output.asset.unwrap());
+        asset_id.reverse(); // Jade want it reversed
+        let trusted_commitment = if output.script_pubkey.is_empty() {
+            // fee output
+            None
+        } else {
+            Some(Commitment {
+                asset_blind_proof: output.blind_asset_proof.as_ref().unwrap().serialize(),
+                asset_generator: output.asset_comm.unwrap().serialize().to_vec(),
+                asset_id,
+                blinding_key: output.blinding_key.unwrap().to_bytes(),
+                value: output.amount.unwrap(),
+                value_commitment: output.amount_comm.unwrap().serialize().to_vec(),
+                value_blind_proof: output.blind_value_proof.as_ref().unwrap().serialize(),
+            })
+        };
+        trusted_commitments.push(trusted_commitment);
+    }
+    assert_eq!(trusted_commitments.len(), 3);
+
     let params = SignLiquidTxParams {
-        network: jade::Network::TestnetLiquid,
-        txn: vec![], // TODO
-        num_inputs: 0,
+        network: jade::Network::LocaltestLiquid,
+        txn,
+        num_inputs: tx.input.len() as u32,
         use_ae_signatures: false,
-        change: vec![],
+        change: vec![None, None, None],
         asset_info: vec![],
-        trusted_commitments: vec![],
-        additional_info: AdditionalInfo {
-            tx_type: "swap".to_string(),
-            wallet_input_summary: vec![],
-            wallet_output_summary: vec![],
-        },
+        trusted_commitments,
+        additional_info: None,
     };
-    let _sign_response = initialized_jade.jade.sign_liquid_tx(params);
-    //assert!(sign_response); // TODO
+    // println!("{:#?}", params);
+    let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
+    assert!(sign_response);
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

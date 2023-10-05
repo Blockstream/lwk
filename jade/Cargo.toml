@@ -30,7 +30,7 @@ name = "e2e"
 path = "test/e2e.rs"
 
 [dev-dependencies]
-elements = "0.23.0"
+elements = { version = "0.23.0", features = ["base64"] }
 insta = { version = "1.31.0", features = ["yaml"] }
 tempfile = "3.8.0"
 testcontainers = "0.14"

@@ -204,7 +204,7 @@ fn download_txs(
     }
 }
 
-fn derive_blinding_key(
+pub(crate) fn derive_blinding_key(
     script_pubkey: &Script,
     descriptor_blinding_key: &Key<DefiniteDescriptorKey>,
 ) -> SecretKey {

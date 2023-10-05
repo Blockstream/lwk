@@ -50,7 +50,7 @@ pub(crate) fn derive_script_pubkey(
     Ok(derive_address(descriptor, index, &AddressParams::LIQUID)?.script_pubkey())
 }
 
-fn convert_blinding_key(
+pub(crate) fn convert_blinding_key(
     key: &Key<DescriptorPublicKey>,
 ) -> Result<Key<DefiniteDescriptorKey>, Error> {
     match key {

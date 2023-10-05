@@ -8,7 +8,8 @@ use crate::elements::{
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
-use crate::wallet::derive_script_pubkey;
+use crate::sync::derive_blinding_key;
+use crate::wallet::{convert_blinding_key, derive_script_pubkey};
 
 #[derive(Debug)]
 pub struct PsetBalance {
@@ -64,6 +65,8 @@ pub fn pset_balance(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
     let secp = Secp256k1::new();
+    let descriptor_blinding_key =
+        convert_blinding_key(&descriptor.key).expect("No private blinding keys for bare variant");
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     'inputsfor: for (input_index, input) in pset.inputs().iter().enumerate() {
@@ -182,7 +185,8 @@ pub fn pset_balance(
                     let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
                     if mine == output.script_pubkey {
                         // TODO: for wallet outputs ensure that we can later unblind it, i.e.
-                        // * get the output private blinding key
+                        let _private_blinding_key =
+                            derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
                         // * rewind the master output rangeproof
                         // * extract the abf, vbf
                         // * verify they match the commitments

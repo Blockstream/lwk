@@ -57,6 +57,9 @@ pub enum Error {
 
     #[error("Output #{output_index} is not blinded")]
     OutputNotBlinded { output_index: usize },
+
+    #[error("Output #{output_index} belongs to the wallet but cannot be unblinded")]
+    OutputMineNotUnblindable { output_index: usize },
 }
 
 pub fn pset_balance(
@@ -185,10 +188,12 @@ pub fn pset_balance(
                     let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
                     if mine == output.script_pubkey {
                         // TODO: for wallet outputs ensure that we can later unblind it, i.e.
-                        let _private_blinding_key =
+                        let private_blinding_key =
                             derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
-                        // * rewind the master output rangeproof
-                        // * extract the abf, vbf
+                        let txout = output.to_txout();
+                        let _txout_secrets = txout
+                            .unblind(&secp, private_blinding_key)
+                            .map_err(|_| Error::OutputMineNotUnblindable { output_index })?;
                         // * verify they match the commitments
                         *balances.entry(asset).or_default() += amount as i64;
                         continue 'outputsfor;

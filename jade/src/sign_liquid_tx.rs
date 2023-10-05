@@ -97,6 +97,20 @@ pub struct Entity {
     pub domain: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+
+pub struct TxInputParams {
+    pub is_witness: bool,
+    #[serde(with = "serde_bytes")]
+    pub script: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub value_commitment: Vec<u8>,
+
+    pub path: Vec<u32>,
+
+    pub sighash: Option<u32>,
+}
+
 #[cfg(test)]
 mod test {
     use ureq::serde_json;

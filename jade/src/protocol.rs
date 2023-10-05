@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
-use crate::{error::ErrorDetails, sign_liquid_tx::SignLiquidTxParams};
+use crate::{
+    error::ErrorDetails,
+    sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Request<P> {
@@ -25,6 +28,7 @@ pub enum Params {
     GetSignature(GetSignatureParams),
     SignLiquidTx(SignLiquidTxParams),
     DebugSetMnemonic(DebugSetMnemonicParams),
+    TxInput(TxInputParams),
 }
 
 #[derive(Debug, Serialize)]

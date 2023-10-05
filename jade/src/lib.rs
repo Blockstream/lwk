@@ -9,7 +9,7 @@ use protocol::{
 };
 use rand::RngCore;
 use serde::de::DeserializeOwned;
-use sign_liquid_tx::SignLiquidTxParams;
+use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 
 use crate::error::Error;
 
@@ -107,6 +107,11 @@ impl Jade {
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<BoolResult> {
         let params = Params::SignLiquidTx(params);
         self.send_request("sign_liquid_tx", Some(params))
+    }
+
+    pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteResult> {
+        let params = Params::TxInput(params);
+        self.send_request("tx_input", Some(params))
     }
 
     pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<BoolResult> {

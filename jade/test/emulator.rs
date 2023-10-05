@@ -4,7 +4,8 @@ use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use elements::{
-    bitcoin,
+    bitcoin::{self, bip32::ChildNumber},
+    confidential::Value,
     encode::serialize,
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message},
@@ -19,7 +20,7 @@ use jade::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
         HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
-    sign_liquid_tx::{Commitment, SignLiquidTxParams},
+    sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -221,7 +222,7 @@ fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
-    let pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
+    let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
     let tx = pset.extract_tx().unwrap();
     let txn = serialize(&tx);
 
@@ -263,6 +264,37 @@ fn jade_sign_liquid_tx() {
     // println!("{:#?}", params);
     let sign_response = initialized_jade.jade.sign_liquid_tx(params).unwrap().get();
     assert!(sign_response);
+
+    for input in pset.inputs_mut() {
+        let entry = input.bip32_derivation.clone().into_iter().next().unwrap();
+        let params = TxInputParams {
+            is_witness: true,
+            script: input
+                .witness_utxo
+                .as_ref()
+                .unwrap()
+                .script_pubkey
+                .clone()
+                .into_bytes(),
+            value_commitment: match input.witness_utxo.as_ref().unwrap().value {
+                Value::Null => panic!("null unexpected"),
+                Value::Explicit(_) => panic!("explicit unexpected"),
+                Value::Confidential(comm) => comm.serialize().to_vec(),
+            },
+            path: entry
+                .1
+                 .1
+                .into_iter()
+                .map(|e| match e {
+                    ChildNumber::Normal { index } => *index,
+                    ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
+                })
+                .collect(),
+            sighash: None,
+        };
+        let signature: Vec<u8> = initialized_jade.jade.tx_input(params).unwrap().into();
+        input.partial_sigs.insert(entry.0, signature);
+    }
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

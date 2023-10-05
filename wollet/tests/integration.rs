@@ -96,8 +96,9 @@ fn roundtrip() {
         ] {
             let server = &server;
             let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-            wallet.fund_btc(server);
             s.spawn(move || {
+                wallet.fund_btc(server);
+                server.generate(1);
                 wallet.send_btc(&signers, None);
                 let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
                 let node_address = server.node_getnewaddress();

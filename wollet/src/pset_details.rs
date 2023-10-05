@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::elements::{
-    confidential::{Asset, Value},
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
     AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, TxOutSecrets,
@@ -26,11 +25,16 @@ pub enum Error {
         previous_outpoint: OutPoint,
     },
 
-    #[error("There is no unblinding information and Input #{idx} has non explicit asset {asset}")]
-    InputAssetNotExplicit { idx: usize, asset: Asset },
+    #[error("Input #{idx} is not blinded")]
+    InputNotBlinded { idx: usize },
 
-    #[error("There is no unblinding information and Input #{idx} has non explicit value {value}")]
-    InputValueNotExplicit { idx: usize, value: Value },
+    #[error("Input #{idx} belongs to the wallet but cannot be unblinded")]
+    InputMineNotUnblindable { idx: usize },
+
+    #[error(
+        "Input #{idx} belongs to the wallet but its commitments do not match the unblinded values"
+    )]
+    InputCommitmentsMismatch { idx: usize },
 
     #[error("Output #{idx} has none asset")]
     OutputAssetNone { idx: usize },
@@ -88,7 +92,7 @@ fn commitments(
 
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
-    unblinded: &HashMap<OutPoint, TxOutSecrets>,
+    _unblinded: &HashMap<OutPoint, TxOutSecrets>,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
     let descriptor_blinding_key =
@@ -96,57 +100,47 @@ pub fn pset_balance(
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     'inputsfor: for (idx, input) in pset.inputs().iter().enumerate() {
-        let previous_outpoint = OutPoint {
-            txid: input.previous_txid,
-            vout: input.previous_output_index,
-        };
-
-        match unblinded.get(&previous_outpoint) {
-            Some(txout_secrets) => {
-                // TODO CH&ECK, if they are in unblinded they are surely mine?
-                *balances.entry(txout_secrets.asset).or_default() -= txout_secrets.value as i64;
-            }
+        match input.witness_utxo.as_ref() {
             None => {
-                // Try to get asset id and value from previous output if they are explicit
-                match input.witness_utxo.as_ref() {
-                    Some(utxo) => match utxo.asset {
-                        Asset::Null | Asset::Confidential(_) => {
-                            return Err(Error::InputAssetNotExplicit {
-                                idx,
-                                asset: utxo.asset,
-                            })
+                let previous_outpoint = OutPoint {
+                    txid: input.previous_txid,
+                    vout: input.previous_output_index,
+                };
+                return Err(Error::MissingPreviousOutput {
+                    idx,
+                    previous_outpoint,
+                });
+            }
+            Some(txout) => {
+                // We expect the input to be blinded
+                if !(txout.asset.is_confidential() && txout.value.is_confidential()) {
+                    return Err(Error::InputNotBlinded { idx });
+                }
+                let asset_comm = txout.asset.commitment().unwrap();
+                let amount_comm = txout.value.commitment().unwrap();
+
+                for (_, path) in input.bip32_derivation.values() {
+                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
+                    // TODO consider fingerprint if available
+                    if path.is_empty() {
+                        continue;
+                    }
+                    let wildcard_index = path[path.len() - 1];
+                    let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
+                    if mine == txout.script_pubkey {
+                        // We expect the input to be unblindable with the descriptor blinding key
+                        let private_blinding_key =
+                            derive_blinding_key(&txout.script_pubkey, &descriptor_blinding_key);
+                        let txout_secrets = txout
+                            .unblind(&EC, private_blinding_key)
+                            .map_err(|_| Error::InputMineNotUnblindable { idx })?;
+                        if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
+                            return Err(Error::InputCommitmentsMismatch { idx });
                         }
-                        Asset::Explicit(asset_id) => match utxo.value {
-                            Value::Null | Value::Confidential(_) => {
-                                return Err(Error::InputValueNotExplicit {
-                                    idx,
-                                    value: utxo.value,
-                                })
-                            }
-                            Value::Explicit(value) => {
-                                for (_, path) in input.bip32_derivation.values() {
-                                    // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
-                                    // TODO consider fingerprint if available
-                                    if path.is_empty() {
-                                        continue;
-                                    }
-                                    let wildcard_index = path[path.len() - 1];
-                                    let mine =
-                                        derive_script_pubkey(descriptor, wildcard_index.into())
-                                            .unwrap();
-                                    if mine == utxo.script_pubkey {
-                                        *balances.entry(asset_id).or_default() -= value as i64;
-                                        continue 'inputsfor;
-                                    }
-                                }
-                            }
-                        },
-                    },
-                    None => {
-                        return Err(Error::MissingPreviousOutput {
-                            idx,
-                            previous_outpoint,
-                        })
+
+                        *balances.entry(txout_secrets.asset).or_default() -=
+                            txout_secrets.value as i64;
+                        continue 'inputsfor;
                     }
                 }
             }

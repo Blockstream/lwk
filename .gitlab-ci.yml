@@ -46,8 +46,9 @@ build:
     - cargo build --features serial --all-targets
 
 test_wollet:
-  extends: .base
+  extends: .docker
   script:
+    - docker pull xenoky/local-jade-emulator:1.0.23
     - ./download_bins.sh
     - . .envrc
     - cargo test -p wollet -p software_signer

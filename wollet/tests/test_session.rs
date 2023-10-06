@@ -6,6 +6,7 @@ use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
+use crate::sign::Sign;
 use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
@@ -382,7 +383,7 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self, signers: &[&Signer], fee_rate: Option<f32>) {
+    pub fn send_btc<S: Sign>(&mut self, signers: &[S], fee_rate: Option<f32>) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.address();
@@ -405,9 +406,9 @@ impl TestElectrumWallet {
         assert!(balance_before > balance_after);
     }
 
-    pub fn send_asset(
+    pub fn send_asset<S: Sign>(
         &mut self,
-        signers: &[&Signer],
+        signers: &[S],
         node_address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -433,9 +434,9 @@ impl TestElectrumWallet {
         assert!(balance_before > balance_after);
     }
 
-    pub fn send_many(
+    pub fn send_many<S: Sign>(
         &mut self,
-        signers: &[&Signer],
+        signers: &[S],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -473,9 +474,9 @@ impl TestElectrumWallet {
         assert!(balance2_before > balance2_after);
     }
 
-    pub fn issueasset(
+    pub fn issueasset<S: Sign>(
         &mut self,
-        signers: &[&Signer],
+        signers: &[S],
         satoshi_asset: u64,
         satoshi_token: u64,
         contract: &str,
@@ -520,9 +521,9 @@ impl TestElectrumWallet {
         (asset, token)
     }
 
-    pub fn reissueasset(
+    pub fn reissueasset<S: Sign>(
         &mut self,
-        signers: &[&Signer],
+        signers: &[S],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -553,9 +554,9 @@ impl TestElectrumWallet {
         assert!(reissuance.token_amount.is_none());
     }
 
-    pub fn burnasset(
+    pub fn burnasset<S: Sign>(
         &mut self,
-        signers: &[&Signer],
+        signers: &[S],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -576,11 +577,8 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    pub fn sign(&self, signer: &Signer, pset: &mut PartiallySignedTransaction) {
-        let pset_base64 = pset.to_string();
-        let signed_pset_base64 = signer.sign(&pset_base64).unwrap();
-        assert_ne!(pset_base64, signed_pset_base64);
-        *pset = signed_pset_base64.parse().unwrap();
+    pub fn sign<S: Sign>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
+        signer.sign(pset).unwrap();
     }
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {

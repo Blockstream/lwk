@@ -2,14 +2,8 @@ mod jade_emulator;
 mod sign;
 mod test_session;
 
-use bs_containers::{
-    jade::{JadeEmulator, EMULATOR_PORT},
-    testcontainers::clients::Cli,
-};
-use jade::{
-    protocol::{DebugSetMnemonicParams, GetXpubParams},
-    Jade,
-};
+use bs_containers::testcontainers::clients::Cli;
+use jade::protocol::GetXpubParams;
 use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
@@ -496,7 +490,7 @@ fn jade_sign_wollet_pset() {
         .unwrap();
 
     let docker = Cli::default();
-    let mut jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
 
     let jade_xpub = jade_init
         .jade

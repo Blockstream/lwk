@@ -20,6 +20,7 @@ variables:
   before_script:
     - curl -fsSL https://get.docker.com -o get-docker.sh
     - sh get-docker.sh
+    - docker pull xenoky/local-jade-emulator:1.0.23
   tags:
     - k8s-docker
   services:
@@ -48,7 +49,6 @@ build:
 test_wollet:
   extends: .docker
   script:
-    - docker pull xenoky/local-jade-emulator:1.0.23
     - ./download_bins.sh
     - . .envrc
     - cargo test -p wollet -p software_signer
@@ -56,7 +56,6 @@ test_wollet:
 test_jade:
   extends: .docker
   script:
-    - docker pull xenoky/local-jade-emulator:1.0.23
     - docker pull tulipan81/blind_pin_server:v0.0.3
     - cargo test -p jade
 

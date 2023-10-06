@@ -101,8 +101,10 @@ pub struct Entity {
 
 pub struct TxInputParams {
     pub is_witness: bool,
-    #[serde(with = "serde_bytes")]
-    pub script: Vec<u8>,
+
+    #[serde(with = "serde_bytes", rename = "script")]
+    pub script_code: Vec<u8>,
+
     #[serde(with = "serde_bytes")]
     pub value_commitment: Vec<u8>,
 

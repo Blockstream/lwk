@@ -135,7 +135,7 @@ impl Jade {
 
             let params = TxInputParams {
                 is_witness: true,
-                script: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
+                script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
                 value_commitment: match input
                     .witness_utxo
                     .as_ref()

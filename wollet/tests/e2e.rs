@@ -1,3 +1,4 @@
+mod sign;
 mod test_session;
 
 use bs_containers::{

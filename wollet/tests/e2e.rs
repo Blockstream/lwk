@@ -21,10 +21,14 @@ fn liquid() {
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
     let signers: [Box<dyn Sign>; 1] = [Box::new(signer.clone())];
 
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let signers_with_jade: [Box<dyn Sign>; 2] = [Box::new(signer), Box::new(jade_init.jade)];
+
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
 
-    wallet.send_btc(&signers, None);
+    wallet.send_btc(&signers_with_jade, None);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(&signers, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();

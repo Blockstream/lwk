@@ -1,3 +1,4 @@
+mod jade_emulator;
 mod sign;
 mod test_session;
 
@@ -13,6 +14,8 @@ use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
 use wollet::*;
+
+use crate::{jade_emulator::inner_jade_debug_initialization, sign::Sign};
 
 #[test]
 fn liquid() {
@@ -493,18 +496,10 @@ fn jade_sign_wollet_pset() {
         .unwrap();
 
     let docker = Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
-    jade_api
-        .debug_set_mnemonic(DebugSetMnemonicParams {
-            mnemonic: mnemonic.to_string(),
-            passphrase: None,
-            temporary_wallet: false,
-        })
-        .unwrap();
-    let jade_xpub = jade_api
+    let mut jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+
+    let jade_xpub = jade_init
+        .jade
         .get_xpub(GetXpubParams {
             network: jade::Network::LocaltestLiquid,
             path: vec![],
@@ -512,7 +507,8 @@ fn jade_sign_wollet_pset() {
         .unwrap();
     assert_eq!(jade_xpub.get(), signer.xpub().to_string());
 
-    jade_api.sign_pset(&mut pset).unwrap();
+    let signatures_added = jade_init.jade.sign(&mut pset).unwrap();
+    assert_eq!(signatures_added, 1);
 
     wallet.send(&mut pset);
 }

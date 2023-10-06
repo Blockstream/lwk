@@ -135,10 +135,12 @@ impl Jade {
             let params = TxInputParams {
                 is_witness: true,
                 script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
-                value_commitment: match txout.value {
-                    Value::Confidential(comm) => comm.serialize().to_vec(),
-                    _ => return Err(Error::NonConfidentialInput(i)),
-                },
+                value_commitment: txout
+                    .value
+                    .commitment()
+                    .ok_or(Error::NonConfidentialInput(i))?
+                    .serialize()
+                    .to_vec(),
                 path,
                 sighash: Some(1),
             };

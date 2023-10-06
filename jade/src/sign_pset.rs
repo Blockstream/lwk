@@ -40,9 +40,6 @@ pub enum Error {
     #[error("Missing witness utxo in input {0}")]
     MissingWitnessUtxoInInput(usize),
 
-    #[error("Missing value commitment in input {0}")]
-    MissingValueCommInInput(usize),
-
     #[error("Non confidential input {0}")]
     NonConfidentialInput(usize),
 
@@ -125,23 +122,19 @@ impl Jade {
                     ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
                 })
                 .collect();
-            dbg!(&path);
             // TODO multisig
-            let previous_output_script = &input
+
+            let txout = input
                 .witness_utxo
                 .as_ref()
-                .ok_or(Error::MissingWitnessUtxoInInput(i))?
-                .script_pubkey;
+                .ok_or(Error::MissingWitnessUtxoInInput(i))?;
+
+            let previous_output_script = &txout.script_pubkey;
 
             let params = TxInputParams {
                 is_witness: true,
                 script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
-                value_commitment: match input
-                    .witness_utxo
-                    .as_ref()
-                    .ok_or(Error::MissingValueCommInInput(i))?
-                    .value
-                {
+                value_commitment: match txout.value {
                     Value::Confidential(comm) => comm.serialize().to_vec(),
                     _ => return Err(Error::NonConfidentialInput(i)),
                 },

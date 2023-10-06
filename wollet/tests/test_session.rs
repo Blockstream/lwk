@@ -383,7 +383,7 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc<S: Sign>(&mut self, signers: &[Box<S>], fee_rate: Option<f32>) {
+    pub fn send_btc(&mut self, signers: &[Box<dyn Sign>], fee_rate: Option<f32>) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.address();
@@ -406,9 +406,9 @@ impl TestElectrumWallet {
         assert!(balance_before > balance_after);
     }
 
-    pub fn send_asset<S: Sign>(
+    pub fn send_asset(
         &mut self,
-        signers: &[Box<S>],
+        signers: &[Box<dyn Sign>],
         node_address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -434,9 +434,9 @@ impl TestElectrumWallet {
         assert!(balance_before > balance_after);
     }
 
-    pub fn send_many<S: Sign>(
+    pub fn send_many(
         &mut self,
-        signers: &[Box<S>],
+        signers: &[Box<dyn Sign>],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -474,9 +474,9 @@ impl TestElectrumWallet {
         assert!(balance2_before > balance2_after);
     }
 
-    pub fn issueasset<S: Sign>(
+    pub fn issueasset(
         &mut self,
-        signers: &[Box<S>],
+        signers: &[Box<dyn Sign>],
         satoshi_asset: u64,
         satoshi_token: u64,
         contract: &str,
@@ -521,9 +521,9 @@ impl TestElectrumWallet {
         (asset, token)
     }
 
-    pub fn reissueasset<S: Sign>(
+    pub fn reissueasset(
         &mut self,
-        signers: &[Box<S>],
+        signers: &[Box<dyn Sign>],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -554,9 +554,9 @@ impl TestElectrumWallet {
         assert!(reissuance.token_amount.is_none());
     }
 
-    pub fn burnasset<S: Sign>(
+    pub fn burnasset(
         &mut self,
-        signers: &[Box<S>],
+        signers: &[Box<dyn Sign>],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -577,7 +577,7 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    pub fn sign<S: Sign>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
+    pub fn sign(&self, signer: &dyn Sign, pset: &mut PartiallySignedTransaction) {
         signer.sign(pset).unwrap();
     }
 

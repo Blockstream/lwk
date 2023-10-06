@@ -19,27 +19,27 @@ fn liquid() {
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
-    let signers = &[Box::new(signer)];
+    let signers: [Box<dyn Sign>; 1] = [Box::new(signer.clone())];
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
 
-    wallet.send_btc(signers, None);
+    wallet.send_btc(&signers, None);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(signers, &node_address, &asset, None);
+    wallet.send_asset(&signers, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        signers,
+        &signers,
         &node_address1,
         &asset,
         &node_address2,
         &wallet.policy_asset(),
         None,
     );
-    let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
-    wallet.reissueasset(signers, 10, &asset, None);
-    wallet.burnasset(signers, 5, &asset, None);
+    let (asset, _token) = wallet.issueasset(&signers, 10, 1, "", None);
+    wallet.reissueasset(&signers, 10, &asset, None);
+    wallet.burnasset(&signers, 5, &asset, None);
 }
 
 #[test]
@@ -91,40 +91,45 @@ fn roundtrip() {
         signer51.xpub(),
         signer52.xpub()
     );
+    let signers1: [Box<dyn Sign>; 1] = [Box::new(signer1)];
+    let signers2: [Box<dyn Sign>; 1] = [Box::new(signer2)];
+    let signers3: [Box<dyn Sign>; 1] = [Box::new(signer3)];
+    let signers4: [Box<dyn Sign>; 1] = [Box::new(signer4)];
+    let signers5: [Box<dyn Sign>; 2] = [Box::new(signer51), Box::new(signer52)];
 
-    std::thread::scope(|s| {
-        for (signers, desc) in [
-            (vec![Box::new(signer1)], desc1),
-            (vec![Box::new(signer2)], desc2),
-            (vec![Box::new(signer3)], desc3),
-            (vec![Box::new(signer4)], desc4),
-            (vec![Box::new(signer51), Box::new(signer52)], desc5),
-        ] {
-            let server = &server;
-            let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-            s.spawn(move || {
-                wallet.fund_btc(server);
-                server.generate(1);
-                wallet.send_btc(&signers, None);
-                let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
-                let node_address = server.node_getnewaddress();
-                wallet.send_asset(&signers, &node_address, &asset, None);
-                let node_address1 = server.node_getnewaddress();
-                let node_address2 = server.node_getnewaddress();
-                wallet.send_many(
-                    &signers,
-                    &node_address1,
-                    &asset,
-                    &node_address2,
-                    &wallet.policy_asset(),
-                    None,
-                );
-                wallet.reissueasset(&signers, 10_000, &asset, None);
-                wallet.burnasset(&signers, 5_000, &asset, None);
-                server.generate(2);
-            });
-        }
-    });
+    // std::thread::scope(|s| {
+    for (signers, desc) in [
+        (&signers1[..], desc1),
+        (&signers2[..], desc2),
+        (&signers3[..], desc3),
+        (&signers4[..], desc4),
+        (&signers5[..], desc5),
+    ] {
+        let server = &server;
+        let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+        // s.spawn(move || {
+        wallet.fund_btc(server);
+        server.generate(1);
+        wallet.send_btc(&signers, None);
+        let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", None);
+        let node_address = server.node_getnewaddress();
+        wallet.send_asset(&signers, &node_address, &asset, None);
+        let node_address1 = server.node_getnewaddress();
+        let node_address2 = server.node_getnewaddress();
+        wallet.send_many(
+            &signers,
+            &node_address1,
+            &asset,
+            &node_address2,
+            &wallet.policy_asset(),
+            None,
+        );
+        wallet.reissueasset(&signers, 10_000, &asset, None);
+        wallet.burnasset(&signers, 5_000, &asset, None);
+        server.generate(2);
+        // });
+    }
+    // });
 }
 
 #[test]
@@ -226,26 +231,26 @@ fn fee_rate() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = &[Box::new(signer)];
+    let signers: [Box<dyn Sign>; 1] = [Box::new(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
-    wallet.send_btc(signers, fee_rate);
-    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", fee_rate);
+    wallet.send_btc(&signers, fee_rate);
+    let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", fee_rate);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(signers, &node_address, &asset, fee_rate);
+    wallet.send_asset(&signers, &node_address, &asset, fee_rate);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        signers,
+        &signers,
         &node_address1,
         &asset,
         &node_address2,
         &wallet.policy_asset(),
         fee_rate,
     );
-    wallet.reissueasset(signers, 10_000, &asset, fee_rate);
-    wallet.burnasset(signers, 5_000, &asset, fee_rate);
+    wallet.reissueasset(&signers, 10_000, &asset, fee_rate);
+    wallet.burnasset(&signers, 5_000, &asset, fee_rate);
 }
 
 #[test]
@@ -257,12 +262,12 @@ fn contract() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = &[Box::new(signer)];
+    let signers: [Box<dyn Sign>; 1] = [Box::new(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
-    wallet.send_btc(signers, None);
-    let (_asset, _token) = wallet.issueasset(signers, 100_000, 1, contract, None);
+    wallet.send_btc(&signers, None);
+    let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, contract, None);
 
     // Error cases
     let contract_d = "{\"entity\":{\"domain\":\"testcom\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";

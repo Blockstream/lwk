@@ -4,14 +4,14 @@ use serde::{Deserialize, Serialize};
 use crate::Network;
 
 #[derive(Debug, Deserialize, Serialize)]
-struct RegisterMultisigParams {
+pub struct RegisterMultisigParams {
     pub network: Network,
     pub multisig_name: String,
     pub descriptor: JadeDescriptor,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct JadeDescriptor {
+pub struct JadeDescriptor {
     pub variant: String,
     pub sorted: bool,
     pub threshold: u32,
@@ -23,7 +23,7 @@ struct JadeDescriptor {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct JadeSigner {
+pub struct JadeSigner {
     #[serde(with = "serde_bytes")]
     pub fingerprint: Vec<u8>,
 

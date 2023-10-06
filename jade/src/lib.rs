@@ -8,6 +8,7 @@ use protocol::{
     UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
+use register_multisig::RegisterMultisigParams;
 use serde::de::DeserializeOwned;
 use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 
@@ -17,7 +18,7 @@ pub mod connection;
 pub mod error;
 mod network;
 pub mod protocol;
-mod register_multisig;
+pub mod register_multisig;
 pub mod sign_liquid_tx;
 mod sign_pset;
 
@@ -118,6 +119,11 @@ impl Jade {
     pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<BoolResult> {
         let params = Params::DebugSetMnemonic(params);
         self.send_request("debug_set_mnemonic", Some(params))
+    }
+
+    pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<BoolResult> {
+        let params = Params::RegisterMultisig(params);
+        self.send_request("register_multisig", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

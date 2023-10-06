@@ -3,6 +3,7 @@ use serde_bytes::ByteBuf;
 
 use crate::{
     error::ErrorDetails,
+    register_multisig::RegisterMultisigParams,
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
 };
 
@@ -29,6 +30,7 @@ pub enum Params {
     SignLiquidTx(SignLiquidTxParams),
     DebugSetMnemonic(DebugSetMnemonicParams),
     TxInput(TxInputParams),
+    RegisterMultisig(RegisterMultisigParams),
 }
 
 #[derive(Debug, Serialize)]

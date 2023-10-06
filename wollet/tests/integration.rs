@@ -491,10 +491,6 @@ fn jade_sign_wollet_pset() {
         .sendlbtc(1000, &my_addr.to_string(), None)
         .unwrap();
 
-    let mut software_signer_pset = pset.clone();
-    wallet.sign(&signer, &mut software_signer_pset);
-    wallet.send(&mut software_signer_pset);
-
     let docker = Cli::default();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);

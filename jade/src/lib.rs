@@ -18,7 +18,7 @@ pub mod error;
 mod network;
 pub mod protocol;
 pub mod sign_liquid_tx;
-mod sign_pset;
+pub mod sign_pset;
 
 pub use network::Network;
 

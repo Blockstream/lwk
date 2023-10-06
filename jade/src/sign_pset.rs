@@ -48,9 +48,10 @@ pub enum Error {
 }
 
 impl Jade {
-    pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
+    pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
+        let mut signatures_added = 0;
 
         let mut trusted_commitments = vec![];
         let mut change = vec![];
@@ -143,10 +144,13 @@ impl Jade {
             };
             let sig: Vec<u8> = self.tx_input(params)?.into();
 
-            input.partial_sigs.insert(entry.0, sig);
+            let insterted = input.partial_sigs.insert(entry.0, sig);
+            if insterted.is_none() {
+                signatures_added += 1;
+            }
         }
 
-        Ok(())
+        Ok(signatures_added)
     }
 }
 

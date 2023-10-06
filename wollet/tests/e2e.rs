@@ -19,7 +19,7 @@ fn liquid() {
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
-    let signers = &[signer];
+    let signers = &[Box::new(signer)];
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
@@ -94,11 +94,11 @@ fn roundtrip() {
 
     std::thread::scope(|s| {
         for (signers, desc) in [
-            (vec![signer1], desc1),
-            (vec![signer2], desc2),
-            (vec![signer3], desc3),
-            (vec![signer4], desc4),
-            (vec![signer51, signer52], desc5),
+            (vec![Box::new(signer1)], desc1),
+            (vec![Box::new(signer2)], desc2),
+            (vec![Box::new(signer3)], desc3),
+            (vec![Box::new(signer4)], desc4),
+            (vec![Box::new(signer51), Box::new(signer52)], desc5),
         ] {
             let server = &server;
             let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
@@ -226,7 +226,7 @@ fn fee_rate() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = &[signer];
+    let signers = &[Box::new(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -257,7 +257,7 @@ fn contract() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = &[signer];
+    let signers = &[Box::new(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -354,7 +354,8 @@ fn createpset_error() {
     wallet.fund_btc(&server);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
-    let (asset, token) = wallet.issueasset(&[signer.clone()], satoshi_a, satoshi_t, "", None);
+    let (asset, token) =
+        wallet.issueasset(&[Box::new(signer.clone())], satoshi_a, satoshi_t, "", None);
     let asset = asset.to_string();
     let token = token.to_string();
 

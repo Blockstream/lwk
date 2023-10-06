@@ -383,7 +383,7 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc<S: Sign>(&mut self, signers: &[S], fee_rate: Option<f32>) {
+    pub fn send_btc<S: Sign>(&mut self, signers: &[Box<S>], fee_rate: Option<f32>) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.address();
@@ -398,7 +398,7 @@ impl TestElectrumWallet {
         assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-fee));
 
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -408,7 +408,7 @@ impl TestElectrumWallet {
 
     pub fn send_asset<S: Sign>(
         &mut self,
-        signers: &[S],
+        signers: &[Box<S>],
         node_address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -426,7 +426,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -436,7 +436,7 @@ impl TestElectrumWallet {
 
     pub fn send_many<S: Sign>(
         &mut self,
-        signers: &[S],
+        signers: &[Box<S>],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -464,7 +464,7 @@ impl TestElectrumWallet {
         let mut pset = self.electrum_wallet.sendmany(addressees, fee_rate).unwrap();
 
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -476,7 +476,7 @@ impl TestElectrumWallet {
 
     pub fn issueasset<S: Sign>(
         &mut self,
-        signers: &[S],
+        signers: &[Box<S>],
         satoshi_asset: u64,
         satoshi_token: u64,
         contract: &str,
@@ -489,7 +489,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -523,7 +523,7 @@ impl TestElectrumWallet {
 
     pub fn reissueasset<S: Sign>(
         &mut self,
-        signers: &[S],
+        signers: &[Box<S>],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -537,7 +537,7 @@ impl TestElectrumWallet {
             .reissueasset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
@@ -556,7 +556,7 @@ impl TestElectrumWallet {
 
     pub fn burnasset<S: Sign>(
         &mut self,
-        signers: &[S],
+        signers: &[Box<S>],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -568,7 +568,7 @@ impl TestElectrumWallet {
             .burnasset(&asset.to_string(), satoshi_asset, fee_rate)
             .unwrap();
         for signer in signers {
-            self.sign(signer, &mut pset);
+            self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);

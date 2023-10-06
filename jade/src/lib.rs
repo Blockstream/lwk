@@ -17,6 +17,7 @@ pub mod connection;
 pub mod error;
 mod network;
 pub mod protocol;
+mod register_multisig;
 pub mod sign_liquid_tx;
 mod sign_pset;
 

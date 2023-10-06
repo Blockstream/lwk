@@ -17,6 +17,7 @@ use elements::{
     bitcoin::{bip32::ExtendedPubKey, sign_message::signed_msg_hash},
     hashes::Hash,
 };
+use jade::register_multisig::{JadeDescriptor, JadeSigner, RegisterMultisigParams};
 use jade::{
     protocol::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
@@ -169,6 +170,52 @@ fn jade_receive_address() {
     let address = elements::Address::from_str(result.get()).unwrap();
     assert!(address.blinding_pubkey.is_some());
     assert_eq!(address.params, &AddressParams::ELEMENTS);
+}
+
+#[test]
+fn jade_register_multisig() {
+    let docker = clients::Cli::default();
+
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+
+    let params = GetXpubParams {
+        network: jade::Network::TestnetLiquid,
+        path: vec![0],
+    };
+    let result = initialized_jade.jade.get_xpub(params).unwrap();
+    let jade_xpub: ExtendedPubKey = result.get().parse().unwrap();
+
+    let signers = vec![
+        JadeSigner {
+            fingerprint: vec![2u8; 4],
+            derivation: vec![],
+            xpub: "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap(),
+            path: vec![],
+        },
+        JadeSigner {
+            fingerprint: jade_xpub.parent_fingerprint.to_bytes().to_vec(),
+            derivation: vec![0],
+            xpub: jade_xpub,
+            path: vec![],
+        }
+    ];
+
+    let params = RegisterMultisigParams {
+        network: jade::Network::LocaltestLiquid,
+        multisig_name: "finney-satoshi".to_string(),
+        descriptor: JadeDescriptor {
+            variant: "wsh(multi(k))".to_string(),
+            sorted: false,
+            threshold: 2,
+            master_blinding_key: hex::decode(
+                "afacc503637e85da661ca1706c4ea147f1407868c48d8f92dd339ac272293cdc",
+            )
+            .unwrap(),
+            signers,
+        },
+    };
+    let result = initialized_jade.jade.register_multisig(params).unwrap();
+    assert!(result.get())
 }
 
 #[test]

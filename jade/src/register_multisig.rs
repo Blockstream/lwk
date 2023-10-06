@@ -6,13 +6,13 @@ use crate::Network;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RegisterMultisigParams {
     pub network: Network,
-    pub multisig_name: String,
+    pub multisig_name: String, // max 16 chars
     pub descriptor: JadeDescriptor,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JadeDescriptor {
-    pub variant: String,
+    pub variant: String, // TODO make enum with segwit types: 'variant' indicates the script type used, and must be one of: 'sh(multi(k))', 'wsh(multi(k))' or 'sh(wsh(multi(k)))'
     pub sorted: bool,
     pub threshold: u32,
 

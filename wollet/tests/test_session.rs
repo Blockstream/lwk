@@ -392,10 +392,10 @@ impl TestElectrumWallet {
             .sendlbtc(satoshi, &address.to_string(), fee_rate)
             .unwrap();
 
-        let balance = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = balance.fee as i64;
+        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let fee = details.fee as i64;
         assert!(fee > 0);
-        assert_eq!(balance.balances.get(&self.policy_asset()), Some(&-fee));
+        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
 
         for signer in signers {
             self.sign(signer.as_ref(), &mut pset);

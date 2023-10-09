@@ -498,6 +498,34 @@ fn createpset_error() {
 }
 
 #[test]
+fn multisig_flow() {
+    // Simulate a multisig workflow
+    let server = setup();
+
+    // * Multisig Setup: Start
+    // We have 2 signers
+    let signer1 = generate_signer();
+    let signer2 = generate_signer();
+
+    // Someone generates the "view" descriptor blinding key
+    let view_key = generate_view_key();
+
+    // A "coordinator" collects the signers xpubs and the descriptor blinding key,
+    // then it creates the multisig descriptor
+    let desc_str = format!(
+        "ct({},elwsh(multi(2,{}/*,{}/*)))",
+        view_key,
+        signer1.xpub(),
+        signer2.xpub()
+    );
+    let _wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    // Sharing desc_str grants watch only access to the wallet.
+    // Each signer should have access to desc_str to understand how a PSET is affecting the wallet.
+
+    // * Multisig Setup: Complete
+}
+#[test]
 fn jade_sign_wollet_pset() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";

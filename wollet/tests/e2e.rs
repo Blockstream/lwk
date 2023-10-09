@@ -331,13 +331,12 @@ fn multiple_descriptors() {
         .electrum_wallet
         .issueasset(satoshi_a, "", satoshi_t, &address_t, "", None)
         .unwrap();
+    wallet_t.electrum_wallet.add_details(&mut pset).unwrap();
     let (asset, token) = &pset.inputs()[0].issuance_ids();
     let details_a = wallet_a.electrum_wallet.get_details(&pset).unwrap();
     let details_t = wallet_t.electrum_wallet.get_details(&pset).unwrap();
     assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_a as i64);
-    // FIXME: get_details needs bip32 derivation to be set
-    //assert_eq!(*details_t.balances.get(token).unwrap(), satoshi_t  as i64);
-    assert!(details_t.balances.get(token).is_none());
+    assert_eq!(*details_t.balances.get(token).unwrap(), satoshi_t as i64);
     wallet_a.sign(&signer_a, &mut pset);
     wallet_a.send(&mut pset);
     assert_eq!(wallet_a.balance(asset), satoshi_a);
@@ -351,11 +350,10 @@ fn multiple_descriptors() {
         .electrum_wallet
         .reissueasset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
         .unwrap();
+    wallet_a.electrum_wallet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.electrum_wallet.get_details(&pset).unwrap();
     let details_t = wallet_t.electrum_wallet.get_details(&pset).unwrap();
-    // FIXME: get_details needs bip32 derivation to be set
-    //assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_ar as i64);
-    assert!(details_a.balances.get(asset).is_none());
+    assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_ar as i64);
     assert_eq!(*details_t.balances.get(token).unwrap(), 0i64);
     wallet_t.sign(&signer_t1, &mut pset);
     wallet_t.sign(&signer_t2, &mut pset);

@@ -543,6 +543,7 @@ fn multisig_flow() {
     wallet.sign(&signer2, &mut pset2);
 
     // Collect and combine the PSETs
+    // FIXME: "coordinator" should be able to tell which signatures are missing
     let mut pset = wallet.electrum_wallet.combine(&vec![pset1, pset2]).unwrap();
 
     // Finalize and send the PSET

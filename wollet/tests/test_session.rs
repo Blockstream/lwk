@@ -560,6 +560,14 @@ impl TestElectrumWallet {
             .electrum_wallet
             .reissueasset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
+
+        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let fee = details.fee as i64;
+        assert!(fee > 0);
+        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
+        assert_eq!(*details.balances.get(asset).unwrap(), satoshi_asset as i64);
+        assert_eq!(*details.balances.get(&issuance.token).unwrap(), 0i64);
+
         for signer in signers {
             self.sign(signer.as_ref(), &mut pset);
         }

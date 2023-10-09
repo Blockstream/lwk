@@ -17,7 +17,7 @@ use elements::{
     bitcoin::{bip32::ExtendedPubKey, sign_message::signed_msg_hash},
     hashes::Hash,
 };
-use jade::register_multisig::{JadeDescriptor, JadeSigner, RegisterMultisigParams};
+use jade::register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams};
 use jade::{
     protocol::{
         DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
@@ -186,13 +186,13 @@ fn jade_register_multisig() {
     let jade_xpub: ExtendedPubKey = result.get().parse().unwrap();
 
     let signers = vec![
-        JadeSigner {
+        MultisigSigner {
             fingerprint: vec![2u8; 4],
             derivation: vec![],
             xpub: "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap(),
             path: vec![],
         },
-        JadeSigner {
+        MultisigSigner {
             fingerprint: jade_xpub.parent_fingerprint.to_bytes().to_vec(),
             derivation: vec![0],
             xpub: jade_xpub,

@@ -19,11 +19,11 @@ pub struct JadeDescriptor {
     #[serde(with = "serde_bytes")]
     pub master_blinding_key: Vec<u8>,
 
-    pub signers: Vec<JadeSigner>,
+    pub signers: Vec<MultisigSigner>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct JadeSigner {
+pub struct MultisigSigner {
     #[serde(with = "serde_bytes")]
     pub fingerprint: Vec<u8>,
 

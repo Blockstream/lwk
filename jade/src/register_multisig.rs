@@ -124,35 +124,37 @@ mod test {
         let b: &str = "tpubDDExQpZg2tziZ7ACSBCYsY3rYxAZtTRBgWwioRLYqgNBguH6rMHN1D8epTxUQUB5kM5nxkEtr2SNic6PJLPubcGMR6S2fmDZTzL9dHpU7ka";
         let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let kind = ["sortedmulti", "multi"];
-        for k in kind {
-            let desc = format!("ct(slip77({slip77_key}),elwsh({k}(2,{a}/*,{b}/*)))");
-            let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
+        for t in 1..=2 {
+            for k in kind {
+                let desc = format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/*,{b}/*)))");
+                let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 
-            let jade_desc: JadeDescriptor = desc.try_into().unwrap();
+                let jade_desc: JadeDescriptor = desc.try_into().unwrap();
 
-            assert_eq!(
-                jade_desc,
-                JadeDescriptor {
-                    variant: "wsh(multi(k))".to_string(),
-                    sorted: k == "sortedmulti",
-                    threshold: 2,
-                    master_blinding_key: hex::decode(slip77_key).unwrap(),
-                    signers: vec![
-                        MultisigSigner {
-                            fingerprint: vec![146, 26, 57, 253],
-                            derivation: vec![],
-                            xpub: a.parse().unwrap(),
-                            path: vec![]
-                        },
-                        MultisigSigner {
-                            fingerprint: vec![195, 206, 35, 178],
-                            derivation: vec![],
-                            xpub: b.parse().unwrap(),
-                            path: vec![]
-                        }
-                    ]
-                }
-            )
+                assert_eq!(
+                    jade_desc,
+                    JadeDescriptor {
+                        variant: "wsh(multi(k))".to_string(),
+                        sorted: k == "sortedmulti",
+                        threshold: t,
+                        master_blinding_key: hex::decode(slip77_key).unwrap(),
+                        signers: vec![
+                            MultisigSigner {
+                                fingerprint: vec![146, 26, 57, 253],
+                                derivation: vec![],
+                                xpub: a.parse().unwrap(),
+                                path: vec![]
+                            },
+                            MultisigSigner {
+                                fingerprint: vec![195, 206, 35, 178],
+                                derivation: vec![],
+                                xpub: b.parse().unwrap(),
+                                path: vec![]
+                            }
+                        ]
+                    }
+                )
+            }
         }
     }
 }

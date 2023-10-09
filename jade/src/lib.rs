@@ -196,7 +196,7 @@ pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
     path.into_iter()
         .map(|e| match e {
             ChildNumber::Normal { index } => *index,
-            ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
+            ChildNumber::Hardened { index } => *index,
         })
         .collect()
 }

@@ -93,6 +93,13 @@ impl Jade {
         self.send_request("get_xpub", Some(params))
     }
 
+    pub fn get_master_xpub(&mut self, network: Network) -> Result<StringResult> {
+        self.get_xpub(GetXpubParams {
+            network,
+            path: vec![],
+        })
+    }
+
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {
         let params = Params::GetReceiveAddress(params);
         self.send_request("get_receive_address", Some(params))

@@ -176,13 +176,18 @@ fn jade_receive_address() {
 fn jade_register_multisig() {
     let docker = clients::Cli::default();
 
+    let network = jade::Network::TestnetLiquid;
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let jade = &mut initialized_jade.jade;
+
+    let result = jade.get_master_xpub(network).unwrap();
+    let jade_master_xpub: ExtendedPubKey = result.get().parse().unwrap();
 
     let params = GetXpubParams {
         network: jade::Network::TestnetLiquid,
-        path: vec![0],
+        path: vec![0, 1],
     };
-    let result = initialized_jade.jade.get_xpub(params).unwrap();
+    let result = jade.get_xpub(params).unwrap();
     let jade_xpub: ExtendedPubKey = result.get().parse().unwrap();
 
     let signers = vec![
@@ -193,8 +198,8 @@ fn jade_register_multisig() {
             path: vec![],
         },
         MultisigSigner {
-            fingerprint: jade_xpub.parent_fingerprint.to_bytes().to_vec(),
-            derivation: vec![0],
+            fingerprint: jade_master_xpub.fingerprint().to_bytes().to_vec(),
+            derivation: vec![0,1],
             xpub: jade_xpub,
             path: vec![],
         }
@@ -214,7 +219,7 @@ fn jade_register_multisig() {
             signers,
         },
     };
-    let result = initialized_jade.jade.register_multisig(params).unwrap();
+    let result = jade.register_multisig(params).unwrap();
     assert!(result.get())
 }
 

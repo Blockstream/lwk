@@ -19,7 +19,7 @@ pub struct JadeDescriptor {
     pub sorted: bool,
     pub threshold: u32,
 
-    /// The master blinding key in the slip77 format
+    /// The slip77 master blinding key
     #[serde(with = "serde_bytes")]
     pub master_blinding_key: Vec<u8>,
 

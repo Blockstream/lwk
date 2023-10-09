@@ -26,14 +26,31 @@ pub struct JadeDescriptor {
     pub signers: Vec<MultisigSigner>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    // #[error(transparent)]
+    // Ser(#[from] ciborium::ser::Error<std::io::Error>),
+    #[error("Only slip77 master blinding key are supported")]
+    OnlySlip77Supported,
+
+    #[error("Only xpub keys are not supported")]
+    OnlyXpubKeysAreSupported,
+
+    #[error("Unsupported descriptor type, only wsh is supported")]
+    UnsupportedDescriptorType,
+
+    #[error("Unsupported descriptor variant, only multi or sortedmulti are supported")]
+    UnsupportedDescriptorVariant,
+}
+
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(desc: ConfidentialDescriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
         let variant = "wsh(multi(k))".to_string(); // only supported one for now
         let master_blinding_key = match desc.key {
             Key::Slip77(k) => k.as_bytes().to_vec(),
-            _ => return Err(()),
+            _ => return Err(Error::OnlySlip77Supported),
         };
         let sorted;
         let threshold;
@@ -45,7 +62,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                     sorted = true;
 
                     for pk in x.pks.iter() {
-                        signers.push(pk.try_into().unwrap());
+                        signers.push(pk.try_into()?);
                     }
                 }
                 elements_miniscript::descriptor::WshInner::Ms(x) => {
@@ -54,15 +71,15 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                     if let Terminal::Multi(t, keys) = &x.node {
                         threshold = *t as u32;
                         for pk in keys {
-                            signers.push(pk.try_into().unwrap());
+                            signers.push(pk.try_into()?);
                         }
                     } else {
-                        return Err(());
+                        return Err(Error::UnsupportedDescriptorVariant);
                     }
                 }
             },
 
-            _ => return Err(()),
+            _ => return Err(Error::UnsupportedDescriptorType),
         }
         Ok(JadeDescriptor {
             variant,
@@ -75,13 +92,21 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
 }
 
 impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: &DescriptorPublicKey) -> Result<Self, Self::Error> {
+        let xpub = match value {
+            DescriptorPublicKey::XPub(x) => x.xkey,
+            _ => return Err(Error::OnlyXpubKeysAreSupported),
+        };
         Ok(MultisigSigner {
             fingerprint: value.master_fingerprint().as_bytes().to_vec(),
-            derivation: derivation_path_to_vec(&value.full_derivation_path().unwrap()),
-            xpub: value.to_string().replace("/*", "").parse().unwrap(),
+            derivation: derivation_path_to_vec(
+                &value
+                    .full_derivation_path()
+                    .ok_or(Error::OnlyXpubKeysAreSupported)?,
+            ),
+            xpub,
             path: vec![],
         })
     }

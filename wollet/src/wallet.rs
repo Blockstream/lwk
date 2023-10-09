@@ -352,6 +352,34 @@ impl ElectrumWallet {
         Ok(self.descriptor.descriptor.at_derivation_index(utxo_index)?)
     }
 
+    /// Add the PSET details with respect to the wallet
+    pub fn add_details(&self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
+        for (idx, input) in pset.clone().inputs().iter().enumerate() {
+            if let Some(txout) = input.witness_utxo.as_ref() {
+                match self.definite_descriptor(&txout.script_pubkey) {
+                    Ok(desc) => {
+                        pset.update_input_with_descriptor(idx, &desc)
+                            .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+                    }
+                    Err(Error::ScriptNotMine) => (),
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+
+        for (idx, output) in pset.clone().outputs().iter().enumerate() {
+            match self.definite_descriptor(&output.script_pubkey) {
+                Ok(desc) => {
+                    pset.update_output_with_descriptor(idx, &desc)
+                        .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+                }
+                Err(Error::ScriptNotMine) => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();

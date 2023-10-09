@@ -65,6 +65,8 @@ pub struct HandshakeCompleteParams {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetXpubParams {
     pub network: crate::Network,
+
+    /// Derive the master node (m) with the given path and the return the resuting xpub
     pub path: Vec<u32>,
 }
 

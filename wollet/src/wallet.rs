@@ -21,7 +21,10 @@ use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
 use elements_miniscript::psbt;
-use elements_miniscript::{ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey};
+use elements_miniscript::psbt::PsbtExt;
+use elements_miniscript::{
+    ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
+};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -339,6 +342,14 @@ impl ElectrumWallet {
                 Err(Error::Generic("unexpected hardened derivation".into()))
             }
         }
+    }
+
+    pub(crate) fn definite_descriptor(
+        &self,
+        script_pubkey: &Script,
+    ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
+        let utxo_index = self.index(script_pubkey)?;
+        Ok(self.descriptor.descriptor.at_derivation_index(utxo_index)?)
     }
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {

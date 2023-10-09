@@ -10,7 +10,6 @@ use crate::registry::Contract;
 use crate::util::EC;
 use crate::wallet::ElectrumWallet;
 use elements_miniscript::psbt::PsbtExt;
-use elements_miniscript::{DefiniteDescriptorKey, Descriptor};
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -48,14 +47,6 @@ impl ElectrumWallet {
             .get(outpoint.vout as usize)
             .ok_or_else(|| Error::MissingVout)?
             .clone())
-    }
-
-    fn definite_descriptor(
-        &self,
-        script_pubkey: &Script,
-    ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
-        let utxo_index = self.index(script_pubkey)?;
-        Ok(self.descriptor.descriptor.at_derivation_index(utxo_index)?)
     }
 
     fn validate_address(&self, address: &str) -> Result<Address, Error> {

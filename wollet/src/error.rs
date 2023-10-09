@@ -104,6 +104,9 @@ pub enum Error {
 
     #[error("Descriptor not supported")]
     UnsupportedDescriptor,
+
+    #[error("Missing PSET")]
+    MissingPset,
 }
 
 // cannot derive automatically with this error because of trait bound

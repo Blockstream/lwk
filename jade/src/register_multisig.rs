@@ -27,10 +27,12 @@ pub struct MultisigSigner {
     #[serde(with = "serde_bytes")]
     pub fingerprint: Vec<u8>,
 
+    /// From the master node (m) to the xpub
     pub derivation: Vec<u32>,
 
     pub xpub: ExtendedPubKey,
 
+    /// From the xpub to the signer
     pub path: Vec<u32>,
 }
 

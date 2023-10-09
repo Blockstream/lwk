@@ -48,9 +48,10 @@ pub enum Error {
 }
 
 impl Jade {
-    pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
+    pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
+        let mut signatures_added = 0;
 
         let mut trusted_commitments = vec![];
         let mut change = vec![];
@@ -134,19 +135,24 @@ impl Jade {
             let params = TxInputParams {
                 is_witness: true,
                 script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
-                value_commitment: match txout.value {
-                    Value::Confidential(comm) => comm.serialize().to_vec(),
-                    _ => return Err(Error::NonConfidentialInput(i)),
-                },
+                value_commitment: txout
+                    .value
+                    .commitment()
+                    .ok_or(Error::NonConfidentialInput(i))?
+                    .serialize()
+                    .to_vec(),
                 path,
                 sighash: Some(1),
             };
             let sig: Vec<u8> = self.tx_input(params)?.into();
 
-            input.partial_sigs.insert(entry.0, sig);
+            let insterted = input.partial_sigs.insert(entry.0, sig);
+            if insterted.is_none() {
+                signatures_added += 1;
+            }
         }
 
-        Ok(())
+        Ok(signatures_added)
     }
 }
 

@@ -2,6 +2,7 @@
 name = "jade"
 version = "0.1.0"
 edition = "2021"
+autotests = false
 
 [dependencies]
 # anyhow = "1"
@@ -28,7 +29,7 @@ serial = ["serialport"]
 
 [[test]]
 name = "e2e"
-path = "test/e2e.rs"
+path = "tests/e2e.rs"
 
 [dev-dependencies]
 insta = { version = "1.31.0", features = ["yaml"] }

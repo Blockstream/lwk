@@ -44,6 +44,7 @@ pub enum NewError {
     Bip32(#[from] bip32::Error),
 }
 
+#[derive(Clone)]
 pub struct Signer<'a> {
     xprv: ExtendedPrivKey,
     secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
@@ -70,12 +71,16 @@ impl<'a> Signer<'a> {
     fn fingerprint(&self) -> Fingerprint {
         self.xprv.fingerprint(self.secp)
     }
-
     pub fn sign(&self, pset: &str) -> Result<String, SignError> {
         let mut pset: PartiallySignedTransaction = pset.parse()?;
+        self.sign_pset(&mut pset)?;
+        Ok(pset.to_string())
+    }
 
+    pub fn sign_pset(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignError> {
         let tx = pset.extract_tx()?;
         let mut sighash_cache = SighashCache::new(&tx);
+        let mut signature_added = 0;
 
         // genesis hash is not used at all for sighash calculation
         let genesis_hash = crate::elements::BlockHash::all_zeros();
@@ -105,12 +110,15 @@ impl<'a> Signer<'a> {
                     let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);
                     let sig = elementssig_to_rawsig(&(sig, hash_ty));
 
-                    input.partial_sigs.insert(public_key, sig);
+                    let inserted = input.partial_sigs.insert(public_key, sig);
+                    if inserted.is_none() {
+                        signature_added += 1;
+                    }
                 }
             }
         }
 
-        Ok(pset.to_string())
+        Ok(signature_added)
     }
 }
 

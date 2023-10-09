@@ -9,6 +9,7 @@ authors = [
 ]
 license = "(MIT)"
 edition = "2018"
+autotests = false
 
 [lib]
 crate-type = ["lib"]
@@ -40,3 +41,8 @@ electrsd = { version = "0.25.0", features = ["legacy"] }
 software_signer = { path = "../software_signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
+
+
+[[test]]
+name = "e2e"
+path = "tests/e2e.rs"

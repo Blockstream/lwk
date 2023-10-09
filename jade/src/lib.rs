@@ -16,11 +16,12 @@ use crate::error::Error;
 
 pub mod connection;
 pub mod error;
+pub mod lock_jade;
 mod network;
 pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
-mod sign_pset;
+pub mod sign_pset;
 
 pub use network::Network;
 

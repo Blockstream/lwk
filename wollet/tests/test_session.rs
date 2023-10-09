@@ -501,14 +501,25 @@ impl TestElectrumWallet {
             .issueasset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
             .unwrap();
 
+        let issuance_input = &pset.inputs()[0].clone();
+        let (asset, token) = issuance_input.issuance_ids();
+
+        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let fee = details.fee as i64;
+        assert!(fee > 0);
+        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
+        assert_eq!(*details.balances.get(&asset).unwrap(), satoshi_asset as i64);
+        assert_eq!(
+            *details.balances.get(&token).unwrap_or(&0),
+            satoshi_token as i64
+        );
+
         for signer in signers {
             self.sign(signer.as_ref(), &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
 
-        let issuance_input = &pset.inputs()[0];
-        let (asset, token) = issuance_input.issuance_ids();
         assert_eq!(self.balance(&asset), satoshi_asset);
         assert_eq!(self.balance(&token), satoshi_token);
         let balance_after = self.balance_btc();

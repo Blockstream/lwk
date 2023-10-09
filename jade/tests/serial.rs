@@ -50,3 +50,22 @@ fn logout() {
         insta::assert_yaml_snapshot!(result);
     }
 }
+
+#[test]
+#[ignore = "requires hardware jade connected via usb/serial"]
+fn ping() {
+    let ports = serialport::available_ports().unwrap();
+    if !ports.is_empty() {
+        let path = &ports[0].port_name;
+        let port = serialport::new(path, 115_200)
+            .timeout(Duration::from_secs(10))
+            .open()
+            .unwrap();
+
+        let mut jade_api = Jade::new(port.into());
+
+        let result = jade_api.ping().unwrap();
+
+        insta::assert_yaml_snapshot!(result);
+    }
+}

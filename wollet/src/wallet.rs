@@ -381,6 +381,18 @@ impl ElectrumWallet {
         Ok(())
     }
 
+    /// Combine a vector of PSET
+    pub fn combine(
+        &self,
+        psets: &[PartiallySignedTransaction],
+    ) -> Result<PartiallySignedTransaction, Error> {
+        let mut res = psets.get(0).ok_or_else(|| Error::MissingPset)?.clone();
+        for pset in psets.iter().skip(1) {
+            res.merge(pset.clone())?;
+        }
+        Ok(res)
+    }
+
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();

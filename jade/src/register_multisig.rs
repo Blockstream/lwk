@@ -1,6 +1,6 @@
 use elements::bitcoin::bip32::ExtendedPubKey;
 use elements_miniscript::{
-    confidential::Key, ConfidentialDescriptor, Descriptor, DescriptorPublicKey,
+    confidential::Key, ConfidentialDescriptor, Descriptor, DescriptorPublicKey, Terminal,
 };
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ pub struct RegisterMultisigParams {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct JadeDescriptor {
-    pub variant: String, // TODO make enum with segwit types: 'variant' indicates the script type used, and must be one of: 'sh(multi(k))', 'wsh(multi(k))' or 'sh(wsh(multi(k)))'
+    pub variant: String, // only 'wsh(multi(k))' supported for now
     pub sorted: bool,
     pub threshold: u32,
 
@@ -45,7 +45,6 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                     sorted = true;
 
                     for pk in x.pks.iter() {
-                        println!("{}", pk);
                         let signer = MultisigSigner {
                             fingerprint: pk.master_fingerprint().as_bytes().to_vec(),
                             derivation: derivation_path_to_vec(&pk.full_derivation_path().unwrap()),
@@ -55,8 +54,25 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                         signers.push(signer);
                     }
                 }
-                elements_miniscript::descriptor::WshInner::Ms(_x) => {
-                    todo!()
+                elements_miniscript::descriptor::WshInner::Ms(x) => {
+                    sorted = false;
+
+                    if let Terminal::Multi(t, keys) = &x.node {
+                        threshold = *t as u32;
+                        for pk in keys {
+                            let signer = MultisigSigner {
+                                fingerprint: pk.master_fingerprint().as_bytes().to_vec(),
+                                derivation: derivation_path_to_vec(
+                                    &pk.full_derivation_path().unwrap(),
+                                ),
+                                xpub: pk.to_string().replace("/*", "").parse().unwrap(),
+                                path: vec![],
+                            };
+                            signers.push(signer);
+                        }
+                    } else {
+                        return Err(());
+                    }
                 }
             },
 
@@ -107,33 +123,36 @@ mod test {
         let a= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG";
         let b: &str = "tpubDDExQpZg2tziZ7ACSBCYsY3rYxAZtTRBgWwioRLYqgNBguH6rMHN1D8epTxUQUB5kM5nxkEtr2SNic6PJLPubcGMR6S2fmDZTzL9dHpU7ka";
         let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-        let desc = format!("ct(slip77({slip77_key}),elwsh(sortedmulti(2,{a}/*,{b}/*)))");
-        let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
+        let kind = ["sortedmulti", "multi"];
+        for k in kind {
+            let desc = format!("ct(slip77({slip77_key}),elwsh({k}(2,{a}/*,{b}/*)))");
+            let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 
-        let jade_desc: JadeDescriptor = desc.try_into().unwrap();
+            let jade_desc: JadeDescriptor = desc.try_into().unwrap();
 
-        assert_eq!(
-            jade_desc,
-            JadeDescriptor {
-                variant: "wsh(multi(k))".to_string(),
-                sorted: true,
-                threshold: 2,
-                master_blinding_key: hex::decode(slip77_key).unwrap(),
-                signers: vec![
-                    MultisigSigner {
-                        fingerprint: vec![146, 26, 57, 253],
-                        derivation: vec![],
-                        xpub: a.parse().unwrap(),
-                        path: vec![]
-                    },
-                    MultisigSigner {
-                        fingerprint: vec![195, 206, 35, 178],
-                        derivation: vec![],
-                        xpub: b.parse().unwrap(),
-                        path: vec![]
-                    }
-                ]
-            }
-        )
+            assert_eq!(
+                jade_desc,
+                JadeDescriptor {
+                    variant: "wsh(multi(k))".to_string(),
+                    sorted: k == "sortedmulti",
+                    threshold: 2,
+                    master_blinding_key: hex::decode(slip77_key).unwrap(),
+                    signers: vec![
+                        MultisigSigner {
+                            fingerprint: vec![146, 26, 57, 253],
+                            derivation: vec![],
+                            xpub: a.parse().unwrap(),
+                            path: vec![]
+                        },
+                        MultisigSigner {
+                            fingerprint: vec![195, 206, 35, 178],
+                            derivation: vec![],
+                            xpub: b.parse().unwrap(),
+                            path: vec![]
+                        }
+                    ]
+                }
+            )
+        }
     }
 }

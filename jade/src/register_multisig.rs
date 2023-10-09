@@ -1,6 +1,7 @@
 use elements::bitcoin::bip32::ExtendedPubKey;
 use elements_miniscript::{
-    confidential::Key, ConfidentialDescriptor, Descriptor, DescriptorPublicKey, Terminal,
+    confidential::Key, descriptor::WshInner, ConfidentialDescriptor, Descriptor,
+    DescriptorPublicKey, Terminal,
 };
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +58,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
         let mut signers = vec![];
         match desc.descriptor {
             Descriptor::Wsh(s) => match s.as_inner() {
-                elements_miniscript::descriptor::WshInner::SortedMulti(x) => {
+                WshInner::SortedMulti(x) => {
                     threshold = x.k as u32;
                     sorted = true;
 
@@ -65,7 +66,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                         signers.push(pk.try_into()?);
                     }
                 }
-                elements_miniscript::descriptor::WshInner::Ms(x) => {
+                WshInner::Ms(x) => {
                     sorted = false;
 
                     if let Terminal::Multi(t, keys) = &x.node {

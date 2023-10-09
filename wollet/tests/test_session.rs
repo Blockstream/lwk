@@ -469,6 +469,13 @@ impl TestElectrumWallet {
         ];
         let mut pset = self.electrum_wallet.sendmany(addressees, fee_rate).unwrap();
 
+        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let fee = details.fee as i64;
+        assert!(fee > 0);
+        // Checking the balance here has a bit too many cases:
+        // asset1,2 are btc, asset1,2 are equal, addr1,2 belong to the wallet
+        // Skipping the checks here
+
         for signer in signers {
             self.sign(signer.as_ref(), &mut pset);
         }

@@ -3,6 +3,7 @@ use elements::{
 };
 
 use crate::{
+    derivation_path_to_vec,
     sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
@@ -113,15 +114,7 @@ impl Jade {
             if iter.next().is_some() {
                 panic!("other bip32 derivations..."); // TODO
             }
-            let path: Vec<u32> = entry
-                .1
-                 .1
-                .into_iter()
-                .map(|e| match e {
-                    ChildNumber::Normal { index } => *index,
-                    ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
-                })
-                .collect();
+            let path: Vec<u32> = derivation_path_to_vec(&entry.1 .1);
             // TODO multisig
 
             let txout = input

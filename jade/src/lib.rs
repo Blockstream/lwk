@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
+use elements::bitcoin::bip32::{ChildNumber, DerivationPath};
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
     EpochParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData,
@@ -189,4 +190,13 @@ impl Jade {
             }
         }
     }
+}
+
+pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
+    path.into_iter()
+        .map(|e| match e {
+            ChildNumber::Normal { index } => *index,
+            ChildNumber::Hardened { index: _ } => panic!("unexpected hardened deriv"),
+        })
+        .collect()
 }

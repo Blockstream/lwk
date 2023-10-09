@@ -10,18 +10,24 @@ use bs_containers::{
 use elements::{
     bitcoin,
     pset::PartiallySignedTransaction,
-    secp256k1_zkp::{ecdsa::Signature, Message},
-    AddressParams,
+    secp256k1_zkp::{ecdsa::Signature, Message, Secp256k1},
+    Address, AddressParams,
 };
 use elements::{
     bitcoin::{bip32::ExtendedPubKey, sign_message::signed_msg_hash},
     hashes::Hash,
 };
-use jade::register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams};
+use elements_miniscript::{
+    confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
+};
+use jade::{
+    get_receive_address::{GetReceiveAddressParams, Multi, Single},
+    register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
+};
 use jade::{
     protocol::{
-        DebugSetMnemonicParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams,
-        HandshakeCompleteParams, HandshakeParams, SignMessageParams, UpdatePinserverParams,
+        DebugSetMnemonicParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
+        HandshakeParams, SignMessageParams, UpdatePinserverParams,
     },
     Jade,
 };
@@ -163,8 +169,11 @@ fn jade_receive_address() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = GetReceiveAddressParams {
         network: jade::Network::LocaltestLiquid,
-        variant: "sh(wpkh(k))".into(),
-        path: [2147483697, 2147483648, 2147483648, 0, 143].to_vec(),
+        single: Some(Single {
+            variant: "sh(wpkh(k))".into(),
+            path: [2147483697, 2147483648, 2147483648, 0, 143].to_vec(),
+        }),
+        multi: None,
     };
     let result = initialized_jade.jade.get_receive_address(params).unwrap();
     let address = elements::Address::from_str(result.get()).unwrap();
@@ -224,6 +233,60 @@ fn jade_register_multisig() {
 }
 
 #[test]
+fn jade_register_multisig_check_address() {
+    let docker = clients::Cli::default();
+
+    let network = jade::Network::LocaltestLiquid;
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let jade = &mut initialized_jade.jade;
+
+    let multisig_name = "you_and_me".to_string();
+    let result = jade.get_master_xpub(network).unwrap();
+    let jade_master_xpub: ExtendedPubKey = result.get().parse().unwrap();
+    let other_signer: ExtendedPubKey= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap();
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+
+    let desc =
+        format!("ct(slip77({slip77_key}),elwsh(multi(2,{jade_master_xpub}/*,{other_signer}/*)))");
+
+    let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
+    let jade_desc: JadeDescriptor = (&desc).try_into().unwrap();
+    jade.register_multisig(RegisterMultisigParams {
+        network,
+        multisig_name: multisig_name.clone(),
+        descriptor: jade_desc,
+    })
+    .unwrap();
+
+    let result = jade
+        .get_receive_address(GetReceiveAddressParams {
+            network,
+            single: None,
+            multi: Some(Multi {
+                multisig_name,
+                paths: vec![vec![0], vec![0]],
+            }),
+        })
+        .unwrap();
+    let address_jade: Address = result.get().parse().unwrap();
+
+    // copied from wollet derive_address
+    let derived_non_conf = desc.descriptor.at_derivation_index(0).unwrap();
+    let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
+        key: match desc.key {
+            Key::Slip77(x) => Key::Slip77(x),
+            _ => panic!("wrong master blinding key type"),
+        },
+        descriptor: derived_non_conf,
+    };
+    let address_desc = derived_conf
+        .address(&Secp256k1::new(), &AddressParams::ELEMENTS)
+        .unwrap();
+
+    assert_eq!(address_desc, address_jade);
+}
+
+#[test]
 fn jade_sign_message() {
     // TODO create anti exfil commitments
     // The following are taken from jade tests, even though they may be random if we are not verifying.
@@ -259,7 +322,7 @@ fn jade_sign_message() {
     let message = Message::from_slice(msg_hash.as_byte_array()).unwrap();
     let signature = Signature::from_compact(&signature_bytes).unwrap();
 
-    assert!(elements::secp256k1_zkp::Secp256k1::verification_only()
+    assert!(Secp256k1::verification_only()
         .verify_ecdsa(&message, &signature, &xpub.public_key)
         .is_ok());
 

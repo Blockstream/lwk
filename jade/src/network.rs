@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Network {
     Liquid,
     TestnetLiquid,

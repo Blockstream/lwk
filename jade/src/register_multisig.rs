@@ -44,10 +44,10 @@ pub enum Error {
     UnsupportedDescriptorVariant,
 }
 
-impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
+impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
     type Error = Error;
 
-    fn try_from(desc: ConfidentialDescriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
+    fn try_from(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
         let variant = "wsh(multi(k))".to_string(); // only supported one for now
         let master_blinding_key = match desc.key {
             Key::Slip77(k) => k.as_bytes().to_vec(),
@@ -56,7 +56,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
         let sorted;
         let threshold;
         let mut signers = vec![];
-        match desc.descriptor {
+        match &desc.descriptor {
             Descriptor::Wsh(s) => match s.as_inner() {
                 WshInner::SortedMulti(x) => {
                     threshold = x.k as u32;
@@ -154,7 +154,7 @@ mod test {
                 let desc = format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/*,{b}/*)))");
                 let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 
-                let jade_desc: JadeDescriptor = desc.try_into().unwrap();
+                let jade_desc: JadeDescriptor = (&desc).try_into().unwrap();
 
                 assert_eq!(
                     jade_desc,

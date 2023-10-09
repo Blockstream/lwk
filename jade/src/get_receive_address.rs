@@ -4,9 +4,11 @@ use serde::{Deserialize, Serialize};
 pub struct GetReceiveAddressParams {
     pub network: crate::Network,
 
+    /// Specify when asking a singlesig address. Cannot be specified if `multi` is some.
     #[serde(flatten)]
     pub single: Option<Single>,
 
+    /// Specify when asking a singlesig address. Cannot be specified if `single` is some.
     #[serde(flatten)]
     pub multi: Option<Multi>,
 }
@@ -22,8 +24,8 @@ pub struct Single {
 
 pub struct Multi {
     /// Previously register multisig wallet, cannot be specified with `variant`
-    multisig_name: String,
-    paths: Vec<Vec<u32>>,
+    pub multisig_name: String,
+    pub paths: Vec<Vec<u32>>,
 }
 
 #[cfg(test)]
@@ -39,7 +41,7 @@ mod test {
             "path": [2147483697, 2147483648, 2147483648, 0, 143]
         }
         "#;
-        let a: GetReceiveAddressParams = serde_json::from_str(&single).unwrap();
+        let a: GetReceiveAddressParams = serde_json::from_str(single).unwrap();
         assert_eq!(a.single.unwrap().variant, "sh(wpkh(k))");
         assert!(a.multi.is_none());
 
@@ -53,7 +55,7 @@ mod test {
             ]
         }
         "#;
-        let b: GetReceiveAddressParams = serde_json::from_str(&multi).unwrap();
+        let b: GetReceiveAddressParams = serde_json::from_str(multi).unwrap();
         assert_eq!(b.multi.unwrap().multisig_name, "small_beans");
         assert!(b.single.is_none());
     }

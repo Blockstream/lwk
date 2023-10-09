@@ -3,6 +3,7 @@ use serde_bytes::ByteBuf;
 
 use crate::{
     error::ErrorDetails,
+    get_receive_address::GetReceiveAddressParams,
     register_multisig::RegisterMultisigParams,
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
 };
@@ -67,13 +68,6 @@ pub struct GetXpubParams {
     pub network: crate::Network,
 
     /// Derive the master node (m) with the given path and the return the resuting xpub
-    pub path: Vec<u32>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct GetReceiveAddressParams {
-    pub network: crate::Network,
-    pub variant: String,
     pub path: Vec<u32>,
 }
 

@@ -2,11 +2,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
 use elements::bitcoin::bip32::{ChildNumber, DerivationPath};
+use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
-    EpochParams, GetReceiveAddressParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeParams, Params, PingResult, Request, Response, SignMessageParams, StringResult,
-    UpdatePinserverParams, VersionInfoResult,
+    EpochParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params,
+    PingResult, Request, Response, SignMessageParams, StringResult, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
@@ -17,6 +18,7 @@ use crate::error::Error;
 
 pub mod connection;
 pub mod error;
+pub mod get_receive_address;
 pub mod lock_jade;
 mod network;
 pub mod protocol;

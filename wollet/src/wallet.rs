@@ -354,7 +354,8 @@ impl ElectrumWallet {
 
     /// Add the PSET details with respect to the wallet
     pub fn add_details(&self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
-        for (idx, input) in pset.clone().inputs().iter().enumerate() {
+        let pset_clone = pset.clone();
+        for (idx, input) in pset_clone.inputs().iter().enumerate() {
             if let Some(txout) = input.witness_utxo.as_ref() {
                 match self.definite_descriptor(&txout.script_pubkey) {
                     Ok(desc) => {
@@ -367,7 +368,7 @@ impl ElectrumWallet {
             }
         }
 
-        for (idx, output) in pset.clone().outputs().iter().enumerate() {
+        for (idx, output) in pset_clone.outputs().iter().enumerate() {
             match self.definite_descriptor(&output.script_pubkey) {
                 Ok(desc) => {
                     pset.update_output_with_descriptor(idx, &desc)

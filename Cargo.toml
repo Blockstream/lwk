@@ -1,6 +1,8 @@
 [workspace]
 
 members = [
+    "app",
+    "cli",
     "hwi",
     "jade",
     "software_signer",

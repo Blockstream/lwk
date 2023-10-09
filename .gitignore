@@ -4,3 +4,4 @@ target*
 bak*
 bin/
 .vscode
+debug.log

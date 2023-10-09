@@ -518,12 +518,37 @@ fn multisig_flow() {
         signer1.xpub(),
         signer2.xpub()
     );
-    let _wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
     // Sharing desc_str grants watch only access to the wallet.
     // Each signer should have access to desc_str to understand how a PSET is affecting the wallet.
 
     // * Multisig Setup: Complete
+
+    // * Multisig Sign: Start
+    // Fund the wallet
+    wallet.fund_btc(&server);
+    // Create a simple PSET
+    let satoshi = 1_000;
+    let node_addr = server.node_getnewaddress().to_string();
+    let pset = wallet
+        .electrum_wallet
+        .sendlbtc(satoshi, &node_addr, None)
+        .unwrap();
+
+    // Send the PSET to each signer
+    let mut pset1 = pset.clone();
+    let mut pset2 = pset;
+    wallet.sign(&signer1, &mut pset1);
+    wallet.sign(&signer2, &mut pset2);
+
+    // Collect and combine the PSETs
+    let mut pset = wallet.electrum_wallet.combine(&vec![pset1, pset2]).unwrap();
+
+    // Finalize and send the PSET
+    wallet.send(&mut pset);
+
+    // * Multisig Sign: Complete
 }
 #[test]
 fn jade_sign_wollet_pset() {

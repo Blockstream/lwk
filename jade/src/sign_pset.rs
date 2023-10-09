@@ -1,6 +1,4 @@
-use elements::{
-    bitcoin::bip32::ChildNumber, encode::serialize, pset::PartiallySignedTransaction, Script,
-};
+use elements::{encode::serialize, pset::PartiallySignedTransaction, Script};
 
 use crate::{
     derivation_path_to_vec,

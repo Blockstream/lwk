@@ -45,13 +45,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                     sorted = true;
 
                     for pk in x.pks.iter() {
-                        let signer = MultisigSigner {
-                            fingerprint: pk.master_fingerprint().as_bytes().to_vec(),
-                            derivation: derivation_path_to_vec(&pk.full_derivation_path().unwrap()),
-                            xpub: pk.to_string().replace("/*", "").parse().unwrap(),
-                            path: vec![],
-                        };
-                        signers.push(signer);
+                        signers.push(pk.try_into().unwrap());
                     }
                 }
                 elements_miniscript::descriptor::WshInner::Ms(x) => {
@@ -60,15 +54,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
                     if let Terminal::Multi(t, keys) = &x.node {
                         threshold = *t as u32;
                         for pk in keys {
-                            let signer = MultisigSigner {
-                                fingerprint: pk.master_fingerprint().as_bytes().to_vec(),
-                                derivation: derivation_path_to_vec(
-                                    &pk.full_derivation_path().unwrap(),
-                                ),
-                                xpub: pk.to_string().replace("/*", "").parse().unwrap(),
-                                path: vec![],
-                            };
-                            signers.push(signer);
+                            signers.push(pk.try_into().unwrap());
                         }
                     } else {
                         return Err(());
@@ -84,6 +70,19 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
             threshold,
             master_blinding_key,
             signers,
+        })
+    }
+}
+
+impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
+    type Error = ();
+
+    fn try_from(value: &DescriptorPublicKey) -> Result<Self, Self::Error> {
+        Ok(MultisigSigner {
+            fingerprint: value.master_fingerprint().as_bytes().to_vec(),
+            derivation: derivation_path_to_vec(&value.full_derivation_path().unwrap()),
+            xpub: value.to_string().replace("/*", "").parse().unwrap(),
+            path: vec![],
         })
     }
 }

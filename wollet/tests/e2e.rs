@@ -355,8 +355,14 @@ fn multiple_descriptors() {
     let details_t = wallet_t.electrum_wallet.get_details(&pset).unwrap();
     assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_ar as i64);
     assert_eq!(*details_t.balances.get(token).unwrap(), 0i64);
-    wallet_t.sign(&signer_t1, &mut pset);
-    wallet_t.sign(&signer_t2, &mut pset);
+    let mut pset_t1 = pset.clone();
+    let mut pset_t2 = pset.clone();
+    wallet_t.sign(&signer_t1, &mut pset_t1);
+    wallet_t.sign(&signer_t2, &mut pset_t2);
+    let mut pset = wallet_t
+        .electrum_wallet
+        .combine(&vec![pset_t1, pset_t2])
+        .unwrap();
     wallet_t.send(&mut pset);
     assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
     assert_eq!(wallet_t.balance(token), satoshi_t);

@@ -1,6 +1,5 @@
 use elements::{
-    bitcoin::bip32::ChildNumber, confidential::Value, encode::serialize,
-    pset::PartiallySignedTransaction, Script,
+    bitcoin::bip32::ChildNumber, encode::serialize, pset::PartiallySignedTransaction, Script,
 };
 
 use crate::{

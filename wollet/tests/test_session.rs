@@ -599,6 +599,19 @@ impl TestElectrumWallet {
             .electrum_wallet
             .burnasset(&asset.to_string(), satoshi_asset, fee_rate)
             .unwrap();
+
+        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let fee = details.fee as i64;
+        assert!(fee > 0);
+        let btc = self.policy_asset();
+        let (expected_asset, expected_btc) = if asset == &btc {
+            (0, -(fee + satoshi_asset as i64))
+        } else {
+            (-(satoshi_asset as i64), -fee)
+        };
+        assert_eq!(*details.balances.get(&btc).unwrap(), expected_btc);
+        assert_eq!(*details.balances.get(asset).unwrap_or(&0), expected_asset);
+
         for signer in signers {
             self.sign(signer.as_ref(), &mut pset);
         }

@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
-use elements::bitcoin::bip32::{ChildNumber, DerivationPath};
+use elements::bitcoin::bip32::DerivationPath;
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
@@ -202,10 +202,5 @@ impl Jade {
 }
 
 pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
-    path.into_iter()
-        .map(|e| match e {
-            ChildNumber::Normal { index } => *index,
-            ChildNumber::Hardened { index } => *index,
-        })
-        .collect()
+    path.into_iter().map(|e| (*e).into()).collect()
 }

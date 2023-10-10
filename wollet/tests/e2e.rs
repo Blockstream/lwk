@@ -612,3 +612,33 @@ fn jade_sign_wollet_pset() {
 
     wallet.send(&mut pset);
 }
+
+#[test]
+fn jade_single_sig() {
+    let server = setup();
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let _signer = Signer::Jade(&jade_init.jade);
+    // FIXME: implement Signer::xpub
+    let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
+
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    wallet.fund_btc(&server);
+    let satoshi_utxo1 = wallet.balance(&wallet.policy_asset());
+    wallet.fund_btc(&server);
+
+    let satoshi = satoshi_utxo1 + 1;
+    let node_addr = server.node_getnewaddress().to_string();
+    let mut _pset = wallet
+        .electrum_wallet
+        .sendlbtc(satoshi, &node_addr, None)
+        .unwrap();
+
+    // FIXME: Jade cannot sign transactions with multiple inputs
+    // wallet.sign(&signer, &mut pset);
+    // wallet.send(&mut pset);
+}

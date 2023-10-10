@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Network;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct SignLiquidTxParams {
     pub network: Network,
 
@@ -20,6 +20,21 @@ pub struct SignLiquidTxParams {
     pub trusted_commitments: Vec<Option<Commitment>>,
 
     pub additional_info: Option<AdditionalInfo>,
+}
+
+impl std::fmt::Debug for SignLiquidTxParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SignLiquidTxParams")
+            .field("network", &self.network)
+            .field("txn_bytes", &self.txn.len())
+            .field("num_inputs", &self.num_inputs)
+            .field("use_ae_signatures", &self.use_ae_signatures)
+            .field("change", &self.change)
+            .field("asset_info", &self.asset_info)
+            .field("trusted_commitments", &self.trusted_commitments)
+            .field("additional_info", &self.additional_info)
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

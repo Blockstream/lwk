@@ -155,9 +155,9 @@ impl Jade {
         let hex_enc = hex::encode(&buf);
         println!(
             "\n--->\t{:?}\n\t({} bytes) {}",
-            &req_str[..req_str.len().min(1000)],
+            &req_str,
             buf.len(),
-            &hex_enc[..hex_enc.len().min(1000)],
+            &hex_enc,
         );
 
         self.conn.write_all(&buf).unwrap();

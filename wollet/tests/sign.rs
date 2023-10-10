@@ -12,7 +12,7 @@ pub enum Error {
 
 pub trait Sign {
     /// Try to sign the given pset, mutating it in place.
-    /// returns how many signatures were added
+    /// returns how many signatures were added or overwritten
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error>;
 }
 

@@ -623,7 +623,8 @@ impl TestElectrumWallet {
     }
 
     pub fn sign(&self, signer: &dyn Sign, pset: &mut PartiallySignedTransaction) {
-        signer.sign(pset).unwrap();
+        let sigs_added_or_overwritten = signer.sign(pset).unwrap();
+        assert!(sigs_added_or_overwritten > 0);
     }
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {

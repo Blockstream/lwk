@@ -262,3 +262,24 @@ pub fn pset_balance(
 
     Ok(PsetBalance { fee, balances })
 }
+
+pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures> {
+    pset.inputs()
+        .iter()
+        .map(|input| {
+            let mut has_signature = vec![];
+            let mut missing_signature = vec![];
+            for (pk, ks) in input.bip32_derivation.clone() {
+                if input.partial_sigs.contains_key(&pk) {
+                    has_signature.push((pk, ks));
+                } else {
+                    missing_signature.push((pk, ks));
+                }
+            }
+            PsetSignatures {
+                has_signature,
+                missing_signature,
+            }
+        })
+        .collect()
+}

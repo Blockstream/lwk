@@ -25,6 +25,14 @@ pub struct PsetSignatures {
     pub missing_signature: Vec<(PublicKey, KeySource)>,
 }
 
+#[derive(Debug)]
+pub struct PsetDetails {
+    pub balance: PsetBalance,
+
+    /// For each input, existing or missing signatures
+    pub sig_details: Vec<PsetSignatures>,
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("There is no unblinding information and Input #{idx} is missing witness_utxo of outpoint {previous_outpoint}")]

@@ -82,6 +82,7 @@ pub struct SignMessageParams {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetSignatureParams {
+    /// 32 bytes anti-exfiltration entropy
     #[serde(with = "serde_bytes")]
     pub ae_host_entropy: Vec<u8>,
 }

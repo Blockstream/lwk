@@ -32,7 +32,7 @@ fn liquid() {
 
     wallet.send_btc(&signers_with_jade, None);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(&signers, &node_address, &asset, None);
+    wallet.send_asset(&signers_with_jade, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(

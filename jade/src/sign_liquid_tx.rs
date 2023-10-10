@@ -126,6 +126,10 @@ pub struct TxInputParams {
     pub path: Vec<u32>,
 
     pub sighash: Option<u32>,
+
+    /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
+    #[serde(with = "serde_bytes")]
+    pub ae_host_commitment: Vec<u8>,
 }
 
 #[cfg(test)]

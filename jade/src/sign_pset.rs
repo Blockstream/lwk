@@ -2,6 +2,7 @@ use elements::{encode::serialize, pset::PartiallySignedTransaction, Script};
 
 use crate::{
     derivation_path_to_vec,
+    protocol::GetSignatureParams,
     sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
@@ -97,7 +98,7 @@ impl Jade {
             network: crate::Network::LocaltestLiquid,
             txn,
             num_inputs: tx.input.len() as u32,
-            use_ae_signatures: false,
+            use_ae_signatures: true,
             change,
             asset_info: vec![], // TODO
             trusted_commitments,
@@ -133,8 +134,19 @@ impl Jade {
                     .to_vec(),
                 path,
                 sighash: Some(1),
+                ae_host_commitment: vec![1u8; 32],
             };
-            let sig: Vec<u8> = self.tx_input(params)?.into();
+            let _signer_commitment: Vec<u8> = self.tx_input(params)?.into();
+        }
+
+        for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
+            let mut iter = input.bip32_derivation.clone().into_iter();
+            let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
+
+            let params = GetSignatureParams {
+                ae_host_entropy: vec![1u8; 32],
+            };
+            let sig: Vec<u8> = self.get_signature_for_tx(params)?.into();
 
             input.partial_sigs.insert(entry.0, sig);
             sigs_added_or_overwritten += 1;

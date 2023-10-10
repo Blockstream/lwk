@@ -5,7 +5,6 @@ use std::{
 };
 
 use error::{Error, METHOD_NOT_FOUND};
-use serde::ser::SerializeStruct;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Response as HttpResponse;
@@ -168,11 +167,13 @@ pub struct Request {
     pub params: Option<Value>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Response {
     pub jsonrpc: String,
     pub id: Option<Id>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<RpcError>,
 }
 
@@ -219,23 +220,6 @@ impl Response {
 
     pub fn is_result(&self) -> bool {
         self.result.is_some()
-    }
-}
-
-impl serde::Serialize for Response {
-    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut s = serializer.serialize_struct("Response", 3)?;
-        s.serialize_field("jsonrpc", &self.jsonrpc)?;
-        if self.result.is_some() {
-            s.serialize_field("result", &self.result)?;
-        } else {
-            s.serialize_field("error", &self.error)?;
-        }
-        s.serialize_field("id", &self.id)?;
-        s.end()
     }
 }
 

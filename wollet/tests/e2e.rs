@@ -554,12 +554,22 @@ fn multisig_flow() {
 
     // Send the PSET to each signer
     let mut pset1 = pset.clone();
-    let mut pset2 = pset;
+    let mut pset2 = pset.clone();
     wallet.sign(&signer1, &mut pset1);
     wallet.sign(&signer2, &mut pset2);
 
     // Collect and combine the PSETs
-    // FIXME: "coordinator" should be able to tell which signatures are missing
+    let details = wallet.electrum_wallet.get_details(&pset).unwrap();
+    for idx in 0..pset.n_inputs() {
+        // Each input has 2 misaing signatures
+        let sig = &details.sig_details[idx];
+        assert_eq!(sig.has_signature.len(), 0);
+        assert_eq!(sig.missing_signature.len(), 2);
+        // Signatures are expected from signer1 and signer2
+        let fingerprints: HashSet<_> = sig.missing_signature.iter().map(|(_, (f, _))| f).collect();
+        assert!(fingerprints.contains(&signer1.fingerprint()));
+        assert!(fingerprints.contains(&signer2.fingerprint()));
+    }
     let mut pset = wallet.electrum_wallet.combine(&vec![pset1, pset2]).unwrap();
 
     // Finalize and send the PSET

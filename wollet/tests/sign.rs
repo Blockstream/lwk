@@ -18,7 +18,7 @@ pub trait Sign {
 
 pub enum Signer<'a> {
     Software(SwSigner<'a>),
-    Jade(LockJade),
+    Jade(&'a LockJade),
 }
 
 impl Sign for LockJade {

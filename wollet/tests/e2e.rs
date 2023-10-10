@@ -619,7 +619,7 @@ fn jade_single_sig() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let _signer = Signer::Jade(&jade_init.jade);
+    let signer = Signer::Jade(&jade_init.jade);
     // FIXME: implement Signer::xpub
     let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
 
@@ -633,12 +633,11 @@ fn jade_single_sig() {
 
     let satoshi = satoshi_utxo1 + 1;
     let node_addr = server.node_getnewaddress().to_string();
-    let mut _pset = wallet
+    let mut pset = wallet
         .electrum_wallet
         .sendlbtc(satoshi, &node_addr, None)
         .unwrap();
 
-    // FIXME: Jade cannot sign transactions with multiple inputs
-    // wallet.sign(&signer, &mut pset);
-    // wallet.send(&mut pset);
+    wallet.sign(&signer, &mut pset);
+    wallet.send(&mut pset);
 }

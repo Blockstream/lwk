@@ -19,6 +19,12 @@ pub struct PsetBalance {
     pub balances: HashMap<AssetId, i64>,
 }
 
+#[derive(Debug)]
+pub struct PsetSignatures {
+    pub has_signature: Vec<(PublicKey, KeySource)>,
+    pub missing_signature: Vec<(PublicKey, KeySource)>,
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("There is no unblinding information and Input #{idx} is missing witness_utxo of outpoint {previous_outpoint}")]

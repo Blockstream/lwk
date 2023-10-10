@@ -16,6 +16,11 @@ pub trait Sign {
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error>;
 }
 
+pub enum Signer<'a> {
+    Software(SwSigner<'a>),
+    Jade(LockJade),
+}
+
 impl Sign for LockJade {
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
         Ok(self.sign_pset(pset)?)
@@ -25,5 +30,14 @@ impl Sign for LockJade {
 impl<'a> Sign for SwSigner<'a> {
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
         Ok(self.sign_pset(pset)?)
+    }
+}
+
+impl<'a> Sign for Signer<'a> {
+    fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
+        Ok(match self {
+            Signer::Software(signer) => signer.sign_pset(pset)?,
+            Signer::Jade(signer) => signer.sign_pset(pset)?,
+        })
     }
 }

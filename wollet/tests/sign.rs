@@ -35,6 +35,12 @@ impl<'a> Sign for SwSigner<'a> {
 
 impl<'a> Sign for Signer<'a> {
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
+        Sign::sign(&self, pset)
+    }
+}
+
+impl<'a> Sign for &Signer<'a> {
+    fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
         Ok(match self {
             Signer::Software(signer) => signer.sign_pset(pset)?,
             Signer::Jade(signer) => signer.sign_pset(pset)?,

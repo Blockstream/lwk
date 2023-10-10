@@ -4,6 +4,7 @@ use elements::pset::PartiallySignedTransaction;
 
 use crate::{protocol::StringResult, sign_pset, Jade};
 
+#[derive(Debug)]
 pub struct LockJade(Mutex<Jade>);
 
 impl LockJade {

@@ -49,7 +49,7 @@ impl Jade {
     pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
-        let mut signatures_added = 0;
+        let mut sigs_added_or_overwritten = 0;
 
         let mut trusted_commitments = vec![];
         let mut change = vec![];
@@ -136,13 +136,11 @@ impl Jade {
             };
             let sig: Vec<u8> = self.tx_input(params)?.into();
 
-            let insterted = input.partial_sigs.insert(entry.0, sig);
-            if insterted.is_none() {
-                signatures_added += 1;
-            }
+            input.partial_sigs.insert(entry.0, sig);
+            sigs_added_or_overwritten += 1;
         }
 
-        Ok(signatures_added)
+        Ok(sigs_added_or_overwritten)
     }
 }
 

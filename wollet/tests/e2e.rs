@@ -4,6 +4,7 @@ mod test_session;
 
 use bs_containers::testcontainers::clients::Cli;
 use jade::protocol::GetXpubParams;
+use sign::Signer;
 use software_signer::*;
 use std::collections::HashSet;
 use test_session::*;
@@ -15,15 +16,16 @@ use crate::{jade_emulator::inner_jade_debug_initialization, sign::Sign};
 fn liquid() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
+    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
-    let signers: [Box<dyn Sign>; 1] = [Box::new(signer.clone())];
+    let signers = [&Signer::Software(signer.clone())];
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let signers_with_jade: [Box<dyn Sign>; 2] = [Box::new(signer), Box::new(jade_init.jade)];
+    let signers_with_jade = [&Signer::Software(signer), &Signer::Jade(&jade_init.jade)];
+    dbg!(&jade_init);
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
@@ -95,45 +97,45 @@ fn roundtrip() {
         signer51.xpub(),
         signer52.xpub()
     );
-    let signers1: [Box<dyn Sign>; 1] = [Box::new(signer1)];
-    let signers2: [Box<dyn Sign>; 1] = [Box::new(signer2)];
-    let signers3: [Box<dyn Sign>; 1] = [Box::new(signer3)];
-    let signers4: [Box<dyn Sign>; 1] = [Box::new(signer4)];
-    let signers5: [Box<dyn Sign>; 2] = [Box::new(signer51), Box::new(signer52)];
+    let signers1 = [&Signer::Software(signer1)];
+    let signers2 = [&Signer::Software(signer2)];
+    let signers3 = [&Signer::Software(signer3)];
+    let signers4 = [&Signer::Software(signer4)];
+    let signers5 = [&Signer::Software(signer51), &Signer::Software(signer52)];
 
-    // std::thread::scope(|s| {
-    for (signers, desc) in [
-        (&signers1[..], desc1),
-        (&signers2[..], desc2),
-        (&signers3[..], desc3),
-        (&signers4[..], desc4),
-        (&signers5[..], desc5),
-    ] {
-        let server = &server;
-        let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
-        // s.spawn(move || {
-        wallet.fund_btc(server);
-        server.generate(1);
-        wallet.send_btc(signers, None);
-        let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
-        let node_address = server.node_getnewaddress();
-        wallet.send_asset(signers, &node_address, &asset, None);
-        let node_address1 = server.node_getnewaddress();
-        let node_address2 = server.node_getnewaddress();
-        wallet.send_many(
-            signers,
-            &node_address1,
-            &asset,
-            &node_address2,
-            &wallet.policy_asset(),
-            None,
-        );
-        wallet.reissueasset(signers, 10_000, &asset, None);
-        wallet.burnasset(signers, 5_000, &asset, None);
-        server.generate(2);
-        // });
-    }
-    // });
+    std::thread::scope(|s| {
+        for (signers, desc) in [
+            (&signers1[..], desc1),
+            (&signers2[..], desc2),
+            (&signers3[..], desc3),
+            (&signers4[..], desc4),
+            (&signers5[..], desc5),
+        ] {
+            let server = &server;
+            let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
+            s.spawn(move || {
+                wallet.fund_btc(server);
+                server.generate(1);
+                wallet.send_btc(signers, None);
+                let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
+                let node_address = server.node_getnewaddress();
+                wallet.send_asset(signers, &node_address, &asset, None);
+                let node_address1 = server.node_getnewaddress();
+                let node_address2 = server.node_getnewaddress();
+                wallet.send_many(
+                    signers,
+                    &node_address1,
+                    &asset,
+                    &node_address2,
+                    &wallet.policy_asset(),
+                    None,
+                );
+                wallet.reissueasset(signers, 10_000, &asset, None);
+                wallet.burnasset(signers, 5_000, &asset, None);
+                server.generate(2);
+            });
+        }
+    });
 }
 
 #[test]
@@ -235,7 +237,7 @@ fn fee_rate() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers: [Box<dyn Sign>; 1] = [Box::new(signer)];
+    let signers = [&Signer::Software(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -266,7 +268,7 @@ fn contract() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers: [Box<dyn Sign>; 1] = [Box::new(signer)];
+    let signers = [&Signer::Software(signer)];
 
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -379,8 +381,13 @@ fn createpset_error() {
     wallet.fund_btc(&server);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
-    let (asset, token) =
-        wallet.issueasset(&[Box::new(signer.clone())], satoshi_a, satoshi_t, "", None);
+    let (asset, token) = wallet.issueasset(
+        &[&Signer::Software(signer.clone())],
+        satoshi_a,
+        satoshi_t,
+        "",
+        None,
+    );
     let asset = asset.to_string();
     let token = token.to_string();
 
@@ -555,7 +562,7 @@ fn multisig_flow() {
 fn jade_sign_wollet_pset() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
+    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);

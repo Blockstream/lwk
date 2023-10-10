@@ -6,7 +6,7 @@ use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
-use crate::sign::Sign;
+use crate::sign::{Sign, Signer};
 use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
@@ -383,7 +383,7 @@ impl TestElectrumWallet {
         asset
     }
 
-    pub fn send_btc(&mut self, signers: &[Box<dyn Sign>], fee_rate: Option<f32>) {
+    pub fn send_btc(&mut self, signers: &[&Signer], fee_rate: Option<f32>) {
         let balance_before = self.balance_btc();
         let satoshi: u64 = 10_000;
         let address = self.address();
@@ -398,7 +398,7 @@ impl TestElectrumWallet {
         assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -408,7 +408,7 @@ impl TestElectrumWallet {
 
     pub fn send_asset(
         &mut self,
-        signers: &[Box<dyn Sign>],
+        signers: &[&Signer],
         node_address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -432,7 +432,7 @@ impl TestElectrumWallet {
         assert_eq!(*details.balances.get(asset).unwrap(), -(satoshi as i64));
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -442,7 +442,7 @@ impl TestElectrumWallet {
 
     pub fn send_many(
         &mut self,
-        signers: &[Box<dyn Sign>],
+        signers: &[&Signer],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -477,7 +477,7 @@ impl TestElectrumWallet {
         // Skipping the checks here
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -489,7 +489,7 @@ impl TestElectrumWallet {
 
     pub fn issueasset(
         &mut self,
-        signers: &[Box<dyn Sign>],
+        signers: &[&Signer],
         satoshi_asset: u64,
         satoshi_token: u64,
         contract: &str,
@@ -515,7 +515,7 @@ impl TestElectrumWallet {
         );
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -547,7 +547,7 @@ impl TestElectrumWallet {
 
     pub fn reissueasset(
         &mut self,
-        signers: &[Box<dyn Sign>],
+        signers: &[&Signer],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -569,7 +569,7 @@ impl TestElectrumWallet {
         assert_eq!(*details.balances.get(&issuance.token).unwrap(), 0i64);
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
@@ -588,7 +588,7 @@ impl TestElectrumWallet {
 
     pub fn burnasset(
         &mut self,
-        signers: &[Box<dyn Sign>],
+        signers: &[&Signer],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -613,7 +613,7 @@ impl TestElectrumWallet {
         assert_eq!(*details.balances.get(asset).unwrap_or(&0), expected_asset);
 
         for signer in signers {
-            self.sign(signer.as_ref(), &mut pset);
+            self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         self.send(&mut pset);
@@ -622,8 +622,9 @@ impl TestElectrumWallet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    pub fn sign(&self, signer: &dyn Sign, pset: &mut PartiallySignedTransaction) {
-        signer.sign(pset).unwrap();
+    pub fn sign<S: Sign>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
+        let sigs_added_or_overwritten = signer.sign(pset).unwrap();
+        assert!(sigs_added_or_overwritten > 0);
     }
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
@@ -682,7 +683,7 @@ pub fn generate_view_key() -> String {
         .to_wif()
 }
 
-pub fn generate_signer() -> Signer<'static> {
+pub fn generate_signer() -> SwSigner<'static> {
     let mnemonic = generate_mnemonic();
-    Signer::new(&mnemonic, &wollet::EC).unwrap()
+    SwSigner::new(&mnemonic, &wollet::EC).unwrap()
 }

@@ -30,6 +30,7 @@ pub use network::Network;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 
+#[derive(Debug)]
 pub struct Jade {
     conn: Connection,
 }

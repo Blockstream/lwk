@@ -6,6 +6,7 @@ use bs_containers::{
 };
 use jade::{lock_jade::LockJade, protocol::DebugSetMnemonicParams, Jade};
 
+#[derive(Debug)]
 pub struct InitializedJade<'a> {
     _jade_emul: Container<'a, JadeEmulator>,
     pub jade: LockJade,

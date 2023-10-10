@@ -45,18 +45,18 @@ pub enum NewError {
 }
 
 #[derive(Clone)]
-pub struct Signer<'a> {
+pub struct SwSigner<'a> {
     xprv: ExtendedPrivKey,
     secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
 }
 
-impl<'a> core::fmt::Debug for Signer<'a> {
+impl<'a> core::fmt::Debug for SwSigner<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signer({})", self.fingerprint())
     }
 }
 
-impl<'a> Signer<'a> {
+impl<'a> SwSigner<'a> {
     pub fn new(mnemonic: &str, secp: &'a Secp256k1<All>) -> Result<Self, NewError> {
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
@@ -129,11 +129,11 @@ mod tests {
     #[test]
     fn new_signer() {
         let secp = Secp256k1::new();
-        let signer = Signer::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", &secp).unwrap();
+        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", &secp).unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
-            Signer::new("bad", &secp).unwrap_err().to_string()
+            SwSigner::new("bad", &secp).unwrap_err().to_string()
         );
         assert_eq!("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s", &signer.xpub().to_string())
     }

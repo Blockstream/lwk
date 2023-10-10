@@ -1,5 +1,5 @@
 use jade::lock_jade::LockJade;
-use software_signer::Signer;
+use software_signer::SwSigner;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -12,8 +12,13 @@ pub enum Error {
 
 pub trait Sign {
     /// Try to sign the given pset, mutating it in place.
-    /// returns how many signatures were added
+    /// returns how many signatures were added or overwritten
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error>;
+}
+
+pub enum Signer<'a> {
+    Software(SwSigner<'a>),
+    Jade(&'a LockJade),
 }
 
 impl Sign for LockJade {
@@ -22,8 +27,23 @@ impl Sign for LockJade {
     }
 }
 
-impl<'a> Sign for Signer<'a> {
+impl<'a> Sign for SwSigner<'a> {
     fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
         Ok(self.sign_pset(pset)?)
+    }
+}
+
+impl<'a> Sign for Signer<'a> {
+    fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
+        Sign::sign(&self, pset)
+    }
+}
+
+impl<'a> Sign for &Signer<'a> {
+    fn sign(&self, pset: &mut elements::pset::PartiallySignedTransaction) -> Result<u32, Error> {
+        Ok(match self {
+            Signer::Software(signer) => signer.sign_pset(pset)?,
+            Signer::Jade(signer) => signer.sign_pset(pset)?,
+        })
     }
 }

@@ -13,7 +13,7 @@ use crate::elements::{
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTxOut};
-use crate::pset_details::{pset_balance, PsetBalance};
+use crate::pset_details::{pset_balance, pset_signatures, PsetDetails};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -325,8 +325,11 @@ impl ElectrumWallet {
     }
 
     /// Get the PSET details with respect to the wallet
-    pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetBalance, Error> {
-        Ok(pset_balance(pset, self.descriptor())?)
+    pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
+        Ok(PsetDetails {
+            balance: pset_balance(pset, self.descriptor())?,
+            sig_details: pset_signatures(pset),
+        })
     }
 
     pub(crate) fn index(&self, script_pubkey: &Script) -> Result<u32, Error> {

@@ -393,9 +393,12 @@ impl TestElectrumWallet {
             .unwrap();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
-        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
+        assert_eq!(
+            *details.balance.balances.get(&self.policy_asset()).unwrap(),
+            -fee
+        );
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -426,10 +429,16 @@ impl TestElectrumWallet {
             .unwrap();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
-        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
-        assert_eq!(*details.balances.get(asset).unwrap(), -(satoshi as i64));
+        assert_eq!(
+            *details.balance.balances.get(&self.policy_asset()).unwrap(),
+            -fee
+        );
+        assert_eq!(
+            *details.balance.balances.get(asset).unwrap(),
+            -(satoshi as i64)
+        );
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -470,7 +479,7 @@ impl TestElectrumWallet {
         let mut pset = self.electrum_wallet.sendmany(addressees, fee_rate).unwrap();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
         // Checking the balance here has a bit too many cases:
         // asset1,2 are btc, asset1,2 are equal, addr1,2 belong to the wallet
@@ -505,12 +514,18 @@ impl TestElectrumWallet {
         let (asset, token) = issuance_input.issuance_ids();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
-        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
-        assert_eq!(*details.balances.get(&asset).unwrap(), satoshi_asset as i64);
         assert_eq!(
-            *details.balances.get(&token).unwrap_or(&0),
+            *details.balance.balances.get(&self.policy_asset()).unwrap(),
+            -fee
+        );
+        assert_eq!(
+            *details.balance.balances.get(&asset).unwrap(),
+            satoshi_asset as i64
+        );
+        assert_eq!(
+            *details.balance.balances.get(&token).unwrap_or(&0),
             satoshi_token as i64
         );
 
@@ -562,11 +577,20 @@ impl TestElectrumWallet {
             .unwrap();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
-        assert_eq!(*details.balances.get(&self.policy_asset()).unwrap(), -fee);
-        assert_eq!(*details.balances.get(asset).unwrap(), satoshi_asset as i64);
-        assert_eq!(*details.balances.get(&issuance.token).unwrap(), 0i64);
+        assert_eq!(
+            *details.balance.balances.get(&self.policy_asset()).unwrap(),
+            -fee
+        );
+        assert_eq!(
+            *details.balance.balances.get(asset).unwrap(),
+            satoshi_asset as i64
+        );
+        assert_eq!(
+            *details.balance.balances.get(&issuance.token).unwrap(),
+            0i64
+        );
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -601,7 +625,7 @@ impl TestElectrumWallet {
             .unwrap();
 
         let details = self.electrum_wallet.get_details(&pset).unwrap();
-        let fee = details.fee as i64;
+        let fee = details.balance.fee as i64;
         assert!(fee > 0);
         let btc = self.policy_asset();
         let (expected_asset, expected_btc) = if asset == &btc {
@@ -609,8 +633,11 @@ impl TestElectrumWallet {
         } else {
             (-(satoshi_asset as i64), -fee)
         };
-        assert_eq!(*details.balances.get(&btc).unwrap(), expected_btc);
-        assert_eq!(*details.balances.get(asset).unwrap_or(&0), expected_asset);
+        assert_eq!(*details.balance.balances.get(&btc).unwrap(), expected_btc);
+        assert_eq!(
+            *details.balance.balances.get(asset).unwrap_or(&0),
+            expected_asset
+        );
 
         for signer in signers {
             self.sign(signer, &mut pset);

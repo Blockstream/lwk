@@ -337,8 +337,14 @@ fn multiple_descriptors() {
     let (asset, token) = &pset.inputs()[0].issuance_ids();
     let details_a = wallet_a.electrum_wallet.get_details(&pset).unwrap();
     let details_t = wallet_t.electrum_wallet.get_details(&pset).unwrap();
-    assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_a as i64);
-    assert_eq!(*details_t.balances.get(token).unwrap(), satoshi_t as i64);
+    assert_eq!(
+        *details_a.balance.balances.get(asset).unwrap(),
+        satoshi_a as i64
+    );
+    assert_eq!(
+        *details_t.balance.balances.get(token).unwrap(),
+        satoshi_t as i64
+    );
     wallet_a.sign(&signer_a, &mut pset);
     wallet_a.send(&mut pset);
     assert_eq!(wallet_a.balance(asset), satoshi_a);
@@ -355,8 +361,11 @@ fn multiple_descriptors() {
     wallet_a.electrum_wallet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.electrum_wallet.get_details(&pset).unwrap();
     let details_t = wallet_t.electrum_wallet.get_details(&pset).unwrap();
-    assert_eq!(*details_a.balances.get(asset).unwrap(), satoshi_ar as i64);
-    assert_eq!(*details_t.balances.get(token).unwrap(), 0i64);
+    assert_eq!(
+        *details_a.balance.balances.get(asset).unwrap(),
+        satoshi_ar as i64
+    );
+    assert_eq!(*details_t.balance.balances.get(token).unwrap(), 0i64);
     let mut pset_t1 = pset.clone();
     let mut pset_t2 = pset.clone();
     wallet_t.sign(&signer_t1, &mut pset_t1);

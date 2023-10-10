@@ -15,7 +15,7 @@ use crate::{jade_emulator::inner_jade_debug_initialization, sign::Sign};
 fn liquid() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
+    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
@@ -555,7 +555,7 @@ fn multisig_flow() {
 fn jade_sign_wollet_pset() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = Signer::new(mnemonic, &wollet::EC).unwrap();
+    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);

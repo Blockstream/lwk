@@ -683,7 +683,7 @@ pub fn generate_view_key() -> String {
         .to_wif()
 }
 
-pub fn generate_signer() -> Signer<'static> {
+pub fn generate_signer() -> SwSigner<'static> {
     let mnemonic = generate_mnemonic();
-    Signer::new(&mnemonic, &wollet::EC).unwrap()
+    SwSigner::new(&mnemonic, &wollet::EC).unwrap()
 }

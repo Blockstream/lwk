@@ -307,7 +307,7 @@ fn jade_sign_message() {
     let _signer_commitment: Vec<u8> = initialized_jade.jade.sign_message(params).unwrap().into();
 
     let params = GetSignatureParams { ae_host_entropy };
-    let signature = initialized_jade.jade.get_signature(params).unwrap();
+    let signature = initialized_jade.jade.get_signature_for_msg(params).unwrap();
     let signature_bytes = base64::engine::general_purpose::STANDARD
         .decode(signature.get())
         .unwrap();

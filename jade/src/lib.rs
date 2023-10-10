@@ -113,7 +113,12 @@ impl Jade {
         self.send_request("sign_message", Some(params))
     }
 
-    pub fn get_signature(&mut self, params: GetSignatureParams) -> Result<StringResult> {
+    pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<StringResult> {
+        let params = Params::GetSignature(params);
+        self.send_request("get_signature", Some(params))
+    }
+
+    pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteResult> {
         let params = Params::GetSignature(params);
         self.send_request("get_signature", Some(params))
     }

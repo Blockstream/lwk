@@ -68,7 +68,7 @@ impl<'a> SwSigner<'a> {
         ExtendedPubKey::from_priv(self.secp, &self.xprv)
     }
 
-    fn fingerprint(&self) -> Fingerprint {
+    pub fn fingerprint(&self) -> Fingerprint {
         self.xprv.fingerprint(self.secp)
     }
     pub fn sign(&self, pset: &str) -> Result<String, SignError> {

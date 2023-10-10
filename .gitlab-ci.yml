@@ -64,6 +64,26 @@ test_jrpc:
   script:
     - cargo test -p tiny_jrpc
 
+test_app:
+  extends: .base
+  script:
+    - cargo test -p app
+
+test_cli:
+  extends: .base
+  script:
+    - cargo test -p cli
+
+build_cli:
+  extends: .base
+  script:
+    - cargo build --release -p cli
+  artifacts:
+    paths:
+      - target/release/cli
+    when: always
+    expire_in: 14 days
+
 audit:
   extends: .base
   script:

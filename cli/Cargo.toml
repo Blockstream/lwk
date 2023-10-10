@@ -1,0 +1,15 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.75"
+app = { path = "../app" }
+clap = { version = "4.4.6", features = ["derive"] }
+# config = "0.13.3"
+console = "0.15.7"
+dialoguer = "0.11.0"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

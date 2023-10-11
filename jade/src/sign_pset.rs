@@ -46,6 +46,9 @@ pub enum Error {
 
     #[error("Expecting bip 32 derivation for input {0}")]
     MissingBip32DerivInput(usize),
+
+    #[error("Previous script pubkey is wsh but witness script is missing in input {0}")]
+    MissingWitnessScript(usize),
 }
 
 impl Jade {
@@ -127,10 +130,20 @@ impl Jade {
                         .ok_or(Error::MissingWitnessUtxoInInput(i))?;
 
                     let previous_output_script = &txout.script_pubkey;
+                    let script_code = if previous_output_script.is_v0_p2wpkh() {
+                        script_code_wpkh(previous_output_script)
+                    } else if previous_output_script.is_v0_p2wsh() {
+                        input
+                            .witness_script
+                            .clone()
+                            .ok_or(Error::MissingWitnessScript(i))?
+                    } else {
+                        panic!("unsupported script type");
+                    };
 
                     let params = TxInputParams {
                         is_witness: true,
-                        script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
+                        script_code: script_code.as_bytes().to_vec(),
                         value_commitment: txout
                             .value
                             .commitment()

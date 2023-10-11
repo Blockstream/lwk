@@ -3,6 +3,7 @@ mod test_session;
 
 use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
+use jade::protocol::GetXpubParams;
 use signer::*;
 use std::collections::HashSet;
 use test_session::*;
@@ -531,7 +532,18 @@ fn multisig_flow() {
     // * Multisig Setup: Start
     // We have 2 signers
     let signer1 = generate_signer();
-    let signer2 = generate_signer();
+
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+
+    let signer2 = &jade_init.jade;
+    let signer2_xpub = signer2
+        .get_xpub(GetXpubParams {
+            network: jade::Network::LocaltestLiquid,
+            path: vec![],
+        })
+        .unwrap();
+    let signer2_fingerprint = signer2_xpub.fingerprint();
 
     // Someone generates the "view" descriptor blinding key
     let view_key = generate_view_key();
@@ -542,7 +554,7 @@ fn multisig_flow() {
         "ct({},elwsh(multi(2,{}/*,{}/*)))",
         view_key,
         signer1.xpub(),
-        signer2.xpub()
+        signer2_xpub
     );
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
@@ -578,7 +590,7 @@ fn multisig_flow() {
         // Signatures are expected from signer1 and signer2
         let fingerprints: HashSet<_> = sig.missing_signature.iter().map(|(_, (f, _))| f).collect();
         assert!(fingerprints.contains(&signer1.fingerprint()));
-        assert!(fingerprints.contains(&signer2.fingerprint()));
+        assert!(fingerprints.contains(&signer2_fingerprint));
     }
     let mut pset = wallet.electrum_wallet.combine(&vec![pset1, pset2]).unwrap();
 

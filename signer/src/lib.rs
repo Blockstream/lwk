@@ -58,6 +58,12 @@ impl Sign for LockJade {
     }
 }
 
+impl Sign for &LockJade {
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
+        Ok(self.sign_pset(pset)?)
+    }
+}
+
 impl<'a> Sign for SwSigner<'a> {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
         Ok(self.sign_pset(pset)?)

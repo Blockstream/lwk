@@ -3,6 +3,10 @@ use crate::elements::hex::{FromHex, ToHex};
 use crate::elements::Script;
 use crate::error::Error;
 use crate::secp256k1;
+use crate::secp256k1::SecretKey;
+use elements_miniscript::confidential::bare::tweak_private_key;
+use elements_miniscript::confidential::Key;
+use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::thread_rng;
 use serde::Deserialize;
@@ -57,4 +61,21 @@ pub fn derive_script_pubkey(
         .descriptor
         .at_derivation_index(index)?
         .script_pubkey())
+}
+
+pub fn derive_blinding_key(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    script_pubkey: &Script,
+) -> Option<SecretKey> {
+    match &descriptor.key {
+        Key::Slip77(k) => Some(k.blinding_private_key(script_pubkey)),
+        Key::View(DescriptorSecretKey::XPrv(dxk)) => {
+            let k = dxk.xkey.to_priv();
+            Some(tweak_private_key(&EC, script_pubkey, &k.inner))
+        }
+        Key::View(DescriptorSecretKey::Single(k)) => {
+            Some(tweak_private_key(&EC, script_pubkey, &k.key.inner))
+        }
+        _ => None,
+    }
 }

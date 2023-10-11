@@ -110,6 +110,9 @@ pub enum Error {
 
     #[error("Send many cannot be called with an empty addressee list")]
     SendManyEmptyAddressee,
+
+    #[error("Private blinding key not available")]
+    MissingPrivateBlindingKey,
 }
 
 // cannot derive automatically with this error because of trait bound

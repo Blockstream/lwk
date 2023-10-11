@@ -108,11 +108,6 @@ impl ElectrumWallet {
         })
     }
 
-    fn descriptor_blinding_key(&self) -> Key<DefiniteDescriptorKey> {
-        convert_blinding_key(&self.descriptor.key)
-            .expect("No private blinding keys for bare variant")
-    }
-
     /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
         self.config.policy_asset()
@@ -126,8 +121,7 @@ impl ElectrumWallet {
     /// Sync the wallet transactions
     pub fn sync_txs(&mut self) -> Result<(), Error> {
         if let Ok(client) = self.config.electrum_url().build_client() {
-            let blinding_key = self.descriptor_blinding_key();
-            match sync(&client, &mut self.store, blinding_key) {
+            match sync(&client, &mut self.store, &self.descriptor) {
                 Ok(true) => log::info!("there are new transcations"),
                 Ok(false) => (),
                 Err(e) => log::warn!("Error during sync, {:?}", e),

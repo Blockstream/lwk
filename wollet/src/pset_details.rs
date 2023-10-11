@@ -9,9 +9,7 @@ use crate::elements::{
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
-use crate::sync::derive_blinding_key;
-use crate::util::derive_script_pubkey;
-use crate::wallet::convert_blinding_key;
+use crate::util::{derive_blinding_key, derive_script_pubkey};
 use crate::EC;
 
 #[derive(Debug)]
@@ -93,6 +91,9 @@ pub enum Error {
         "Output #{idx} belongs to the wallet but its commitments do not match the unblinded values"
     )]
     OutputCommitmentsMismatch { idx: usize },
+
+    #[error("Private blinding key not available")]
+    MissingPrivateBlindingKey,
 }
 
 fn commitments(
@@ -137,8 +138,6 @@ pub fn pset_balance(
     pset: &PartiallySignedTransaction,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
-    let descriptor_blinding_key =
-        convert_blinding_key(&descriptor.key).expect("No private blinding keys for bare variant");
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
@@ -179,8 +178,8 @@ pub fn pset_balance(
                 let amount_comm = txout.value.commitment().unwrap();
 
                 // We expect the input to be unblindable with the descriptor blinding key
-                let private_blinding_key =
-                    derive_blinding_key(&txout.script_pubkey, &descriptor_blinding_key);
+                let private_blinding_key = derive_blinding_key(descriptor, &txout.script_pubkey)
+                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = txout
                     .unblind(&EC, private_blinding_key)
                     .map_err(|_| Error::InputMineNotUnblindable { idx })?;
@@ -244,8 +243,8 @@ pub fn pset_balance(
                 }
 
                 // Check that we can later unblind the output
-                let private_blinding_key =
-                    derive_blinding_key(&output.script_pubkey, &descriptor_blinding_key);
+                let private_blinding_key = derive_blinding_key(descriptor, &output.script_pubkey)
+                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = output
                     .to_txout()
                     .unblind(&EC, private_blinding_key)

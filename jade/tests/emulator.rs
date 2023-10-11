@@ -143,12 +143,10 @@ fn jade_xpub() {
     let docker = clients::Cli::default();
 
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
-    let params = GetXpubParams {
-        network: jade::Network::TestnetLiquid,
-        path: vec![],
-    };
-    let result = initialized_jade.jade.get_xpub(params).unwrap();
-    let xpub_master = ExtendedPubKey::from_str(result.get()).unwrap();
+    let xpub_master = initialized_jade
+        .jade
+        .get_master_xpub(jade::Network::TestnetLiquid)
+        .unwrap();
     assert_eq!(xpub_master.depth, 0);
     assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
 
@@ -189,8 +187,7 @@ fn jade_register_multisig() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let jade = &mut initialized_jade.jade;
 
-    let result = jade.get_master_xpub(network).unwrap();
-    let jade_master_xpub: ExtendedPubKey = result.get().parse().unwrap();
+    let jade_master_xpub = jade.get_master_xpub(network).unwrap();
 
     let params = GetXpubParams {
         network: jade::Network::TestnetLiquid,
@@ -241,8 +238,7 @@ fn jade_register_multisig_check_address() {
     let jade = &mut initialized_jade.jade;
 
     let multisig_name = "you_and_me".to_string();
-    let result = jade.get_master_xpub(network).unwrap();
-    let jade_master_xpub: ExtendedPubKey = result.get().parse().unwrap();
+    let jade_master_xpub = jade.get_master_xpub(network).unwrap();
     let other_signer: ExtendedPubKey= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
 

@@ -20,6 +20,9 @@ pub enum Error {
 
     #[error(transparent)]
     Des(#[from] ciborium::de::Error<std::io::Error>),
+
+    #[error(transparent)]
+    Bip32(#[from] elements::bitcoin::bip32::Error),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

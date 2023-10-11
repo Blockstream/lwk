@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
-use elements::bitcoin::bip32::DerivationPath;
+use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
@@ -33,11 +33,17 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 #[derive(Debug)]
 pub struct Jade {
     conn: Connection,
+
+    /// Cached master xpub
+    master_xpub: Option<ExtendedPubKey>,
 }
 
 impl Jade {
     pub fn new(conn: Connection) -> Self {
-        Self { conn }
+        Self {
+            conn,
+            master_xpub: None,
+        }
     }
 
     pub fn ping(&mut self) -> Result<PingResult> {
@@ -96,11 +102,16 @@ impl Jade {
         self.send_request("get_xpub", Some(params))
     }
 
-    pub fn get_master_xpub(&mut self, network: Network) -> Result<StringResult> {
-        self.get_xpub(GetXpubParams {
-            network,
-            path: vec![],
-        })
+    pub fn get_master_xpub(&mut self, network: Network) -> Result<ExtendedPubKey> {
+        if self.master_xpub.is_none() {
+            let result = self.get_xpub(GetXpubParams {
+                network,
+                path: vec![],
+            })?;
+            let master_xpub = result.get().parse()?;
+            self.master_xpub = Some(master_xpub);
+        }
+        Ok(self.master_xpub.expect("ensure it is some before"))
     }
 
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {

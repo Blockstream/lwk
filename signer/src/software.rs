@@ -17,16 +17,16 @@ use elements_miniscript::{
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
     #[error(transparent)]
-    Pset(#[from] crate::elements::pset::Error),
+    Pset(#[from] elements_miniscript::elements::pset::Error),
 
     #[error(transparent)]
-    ElementsEncode(#[from] crate::elements::encode::Error),
+    ElementsEncode(#[from] elements_miniscript::elements::encode::Error),
 
     #[error(transparent)]
     Sighash(#[from] elements_miniscript::psbt::SighashError),
 
     #[error(transparent)]
-    PsetParse(#[from] crate::elements::pset::ParseError),
+    PsetParse(#[from] elements_miniscript::elements::pset::ParseError),
 
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
@@ -80,7 +80,7 @@ impl<'a> SwSigner<'a> {
         let mut signature_added = 0;
 
         // genesis hash is not used at all for sighash calculation
-        let genesis_hash = crate::elements::BlockHash::all_zeros();
+        let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for i in 0..pset.inputs().len() {
             // computing all the messages to sign, it is not necessary if we are not going to sign
@@ -92,7 +92,7 @@ impl<'a> SwSigner<'a> {
         }
 
         // Fixme: Take a parameter
-        let hash_ty = crate::elements::EcdsaSighashType::All;
+        let hash_ty = elements_miniscript::elements::EcdsaSighashType::All;
 
         // let signer_fingerprint = self.fingerprint();
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {

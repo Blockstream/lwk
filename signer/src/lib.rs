@@ -6,7 +6,6 @@ use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use jade::lock_jade::LockJade;
-use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignerError {
@@ -43,8 +42,7 @@ impl<'a> Signer<'a> {
                     network: jade::Network::LocaltestLiquid,
                     path: vec![],
                 };
-                let result = s.get_xpub(params)?;
-                Ok(ExtendedPubKey::from_str(result.get())?)
+                Ok(s.get_xpub(params)?)
             }
         }
     }

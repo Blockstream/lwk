@@ -151,8 +151,7 @@ fn jade_xpub() {
         network: jade::Network::LocaltestLiquid,
         path: vec![0],
     };
-    let result = initialized_jade.jade.get_xpub(params).unwrap();
-    let xpub = ExtendedPubKey::from_str(result.get()).unwrap();
+    let xpub = initialized_jade.jade.get_xpub(params).unwrap();
     assert_ne!(xpub_master, xpub);
     assert_eq!(xpub.depth, 1);
 }
@@ -189,8 +188,7 @@ fn jade_register_multisig() {
         network: jade::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
-    let result = jade.get_xpub(params).unwrap();
-    let jade_xpub: ExtendedPubKey = result.get().parse().unwrap();
+    let jade_xpub = jade.get_xpub(params).unwrap();
 
     let signers = vec![
         MultisigSigner {
@@ -308,8 +306,7 @@ fn jade_sign_message() {
         network: jade::Network::LocaltestLiquid,
         path: vec![0],
     };
-    let result = initialized_jade.jade.get_xpub(params).unwrap();
-    let xpub = ExtendedPubKey::from_str(result.get()).unwrap();
+    let xpub = initialized_jade.jade.get_xpub(params).unwrap();
     let msg_hash = signed_msg_hash(message);
     let message = Message::from_slice(msg_hash.as_byte_array()).unwrap();
     let signature = Signature::from_compact(&signature_bytes).unwrap();

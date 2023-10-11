@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 
-use elements::pset::PartiallySignedTransaction;
+use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
 
-use crate::{protocol::StringResult, sign_pset, Jade};
+use crate::{sign_pset, Jade};
 
 #[derive(Debug)]
 pub struct LockJade(Mutex<Jade>);
@@ -21,7 +21,7 @@ impl LockJade {
     pub fn get_xpub(
         &self,
         params: crate::protocol::GetXpubParams,
-    ) -> Result<StringResult, crate::error::Error> {
+    ) -> Result<ExtendedPubKey, crate::error::Error> {
         self.0.lock().unwrap().get_xpub(params)
     }
 }

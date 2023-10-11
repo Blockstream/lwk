@@ -1,26 +1,21 @@
 use std::fs::File;
 
 use app::config::Config;
-use console::Style;
-// use dialoguer::{theme::ColorfulTheme, Input};
-use tracing::Level;
-use tracing_subscriber::{EnvFilter, FmtSubscriber};
-
 use clap::Parser;
+use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Run the application as JSON RPC server only.
-    #[arg(short, long)]
-    server: bool,
-}
+use crate::args::CliCommand;
 
-//
+mod args;
+
 fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    let args = args::Cli::parse();
     // config
+    // - network
+    // - config file
     // - json rpc host/port
+    // - electrum server
+    // - file/directory path
 
     // set up logging
     let file = File::options()
@@ -28,9 +23,11 @@ fn main() -> anyhow::Result<()> {
         .append(true)
         .open("debug.log")?;
     let (appender, _guard) = tracing_appender::non_blocking(file);
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(filter)
         .with_writer(appender)
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
@@ -42,19 +39,18 @@ fn main() -> anyhow::Result<()> {
     let client = app.client()?;
     // get the app version
     let version = client.version()?;
+    tracing::info!("App running version {}", version);
 
-    if args.server {
-        tracing::info!("Server mode. Version {}", version);
-        // todo: run as server only
-        // todo: interrupt handling
-        todo!();
-    } else {
-        // run the interactive CLI
-        let bg = Style::new().black().on_cyan();
-        let text = format!("Liquid MultiSig Hardware Wallet CLI (version {})", version);
-        println!("{}", bg.apply_to(text));
-        // todo: cli loop
-        println!("wip. exiting");
+    match args.command {
+        CliCommand::Server => todo!(),
+        CliCommand::Signer(a) => match a.command {
+            args::SignerCommand::Generate => {
+                let mnemonic = client.generate_signer()?;
+                println!("Generated mnemonic:");
+                println!("{}", mnemonic);
+            }
+        },
+        CliCommand::Wallet(_) => todo!(),
     }
 
     Ok(())

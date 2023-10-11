@@ -11,39 +11,54 @@ use wollet::*;
 
 use crate::{jade_emulator::inner_jade_debug_initialization, sign::Sign};
 
-#[test]
-fn liquid() {
-    let server = setup();
-    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
-    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
-    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+const TEST_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
+#[test]
+fn liquid_jade_signer() {
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let signers_with_jade = [&Signer::Software(signer), &Signer::Jade(&jade_init.jade)];
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let signers = [&Signer::Jade(&jade_init.jade)];
+    liquid(&signers);
+}
+
+#[test]
+fn liquid_software_signer() {
+    let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
+    let signers = [&Signer::Software(signer)];
+    liquid(&signers);
+}
+
+fn liquid(signers: &[&Signer]) {
+    let server = setup();
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!(
+        "ct(slip77({}),elwpkh({}/*))",
+        slip77_key,
+        signers[0].xpub().unwrap()
+    );
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
     server.generate(1);
 
-    wallet.send_btc(&signers_with_jade, None);
+    wallet.send_btc(signers, None);
     let node_address = server.node_getnewaddress();
-    wallet.send_asset(&signers_with_jade, &node_address, &asset, None);
+    wallet.send_asset(signers, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        &signers_with_jade,
+        signers,
         &node_address1,
         &asset,
         &node_address2,
         &wallet.policy_asset(),
         None,
     );
-    let (asset, _token) = wallet.issueasset(&signers_with_jade, 10, 1, "", None);
-    wallet.reissueasset(&signers_with_jade, 10, &asset, None);
-    wallet.burnasset(&signers_with_jade, 5, &asset, None);
+    let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
+    wallet.reissueasset(signers, 10, &asset, None);
+    wallet.burnasset(signers, 5, &asset, None);
 }
 
 #[test]

@@ -24,10 +24,10 @@ fn liquid() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
     let signers_with_jade = [&Signer::Software(signer), &Signer::Jade(&jade_init.jade)];
-    dbg!(&jade_init);
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
+    server.generate(1);
 
     wallet.send_btc(&signers_with_jade, None);
     let node_address = server.node_getnewaddress();
@@ -44,7 +44,7 @@ fn liquid() {
     );
     let (asset, _token) = wallet.issueasset(&signers, 10, 1, "", None);
     wallet.reissueasset(&signers, 10, &asset, None);
-    wallet.burnasset(&signers, 5, &asset, None);
+    wallet.burnasset(&signers_with_jade, 5, &asset, None);
 }
 
 #[test]

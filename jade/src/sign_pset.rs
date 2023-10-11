@@ -57,8 +57,10 @@ impl Jade {
         for (i, output) in pset.outputs().iter().enumerate() {
             let mut asset_id = serialize(&output.asset.ok_or(Error::MissingAssetIdInOutput(i))?);
             asset_id.reverse(); // Jade want it reversed
-            let trusted_commitment = if output.script_pubkey.is_empty() {
-                // fee output
+            let burn_script = Script::new_op_return(&[]);
+            let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
+            let trusted_commitment = if unblinded {
+                // fee output or burn output
                 None
             } else {
                 Some(Commitment {

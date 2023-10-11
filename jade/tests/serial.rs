@@ -12,9 +12,9 @@ fn auth_user() {
             .open()
             .unwrap();
 
-        let mut jade_api = Jade::new(port.into());
+        let mut jade_api = Jade::new(port.into(), jade::Network::Liquid);
 
-        let result = jade_api.auth_user(jade::Network::Liquid).unwrap();
+        let result = jade_api.auth_user().unwrap();
         dbg!(&result);
         // insta::assert_yaml_snapshot!(result);
 
@@ -42,7 +42,7 @@ fn logout() {
             .open()
             .unwrap();
 
-        let mut jade_api = Jade::new(port.into());
+        let mut jade_api = Jade::new(port.into(), jade::Network::TestnetLiquid);
 
         let result = jade_api.logout().unwrap();
         dbg!(&result);
@@ -62,7 +62,7 @@ fn ping() {
             .open()
             .unwrap();
 
-        let mut jade_api = Jade::new(port.into());
+        let mut jade_api = Jade::new(port.into(), jade::Network::TestnetLiquid);
 
         let result = jade_api.ping().unwrap();
 

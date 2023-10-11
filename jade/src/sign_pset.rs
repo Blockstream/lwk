@@ -53,6 +53,7 @@ impl Jade {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
         let mut sigs_added_or_overwritten = 0;
+        let my_fingerprint = self.fingerprint()?;
 
         let mut trusted_commitments = vec![];
         let mut change = vec![];
@@ -114,41 +115,36 @@ impl Jade {
         let mut signers_commitment = HashMap::new();
 
         for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
-            // for (want_public_key, (_fingerprint, derivation_path)) in input.bip32_derivation.iter()
-            // {
-            //     self.f
-            // }
+            for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
+                if &my_fingerprint == fingerprint {
+                    let path: Vec<u32> = derivation_path_to_vec(derivation_path);
 
-            let mut iter = input.bip32_derivation.clone().into_iter();
-            let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
-            if iter.next().is_some() {
-                panic!("other bip32 derivations..."); // TODO
+                    // TODO? verify `want_public_key` is one of the key of the descriptor?
+
+                    let txout = input
+                        .witness_utxo
+                        .as_ref()
+                        .ok_or(Error::MissingWitnessUtxoInInput(i))?;
+
+                    let previous_output_script = &txout.script_pubkey;
+
+                    let params = TxInputParams {
+                        is_witness: true,
+                        script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
+                        value_commitment: txout
+                            .value
+                            .commitment()
+                            .ok_or(Error::NonConfidentialInput(i))?
+                            .serialize()
+                            .to_vec(),
+                        path,
+                        sighash: Some(1),
+                        ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
+                    };
+                    let signer_commitment: Vec<u8> = self.tx_input(params)?.into();
+                    signers_commitment.insert(*want_public_key, signer_commitment);
+                }
             }
-            let path: Vec<u32> = derivation_path_to_vec(&entry.1 .1);
-            // TODO multisig
-
-            let txout = input
-                .witness_utxo
-                .as_ref()
-                .ok_or(Error::MissingWitnessUtxoInInput(i))?;
-
-            let previous_output_script = &txout.script_pubkey;
-
-            let params = TxInputParams {
-                is_witness: true,
-                script_code: script_code_wpkh(previous_output_script).as_bytes().to_vec(),
-                value_commitment: txout
-                    .value
-                    .commitment()
-                    .ok_or(Error::NonConfidentialInput(i))?
-                    .serialize()
-                    .to_vec(),
-                path,
-                sighash: Some(1),
-                ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
-            };
-            let signer_commitment: Vec<u8> = self.tx_input(params)?.into();
-            signers_commitment.insert(entry.0, signer_commitment);
         }
 
         for input in pset.inputs_mut().iter_mut() {

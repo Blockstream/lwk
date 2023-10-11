@@ -45,7 +45,7 @@ fn entropy() {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.add_entropy(&[1, 2, 3, 4]).unwrap();
     insta::assert_yaml_snapshot!(result);
@@ -67,7 +67,7 @@ fn epoch() {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -83,7 +83,7 @@ fn ping() {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.ping().unwrap();
     insta::assert_yaml_snapshot!(result);
@@ -95,7 +95,7 @@ fn version() {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.version_info().unwrap();
     insta::assert_yaml_snapshot!(result);
@@ -107,7 +107,7 @@ fn update_pinserver() {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let tempdir = tempdir().unwrap();
     let pin_server = PinServerEmulator::new(&tempdir);
@@ -143,15 +143,12 @@ fn jade_xpub() {
     let docker = clients::Cli::default();
 
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
-    let xpub_master = initialized_jade
-        .jade
-        .get_master_xpub(jade::Network::TestnetLiquid)
-        .unwrap();
+    let xpub_master = initialized_jade.jade.get_master_xpub().unwrap();
     assert_eq!(xpub_master.depth, 0);
     assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
 
     let params = GetXpubParams {
-        network: jade::Network::TestnetLiquid,
+        network: jade::Network::LocaltestLiquid,
         path: vec![0],
     };
     let result = initialized_jade.jade.get_xpub(params).unwrap();
@@ -183,14 +180,13 @@ fn jade_receive_address() {
 fn jade_register_multisig() {
     let docker = clients::Cli::default();
 
-    let network = jade::Network::TestnetLiquid;
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let jade = &mut initialized_jade.jade;
 
-    let jade_master_xpub = jade.get_master_xpub(network).unwrap();
+    let jade_master_xpub = jade.get_master_xpub().unwrap();
 
     let params = GetXpubParams {
-        network: jade::Network::TestnetLiquid,
+        network: jade::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
     let result = jade.get_xpub(params).unwrap();
@@ -238,7 +234,7 @@ fn jade_register_multisig_check_address() {
     let jade = &mut initialized_jade.jade;
 
     let multisig_name = "you_and_me".to_string();
-    let jade_master_xpub = jade.get_master_xpub(network).unwrap();
+    let jade_master_xpub = jade.get_master_xpub().unwrap();
     let other_signer: ExtendedPubKey= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
 
@@ -309,7 +305,7 @@ fn jade_sign_message() {
         .unwrap();
 
     let params = GetXpubParams {
-        network: jade::Network::TestnetLiquid,
+        network: jade::Network::LocaltestLiquid,
         path: vec![0],
     };
     let result = initialized_jade.jade.get_xpub(params).unwrap();
@@ -349,7 +345,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let jade_container = docker.run(JadeEmulator);
     let port = jade_container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::Liquid);
 
     let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
@@ -371,7 +367,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let result = jade_api.update_pinserver(params).unwrap();
     assert!(result.get());
 
-    let result = jade_api.auth_user(jade::Network::Liquid).unwrap();
+    let result = jade_api.auth_user().unwrap();
     let start_handshake_url = &result.urls()[0];
     assert_eq!(
         start_handshake_url,
@@ -405,7 +401,7 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
     let params = DebugSetMnemonicParams {
         mnemonic: TEST_MNEMONIC.to_string(),
         passphrase: None,

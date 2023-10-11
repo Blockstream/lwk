@@ -32,17 +32,31 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 
 #[derive(Debug)]
 pub struct Jade {
+    /// Jade working via emulator(tcp), physical(serial/bluetooth)
     conn: Connection,
+
+    /// The network
+    network: crate::Network,
 
     /// Cached master xpub
     master_xpub: Option<ExtendedPubKey>,
 }
 
 impl Jade {
-    pub fn new(conn: Connection) -> Self {
+    pub fn new(conn: Connection, network: Network) -> Self {
         Self {
             conn,
+            network,
             master_xpub: None,
+        }
+    }
+
+    fn check_network(&self, passed: Network) -> Result<()> {
+        let init = self.network;
+        if passed != init {
+            Err(Error::MismatchingXpub { init, passed })
+        } else {
+            Ok(())
         }
     }
 
@@ -70,12 +84,15 @@ impl Jade {
         self.send_request("add_entropy", Some(params))
     }
 
-    pub fn auth_user(&mut self, network: Network) -> Result<AuthResult<String>> {
+    pub fn auth_user(&mut self) -> Result<AuthResult<String>> {
         let epoch = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(error::Error::SystemTimeError)?
             .as_secs();
-        let params = Params::AuthUser(AuthUserParams { network, epoch });
+        let params = Params::AuthUser(AuthUserParams {
+            network: self.network,
+            epoch,
+        });
         self.send_request("auth_user", Some(params))
     }
 
@@ -98,14 +115,15 @@ impl Jade {
     }
 
     pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<StringResult> {
+        self.check_network(params.network)?;
         let params = Params::GetXpub(params);
         self.send_request("get_xpub", Some(params))
     }
 
-    pub fn get_master_xpub(&mut self, network: Network) -> Result<ExtendedPubKey> {
+    pub fn get_master_xpub(&mut self) -> Result<ExtendedPubKey> {
         if self.master_xpub.is_none() {
             let result = self.get_xpub(GetXpubParams {
-                network,
+                network: self.network,
                 path: vec![],
             })?;
             let master_xpub = result.get().parse()?;
@@ -115,6 +133,7 @@ impl Jade {
     }
 
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {
+        self.check_network(params.network)?;
         let params = Params::GetReceiveAddress(params);
         self.send_request("get_receive_address", Some(params))
     }
@@ -135,6 +154,7 @@ impl Jade {
     }
 
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<BoolResult> {
+        self.check_network(params.network)?;
         let params = Params::SignLiquidTx(params);
         self.send_request("sign_liquid_tx", Some(params))
     }
@@ -150,6 +170,7 @@ impl Jade {
     }
 
     pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<BoolResult> {
+        self.check_network(params.network)?;
         let params = Params::RegisterMultisig(params);
         self.send_request("register_multisig", Some(params))
     }

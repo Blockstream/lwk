@@ -23,6 +23,12 @@ pub enum Error {
 
     #[error(transparent)]
     Bip32(#[from] elements::bitcoin::bip32::Error),
+
+    #[error("Mismatching network, jade was initialized with: {init} but the method params received {passed}")]
+    MismatchingXpub {
+        init: crate::Network,
+        passed: crate::Network,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]

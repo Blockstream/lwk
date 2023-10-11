@@ -16,7 +16,7 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into());
+    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
     let params = DebugSetMnemonicParams {
         mnemonic,
         passphrase: None,

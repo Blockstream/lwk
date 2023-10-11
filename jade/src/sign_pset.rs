@@ -114,6 +114,11 @@ impl Jade {
         let mut signers_commitment = HashMap::new();
 
         for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
+            // for (want_public_key, (_fingerprint, derivation_path)) in input.bip32_derivation.iter()
+            // {
+            //     self.f
+            // }
+
             let mut iter = input.bip32_derivation.clone().into_iter();
             let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
             if iter.next().is_some() {

@@ -19,7 +19,6 @@ fn liquid() {
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
-    let signers = [&Signer::Software(signer.clone())];
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
@@ -42,8 +41,8 @@ fn liquid() {
         &wallet.policy_asset(),
         None,
     );
-    let (asset, _token) = wallet.issueasset(&signers, 10, 1, "", None);
-    wallet.reissueasset(&signers, 10, &asset, None);
+    let (asset, _token) = wallet.issueasset(&signers_with_jade, 10, 1, "", None);
+    wallet.reissueasset(&signers_with_jade, 10, &asset, None);
     wallet.burnasset(&signers_with_jade, 5, &asset, None);
 }
 

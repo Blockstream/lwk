@@ -10,7 +10,8 @@ use crate::elements::{
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
 use crate::sync::derive_blinding_key;
-use crate::wallet::{convert_blinding_key, derive_script_pubkey};
+use crate::util::derive_script_pubkey;
+use crate::wallet::convert_blinding_key;
 use crate::EC;
 
 #[derive(Debug)]

@@ -1,7 +1,9 @@
 use crate::elements::bitcoin::secp256k1::PublicKey;
 use crate::elements::hex::{FromHex, ToHex};
+use crate::elements::Script;
 use crate::error::Error;
 use crate::secp256k1;
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use rand::thread_rng;
 use serde::Deserialize;
 
@@ -45,4 +47,14 @@ where
 pub fn verify_pubkey(pubkey: &[u8]) -> Result<(), Error> {
     PublicKey::from_slice(pubkey)?;
     Ok(())
+}
+
+pub fn derive_script_pubkey(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    index: u32,
+) -> Result<Script, Error> {
+    Ok(descriptor
+        .descriptor
+        .at_derivation_index(index)?
+        .script_pubkey())
 }

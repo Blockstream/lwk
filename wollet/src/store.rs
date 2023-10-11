@@ -1,7 +1,6 @@
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::{sha256, Hash};
-use crate::util::ciborium_to_vec;
-use crate::wallet::derive_script_pubkey;
+use crate::util::{ciborium_to_vec, derive_script_pubkey};
 use crate::Error;
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};

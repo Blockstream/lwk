@@ -46,13 +46,6 @@ pub(crate) fn derive_address(
     Ok(derived_conf.address(&EC, address_params)?)
 }
 
-pub(crate) fn derive_script_pubkey(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-    index: u32,
-) -> Result<Script, Error> {
-    Ok(derive_address(descriptor, index, &AddressParams::LIQUID)?.script_pubkey())
-}
-
 pub(crate) fn convert_blinding_key(
     key: &Key<DescriptorPublicKey>,
 ) -> Result<Key<DefiniteDescriptorKey>, Error> {

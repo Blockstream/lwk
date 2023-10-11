@@ -3,7 +3,6 @@ mod sign;
 mod test_session;
 
 use bs_containers::testcontainers::clients::Cli;
-use jade::protocol::GetXpubParams;
 use sign::Signer;
 use software_signer::*;
 use std::collections::HashSet;
@@ -597,17 +596,15 @@ fn jade_sign_wollet_pset() {
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let jade_signer = Signer::Jade(&jade_init.jade);
+    // Compre strings so that we don't get mismatching regtest-testnet networks
+    assert_eq!(
+        jade_signer.xpub().unwrap().to_string(),
+        signer.xpub().to_string()
+    );
+    assert_eq!(jade_signer.fingerprint().unwrap(), signer.fingerprint());
 
-    let jade_xpub = jade_init
-        .jade
-        .get_xpub(GetXpubParams {
-            network: jade::Network::LocaltestLiquid,
-            path: vec![],
-        })
-        .unwrap();
-    assert_eq!(jade_xpub.get(), signer.xpub().to_string());
-
-    let signatures_added = jade_init.jade.sign(&mut pset).unwrap();
+    let signatures_added = jade_signer.sign(&mut pset).unwrap();
     assert_eq!(signatures_added, 1);
 
     wallet.send(&mut pset);

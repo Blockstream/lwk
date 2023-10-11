@@ -44,7 +44,6 @@ impl<'a> Signer<'a> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn fingerprint(&self) -> Result<Fingerprint, Error> {
         Ok(self.xpub()?.fingerprint())
     }

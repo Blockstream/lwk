@@ -35,7 +35,7 @@ fn liquid() {
     let node_address1 = server.node_getnewaddress();
     let node_address2 = server.node_getnewaddress();
     wallet.send_many(
-        &signers,
+        &signers_with_jade,
         &node_address1,
         &asset,
         &node_address2,

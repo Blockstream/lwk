@@ -6,7 +6,6 @@ use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
-use crate::sign::{Sign, Signer};
 use bip39::Mnemonic;
 use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};

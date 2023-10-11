@@ -1,15 +1,12 @@
 mod jade_emulator;
-mod sign;
 mod test_session;
 
+use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
-use sign::Signer;
 use signer::*;
 use std::collections::HashSet;
 use test_session::*;
 use wollet::*;
-
-use crate::{jade_emulator::inner_jade_debug_initialization, sign::Sign};
 
 const TEST_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";

@@ -1,5 +1,7 @@
+use crate::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use jade::lock_jade::LockJade;
 use software_signer::SwSigner;
+use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -8,6 +10,12 @@ pub enum Error {
 
     #[error(transparent)]
     Jade(#[from] jade::sign_pset::Error),
+
+    #[error(transparent)]
+    JadeError(#[from] jade::error::Error),
+
+    #[error(transparent)]
+    Bip32Error(#[from] crate::bitcoin::bip32::Error),
 }
 
 pub trait Sign {
@@ -19,6 +27,22 @@ pub trait Sign {
 pub enum Signer<'a> {
     Software(SwSigner<'a>),
     Jade(&'a LockJade),
+}
+
+impl<'a> Signer<'a> {
+    pub fn xpub(&self) -> Result<ExtendedPubKey, Error> {
+        match self {
+            Signer::Software(s) => Ok(s.xpub()),
+            Signer::Jade(s) => {
+                let params = jade::protocol::GetXpubParams {
+                    network: jade::Network::LocaltestLiquid,
+                    path: vec![],
+                };
+                let result = s.get_xpub(params)?;
+                Ok(ExtendedPubKey::from_str(result.get())?)
+            }
+        }
+    }
 }
 
 impl Sign for LockJade {

@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use connection::Connection;
-use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey};
+use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
@@ -126,6 +126,10 @@ impl Jade {
         } else {
             self.inner_get_xpub(params)
         }
+    }
+
+    pub fn fingerprint(&mut self) -> Result<Fingerprint> {
+        Ok(self.get_master_xpub()?.fingerprint())
     }
 
     pub fn get_master_xpub(&mut self) -> Result<ExtendedPubKey> {

@@ -143,7 +143,8 @@ fn jade_xpub() {
     let docker = clients::Cli::default();
 
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
-    let xpub_master = initialized_jade.jade.get_master_xpub().unwrap();
+    let jade = &mut initialized_jade.jade;
+    let xpub_master = jade.get_master_xpub().unwrap();
     assert_eq!(xpub_master.depth, 0);
     assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
 
@@ -151,9 +152,10 @@ fn jade_xpub() {
         network: jade::Network::LocaltestLiquid,
         path: vec![0],
     };
-    let xpub = initialized_jade.jade.get_xpub(params).unwrap();
+    let xpub = jade.get_xpub(params).unwrap();
     assert_ne!(xpub_master, xpub);
     assert_eq!(xpub.depth, 1);
+    assert_eq!(jade.fingerprint().unwrap().as_bytes(), &[115, 197, 218, 10]);
 }
 
 #[test]

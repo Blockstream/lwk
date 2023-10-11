@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use elements::{encode::serialize, pset::PartiallySignedTransaction, Script};
 
 use crate::{
@@ -109,6 +111,8 @@ impl Jade {
         let sign_response = self.sign_liquid_tx(params)?.get();
         assert!(sign_response);
 
+        let mut signers_commitment = HashMap::new();
+
         for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
             let mut iter = input.bip32_derivation.clone().into_iter();
             let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
@@ -136,22 +140,24 @@ impl Jade {
                     .to_vec(),
                 path,
                 sighash: Some(1),
-                ae_host_commitment: vec![1u8; 32],
+                ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
             };
-            let _signer_commitment: Vec<u8> = self.tx_input(params)?.into();
+            let signer_commitment: Vec<u8> = self.tx_input(params)?.into();
+            signers_commitment.insert(entry.0, signer_commitment);
         }
 
-        for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
-            let mut iter = input.bip32_derivation.clone().into_iter();
-            let entry = iter.next().ok_or(Error::MissingBip32DerivInput(i))?;
+        for input in pset.inputs_mut().iter_mut() {
+            for (public_key, (_, _)) in input.bip32_derivation.iter() {
+                if let Some(_signer_commitment) = signers_commitment.get(public_key) {
+                    let params = GetSignatureParams {
+                        ae_host_entropy: vec![1u8; 32], // TODO verify anti-exfil
+                    };
+                    let sig: Vec<u8> = self.get_signature_for_tx(params)?.into();
 
-            let params = GetSignatureParams {
-                ae_host_entropy: vec![1u8; 32],
-            };
-            let sig: Vec<u8> = self.get_signature_for_tx(params)?.into();
-
-            input.partial_sigs.insert(entry.0, sig);
-            sigs_added_or_overwritten += 1;
+                    input.partial_sigs.insert(*public_key, sig);
+                    sigs_added_or_overwritten += 1;
+                }
+            }
         }
 
         Ok(sigs_added_or_overwritten)

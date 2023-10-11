@@ -1,12 +1,12 @@
 use crate::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use jade::lock_jade::LockJade;
-use software_signer::SwSigner;
+use signer::SwSigner;
 use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    Software(#[from] software_signer::SignError),
+    Software(#[from] signer::SignError),
 
     #[error(transparent)]
     Jade(#[from] jade::sign_pset::Error),

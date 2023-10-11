@@ -15,7 +15,7 @@ use elements_miniscript::descriptor::checksum::desc_checksum;
 use log::{LevelFilter, Metadata, Record};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
-use software_signer::*;
+use signer::*;
 use std::env;
 use std::str::FromStr;
 use std::sync::Once;

@@ -1,5 +1,5 @@
 [package]
-name = "software_signer"
+name = "signer"
 version = "0.1.0"
 edition = "2021"
 

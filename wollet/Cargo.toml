@@ -38,7 +38,7 @@ regex = "1.9.6"
 chrono = "0.4.11"
 tempfile = "3.8.0"
 electrsd = { version = "0.25.0", features = ["legacy"] }
-software_signer = { path = "../software_signer" }
+signer = { path = "../signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
 

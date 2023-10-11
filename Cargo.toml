@@ -5,7 +5,7 @@ members = [
     "cli",
     "hwi",
     "jade",
-    "software_signer",
+    "signer",
     "tiny_jrpc",
     "wollet",
     "bs_containers",

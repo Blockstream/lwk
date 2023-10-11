@@ -51,7 +51,7 @@ test_wollet:
   script:
     - ./download_bins.sh
     - . .envrc
-    - cargo test -p wollet -p software_signer
+    - cargo test -p wollet -p signer
 
 test_jade:
   extends: .docker

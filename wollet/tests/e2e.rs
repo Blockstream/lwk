@@ -4,7 +4,7 @@ mod test_session;
 
 use bs_containers::testcontainers::clients::Cli;
 use sign::Signer;
-use software_signer::*;
+use signer::*;
 use std::collections::HashSet;
 use test_session::*;
 use wollet::*;

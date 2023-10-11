@@ -114,15 +114,23 @@ impl Jade {
         self.send_request("handshake_complete", Some(params))
     }
 
-    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<ExtendedPubKey> {
+    fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<ExtendedPubKey> {
         self.check_network(params.network)?;
         let params = Params::GetXpub(params);
         self.send_request("get_xpub", Some(params))
     }
 
+    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<ExtendedPubKey> {
+        if params.path.is_empty() {
+            self.get_master_xpub()
+        } else {
+            self.inner_get_xpub(params)
+        }
+    }
+
     pub fn get_master_xpub(&mut self) -> Result<ExtendedPubKey> {
         if self.master_xpub.is_none() {
-            let master_xpub = self.get_xpub(GetXpubParams {
+            let master_xpub = self.inner_get_xpub(GetXpubParams {
                 network: self.network,
                 path: vec![],
             })?;

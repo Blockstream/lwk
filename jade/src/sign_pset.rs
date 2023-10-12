@@ -115,7 +115,7 @@ impl Jade {
             trusted_commitments,
             additional_info: None,
         };
-        let sign_response = self.sign_liquid_tx(params)?.get();
+        let sign_response = self.sign_liquid_tx(params)?;
         assert!(sign_response);
 
         let mut signers_commitment = HashMap::new();

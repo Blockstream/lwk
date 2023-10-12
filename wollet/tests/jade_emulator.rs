@@ -23,7 +23,7 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
         temporary_wallet: false,
     };
     let result = jade_api.debug_set_mnemonic(params).unwrap();
-    assert!(result.get());
+    assert!(result);
 
     InitializedJade {
         _jade_emul: container,

@@ -7,7 +7,7 @@ use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, DebugSetMnemonicParams, EntropyParams, EpochParams,
+    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
     GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult,
     RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
     VersionInfoResult,
@@ -68,7 +68,7 @@ impl Jade {
         self.send_request("ping", None)
     }
 
-    pub fn logout(&mut self) -> Result<BoolResult> {
+    pub fn logout(&mut self) -> Result<bool> {
         self.send_request("logout", None)
     }
 
@@ -76,12 +76,12 @@ impl Jade {
         self.send_request("get_version_info", None)
     }
 
-    pub fn set_epoch(&mut self, epoch: u64) -> Result<BoolResult> {
+    pub fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
         let params = Params::Epoch(EpochParams { epoch });
         self.send_request("set_epoch", Some(params))
     }
 
-    pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<BoolResult> {
+    pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
         let params = Params::Entropy(EntropyParams {
             entropy: entropy.to_vec(),
         });
@@ -105,7 +105,7 @@ impl Jade {
         self.send_request("handshake_init", Some(params))
     }
 
-    pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<BoolResult> {
+    pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
         let params = Params::UpdatePinServer(params);
         self.send_request("update_pinserver", Some(params))
     }
@@ -113,7 +113,7 @@ impl Jade {
     pub fn handshake_complete(
         &mut self,
         params: protocol::HandshakeCompleteParams,
-    ) -> Result<BoolResult> {
+    ) -> Result<bool> {
         let params = Params::HandshakeComplete(params);
         self.send_request("handshake_complete", Some(params))
     }
@@ -168,7 +168,7 @@ impl Jade {
         self.send_request("get_signature", Some(params))
     }
 
-    pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<BoolResult> {
+    pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::SignLiquidTx(params);
         self.send_request("sign_liquid_tx", Some(params))
@@ -179,12 +179,12 @@ impl Jade {
         self.send_request("tx_input", Some(params))
     }
 
-    pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<BoolResult> {
+    pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<bool> {
         let params = Params::DebugSetMnemonic(params);
         self.send_request("debug_set_mnemonic", Some(params))
     }
 
-    pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<BoolResult> {
+    pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::RegisterMultisig(params);
         self.send_request("register_multisig", Some(params))

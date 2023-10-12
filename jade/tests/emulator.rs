@@ -222,7 +222,7 @@ fn jade_register_multisig() {
         },
     };
     let result = jade.register_multisig(params).unwrap();
-    assert!(result.get())
+    assert!(result)
 }
 
 #[test]
@@ -368,7 +368,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     };
 
     let result = jade_api.update_pinserver(params).unwrap();
-    assert!(result.get());
+    assert!(result);
 
     let result = jade_api.auth_user().unwrap();
     let start_handshake_url = &result.urls()[0];
@@ -390,7 +390,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let params: HandshakeCompleteParams = resp.into_json().unwrap();
 
     let result = jade_api.handshake_complete(params).unwrap();
-    assert!(result.get());
+    assert!(result);
 
     InitializedJade {
         _pin_server: Some(pin_container),
@@ -411,7 +411,7 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
         temporary_wallet: false,
     };
     let result = jade_api.debug_set_mnemonic(params).unwrap();
-    assert!(result.get());
+    assert!(result);
 
     InitializedJade {
         _pin_server: None,

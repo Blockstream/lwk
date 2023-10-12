@@ -111,15 +111,6 @@ pub struct Response<T> {
 pub struct PingResult(u8);
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct BoolResult(bool);
-
-impl BoolResult {
-    pub fn get(&self) -> bool {
-        self.0
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct VersionInfoResult {
     jade_version: String,

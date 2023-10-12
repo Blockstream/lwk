@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    io::ErrorKind,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -240,6 +241,7 @@ impl Jade {
                             }
                             return Err(Error::JadeNeitherErrorNorResult);
                         }
+
                         Err(e) => {
                             let res = ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total]);
                             if let Ok(value) = res {
@@ -259,8 +261,10 @@ impl Jade {
                     }
                 }
                 Err(e) => {
-                    dbg!(&e);
-                    return Err(Error::IoError(e));
+                    if e.kind() != ErrorKind::Interrupted {
+                        dbg!(&e);
+                        return Err(Error::IoError(e));
+                    }
                 }
             }
         }

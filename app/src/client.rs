@@ -21,4 +21,13 @@ impl Client {
         let version: String = serde_json::from_str(&result).unwrap();
         Ok(version)
     }
+
+    pub fn generate_signer(&self) -> Result<String> {
+        let request = self.client.build_request("generate_signer", &[]);
+        let response = self.client.send_request(request)?;
+        // todo: error
+        let result = response.result.unwrap().to_string();
+        let mnemonic: String = serde_json::from_str(&result).unwrap();
+        Ok(mnemonic)
+    }
 }

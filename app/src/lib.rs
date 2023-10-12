@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 
 use client::Client;
 use config::Config;
-use serde_json::Value;
+use secp256k1::Secp256k1;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 
 pub mod client;
@@ -22,7 +22,7 @@ impl App {
         tracing::info!("Creating new app with config: {:?}", config);
 
         let server = tiny_http::Server::http(config.addr)?;
-        let _rpc = tiny_jrpc::JsonRpcServer::new(server, process);
+        let _rpc = tiny_jrpc::JsonRpcServer::new(server, method_handler);
 
         Ok(App { _rpc, config })
     }
@@ -36,14 +36,12 @@ impl App {
     }
 }
 
-fn process(request: Request) -> tiny_jrpc::Result<Response> {
+fn method_handler(request: Request) -> tiny_jrpc::Result<Response> {
+    let secp = Secp256k1::default(); // todo: request context?
     let response = match request.method.as_str() {
-        "echo" => {
-            let value = match request.params {
-                Some(value) => value,
-                None => Value::Null,
-            };
-            Response::result(request.id, value)
+        "generate_signer" => {
+            let (_signer, mnemonic) = signer::SwSigner::random(&secp).unwrap(); // todo
+            Response::result(request.id, mnemonic.to_string().into())
         }
         "version" => Response::result(request.id, consts::APP_VERSION.into()),
         _ => Response::unimplemented(request.id),

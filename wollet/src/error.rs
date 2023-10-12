@@ -9,6 +9,9 @@ pub enum Error {
     #[error("Blinding bare key unsupported")]
     BlindingBareUnsupported,
 
+    #[error("Blinding view key with wildcard unsupported")]
+    BlindingViewWildcardUnsupported,
+
     #[error("Blinding view key with multipath unsupported")]
     BlindingViewMultiUnsupported,
 

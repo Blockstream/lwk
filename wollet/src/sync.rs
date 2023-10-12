@@ -4,11 +4,11 @@ use crate::elements::encode::deserialize as elements_deserialize;
 use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Store, BATCH_SIZE};
-use crate::util::derive_blinding_key;
 use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use pset_details::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 

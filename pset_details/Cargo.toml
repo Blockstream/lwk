@@ -1,0 +1,10 @@
+[package]
+name = "pset_details"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "27b6e37af2cc850b20b5c4322b3673dcd452cd08" }
+thiserror = "1.0.48"

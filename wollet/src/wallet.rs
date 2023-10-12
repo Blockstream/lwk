@@ -13,7 +13,6 @@ use crate::elements::{
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTxOut};
-use crate::pset_details::{pset_balance, pset_signatures, PsetDetails};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -25,6 +24,7 @@ use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
+use pset_details::{pset_balance, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;

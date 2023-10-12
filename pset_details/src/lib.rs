@@ -1,16 +1,16 @@
-use std::collections::btree_map::BTreeMap;
-use std::collections::HashMap;
-
-use crate::elements::{
+use elements_miniscript::confidential::bare::tweak_private_key;
+use elements_miniscript::confidential::Key;
+use elements_miniscript::descriptor::DescriptorSecretKey;
+use elements_miniscript::elements::bitcoin::secp256k1::SecretKey;
+use elements_miniscript::elements::{
     bitcoin::{bip32::KeySource, key::PublicKey},
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
     AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
-
-use crate::util::{derive_blinding_key, derive_script_pubkey};
-use crate::EC;
+use std::collections::btree_map::BTreeMap;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct PsetBalance {
@@ -94,6 +94,37 @@ pub enum Error {
 
     #[error("Private blinding key not available")]
     MissingPrivateBlindingKey,
+
+    #[error(transparent)]
+    DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
+}
+
+pub fn derive_script_pubkey(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    index: u32,
+) -> Result<Script, Error> {
+    Ok(descriptor
+        .descriptor
+        .at_derivation_index(index)?
+        .script_pubkey())
+}
+
+pub fn derive_blinding_key(
+    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    script_pubkey: &Script,
+) -> Option<SecretKey> {
+    let secp = Secp256k1::new();
+    match &descriptor.key {
+        Key::Slip77(k) => Some(k.blinding_private_key(script_pubkey)),
+        Key::View(DescriptorSecretKey::XPrv(dxk)) => {
+            let k = dxk.xkey.to_priv();
+            Some(tweak_private_key(&secp, script_pubkey, &k.inner))
+        }
+        Key::View(DescriptorSecretKey::Single(k)) => {
+            Some(tweak_private_key(&secp, script_pubkey, &k.key.inner))
+        }
+        _ => None,
+    }
 }
 
 fn commitments(
@@ -138,6 +169,7 @@ pub fn pset_balance(
     pset: &PartiallySignedTransaction,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
+    let secp = Secp256k1::new();
     let mut balances: HashMap<AssetId, i64> = HashMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
@@ -181,9 +213,9 @@ pub fn pset_balance(
                 let private_blinding_key = derive_blinding_key(descriptor, &txout.script_pubkey)
                     .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = txout
-                    .unblind(&EC, private_blinding_key)
+                    .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::InputMineNotUnblindable { idx })?;
-                if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
+                if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {
                     return Err(Error::InputCommitmentsMismatch { idx });
                 }
 
@@ -234,11 +266,15 @@ pub fn pset_balance(
                 Some(amount_comm),
                 Some(blind_value_proof),
             ) => {
-                if !blind_asset_proof.blind_asset_proof_verify(&EC, asset, asset_comm) {
+                if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
                     return Err(Error::InvalidAssetBlindProof { idx });
                 }
-                if !blind_value_proof.blind_value_proof_verify(&EC, amount, asset_comm, amount_comm)
-                {
+                if !blind_value_proof.blind_value_proof_verify(
+                    &secp,
+                    amount,
+                    asset_comm,
+                    amount_comm,
+                ) {
                     return Err(Error::InvalidValueBlindProof { idx });
                 }
 
@@ -247,9 +283,9 @@ pub fn pset_balance(
                     .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = output
                     .to_txout()
-                    .unblind(&EC, private_blinding_key)
+                    .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::OutputMineNotUnblindable { idx })?;
-                if (asset_comm, amount_comm) != commitments(&EC, &txout_secrets) {
+                if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {
                     return Err(Error::OutputCommitmentsMismatch { idx });
                 }
 

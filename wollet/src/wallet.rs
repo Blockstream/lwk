@@ -8,7 +8,7 @@ use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{
-    Address, AddressParams, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid,
+    Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid,
 };
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
@@ -30,31 +30,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
-
-fn derive_address(
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-    index: u32,
-    address_params: &'static AddressParams,
-) -> Result<Address, Error> {
-    let derived_non_conf = descriptor.descriptor.at_derivation_index(index)?;
-
-    let derived_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
-        key: convert_blinding_key(&descriptor.key)?,
-        descriptor: derived_non_conf,
-    };
-
-    Ok(derived_conf.address(&EC, address_params)?)
-}
-
-fn convert_blinding_key(
-    key: &Key<DescriptorPublicKey>,
-) -> Result<Key<DefiniteDescriptorKey>, Error> {
-    match key {
-        Key::Slip77(x) => Ok(Key::Slip77(*x)),
-        Key::Bare(_) => Err(Error::BlindingBareUnsupported),
-        Key::View(x) => Ok(Key::View(x.clone())),
-    }
-}
 
 fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
     if let Key::Bare(_) = desc.key {
@@ -153,7 +128,24 @@ impl ElectrumWallet {
     }
 
     fn derive_address(&self, index: u32) -> Result<Address, Error> {
-        derive_address(&self.descriptor, index, self.config.address_params())
+        // To derive an address from a confidential descriptor we need to make it definite.
+        let derived_descriptor: Descriptor<DefiniteDescriptorKey> =
+            self.descriptor.descriptor.at_derivation_index(index)?;
+        // But we also need to make the blinding key using the same generic, so we need to convert
+        // it here.
+        // However the generic is only relevant for the Bare variant, which we do not support.
+        let key: Key<DefiniteDescriptorKey> = match &self.descriptor.key {
+            Key::Slip77(x) => Key::Slip77(*x),
+            Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
+            Key::View(x) => Key::View(x.clone()),
+        };
+
+        let derived_descriptor_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
+            key,
+            descriptor: derived_descriptor,
+        };
+
+        Ok(derived_descriptor_conf.address(&EC, self.config.address_params())?)
     }
 
     /// Get a wallet address
@@ -402,6 +394,7 @@ mod tests {
     use super::*;
     use crate::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
     use crate::elements::bitcoin::network::constants::Network;
+    use crate::elements::AddressParams;
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
@@ -419,29 +412,6 @@ mod tests {
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let addr = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
-        assert_eq!(addr.to_string(), expected_addr.to_string());
-    }
-
-    #[test]
-    fn test_address_from_desc_wildcard() {
-        let xpub = "tpubDC2Q4xK4XH72GLdvD62W5NsFiD3HmTScXpopTsf3b4AUqkQwBd7wmWAJki61sov1MVuyU4MuGLJHF7h3j1b3e1FY2wvUVVx7vagmxdPvVsv";
-        let master_blinding_key =
-            "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-        let checksum = "yfhwtmd8";
-        let desc_str = format!(
-            "ct(slip77({}),elsh(wpkh({}/0/*)))#{}",
-            master_blinding_key, xpub, checksum
-        );
-        let desc = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(&desc_str).unwrap();
-
-        let addr = derive_address(&desc, 0, &AddressParams::LIQUID_TESTNET).unwrap();
-        let expected_addr =
-            "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji";
-        assert_eq!(addr.to_string(), expected_addr.to_string());
-
-        let addr = derive_address(&desc, 1, &AddressParams::LIQUID_TESTNET).unwrap();
-        let expected_addr =
-            "vjTuhaPWWbywbSy2EeRWWQ8bN2pPLmM4gFQTkA7DPX7uaCApKuav1e6LW1GKHuLUHdbv9Eag5MybsZoy";
         assert_eq!(addr.to_string(), expected_addr.to_string());
     }
 

@@ -101,22 +101,22 @@ impl<'a> SwSigner<'a> {
         // Fixme: Take a parameter
         let hash_ty = elements_miniscript::elements::EcdsaSighashType::All;
 
-        // let signer_fingerprint = self.fingerprint();
+        let signer_fingerprint = self.fingerprint();
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
-            for (want_public_key, (_fingerprint, derivation_path)) in input.bip32_derivation.iter()
-            {
-                // if fingerprint == &signer_fingerprint {  // TODO let's ignore the fingerprint for now
-                let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
-                let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                let public_key = private_key.public_key(self.secp);
-                if want_public_key == &public_key {
-                    // fixme: for taproot use schnorr
-                    let sig = self.secp.sign_ecdsa_low_r(&msg, &private_key.inner);
-                    let sig = elementssig_to_rawsig(&(sig, hash_ty));
+            for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
+                if &signer_fingerprint == fingerprint {
+                    let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
+                    let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
+                    let public_key = private_key.public_key(self.secp);
+                    if want_public_key == &public_key {
+                        // fixme: for taproot use schnorr
+                        let sig = self.secp.sign_ecdsa_low_r(&msg, &private_key.inner);
+                        let sig = elementssig_to_rawsig(&(sig, hash_ty));
 
-                    let inserted = input.partial_sigs.insert(public_key, sig);
-                    if inserted.is_none() {
-                        signature_added += 1;
+                        let inserted = input.partial_sigs.insert(public_key, sig);
+                        if inserted.is_none() {
+                            signature_added += 1;
+                        }
                     }
                 }
             }

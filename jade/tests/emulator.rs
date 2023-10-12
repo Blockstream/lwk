@@ -250,6 +250,9 @@ fn jade_register_multisig_check_address() {
     })
     .unwrap();
 
+    let result = jade.get_registered_multisigs().unwrap();
+    result.get(&multisig_name).unwrap();
+
     let result = jade
         .get_receive_address(GetReceiveAddressParams {
             network,

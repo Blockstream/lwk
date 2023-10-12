@@ -1,4 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
@@ -6,8 +9,8 @@ use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
     EpochParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params,
-    PingResult, Request, Response, SignMessageParams, StringResult, UpdatePinserverParams,
-    VersionInfoResult,
+    PingResult, RegisteredMultisig, Request, Response, SignMessageParams, StringResult,
+    UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
@@ -184,6 +187,10 @@ impl Jade {
         self.check_network(params.network)?;
         let params = Params::RegisterMultisig(params);
         self.send_request("register_multisig", Some(params))
+    }
+
+    pub fn get_registered_multisigs(&mut self) -> Result<HashMap<String, RegisteredMultisig>> {
+        self.send_request("get_registered_multisigs", None)
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

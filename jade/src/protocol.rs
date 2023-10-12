@@ -156,6 +156,17 @@ pub struct VersionInfoResult {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct RegisteredMultisig {
+    variant: String,
+    sorted: bool,
+    threshold: u32,
+    num_signers: u32,
+
+    #[serde(with = "serde_bytes")]
+    master_blinding_key: Vec<u8>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthResult<T> {
     http_request: HttpRequest<T>,
 }

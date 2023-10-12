@@ -19,6 +19,7 @@ use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
+use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::psbt;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
@@ -32,8 +33,11 @@ use std::str::FromStr;
 use std::sync::atomic;
 
 fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
-    if let Key::Bare(_) = desc.key {
+    if let Key::Bare(_) = &desc.key {
         return Err(Error::BlindingBareUnsupported);
+    }
+    if let Key::View(DescriptorSecretKey::MultiXPrv(_)) = &desc.key {
+        return Err(Error::BlindingViewMultiUnsupported);
     }
     if !desc.descriptor.has_wildcard() {
         return Err(Error::UnsupportedDescriptor);

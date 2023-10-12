@@ -200,6 +200,10 @@ fn unsupported_descriptor() {
     let bare_key = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904";
     let desc_bare = format!("ct({},elwpkh({}/*))", bare_key, signer1.xpub());
     new_unsupported_wallet(&desc_bare, Error::BlindingBareUnsupported);
+
+    let xprv = generate_xprv();
+    let desc_view_multi = format!("ct({}/<0;1>,elwpkh({}))", xprv, signer1.xpub());
+    new_unsupported_wallet(&desc_view_multi, Error::BlindingViewMultiUnsupported);
 }
 
 #[test]

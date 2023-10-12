@@ -16,7 +16,6 @@ fn auth_user() {
 
         let result = jade_api.auth_user().unwrap();
         dbg!(&result);
-        // insta::assert_yaml_snapshot!(result);
 
         let url = result.urls()[0].as_str();
         dbg!(&url);
@@ -26,7 +25,6 @@ fn auth_user() {
 
         let result = jade_api.handshake_init(params).unwrap();
         dbg!(&result);
-        // insta::assert_yaml_snapshot!(result);
     }
 }
 

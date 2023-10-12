@@ -22,6 +22,7 @@ use elements_miniscript::{
 };
 use jade::{
     get_receive_address::{GetReceiveAddressParams, Multi, Single},
+    protocol::VersionInfoResult,
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
 };
 use jade::{
@@ -58,7 +59,7 @@ fn debug_set_mnemonic() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
 
     let result = initialized_jade.jade.version_info().unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert_eq!(result, mock_version_info());
 }
 
 #[test]
@@ -98,7 +99,9 @@ fn version() {
     let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.version_info().unwrap();
-    insta::assert_yaml_snapshot!(result);
+    let mut expected = mock_version_info();
+    expected.jade_state = "UNINIT".to_string();
+    assert_eq!(result, expected);
 }
 
 #[test]
@@ -134,8 +137,9 @@ fn jade_initialization_with_pin_server() {
 
     let mut initialized_jade = inner_jade_initialization(&docker);
     let result = initialized_jade.jade.version_info().unwrap();
-    insta::assert_yaml_snapshot!(result);
-    assert!(result.jade_has_pin);
+    let mut expected = mock_version_info();
+    expected.jade_has_pin = true;
+    assert_eq!(result, expected);
 }
 
 #[test]
@@ -418,5 +422,22 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
         _jade_emul: container,
         _tempdir: None,
         jade: jade_api,
+    }
+}
+
+fn mock_version_info() -> VersionInfoResult {
+    VersionInfoResult {
+        jade_version: "1".to_string(),
+        jade_ota_max_chunk: 4096,
+        jade_config: "NORADIO".to_string(),
+        board_type: "DEV".to_string(),
+        jade_features: "DEV".to_string(),
+        idf_version: "v5.0.2".to_string(),
+        chip_features: "32000000".to_string(),
+        efusemac: "000000000000".to_string(),
+        battery_status: 0,
+        jade_state: "READY".to_string(),
+        jade_networks: "ALL".to_string(),
+        jade_has_pin: false,
     }
 }

@@ -107,23 +107,20 @@ pub struct Response<T> {
     pub error: Option<ErrorDetails>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PingResult(u8);
-
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct VersionInfoResult {
-    jade_version: String,
-    jade_ota_max_chunk: u32,
-    jade_config: String,
-    board_type: String,
-    jade_features: String,
-    idf_version: String,
-    chip_features: String,
-    efusemac: String,
-    battery_status: u8,
-    jade_state: String,
-    jade_networks: String,
+    pub jade_version: String,
+    pub jade_ota_max_chunk: u32,
+    pub jade_config: String,
+    pub board_type: String,
+    pub jade_features: String,
+    pub idf_version: String,
+    pub chip_features: String,
+    pub efusemac: String,
+    pub battery_status: u8,
+    pub jade_state: String,
+    pub jade_networks: String,
     pub jade_has_pin: bool,
 }
 

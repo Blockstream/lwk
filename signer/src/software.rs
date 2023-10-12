@@ -104,7 +104,7 @@ impl<'a> SwSigner<'a> {
                 let public_key = private_key.public_key(self.secp);
                 if want_public_key == &public_key {
                     // fixme: for taproot use schnorr
-                    let sig = self.secp.sign_ecdsa(&msg, &private_key.inner);
+                    let sig = self.secp.sign_ecdsa_low_r(&msg, &private_key.inner);
                     let sig = elementssig_to_rawsig(&(sig, hash_ty));
 
                     let inserted = input.partial_sigs.insert(public_key, sig);

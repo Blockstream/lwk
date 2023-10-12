@@ -49,6 +49,9 @@ pub enum Error {
 
     #[error("Previous script pubkey is wsh but witness script is missing in input {0}")]
     MissingWitnessScript(usize),
+
+    #[error("Unsupported spending script pubkey: {0}")]
+    UnsupportedScriptPubkeyType(String),
 }
 
 impl Jade {
@@ -138,7 +141,9 @@ impl Jade {
                             .clone()
                             .ok_or(Error::MissingWitnessScript(i))?
                     } else {
-                        panic!("unsupported script type");
+                        return Err(Error::UnsupportedScriptPubkeyType(
+                            previous_output_script.asm(),
+                        ));
                     };
 
                     let params = TxInputParams {

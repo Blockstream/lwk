@@ -255,7 +255,6 @@ impl Jade {
                                 return Err(Error::Des(e));
                             } else {
                                 // it may be the parsing failed because there is other data to be read
-                                // TODO make a test emulating a partial write
                             }
                         }
                     }

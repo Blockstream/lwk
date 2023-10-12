@@ -362,8 +362,7 @@ impl ElectrumWallet {
             if let Some(txout) = input.witness_utxo.as_ref() {
                 match self.definite_descriptor(&txout.script_pubkey) {
                     Ok(desc) => {
-                        pset.update_input_with_descriptor(idx, &desc)
-                            .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+                        pset.update_input_with_descriptor(idx, &desc)?;
                     }
                     Err(Error::ScriptNotMine) => (),
                     Err(e) => return Err(e),

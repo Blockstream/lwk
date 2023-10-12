@@ -31,7 +31,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
 
-pub(crate) fn derive_address(
+fn derive_address(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,
     address_params: &'static AddressParams,
@@ -46,7 +46,7 @@ pub(crate) fn derive_address(
     Ok(derived_conf.address(&EC, address_params)?)
 }
 
-pub(crate) fn convert_blinding_key(
+fn convert_blinding_key(
     key: &Key<DescriptorPublicKey>,
 ) -> Result<Key<DefiniteDescriptorKey>, Error> {
     match key {

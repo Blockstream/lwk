@@ -8,9 +8,8 @@ use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult,
-    RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
-    VersionInfoResult,
+    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params, RegisteredMultisig,
+    Request, Response, SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
@@ -64,7 +63,7 @@ impl Jade {
         }
     }
 
-    pub fn ping(&mut self) -> Result<PingResult> {
+    pub fn ping(&mut self) -> Result<u8> {
         self.send_request("ping", None)
     }
 

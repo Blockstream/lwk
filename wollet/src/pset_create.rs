@@ -211,7 +211,7 @@ impl ElectrumWallet {
     fn createpset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
-        fee_rate: Option<f32>,
+        fee_rate: Option<f32>, // TODO consider using bitcoin::FeeRate
         issuance_request: IssuanceRequest,
     ) -> Result<PartiallySignedTransaction, Error> {
         // Check user inputs
@@ -265,7 +265,7 @@ impl ElectrumWallet {
             satoshi_out += addressee.satoshi;
         }
 
-        // For implementation simplicity we always add all L-BTC inputs
+        // FIXME: For implementation simplicity now we always add all L-BTC inputs
         for utxo in self.asset_utxos(&self.policy_asset())? {
             self.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
             satoshi_in += utxo.unblinded.value;
@@ -377,10 +377,12 @@ impl ElectrumWallet {
         // Replace change and fee outputs
         let n_outputs = pset.n_outputs();
         let outputs = pset.outputs_mut();
-        let change_output = &mut outputs[n_outputs - 2];
+        let change_output = &mut outputs[n_outputs - 2]; // index check: we always have the lbtc change and the fee output at least
         change_output.amount = Some(satoshi_change);
         let fee_output = &mut outputs[n_outputs - 1];
         fee_output.amount = Some(fee);
+
+        // TODO inputs/outputs(except fee) randomization, not trivial because of blinder_index on inputs
 
         // Blind the transaction
         let mut rng = thread_rng();

@@ -217,7 +217,7 @@ impl Jade {
 
         self.conn.write_all(&buf).unwrap();
 
-        let mut rx = vec![0; 1000];
+        let mut rx = [0u8; 4096];
 
         let mut total = 0;
         loop {
@@ -241,16 +241,25 @@ impl Jade {
                             return Err(Error::JadeNeitherErrorNorResult);
                         }
                         Err(e) => {
-                            let value =
-                                ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total])?;
-                            dbg!(&value);
-                            return Err(Error::Des(e));
+                            let res = ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total]);
+                            if let Ok(value) = res {
+                                // The value returned is a valid CBOR, but our structs doesn't map it correctly
+                                dbg!(&value);
+                                return Err(Error::Des(e));
+                            }
+
+                            if len == 0 {
+                                // There is no more data coming from jade and we can't parse its message, return error
+                                return Err(Error::Des(e));
+                            } else {
+                                // it may be the parsing failed because there is other data to be read
+                            }
                         }
                     }
                 }
                 Err(e) => {
-                    dbg!(e);
-                    todo!();
+                    dbg!(&e);
+                    return Err(Error::IoError(e));
                 }
             }
         }

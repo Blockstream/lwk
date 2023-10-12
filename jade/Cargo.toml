@@ -32,7 +32,6 @@ name = "e2e"
 path = "tests/e2e.rs"
 
 [dev-dependencies]
-insta = { version = "1.31.0", features = ["yaml"] }
 tempfile = "3.8.0"
 bs_containers = { path = "../bs_containers" }
 base64 = "0.21.4"

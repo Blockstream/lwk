@@ -16,7 +16,6 @@ fn auth_user() {
 
         let result = jade_api.auth_user().unwrap();
         dbg!(&result);
-        // insta::assert_yaml_snapshot!(result);
 
         let url = result.urls()[0].as_str();
         dbg!(&url);
@@ -26,7 +25,6 @@ fn auth_user() {
 
         let result = jade_api.handshake_init(params).unwrap();
         dbg!(&result);
-        // insta::assert_yaml_snapshot!(result);
     }
 }
 
@@ -46,8 +44,7 @@ fn logout() {
 
         let result = jade_api.logout().unwrap();
         dbg!(&result);
-
-        insta::assert_yaml_snapshot!(result);
+        assert!(result);
     }
 }
 
@@ -65,7 +62,6 @@ fn ping() {
         let mut jade_api = Jade::new(port.into(), jade::Network::TestnetLiquid);
 
         let result = jade_api.ping().unwrap();
-
-        insta::assert_yaml_snapshot!(result);
+        assert_eq!(result, 0);
     }
 }

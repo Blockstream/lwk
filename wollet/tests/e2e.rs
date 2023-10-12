@@ -450,10 +450,12 @@ fn createpset_error() {
         .electrum_wallet
         .sendmany(addressees, None)
         .unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        "base58 error: base58ck data not even long enough for a checksum".to_string()
-    );
+    let expected = "base58 error: base58ck data not even long enough for a checksum";
+    assert_eq!(err.to_string(), expected);
+
+    let err = wallet.electrum_wallet.sendmany(vec![], None).unwrap_err();
+    let expected = "Send many cannot be called with an empty addressee list";
+    assert_eq!(err.to_string(), expected);
 
     // Not confidential address
     let mut address = wallet.address();

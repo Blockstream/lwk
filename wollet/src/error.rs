@@ -107,6 +107,9 @@ pub enum Error {
 
     #[error("Missing PSET")]
     MissingPset,
+
+    #[error("Send many cannot be called with an empty addressee list")]
+    SendManyEmptyAddressee,
 }
 
 // cannot derive automatically with this error because of trait bound

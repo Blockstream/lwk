@@ -427,6 +427,9 @@ impl ElectrumWallet {
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
+        if addressees.is_empty() {
+            return Err(Error::SendManyEmptyAddressee);
+        }
         self.createpset(addressees, fee_rate, IssuanceRequest::None)
     }
 

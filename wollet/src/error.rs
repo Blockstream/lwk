@@ -9,6 +9,9 @@ pub enum Error {
     #[error("Blinding bare key unsupported")]
     BlindingBareUnsupported,
 
+    #[error("Blinding view key with multipath unsupported")]
+    BlindingViewMultiUnsupported,
+
     #[error(transparent)]
     BitcoinBIP32Error(#[from] crate::bitcoin::bip32::Error),
 

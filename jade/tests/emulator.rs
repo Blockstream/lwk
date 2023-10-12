@@ -172,7 +172,7 @@ fn jade_receive_address() {
         multi: None,
     };
     let result = initialized_jade.jade.get_receive_address(params).unwrap();
-    let address = elements::Address::from_str(result.get()).unwrap();
+    let address = elements::Address::from_str(&result).unwrap();
     assert!(address.blinding_pubkey.is_some());
     assert_eq!(address.params, &AddressParams::ELEMENTS);
 }
@@ -251,6 +251,7 @@ fn jade_register_multisig_check_address() {
     .unwrap();
 
     let result = jade.get_registered_multisigs().unwrap();
+    assert_eq!(result.len(), 1);
     result.get(&multisig_name).unwrap();
 
     let result = jade
@@ -263,7 +264,7 @@ fn jade_register_multisig_check_address() {
             }),
         })
         .unwrap();
-    let address_jade: Address = result.get().parse().unwrap();
+    let address_jade: Address = result.parse().unwrap();
 
     // copied from wollet derive_address
     let derived_non_conf = desc.descriptor.at_derivation_index(0).unwrap();
@@ -304,7 +305,7 @@ fn jade_sign_message() {
     let params = GetSignatureParams { ae_host_entropy };
     let signature = initialized_jade.jade.get_signature_for_msg(params).unwrap();
     let signature_bytes = base64::engine::general_purpose::STANDARD
-        .decode(signature.get())
+        .decode(signature)
         .unwrap();
 
     let params = GetXpubParams {

@@ -121,15 +121,6 @@ impl BoolResult {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct StringResult(String);
-
-impl StringResult {
-    pub fn get(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct ByteResult(ByteBuf);
 
 impl From<ByteResult> for Vec<u8> {

@@ -9,8 +9,8 @@ use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
     EpochParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params,
-    PingResult, RegisteredMultisig, Request, Response, SignMessageParams, StringResult,
-    UpdatePinserverParams, VersionInfoResult,
+    PingResult, RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
@@ -146,7 +146,7 @@ impl Jade {
         Ok(self.master_xpub.expect("ensure it is some before"))
     }
 
-    pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<StringResult> {
+    pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
         self.check_network(params.network)?;
         let params = Params::GetReceiveAddress(params);
         self.send_request("get_receive_address", Some(params))
@@ -157,7 +157,7 @@ impl Jade {
         self.send_request("sign_message", Some(params))
     }
 
-    pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<StringResult> {
+    pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<String> {
         let params = Params::GetSignature(params);
         self.send_request("get_signature", Some(params))
     }

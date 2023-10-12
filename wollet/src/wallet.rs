@@ -57,7 +57,9 @@ fn convert_blinding_key(
 }
 
 fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
-    convert_blinding_key(&desc.key)?;
+    if let Key::Bare(_) = desc.key {
+        return Err(Error::BlindingBareUnsupported);
+    }
     if !desc.descriptor.has_wildcard() {
         return Err(Error::UnsupportedDescriptor);
     }

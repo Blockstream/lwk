@@ -46,8 +46,7 @@ fn logout() {
 
         let result = jade_api.logout().unwrap();
         dbg!(&result);
-
-        insta::assert_yaml_snapshot!(result);
+        assert!(result);
     }
 }
 
@@ -65,7 +64,6 @@ fn ping() {
         let mut jade_api = Jade::new(port.into(), jade::Network::TestnetLiquid);
 
         let result = jade_api.ping().unwrap();
-
-        insta::assert_yaml_snapshot!(result);
+        assert_eq!(result, 0);
     }
 }

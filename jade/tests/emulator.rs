@@ -48,7 +48,7 @@ fn entropy() {
     let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.add_entropy(&[1, 2, 3, 4]).unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert!(result);
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn epoch() {
         .unwrap()
         .as_secs();
     let result = jade_api.set_epoch(seconds).unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert!(result);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn ping() {
     let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
 
     let result = jade_api.ping().unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert_eq!(result, 0);
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn update_pinserver() {
         certificate: "".into(),
     };
     let result = jade_api.update_pinserver(params).unwrap();
-    insta::assert_yaml_snapshot!(result);
+    assert!(result);
 }
 
 #[test]

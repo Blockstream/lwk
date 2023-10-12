@@ -211,7 +211,7 @@ pub fn pset_balance(
 
                 // We expect the input to be unblindable with the descriptor blinding key
                 let private_blinding_key = derive_blinding_key(descriptor, &txout.script_pubkey)
-                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
+                    .ok_or(Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = txout
                     .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::InputMineNotUnblindable { idx })?;
@@ -280,7 +280,7 @@ pub fn pset_balance(
 
                 // Check that we can later unblind the output
                 let private_blinding_key = derive_blinding_key(descriptor, &output.script_pubkey)
-                    .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
+                    .ok_or(Error::MissingPrivateBlindingKey)?;
                 let txout_secrets = output
                     .to_txout()
                     .unblind(&secp, private_blinding_key)

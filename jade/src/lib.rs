@@ -249,8 +249,8 @@ impl Jade {
                     }
                 }
                 Err(e) => {
-                    dbg!(e);
-                    todo!();
+                    dbg!(&e);
+                    return Err(Error::IoError(e));
                 }
             }
         }

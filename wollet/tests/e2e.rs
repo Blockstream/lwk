@@ -13,21 +13,36 @@ const TEST_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 #[test]
-fn liquid_jade_signer() {
+fn liquid_send_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let signers = [&Signer::Jade(&jade_init.jade)];
-    liquid(&signers);
+    liquid_send(&signers);
 }
 
 #[test]
-fn liquid_software_signer() {
+fn liquid_send_software_signer() {
     let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
     let signers = [&Signer::Software(signer)];
-    liquid(&signers);
+    liquid_send(&signers);
 }
 
-fn liquid(signers: &[&Signer]) {
+#[test]
+fn liquid_issue_jade_signer() {
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let signers = [&Signer::Jade(&jade_init.jade)];
+    liquid_issue(&signers);
+}
+
+#[test]
+fn liquid_issue_software_signer() {
+    let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
+    let signers = [&Signer::Software(signer)];
+    liquid_issue(&signers);
+}
+
+fn liquid_send(signers: &[&Signer]) {
     let server = setup();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
@@ -54,6 +69,20 @@ fn liquid(signers: &[&Signer]) {
         &wallet.policy_asset(),
         None,
     );
+}
+
+fn liquid_issue(signers: &[&Signer]) {
+    let server = setup();
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!(
+        "ct(slip77({}),elwpkh({}/*))",
+        slip77_key,
+        signers[0].xpub().unwrap()
+    );
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    wallet.fund_btc(&server);
+
     let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 5, &asset, None);

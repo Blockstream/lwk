@@ -204,6 +204,9 @@ fn unsupported_descriptor() {
     let xprv = generate_xprv();
     let desc_view_multi = format!("ct({}/<0;1>,elwpkh({}))", xprv, signer1.xpub());
     new_unsupported_wallet(&desc_view_multi, Error::BlindingViewMultiUnsupported);
+
+    let desc_view_wildcard = format!("ct({}/*,elwpkh({}))", xprv, signer1.xpub());
+    new_unsupported_wallet(&desc_view_wildcard, Error::BlindingViewWildcardUnsupported);
 }
 
 #[test]

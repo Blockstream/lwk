@@ -217,7 +217,7 @@ impl Jade {
 
         self.conn.write_all(&buf).unwrap();
 
-        let mut rx = vec![0; 1000];
+        let mut rx = [0u8; 4096];
 
         let mut total = 0;
         loop {

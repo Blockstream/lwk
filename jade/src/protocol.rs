@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
 
 use crate::{
     error::ErrorDetails,
@@ -117,15 +116,6 @@ pub struct BoolResult(bool);
 impl BoolResult {
     pub fn get(&self) -> bool {
         self.0
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ByteResult(ByteBuf);
-
-impl From<ByteResult> for Vec<u8> {
-    fn from(value: ByteResult) -> Self {
-        value.0.into_vec()
     }
 }
 

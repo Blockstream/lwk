@@ -7,14 +7,15 @@ use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
-    AuthResult, AuthUserParams, BoolResult, ByteResult, DebugSetMnemonicParams, EntropyParams,
-    EpochParams, GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params,
-    PingResult, RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
+    AuthResult, AuthUserParams, BoolResult, DebugSetMnemonicParams, EntropyParams, EpochParams,
+    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params, PingResult,
+    RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
     VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
 use serde::de::DeserializeOwned;
+use serde_bytes::ByteBuf;
 use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 
 use crate::error::Error;
@@ -152,7 +153,7 @@ impl Jade {
         self.send_request("get_receive_address", Some(params))
     }
 
-    pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteResult> {
+    pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {
         let params = Params::SignMessage(params);
         self.send_request("sign_message", Some(params))
     }
@@ -162,7 +163,7 @@ impl Jade {
         self.send_request("get_signature", Some(params))
     }
 
-    pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteResult> {
+    pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteBuf> {
         let params = Params::GetSignature(params);
         self.send_request("get_signature", Some(params))
     }
@@ -173,7 +174,7 @@ impl Jade {
         self.send_request("sign_liquid_tx", Some(params))
     }
 
-    pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteResult> {
+    pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteBuf> {
         let params = Params::TxInput(params);
         self.send_request("tx_input", Some(params))
     }

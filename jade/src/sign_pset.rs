@@ -159,7 +159,7 @@ impl Jade {
                         sighash: Some(1),
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
                     };
-                    let signer_commitment: Vec<u8> = self.tx_input(params)?.into();
+                    let signer_commitment: Vec<u8> = self.tx_input(params)?.to_vec();
                     signers_commitment.insert(*want_public_key, signer_commitment);
                 }
             }
@@ -171,7 +171,7 @@ impl Jade {
                     let params = GetSignatureParams {
                         ae_host_entropy: vec![1u8; 32], // TODO verify anti-exfil
                     };
-                    let sig: Vec<u8> = self.get_signature_for_tx(params)?.into();
+                    let sig: Vec<u8> = self.get_signature_for_tx(params)?.to_vec();
 
                     input.partial_sigs.insert(*public_key, sig);
                     sigs_added_or_overwritten += 1;

@@ -62,6 +62,30 @@ test_cli:
   script:
     - cargo test -p cli
 
+test_coverage:
+  extends: .base
+  variables:
+    RUSTFLAGS: "-C instrument-coverage"
+    LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+
+  script:
+    - docker pull tulipan81/blind_pin_server:v0.0.3
+    - docker pull xenoky/local-jade-emulator:1.0.23
+    - cd / && . ./env.sh && cd -
+    - cargo nextest run --profile ci
+    - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
+    - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
+  coverage: '/Coverage: \d+(?:\.\d+)?/'
+  artifacts:
+    paths:
+      - target/coverage.xml
+      - target/nextest/ci/junit.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: target/coverage.xml
+      junit: target/nextest/ci/junit.xml
+
 build_cli:
   extends: .base
   script:

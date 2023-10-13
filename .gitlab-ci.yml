@@ -37,7 +37,7 @@ test_wollet:
   extends: .base
   script:
     - docker pull xenoky/local-jade-emulator:1.0.23
-    - . ./env.sh
+    - cd / && . ./env.sh && cd -
     - cargo test -p wollet -p signer
 
 test_jade:

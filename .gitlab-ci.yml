@@ -49,7 +49,7 @@ build:
 test_wollet:
   extends: .docker
   script:
-    - ./download_bins.sh
+    - ./context/download_bins.sh
     - . .envrc
     - cargo test -p wollet -p signer
 

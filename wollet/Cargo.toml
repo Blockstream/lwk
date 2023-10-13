@@ -23,7 +23,7 @@ log = "0.4.8"
 aes-gcm-siv = "0.10.0"
 electrum-client = "0.15.0"
 bip39 = "2.0.0"
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "27b6e37af2cc850b20b5c4322b3673dcd452cd08", features = [
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "856543bbb0dbe14044c7a2d062ce1cf29ce70741", features = [
     "serde",
 ] }
 thiserror = "1.0.48"
@@ -42,7 +42,6 @@ electrsd = { version = "0.25.0", features = ["legacy"] }
 signer = { path = "../signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
-
 
 
 [[test]]

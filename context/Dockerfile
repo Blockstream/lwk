@@ -19,3 +19,11 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 COPY env.sh /env.sh
+
+
+#### move following lines upper when redoing all layers
+
+RUN cargo install cargo-nextest
+
+# libxml2-utils for xmllint
+RUN apt install -y libxml2-utils

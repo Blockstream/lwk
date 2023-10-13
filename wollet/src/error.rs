@@ -66,6 +66,9 @@ pub enum Error {
     #[error(transparent)]
     UtxoUpdateError(#[from] elements_miniscript::psbt::UtxoUpdateError),
 
+    #[error(transparent)]
+    OutputUpdateError(#[from] elements_miniscript::psbt::OutputUpdateError),
+
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 

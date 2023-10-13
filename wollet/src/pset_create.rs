@@ -125,8 +125,7 @@ impl ElectrumWallet {
 
         match self.definite_descriptor(&addressee.script_pubkey) {
             Ok(desc) => {
-                pset.update_output_with_descriptor(last_output_index, &desc)
-                    .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+                pset.update_output_with_descriptor(last_output_index, &desc)?;
             }
             Err(Error::ScriptNotMine) => (),
             Err(e) => return Err(e),

@@ -367,8 +367,7 @@ impl ElectrumWallet {
         for (idx, output) in pset_clone.outputs().iter().enumerate() {
             match self.definite_descriptor(&output.script_pubkey) {
                 Ok(desc) => {
-                    pset.update_output_with_descriptor(idx, &desc)
-                        .map_err(|e| Error::Generic(e.to_string()))?; //TODO handle OutputUpdateError conversion
+                    pset.update_output_with_descriptor(idx, &desc)?;
                 }
                 Err(Error::ScriptNotMine) => (),
                 Err(e) => return Err(e),

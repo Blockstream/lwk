@@ -5,58 +5,46 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: rust:1.70
+  image: xenoky/ks-builder
   tags:
-    - cloud
+    - k8s-docker
+  before_script:
+    - docker pull tulipan81/blind_pin_server:v0.0.3
+    - docker pull xenoky/local-jade-emulator:1.0.23
   retry:
     max: 2
     when:
       - runner_system_failure
       - unknown_failure
-      - stuck_or_timeout_failure
-
-.docker:
-  extends: .base
-  before_script:
-    - curl -fsSL https://get.docker.com -o get-docker.sh
-    - sh get-docker.sh
-    - docker pull xenoky/local-jade-emulator:1.0.23
-  tags:
-    - k8s-docker
+      - stuck_or_timeout_failure  
   services:
     - docker:20.10.12-dind
+
 
 fmt:
   extends: .base
   script:
-    - rustup component add rustfmt
     - cargo fmt --check
 
 clippy:
   extends: .base
   script:
-    - rustup component add clippy
     - cargo clippy --all-targets -- -D warnings
 
 build:
   extends: .base
   script:
-    - cargo build
-    - apt update
-    - apt install -y libudev-dev
-    - cargo build --features serial --all-targets
+    - cargo build --all-features --all-targets
 
 test_wollet:
-  extends: .docker
+  extends: .base
   script:
-    - ./context/download_bins.sh
     - . .envrc
     - cargo test -p wollet -p signer
 
 test_jade:
-  extends: .docker
+  extends: .base
   script:
-    - docker pull tulipan81/blind_pin_server:v0.0.3
     - cargo test -p jade
 
 test_jrpc:
@@ -87,5 +75,4 @@ build_cli:
 audit:
   extends: .base
   script:
-    - cargo install cargo-audit
     - cargo audit -D warnings

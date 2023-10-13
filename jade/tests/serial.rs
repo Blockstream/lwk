@@ -8,7 +8,7 @@ fn auth_user() {
     if !ports.is_empty() {
         let path = &ports[0].port_name;
         let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(60))
             .open()
             .unwrap();
 

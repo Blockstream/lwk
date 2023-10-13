@@ -194,14 +194,17 @@ fn unsupported_descriptor() {
     let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.xpub());
     let desc_multi_path = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer1.xpub());
 
-    for desc in [
-        desc_p2pkh,
-        desc_p2sh,
-        desc_p2tr,
-        desc_no_wildcard,
-        desc_multi_path,
+    for (desc, err) in [
+        (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
+        (desc_p2sh, Error::UnsupportedDescriptorNonV0),
+        (desc_p2tr, Error::UnsupportedDescriptorNonV0),
+        (
+            desc_no_wildcard,
+            Error::UnsupportedDescriptorWithoutWildcard,
+        ),
+        (desc_multi_path, Error::UnsupportedDescriptorWithMultipath),
     ] {
-        new_unsupported_wallet(&desc, Error::UnsupportedDescriptor);
+        new_unsupported_wallet(&desc, err);
     }
 
     let bare_key = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904";

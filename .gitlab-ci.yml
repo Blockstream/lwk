@@ -7,7 +7,7 @@ variables:
 .base:
   image: xenoky/ks-builder@sha256:587bb253ed669e3390d45afd7aff989d954d8b6f64526111e64f36e59ac0f3fd
   tags:
-    - k8s-docker
+    - cloud
   retry:
     max: 2
     when:

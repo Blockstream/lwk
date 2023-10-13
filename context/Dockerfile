@@ -17,3 +17,5 @@ RUN ./download_bins.sh
 # update the installation script with curl -fsSL https://get.docker.com -o get-docker.sh
 COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
+
+COPY env.sh /env.sh

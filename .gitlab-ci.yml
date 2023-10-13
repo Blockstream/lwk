@@ -8,9 +8,6 @@ variables:
   image: xenoky/ks-builder
   tags:
     - k8s-docker
-  before_script:
-    - docker pull tulipan81/blind_pin_server:v0.0.3
-    - docker pull xenoky/local-jade-emulator:1.0.23
   retry:
     max: 2
     when:
@@ -39,12 +36,15 @@ build:
 test_wollet:
   extends: .base
   script:
-    - . .envrc
+    - docker pull xenoky/local-jade-emulator:1.0.23
+    - . ./env.sh
     - cargo test -p wollet -p signer
 
 test_jade:
   extends: .base
   script:
+    - docker pull tulipan81/blind_pin_server:v0.0.3
+    - docker pull xenoky/local-jade-emulator:1.0.23
     - cargo test -p jade
 
 test_jrpc:

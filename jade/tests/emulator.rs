@@ -143,6 +143,16 @@ fn jade_initialization_with_pin_server() {
 }
 
 #[test]
+fn jade_init_logout_unlock() {
+    let docker = clients::Cli::default();
+
+    let mut initialized_jade = inner_jade_initialization(&docker);
+    let jade = &mut initialized_jade.jade;
+    assert!(jade.logout().unwrap());
+    assert!(jade.unlock_jade().unwrap());
+}
+
+#[test]
 fn jade_xpub() {
     let docker = clients::Cli::default();
 

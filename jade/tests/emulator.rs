@@ -22,7 +22,7 @@ use elements_miniscript::{
 };
 use jade::{
     get_receive_address::{GetReceiveAddressParams, Multi, Single},
-    protocol::VersionInfoResult,
+    protocol::{JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
 };
 use jade::{
@@ -100,7 +100,7 @@ fn version() {
 
     let result = jade_api.version_info().unwrap();
     let mut expected = mock_version_info();
-    expected.jade_state = "UNINIT".to_string();
+    expected.jade_state = JadeState::Uninit;
     assert_eq!(result, expected);
 }
 
@@ -447,7 +447,7 @@ fn mock_version_info() -> VersionInfoResult {
         chip_features: "32000000".to_string(),
         efusemac: "000000000000".to_string(),
         battery_status: 0,
-        jade_state: "READY".to_string(),
+        jade_state: JadeState::Ready,
         jade_networks: "ALL".to_string(),
         jade_has_pin: false,
     }

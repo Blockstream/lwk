@@ -119,9 +119,29 @@ pub struct VersionInfoResult {
     pub chip_features: String,
     pub efusemac: String,
     pub battery_status: u8,
-    pub jade_state: String,
+    pub jade_state: JadeState,
     pub jade_networks: String,
     pub jade_has_pin: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "UPPERCASE")]
+
+pub enum JadeState {
+    /// no wallet set on the hw, mnemonic not entered, unit uninitialised
+    Uninit,
+
+    /// wallet mnemonic has been set on hw, but not yet persisted with blind pinserver
+    Unsaved,
+
+    /// wallet set, but currently locked - requires PIN entry to unlock.
+    Locked,
+
+    /// wallet set and unlocked for this interface, ready to use.
+    Ready,
+
+    ///  hw currently set with a temporary ('Emergency Restore') wallet, ready to use.
+    Temp,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

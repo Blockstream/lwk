@@ -29,6 +29,7 @@ pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
 pub mod sign_pset;
+pub mod unlock_jade;
 
 pub use network::Network;
 

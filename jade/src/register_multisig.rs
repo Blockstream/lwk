@@ -130,7 +130,6 @@ pub struct MultisigSigner {
 #[cfg(test)]
 mod test {
     use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
-    use ureq::serde_json;
 
     use crate::{protocol::Request, register_multisig::MultisigSigner};
 

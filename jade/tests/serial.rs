@@ -19,8 +19,8 @@ fn auth_user() {
 
         let url = result.urls()[0].as_str();
         dbg!(&url);
-        let res = ureq::post(url).call().unwrap();
-        let params: HandshakeParams = res.into_json().unwrap();
+        let res = minreq::post(url).send().unwrap();
+        let params: HandshakeParams = serde_json::from_slice(res.as_bytes()).unwrap();
         dbg!(&params);
 
         let result = jade_api.handshake_init(params).unwrap();

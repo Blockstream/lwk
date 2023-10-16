@@ -134,7 +134,6 @@ pub struct TxInputParams {
 
 #[cfg(test)]
 mod test {
-    use ureq::serde_json;
 
     use crate::protocol::Request;
 

@@ -20,14 +20,14 @@ fn pin_server() {
 
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let pin_server_url = format!("http://127.0.0.1:{port}");
-    let result = ureq::get(&pin_server_url).call().unwrap();
-    assert_eq!(result.status(), 200);
+    let result = minreq::get(&pin_server_url).send().unwrap();
+    assert_eq!(result.status_code, 200);
 
     let start_handshake_url = format!("{pin_server_url}/start_handshake");
-    let resp = ureq::post(&start_handshake_url)
-        .call()
+    let resp = minreq::post(start_handshake_url)
+        .send()
         .unwrap_or_else(|_| print_docker_logs_and_panic(container.id()));
-    let params: HandshakeParams = resp.into_json().unwrap();
+    let params: HandshakeParams = serde_json::from_slice(resp.as_bytes()).unwrap();
     verify(&params, &pin_server_pub_key);
 }
 

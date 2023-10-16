@@ -19,12 +19,18 @@ pub enum Error {
 
     #[error("Jade authentication returned a response without urlA")]
     MissingUrlA,
+
+    #[error("The handshake complete call to the pin server failed")]
+    HandshakeFailed,
 }
 
 impl Jade {
-    /// unlock an already initialized Jade, the device will ask the pin, and http calls to the
-    /// pin server will be attempted to unlock the secret of the device.
-    pub fn unlock(&mut self) -> Result<bool, Error> {
+    /// Unlock an already initialized Jade.
+    ///
+    /// The device asks for the pin,
+    /// and the host performs network calls to the pin server
+    /// to decrypt the secret on the device.
+    pub fn unlock(&mut self) -> Result<(), Error> {
         let result = self.auth_user()?;
         let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
         let resp = minreq::post(url).send()?;
@@ -45,6 +51,10 @@ impl Jade {
 
         let result = self.handshake_complete(params)?;
 
-        Ok(result)
+        if !result {
+            return Err(Error::HandshakeFailed);
+        }
+
+        Ok(())
     }
 }

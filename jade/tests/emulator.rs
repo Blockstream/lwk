@@ -149,7 +149,7 @@ fn jade_init_logout_unlock() {
     let mut initialized_jade = inner_jade_initialization(&docker);
     let jade = &mut initialized_jade.jade;
     assert!(jade.logout().unwrap());
-    assert!(jade.unlock().unwrap());
+    jade.unlock().unwrap();
 }
 
 #[test]

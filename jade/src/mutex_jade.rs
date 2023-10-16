@@ -25,7 +25,7 @@ impl MutexJade {
         self.0.lock().unwrap().get_xpub(params)
     }
 
-    pub fn unlock(&self) -> Result<bool, crate::unlock::Error> {
+    pub fn unlock(&self) -> Result<(), crate::unlock::Error> {
         self.0.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
     }
 }

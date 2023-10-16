@@ -1,11 +1,13 @@
+use elements::{
+    bitcoin::bip32::ChildNumber, encode::serialize, pset::PartiallySignedTransaction, Script,
+};
 use std::collections::HashMap;
-
-use elements::{encode::serialize, pset::PartiallySignedTransaction, Script};
 
 use crate::{
     derivation_path_to_vec,
+    get_receive_address::SingleOrMulti,
     protocol::GetSignatureParams,
-    sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
+    sign_liquid_tx::{Change, Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
 
@@ -54,12 +56,15 @@ pub enum Error {
     UnsupportedScriptPubkeyType(String),
 }
 
+const CHANGE_INDEX: ChildNumber = ChildNumber::Normal { index: 1 };
+
 impl Jade {
     pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
+        dbg!(&pset.global);
 
         let mut trusted_commitments = vec![];
         let mut change = vec![];
@@ -102,7 +107,24 @@ impl Jade {
                 })
             };
             trusted_commitments.push(trusted_commitment);
-            change.push(None); //TODO
+
+            let mut current_is_change = None;
+            for (fingerprint, path) in output.bip32_derivation.values() {
+                if fingerprint == &my_fingerprint {
+                    let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_INDEX);
+                    if output.script_pubkey.is_v0_p2wpkh() && is_change {
+                        current_is_change = Some(Change {
+                            address: SingleOrMulti::Single {
+                                variant: "wpkh(k)".to_string(),
+                                path: derivation_path_to_vec(path),
+                            },
+                            is_change: true,
+                        });
+                    }
+                    // TODO handle multisig
+                }
+            }
+            change.push(current_is_change);
         }
 
         let params = SignLiquidTxParams {

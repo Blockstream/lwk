@@ -20,7 +20,7 @@ fn jade_send_lbtc() {
     let jade = Jade::new(port.into(), network);
     let jade = MutexJade::new(jade);
 
-    let result = jade.unlock_jade().unwrap();
+    let result = jade.unlock().unwrap();
 
     assert!(result);
 

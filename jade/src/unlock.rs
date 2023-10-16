@@ -24,7 +24,7 @@ pub enum Error {
 impl Jade {
     /// unlock an already initialized Jade, the device will ask the pin, and http calls to the
     /// pin server will be attempted to unlock the secret of the device.
-    pub fn unlock_jade(&mut self) -> Result<bool, Error> {
+    pub fn unlock(&mut self) -> Result<bool, Error> {
         let result = self.auth_user()?;
         let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
         let resp = minreq::post(url).send()?;

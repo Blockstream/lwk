@@ -32,6 +32,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
 
+/// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,

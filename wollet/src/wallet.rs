@@ -116,6 +116,7 @@ impl ElectrumWallet {
         Ok(self.store.cache.tip)
     }
 
+    // TODO move to WolletDescriptor::address(index)
     fn derive_address(&self, index: u32) -> Result<Address, Error> {
         // To derive an address from a confidential descriptor we need to make it definite.
         let derived_descriptor: Descriptor<DefiniteDescriptorKey> =
@@ -317,6 +318,7 @@ impl ElectrumWallet {
         }
     }
 
+    // TODO: move to WolletDescriptor::definite_descriptor(index)
     pub(crate) fn definite_descriptor(
         &self,
         script_pubkey: &Script,

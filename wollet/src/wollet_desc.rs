@@ -1,3 +1,5 @@
+// TODO: rename as wollet/src/descriptor.rs
+
 use std::{convert::TryFrom, fmt::Display};
 
 use elements::bitcoin::address::WitnessVersion;
@@ -8,7 +10,7 @@ use elements_miniscript::{
 };
 
 #[derive(Debug, Clone)]
-/// A wrapper that contains only the subset of CT handled by wollet
+/// A wrapper that contains only the subset of CT descriptors handled by wollet
 pub struct WolletDescriptor(ConfidentialDescriptor<DescriptorPublicKey>);
 
 impl Display for WolletDescriptor {
@@ -17,6 +19,7 @@ impl Display for WolletDescriptor {
     }
 }
 
+// TODO add FromStr also
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     type Error = crate::error::Error;
 

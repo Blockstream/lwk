@@ -1,6 +1,9 @@
 mod jade_emulator;
 mod test_session;
 
+#[cfg(feature = "serial")]
+mod serial;
+
 use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
 use jade::protocol::GetXpubParams;

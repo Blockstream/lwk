@@ -8,7 +8,7 @@ use crate::hashes::Hash;
 use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
-use crate::wallet::Wollet;
+use crate::wollet::Wollet;
 use elements_miniscript::psbt::PsbtExt;
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};

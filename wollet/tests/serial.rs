@@ -1,10 +1,14 @@
 use std::time::Duration;
 
-use jade::{serialport, Jade};
+use jade::{mutex_jade::MutexJade, protocol::GetXpubParams, serialport, Jade};
+use signer::Signer;
+
+use crate::test_session::{setup, TestElectrumWallet};
 
 #[test]
-#[ignore = "requires hardware jade connected via usb/serial "]
+#[ignore = "requires hardware jade: initialized with localtest network, locked and connected via usb/serial"]
 fn jade_send_lbtc() {
+    let network = jade::Network::LocaltestLiquid;
     let ports = serialport::available_ports().unwrap();
     assert!(!ports.is_empty());
     let path = &ports[0].port_name;
@@ -13,11 +17,28 @@ fn jade_send_lbtc() {
         .open()
         .unwrap();
 
-    let mut jade_api = Jade::new(port.into(), jade::Network::LocaltestLiquid);
+    let jade = Jade::new(port.into(), network);
+    let jade = MutexJade::new(jade);
 
-    let result = jade_api.unlock_jade().unwrap();
+    let result = jade.unlock_jade().unwrap();
 
     assert!(result);
 
-    //TODO start bitcoind/electrs, receive lbtc, send lbtc
+    let server = setup();
+    let xpub = jade
+        .get_xpub(GetXpubParams {
+            network,
+            path: vec![],
+        })
+        .unwrap();
+
+    let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let mut wallet = TestElectrumWallet::new(&server.electrs.electrum_url, &desc_str);
+
+    wallet.fund_btc(&server);
+
+    let signers = [&Signer::Jade(&jade)];
+
+    wallet.send_btc(&signers, None);
 }

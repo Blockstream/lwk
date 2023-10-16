@@ -24,4 +24,8 @@ impl MutexJade {
     ) -> Result<ExtendedPubKey, crate::error::Error> {
         self.0.lock().unwrap().get_xpub(params)
     }
+
+    pub fn unlock_jade(&self) -> Result<bool, crate::unlock_jade::Error> {
+        self.0.lock().unwrap().unlock_jade() // TODO remove unwrap here and in the other methods
+    }
 }

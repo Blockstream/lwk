@@ -1,12 +1,16 @@
 use std::time::Duration;
 
-use jade::{mutex_jade::MutexJade, protocol::GetXpubParams, serialport, Jade};
+use jade::{
+    mutex_jade::MutexJade,
+    protocol::{GetXpubParams, JadeState},
+    serialport, Jade,
+};
 use signer::Signer;
 
 use crate::test_session::{setup, TestWollet};
 
 #[test]
-#[ignore = "requires hardware jade: initialized with localtest network, locked and connected via usb/serial"]
+#[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
 fn jade_send_lbtc() {
     let network = jade::Network::LocaltestLiquid;
     let ports = serialport::available_ports().unwrap();
@@ -18,9 +22,16 @@ fn jade_send_lbtc() {
         .unwrap();
 
     let jade = Jade::new(port.into(), network);
-    let jade = MutexJade::new(jade);
+    let mut jade = MutexJade::new(jade);
 
-    jade.unlock().unwrap();
+    let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+    assert_ne!(jade_state, JadeState::Uninit);
+    assert_ne!(jade_state, JadeState::Unsaved);
+    if jade_state == JadeState::Locked {
+        jade.unlock().unwrap();
+        jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+    }
+    assert_eq!(jade_state, JadeState::Ready);
 
     let server = setup();
     let xpub = jade
@@ -39,4 +50,7 @@ fn jade_send_lbtc() {
     let signers = [&Signer::Jade(&jade)];
 
     wallet.send_btc(&signers, None);
+
+    // refuse the tx on the jade to keep the session logged
+    jade.get_mut().unwrap().logout().unwrap();
 }

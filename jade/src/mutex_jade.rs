@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 
 use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
 
@@ -27,5 +27,13 @@ impl MutexJade {
 
     pub fn unlock(&self) -> Result<(), crate::unlock::Error> {
         self.0.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
+    }
+
+    pub fn into_inner(self) -> Result<Jade, PoisonError<Jade>> {
+        self.0.into_inner()
+    }
+
+    pub fn get_mut(&mut self) -> Result<&mut Jade, PoisonError<&mut Jade>> {
+        self.0.get_mut()
     }
 }

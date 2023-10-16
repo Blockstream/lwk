@@ -32,6 +32,9 @@ pub mod sign_pset;
 
 pub use network::Network;
 
+#[cfg(feature = "serial")]
+pub use serialport;
+
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 #[derive(Debug)]

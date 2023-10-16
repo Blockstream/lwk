@@ -14,7 +14,7 @@ pub use crate::config::ElementsNetwork;
 pub use crate::error::Error;
 pub use crate::model::{AddressResult, IssuanceDetails, UnvalidatedAddressee, WalletTxOut};
 pub use crate::util::EC;
-pub use crate::wallet::ElectrumWallet;
+pub use crate::wallet::Wollet;
 pub use crate::wollet_desc::WolletDescriptor;
 
 pub use elements_miniscript::elements;

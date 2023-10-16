@@ -221,8 +221,8 @@ impl TestElectrumServer {
     }
 }
 
-pub struct TestElectrumWallet {
-    pub electrum_wallet: ElectrumWallet,
+pub struct TestWollet {
+    pub electrum_wallet: Wollet,
     _db_root_dir: TempDir,
 }
 
@@ -234,7 +234,7 @@ fn network_regtest() -> ElementsNetwork {
 }
 
 pub fn new_unsupported_wallet(desc: &str, expected: Error) {
-    let r = ElectrumWallet::new(
+    let r = Wollet::new(
         network_regtest(),
         "",
         false,
@@ -248,7 +248,7 @@ pub fn new_unsupported_wallet(desc: &str, expected: Error) {
     }
 }
 
-impl TestElectrumWallet {
+impl TestWollet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
         let tls = false;
         let validate_domain = false;
@@ -256,7 +256,7 @@ impl TestElectrumWallet {
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let mut electrum_wallet = ElectrumWallet::new(
+        let mut electrum_wallet = Wollet::new(
             network_regtest(),
             electrs_url,
             tls,

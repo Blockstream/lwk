@@ -8,7 +8,7 @@ use crate::hashes::Hash;
 use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
-use crate::wallet::ElectrumWallet;
+use crate::wallet::Wollet;
 use elements_miniscript::psbt::PsbtExt;
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
@@ -21,7 +21,7 @@ enum IssuanceRequest {
     Reissuance(AssetId, u64, Option<Address>),
 }
 
-impl ElectrumWallet {
+impl Wollet {
     fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<WalletTxOut>, Error> {
         Ok(self
             .utxos()?

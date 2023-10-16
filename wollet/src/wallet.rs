@@ -32,13 +32,13 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
 
-pub struct ElectrumWallet {
+pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,
     pub(crate) descriptor: WolletDescriptor,
 }
 
-impl ElectrumWallet {
+impl Wollet {
     /// Create a new  wallet
     pub fn new(
         network: ElementsNetwork,
@@ -66,7 +66,7 @@ impl ElectrumWallet {
         path.push(wallet_id);
         let store = new_store(&path, descriptor.clone())?;
 
-        Ok(ElectrumWallet {
+        Ok(Wollet {
             store,
             config,
             descriptor,

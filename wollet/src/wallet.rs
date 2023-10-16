@@ -1,4 +1,3 @@
-use crate::bitcoin::address::WitnessVersion;
 use crate::config::{Config, ElementsNetwork};
 use crate::elements::confidential::Value;
 use crate::elements::encode::{
@@ -16,10 +15,10 @@ use crate::model::{AddressResult, IssuanceDetails, WalletTxOut};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
+use crate::WolletDescriptor;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
-use elements_miniscript::descriptor::{DescriptorSecretKey, Wildcard};
 use elements_miniscript::psbt;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{
@@ -28,39 +27,15 @@ use elements_miniscript::{
 use pset_details::{pset_balance, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
 
-fn validate_descriptor(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<(), Error> {
-    if let Key::Bare(_) = &desc.key {
-        return Err(Error::BlindingBareUnsupported);
-    }
-    if let Key::View(DescriptorSecretKey::MultiXPrv(_)) = &desc.key {
-        return Err(Error::BlindingViewMultiUnsupported);
-    }
-    if let Key::View(DescriptorSecretKey::XPrv(k)) = &desc.key {
-        if k.wildcard != Wildcard::None {
-            return Err(Error::BlindingViewWildcardUnsupported);
-        }
-    }
-
-    if !desc.descriptor.has_wildcard() {
-        return Err(Error::UnsupportedDescriptor);
-    }
-    if desc.descriptor.is_multipath() {
-        return Err(Error::UnsupportedDescriptor);
-    }
-    match desc.descriptor.desc_type().segwit_version() {
-        Some(WitnessVersion::V0) => Ok(()),
-        _ => Err(Error::UnsupportedDescriptor),
-    }
-}
-
 pub struct ElectrumWallet {
     pub(crate) config: Config,
     pub(crate) store: Store,
-    pub(crate) descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
+    pub(crate) descriptor: WolletDescriptor,
 }
 
 impl ElectrumWallet {
@@ -79,7 +54,7 @@ impl ElectrumWallet {
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(desc)?;
-        validate_descriptor(&descriptor)?;
+        let descriptor: WolletDescriptor = descriptor.try_into()?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
@@ -105,13 +80,14 @@ impl ElectrumWallet {
 
     /// Get the wallet descriptor
     pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        &self.descriptor
+        self.descriptor.as_ref()
     }
 
     /// Sync the wallet transactions
     pub fn sync_txs(&mut self) -> Result<(), Error> {
         if let Ok(client) = self.config.electrum_url().build_client() {
-            match sync(&client, &mut self.store, &self.descriptor) {
+            let descriptor = self.descriptor().clone();
+            match sync(&client, &mut self.store, &descriptor) {
                 Ok(true) => log::info!("there are new transcations"),
                 Ok(false) => (),
                 Err(e) => log::warn!("Error during sync, {:?}", e),
@@ -140,14 +116,15 @@ impl ElectrumWallet {
         Ok(self.store.cache.tip)
     }
 
+    // TODO move to WolletDescriptor::address(index)
     fn derive_address(&self, index: u32) -> Result<Address, Error> {
         // To derive an address from a confidential descriptor we need to make it definite.
         let derived_descriptor: Descriptor<DefiniteDescriptorKey> =
-            self.descriptor.descriptor.at_derivation_index(index)?;
+            self.descriptor.descriptor().at_derivation_index(index)?;
         // But we also need to make the blinding key using the same generic, so we need to convert
         // it here.
         // However the generic is only relevant for the Bare variant, which we do not support.
-        let key: Key<DefiniteDescriptorKey> = match &self.descriptor.key {
+        let key: Key<DefiniteDescriptorKey> = match &self.descriptor.key() {
             Key::Slip77(x) => Key::Slip77(*x),
             Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
             Key::View(x) => Key::View(x.clone()),
@@ -341,12 +318,16 @@ impl ElectrumWallet {
         }
     }
 
+    // TODO: move to WolletDescriptor::definite_descriptor(index)
     pub(crate) fn definite_descriptor(
         &self,
         script_pubkey: &Script,
     ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
         let utxo_index = self.index(script_pubkey)?;
-        Ok(self.descriptor.descriptor.at_derivation_index(utxo_index)?)
+        Ok(self
+            .descriptor
+            .descriptor()
+            .at_derivation_index(utxo_index)?)
     }
 
     /// Add the PSET details with respect to the wallet

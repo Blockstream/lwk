@@ -111,8 +111,14 @@ pub enum Error {
     #[error("Invalid issuer pubkey")]
     InvalidIssuerPubkey,
 
-    #[error("Descriptor not supported")]
-    UnsupportedDescriptor,
+    #[error("Descriptor without wildcard not supported")]
+    UnsupportedDescriptorWithoutWildcard,
+
+    #[error("Descriptor with multipath is not supported")]
+    UnsupportedDescriptorWithMultipath,
+
+    #[error("Descriptor with segwit not v0 is not supported")]
+    UnsupportedDescriptorNonV0, // TODO add non supported descriptor type as field or split it further: UnsupportedDescriptorPreSegwit, UnsupportedDescriptorTaproot, UnsupportedDescriptorUnknownSegwitVersion
 
     #[error("Missing PSET")]
     MissingPset,

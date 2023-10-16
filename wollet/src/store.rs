@@ -1,12 +1,11 @@
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::{sha256, Hash};
 use crate::util::ciborium_to_vec;
-use crate::Error;
+use crate::{Error, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use pset_details::derive_script_pubkey;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -18,10 +17,7 @@ use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;
 
-pub fn new_store<P: AsRef<Path>>(
-    path: P,
-    desc: ConfidentialDescriptor<DescriptorPublicKey>,
-) -> Result<Store, Error> {
+pub fn new_store<P: AsRef<Path>>(path: P, desc: WolletDescriptor) -> Result<Store, Error> {
     Store::new(&path, desc)
 }
 
@@ -69,7 +65,7 @@ pub struct Store {
     pub cache: RawCache,
     path: PathBuf,
     cipher: Aes256GcmSiv,
-    descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: WolletDescriptor,
 }
 
 impl Drop for Store {
@@ -125,10 +121,7 @@ fn load_decrypt<P: AsRef<Path>>(
 }
 
 impl Store {
-    pub fn new<P: AsRef<Path>>(
-        path: P,
-        descriptor: ConfidentialDescriptor<DescriptorPublicKey>,
-    ) -> Result<Store, Error> {
+    pub fn new<P: AsRef<Path>>(path: P, descriptor: WolletDescriptor) -> Result<Store, Error> {
         /*
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
@@ -193,7 +186,7 @@ impl Store {
                 Some(script) => script.clone(),
                 None => {
                     result.cached = false;
-                    derive_script_pubkey(&self.descriptor, j)?
+                    derive_script_pubkey(self.descriptor.as_ref(), j)?
                 }
             };
             result.value.push((script, child));
@@ -214,9 +207,10 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::store::Store;
-    use std::str::FromStr;
+    use elements::Txid;
+    use elements_miniscript::ConfidentialDescriptor;
+    use std::{convert::TryInto, str::FromStr};
     use tempfile::TempDir;
 
     #[test]
@@ -227,9 +221,9 @@ mod tests {
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
         let master_blinding_key =
             "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-        let checksum = "qw2qy2ml";
+        let checksum = "8w7cjcha";
         let desc_str = format!(
-            "ct(slip77({}),elwpkh({}))#{}",
+            "ct(slip77({}),elwpkh({}/*))#{}",
             master_blinding_key, xpub, checksum
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
@@ -237,11 +231,11 @@ mod tests {
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let mut store = Store::new(&dir, desc.clone()).unwrap();
+        let mut store = Store::new(&dir, desc.clone().try_into().unwrap()).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = Store::new(&dir, desc).unwrap();
+        let store = Store::new(&dir, desc.try_into().unwrap()).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 
@@ -260,7 +254,7 @@ mod tests {
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
 
-        let store = Store::new(&dir, desc).unwrap();
+        let store = Store::new(&dir, desc.try_into().unwrap()).unwrap();
 
         let x = store.get_script_batch(0).unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");

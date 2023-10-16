@@ -4,12 +4,12 @@ use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
     testcontainers::{clients::Cli, Container},
 };
-use jade::{lock_jade::LockJade, protocol::DebugSetMnemonicParams, Jade};
+use jade::{mutex_jade::MutexJade, protocol::DebugSetMnemonicParams, Jade};
 
 #[derive(Debug)]
 pub struct InitializedJade<'a> {
     _jade_emul: Container<'a, JadeEmulator>,
-    pub jade: LockJade,
+    pub jade: MutexJade,
 }
 
 pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> InitializedJade {
@@ -27,6 +27,6 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
 
     InitializedJade {
         _jade_emul: container,
-        jade: LockJade::new(jade_api),
+        jade: MutexJade::new(jade_api),
     }
 }

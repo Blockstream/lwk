@@ -23,7 +23,7 @@ use crate::error::Error;
 pub mod connection;
 pub mod error;
 pub mod get_receive_address;
-pub mod lock_jade;
+pub mod mutex_jade;
 mod network;
 pub mod protocol;
 pub mod register_multisig;

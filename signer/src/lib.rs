@@ -5,7 +5,7 @@ pub use crate::software::{NewError, SignError, SwSigner};
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use jade::lock_jade::LockJade;
+use jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignerError {
@@ -30,7 +30,7 @@ pub trait Sign {
 
 pub enum Signer<'a> {
     Software(SwSigner<'a>),
-    Jade(&'a LockJade),
+    Jade(&'a MutexJade),
 }
 
 impl<'a> Signer<'a> {
@@ -52,13 +52,13 @@ impl<'a> Signer<'a> {
     }
 }
 
-impl Sign for LockJade {
+impl Sign for MutexJade {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
         Ok(self.sign_pset(pset)?)
     }
 }
 
-impl Sign for &LockJade {
+impl Sign for &MutexJade {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
         Ok(self.sign_pset(pset)?)
     }

@@ -5,9 +5,9 @@ use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction}
 use crate::{sign_pset, Jade};
 
 #[derive(Debug)]
-pub struct LockJade(Mutex<Jade>);
+pub struct MutexJade(Mutex<Jade>);
 
-impl LockJade {
+impl MutexJade {
     pub fn new(jade: Jade) -> Self {
         Self(Mutex::new(jade))
     }

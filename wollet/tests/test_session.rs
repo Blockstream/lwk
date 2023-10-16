@@ -222,7 +222,7 @@ impl TestElectrumServer {
 }
 
 pub struct TestWollet {
-    pub electrum_wallet: Wollet,
+    pub wollet: Wollet,
     _db_root_dir: TempDir,
 }
 
@@ -256,7 +256,7 @@ impl TestWollet {
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let mut electrum_wallet = Wollet::new(
+        let mut wollet = Wollet::new(
             network_regtest(),
             electrs_url,
             tls,
@@ -266,15 +266,15 @@ impl TestWollet {
         )
         .unwrap();
 
-        electrum_wallet.sync_txs().unwrap();
-        let list = electrum_wallet.transactions().unwrap();
+        wollet.sync_txs().unwrap();
+        let list = wollet.transactions().unwrap();
         assert_eq!(list.len(), 0);
         let mut i = 120;
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            electrum_wallet.sync_tip().unwrap();
-            let tip = electrum_wallet.tip().unwrap();
+            wollet.sync_tip().unwrap();
+            let tip = wollet.tip().unwrap();
             if tip.0 >= 101 {
                 break tip.0;
             } else {
@@ -284,37 +284,33 @@ impl TestWollet {
         assert!(tip >= 101);
 
         Self {
-            electrum_wallet,
+            wollet,
             _db_root_dir,
         }
     }
 
     pub fn policy_asset(&self) -> AssetId {
-        self.electrum_wallet.policy_asset()
+        self.wollet.policy_asset()
     }
 
     pub fn sync(&mut self) {
-        self.electrum_wallet.sync_txs().unwrap();
-        self.electrum_wallet.sync_tip().unwrap();
+        self.wollet.sync_txs().unwrap();
+        self.wollet.sync_tip().unwrap();
     }
 
     pub fn address(&self) -> Address {
-        self.electrum_wallet
-            .address(None)
-            .unwrap()
-            .address()
-            .clone()
+        self.wollet.address(None).unwrap().address().clone()
     }
 
     pub fn address_result(&self, last_unused: Option<u32>) -> AddressResult {
-        self.electrum_wallet.address(last_unused).unwrap()
+        self.wollet.address(last_unused).unwrap()
     }
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
         for _ in 0..120 {
-            self.electrum_wallet.sync_txs().unwrap();
-            let list = self.electrum_wallet.transactions().unwrap();
+            self.wollet.sync_txs().unwrap();
+            let list = self.wollet.transactions().unwrap();
             if list.iter().any(|e| e.0.txid().to_string() == txid) {
                 return;
             }
@@ -325,18 +321,18 @@ impl TestWollet {
 
     /// asset balance in satoshi
     pub fn balance(&mut self, asset: &AssetId) -> u64 {
-        self.electrum_wallet.sync_txs().unwrap();
-        let balance = self.electrum_wallet.balance().unwrap();
+        self.wollet.sync_txs().unwrap();
+        let balance = self.wollet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }
 
     fn balance_btc(&mut self) -> u64 {
-        self.balance(&self.electrum_wallet.policy_asset())
+        self.balance(&self.wollet.policy_asset())
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> Transaction {
-        self.electrum_wallet.sync_txs().unwrap();
-        let list = self.electrum_wallet.transactions().unwrap();
+        self.wollet.sync_txs().unwrap();
+        let list = self.wollet.transactions().unwrap();
         let filtered_list: Vec<_> = list
             .iter()
             .filter(|e| e.0.txid().to_string() == txid)
@@ -357,7 +353,7 @@ impl TestWollet {
         address: Option<Address>,
         asset: Option<AssetId>,
     ) {
-        let utxos_before = self.electrum_wallet.utxos().unwrap().len();
+        let utxos_before = self.wollet.utxos().unwrap().len();
         let balance_before = self.balance(&asset.unwrap_or(self.policy_asset()));
 
         let address = address.unwrap_or_else(|| self.address());
@@ -366,7 +362,7 @@ impl TestWollet {
         let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
         assert_eq!(txid, wallet_txid);
 
-        let utxos_after = self.electrum_wallet.utxos().unwrap().len();
+        let utxos_after = self.wollet.utxos().unwrap().len();
         let balance_after = self.balance(&asset.unwrap_or(self.policy_asset()));
         assert_eq!(utxos_after, utxos_before + 1);
         assert_eq!(balance_before + satoshi, balance_after);
@@ -388,11 +384,11 @@ impl TestWollet {
         let satoshi: u64 = 10_000;
         let address = self.address();
         let mut pset = self
-            .electrum_wallet
+            .wollet
             .sendlbtc(satoshi, &address.to_string(), fee_rate)
             .unwrap();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -419,7 +415,7 @@ impl TestWollet {
         let balance_before = self.balance(asset);
         let satoshi: u64 = 10;
         let mut pset = self
-            .electrum_wallet
+            .wollet
             .sendasset(
                 satoshi,
                 &node_address.to_string(),
@@ -428,7 +424,7 @@ impl TestWollet {
             )
             .unwrap();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -476,9 +472,9 @@ impl TestWollet {
                 asset: &ass2,
             },
         ];
-        let mut pset = self.electrum_wallet.sendmany(addressees, fee_rate).unwrap();
+        let mut pset = self.wollet.sendmany(addressees, fee_rate).unwrap();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         // Checking the balance here has a bit too many cases:
@@ -506,14 +502,14 @@ impl TestWollet {
     ) -> (AssetId, AssetId) {
         let balance_before = self.balance_btc();
         let mut pset = self
-            .electrum_wallet
+            .wollet
             .issueasset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
             .unwrap();
 
         let issuance_input = &pset.inputs()[0].clone();
         let (asset, token) = issuance_input.issuance_ids();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -540,7 +536,7 @@ impl TestWollet {
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
 
-        let issuance = self.electrum_wallet.issuance(&asset).unwrap();
+        let issuance = self.wollet.issuance(&asset).unwrap();
         assert_eq!(issuance.vin, 0);
         assert!(!issuance.is_reissuance);
         assert_eq!(issuance.asset_amount, Some(satoshi_asset));
@@ -567,16 +563,16 @@ impl TestWollet {
         asset: &AssetId,
         fee_rate: Option<f32>,
     ) {
-        let issuance = self.electrum_wallet.issuance(asset).unwrap();
+        let issuance = self.wollet.issuance(asset).unwrap();
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
-            .electrum_wallet
+            .wollet
             .reissueasset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -602,7 +598,7 @@ impl TestWollet {
         assert_eq!(self.balance(&issuance.token), balance_token_before);
         assert!(self.balance_btc() < balance_btc_before);
 
-        let issuances = self.electrum_wallet.issuances().unwrap();
+        let issuances = self.wollet.issuances().unwrap();
         assert!(issuances.len() > 1);
         let reissuance = issuances.iter().find(|e| e.txid == txid).unwrap();
         assert!(reissuance.is_reissuance);
@@ -620,11 +616,11 @@ impl TestWollet {
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let mut pset = self
-            .electrum_wallet
+            .wollet
             .burnasset(&asset.to_string(), satoshi_asset, fee_rate)
             .unwrap();
 
-        let details = self.electrum_wallet.get_details(&pset).unwrap();
+        let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         let btc = self.policy_asset();
@@ -655,8 +651,8 @@ impl TestWollet {
     }
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
-        let tx = self.electrum_wallet.finalize(pset).unwrap();
-        let txid = self.electrum_wallet.broadcast(&tx).unwrap();
+        let tx = self.wollet.finalize(pset).unwrap();
+        let txid = self.wollet.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());
         txid
     }

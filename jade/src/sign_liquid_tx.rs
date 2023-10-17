@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeStruct, Deserialize, Serialize};
 
-use crate::Network;
+use crate::{get_receive_address::SingleOrMulti, Network};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 pub struct SignLiquidTxParams {
     pub network: Network,
 
@@ -60,11 +60,35 @@ pub struct Commitment {
     pub asset_blind_proof: Vec<u8>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Change {
-    pub variant: String,
-    pub path: Vec<u32>,
+    pub address: SingleOrMulti,
     pub is_change: bool,
+}
+
+impl Serialize for Change {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Change", 3)?;
+        match &self.address {
+            SingleOrMulti::Single { variant, path } => {
+                state.serialize_field("variant", variant)?;
+                state.serialize_field("path", path)?;
+            }
+            SingleOrMulti::Multi {
+                multisig_name,
+                paths,
+            } => {
+                state.serialize_field("multisig_name", multisig_name)?;
+                state.serialize_field("paths", paths)?;
+            }
+        }
+        state.serialize_field("is_change", &self.is_change)?;
+
+        state.end()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -135,14 +159,30 @@ pub struct TxInputParams {
 #[cfg(test)]
 mod test {
 
-    use crate::protocol::Request;
+    use serde_json::Value;
 
-    use super::SignLiquidTxParams;
+    use crate::get_receive_address::SingleOrMulti;
+
+    use super::Change;
 
     #[test]
-    fn parse_sign_liquid_tx() {
+    fn parse_change() {
         let json = include_str!("../test_data/sign_liquid_tx_request.json");
 
-        let _resp: Request<SignLiquidTxParams> = serde_json::from_str(json).unwrap();
+        let resp: Value = serde_json::from_str(json).unwrap();
+
+        let params = resp.get("params").unwrap();
+        let changes = params.get("change").unwrap();
+        let change = changes.get(1).unwrap();
+
+        let expected = Change {
+            address: SingleOrMulti::Single {
+                variant: "sh(wpkh(k))".to_string(),
+                path: vec![2147483697, 2147483648, 2147483648, 0, 143],
+            },
+            is_change: true,
+        };
+
+        assert_eq!(&serde_json::to_value(expected).unwrap(), change);
     }
 }

@@ -38,16 +38,15 @@ fn main() -> anyhow::Result<()> {
     // get a client to make requests
     let client = app.client()?;
     // get the app version
-    let version = client.version()?;
+    let version = client.version()?.version;
     tracing::info!("App running version {}", version);
 
     match args.command {
         CliCommand::Server => todo!(),
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
-                let mnemonic = client.generate_signer()?;
-                println!("Generated mnemonic:");
-                println!("{}", mnemonic);
+                let j = client.generate_signer()?;
+                println!("{}", serde_json::to_string(&j)?);
             }
         },
         CliCommand::Wallet(_) => todo!(),

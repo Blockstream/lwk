@@ -9,6 +9,7 @@ pub mod client;
 pub mod config;
 pub mod consts;
 pub mod error;
+pub mod model;
 
 pub struct App {
     _rpc: JsonRpcServer,
@@ -41,9 +42,21 @@ fn method_handler(request: Request) -> tiny_jrpc::Result<Response> {
     let response = match request.method.as_str() {
         "generate_signer" => {
             let (_signer, mnemonic) = signer::SwSigner::random(&secp).unwrap(); // todo
-            Response::result(request.id, mnemonic.to_string().into())
+            Response::result(
+                request.id,
+                serde_json::to_value(model::SignerGenerateResponse {
+                    mnemonic: mnemonic.to_string(),
+                })
+                .unwrap(), // todo
+            )
         }
-        "version" => Response::result(request.id, consts::APP_VERSION.into()),
+        "version" => Response::result(
+            request.id,
+            serde_json::to_value(model::VersionResponse {
+                version: consts::APP_VERSION.into(),
+            })
+            .unwrap(), // todo
+        ),
         _ => Response::unimplemented(request.id),
     };
     Ok(response)
@@ -76,7 +89,7 @@ mod tests {
         let response = client.send_request(request).unwrap();
 
         let result = response.result.unwrap().to_string();
-        let actual: &str = serde_json::from_str(&result).unwrap();
-        assert_eq!(actual, consts::APP_VERSION);
+        let actual: model::VersionResponse = serde_json::from_str(&result).unwrap();
+        assert_eq!(actual.version, consts::APP_VERSION);
     }
 }

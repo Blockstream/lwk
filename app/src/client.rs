@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use crate::model::*;
 use crate::Result;
 
 pub struct Client {
@@ -13,21 +14,17 @@ impl Client {
         Ok(Self { client })
     }
 
-    pub fn version(&self) -> Result<String> {
+    pub fn version(&self) -> Result<VersionResponse> {
         let request = self.client.build_request("version", &[]);
         let response = self.client.send_request(request)?;
         // todo: error
-        let result = response.result.unwrap().to_string();
-        let version: String = serde_json::from_str(&result).unwrap();
-        Ok(version)
+        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
     }
 
-    pub fn generate_signer(&self) -> Result<String> {
+    pub fn generate_signer(&self) -> Result<SignerGenerateResponse> {
         let request = self.client.build_request("generate_signer", &[]);
         let response = self.client.send_request(request)?;
         // todo: error
-        let result = response.result.unwrap().to_string();
-        let mnemonic: String = serde_json::from_str(&result).unwrap();
-        Ok(mnemonic)
+        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
     }
 }

@@ -21,7 +21,7 @@ use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
 use jade::{
-    get_receive_address::{GetReceiveAddressParams, Multi, Single},
+    get_receive_address::{GetReceiveAddressParams, SingleOrMulti},
     protocol::{JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
 };
@@ -179,11 +179,10 @@ fn jade_receive_address() {
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = GetReceiveAddressParams {
         network: jade::Network::LocaltestLiquid,
-        single: Some(Single {
+        address: SingleOrMulti::Single {
             variant: "sh(wpkh(k))".into(),
-            path: [2147483697, 2147483648, 2147483648, 0, 143].to_vec(),
-        }),
-        multi: None,
+            path: vec![2147483697, 2147483648, 2147483648, 0, 143],
+        },
     };
     let result = initialized_jade.jade.get_receive_address(params).unwrap();
     let address = elements::Address::from_str(&result).unwrap();
@@ -271,11 +270,10 @@ fn jade_register_multisig_check_address() {
     let result = jade
         .get_receive_address(GetReceiveAddressParams {
             network,
-            single: None,
-            multi: Some(Multi {
+            address: SingleOrMulti::Multi {
                 multisig_name,
                 paths: vec![vec![0], vec![0]],
-            }),
+            },
         })
         .unwrap();
     let address_jade: Address = result.parse().unwrap();

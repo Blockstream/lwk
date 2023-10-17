@@ -1,51 +1,78 @@
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeStruct, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct GetReceiveAddressParams {
     pub network: crate::Network,
 
-    /// Specify when asking a singlesig address. Cannot be specified if `multi` is some.
-    #[serde(flatten)]
-    pub single: Option<Single>,
-
-    /// Specify when asking a singlesig address. Cannot be specified if `single` is some.
-    #[serde(flatten)]
-    pub multi: Option<Multi>,
+    pub address: SingleOrMulti,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Single {
-    /// for example "wpkh(k)", not needed if using `multisig_name``
-    pub variant: String,
-    pub path: Vec<u32>,
+#[derive(Debug, PartialEq, Eq)]
+pub enum SingleOrMulti {
+    Single {
+        /// for example "wpkh(k)", not needed if using `multisig_name``
+        variant: String,
+        path: Vec<u32>,
+    },
+    Multi {
+        /// Previously register multisig wallet, cannot be specified with `variant`
+        multisig_name: String,
+        paths: Vec<Vec<u32>>,
+    },
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-
-pub struct Multi {
-    /// Previously register multisig wallet, cannot be specified with `variant`
-    pub multisig_name: String,
-    pub paths: Vec<Vec<u32>>,
+impl Serialize for GetReceiveAddressParams {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("GetReceiveAddressParams", 3)?;
+        state.serialize_field("network", &self.network)?;
+        match &self.address {
+            SingleOrMulti::Single { variant, path } => {
+                state.serialize_field("variant", variant)?;
+                state.serialize_field("path", path)?;
+            }
+            SingleOrMulti::Multi {
+                multisig_name,
+                paths,
+            } => {
+                state.serialize_field("multisig_name", multisig_name)?;
+                state.serialize_field("paths", paths)?;
+            }
+        }
+        state.end()
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use serde_json::Value;
+
+    use crate::get_receive_address::SingleOrMulti;
+
     use super::GetReceiveAddressParams;
 
     #[test]
-    fn parse_get_receive_address() {
-        let single = r#"
+    fn serialize_get_receive_address() {
+        let single_str = r#"
         {
             "network": "liquid",
             "variant": "sh(wpkh(k))",
             "path": [2147483697, 2147483648, 2147483648, 0, 143]
         }
         "#;
-        let a: GetReceiveAddressParams = serde_json::from_str(single).unwrap();
-        assert_eq!(a.single.unwrap().variant, "sh(wpkh(k))");
-        assert!(a.multi.is_none());
+        let single_value: Value = serde_json::from_str(single_str).unwrap();
+        let single_struct = GetReceiveAddressParams {
+            network: crate::Network::Liquid,
+            address: SingleOrMulti::Single {
+                variant: "sh(wpkh(k))".to_string(),
+                path: vec![2147483697, 2147483648, 2147483648, 0, 143],
+            },
+        };
+        assert_eq!(single_value, serde_json::to_value(single_struct).unwrap());
 
-        let multi = r#"
+        let multi_str = r#"
         {
             "network": "liquid",
             "multisig_name": "small_beans",
@@ -55,8 +82,14 @@ mod test {
             ]
         }
         "#;
-        let b: GetReceiveAddressParams = serde_json::from_str(multi).unwrap();
-        assert_eq!(b.multi.unwrap().multisig_name, "small_beans");
-        assert!(b.single.is_none());
+        let multi_value: Value = serde_json::from_str(multi_str).unwrap();
+        let multi_struct = GetReceiveAddressParams {
+            network: crate::Network::Liquid,
+            address: SingleOrMulti::Multi {
+                multisig_name: "small_beans".to_string(),
+                paths: vec![vec![0, 43], vec![0, 14]],
+            },
+        };
+        assert_eq!(multi_value, serde_json::to_value(multi_struct).unwrap());
     }
 }

@@ -29,11 +29,11 @@ impl MutexJade {
         self.0.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
     }
 
-    pub fn into_inner(self) -> Result<Jade, PoisonError<Jade>> {
-        self.0.into_inner()
+    pub fn into_inner(self) -> Result<Jade, Box<PoisonError<Jade>>> {
+        self.0.into_inner().map_err(Box::new)
     }
 
-    pub fn get_mut(&mut self) -> Result<&mut Jade, PoisonError<&mut Jade>> {
-        self.0.get_mut()
+    pub fn get_mut(&mut self) -> Result<&mut Jade, Box<PoisonError<&mut Jade>>> {
+        self.0.get_mut().map_err(Box::new)
     }
 }

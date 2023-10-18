@@ -122,8 +122,8 @@ fn origin() {
         .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
         .unwrap();
 
-    let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
-    let desc_str = format!("ct({descriptor_blinding_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
+    let view_key = generate_view_key();
+    let desc_str = format!("ct({view_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];

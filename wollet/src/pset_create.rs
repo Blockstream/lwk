@@ -122,16 +122,6 @@ impl Wollet {
         };
         pset.add_output(output);
 
-        let last_output_index = pset.n_outputs() - 1;
-
-        match self.definite_descriptor(&addressee.script_pubkey) {
-            Ok(desc) => {
-                pset.update_output_with_descriptor(last_output_index, &desc)?;
-            }
-            Err(Error::ScriptNotMine) => (),
-            Err(e) => return Err(e),
-        }
-
         Ok(())
     }
 
@@ -148,7 +138,6 @@ impl Wollet {
         pset.add_input(input);
         let idx = pset.inputs().len() - 1;
         let desc = self.definite_descriptor(&utxo.script_pubkey)?;
-        pset.update_input_with_descriptor(idx, &desc)?;
         inp_txout_sec.insert(idx, utxo.unblinded);
         *inp_weight += desc.max_weight_to_satisfy()?;
         Ok(idx)
@@ -397,6 +386,10 @@ impl Wollet {
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+
+        // Add details to the pset from our descriptor, like bip32derivation and keyorigin
+        self.add_details(&mut pset)?;
+
         Ok(pset)
     }
 

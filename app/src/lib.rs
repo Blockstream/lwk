@@ -54,7 +54,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
     let secp = Secp256k1::default(); // todo: request context?
     let response = match request.method.as_str() {
         "generate_signer" => {
-            let (_signer, mnemonic) = signer::SwSigner::random(&secp).unwrap(); // todo
+            let (_signer, mnemonic) = signer::SwSigner::random(&secp)?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::SignerGenerateResponse {

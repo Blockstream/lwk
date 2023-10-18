@@ -36,7 +36,7 @@ pub enum Signer<'a> {
 impl<'a> Signer<'a> {
     pub fn xpub(&self) -> Result<ExtendedPubKey, SignerError> {
         match self {
-            Signer::Software(s) => Ok(s.master_xpub()),
+            Signer::Software(s) => Ok(s.xpub()),
             Signer::Jade(s) => {
                 let params = jade::protocol::GetXpubParams {
                     network: jade::Network::LocaltestLiquid,

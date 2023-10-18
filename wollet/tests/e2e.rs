@@ -116,7 +116,7 @@ fn view() {
 fn origin() {
     let server = setup();
     let signer = generate_signer();
-    let fingerprint = signer.master_xpub().fingerprint();
+    let fingerprint = signer.fingerprint();
     let path = "84h/1776h/0h";
     let xpub = signer
         .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
@@ -138,23 +138,19 @@ fn roundtrip() {
 
     let signer1 = generate_signer();
     let slip77_key = generate_slip77();
-    let desc1 = format!(
-        "ct(slip77({}),elwpkh({}/*))",
-        slip77_key,
-        signer1.master_xpub()
-    );
+    let desc1 = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer1.xpub());
 
     let view_key = generate_view_key();
     let signer2 = generate_signer();
-    let desc2 = format!("ct({},elwpkh({}/*))", view_key, signer2.master_xpub());
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key, signer2.xpub());
 
     let view_key3 = generate_view_key();
     let signer3 = generate_signer();
-    let desc3 = format!("ct({},elsh(wpkh({}/*)))", view_key3, signer3.master_xpub());
+    let desc3 = format!("ct({},elsh(wpkh({}/*)))", view_key3, signer3.xpub());
 
     let view_key = generate_view_key();
     let signer4 = generate_signer();
-    let desc4 = format!("ct({},elwpkh({}/9/*))", view_key, signer4.master_xpub());
+    let desc4 = format!("ct({},elwpkh({}/9/*))", view_key, signer4.xpub());
 
     let view_key = generate_view_key();
     let signer51 = generate_signer();
@@ -162,8 +158,8 @@ fn roundtrip() {
     let desc5 = format!(
         "ct({},elwsh(multi(2,{}/*,{}/*)))",
         view_key,
-        signer51.master_xpub(),
-        signer52.master_xpub()
+        signer51.xpub(),
+        signer52.xpub()
     );
     let signers1 = [&Signer::Software(signer1)];
     let signers2 = [&Signer::Software(signer2)];
@@ -211,16 +207,16 @@ fn unsupported_descriptor() {
     let signer1 = generate_signer();
     let signer2 = generate_signer();
     let view_key = generate_view_key();
-    let desc_p2pkh = format!("ct({},elpkh({}/*))", view_key, signer1.master_xpub());
+    let desc_p2pkh = format!("ct({},elpkh({}/*))", view_key, signer1.xpub());
     let desc_p2sh = format!(
         "ct({},elsh(multi(2,{}/*,{}/*)))",
         view_key,
-        signer1.master_xpub(),
-        signer2.master_xpub()
+        signer1.xpub(),
+        signer2.xpub()
     );
-    let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.master_xpub());
-    let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.master_xpub());
-    let desc_multi_path = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer1.master_xpub());
+    let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.xpub());
+    let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.xpub());
+    let desc_multi_path = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer1.xpub());
 
     for (desc, err) in [
         (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
@@ -236,14 +232,14 @@ fn unsupported_descriptor() {
     }
 
     let bare_key = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904";
-    let desc_bare = format!("ct({},elwpkh({}/*))", bare_key, signer1.master_xpub());
+    let desc_bare = format!("ct({},elwpkh({}/*))", bare_key, signer1.xpub());
     new_unsupported_wallet(&desc_bare, Error::BlindingBareUnsupported);
 
     let xprv = generate_xprv();
-    let desc_view_multi = format!("ct({}/<0;1>,elwpkh({}))", xprv, signer1.master_xpub());
+    let desc_view_multi = format!("ct({}/<0;1>,elwpkh({}))", xprv, signer1.xpub());
     new_unsupported_wallet(&desc_view_multi, Error::BlindingViewMultiUnsupported);
 
-    let desc_view_wildcard = format!("ct({}/*,elwpkh({}))", xprv, signer1.master_xpub());
+    let desc_view_wildcard = format!("ct({}/*,elwpkh({}))", xprv, signer1.xpub());
     new_unsupported_wallet(&desc_view_wildcard, Error::BlindingViewWildcardUnsupported);
 }
 
@@ -253,7 +249,7 @@ fn address() {
 
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.master_xpub());
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
 
@@ -297,8 +293,8 @@ fn different_blinding_keys() {
     let signer = generate_signer();
     let view_key1 = generate_view_key();
     let view_key2 = generate_view_key();
-    let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer.master_xpub());
-    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer.master_xpub());
+    let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer.xpub());
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer.xpub());
 
     let mut wallet1 = TestWollet::new(&server.electrs.electrum_url, &desc1);
     wallet1.sync();
@@ -321,7 +317,7 @@ fn fee_rate() {
     let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.master_xpub());
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&Signer::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
@@ -352,7 +348,7 @@ fn contract() {
     let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.master_xpub());
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&Signer::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
@@ -392,7 +388,7 @@ fn multiple_descriptors() {
     // Asset descriptor and signers
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
-    let desc_a = format!("ct({},elwpkh({}/*))", view_key_a, signer_a.master_xpub());
+    let desc_a = format!("ct({},elwpkh({}/*))", view_key_a, signer_a.xpub());
     let mut wallet_a = TestWollet::new(&server.electrs.electrum_url, &desc_a);
     // Token descriptor and signers
     let signer_t1 = generate_signer();
@@ -401,8 +397,8 @@ fn multiple_descriptors() {
     let desc_t = format!(
         "ct({},elwsh(multi(2,{}/*,{}/*)))",
         view_key_t,
-        signer_t1.master_xpub(),
-        signer_t2.master_xpub()
+        signer_t1.xpub(),
+        signer_t2.xpub()
     );
     let mut wallet_t = TestWollet::new(&server.electrs.electrum_url, &desc_t);
 
@@ -466,7 +462,7 @@ fn create_pset_error() {
     let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.master_xpub());
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -552,7 +548,7 @@ fn create_pset_error() {
     // Not enough token
     let signer2 = generate_signer();
     let view_key2 = generate_view_key();
-    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.master_xpub());
+    let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
     let wallet2 = TestWollet::new(&server.electrs.electrum_url, &desc2);
 
     // Send token elsewhere
@@ -608,7 +604,7 @@ fn multisig_flow() {
     let desc_str = format!(
         "ct({},elwsh(multi(2,{}/*,{}/*)))",
         view_key,
-        signer1.master_xpub(),
+        signer1.xpub(),
         signer2_xpub
     );
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
@@ -657,11 +653,7 @@ fn jade_sign_wollet_pset() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-    let desc_str = format!(
-        "ct(slip77({}),elwpkh({}/*))",
-        slip77_key,
-        signer.master_xpub()
-    );
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&server);
@@ -679,7 +671,7 @@ fn jade_sign_wollet_pset() {
     // Compre strings so that we don't get mismatching regtest-testnet networks
     assert_eq!(
         jade_signer.xpub().unwrap().to_string(),
-        signer.master_xpub().to_string()
+        signer.xpub().to_string()
     );
     assert_eq!(jade_signer.fingerprint().unwrap(), signer.fingerprint());
 
@@ -697,7 +689,7 @@ fn jade_single_sig() {
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
     let signer = Signer::Jade(&jade_init.jade);
     // FIXME: implement Signer::xpub
-    let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().master_xpub();
+    let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);

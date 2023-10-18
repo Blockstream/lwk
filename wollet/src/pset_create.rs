@@ -444,7 +444,7 @@ impl Wollet {
     }
 
     /// Create a PSET burning an asset
-    pub fn burnasset(
+    pub fn burn_asset(
         &self,
         asset: &str,
         satoshi: u64,

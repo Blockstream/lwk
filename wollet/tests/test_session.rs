@@ -627,7 +627,7 @@ impl TestWollet {
         let balance_asset_before = self.balance(asset);
         let mut pset = self
             .wollet
-            .burnasset(&asset.to_string(), satoshi_asset, fee_rate)
+            .burn_asset(&asset.to_string(), satoshi_asset, fee_rate)
             .unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();

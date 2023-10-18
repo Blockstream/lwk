@@ -19,8 +19,8 @@ use crate::WolletDescriptor;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::confidential::Key;
-use elements_miniscript::psbt;
 use elements_miniscript::psbt::PsbtExt;
+use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
@@ -355,6 +355,17 @@ impl Wollet {
                 Err(e) => return Err(e),
             }
         }
+
+        // Set PSET xpub origin
+        self.descriptor().descriptor.for_each_key(|k| {
+            if let DescriptorPublicKey::XPub(x) = k {
+                if let Some(origin) = &x.origin {
+                    pset.global.xpub.insert(x.xkey, origin.clone());
+                }
+            }
+            true
+        });
+
         Ok(())
     }
 

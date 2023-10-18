@@ -10,6 +10,7 @@ use crate::registry::Contract;
 use crate::util::EC;
 use crate::wollet::Wollet;
 use elements_miniscript::psbt::PsbtExt;
+use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -227,6 +228,16 @@ impl Wollet {
         let mut inp_txout_sec = HashMap::new();
         let mut last_unused = self.address(None)?.index();
         let mut inp_weight = 0;
+
+        // Set PSET xpub origin
+        self.descriptor().descriptor.for_each_key(|k| {
+            if let DescriptorPublicKey::XPub(x) = k {
+                if let Some(origin) = &x.origin {
+                    pset.global.xpub.insert(x.xkey, origin.clone());
+                }
+            }
+            true
+        });
 
         // Assets inputs and outputs
         let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();

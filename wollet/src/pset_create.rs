@@ -208,7 +208,7 @@ impl Wollet {
         Ok(Addressee::from_address(satoshi, address.address(), asset))
     }
 
-    fn createpset(
+    fn create_pset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>, // TODO consider using bitcoin::FeeRate
@@ -412,7 +412,7 @@ impl Wollet {
             address,
             asset: "",
         }];
-        self.createpset(addressees, fee_rate, IssuanceRequest::None)
+        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -428,7 +428,7 @@ impl Wollet {
             address,
             asset,
         }];
-        self.createpset(addressees, fee_rate, IssuanceRequest::None)
+        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET sending to many outputs
@@ -440,7 +440,7 @@ impl Wollet {
         if addressees.is_empty() {
             return Err(Error::SendManyEmptyAddressee);
         }
-        self.createpset(addressees, fee_rate, IssuanceRequest::None)
+        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET burning an asset
@@ -455,7 +455,7 @@ impl Wollet {
             address: "burn",
             asset,
         }];
-        self.createpset(addressees, fee_rate, IssuanceRequest::None)
+        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
 
     /// Create a PSET issuing an asset
@@ -486,7 +486,7 @@ impl Wollet {
             address_token,
             contract,
         );
-        self.createpset(addressees, fee_rate, issuance)
+        self.create_pset(addressees, fee_rate, issuance)
     }
 
     /// Create a PSET reissuing an asset
@@ -501,7 +501,7 @@ impl Wollet {
         let asset = AssetId::from_str(asset)?;
         let address_asset = self.validate_empty_address(address_asset)?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
-        self.createpset(addressees, fee_rate, reissuance)
+        self.create_pset(addressees, fee_rate, reissuance)
     }
 }
 

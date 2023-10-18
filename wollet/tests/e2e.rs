@@ -462,7 +462,7 @@ fn multiple_descriptors() {
 }
 
 #[test]
-fn createpset_error() {
+fn create_pset_error() {
     let server = setup();
     let signer = generate_signer();
     let view_key = generate_view_key();

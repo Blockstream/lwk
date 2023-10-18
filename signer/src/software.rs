@@ -1,4 +1,5 @@
 use bip39::Mnemonic;
+use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elementssig_to_rawsig;
 use elements_miniscript::{
     elements::{
@@ -70,6 +71,11 @@ impl<'a> SwSigner<'a> {
 
     pub fn master_xpub(&self) -> ExtendedPubKey {
         ExtendedPubKey::from_priv(self.secp, &self.xprv)
+    }
+
+    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, bip32::Error> {
+        let derived = self.xprv.derive_priv(self.secp, path)?;
+        Ok(ExtendedPubKey::from_priv(self.secp, &derived))
     }
 
     pub fn fingerprint(&self) -> Fingerprint {

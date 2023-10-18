@@ -624,7 +624,7 @@ fn multisig_flow() {
     // Create a simple PSET
     let satoshi = 1_000;
     let node_addr = server.node_getnewaddress().to_string();
-    let pset = wallet.wollet.sendlbtc(satoshi, &node_addr, None).unwrap();
+    let pset = wallet.wollet.send_lbtc(satoshi, &node_addr, None).unwrap();
 
     // Send the PSET to each signer
     let mut pset1 = pset.clone();
@@ -670,7 +670,7 @@ fn jade_sign_wollet_pset() {
 
     let mut pset = wallet
         .wollet
-        .sendlbtc(1000, &my_addr.to_string(), None)
+        .send_lbtc(1000, &my_addr.to_string(), None)
         .unwrap();
 
     let docker = Cli::default();
@@ -709,7 +709,7 @@ fn jade_single_sig() {
 
     let satoshi = satoshi_utxo1 + 1;
     let node_addr = server.node_getnewaddress().to_string();
-    let mut pset = wallet.wollet.sendlbtc(satoshi, &node_addr, None).unwrap();
+    let mut pset = wallet.wollet.send_lbtc(satoshi, &node_addr, None).unwrap();
 
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);

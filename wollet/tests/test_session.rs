@@ -386,7 +386,7 @@ impl TestWollet {
         let address = self.address();
         let mut pset = self
             .wollet
-            .sendlbtc(satoshi, &address.to_string(), fee_rate)
+            .send_lbtc(satoshi, &address.to_string(), fee_rate)
             .unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();

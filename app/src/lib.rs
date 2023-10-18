@@ -1,15 +1,23 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 
 use client::Client;
 use config::Config;
 use secp256k1::Secp256k1;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use wollet::{ElementsNetwork, Wollet};
 
 pub mod client;
 pub mod config;
 pub mod consts;
 pub mod error;
 pub mod model;
+
+#[derive(Default)]
+pub struct State {
+    pub wollets: HashMap<String, Wollet>,
+}
 
 pub struct App {
     rpc: JsonRpcServer,
@@ -22,8 +30,9 @@ impl App {
     pub fn new(config: Config) -> Result<App> {
         tracing::info!("Creating new app with config: {:?}", config);
 
+        let state = Arc::new(Mutex::new(State::default()));
         let server = tiny_http::Server::http(config.addr)?;
-        let rpc = tiny_jrpc::JsonRpcServer::new(server, method_handler);
+        let rpc = tiny_jrpc::JsonRpcServer::new(server, state, method_handler);
 
         Ok(App { rpc, config })
     }
@@ -41,7 +50,7 @@ impl App {
     }
 }
 
-fn method_handler(request: Request) -> tiny_jrpc::Result<Response> {
+fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
     let secp = Secp256k1::default(); // todo: request context?
     let response = match request.method.as_str() {
         "generate_signer" => {
@@ -61,6 +70,29 @@ fn method_handler(request: Request) -> tiny_jrpc::Result<Response> {
             })
             .unwrap(), // todo
         ),
+        "load_wallet" => {
+            let r: model::LoadWalletRequest =
+                serde_json::from_value(request.params.unwrap()).unwrap();
+            let wollet = Wollet::new(
+                ElementsNetwork::LiquidTestnet, // todo
+                "",                             // electrum url
+                false,                          // tls
+                false,                          // validate_domain
+                "/tmp/.ks/",                    // data root
+                &r.descriptor,
+            )
+            .unwrap();
+            let mut s = state.lock().unwrap();
+            let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();
+            Response::result(
+                request.id,
+                serde_json::to_value(model::LoadWalletResponse {
+                    descriptor: r.descriptor,
+                    new,
+                })
+                .unwrap(), // todo
+            )
+        }
         _ => Response::unimplemented(request.id),
     };
     Ok(response)

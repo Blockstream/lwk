@@ -14,3 +14,5 @@ signer = { path = "../signer" }
 tiny_jrpc = { path = "../tiny_jrpc" }
 thiserror = "1"
 tracing = "0.1"
+
+wollet = { path = "../wollet" }

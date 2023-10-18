@@ -1,6 +1,6 @@
 use std::{
     result,
-    sync::Arc,
+    sync::{Arc, Mutex},
     thread::{self, JoinHandle},
 };
 
@@ -24,11 +24,12 @@ pub struct JsonRpcServer {
 
 impl JsonRpcServer {
     ///
-    pub fn new<F>(server: Server, func: F) -> Self
+    pub fn new<F, T>(server: Server, state: Arc<Mutex<T>>, func: F) -> Self
     where
-        F: Fn(Request) -> Result<Response> + Clone + Send + Sync + 'static,
+        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+        T: Send + 'static,
     {
-        Self::run(Arc::new(server), func)
+        Self::run(Arc::new(server), state, func)
     }
 
     ///
@@ -42,9 +43,10 @@ impl JsonRpcServer {
     }
 
     ///
-    fn run<F>(server: Arc<Server>, func: F) -> Self
+    fn run<F, T>(server: Arc<Server>, state: Arc<Mutex<T>>, func: F) -> Self
     where
-        F: Fn(Request) -> Result<Response> + Clone + Send + Sync + 'static,
+        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+        T: Send + 'static,
     {
         // todo config the number of threads
         let mut handles = Vec::with_capacity(4);
@@ -52,6 +54,7 @@ impl JsonRpcServer {
         for _ in 0..4 {
             let server = server.clone();
             let func = func.clone();
+            let state = state.clone();
             let handle = thread::spawn(move || {
                 loop {
                     // receive http request
@@ -69,7 +72,7 @@ impl JsonRpcServer {
                         Ok(request) => {
                             // handle the request
                             let id = request.id.clone();
-                            match handle_request(request, func.clone()) {
+                            match handle_request(request, state.clone(), func.clone()) {
                                 Ok(response) => response,
                                 Err(err) => Response::from_error(id, err),
                             }
@@ -127,9 +130,10 @@ fn validate_request(http_request: &mut tiny_http::Request) -> Result<Request> {
     Ok(request)
 }
 
-fn handle_request<F>(request: Request, process: F) -> Result<Response>
+fn handle_request<F, T>(request: Request, state: Arc<Mutex<T>>, process: F) -> Result<Response>
 where
-    F: Fn(Request) -> Result<Response> + Clone + Send + Sync + 'static,
+    F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+    T: Send + 'static,
 {
     // check jsonrpc version
     if request.jsonrpc.as_str() != "2.0" {
@@ -143,7 +147,7 @@ where
 
     // call the method handler
     let id = request.id.clone();
-    let response = match process(request) {
+    let response = match process(request, state) {
         Ok(response) => response,
         Err(err) => {
             tracing::error!("Error processing request: {}", err);
@@ -250,7 +254,7 @@ mod test {
     use serde_json::{json, value::to_raw_value};
     use tiny_http::Server;
 
-    fn process(request: Request) -> Result<Response> {
+    fn process(request: Request, _state: Arc<Mutex<()>>) -> Result<Response> {
         let response = match request.method.as_str() {
             "echo" => Response {
                 jsonrpc: request.jsonrpc,
@@ -267,7 +271,8 @@ mod test {
     fn echo() {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
-        let rpc = JsonRpcServer::new(server, process);
+        let state = Arc::new(Mutex::new(()));
+        let rpc = JsonRpcServer::new(server, state, process);
         let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
@@ -291,7 +296,8 @@ mod test {
     fn rpc_dot_reserved() {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
-        let rpc = JsonRpcServer::new(server, process);
+        let state = Arc::new(Mutex::new(()));
+        let rpc = JsonRpcServer::new(server, state, process);
         let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 

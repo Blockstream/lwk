@@ -432,7 +432,7 @@ impl Wollet {
     }
 
     /// Create a PSET sending to many outputs
-    pub fn sendmany(
+    pub fn send_many(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>,

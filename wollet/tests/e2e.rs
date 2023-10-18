@@ -488,11 +488,11 @@ fn create_pset_error() {
         address: "",
         asset: "",
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     let expected = "base58 error: base58ck data not even long enough for a checksum";
     assert_eq!(err.to_string(), expected);
 
-    let err = wallet.wollet.sendmany(vec![], None).unwrap_err();
+    let err = wallet.wollet.send_many(vec![], None).unwrap_err();
     let expected = "Send many cannot be called with an empty addressee list";
     assert_eq!(err.to_string(), expected);
 
@@ -505,7 +505,7 @@ fn create_pset_error() {
         address: &not_conf_address,
         asset: "",
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
 
     let address = wallet.address().to_string();
@@ -515,7 +515,7 @@ fn create_pset_error() {
         address: &address,
         asset: "",
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
 
     // Invalid asset
@@ -524,7 +524,7 @@ fn create_pset_error() {
         address: &address,
         asset: "aaaa",
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(
         err.to_string(),
         "bad hex string length 4 (expected 64)".to_string()
@@ -537,7 +537,7 @@ fn create_pset_error() {
         address: &address,
         asset: "",
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // Not enough asset
@@ -546,7 +546,7 @@ fn create_pset_error() {
         address: &address,
         asset: &asset,
     }];
-    let err = wallet.wollet.sendmany(addressees, None).unwrap_err();
+    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // Not enough token

@@ -482,7 +482,7 @@ impl TestWollet {
                 asset: &ass2,
             },
         ];
-        let mut pset = self.wollet.sendmany(addressees, fee_rate).unwrap();
+        let mut pset = self.wollet.send_many(addressees, fee_rate).unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;

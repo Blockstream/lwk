@@ -27,7 +27,6 @@ use elements_miniscript::{
 use pset_details::{pset_balance, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
@@ -54,8 +53,7 @@ impl Wollet {
     }
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
-        let descriptor = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(desc)?;
-        let descriptor: WolletDescriptor = descriptor.try_into()?;
+        let descriptor = WolletDescriptor::from_str(desc)?;
 
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));

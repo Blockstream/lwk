@@ -1,4 +1,8 @@
-use std::{convert::TryFrom, fmt::Display};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::Display,
+    str::FromStr,
+};
 
 use elements::bitcoin::address::WitnessVersion;
 use elements_miniscript::{
@@ -17,7 +21,6 @@ impl Display for WolletDescriptor {
     }
 }
 
-// TODO add FromStr also
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     type Error = crate::error::Error;
 
@@ -44,6 +47,14 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             Some(WitnessVersion::V0) => Ok(WolletDescriptor(desc)),
             _ => Err(Self::Error::UnsupportedDescriptorNonV0),
         }
+    }
+}
+
+impl FromStr for WolletDescriptor {
+    type Err = crate::error::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?.try_into()
     }
 }
 

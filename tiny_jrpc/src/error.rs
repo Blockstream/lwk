@@ -16,6 +16,8 @@ pub enum Error {
     ReservedMethodPrefix,
     #[error("'jsonrpc' version should be '2.0'")]
     InvalidVersion,
+    #[error("Wollet Error: {0}")]
+    Wollet(#[from] wollet::Error),
 }
 
 impl Error {
@@ -48,6 +50,7 @@ impl Error {
                 "jsonrpc version is invalid, it should be '2.0'.".to_string(),
                 None,
             ),
+            Error::Wollet(_) => (WOLLET_ERROR, "Watch Only wallet error.".to_string(), None),
         };
 
         RpcError {
@@ -81,3 +84,4 @@ pub const NO_CONTENT_TYPE: i64 = -32_001;
 pub const WRONG_CONTENT_TYPE: i64 = -32_002;
 pub const METHOD_RESERVED: i64 = -32_003;
 pub const INVALID_VERSION: i64 = -32_004;
+pub const WOLLET_ERROR: i64 = -32_005;

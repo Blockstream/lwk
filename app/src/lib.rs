@@ -78,8 +78,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 false,                          // validate_domain
                 "/tmp/.ks/",                    // data root
                 &r.descriptor,
-            )
-            .unwrap();
+            )?;
             let mut s = state.lock().unwrap();
             let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();
             Response::result(

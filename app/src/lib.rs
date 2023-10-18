@@ -12,7 +12,7 @@ pub mod error;
 pub mod model;
 
 pub struct App {
-    _rpc: JsonRpcServer,
+    rpc: JsonRpcServer,
     config: Config,
 }
 
@@ -23,13 +23,17 @@ impl App {
         tracing::info!("Creating new app with config: {:?}", config);
 
         let server = tiny_http::Server::http(config.addr)?;
-        let _rpc = tiny_jrpc::JsonRpcServer::new(server, method_handler);
+        let rpc = tiny_jrpc::JsonRpcServer::new(server, method_handler);
 
-        Ok(App { _rpc, config })
+        Ok(App { rpc, config })
     }
 
     pub fn addr(&self) -> SocketAddr {
         self.config.addr
+    }
+
+    pub fn join_threads(&mut self) {
+        self.rpc.join_threads();
     }
 
     pub fn client(&self) -> Result<Client> {

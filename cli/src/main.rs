@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
-    let app = app::App::new(Config::default())?;
+    let mut app = app::App::new(Config::default())?;
     // get a client to make requests
     let client = app.client()?;
     // get the app version
@@ -42,7 +42,9 @@ fn main() -> anyhow::Result<()> {
     tracing::info!("App running version {}", version);
 
     match args.command {
-        CliCommand::Server => todo!(),
+        CliCommand::Server => {
+            app.join_threads();
+        }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
                 let j = client.generate_signer()?;

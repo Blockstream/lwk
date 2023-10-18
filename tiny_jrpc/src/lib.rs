@@ -19,7 +19,7 @@ pub use tiny_http;
 
 pub struct JsonRpcServer {
     server: Arc<Server>,
-    _handles: Vec<JoinHandle<Result<()>>>,
+    handles: Vec<JoinHandle<Result<()>>>,
 }
 
 impl JsonRpcServer {
@@ -47,7 +47,7 @@ impl JsonRpcServer {
         F: Fn(Request) -> Result<Response> + Clone + Send + Sync + 'static,
     {
         // todo config the number of threads
-        let mut _handles = Vec::with_capacity(4);
+        let mut handles = Vec::with_capacity(4);
 
         for _ in 0..4 {
             let server = server.clone();
@@ -86,9 +86,15 @@ impl JsonRpcServer {
                     }
                 }
             });
-            _handles.push(handle);
+            handles.push(handle);
         }
-        Self { server, _handles }
+        Self { server, handles }
+    }
+
+    pub fn join_threads(&mut self) {
+        while let Some(handle) = self.handles.pop() {
+            let _ = handle.join();
+        }
     }
 }
 

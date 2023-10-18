@@ -1,5 +1,3 @@
-// TODO: rename as wollet/src/descriptor.rs
-
 use std::{convert::TryFrom, fmt::Display};
 
 use elements::bitcoin::address::WitnessVersion;

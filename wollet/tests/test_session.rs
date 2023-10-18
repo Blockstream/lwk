@@ -380,21 +380,35 @@ impl TestWollet {
         asset
     }
 
-    pub fn send_btc(&mut self, signers: &[&Signer], fee_rate: Option<f32>) {
+    /// Send 10_000 satoshi to self with default fee rate.
+    ///
+    /// To specify a custom fee rate pass Some in `fee_rate`
+    /// To specify an external recipient specify the `to` parameter
+    pub fn send_btc(
+        &mut self,
+        signers: &[&Signer],
+        fee_rate: Option<f32>,
+        external: Option<(Address, u64)>,
+    ) {
         let balance_before = self.balance_btc();
-        let satoshi: u64 = 10_000;
-        let address = self.address();
+
+        let recipient = external.clone().unwrap_or((self.address(), 10_000));
+
         let mut pset = self
             .wollet
-            .send_lbtc(satoshi, &address.to_string(), fee_rate)
+            .send_lbtc(recipient.1, &recipient.0.to_string(), fee_rate)
             .unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
+        let balance = match &external {
+            Some((_a, v)) => -fee - *v as i64,
+            None => -fee,
+        };
         assert_eq!(
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
-            -fee
+            balance
         );
 
         for signer in signers {

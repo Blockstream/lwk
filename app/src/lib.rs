@@ -59,20 +59,18 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 request.id,
                 serde_json::to_value(model::SignerGenerateResponse {
                     mnemonic: mnemonic.to_string(),
-                })
-                .unwrap(), // todo
+                })?,
             )
         }
         "version" => Response::result(
             request.id,
             serde_json::to_value(model::VersionResponse {
                 version: consts::APP_VERSION.into(),
-            })
-            .unwrap(), // todo
+            })?,
         ),
         "load_wallet" => {
             let r: model::LoadWalletRequest =
-                serde_json::from_value(request.params.unwrap()).unwrap();
+                serde_json::from_value(request.params.unwrap_or_default())?;
             let wollet = Wollet::new(
                 ElementsNetwork::LiquidTestnet, // todo
                 "",                             // electrum url
@@ -89,8 +87,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::to_value(model::LoadWalletResponse {
                     descriptor: r.descriptor,
                     new,
-                })
-                .unwrap(), // todo
+                })?,
             )
         }
         _ => Response::unimplemented(request.id),

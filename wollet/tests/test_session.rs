@@ -513,7 +513,7 @@ impl TestWollet {
         let balance_before = self.balance_btc();
         let mut pset = self
             .wollet
-            .issueasset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
+            .issue_asset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
             .unwrap();
 
         let issuance_input = &pset.inputs()[0].clone();

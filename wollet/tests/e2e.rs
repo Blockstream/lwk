@@ -378,7 +378,7 @@ fn contract() {
     ] {
         let err = wallet
             .wollet
-            .issueasset(10, "", 1, "", contract, None)
+            .issue_asset(10, "", 1, "", contract, None)
             .unwrap_err();
         assert_eq!(err.to_string(), expected.to_string());
     }
@@ -416,7 +416,7 @@ fn multiple_descriptors() {
     let address_t = wallet_t.address().to_string();
     let mut pset = wallet_a
         .wollet
-        .issueasset(satoshi_a, "", satoshi_t, &address_t, "", None)
+        .issue_asset(satoshi_a, "", satoshi_t, &address_t, "", None)
         .unwrap();
     wallet_t.wollet.add_details(&mut pset).unwrap();
     let (asset, token) = &pset.inputs()[0].issuance_ids();

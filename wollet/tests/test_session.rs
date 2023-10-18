@@ -12,6 +12,7 @@ use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
+use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use log::{LevelFilter, Metadata, Record};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
@@ -403,6 +404,15 @@ impl TestWollet {
         self.send(&mut pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
+
+        self.wollet.descriptor().descriptor.for_each_key(|k| {
+            if let DescriptorPublicKey::XPub(x) = k {
+                if let Some(origin) = &x.origin {
+                    assert_eq!(pset.global.xpub.get(&x.xkey).unwrap(), origin);
+                }
+            }
+            true
+        });
     }
 
     pub fn send_asset(

@@ -6,9 +6,10 @@ mod serial;
 
 use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
+use elements::bitcoin::bip32::DerivationPath;
 use jade::protocol::GetXpubParams;
 use signer::*;
-use std::collections::HashSet;
+use std::{collections::HashSet, str::FromStr};
 use test_session::*;
 use wollet::*;
 
@@ -26,7 +27,7 @@ fn liquid_send_jade_signer() {
 #[test]
 fn liquid_send_software_signer() {
     let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
-    let signers = [&Signer::Software(signer)];
+    let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];
     liquid_send(&signers);
 }
 
@@ -109,6 +110,26 @@ fn view() {
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&server);
+}
+
+#[test]
+fn origin() {
+    let server = setup();
+    let signer = generate_signer();
+    let fingerprint = signer.master_xpub().fingerprint();
+    let path = "84h/1776h/0h";
+    let xpub = signer
+        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
+        .unwrap();
+
+    let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+    let desc_str = format!("ct({descriptor_blinding_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
+    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+
+    let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];
+
+    wallet.fund_btc(&server);
+    wallet.send_btc(&signers, None);
 }
 
 #[test]

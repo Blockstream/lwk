@@ -490,7 +490,7 @@ impl Wollet {
     }
 
     /// Create a PSET reissuing an asset
-    pub fn reissueasset(
+    pub fn reissue_asset(
         &self,
         asset: &str,
         satoshi_asset: u64,

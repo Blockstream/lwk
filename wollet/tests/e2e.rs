@@ -441,7 +441,7 @@ fn multiple_descriptors() {
     let address_a = wallet_a.address().to_string();
     let mut pset = wallet_t
         .wollet
-        .reissueasset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
+        .reissue_asset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
         .unwrap();
     wallet_a.wollet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
@@ -566,7 +566,7 @@ fn create_pset_error() {
 
     let err = wallet
         .wollet
-        .reissueasset(&asset, satoshi_a, "", None)
+        .reissue_asset(&asset, satoshi_a, "", None)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
@@ -574,7 +574,7 @@ fn create_pset_error() {
     // so it can't reissue the asset.
     let err = wallet2
         .wollet
-        .reissueasset(&asset, satoshi_a, "", None)
+        .reissue_asset(&asset, satoshi_a, "", None)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }

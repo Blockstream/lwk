@@ -579,7 +579,7 @@ impl TestWollet {
         let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
             .wollet
-            .reissueasset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
+            .reissue_asset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
 
         let details = self.wollet.get_details(&pset).unwrap();

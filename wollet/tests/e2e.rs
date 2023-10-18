@@ -559,7 +559,7 @@ fn create_pset_error() {
     let address = wallet2.address();
     let mut pset = wallet
         .wollet
-        .sendasset(satoshi_t, &address.to_string(), &token, None)
+        .send_asset(satoshi_t, &address.to_string(), &token, None)
         .unwrap();
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);

@@ -416,7 +416,7 @@ impl Wollet {
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
-    pub fn sendasset(
+    pub fn send_asset(
         &self,
         satoshi: u64,
         address: &str,

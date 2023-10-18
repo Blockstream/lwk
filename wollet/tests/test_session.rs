@@ -426,7 +426,7 @@ impl TestWollet {
         let satoshi: u64 = 10;
         let mut pset = self
             .wollet
-            .sendasset(
+            .send_asset(
                 satoshi,
                 &node_address.to_string(),
                 &asset.to_string(),

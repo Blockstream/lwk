@@ -20,6 +20,8 @@ pub enum Error {
     Wollet(#[from] wollet::Error),
     #[error("Signer New Error: {0}")]
     SignerNew(#[from] signer::NewError),
+    #[error("Signer Error: {0}")]
+    Signer(#[from] signer::SignerError),
 }
 
 impl Error {
@@ -54,6 +56,7 @@ impl Error {
             ),
             Error::Wollet(_) => (WOLLET_ERROR, "Watch Only wallet error.".to_string(), None),
             Error::SignerNew(_) => (SIGNER_NEW_ERROR, "Signer new error.".to_string(), None),
+            Error::Signer(_) => (SIGNER_ERROR, "Signer error.".to_string(), None),
         };
 
         RpcError {
@@ -89,3 +92,4 @@ pub const METHOD_RESERVED: i64 = -32_003;
 pub const INVALID_VERSION: i64 = -32_004;
 pub const WOLLET_ERROR: i64 = -32_005;
 pub const SIGNER_NEW_ERROR: i64 = -32_006;
+pub const SIGNER_ERROR: i64 = -32_007;

@@ -60,7 +60,7 @@ fn liquid_send(signers: &[&Signer]) {
     let asset = wallet.fund_asset(&server);
     server.generate(1);
 
-    wallet.send_btc(signers, None);
+    wallet.send_btc(signers, None, None);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();
@@ -128,8 +128,10 @@ fn origin() {
 
     let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];
 
+    let address = server.node_getnewaddress();
+
     wallet.fund_btc(&server);
-    wallet.send_btc(&signers, None);
+    wallet.send_btc(&signers, None, Some((address, 10_000)));
 }
 
 #[test]
@@ -180,7 +182,7 @@ fn roundtrip() {
             s.spawn(move || {
                 wallet.fund_btc(server);
                 server.generate(1);
-                wallet.send_btc(signers, None);
+                wallet.send_btc(signers, None, None);
                 let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
                 let node_address = server.node_getnewaddress();
                 wallet.send_asset(signers, &node_address, &asset, None);
@@ -322,7 +324,7 @@ fn fee_rate() {
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
-    wallet.send_btc(&signers, fee_rate);
+    wallet.send_btc(&signers, fee_rate, None);
     let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", fee_rate);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(&signers, &node_address, &asset, fee_rate);
@@ -353,7 +355,7 @@ fn contract() {
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
-    wallet.send_btc(&signers, None);
+    wallet.send_btc(&signers, None, None);
     let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, contract, None);
 
     // Error cases

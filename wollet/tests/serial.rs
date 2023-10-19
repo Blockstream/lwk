@@ -1,6 +1,8 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
+use elements::bitcoin::bip32::DerivationPath;
 use jade::{
+    derivation_path_to_vec,
     mutex_jade::MutexJade,
     protocol::{GetXpubParams, JadeState},
     serialport, Jade,
@@ -34,22 +36,28 @@ fn jade_send_lbtc() {
     assert_eq!(jade_state, JadeState::Ready);
 
     let server = setup();
+    let path = "84h/1h/0h";
+    let master_node = jade.get_mut().unwrap().get_master_xpub().unwrap();
+    let fingerprint = master_node.fingerprint();
     let xpub = jade
         .get_xpub(GetXpubParams {
             network,
-            path: vec![],
+            path: derivation_path_to_vec(&DerivationPath::from_str(&format!("m/{path}")).unwrap()),
         })
         .unwrap();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+
+    // m / purpose' / coin_type' / account' / change / address_index
+    let desc_str = format!("ct(slip77({slip77_key}),elwpkh([{fingerprint}/{path}]{xpub}/1/*))");
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&server);
 
     let signers = [&Signer::Jade(&jade)];
 
-    wallet.send_btc(&signers, None);
+    let node_address = server.node_getnewaddress();
+    wallet.send_btc(&signers, None, Some((node_address, 10_000)));
 
     // refuse the tx on the jade to keep the session logged
     jade.get_mut().unwrap().logout().unwrap();

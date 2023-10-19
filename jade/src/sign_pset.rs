@@ -1,11 +1,13 @@
+use elements::{
+    bitcoin::bip32::ChildNumber, encode::serialize, pset::PartiallySignedTransaction, Script,
+};
 use std::collections::HashMap;
-
-use elements::{encode::serialize, pset::PartiallySignedTransaction, Script};
 
 use crate::{
     derivation_path_to_vec,
+    get_receive_address::SingleOrMulti,
     protocol::GetSignatureParams,
-    sign_liquid_tx::{Commitment, SignLiquidTxParams, TxInputParams},
+    sign_liquid_tx::{Change, Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
 };
 
@@ -54,6 +56,8 @@ pub enum Error {
     UnsupportedScriptPubkeyType(String),
 }
 
+const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
+
 impl Jade {
     pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
@@ -62,7 +66,7 @@ impl Jade {
         let my_fingerprint = self.fingerprint()?;
 
         let mut trusted_commitments = vec![];
-        let mut change = vec![];
+        let mut changes = vec![];
         for (i, output) in pset.outputs().iter().enumerate() {
             let mut asset_id = serialize(&output.asset.ok_or(Error::MissingAssetIdInOutput(i))?);
             asset_id.reverse(); // Jade want it reversed
@@ -102,7 +106,24 @@ impl Jade {
                 })
             };
             trusted_commitments.push(trusted_commitment);
-            change.push(None); //TODO
+
+            let mut change = None;
+            for (fingerprint, path) in output.bip32_derivation.values() {
+                if fingerprint == &my_fingerprint {
+                    let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
+                    if output.script_pubkey.is_v0_p2wpkh() && is_change {
+                        change = Some(Change {
+                            address: SingleOrMulti::Single {
+                                variant: "wpkh(k)".to_string(),
+                                path: derivation_path_to_vec(path),
+                            },
+                            is_change: true,
+                        });
+                    }
+                    // TODO handle multisig
+                }
+            }
+            changes.push(change);
         }
 
         let params = SignLiquidTxParams {
@@ -110,7 +131,7 @@ impl Jade {
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: true,
-            change,
+            change: changes,
             asset_info: vec![], // TODO
             trusted_commitments,
             additional_info: None,

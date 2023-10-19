@@ -1,5 +1,6 @@
 use bs_containers::testcontainers::clients::Cli;
 use elements::bitcoin::bip32::DerivationPath;
+use jade::get_receive_address::Variant;
 use signer::Signer;
 use std::str::FromStr;
 
@@ -11,7 +12,9 @@ use crate::{
 
 #[cfg(feature = "serial")]
 mod serial {
-    use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
+    use jade::{
+        get_receive_address::Variant, mutex_jade::MutexJade, protocol::JadeState, serialport, Jade,
+    };
     use signer::Signer;
     use std::time::Duration;
 
@@ -41,23 +44,28 @@ mod serial {
         assert_eq!(jade_state, JadeState::Ready);
         let signers = [&Signer::Jade(&jade)];
 
-        super::send_lbtc_detect_change(&signers);
+        super::send_lbtc_detect_change(&signers, Variant::Wpkh);
 
         // refuse the tx on the jade to keep the session logged
         jade.get_mut().unwrap().logout().unwrap();
     }
 }
+
 #[test]
 fn emul_send_lbtc_detect_change() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let signers = [&Signer::Jade(&jade_init.jade)];
 
-    send_lbtc_detect_change(&signers);
+    send_lbtc_detect_change(&signers, Variant::Wpkh);
+    // send_lbtc_detect_change(&signers, Variant::ShWpkh); // sign not yet supported
 }
 
-fn send_lbtc_detect_change(signers: &[&Signer]) {
-    let path = "84h/1h/0h";
+fn send_lbtc_detect_change(signers: &[&Signer], variant: Variant) {
+    let (variant, path, closing) = match variant {
+        Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
+        Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
+    };
     let master_node = signers[0].xpub().unwrap();
     let fingerprint = master_node.fingerprint();
     let xpub = signers[0]
@@ -67,7 +75,8 @@ fn send_lbtc_detect_change(signers: &[&Signer]) {
     let slip77_key = generate_slip77();
 
     // m / purpose' / coin_type' / account' / change / address_index
-    let desc_str = format!("ct(slip77({slip77_key}),elwpkh([{fingerprint}/{path}]{xpub}/1/*))");
+    let desc_str =
+        format!("ct(slip77({slip77_key}),{variant}([{fingerprint}/{path}]{xpub}/1/*){closing})");
 
     let server = setup();
 

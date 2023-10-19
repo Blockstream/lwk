@@ -20,3 +20,14 @@ pub struct LoadWalletResponse {
     pub descriptor: String,
     pub new: bool,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct LoadSignerRequest {
+    pub mnemonic: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LoadSignerResponse {
+    pub fingerprint: String,
+    pub new: bool,
+}

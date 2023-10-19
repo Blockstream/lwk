@@ -4,9 +4,9 @@ use std::sync::{Arc, Mutex};
 
 use client::Client;
 use config::Config;
-use secp256k1::Secp256k1;
+use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use wollet::{ElementsNetwork, Wollet};
+use wollet::{ElementsNetwork, Wollet, EC};
 
 pub mod client;
 pub mod config;
@@ -15,8 +15,9 @@ pub mod error;
 pub mod model;
 
 #[derive(Default)]
-pub struct State {
+pub struct State<'a> {
     pub wollets: HashMap<String, Wollet>,
+    pub signers: HashMap<String, Signer<'a>>,
 }
 
 pub struct App {
@@ -51,10 +52,9 @@ impl App {
 }
 
 fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
-    let secp = Secp256k1::default(); // todo: request context?
     let response = match request.method.as_str() {
         "generate_signer" => {
-            let (_signer, mnemonic) = signer::SwSigner::random(&secp)?;
+            let (_signer, mnemonic) = SwSigner::random(&EC)?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::SignerGenerateResponse {
@@ -87,6 +87,19 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     descriptor: r.descriptor,
                     new,
                 })?,
+            )
+        }
+        "load_signer" => {
+            let r: model::LoadSignerRequest =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
+            let fingerprint = signer.fingerprint()?.to_string();
+            let mut s = state.lock().unwrap();
+            // TODO: handle matching fingerprints
+            let new = s.signers.insert(fingerprint.clone(), signer).is_none();
+            Response::result(
+                request.id,
+                serde_json::to_value(model::LoadSignerResponse { fingerprint, new })?,
             )
         }
         _ => Response::unimplemented(request.id),

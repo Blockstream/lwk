@@ -58,7 +58,7 @@ fn emul_send_lbtc_detect_change() {
     let signers = [&Signer::Jade(&jade_init.jade)];
 
     send_lbtc_detect_change(&signers, Variant::Wpkh);
-    // send_lbtc_detect_change(&signers, Variant::ShWpkh); // sign not yet supported
+    send_lbtc_detect_change(&signers, Variant::ShWpkh);
 }
 
 fn send_lbtc_detect_change(signers: &[&Signer], variant: Variant) {

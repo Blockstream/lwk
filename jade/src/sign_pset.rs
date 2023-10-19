@@ -154,6 +154,14 @@ impl Jade {
                         .ok_or(Error::MissingWitnessUtxoInInput(i))?;
 
                     let previous_output_script = &txout.script_pubkey;
+
+                    let is_nested_wpkh = previous_output_script.is_p2sh()
+                        && input
+                            .redeem_script
+                            .as_ref()
+                            .map(|x| x.is_v0_p2wpkh())
+                            .unwrap_or(false);
+
                     let script_code = if previous_output_script.is_v0_p2wpkh() {
                         script_code_wpkh(previous_output_script)
                     } else if previous_output_script.is_v0_p2wsh() {
@@ -161,6 +169,13 @@ impl Jade {
                             .witness_script
                             .clone()
                             .ok_or(Error::MissingWitnessScript(i))?
+                    } else if is_nested_wpkh {
+                        script_code_wpkh(
+                            input
+                                .redeem_script
+                                .as_ref()
+                                .expect("Redeem script non-empty checked earlier"),
+                        )
                     } else {
                         return Err(Error::UnsupportedScriptPubkeyType(
                             previous_output_script.asm(),

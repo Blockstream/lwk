@@ -56,7 +56,7 @@ pub enum Error {
     UnsupportedScriptPubkeyType(String),
 }
 
-const CHANGE_INDEX: ChildNumber = ChildNumber::Normal { index: 1 };
+const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
 impl Jade {
     pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
@@ -64,10 +64,9 @@ impl Jade {
         let txn = serialize(&tx);
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
-        dbg!(&pset.global);
 
         let mut trusted_commitments = vec![];
-        let mut change = vec![];
+        let mut changes = vec![];
         for (i, output) in pset.outputs().iter().enumerate() {
             let mut asset_id = serialize(&output.asset.ok_or(Error::MissingAssetIdInOutput(i))?);
             asset_id.reverse(); // Jade want it reversed
@@ -108,12 +107,12 @@ impl Jade {
             };
             trusted_commitments.push(trusted_commitment);
 
-            let mut current_is_change = None;
+            let mut change = None;
             for (fingerprint, path) in output.bip32_derivation.values() {
                 if fingerprint == &my_fingerprint {
-                    let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_INDEX);
+                    let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
                     if output.script_pubkey.is_v0_p2wpkh() && is_change {
-                        current_is_change = Some(Change {
+                        change = Some(Change {
                             address: SingleOrMulti::Single {
                                 variant: "wpkh(k)".to_string(),
                                 path: derivation_path_to_vec(path),
@@ -124,7 +123,7 @@ impl Jade {
                     // TODO handle multisig
                 }
             }
-            change.push(current_is_change);
+            changes.push(change);
         }
 
         let params = SignLiquidTxParams {
@@ -132,7 +131,7 @@ impl Jade {
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: true,
-            change,
+            change: changes,
             asset_info: vec![], // TODO
             trusted_commitments,
             additional_info: None,

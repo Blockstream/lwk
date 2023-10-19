@@ -111,15 +111,30 @@ impl Jade {
             for (fingerprint, path) in output.bip32_derivation.values() {
                 if fingerprint == &my_fingerprint {
                     let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
-                    if output.script_pubkey.is_v0_p2wpkh() && is_change {
-                        change = Some(Change {
-                            address: SingleOrMulti::Single {
-                                variant: Variant::Wpkh,
-                                path: derivation_path_to_vec(path),
-                            },
-                            is_change: true,
-                        });
+                    if is_change {
+                        if output.script_pubkey.is_v0_p2wpkh() {
+                            change = Some(Change {
+                                address: SingleOrMulti::Single {
+                                    variant: Variant::Wpkh,
+                                    path: derivation_path_to_vec(path),
+                                },
+                                is_change: true,
+                            });
+                        } else if output.script_pubkey.is_p2sh() {
+                            if let Some(redeem_script) = output.redeem_script.as_ref() {
+                                if redeem_script.is_v0_p2wpkh() {
+                                    change = Some(Change {
+                                        address: SingleOrMulti::Single {
+                                            variant: Variant::ShWpkh,
+                                            path: derivation_path_to_vec(path),
+                                        },
+                                        is_change: true,
+                                    });
+                                }
+                            }
+                        }
                     }
+
                     // TODO handle multisig
                 }
             }

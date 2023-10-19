@@ -45,6 +45,7 @@ mod serial {
         let signers = [&Signer::Jade(&jade)];
 
         super::send_lbtc_detect_change(&signers, Variant::Wpkh);
+        super::send_lbtc_detect_change(&signers, Variant::ShWpkh);
 
         // refuse the tx on the jade to keep the session logged
         jade.get_mut().unwrap().logout().unwrap();

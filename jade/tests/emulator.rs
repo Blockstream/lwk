@@ -37,7 +37,7 @@ use tempfile::{tempdir, TempDir};
 
 use crate::pin_server::verify;
 
-const TEST_MNEMONIC: &str =
+pub const TEST_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 #[test]

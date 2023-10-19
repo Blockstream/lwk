@@ -1,41 +1,59 @@
-use std::{str::FromStr, time::Duration};
-
+use bs_containers::testcontainers::clients::Cli;
 use elements::bitcoin::bip32::DerivationPath;
-use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
 use signer::Signer;
+use std::str::FromStr;
 
-use crate::test_session::{generate_slip77, setup, TestWollet};
+use crate::{
+    jade_emulator::inner_jade_debug_initialization,
+    test_session::{generate_slip77, setup, TestWollet},
+    TEST_MNEMONIC,
+};
 
-#[test]
-#[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
-fn jade_send_lbtc_detect_change() {
-    let network = jade::Network::LocaltestLiquid;
+#[cfg(feature = "serial")]
+mod serial {
+    use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
+    use signer::Signer;
+    use std::time::Duration;
 
-    let ports = serialport::available_ports().unwrap();
-    assert!(!ports.is_empty());
-    let path = &ports[0].port_name;
-    let port = serialport::new(path, 115_200)
-        .timeout(Duration::from_secs(60))
-        .open()
-        .unwrap();
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
+    fn jade_send_lbtc_detect_change() {
+        let network = jade::Network::LocaltestLiquid;
 
-    let jade = Jade::new(port.into(), network);
-    let mut jade = MutexJade::new(jade);
+        let ports = serialport::available_ports().unwrap();
+        assert!(!ports.is_empty());
+        let path = &ports[0].port_name;
+        let port = serialport::new(path, 115_200)
+            .timeout(Duration::from_secs(60))
+            .open()
+            .unwrap();
 
-    let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-    assert_ne!(jade_state, JadeState::Uninit);
-    assert_ne!(jade_state, JadeState::Unsaved);
-    if jade_state == JadeState::Locked {
-        jade.unlock().unwrap();
-        jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+        let jade = Jade::new(port.into(), network);
+        let mut jade = MutexJade::new(jade);
+
+        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+        assert_ne!(jade_state, JadeState::Uninit);
+        assert_ne!(jade_state, JadeState::Unsaved);
+        if jade_state == JadeState::Locked {
+            jade.unlock().unwrap();
+            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+        }
+        assert_eq!(jade_state, JadeState::Ready);
+        let signers = [&Signer::Jade(&jade)];
+
+        super::send_lbtc_detect_change(&signers);
+
+        // refuse the tx on the jade to keep the session logged
+        jade.get_mut().unwrap().logout().unwrap();
     }
-    assert_eq!(jade_state, JadeState::Ready);
-    let signers = [&Signer::Jade(&jade)];
+}
+#[test]
+fn emul_send_lbtc_detect_change() {
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let signers = [&Signer::Jade(&jade_init.jade)];
 
     send_lbtc_detect_change(&signers);
-
-    // refuse the tx on the jade to keep the session logged
-    jade.get_mut().unwrap().logout().unwrap();
 }
 
 fn send_lbtc_detect_change(signers: &[&Signer]) {
@@ -58,5 +76,5 @@ fn send_lbtc_detect_change(signers: &[&Signer]) {
     wallet.fund_btc(&server);
 
     let node_address = server.node_getnewaddress();
-    wallet.send_btc(&signers, None, Some((node_address, 10_000)));
+    wallet.send_btc(signers, None, Some((node_address, 10_000)));
 }

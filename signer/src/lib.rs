@@ -2,9 +2,11 @@ mod software;
 
 pub use crate::software::{NewError, SignError, SwSigner};
 
+use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
+use jade::derivation_path_to_vec;
 use jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
@@ -41,6 +43,19 @@ impl<'a> Signer<'a> {
                 let params = jade::protocol::GetXpubParams {
                     network: jade::Network::LocaltestLiquid,
                     path: vec![],
+                };
+                Ok(s.get_xpub(params)?)
+            }
+        }
+    }
+
+    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, SignerError> {
+        match self {
+            Signer::Software(s) => Ok(s.derive_xpub(path)?),
+            Signer::Jade(s) => {
+                let params = jade::protocol::GetXpubParams {
+                    network: jade::Network::LocaltestLiquid,
+                    path: derivation_path_to_vec(path),
                 };
                 Ok(s.get_xpub(params)?)
             }

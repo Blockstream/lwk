@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::{
     derivation_path_to_vec,
-    get_receive_address::SingleOrMulti,
+    get_receive_address::{SingleOrMulti, Variant},
     protocol::GetSignatureParams,
     sign_liquid_tx::{Change, Commitment, SignLiquidTxParams, TxInputParams},
     Jade,
@@ -114,7 +114,7 @@ impl Jade {
                     if output.script_pubkey.is_v0_p2wpkh() && is_change {
                         change = Some(Change {
                             address: SingleOrMulti::Single {
-                                variant: "wpkh(k)".to_string(),
+                                variant: Variant::Wpkh,
                                 path: derivation_path_to_vec(path),
                             },
                             is_change: true,

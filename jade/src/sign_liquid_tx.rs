@@ -161,7 +161,7 @@ mod test {
 
     use serde_json::Value;
 
-    use crate::get_receive_address::SingleOrMulti;
+    use crate::get_receive_address::{SingleOrMulti, Variant};
 
     use super::Change;
 
@@ -177,7 +177,7 @@ mod test {
 
         let expected = Change {
             address: SingleOrMulti::Single {
-                variant: "sh(wpkh(k))".to_string(),
+                variant: Variant::ShWpkh,
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
             },
             is_change: true,

@@ -21,7 +21,7 @@ use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
 use jade::{
-    get_receive_address::{GetReceiveAddressParams, SingleOrMulti},
+    get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
 };
@@ -180,7 +180,7 @@ fn jade_receive_address() {
     let params = GetReceiveAddressParams {
         network: jade::Network::LocaltestLiquid,
         address: SingleOrMulti::Single {
-            variant: "sh(wpkh(k))".into(),
+            variant: Variant::ShWpkh,
             path: vec![2147483697, 2147483648, 2147483648, 0, 143],
         },
     };

@@ -7,11 +7,26 @@ pub struct GetReceiveAddressParams {
     pub address: SingleOrMulti,
 }
 
+#[derive(Debug, PartialEq, Eq, Serialize)]
+
+/// Singlesig variants for Jade
+///
+/// Jade support also legacy pkh but we don't
+pub enum Variant {
+    /// Witness public key hash, BIP84
+    #[serde(rename = "wpkh(k)")]
+    Wpkh,
+
+    /// Scritp hash, Witness public key hash AKA nested segwit, BIP49
+    #[serde(rename = "sh(wpkh(k))")]
+    ShWpkh,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum SingleOrMulti {
     Single {
         /// for example "wpkh(k)", not needed if using `multisig_name``
-        variant: String,
+        variant: Variant,
         path: Vec<u32>,
     },
     Multi {
@@ -49,7 +64,7 @@ impl Serialize for GetReceiveAddressParams {
 mod test {
     use serde_json::Value;
 
-    use crate::get_receive_address::SingleOrMulti;
+    use crate::get_receive_address::{SingleOrMulti, Variant};
 
     use super::GetReceiveAddressParams;
 
@@ -66,7 +81,7 @@ mod test {
         let single_struct = GetReceiveAddressParams {
             network: crate::Network::Liquid,
             address: SingleOrMulti::Single {
-                variant: "sh(wpkh(k))".to_string(),
+                variant: Variant::ShWpkh,
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
             },
         };

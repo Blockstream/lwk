@@ -2,7 +2,7 @@ mod jade_emulator;
 mod test_session;
 
 #[cfg(feature = "serial")]
-mod serial;
+mod change_detection;
 
 use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;

@@ -118,7 +118,6 @@ impl Jade {
                                     variant: Variant::Wpkh,
                                     path: derivation_path_to_vec(path),
                                 },
-                                is_change: true,
                             });
                         } else if output.script_pubkey.is_p2sh() {
                             if let Some(redeem_script) = output.redeem_script.as_ref() {
@@ -128,7 +127,6 @@ impl Jade {
                                             variant: Variant::ShWpkh,
                                             path: derivation_path_to_vec(path),
                                         },
-                                        is_change: true,
                                     });
                                 }
                             }

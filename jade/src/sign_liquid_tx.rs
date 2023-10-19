@@ -63,7 +63,6 @@ pub struct Commitment {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Change {
     pub address: SingleOrMulti,
-    pub is_change: bool,
 }
 
 impl Serialize for Change {
@@ -71,7 +70,7 @@ impl Serialize for Change {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Change", 3)?;
+        let mut state = serializer.serialize_struct("Change", 2)?;
         match &self.address {
             SingleOrMulti::Single { variant, path } => {
                 state.serialize_field("variant", variant)?;
@@ -85,7 +84,6 @@ impl Serialize for Change {
                 state.serialize_field("paths", paths)?;
             }
         }
-        state.serialize_field("is_change", &self.is_change)?;
 
         state.end()
     }
@@ -180,7 +178,6 @@ mod test {
                 variant: Variant::ShWpkh,
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
             },
-            is_change: true,
         };
 
         assert_eq!(&serde_json::to_value(expected).unwrap(), change);

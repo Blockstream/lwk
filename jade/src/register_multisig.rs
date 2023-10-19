@@ -106,7 +106,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
                 .map(|o| derivation_path_to_vec(&o.1))
                 .unwrap_or(vec![]),
             xpub,
-            path: derivation_path_to_vec(&derivation_path),
+            path: derivation_path_to_vec(derivation_path),
         })
     }
 }

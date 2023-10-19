@@ -1,8 +1,13 @@
 use bs_containers::testcontainers::clients::Cli;
 use elements::bitcoin::bip32::DerivationPath;
-use jade::{get_receive_address::Variant, mutex_jade::MutexJade};
+use jade::{
+    get_receive_address::Variant,
+    mutex_jade::MutexJade,
+    register_multisig::{JadeDescriptor, RegisterMultisigParams},
+};
 use signer::Signer;
-use std::str::FromStr;
+use std::{convert::TryInto, str::FromStr};
+use wollet::WolletDescriptor;
 
 use crate::{
     jade_emulator::inner_jade_debug_initialization,
@@ -136,10 +141,19 @@ fn send_lbtc_detect_change_multisig(mut s1: MutexJade) {
     let slip77 = generate_slip77();
 
     let desc_str = format!(
-        "ct(slip77({slip77}),elwsh(multi(2,[{s1_fingerprint}]{s1_xpub}/*,[{s2_fingerprint}]{s2_xpub}/*)))"
+        "ct(slip77({slip77}),elwsh(multi(2,[{s1_fingerprint}]{s1_xpub}/1/*,[{s2_fingerprint}]{s2_xpub}/1/*)))"
     );
+    let wollet_desc: WolletDescriptor = desc_str.parse().unwrap();
+    let descriptor: JadeDescriptor = wollet_desc.as_ref().try_into().unwrap();
 
-    dbg!(&desc_str);
+    s1.get_mut()
+        .unwrap()
+        .register_multisig(RegisterMultisigParams {
+            network: jade::Network::LocaltestLiquid,
+            multisig_name: "peppino".to_string(),
+            descriptor,
+        })
+        .unwrap();
 
     let server = setup();
 

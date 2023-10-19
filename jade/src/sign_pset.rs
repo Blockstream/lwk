@@ -73,6 +73,8 @@ impl Jade {
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
 
+        let mut multisig_name = None;
+
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
         for (i, output) in pset.outputs().iter().enumerate() {
@@ -138,10 +140,34 @@ impl Jade {
                                     });
                                 }
                             }
+                        } else if output.script_pubkey.is_v0_p2wsh() {
+                            if let Some(witness_script) = output.witness_script.as_ref() {
+                                if is_multisig(witness_script) {
+                                    let opt = multisig_name.get_or_insert_with(|| {
+                                        // TODO the following is not working in case we have no registered multisig or we have more than 1 registered
+                                        // multisig and the one used in the PSET is not the first. To fix this Jade should implement get_multisig_details
+                                        let result = self.get_registered_multisigs().ok()?;
+                                        result.into_iter().next()
+                                    });
+                                    if let Some((multisig_name, multisig_meta)) = opt {
+                                        // only the wildcard value is needed since the path is taken from the registered multisig wallet
+                                        if let Some(wildcard) = path.into_iter().last() {
+                                            let mut paths = vec![];
+                                            for _ in 0..multisig_meta.num_signers {
+                                                paths.push(vec![(*wildcard).into()]);
+                                            }
+                                            change = Some(Change {
+                                                address: SingleOrMulti::Multi {
+                                                    multisig_name: multisig_name.to_string(),
+                                                    paths,
+                                                },
+                                            });
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-
-                    // TODO handle multisig
                 }
             }
             changes.push(change);

@@ -18,6 +18,8 @@ mod serial {
     use signer::Signer;
     use std::time::Duration;
 
+    use crate::change_detection::{send_lbtc_detect_change, send_lbtc_detect_change_multisig};
+
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_detect_change() {
@@ -44,11 +46,38 @@ mod serial {
         assert_eq!(jade_state, JadeState::Ready);
         let signers = [&Signer::Jade(&jade)];
 
-        super::send_lbtc_detect_change(&signers, Variant::Wpkh);
-        super::send_lbtc_detect_change(&signers, Variant::ShWpkh);
+        send_lbtc_detect_change(&signers, Variant::Wpkh);
+        send_lbtc_detect_change(&signers, Variant::ShWpkh);
 
         // refuse the tx on the jade to keep the session logged
         jade.get_mut().unwrap().logout().unwrap();
+    }
+
+    #[test]
+    fn jade_send_lbtc_detect_change_multisig() {
+        let network = jade::Network::LocaltestLiquid;
+
+        let ports = serialport::available_ports().unwrap();
+        assert!(!ports.is_empty());
+        let path = &ports[0].port_name;
+        let port = serialport::new(path, 115_200)
+            .timeout(Duration::from_secs(60))
+            .open()
+            .unwrap();
+
+        let jade = Jade::new(port.into(), network);
+        let mut jade = MutexJade::new(jade);
+
+        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+        assert_ne!(jade_state, JadeState::Uninit);
+        assert_ne!(jade_state, JadeState::Unsaved);
+        if jade_state == JadeState::Locked {
+            jade.unlock().unwrap();
+            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+        }
+        assert_eq!(jade_state, JadeState::Ready);
+
+        send_lbtc_detect_change_multisig(jade);
     }
 }
 

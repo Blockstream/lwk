@@ -1,3 +1,6 @@
+use std::fmt::Debug;
+
+use elements::hex::ToHex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -79,11 +82,19 @@ pub struct SignMessageParams {
     pub ae_host_commitment: Vec<u8>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GetSignatureParams {
     /// 32 bytes anti-exfiltration entropy
     #[serde(with = "serde_bytes")]
     pub ae_host_entropy: Vec<u8>,
+}
+
+impl Debug for GetSignatureParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GetSignatureParams")
+            .field("ae_host_entropy", &self.ae_host_entropy.to_hex())
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

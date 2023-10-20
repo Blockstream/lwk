@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use elements::hex::ToHex;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 
@@ -149,8 +151,7 @@ pub struct Entity {
     pub domain: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-
+#[derive(Deserialize, Serialize)]
 pub struct TxInputParams {
     pub is_witness: bool,
 
@@ -167,6 +168,19 @@ pub struct TxInputParams {
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
+}
+
+impl Debug for TxInputParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TxInputParams")
+            .field("is_witness", &self.is_witness)
+            .field("script_code", &self.script_code.to_hex())
+            .field("value_commitment", &self.value_commitment.to_hex())
+            .field("path", &self.path)
+            .field("sighash", &self.sighash)
+            .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .finish()
+    }
 }
 
 #[cfg(test)]

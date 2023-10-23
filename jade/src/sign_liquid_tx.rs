@@ -1,3 +1,6 @@
+use std::fmt::Debug;
+
+use elements::hex::ToHex;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 
 use crate::{get_receive_address::SingleOrMulti, Network};
@@ -37,7 +40,7 @@ impl std::fmt::Debug for SignLiquidTxParams {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Commitment {
     #[serde(with = "serde_bytes")]
     pub asset_generator: Vec<u8>,
@@ -58,6 +61,20 @@ pub struct Commitment {
 
     #[serde(with = "serde_bytes")]
     pub asset_blind_proof: Vec<u8>,
+}
+
+impl std::fmt::Debug for Commitment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Commitment")
+            .field("asset_generator", &self.asset_generator.to_hex())
+            .field("asset_id", &self.asset_id.to_hex())
+            .field("blinding_key", &self.blinding_key.to_hex())
+            .field("value", &self.value)
+            .field("value_commitment", &self.value_commitment.to_hex())
+            .field("value_blind_proof", &self.value_blind_proof.to_hex())
+            .field("asset_blind_proof", &self.asset_blind_proof.to_hex())
+            .finish()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -134,8 +151,7 @@ pub struct Entity {
     pub domain: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-
+#[derive(Deserialize, Serialize)]
 pub struct TxInputParams {
     pub is_witness: bool,
 
@@ -152,6 +168,19 @@ pub struct TxInputParams {
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
+}
+
+impl Debug for TxInputParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TxInputParams")
+            .field("is_witness", &self.is_witness)
+            .field("script_code", &self.script_code.to_hex())
+            .field("value_commitment", &self.value_commitment.to_hex())
+            .field("path", &self.path)
+            .field("sighash", &self.sighash)
+            .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .finish()
+    }
 }
 
 #[cfg(test)]

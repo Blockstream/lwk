@@ -96,19 +96,17 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
     type Error = Error;
 
     fn try_from(value: &DescriptorPublicKey) -> Result<Self, Self::Error> {
-        let xpub = match value {
-            DescriptorPublicKey::XPub(x) => x.xkey,
+        let (xpub, origin, derivation_path) = match value {
+            DescriptorPublicKey::XPub(x) => (x.xkey, x.origin.as_ref(), &x.derivation_path),
             _ => return Err(Error::OnlyXpubKeysAreSupported),
         };
         Ok(MultisigSigner {
             fingerprint: value.master_fingerprint().as_bytes().to_vec(),
-            derivation: derivation_path_to_vec(
-                &value
-                    .full_derivation_path()
-                    .ok_or(Error::OnlyXpubKeysAreSupported)?,
-            ),
+            derivation: origin
+                .map(|o| derivation_path_to_vec(&o.1))
+                .unwrap_or(vec![]),
             xpub,
-            path: vec![],
+            path: derivation_path_to_vec(derivation_path),
         })
     }
 }
@@ -150,6 +148,7 @@ mod test {
         let kind = ["sortedmulti", "multi"];
         for t in 1..=2 {
             for k in kind {
+                // TODO add keyorigin
                 let desc = format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/*,{b}/*)))");
                 let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 

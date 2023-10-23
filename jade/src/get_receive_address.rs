@@ -7,17 +7,16 @@ pub struct GetReceiveAddressParams {
     pub address: SingleOrMulti,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
-
 /// Singlesig variants for Jade
 ///
-/// Jade support also legacy pkh but we don't
+/// Jade supports also legacy pkh but we don't
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum Variant {
     /// Witness public key hash, BIP84
     #[serde(rename = "wpkh(k)")]
     Wpkh,
 
-    /// Scritp hash, Witness public key hash AKA nested segwit, BIP49
+    /// Script hash, Witness public key hash AKA nested segwit, BIP49
     #[serde(rename = "sh(wpkh(k))")]
     ShWpkh,
 }

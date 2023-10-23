@@ -149,7 +149,7 @@ pub struct RegisteredMultisig {
     variant: String,
     sorted: bool,
     threshold: u32,
-    num_signers: u32,
+    pub num_signers: u32,
 
     #[serde(with = "serde_bytes")]
     master_blinding_key: Vec<u8>,

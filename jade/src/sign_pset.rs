@@ -1,5 +1,13 @@
 use elements::{
-    bitcoin::bip32::ChildNumber, encode::serialize, pset::PartiallySignedTransaction, Script,
+    bitcoin::bip32::ChildNumber,
+    encode::serialize,
+    opcodes::{
+        all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
+        All,
+    },
+    pset::PartiallySignedTransaction,
+    script::Instruction,
+    Script,
 };
 use std::collections::HashMap;
 
@@ -64,6 +72,8 @@ impl Jade {
         let txn = serialize(&tx);
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
+
+        let mut multisig_name = None;
 
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
@@ -130,10 +140,34 @@ impl Jade {
                                     });
                                 }
                             }
+                        } else if output.script_pubkey.is_v0_p2wsh() {
+                            if let Some(witness_script) = output.witness_script.as_ref() {
+                                if is_multisig(witness_script) {
+                                    let opt = multisig_name.get_or_insert_with(|| {
+                                        // TODO the following is not working in case we have no registered multisig or we have more than 1 registered
+                                        // multisig and the one used in the PSET is not the first. To fix this Jade should implement get_multisig_details
+                                        let result = self.get_registered_multisigs().ok()?;
+                                        result.into_iter().next()
+                                    });
+                                    if let Some((multisig_name, multisig_meta)) = opt {
+                                        // only the wildcard value is needed since the path is taken from the registered multisig wallet
+                                        if let Some(wildcard) = path.into_iter().last() {
+                                            let mut paths = vec![];
+                                            for _ in 0..multisig_meta.num_signers {
+                                                paths.push(vec![(*wildcard).into()]);
+                                            }
+                                            change = Some(Change {
+                                                address: SingleOrMulti::Multi {
+                                                    multisig_name: multisig_name.to_string(),
+                                                    paths,
+                                                },
+                                            });
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-
-                    // TODO handle multisig
                 }
             }
             changes.push(change);
@@ -242,3 +276,86 @@ fn script_code_wpkh(script: &Script) -> Script {
     script_code.push(0xac);
     Script::from(script_code)
 }
+
+// taken and adapted from:
+// https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
+// TODO remove once it's released
+#[allow(dead_code)]
+fn is_multisig(script: &Script) -> bool {
+    fn decode_pushnum(op: All) -> Option<u8> {
+        let start: u8 = OP_PUSHNUM_1.into_u8();
+        let end: u8 = OP_PUSHNUM_16.into_u8();
+        if start < op.into_u8() && end >= op.into_u8() {
+            Some(op.into_u8() - start + 1)
+        } else {
+            None
+        }
+    }
+
+    let required_sigs;
+
+    let mut instructions = script.instructions();
+    if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+        if let Some(pushnum) = decode_pushnum(op) {
+            required_sigs = pushnum;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    let mut num_pubkeys: u8 = 0;
+    while let Some(Ok(instruction)) = instructions.next() {
+        match instruction {
+            Instruction::PushBytes(_) => {
+                num_pubkeys += 1;
+            }
+            Instruction::Op(op) => {
+                if let Some(pushnum) = decode_pushnum(op) {
+                    if pushnum != num_pubkeys {
+                        return false;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    if required_sigs > num_pubkeys {
+        return false;
+    }
+
+    if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+        if op != OP_CHECKMULTISIG {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    instructions.next().is_none()
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use elements::Script;
+
+    #[test]
+    fn test_is_multisig() {
+        let multisig = Script::from_str("522102ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f942102c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e52ae").unwrap();
+        assert_eq!(multisig.asm(), "OP_PUSHNUM_2 OP_PUSHBYTES_33 02ebc62c20f1e09e169a88745f60f6dac878c92db5c7ed78c6703d2d0426a01f94 OP_PUSHBYTES_33 02c2d59d677122bc292048833003fd5cb19d27d32896b1d0feec654c291f7ede9e OP_PUSHNUM_2 OP_CHECKMULTISIG");
+        assert!(super::is_multisig(&multisig));
+
+        let not_multisig =
+            Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap();
+        assert_eq!(
+            not_multisig.asm(),
+            "OP_0 OP_PUSHBYTES_20 14fe45f2c2a2b7c00d0940d694a3b6af6c9bf165"
+        );
+        assert!(!super::is_multisig(&not_multisig));
+    }
+}
+//

@@ -1,6 +1,8 @@
+mod asset_metadata;
 mod error;
 mod model;
 
+pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::error::Error;
 pub use crate::model::*;
 

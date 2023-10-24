@@ -1,6 +1,7 @@
 mod change_detection;
-mod jade_emulator;
 mod jade_issue;
+mod jade_burn;
+mod jade_emulator;
 mod test_session;
 
 use crate::jade_emulator::inner_jade_debug_initialization;

@@ -192,7 +192,6 @@ impl Jade {
                         },
                     };
 
-                    dbg!(&asset_info);
                     assets_info.push(asset_info);
                 }
             }

@@ -4,16 +4,16 @@ use signer::Signer;
 use std::str::FromStr;
 
 use crate::{
-    jade_emulator::inner_jade_debug_initialization,
+    init_jade::inner_jade_debug_initialization,
     test_session::{generate_slip77, setup, TestWollet},
     TEST_MNEMONIC,
 };
 
 #[cfg(feature = "serial")]
 mod serial {
-    use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
     use signer::Signer;
-    use std::time::Duration;
+
+    use crate::init_jade::serial::init_and_unlock_serial_jade;
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
@@ -24,31 +24,6 @@ mod serial {
         super::burn(&signers);
 
         jade.get_mut().unwrap().logout().unwrap();
-    }
-
-    fn init_and_unlock_serial_jade() -> MutexJade {
-        let network = jade::Network::LocaltestLiquid;
-
-        let ports = serialport::available_ports().unwrap();
-        assert!(!ports.is_empty());
-        let path = &ports[0].port_name;
-        let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(60))
-            .open()
-            .unwrap();
-
-        let jade = Jade::new(port.into(), network);
-        let mut jade = MutexJade::new(jade);
-
-        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        assert_ne!(jade_state, JadeState::Uninit);
-        assert_ne!(jade_state, JadeState::Unsaved);
-        if jade_state == JadeState::Locked {
-            jade.unlock().unwrap();
-            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        }
-        assert_eq!(jade_state, JadeState::Ready);
-        jade
     }
 }
 

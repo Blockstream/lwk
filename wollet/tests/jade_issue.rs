@@ -4,7 +4,7 @@ use signer::Signer;
 use std::str::FromStr;
 
 use crate::{
-    jade_emulator::inner_jade_debug_initialization,
+    init_jade::inner_jade_debug_initialization,
     test_session::{generate_slip77, setup, TestWollet},
     TEST_MNEMONIC,
 };

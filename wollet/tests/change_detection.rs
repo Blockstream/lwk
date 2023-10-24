@@ -10,7 +10,7 @@ use std::{convert::TryInto, str::FromStr};
 use wollet::WolletDescriptor;
 
 use crate::{
-    jade_emulator::inner_jade_debug_initialization,
+    init_jade::inner_jade_debug_initialization,
     test_session::{generate_signer, generate_slip77, setup, TestWollet},
     TEST_MNEMONIC,
 };

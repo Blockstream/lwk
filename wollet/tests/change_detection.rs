@@ -17,38 +17,19 @@ use crate::{
 
 #[cfg(feature = "serial")]
 mod serial {
-    use jade::{
-        get_receive_address::Variant, mutex_jade::MutexJade, protocol::JadeState, serialport, Jade,
-    };
+    use jade::get_receive_address::Variant;
     use signer::Signer;
-    use std::time::Duration;
 
-    use crate::change_detection::{send_lbtc_detect_change, send_lbtc_detect_change_multisig};
+    use crate::{
+        change_detection::{send_lbtc_detect_change, send_lbtc_detect_change_multisig},
+        init_jade::serial::init_and_unlock_serial_jade,
+    };
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_detect_change() {
-        let network = jade::Network::LocaltestLiquid;
+        let mut jade = init_and_unlock_serial_jade();
 
-        let ports = serialport::available_ports().unwrap();
-        assert!(!ports.is_empty());
-        let path = &ports[0].port_name;
-        let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(60))
-            .open()
-            .unwrap();
-
-        let jade = Jade::new(port.into(), network);
-        let mut jade = MutexJade::new(jade);
-
-        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        assert_ne!(jade_state, JadeState::Uninit);
-        assert_ne!(jade_state, JadeState::Unsaved);
-        if jade_state == JadeState::Locked {
-            jade.unlock().unwrap();
-            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        }
-        assert_eq!(jade_state, JadeState::Ready);
         let signers = [&Signer::Jade(&jade)];
 
         send_lbtc_detect_change(&signers, Variant::Wpkh);
@@ -60,27 +41,7 @@ mod serial {
 
     #[test]
     fn jade_send_lbtc_detect_change_multisig() {
-        let network = jade::Network::LocaltestLiquid;
-
-        let ports = serialport::available_ports().unwrap();
-        assert!(!ports.is_empty());
-        let path = &ports[0].port_name;
-        let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(60))
-            .open()
-            .unwrap();
-
-        let jade = Jade::new(port.into(), network);
-        let mut jade = MutexJade::new(jade);
-
-        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        assert_ne!(jade_state, JadeState::Uninit);
-        assert_ne!(jade_state, JadeState::Unsaved);
-        if jade_state == JadeState::Locked {
-            jade.unlock().unwrap();
-            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        }
-        assert_eq!(jade_state, JadeState::Ready);
+        let jade = init_and_unlock_serial_jade();
 
         send_lbtc_detect_change_multisig(jade);
     }

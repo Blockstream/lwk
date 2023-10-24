@@ -1,7 +1,7 @@
-mod jade_emulator;
-mod test_session;
-
 mod change_detection;
+mod jade_emulator;
+mod jade_issue;
+mod test_session;
 
 use crate::jade_emulator::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;

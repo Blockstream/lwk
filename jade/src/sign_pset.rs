@@ -1,6 +1,7 @@
 use elements::{
     bitcoin::bip32::ChildNumber,
     encode::serialize,
+    hex::ToHex,
     opcodes::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
@@ -9,13 +10,16 @@ use elements::{
     script::Instruction,
     Script,
 };
-use std::collections::HashMap;
+use pset_common::PsetExt;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     derivation_path_to_vec,
     get_receive_address::{SingleOrMulti, Variant},
     protocol::GetSignatureParams,
-    sign_liquid_tx::{Change, Commitment, SignLiquidTxParams, TxInputParams},
+    sign_liquid_tx::{
+        AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, TxInputParams,
+    },
     Jade,
 };
 
@@ -74,11 +78,13 @@ impl Jade {
         let my_fingerprint = self.fingerprint()?;
 
         let mut multisig_name = None;
-
+        let mut asset_ids_in_tx = HashSet::new();
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
         for (i, output) in pset.outputs().iter().enumerate() {
-            let mut asset_id = serialize(&output.asset.ok_or(Error::MissingAssetIdInOutput(i))?);
+            let asset_id = output.asset.ok_or(Error::MissingAssetIdInOutput(i))?;
+            asset_ids_in_tx.insert(asset_id);
+            let mut asset_id = serialize(&asset_id);
             asset_id.reverse(); // Jade want it reversed
             let burn_script = Script::new_op_return(&[]);
             let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
@@ -173,13 +179,32 @@ impl Jade {
             changes.push(change);
         }
 
+        let mut assets_info = vec![];
+        for asset_id in asset_ids_in_tx {
+            if let Some(Ok(meta)) = pset.get_asset_metadata(asset_id) {
+                if let Ok(contract) = serde_json::from_str::<Contract>(&meta.contract) {
+                    let asset_info = AssetInfo {
+                        asset_id: asset_id.to_string(),
+                        contract,
+                        issuance_prevout: Prevout {
+                            txid: meta.issuance_prevout().txid.to_hex(),
+                            vout: meta.issuance_prevout().vout,
+                        },
+                    };
+
+                    dbg!(&asset_info);
+                    assets_info.push(asset_info);
+                }
+            }
+        }
+
         let params = SignLiquidTxParams {
             network: crate::Network::LocaltestLiquid,
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: true,
             change: changes,
-            asset_info: vec![], // TODO
+            asset_info: assets_info,
             trusted_commitments,
             additional_info: None,
         };

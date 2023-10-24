@@ -108,8 +108,7 @@ impl Serialize for Change {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AssetInfo {
-    #[serde(with = "serde_bytes")]
-    pub asset_id: Vec<u8>,
+    pub asset_id: String,
     pub contract: Contract,
     pub issuance_prevout: Prevout,
 }
@@ -141,8 +140,7 @@ pub struct Summary {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Prevout {
-    #[serde(with = "serde_bytes")]
-    pub txid: Vec<u8>,
+    pub txid: String,
     pub vout: u32,
 }
 

@@ -9,6 +9,7 @@ use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
 use crate::wollet::Wollet;
+use pset_common::{AssetMetadata, PsetExt};
 use rand::thread_rng;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -157,12 +158,27 @@ impl Wollet {
         if satoshi_token > 0 {
             input.issuance_inflation_keys = Some(satoshi_token);
         }
-        let contract_hash = match contract {
+        let contract_hash = match contract.as_ref() {
             Some(contract) => contract.contract_hash()?,
             None => ContractHash::from_slice(&[0u8; 32]).unwrap(),
         };
         input.issuance_asset_entropy = Some(contract_hash.to_byte_array());
-        Ok(input.issuance_ids())
+
+        let (asset, token) = input.issuance_ids();
+
+        if let Some(contract) = contract.as_ref() {
+            let issuance_prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
+            let contract = serde_json::to_string(&contract)?;
+            pset.add_asset_metadata(
+                asset,
+                &AssetMetadata {
+                    contract,
+                    issuance_prevout,
+                },
+            );
+        }
+
+        Ok((asset, token))
     }
 
     fn set_reissuance(

@@ -57,10 +57,11 @@ impl PsetExt for PartiallySignedTransaction {
 }
 
 fn prop_key(asset_id: AssetId) -> ProprietaryKey {
+    // equivalent to asset_tag
     let mut key = Vec::with_capacity(32);
     asset_id
         .consensus_encode(&mut key)
-        .expect("vec doesn't err"); // equivalent to asset_tag
+        .expect("vec doesn't err");
 
     ProprietaryKey {
         prefix: String::from("pset_hww").into_bytes(),
@@ -143,7 +144,7 @@ mod test {
         };
         let contract_hash = ContractHash::from_str(CONTRACT_HASH).unwrap();
         assert_eq!(
-            ContractHash::from_json_contract(&VALID_CONTRACT).unwrap(),
+            ContractHash::from_json_contract(VALID_CONTRACT).unwrap(),
             contract_hash
         );
         let serialized = a.serialize();

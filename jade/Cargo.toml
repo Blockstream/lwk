@@ -20,6 +20,8 @@ thiserror = "1"
 minreq = { version = "2.9", features = ["https"] }
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "856543bbb0dbe14044c7a2d062ce1cf29ce70741" }
 
+pset_common = { path = "../pset_common" }
+
 # tokio = { version = "1.32.0", features = ["rt", "macros"] }
 # tracing = "0.1.37"
 # tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }

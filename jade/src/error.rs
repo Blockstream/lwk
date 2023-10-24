@@ -35,7 +35,7 @@ pub enum Error {
 pub struct ErrorDetails {
     code: i64,
     message: String,
-    data: Value,
+    data: Option<Value>,
 }
 
 impl std::fmt::Display for ErrorDetails {

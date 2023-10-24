@@ -9,7 +9,7 @@ members = [
     "tiny_jrpc",
     "wollet",
     "bs_containers",
-    "pset_details",
+    "pset_common",
 ]
 resolver = "2"
 

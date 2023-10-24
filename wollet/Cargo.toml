@@ -29,7 +29,7 @@ elements-miniscript = { git = "https://github.com/ElementsProject/elements-minis
 thiserror = "1.0.48"
 once_cell = "1.18.0"
 elements = { version = "0.23.0", features = ["base64"] }
-pset_details = { path = "../pset_details" }
+pset_common = { path = "../pset_common" }
 
 #registry
 idna = "0.4.0"

@@ -24,7 +24,7 @@ use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
-use pset_details::{pset_balance, pset_signatures, PsetDetails};
+use pset_common::{pset_balance, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;

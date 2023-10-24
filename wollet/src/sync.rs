@@ -8,7 +8,7 @@ use crate::util::EC;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
-use pset_details::derive_blinding_key;
+use pset_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 

@@ -40,6 +40,7 @@ mod serial {
     }
 
     #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_detect_change_multisig() {
         let jade = init_and_unlock_serial_jade();
 

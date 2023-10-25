@@ -13,12 +13,12 @@ use crate::{
 mod serial {
     use signer::Signer;
 
-    use crate::init_jade::serial::init_and_unlock_serial_jade;
+    use crate::init_jade::serial;
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_burn_asset() {
-        let mut jade = init_and_unlock_serial_jade();
+        let mut jade = serial::unlock();
         let signers = [&Signer::Jade(&jade)];
 
         super::burn(&signers);

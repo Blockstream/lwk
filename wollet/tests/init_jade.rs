@@ -36,7 +36,7 @@ pub mod serial {
     use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
     use std::time::Duration;
 
-    pub fn init_and_unlock_serial_jade() -> MutexJade {
+    pub fn unlock() -> MutexJade {
         let network = jade::Network::LocaltestLiquid;
 
         let ports = serialport::available_ports().unwrap();

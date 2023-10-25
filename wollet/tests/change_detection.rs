@@ -22,13 +22,13 @@ mod serial {
 
     use crate::{
         change_detection::{send_lbtc, send_lbtc_multisig},
-        init_jade::serial::init_and_unlock_serial_jade,
+        init_jade::serial,
     };
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_singlesig() {
-        let mut jade = init_and_unlock_serial_jade();
+        let mut jade = serial::unlock();
 
         let signers = [&Signer::Jade(&jade)];
 
@@ -42,7 +42,7 @@ mod serial {
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_multisig() {
-        let jade = init_and_unlock_serial_jade();
+        let jade = serial::unlock();
 
         send_lbtc_multisig(jade);
     }

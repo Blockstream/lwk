@@ -7,7 +7,7 @@ use elements::{
 };
 
 /// TODO move to rust-elements
-/// Contains extension to add and retrieve from the PSET contract informations related to an asset
+/// Contains extension to add and retrieve from the PSET contract information related to an asset
 pub trait PsetExt {
     /// Add contract information to the PSET, returns None if it wasn't present or Some with the old
     /// data if already in the PSET (data to be deserialized in AssetMetadata)

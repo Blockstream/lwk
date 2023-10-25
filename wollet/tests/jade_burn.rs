@@ -17,7 +17,7 @@ mod serial {
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
-    fn jade_burn() {
+    fn jade_burn_asset() {
         let mut jade = init_and_unlock_serial_jade();
         let signers = [&Signer::Jade(&jade)];
 
@@ -28,7 +28,7 @@ mod serial {
 }
 
 #[test]
-fn emul_burn() {
+fn emul_burn_asset() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let signers = [&Signer::Jade(&jade_init.jade)];

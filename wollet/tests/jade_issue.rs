@@ -11,34 +11,13 @@ use crate::{
 
 #[cfg(feature = "serial")]
 mod serial {
-    use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
+    use crate::init_jade::serial::init_and_unlock_serial_jade;
     use signer::Signer;
-    use std::time::Duration;
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_issue_asset() {
-        let network = jade::Network::LocaltestLiquid;
-
-        let ports = serialport::available_ports().unwrap();
-        assert!(!ports.is_empty());
-        let path = &ports[0].port_name;
-        let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(60))
-            .open()
-            .unwrap();
-
-        let jade = Jade::new(port.into(), network);
-        let mut jade = MutexJade::new(jade);
-
-        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        assert_ne!(jade_state, JadeState::Uninit);
-        assert_ne!(jade_state, JadeState::Unsaved);
-        if jade_state == JadeState::Locked {
-            jade.unlock().unwrap();
-            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        }
-        assert_eq!(jade_state, JadeState::Ready);
+        let mut jade = init_and_unlock_serial_jade();
         let signers = [&Signer::Jade(&jade)];
 
         super::issue_asset_contract(&signers);

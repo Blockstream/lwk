@@ -1,7 +1,7 @@
 mod change_detection;
-mod jade_issue;
 mod init_jade;
 mod jade_burn;
+mod jade_issue;
 mod test_session;
 
 use crate::init_jade::inner_jade_debug_initialization;

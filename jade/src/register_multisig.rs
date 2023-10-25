@@ -34,7 +34,7 @@ pub enum Error {
     #[error("Only slip77 master blinding key are supported")]
     OnlySlip77Supported,
 
-    #[error("Only xpub keys are not supported")]
+    #[error("Only xpub keys are supported")]
     OnlyXpubKeysAreSupported,
 
     #[error("Unsupported descriptor type, only wsh is supported")]

@@ -11,6 +11,9 @@ pub enum Error {
     IoError(std::io::Error),
     #[error("SystemTime Error: {0}")]
     SystemTimeError(SystemTimeError),
+    #[cfg(feature = "serial")]
+    #[error("Serial Error: {0}")]
+    SerialError(#[from] serialport::Error),
 
     #[error("Jade returned neither an error nor a result")]
     JadeNeitherErrorNorResult,

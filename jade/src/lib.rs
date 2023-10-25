@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     io::ErrorKind,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use connection::Connection;
@@ -9,16 +9,15 @@ use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeParams, Params, RegisteredMultisig,
-    Request, Response, SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeInitParams, Params,
+    RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
-
-use crate::error::Error;
 
 pub mod connection;
 pub mod error;
@@ -31,12 +30,16 @@ pub mod sign_liquid_tx;
 pub mod sign_pset;
 pub mod unlock;
 
+pub use error::Error;
 pub use network::Network;
 
 #[cfg(feature = "serial")]
 pub use serialport;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
+
+pub const TIMEOUT: Duration = Duration::from_secs(60);
+pub const BAUD_RATE: u32 = 115_200;
 
 #[derive(Debug)]
 pub struct Jade {
@@ -50,12 +53,44 @@ pub struct Jade {
     master_xpub: Option<ExtendedPubKey>,
 }
 
+#[cfg(feature = "serial")]
+#[derive(Debug)]
+pub struct SerialJade {
+    pub jade: Jade,
+    pub network: Network,
+    pub path: String,
+    pub version: VersionInfoResult,
+}
+
 impl Jade {
     pub fn new(conn: Connection, network: Network) -> Self {
         Self {
             conn,
             network,
             master_xpub: None,
+        }
+    }
+
+    #[cfg(feature = "serial")]
+    pub fn scan_serial() -> Result<Option<SerialJade>> {
+        let ports = serialport::available_ports()?;
+        if ports.is_empty() {
+            Ok(None)
+        } else {
+            // todo: loop through ports?
+            let path = ports[0].port_name.clone();
+            let port = serialport::new(&path, BAUD_RATE).timeout(TIMEOUT).open()?;
+
+            let network = Network::TestnetLiquid; // todo: network selection
+            let mut jade = Jade::new(port.into(), network);
+            let version = jade.version_info()?;
+
+            Ok(Some(SerialJade {
+                jade,
+                network,
+                path,
+                version,
+            }))
         }
     }
 
@@ -104,8 +139,11 @@ impl Jade {
         self.send_request("auth_user", Some(params))
     }
 
-    pub fn handshake_init(&mut self, params: HandshakeParams) -> Result<AuthResult<HandshakeData>> {
-        let params = Params::Handshake(params);
+    pub fn handshake_init(
+        &mut self,
+        params: HandshakeInitParams,
+    ) -> Result<AuthResult<HandshakeData>> {
+        let params = Params::HandshakeInit(params);
         self.send_request("handshake_init", Some(params))
     }
 
@@ -211,7 +249,7 @@ impl Jade {
         };
         let mut buf = Vec::new();
         ciborium::into_writer(&req, &mut buf)?;
-        println!(
+        tracing::debug!(
             "\n--->\t{:#?}\n\t({} bytes) {}",
             &req,
             buf.len(),
@@ -230,7 +268,7 @@ impl Jade {
                     match ciborium::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
                         Ok(r) => {
                             if let Some(result) = r.result {
-                                println!(
+                                tracing::debug!(
                                     "\n<---\t{:?}\n\t({} bytes) {}",
                                     &result,
                                     total,

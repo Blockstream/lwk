@@ -6,4 +6,10 @@ pub enum Error {
     JsonRpcHttp(#[from] jsonrpc::simple_http::Error),
     #[error("JSON RPC Client Error: {0}")]
     JsonRpcClient(#[from] jsonrpc::Error),
+    #[error("Serde JSON Error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+    #[error("Jade Error: {0}")]
+    Jade(#[from] jade::Error),
+    #[error("Jade Unlock Error: {0}")]
+    Unlock(#[from] jade::unlock::Error),
 }

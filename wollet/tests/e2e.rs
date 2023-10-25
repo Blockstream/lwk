@@ -1,4 +1,3 @@
-mod change_detection;
 mod jade_burn;
 mod jade_issue;
 mod test_jade;

@@ -20,10 +20,8 @@ mod serial {
     use jade::get_receive_address::Variant;
     use signer::Signer;
 
-    use crate::{
-        change_detection::{send_lbtc, send_lbtc_multisig},
-        test_jade::init::serial,
-    };
+    use crate::test_jade::init::serial;
+    use super::{send_lbtc, send_lbtc_multisig};
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]

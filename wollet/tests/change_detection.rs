@@ -10,7 +10,7 @@ use std::{convert::TryInto, str::FromStr};
 use wollet::WolletDescriptor;
 
 use crate::{
-    init_jade::inner_jade_debug_initialization,
+    test_jade::init::inner_jade_debug_initialization,
     test_session::{generate_signer, generate_slip77, setup, TestWollet},
     TEST_MNEMONIC,
 };
@@ -22,7 +22,7 @@ mod serial {
 
     use crate::{
         change_detection::{send_lbtc, send_lbtc_multisig},
-        init_jade::serial,
+        test_jade::init::serial,
     };
 
     #[test]

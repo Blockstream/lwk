@@ -4,14 +4,14 @@ use signer::Signer;
 use std::str::FromStr;
 
 use crate::{
-    init_jade::inner_jade_debug_initialization,
+    test_jade::init::inner_jade_debug_initialization,
     test_session::{generate_slip77, setup, TestWollet},
     TEST_MNEMONIC,
 };
 
 #[cfg(feature = "serial")]
 mod serial {
-    use crate::init_jade::serial;
+    use crate::test_jade::init::serial;
     use signer::Signer;
 
     #[test]

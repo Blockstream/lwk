@@ -1,10 +1,10 @@
 mod change_detection;
-mod init_jade;
 mod jade_burn;
 mod jade_issue;
+mod test_jade;
 mod test_session;
 
-use crate::init_jade::inner_jade_debug_initialization;
+use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
 use elements::bitcoin::bip32::DerivationPath;
 use jade::protocol::GetXpubParams;

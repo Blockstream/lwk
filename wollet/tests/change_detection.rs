@@ -21,19 +21,19 @@ mod serial {
     use signer::Signer;
 
     use crate::{
-        change_detection::{send_lbtc_detect_change, send_lbtc_detect_change_multisig},
+        change_detection::{send_lbtc, send_lbtc_multisig},
         init_jade::serial::init_and_unlock_serial_jade,
     };
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
-    fn jade_send_lbtc_detect_change() {
+    fn jade_send_lbtc_singlesig() {
         let mut jade = init_and_unlock_serial_jade();
 
         let signers = [&Signer::Jade(&jade)];
 
-        send_lbtc_detect_change(&signers, Variant::Wpkh);
-        send_lbtc_detect_change(&signers, Variant::ShWpkh);
+        send_lbtc(&signers, Variant::Wpkh);
+        send_lbtc(&signers, Variant::ShWpkh);
 
         // refuse the tx on the jade to keep the session logged
         jade.get_mut().unwrap().logout().unwrap();
@@ -41,24 +41,24 @@ mod serial {
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
-    fn jade_send_lbtc_detect_change_multisig() {
+    fn jade_send_lbtc_multisig() {
         let jade = init_and_unlock_serial_jade();
 
-        send_lbtc_detect_change_multisig(jade);
+        send_lbtc_multisig(jade);
     }
 }
 
 #[test]
-fn emul_send_lbtc_detect_change() {
+fn emul_send_lbtc_singlesig() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let signers = [&Signer::Jade(&jade_init.jade)];
 
-    send_lbtc_detect_change(&signers, Variant::Wpkh);
-    send_lbtc_detect_change(&signers, Variant::ShWpkh);
+    send_lbtc(&signers, Variant::Wpkh);
+    send_lbtc(&signers, Variant::ShWpkh);
 }
 
-fn send_lbtc_detect_change(signers: &[&Signer], variant: Variant) {
+fn send_lbtc(signers: &[&Signer], variant: Variant) {
     let (variant, path, closing) = match variant {
         Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
         Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
@@ -86,13 +86,13 @@ fn send_lbtc_detect_change(signers: &[&Signer], variant: Variant) {
 }
 
 #[test]
-fn emul_send_lbtc_detect_change_multisig() {
+fn emul_send_lbtc_multisig() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    send_lbtc_detect_change_multisig(jade_init.jade)
+    send_lbtc_multisig(jade_init.jade)
 }
 
-fn send_lbtc_detect_change_multisig(mut s1: MutexJade) {
+fn send_lbtc_multisig(mut s1: MutexJade) {
     let s1_xpub = s1.get_mut().unwrap().get_master_xpub().unwrap();
     let s1_fingerprint = s1_xpub.fingerprint();
 

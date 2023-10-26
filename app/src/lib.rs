@@ -57,7 +57,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let (_signer, mnemonic) = SwSigner::random(&EC)?;
             Response::result(
                 request.id,
-                serde_json::to_value(model::SignerGenerateResponse {
+                serde_json::to_value(model::GenerateSignerResponse {
                     mnemonic: mnemonic.to_string(),
                 })?,
             )
@@ -94,12 +94,17 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
             let fingerprint = signer.fingerprint()?.to_string();
+            let xpub = signer.xpub()?;
             let mut s = state.lock().unwrap();
             // TODO: handle matching fingerprints
             let new = s.signers.insert(fingerprint.clone(), signer).is_none();
             Response::result(
                 request.id,
-                serde_json::to_value(model::LoadSignerResponse { fingerprint, new })?,
+                serde_json::to_value(model::LoadSignerResponse {
+                    fingerprint,
+                    new,
+                    xpub,
+                })?,
             )
         }
         _ => Response::unimplemented(request.id),

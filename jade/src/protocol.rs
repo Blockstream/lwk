@@ -23,7 +23,7 @@ pub enum Params {
     Epoch(EpochParams),
     Entropy(EntropyParams),
     AuthUser(AuthUserParams),
-    Handshake(HandshakeParams),
+    HandshakeInit(HandshakeInitParams),
     UpdatePinServer(UpdatePinserverParams),
     HandshakeComplete(HandshakeCompleteParams),
     GetXpub(GetXpubParams),
@@ -54,7 +54,7 @@ pub struct EntropyParams {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HandshakeParams {
+pub struct HandshakeInitParams {
     pub sig: String,
     pub ske: String,
 }
@@ -175,6 +175,7 @@ impl<T> AuthResult<T> {
     pub fn urls(&self) -> &[String] {
         self.http_request.params.urls.as_slice()
     }
+
     pub fn data(&self) -> &T {
         &self.http_request.params.data
     }

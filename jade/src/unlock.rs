@@ -1,5 +1,5 @@
 use crate::{
-    protocol::{HandshakeCompleteParams, HandshakeParams},
+    protocol::{HandshakeCompleteParams, HandshakeInitParams},
     Jade,
 };
 
@@ -37,12 +37,11 @@ impl Jade {
         if resp.status_code != 200 {
             return Err(Error::HttpStatus(url.to_string(), resp.status_code));
         }
-        let params: HandshakeParams = serde_json::from_slice(resp.as_bytes())?;
 
+        let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes())?;
         let result = self.handshake_init(params)?;
-        let handshake_data = result.data();
-        let data = serde_json::to_vec(&handshake_data)?;
         let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
+        let data = serde_json::to_vec(result.data())?;
         let resp = minreq::post(url).with_body(data).send()?;
         if resp.status_code != 200 {
             return Err(Error::HttpStatus(url.to_string(), resp.status_code));

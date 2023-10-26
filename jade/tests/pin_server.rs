@@ -8,7 +8,7 @@ use elements::bitcoin::{
     secp256k1::{ecdsa::Signature, Message, Secp256k1},
     PublicKey,
 };
-use jade::protocol::HandshakeParams;
+use jade::protocol::HandshakeInitParams;
 
 #[test]
 fn pin_server() {
@@ -27,11 +27,11 @@ fn pin_server() {
     let resp = minreq::post(start_handshake_url)
         .send()
         .unwrap_or_else(|_| print_docker_logs_and_panic(container.id()));
-    let params: HandshakeParams = serde_json::from_slice(resp.as_bytes()).unwrap();
+    let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
     verify(&params, &pin_server_pub_key);
 }
 
-pub fn verify(params: &HandshakeParams, pin_server_pub_key: &PublicKey) {
+pub fn verify(params: &HandshakeInitParams, pin_server_pub_key: &PublicKey) {
     let ske_bytes = Vec::<u8>::from_hex(&params.ske).unwrap();
     let ske_hash = sha256::Hash::hash(&ske_bytes);
 

@@ -28,7 +28,7 @@ use jade::{
 use jade::{
     protocol::{
         DebugSetMnemonicParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
-        HandshakeParams, SignMessageParams, UpdatePinserverParams,
+        HandshakeInitParams, SignMessageParams, UpdatePinserverParams,
     },
     Jade,
 };
@@ -390,7 +390,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     );
 
     let resp = minreq::post(start_handshake_url).send().unwrap();
-    let params: HandshakeParams = serde_json::from_slice(resp.as_bytes()).unwrap();
+    let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
     verify(&params, &pin_server_pub_key);
 
     let result = jade_api.handshake_init(params).unwrap();

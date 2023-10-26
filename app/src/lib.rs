@@ -16,6 +16,9 @@ pub mod model;
 
 #[derive(Default)]
 pub struct State<'a> {
+    // TODO: config is read-only, so it's not useful to wrap it in a mutex.
+    // Ideally it should be in _another_ struct accessible by method_handler.
+    pub config: Config,
     pub wollets: HashMap<String, Wollet>,
     pub signers: HashMap<String, Signer<'a>>,
 }
@@ -31,7 +34,10 @@ impl App {
     pub fn new(config: Config) -> Result<App> {
         tracing::info!("Creating new app with config: {:?}", config);
 
-        let state = Arc::new(Mutex::new(State::default()));
+        let state = Arc::new(Mutex::new(State {
+            config: config.clone(),
+            ..Default::default()
+        }));
         let server = tiny_http::Server::http(config.addr)?;
         let rpc = tiny_jrpc::JsonRpcServer::new(server, state, method_handler);
 
@@ -71,15 +77,15 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "load_wallet" => {
             let r: model::LoadWalletRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
+            let mut s = state.lock().unwrap();
             let wollet = Wollet::new(
                 ElementsNetwork::LiquidTestnet, // todo
                 "",                             // electrum url
                 false,                          // tls
                 false,                          // validate_domain
-                "/tmp/.ks/",                    // data root
+                &s.config.datadir,              // data root
                 &r.descriptor,
             )?;
-            let mut s = state.lock().unwrap();
             let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();
             Response::result(
                 request.id,
@@ -123,7 +129,8 @@ mod tests {
             .unwrap()
             .local_addr()
             .unwrap();
-        let config = Config { addr };
+        let datadir = "".to_string();
+        let config = Config { addr, datadir };
         App::new(config).unwrap()
     }
 

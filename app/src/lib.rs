@@ -80,7 +80,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let mut s = state.lock().unwrap();
             let wollet = Wollet::new(
                 ElementsNetwork::LiquidTestnet, // todo
-                "",                             // electrum url
+                &s.config.electrum_url,         // electrum_url
                 false,                          // tls
                 false,                          // validate_domain
                 &s.config.datadir,              // data root
@@ -129,8 +129,10 @@ mod tests {
             .unwrap()
             .local_addr()
             .unwrap();
-        let datadir = "".to_string();
-        let config = Config { addr, datadir };
+        let config = Config {
+            addr,
+            ..Default::default()
+        };
         App::new(config).unwrap()
     }
 

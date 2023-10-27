@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{derivation_path_to_vec, Network};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RegisterMultisigParams {
     pub network: Network,
     pub multisig_name: String, // max 16 chars
     pub descriptor: JadeDescriptor,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct JadeDescriptor {
     pub variant: String, // only 'wsh(multi(k))' supported for now
     pub sorted: bool,
@@ -111,7 +111,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct MultisigSigner {
     #[serde(with = "serde_bytes")]
     pub fingerprint: Vec<u8>,

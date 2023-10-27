@@ -26,15 +26,12 @@ mod serial {
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_send_lbtc_singlesig() {
-        let mut jade = serial::unlock();
+        let jade = serial::unlock();
 
         let signers = [&Signer::Jade(&jade)];
 
         send_lbtc(&signers, Variant::Wpkh);
         send_lbtc(&signers, Variant::ShWpkh);
-
-        // refuse the tx on the jade to keep the session logged
-        jade.get_mut().unwrap().logout().unwrap();
     }
 
     #[test]

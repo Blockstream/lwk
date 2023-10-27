@@ -18,12 +18,10 @@ mod serial {
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_burn_asset() {
-        let mut jade = serial::unlock();
+        let jade = serial::unlock();
         let signers = [&Signer::Jade(&jade)];
 
         super::burn(&signers);
-
-        jade.get_mut().unwrap().logout().unwrap();
     }
 }
 

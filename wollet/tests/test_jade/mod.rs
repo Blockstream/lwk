@@ -35,20 +35,36 @@ fn roundtrip(
     wallet.burnasset(signers, 10, &asset, None);
 }
 
-#[test]
-fn emul_roundtrip() {
+fn emul_roundtrip_singlesig(variant: Variant) {
     let server = setup();
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let signers = &[&Signer::Jade(&jade_init.jade)];
+    roundtrip(&server, signers, Some(variant), None);
+}
 
-    // singlesig
-    roundtrip(&server, signers, Some(Variant::Wpkh), None);
-    roundtrip(&server, signers, Some(Variant::ShWpkh), None);
-    // multisig
+fn emul_roundtrip_multisig(threshold: usize) {
+    let server = setup();
+    let docker = Cli::default();
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let sw_signer = generate_signer();
     let signers = &[&Signer::Jade(&jade_init.jade), &Signer::Software(sw_signer)];
-    roundtrip(&server, signers, None, Some(2));
+    roundtrip(&server, signers, None, Some(threshold));
+}
+
+#[test]
+fn emul_roundtrip_wpkh() {
+    emul_roundtrip_singlesig(Variant::Wpkh);
+}
+
+#[test]
+fn emul_roundtrip_shwpkh() {
+    emul_roundtrip_singlesig(Variant::ShWpkh);
+}
+
+#[test]
+fn emul_roundtrip_2of2() {
+    emul_roundtrip_multisig(2);
 }
 
 #[cfg(feature = "serial")]

@@ -1,7 +1,6 @@
 pub mod burn;
 pub mod change_detection;
 pub mod init;
-pub mod issue;
 
 use bs_containers::testcontainers::clients::Cli;
 use jade::get_receive_address::Variant;

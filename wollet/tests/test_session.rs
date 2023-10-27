@@ -758,10 +758,6 @@ pub fn singlesig_desc(signer: &Signer, variant: Variant) -> String {
     format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/1/*){suffix})")
 }
 
-pub fn wpkh_desc(signer: &Signer) -> String {
-    singlesig_desc(signer, Variant::Wpkh)
-}
-
 pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
     assert!(threshold <= signers.len());
     let xpubs = signers

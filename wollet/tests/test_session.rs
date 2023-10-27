@@ -14,10 +14,12 @@ use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use jade::get_receive_address::Variant;
+use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use log::{LevelFilter, Metadata, Record};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use signer::*;
+use std::convert::TryInto;
 use std::env;
 use std::str::FromStr;
 use std::sync::Once;
@@ -767,4 +769,21 @@ pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
         .join(",");
     let slip77 = generate_slip77();
     format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
+}
+
+pub fn register_multisig(signers: &[&Signer], name: &str, desc: &str) {
+    // Register a multisig descriptor on each *jade* signer
+    let desc: WolletDescriptor = desc.parse().unwrap();
+    let desc: JadeDescriptor = desc.as_ref().try_into().unwrap();
+    let params = RegisterMultisigParams {
+        network: jade::Network::LocaltestLiquid,
+        multisig_name: name.into(),
+        descriptor: desc,
+    };
+
+    for signer in signers {
+        if let Signer::Jade(s) = signer {
+            s.register_multisig(params.clone());
+        }
+    }
 }

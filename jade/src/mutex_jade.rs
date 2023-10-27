@@ -36,4 +36,8 @@ impl MutexJade {
     pub fn get_mut(&mut self) -> Result<&mut Jade, Box<PoisonError<&mut Jade>>> {
         self.0.get_mut().map_err(Box::new)
     }
+
+    pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
+        self.0.lock().unwrap().register_multisig(params).unwrap();
+    }
 }

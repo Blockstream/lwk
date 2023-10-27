@@ -1,17 +1,16 @@
 use bs_containers::testcontainers::clients::Cli;
-use elements::bitcoin::bip32::DerivationPath;
 use jade::{
     get_receive_address::Variant,
     mutex_jade::MutexJade,
     register_multisig::{JadeDescriptor, RegisterMultisigParams},
 };
 use signer::Signer;
-use std::{convert::TryInto, str::FromStr};
+use std::convert::TryInto;
 use wollet::WolletDescriptor;
 
 use crate::{
     test_jade::init::inner_jade_debug_initialization,
-    test_session::{generate_signer, generate_slip77, setup, TestWollet},
+    test_session::{generate_signer, multisig_desc, setup, singlesig_desc, TestWollet},
     TEST_MNEMONIC,
 };
 
@@ -54,21 +53,7 @@ fn emul_send_lbtc_singlesig() {
 }
 
 fn send_lbtc(signers: &[&Signer], variant: Variant) {
-    let (variant, path, closing) = match variant {
-        Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
-        Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
-    };
-    let master_node = signers[0].xpub().unwrap();
-    let fingerprint = master_node.fingerprint();
-    let xpub = signers[0]
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
-        .unwrap();
-
-    let slip77_key = generate_slip77();
-
-    // m / purpose' / coin_type' / account' / change / address_index
-    let desc_str =
-        format!("ct(slip77({slip77_key}),{variant}([{fingerprint}/{path}]{xpub}/1/*){closing})");
+    let desc_str = singlesig_desc(signers[0], variant);
 
     let server = setup();
 
@@ -88,18 +73,10 @@ fn emul_send_lbtc_multisig() {
 }
 
 fn send_lbtc_multisig(mut s1: MutexJade) {
-    let s1_xpub = s1.get_mut().unwrap().get_master_xpub().unwrap();
-    let s1_fingerprint = s1_xpub.fingerprint();
-
     let s2 = generate_signer();
-    let s2_xpub = s2.xpub();
-    let s2_fingerprint = s2_xpub.fingerprint();
-
-    let slip77 = generate_slip77();
-
-    let desc_str = format!(
-        "ct(slip77({slip77}),elwsh(multi(2,[{s1_fingerprint}]{s1_xpub}/1/*,[{s2_fingerprint}]{s2_xpub}/1/*)))"
-    );
+    let signers = [&Signer::Jade(&s1), &Signer::Software(s2.clone())];
+    let threshold = 2;
+    let desc_str = multisig_desc(&signers, threshold);
     let wollet_desc: WolletDescriptor = desc_str.parse().unwrap();
     let descriptor: JadeDescriptor = wollet_desc.as_ref().try_into().unwrap();
 
@@ -111,6 +88,8 @@ fn send_lbtc_multisig(mut s1: MutexJade) {
             descriptor,
         })
         .unwrap();
+    // FIXME: handle s1 in a nicer way
+    let signers = [&Signer::Jade(&s1), &Signer::Software(s2)];
 
     let server = setup();
 
@@ -118,7 +97,6 @@ fn send_lbtc_multisig(mut s1: MutexJade) {
 
     wallet.fund_btc(&server);
 
-    let signers = [&Signer::Jade(&s1), &Signer::Software(s2)];
     let node_address = server.node_getnewaddress();
     wallet.send_btc(&signers, None, Some((node_address, 10_000)));
 }

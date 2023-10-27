@@ -1,11 +1,9 @@
 use bs_containers::testcontainers::clients::Cli;
-use elements::bitcoin::bip32::DerivationPath;
 use signer::Signer;
-use std::str::FromStr;
 
 use crate::{
     test_jade::init::inner_jade_debug_initialization,
-    test_session::{generate_slip77, setup, TestWollet},
+    test_session::{setup, wpkh_desc, TestWollet},
     TEST_MNEMONIC,
 };
 
@@ -35,17 +33,7 @@ fn emul_burn_asset() {
 }
 
 fn burn(signers: &[&Signer]) {
-    let path = "84h/1h/0h";
-    let master_node = signers[0].xpub().unwrap();
-    let fingerprint = master_node.fingerprint();
-    let xpub = signers[0]
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
-        .unwrap();
-
-    let slip77_key = generate_slip77();
-
-    // m / purpose' / coin_type' / account' / change / address_index
-    let desc_str = format!("ct(slip77({slip77_key}),elwpkh([{fingerprint}/{path}]{xpub}/1/*))");
+    let desc_str = wpkh_desc(signers[0]);
 
     let server = setup();
 

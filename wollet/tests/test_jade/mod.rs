@@ -34,6 +34,8 @@ fn roundtrip(
     let (asset, _token) = wallet.issueasset(signers, 1_000, 1, contract, None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 10, &asset, None);
+    let node_address = server.node_getnewaddress();
+    wallet.send_asset(signers, &node_address, &asset, None);
 }
 
 fn emul_roundtrip_singlesig(variant: Variant) {

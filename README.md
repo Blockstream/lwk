@@ -144,10 +144,8 @@ Tests using the serial need an additional dependency:
 apt install -y libudev-dev
 ```
 
-Test cannot be executed in parallel:
+Test cannot be executed in parallel so we need the `--test-threads 1` flag.
 ```
-cargo test -p jade --features serial auth -- --include-ignored
-cargo test -p jade --features serial ping -- --include-ignored
-cargo test -p jade --features serial logout -- --include-ignored
-cargo test -p wollet --features serial serial -- --include-ignored
+cargo test -p jade --features serial -- serial --include-ignored --test-threads 1
+cargo test -p wollet --features serial -- serial --include-ignored --test-threads 1
 ```

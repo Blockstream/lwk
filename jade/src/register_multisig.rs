@@ -1,4 +1,4 @@
-use elements::bitcoin::bip32::ExtendedPubKey;
+use elements::{bitcoin::bip32::ExtendedPubKey, hex::ToHex};
 use elements_miniscript::{
     confidential::Key, descriptor::WshInner, ConfidentialDescriptor, Descriptor,
     DescriptorPublicKey, Terminal,
@@ -14,7 +14,7 @@ pub struct RegisterMultisigParams {
     pub descriptor: JadeDescriptor,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct JadeDescriptor {
     pub variant: String, // only 'wsh(multi(k))' supported for now
     pub sorted: bool,
@@ -25,6 +25,18 @@ pub struct JadeDescriptor {
     pub master_blinding_key: Vec<u8>,
 
     pub signers: Vec<MultisigSigner>,
+}
+
+impl std::fmt::Debug for JadeDescriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JadeDescriptor")
+            .field("variant", &self.variant)
+            .field("sorted", &self.sorted)
+            .field("threshold", &self.threshold)
+            .field("master_blinding_key", &self.master_blinding_key.to_hex())
+            .field("signers", &self.signers)
+            .finish()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

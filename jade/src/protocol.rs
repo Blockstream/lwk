@@ -155,7 +155,7 @@ pub enum JadeState {
     Temp,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct RegisteredMultisig {
     variant: String,
     sorted: bool,
@@ -164,6 +164,18 @@ pub struct RegisteredMultisig {
 
     #[serde(with = "serde_bytes")]
     master_blinding_key: Vec<u8>,
+}
+
+impl Debug for RegisteredMultisig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RegisteredMultisig")
+            .field("variant", &self.variant)
+            .field("sorted", &self.sorted)
+            .field("threshold", &self.threshold)
+            .field("num_signers", &self.num_signers)
+            .field("master_blinding_key", &self.master_blinding_key.to_hex())
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

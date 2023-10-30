@@ -1,4 +1,7 @@
-use elements::{bitcoin::bip32::ExtendedPubKey, hex::ToHex};
+use elements::{
+    bitcoin::bip32::{ExtendedPubKey, Fingerprint},
+    hex::ToHex,
+};
 use elements_miniscript::{
     confidential::Key, descriptor::WshInner, ConfidentialDescriptor, Descriptor,
     DescriptorPublicKey, Terminal,
@@ -113,7 +116,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
             _ => return Err(Error::OnlyXpubKeysAreSupported),
         };
         Ok(MultisigSigner {
-            fingerprint: value.master_fingerprint().as_bytes().to_vec(),
+            fingerprint: value.master_fingerprint(),
             derivation: origin
                 .map(|o| derivation_path_to_vec(&o.1))
                 .unwrap_or(vec![]),
@@ -125,8 +128,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct MultisigSigner {
-    #[serde(with = "serde_bytes")]
-    pub fingerprint: Vec<u8>,
+    pub fingerprint: Fingerprint,
 
     /// From the master node (m) to the xpub
     pub derivation: Vec<u32>,
@@ -139,6 +141,7 @@ pub struct MultisigSigner {
 
 #[cfg(test)]
 mod test {
+    use elements::bitcoin::bip32::Fingerprint;
     use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
     use crate::{protocol::Request, register_multisig::MultisigSigner};
@@ -175,13 +178,13 @@ mod test {
                         master_blinding_key: hex::decode(slip77_key).unwrap(),
                         signers: vec![
                             MultisigSigner {
-                                fingerprint: vec![146, 26, 57, 253],
+                                fingerprint: Fingerprint::from([146, 26, 57, 253]),
                                 derivation: vec![],
                                 xpub: a.parse().unwrap(),
                                 path: vec![]
                             },
                             MultisigSigner {
-                                fingerprint: vec![195, 206, 35, 178],
+                                fingerprint: Fingerprint::from([195, 206, 35, 178]),
                                 derivation: vec![],
                                 xpub: b.parse().unwrap(),
                                 path: vec![]

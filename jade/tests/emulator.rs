@@ -8,7 +8,7 @@ use bs_containers::{
     pin_server::{PinServerEmulator, PIN_SERVER_PORT},
 };
 use elements::{
-    bitcoin,
+    bitcoin::{self, bip32::Fingerprint},
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message, Secp256k1},
     Address, AddressParams,
@@ -207,13 +207,13 @@ fn jade_register_multisig() {
 
     let signers = vec![
         MultisigSigner {
-            fingerprint: vec![2u8; 4],
+            fingerprint: Fingerprint::from([2u8; 4]),
             derivation: vec![],
             xpub: "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap(),
             path: vec![],
         },
         MultisigSigner {
-            fingerprint: jade_master_xpub.fingerprint().to_bytes().to_vec(),
+            fingerprint: jade_master_xpub.fingerprint(),
             derivation: vec![0,1],
             xpub: jade_xpub,
             path: vec![],

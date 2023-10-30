@@ -11,7 +11,7 @@
             "master_blinding_key": "bytes",
             "signers": [
                 {
-                    "fingerprint": "<4 bytes>",
+                    "fingerprint": "00010203",
                     "derivation": [
                         44,
                         2147483648,
@@ -24,7 +24,7 @@
                     ]
                 },
                 {
-                    "fingerprint": "<4 bytes>",
+                    "fingerprint": "00010203",
                     "derivation": [
                         2147483651,
                         2147483649,

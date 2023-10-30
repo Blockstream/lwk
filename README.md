@@ -138,6 +138,13 @@ To run end to end tests:
 cargo test
 ```
 
+To see log outputs use `RUST_LOG` for example
+
+```
+RUST_LOG=info cargo test -- test_name
+RUST_LOG=jade=debug cargo test -- test_name  # filter only on specific module
+```
+
 ### Test with physical Jade
 Tests using the serial need an additional dependency:
 ```

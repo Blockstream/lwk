@@ -6,9 +6,7 @@ use crate::elements::encode::{
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
-use crate::elements::{
-    Address, AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid,
-};
+use crate::elements::{AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTxOut};
@@ -18,7 +16,6 @@ use crate::util::EC;
 use crate::WolletDescriptor;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
-use elements_miniscript::confidential::Key;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
@@ -115,28 +112,6 @@ impl Wollet {
         Ok(self.store.cache.tip)
     }
 
-    // TODO move to WolletDescriptor::address(index)
-    fn derive_address(&self, index: u32) -> Result<Address, Error> {
-        // To derive an address from a confidential descriptor we need to make it definite.
-        let derived_descriptor: Descriptor<DefiniteDescriptorKey> =
-            self.descriptor.descriptor().at_derivation_index(index)?;
-        // But we also need to make the blinding key using the same generic, so we need to convert
-        // it here.
-        // However the generic is only relevant for the Bare variant, which we do not support.
-        let key: Key<DefiniteDescriptorKey> = match &self.descriptor.key() {
-            Key::Slip77(x) => Key::Slip77(*x),
-            Key::Bare(_) => return Err(Error::BlindingBareUnsupported),
-            Key::View(x) => Key::View(x.clone()),
-        };
-
-        let derived_descriptor_conf = ConfidentialDescriptor::<DefiniteDescriptorKey> {
-            key,
-            descriptor: derived_descriptor,
-        };
-
-        Ok(derived_descriptor_conf.address(&EC, self.config.address_params())?)
-    }
-
     /// Get a wallet address
     ///
     /// If Some return the address at the given index,
@@ -147,7 +122,10 @@ impl Wollet {
             None => self.store.cache.last_unused.load(atomic::Ordering::Relaxed),
         };
 
-        Ok(AddressResult::new(self.derive_address(index)?, index))
+        let address = self
+            .descriptor
+            .address(index, self.config.address_params())?;
+        Ok(AddressResult::new(address, index))
     }
 
     /// Get the wallet UTXOs
@@ -399,6 +377,7 @@ mod tests {
     use crate::elements::bitcoin::network::constants::Network;
     use crate::elements::AddressParams;
     use elements_miniscript::confidential::bare::tweak_private_key;
+    use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
 

@@ -5,6 +5,7 @@ use std::{
 };
 
 use elements::bitcoin::address::WitnessVersion;
+use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
@@ -63,8 +64,19 @@ impl WolletDescriptor {
         &self.0.descriptor
     }
 
-    pub fn key(&self) -> &Key<DescriptorPublicKey> {
+    pub fn key(&self) -> &Key {
         &self.0.key
+    }
+
+    pub fn address(
+        &self,
+        index: u32,
+        params: &'static AddressParams,
+    ) -> Result<Address, crate::error::Error> {
+        Ok(self
+            .0
+            .at_derivation_index(index)?
+            .address(&crate::EC, params)?)
     }
 }
 

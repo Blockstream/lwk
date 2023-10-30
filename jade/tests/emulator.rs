@@ -357,6 +357,7 @@ struct InitializedJade<'a> {
 }
 
 fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
+    crate::init_logging();
     let jade_container = docker.run(JadeEmulator);
     let port = jade_container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
@@ -414,6 +415,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
 }
 
 fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
+    crate::init_logging();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();

@@ -1,4 +1,3 @@
-pub mod change_detection;
 pub mod init;
 
 use bs_containers::testcontainers::clients::Cli;

@@ -64,10 +64,6 @@ impl WolletDescriptor {
         &self.0.descriptor
     }
 
-    pub fn key(&self) -> &Key {
-        &self.0.key
-    }
-
     pub fn address(
         &self,
         index: u32,

@@ -203,7 +203,7 @@ pub struct HandshakeData {
     error: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UpdatePinserverParams {
     pub reset_details: bool,
     pub reset_certificate: bool,
@@ -217,4 +217,17 @@ pub struct UpdatePinserverParams {
     #[serde(with = "serde_bytes")]
     pub pubkey: Vec<u8>,
     pub certificate: String,
+}
+
+impl Debug for UpdatePinserverParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UpdatePinserverParams")
+            .field("reset_details", &self.reset_details)
+            .field("reset_certificate", &self.reset_certificate)
+            .field("url_a", &self.url_a)
+            .field("url_b", &self.url_b)
+            .field("pubkey", &self.pubkey.to_hex())
+            .field("certificate", &self.certificate)
+            .finish()
+    }
 }

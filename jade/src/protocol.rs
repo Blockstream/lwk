@@ -73,13 +73,23 @@ pub struct GetXpubParams {
     pub path: Vec<u32>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct SignMessageParams {
     pub message: String,
     pub path: Vec<u32>,
 
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
+}
+
+impl Debug for SignMessageParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SignMessageParams")
+            .field("message", &self.message)
+            .field("path", &self.path)
+            .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .finish()
+    }
 }
 
 #[derive(Deserialize, Serialize)]

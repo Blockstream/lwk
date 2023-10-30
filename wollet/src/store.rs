@@ -85,7 +85,7 @@ impl RawCache {
     /// errors such as corrupted file or model change in the db, result in a empty store that will be repopulated
     fn new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Self {
         Self::try_new(path, cipher).unwrap_or_else(|e| {
-            log::warn!("Initialize cache as default {:?}", e);
+            tracing::warn!("Initialize cache as default {:?}", e);
             Default::default()
         })
     }

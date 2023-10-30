@@ -14,7 +14,6 @@ use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use jade::get_receive_address::Variant;
 use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
-use log::LevelFilter;
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use signer::*;
@@ -25,6 +24,7 @@ use std::sync::Once;
 use std::thread;
 use std::time::Duration;
 use tempfile::TempDir;
+use tracing::metadata::LevelFilter;
 use wollet::*;
 
 const DEFAULT_FEE_RATE: f32 = 100.0;
@@ -75,11 +75,11 @@ pub struct TestElectrumServer {
 impl TestElectrumServer {
     pub fn new(electrs_exec: String, node_exec: String) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
-            .unwrap_or(LevelFilter::Off);
+            .unwrap_or(LevelFilter::OFF);
 
         init_logging();
 
-        let view_stdout = filter == LevelFilter::Trace;
+        let view_stdout = filter == LevelFilter::TRACE;
 
         let args = vec![
             "-fallbackfee=0.0001",

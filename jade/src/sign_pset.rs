@@ -66,6 +66,9 @@ pub enum Error {
 
     #[error("Unsupported spending script pubkey: {0}")]
     UnsupportedScriptPubkeyType(String),
+
+    #[error("Multiple registered multisig, please remove all multisigs but one from the physical device")]
+    MultipleRegisteredMultisig,
 }
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
@@ -77,7 +80,7 @@ impl Jade {
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
 
-        let mut multisig_name = None;
+        let mut multisig_details = None;
         let mut asset_ids_in_tx = HashSet::new();
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
@@ -149,13 +152,29 @@ impl Jade {
                         } else if output.script_pubkey.is_v0_p2wsh() {
                             if let Some(witness_script) = output.witness_script.as_ref() {
                                 if is_multisig(witness_script) {
-                                    let opt = multisig_name.get_or_insert_with(|| {
-                                        // TODO the following is not working in case we have no registered multisig or we have more than 1 registered
-                                        // multisig and the one used in the PSET is not the first. To fix this Jade should implement get_multisig_details
-                                        let result = self.get_registered_multisigs().ok()?;
-                                        result.into_iter().next()
-                                    });
-                                    if let Some((multisig_name, multisig_meta)) = opt {
+                                    if multisig_details.is_none() {
+                                        let result = self.get_registered_multisigs()?;
+                                        if result.len() > 1 {
+                                            // FIXME: from get_registered_multisigs we can't
+                                            // reconstruct the multisig descriptors and determine
+                                            // whether this script belongs to any and which of the
+                                            // registered multisigs. Thus we're unable to provide
+                                            // Jade with the information to correctly display the
+                                            // change. So we error early here. To solve this error
+                                            // the caller can remove all the registered wallets but
+                                            // one.
+                                            // Once Jade will return the information to reconstruct
+                                            // the multisig descriptor, e.g. with
+                                            // get_multisig_details, we'll be able to remove this
+                                            // error and correctly handle Jades with multiple
+                                            // registered multisigs.
+                                            return Err(Error::MultipleRegisteredMultisig);
+                                        }
+                                        multisig_details = result.into_iter().next();
+                                    }
+                                    if let Some((multisig_name, multisig_meta)) =
+                                        multisig_details.as_ref()
+                                    {
                                         // only the wildcard value is needed since the path is taken from the registered multisig wallet
                                         if let Some(wildcard) = path.into_iter().last() {
                                             let mut paths = vec![];

@@ -35,15 +35,16 @@ pset_common = { path = "../pset_common" }
 idna = "0.4.0"
 regex = "1.9.6"
 
+tracing = "0.1"
 
 [dev-dependencies]
-chrono = "0.4.11"
 tempfile = "3.8.0"
 electrsd = { version = "0.25.0", features = ["legacy"] }
 signer = { path = "../signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
 minreq = { version = "2.9", features = ["https"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 
 [features]

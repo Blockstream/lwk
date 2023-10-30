@@ -16,7 +16,8 @@ serde_json = "1"
 elements = { version = "0.23.0", features = ["base64", "serde"] }
 serialport = { version = "4.2.1", optional = true }
 thiserror = "1"
-tracing = "0.1.37"
+
+tracing = "0.1"
 
 minreq = { version = "2.9", features = ["https"] }
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5" }
@@ -24,7 +25,7 @@ elements-miniscript = { git = "https://github.com/ElementsProject/elements-minis
 pset_common = { path = "../pset_common" }
 
 # tokio = { version = "1.32.0", features = ["rt", "macros"] }
-# tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
 
 [features]
 serial = ["serialport"]
@@ -38,3 +39,4 @@ tempfile = "3.8.0"
 bs_containers = { path = "../bs_containers" }
 base64 = "0.21.4"
 serde_json = "1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

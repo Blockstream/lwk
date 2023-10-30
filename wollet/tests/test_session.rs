@@ -8,14 +8,13 @@ use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
 use bip39::Mnemonic;
-use chrono::Utc;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use jade::get_receive_address::Variant;
 use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
-use log::{LevelFilter, Metadata, Record};
+use log::LevelFilter;
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use signer::*;
@@ -30,31 +29,7 @@ use wollet::*;
 
 const DEFAULT_FEE_RATE: f32 = 100.0;
 
-static LOGGER: SimpleLogger = SimpleLogger;
-
-//TODO duplicated why I cannot import?
-pub struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= log::max_level()
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!(
-                "{} {} - {}",
-                Utc::now().format("%S%.3f"),
-                record.level(),
-                record.args()
-            );
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static START: Once = Once::new();
+static TRACING_INIT: Once = Once::new();
 
 fn add_checksum(desc: &str) -> String {
     if desc.find('#').is_some() {
@@ -101,12 +76,10 @@ impl TestElectrumServer {
     pub fn new(electrs_exec: String, node_exec: String) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
             .unwrap_or(LevelFilter::Off);
-        START.call_once(|| {
-            log::set_logger(&LOGGER)
-                .map(|()| log::set_max_level(filter))
-                .expect("cannot initialize logging");
-        });
-        let view_stdout = filter != LevelFilter::Off;
+
+        init_logging();
+
+        let view_stdout = filter == LevelFilter::Trace;
 
         let args = vec![
             "-fallbackfee=0.0001",
@@ -689,6 +662,19 @@ pub fn setup() -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     TestElectrumServer::new(electrs_exec, node_exec)
+}
+
+fn init_logging() {
+    use tracing_subscriber::prelude::*;
+
+    TRACING_INIT.call_once(|| {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+
+        tracing::info!("logging initialized");
+    });
 }
 
 #[allow(dead_code)]

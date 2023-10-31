@@ -24,6 +24,7 @@ use jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
+    Network,
 };
 use jade::{
     protocol::{
@@ -356,12 +357,28 @@ struct InitializedJade<'a> {
     jade: Jade,
 }
 
-fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
+struct NotInitializedJade<'a> {
+    _jade_emul: Container<'a, JadeEmulator>,
+    jade: Jade,
+}
+
+fn inner_jade_create(docker: &Cli, network: Network) -> NotInitializedJade {
     crate::init_logging();
-    let jade_container = docker.run(JadeEmulator);
-    let port = jade_container.get_host_port_ipv4(EMULATOR_PORT);
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::Liquid);
+    let jade = Jade::new(stream.into(), network);
+    NotInitializedJade {
+        jade,
+        _jade_emul: container,
+    }
+}
+
+fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
+    let NotInitializedJade {
+        _jade_emul: jade_container,
+        jade: mut jade_api,
+    } = inner_jade_create(docker, Network::Liquid);
 
     let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);

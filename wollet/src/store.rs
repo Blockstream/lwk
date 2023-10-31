@@ -6,7 +6,6 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
-use pset_common::derive_script_pubkey;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -186,7 +185,7 @@ impl Store {
                 Some(script) => script.clone(),
                 None => {
                     result.cached = false;
-                    derive_script_pubkey(self.descriptor.as_ref(), j)?
+                    self.descriptor.derive_script_pubkey(j)?
                 }
             };
             result.value.push((script, child));

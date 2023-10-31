@@ -4,13 +4,14 @@ use std::{
     str::FromStr,
 };
 
-use elements::bitcoin::address::WitnessVersion;
+use elements::{bitcoin::address::WitnessVersion, Script};
 use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey,
 };
+use pset_common::derive_script_pubkey;
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
@@ -73,6 +74,10 @@ impl WolletDescriptor {
             .0
             .at_derivation_index(index)?
             .address(&crate::EC, params)?)
+    }
+
+    pub fn derive_script_pubkey(&self, index: u32) -> Result<Script, crate::error::Error> {
+        Ok(derive_script_pubkey(&self.0, index)?)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::bitcoin::{ScriptBuf as BitcoinScript, Txid as BitcoinTxid};
+use crate::bitcoin::{self, Txid as BitcoinTxid};
 use crate::elements::confidential::{Asset, Nonce, Value};
 use crate::elements::encode::deserialize as elements_deserialize;
 use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
@@ -31,12 +31,11 @@ pub fn sync(
     let mut batch_count = 0;
     loop {
         let batch = store.get_script_batch(batch_count)?;
-        let scripts_bitcoin: Vec<BitcoinScript> = batch
+        let scripts_bitcoin: Vec<_> = batch
             .value
             .iter()
-            .map(|e| BitcoinScript::from(e.0.clone().into_bytes()))
+            .map(|e| bitcoin::Script::from_bytes(e.0.as_bytes()))
             .collect();
-        let scripts_bitcoin: Vec<&_> = scripts_bitcoin.iter().map(|e| e.as_script()).collect();
         let result: Vec<Vec<GetHistoryRes>> = client.batch_script_get_history(scripts_bitcoin)?;
         if !batch.cached {
             scripts.extend(batch.value);

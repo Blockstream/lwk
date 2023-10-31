@@ -363,7 +363,7 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     let NotInitializedJade {
         _jade_emul: jade_container,
         jade: mut jade_api,
-    } = inner_jade_create(docker, Network::Liquid);
+    } = inner_jade_create(docker, Network::LocaltestLiquid);
 
     let tempdir = PinServerEmulator::tempdir();
     let pin_server = PinServerEmulator::new(&tempdir);
@@ -420,7 +420,7 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
     let NotInitializedJade {
         _jade_emul,
         mut jade,
-    } = inner_jade_create(docker, Network::Liquid);
+    } = inner_jade_create(docker, Network::LocaltestLiquid);
 
     let params = DebugSetMnemonicParams {
         mnemonic: TEST_MNEMONIC.to_string(),

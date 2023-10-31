@@ -44,12 +44,9 @@ pub const TEST_MNEMONIC: &str =
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
-    let result = jade_api.add_entropy(&[1, 2, 3, 4]).unwrap();
+    let result = jade.jade.add_entropy(&[1, 2, 3, 4]).unwrap();
     assert!(result);
 }
 
@@ -66,40 +63,31 @@ fn debug_set_mnemonic() {
 #[test]
 fn epoch() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let result = jade_api.set_epoch(seconds).unwrap();
+    let result = jade.jade.set_epoch(seconds).unwrap();
     assert!(result);
 }
 
 #[test]
 fn ping() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
-    let result = jade_api.ping().unwrap();
+    let result = jade.jade.ping().unwrap();
     assert_eq!(result, 0);
 }
 
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
-    let result = jade_api.version_info().unwrap();
+    let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
     expected.jade_state = JadeState::Uninit;
     assert_eq!(result, expected);
@@ -108,10 +96,7 @@ fn version() {
 #[test]
 fn update_pinserver() {
     let docker = clients::Cli::default();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
     let tempdir = tempdir().unwrap();
     let pin_server = PinServerEmulator::new(&tempdir);
@@ -128,7 +113,7 @@ fn update_pinserver() {
         pubkey: pub_key,
         certificate: "".into(),
     };
-    let result = jade_api.update_pinserver(params).unwrap();
+    let result = jade.jade.update_pinserver(params).unwrap();
     assert!(result);
 }
 
@@ -432,24 +417,24 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
 }
 
 fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
-    crate::init_logging();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let NotInitializedJade {
+        _jade_emul,
+        mut jade,
+    } = inner_jade_create(docker, Network::Liquid);
+
     let params = DebugSetMnemonicParams {
         mnemonic: TEST_MNEMONIC.to_string(),
         passphrase: None,
         temporary_wallet: false,
     };
-    let result = jade_api.debug_set_mnemonic(params).unwrap();
+    let result = jade.debug_set_mnemonic(params).unwrap();
     assert!(result);
 
     InitializedJade {
         _pin_server: None,
-        _jade_emul: container,
+        _jade_emul,
         _tempdir: None,
-        jade: jade_api,
+        jade,
     }
 }
 

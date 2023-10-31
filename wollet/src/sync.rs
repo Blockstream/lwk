@@ -5,9 +5,9 @@ use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Store, BATCH_SIZE};
 use crate::util::EC;
+use crate::WolletDescriptor;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
-use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use pset_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
@@ -21,7 +21,7 @@ struct DownloadTxResult {
 pub fn sync(
     client: &Client,
     store: &mut Store,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &WolletDescriptor,
 ) -> Result<bool, Error> {
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
@@ -135,7 +135,7 @@ fn download_txs(
     scripts: &HashMap<Script, ChildNumber>,
     client: &Client,
     store: &mut Store,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
+    descriptor: &WolletDescriptor,
 ) -> Result<DownloadTxResult, Error> {
     let mut txs = vec![];
     let mut unblinds = vec![];
@@ -201,13 +201,10 @@ fn download_txs(
     }
 }
 
-pub fn try_unblind(
-    output: TxOut,
-    descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
-) -> Result<TxOutSecrets, Error> {
+pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {
     match (output.asset, output.value, output.nonce) {
         (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {
-            let receiver_sk = derive_blinding_key(descriptor, &output.script_pubkey)
+            let receiver_sk = derive_blinding_key(descriptor.as_ref(), &output.script_pubkey)
                 .ok_or_else(|| Error::MissingPrivateBlindingKey)?;
             let txout_secrets = output.unblind(&EC, receiver_sk)?;
 

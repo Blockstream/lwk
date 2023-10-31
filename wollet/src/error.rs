@@ -114,8 +114,10 @@ pub enum Error {
     #[error("Descriptor without wildcard not supported")]
     UnsupportedDescriptorWithoutWildcard,
 
-    #[error("Descriptor with multipath is not supported")]
-    UnsupportedDescriptorWithMultipath,
+    #[error(
+        "Multipath descriptor must have only the external/internal multipath (eg '.../<0;1>/*')"
+    )]
+    UnsupportedMultipathDescriptor,
 
     #[error("Descriptor with segwit not v0 is not supported")]
     UnsupportedDescriptorNonV0, // TODO add non supported descriptor type as field or split it further: UnsupportedDescriptorPreSegwit, UnsupportedDescriptorTaproot, UnsupportedDescriptorUnknownSegwitVersion

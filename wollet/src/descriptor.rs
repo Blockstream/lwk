@@ -1,15 +1,19 @@
 use std::{
+    collections::HashSet,
     convert::{TryFrom, TryInto},
     fmt::Display,
     str::FromStr,
 };
 
-use elements::{bitcoin::address::WitnessVersion, Script};
+use elements::{
+    bitcoin::{address::WitnessVersion, bip32::ChildNumber},
+    Script,
+};
 use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
-    ConfidentialDescriptor, Descriptor, DescriptorPublicKey,
+    ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
 use pset_common::derive_script_pubkey;
 
@@ -43,7 +47,25 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             return Err(Self::Error::UnsupportedDescriptorWithoutWildcard);
         }
         if desc.descriptor.is_multipath() {
-            return Err(Self::Error::UnsupportedDescriptorWithMultipath);
+            let descriptors = desc.descriptor.clone().into_single_descriptors()?;
+
+            if descriptors.len() > 2 {
+                return Err(Self::Error::UnsupportedMultipathDescriptor);
+            }
+
+            for (i, desc) in descriptors.iter().enumerate() {
+                let r = desc.for_each_key(|k| {
+                    if let Some(path) = k.full_derivation_path() {
+                        if let Some(val) = path.into_iter().last() {
+                            return val == &ChildNumber::from(i as u32);
+                        }
+                    }
+                    false
+                });
+                if !r {
+                    return Err(Self::Error::UnsupportedMultipathDescriptor);
+                }
+            }
         }
         match desc.descriptor.desc_type().segwit_version() {
             Some(WitnessVersion::V0) => Ok(WolletDescriptor(desc)),

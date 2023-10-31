@@ -220,7 +220,7 @@ pub fn new_unsupported_wallet(desc: &str, expected: Error) {
         &add_checksum(desc),
     );
     match r {
-        Ok(_) => panic!("Expected unsupported descriptor"),
+        Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
     }
 }

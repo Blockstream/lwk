@@ -215,7 +215,11 @@ fn unsupported_descriptor() {
     );
     let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.xpub());
     let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.xpub());
-    let desc_multi_path = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer1.xpub());
+
+    let desc_multi_path_1 = format!("ct({},elwpkh({}/<0;1;2>/*))", view_key, signer1.xpub());
+    let desc_multi_path_2 = format!("ct({},elwpkh({}/<0;1>/0/*))", view_key, signer1.xpub());
+    let desc_multi_path_3 = format!("ct({},elwpkh({}/<1;0>/*))", view_key, signer1.xpub());
+    let desc_multi_path_4 = format!("ct({},elwpkh({}/<0;2>/*))", view_key, signer1.xpub());
 
     for (desc, err) in [
         (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
@@ -225,7 +229,10 @@ fn unsupported_descriptor() {
             desc_no_wildcard,
             Error::UnsupportedDescriptorWithoutWildcard,
         ),
-        (desc_multi_path, Error::UnsupportedDescriptorWithMultipath),
+        (desc_multi_path_1, Error::UnsupportedMultipathDescriptor),
+        (desc_multi_path_2, Error::UnsupportedMultipathDescriptor),
+        (desc_multi_path_3, Error::UnsupportedMultipathDescriptor),
+        (desc_multi_path_4, Error::UnsupportedMultipathDescriptor),
     ] {
         new_unsupported_wallet(&desc, err);
     }

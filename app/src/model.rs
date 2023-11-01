@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use wollet::bitcoin::bip32::ExtendedPubKey;
+use wollet::elements::Address;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionResponse {
@@ -32,4 +33,16 @@ pub struct LoadSignerResponse {
     pub fingerprint: String,
     pub new: bool,
     pub xpub: ExtendedPubKey,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddressRequest {
+    pub descriptor: String,
+    pub index: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddressResponse {
+    pub address: Address,
+    pub index: u32,
 }

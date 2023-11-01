@@ -113,6 +113,20 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 })?,
             )
         }
+        "address" => {
+            let r: model::AddressRequest =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let s = state.lock().unwrap();
+            let wollet = s.wollets.get(&r.descriptor).unwrap(); // TODO: unknown wallet
+            let addr = wollet.address(r.index)?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::AddressResponse {
+                    address: addr.address().clone(),
+                    index: addr.index(),
+                })?,
+            )
+        }
         _ => Response::unimplemented(request.id),
     };
     Ok(response)

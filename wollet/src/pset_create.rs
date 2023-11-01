@@ -206,7 +206,7 @@ impl Wollet {
         asset: AssetId,
         last_unused: &mut u32,
     ) -> Result<Addressee, Error> {
-        let address = self.address(Some(*last_unused))?;
+        let address = self.change(Some(*last_unused))?;
         *last_unused += 1;
         Ok(Addressee::from_address(satoshi, address.address(), asset))
     }
@@ -229,7 +229,7 @@ impl Wollet {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
-        let mut last_unused = self.address(None)?.index();
+        let mut last_unused = self.change(None)?.index();
         let mut inp_weight = 0;
 
         // Assets inputs and outputs

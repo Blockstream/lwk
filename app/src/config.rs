@@ -37,4 +37,15 @@ impl Config {
             validate_domain: true,
         }
     }
+    
+    pub fn default_mainnet() -> Self {
+        Self {
+            addr: consts::DEFAULT_ADDR.into(),
+            datadir: "/tmp/.ks".into(),
+            electrum_url: "blockstream.info:995".into(),
+            network: ElementsNetwork::Liquid,
+            tls: true,
+            validate_domain: true,
+        }
+    }
 }

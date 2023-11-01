@@ -1,5 +1,5 @@
 use crate::config::{Config, ElementsNetwork};
-use crate::descriptor::ExtInt;
+use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
 use crate::elements::encode::{
     deserialize as elements_deserialize, serialize as elements_serialize,
@@ -286,7 +286,7 @@ impl Wollet {
         })
     }
 
-    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(ExtInt, u32), Error> {
+    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(Chain, u32), Error> {
         let (ext_int, index) = self
             .store
             .cache

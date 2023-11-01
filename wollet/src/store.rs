@@ -1,4 +1,4 @@
-use crate::descriptor::ExtInt;
+use crate::descriptor::Chain;
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::{sha256, Hash};
 use crate::util::ciborium_to_vec;
@@ -31,10 +31,10 @@ pub struct RawCache {
     pub all_txs: HashMap<Txid, Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
-    pub paths: HashMap<Script, (ExtInt, ChildNumber)>,
+    pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
     /// inverse of `paths`
-    pub scripts: HashMap<(ExtInt, ChildNumber), Script>,
+    pub scripts: HashMap<(Chain, ChildNumber), Script>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<u32>>,
@@ -82,7 +82,7 @@ impl Drop for Store {
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
-    pub value: Vec<(Script, (ExtInt, ChildNumber))>,
+    pub value: Vec<(Script, (Chain, ChildNumber))>,
 }
 
 impl RawCache {
@@ -187,7 +187,7 @@ impl Store {
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
-        let ext_int: ExtInt = descriptor.try_into().unwrap_or(ExtInt::External);
+        let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
             let opt_script = self.cache.scripts.get(&(ext_int, child));

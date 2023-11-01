@@ -79,7 +79,7 @@ impl FromStr for WolletDescriptor {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum ExtInt {
+pub enum Chain {
     /// Eternal addess, shown when asked a payment
     /// Wallet having a single descriptor are considered External
     External,
@@ -88,7 +88,7 @@ pub enum ExtInt {
     Internal,
 }
 
-impl TryFrom<&Descriptor<DescriptorPublicKey>> for ExtInt {
+impl TryFrom<&Descriptor<DescriptorPublicKey>> for Chain {
     type Error = ();
 
     fn try_from(value: &Descriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
@@ -106,13 +106,13 @@ impl TryFrom<&Descriptor<DescriptorPublicKey>> for ExtInt {
         }
     }
 }
-impl TryFrom<ChildNumber> for ExtInt {
+impl TryFrom<ChildNumber> for Chain {
     type Error = ();
 
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
-            ChildNumber::Normal { index: 0 } => Ok(ExtInt::External),
-            ChildNumber::Normal { index: 1 } => Ok(ExtInt::Internal),
+            ChildNumber::Normal { index: 0 } => Ok(Chain::External),
+            ChildNumber::Normal { index: 1 } => Ok(Chain::Internal),
             _ => Err(()),
         }
     }
@@ -125,7 +125,7 @@ impl WolletDescriptor {
 
     /// return the single descriptor if not multipath, if multipath returns the internal or the
     /// external descriptor accordint to `int_or_ext`
-    fn inner_descriptor_if_available(&self, ext_int: ExtInt) -> WolletDescriptor {
+    fn inner_descriptor_if_available(&self, ext_int: Chain) -> WolletDescriptor {
         let mut descriptors = self
             .0
             .descriptor
@@ -137,8 +137,8 @@ impl WolletDescriptor {
             descriptors.pop().unwrap()
         } else {
             match ext_int {
-                ExtInt::External => descriptors.remove(0),
-                ExtInt::Internal => descriptors.remove(1),
+                Chain::External => descriptors.remove(0),
+                Chain::Internal => descriptors.remove(1),
             }
         };
         WolletDescriptor(ConfidentialDescriptor {
@@ -152,7 +152,7 @@ impl WolletDescriptor {
         index: u32,
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
-        self.inner_address(index, params, ExtInt::Internal)
+        self.inner_address(index, params, Chain::Internal)
     }
 
     pub fn address(
@@ -160,14 +160,14 @@ impl WolletDescriptor {
         index: u32,
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
-        self.inner_address(index, params, ExtInt::External)
+        self.inner_address(index, params, Chain::External)
     }
 
     fn inner_address(
         &self,
         index: u32,
         params: &'static AddressParams,
-        ext_int: ExtInt,
+        ext_int: Chain,
     ) -> Result<Address, crate::error::Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
@@ -178,7 +178,7 @@ impl WolletDescriptor {
 
     pub(crate) fn definite_descriptor(
         &self,
-        ext_int: ExtInt,
+        ext_int: Chain,
         index: u32,
     ) -> Result<Descriptor<elements_miniscript::DefiniteDescriptorKey>, crate::Error> {
         let desc = self.inner_descriptor_if_available(ext_int);

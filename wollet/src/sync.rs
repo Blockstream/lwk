@@ -1,5 +1,5 @@
 use crate::bitcoin::{self, Txid as BitcoinTxid};
-use crate::descriptor::ExtInt;
+use crate::descriptor::Chain;
 use crate::elements::confidential::{Asset, Nonce, Value};
 use crate::elements::encode::deserialize as elements_deserialize;
 use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
@@ -81,7 +81,7 @@ pub fn sync(
 
     let store_last_unused = store
         .cache
-        .last_unused_external
+        .last_unused_internal
         .load(atomic::Ordering::Relaxed);
     let last_unused_changed = store_last_unused != last_unused;
 
@@ -104,12 +104,12 @@ pub fn sync(
                         store.cache.paths.get(&output.script_pubkey)
                     {
                         match ext_int {
-                            ExtInt::External => match last_used_external {
+                            Chain::External => match last_used_external {
                                 None => last_used_external = Some(index),
                                 Some(last) if index > last => last_used_external = Some(index),
                                 _ => {}
                             },
-                            ExtInt::Internal => match last_used_internal {
+                            Chain::Internal => match last_used_internal {
                                 None => last_used_internal = Some(index),
                                 Some(last) if index > last => last_used_internal = Some(index),
                                 _ => {}
@@ -128,7 +128,7 @@ pub fn sync(
         if let Some(last_used_internal) = last_used_internal {
             store
                 .cache
-                .last_unused_external
+                .last_unused_internal
                 .store(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
@@ -153,7 +153,7 @@ pub fn sync(
 
 fn download_txs(
     history_txs_id: &HashSet<Txid>,
-    scripts: &HashMap<Script, (ExtInt, ChildNumber)>,
+    scripts: &HashMap<Script, (Chain, ChildNumber)>,
     client: &Client,
     store: &mut Store,
     descriptor: &WolletDescriptor,

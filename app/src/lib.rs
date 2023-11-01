@@ -79,11 +79,11 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let wollet = Wollet::new(
-                s.config.network.clone(), // todo
-                &s.config.electrum_url,   // electrum_url
-                s.config.tls,             // tls
-                s.config.validate_domain, // validate_domain
-                &s.config.datadir,        // data root
+                s.config.network.clone(),
+                &s.config.electrum_url,
+                s.config.tls,
+                s.config.validate_domain,
+                &s.config.datadir,
                 &r.descriptor,
             )?;
             let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();

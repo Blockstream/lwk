@@ -9,6 +9,7 @@ pub struct Config {
     pub datadir: String,
     pub electrum_url: String,
     pub network: ElementsNetwork,
+    pub tls: bool,
 }
 
 impl Default for Config {
@@ -18,6 +19,7 @@ impl Default for Config {
             datadir: "/tmp/.ks".into(),
             electrum_url: "".into(),
             network: ElementsNetwork::LiquidTestnet,
+            tls: false,
         }
     }
 }

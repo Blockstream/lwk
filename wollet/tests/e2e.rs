@@ -160,11 +160,20 @@ fn roundtrip() {
         signer51.xpub(),
         signer52.xpub()
     );
+
+    let signer6 = generate_signer();
+    let desc6 = format!(
+        "ct(slip77({}),elwpkh({}/<0;1>/*))",
+        slip77_key,
+        signer6.xpub()
+    );
+
     let signers1 = [&Signer::Software(signer1)];
     let signers2 = [&Signer::Software(signer2)];
     let signers3 = [&Signer::Software(signer3)];
     let signers4 = [&Signer::Software(signer4)];
     let signers5 = [&Signer::Software(signer51), &Signer::Software(signer52)];
+    let signers6 = [&Signer::Software(signer6)];
 
     std::thread::scope(|s| {
         for (signers, desc) in [
@@ -173,6 +182,7 @@ fn roundtrip() {
             (&signers3[..], desc3),
             (&signers4[..], desc4),
             (&signers5[..], desc5),
+            (&signers6[..], desc6),
         ] {
             let server = &server;
             let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
@@ -203,25 +213,6 @@ fn make_tests(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&S
     wallet.reissueasset(signers, 10_000, &asset, None);
     wallet.burnasset(signers, 5_000, &asset, None);
     server.generate(2);
-}
-
-// TODO: to be merged in roundtrip once multipath development end
-#[test]
-fn multipath() {
-    let server = setup();
-
-    let signer = generate_signer();
-
-    let slip77_key = generate_slip77();
-    let desc = format!(
-        "ct(slip77({}),elwpkh({}/<0;1>/*))",
-        slip77_key,
-        signer.xpub()
-    );
-    let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
-    let signers = [&Signer::Software(signer)];
-
-    make_tests(wallet, &server, &signers);
 }
 
 #[test]

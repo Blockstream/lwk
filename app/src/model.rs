@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use wollet::bitcoin::bip32::ExtendedPubKey;
-use wollet::elements::Address;
+use wollet::elements::{Address, AssetId};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionResponse {
@@ -45,4 +46,14 @@ pub struct AddressRequest {
 pub struct AddressResponse {
     pub address: Address,
     pub index: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BalanceRequest {
+    pub descriptor: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BalanceResponse {
+    pub balance: HashMap<AssetId, u64>,
 }

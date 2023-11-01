@@ -1,15 +1,18 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+    Regtest,
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    /// Mainnet
-    #[structopt(short, long)]
-    pub mainnet: bool,
-
-    /// Testnet
-    #[structopt(short, long)]
-    pub testnet: bool,
+    /// Network
+    #[structopt(short, long, default_value = "testnet")]
+    pub network: Network,
 
     /// Electrum URL
     #[structopt(short, long, default_value = "")]

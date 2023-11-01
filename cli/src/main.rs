@@ -4,7 +4,7 @@ use app::config::Config;
 use clap::Parser;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
-use crate::args::CliCommand;
+use crate::args::{CliCommand, Network};
 
 mod args;
 
@@ -34,12 +34,10 @@ fn main() -> anyhow::Result<()> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
-    let config = if args.mainnet {
-        Config::default_mainnet()
-    } else if args.testnet {
-        Config::default_testnet()
-    } else {
-        Config::default_regtest(&args.electrum_url)
+    let config = match args.network {
+        Network::Mainnet => Config::default_mainnet(),
+        Network::Testnet => Config::default_testnet(),
+        Network::Regtest => Config::default_regtest(&args.electrum_url),
     };
     let mut app = app::App::new(config)?;
     // get a client to make requests

@@ -187,13 +187,13 @@ fn roundtrip() {
             let server = &server;
             let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
             s.spawn(move || {
-                make_tests(wallet, server, signers);
+                roundtrip_inner(wallet, server, signers);
             });
         }
     });
 }
 
-fn make_tests(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&Signer<'_>]) {
+fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&Signer<'_>]) {
     wallet.fund_btc(server);
     server.generate(1);
     wallet.send_btc(signers, None, None);

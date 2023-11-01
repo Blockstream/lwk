@@ -1,4 +1,6 @@
 use std::net::SocketAddr;
+use std::str::FromStr;
+use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
 
 use crate::consts;
@@ -37,7 +39,7 @@ impl Config {
             validate_domain: true,
         }
     }
-    
+
     pub fn default_mainnet() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
@@ -46,6 +48,19 @@ impl Config {
             network: ElementsNetwork::Liquid,
             tls: true,
             validate_domain: true,
+        }
+    }
+
+    pub fn default_regtest(electrum_url: &str) -> Self {
+        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset = AssetId::from_str(policy_asset).unwrap();
+        Self {
+            addr: consts::DEFAULT_ADDR.into(),
+            datadir: "/tmp/.ks".into(),
+            electrum_url: electrum_url.into(),
+            network: ElementsNetwork::ElementsRegtest { policy_asset },
+            tls: false,
+            validate_domain: false,
         }
     }
 }

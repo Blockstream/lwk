@@ -3,6 +3,18 @@ use clap::{Args, Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
+    /// Mainnet
+    #[structopt(short, long)]
+    pub mainnet: bool,
+
+    /// Testnet
+    #[structopt(short, long)]
+    pub testnet: bool,
+
+    /// Electrum URL
+    #[structopt(short, long, default_value = "")]
+    pub electrum_url: String,
+
     /// The sub command
     #[command(subcommand)]
     pub command: CliCommand,

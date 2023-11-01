@@ -34,7 +34,14 @@ fn main() -> anyhow::Result<()> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
-    let mut app = app::App::new(Config::default())?;
+    let config = if args.mainnet {
+        Config::default_mainnet()
+    } else if args.testnet {
+        Config::default_testnet()
+    } else {
+        Config::default_regtest(&args.electrum_url)
+    };
+    let mut app = app::App::new(config)?;
     // get a client to make requests
     let client = app.client()?;
     // get the app version

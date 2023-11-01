@@ -1,4 +1,5 @@
 use crate::config::{Config, ElementsNetwork};
+use crate::descriptor::ExtInt;
 use crate::elements::confidential::Value;
 use crate::elements::encode::{
     deserialize as elements_deserialize, serialize as elements_serialize,
@@ -32,7 +33,7 @@ use std::sync::atomic;
 pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,
-    pub(crate) descriptor: WolletDescriptor,
+    descriptor: WolletDescriptor,
 }
 
 impl Wollet {
@@ -60,7 +61,7 @@ impl Wollet {
             std::fs::create_dir_all(&path)?;
         }
         path.push(wallet_id);
-        let store = new_store(&path, descriptor.clone())?;
+        let store = new_store(&path, &descriptor)?;
 
         Ok(Wollet {
             store,
@@ -119,7 +120,11 @@ impl Wollet {
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
         let index = match index {
             Some(i) => i,
-            None => self.store.cache.last_unused.load(atomic::Ordering::Relaxed),
+            None => self
+                .store
+                .cache
+                .last_unused_external
+                .load(atomic::Ordering::Relaxed),
         };
 
         let address = self
@@ -156,13 +161,14 @@ impl Wollet {
                     .filter(|(outpoint, _)| !spent.contains(outpoint))
                     .filter_map(|(outpoint, output)| {
                         if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
-                            let wildcard_index = self.index(&output.script_pubkey).ok()?;
+                            let index = self.index(&output.script_pubkey).ok()?;
                             return Some(WalletTxOut {
                                 outpoint,
                                 script_pubkey: output.script_pubkey,
                                 height: *height,
                                 unblinded: *unblinded,
-                                wildcard_index,
+                                wildcard_index: index.1,
+                                ext_int: index.0,
                             });
                         }
                         None
@@ -280,19 +286,20 @@ impl Wollet {
         })
     }
 
-    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<u32, Error> {
-        let index = self
+    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(ExtInt, u32), Error> {
+        let (ext_int, index) = self
             .store
             .cache
             .paths
             .get(script_pubkey)
             .ok_or_else(|| Error::ScriptNotMine)?;
-        match index {
-            ChildNumber::Normal { index } => Ok(*index),
+        let index = match index {
+            ChildNumber::Normal { index } => index,
             ChildNumber::Hardened { index: _ } => {
-                Err(Error::Generic("unexpected hardened derivation".into()))
+                return Err(Error::Generic("unexpected hardened derivation".into()));
             }
-        }
+        };
+        Ok((*ext_int, *index))
     }
 
     // TODO: move to WolletDescriptor::definite_descriptor(index)
@@ -300,11 +307,8 @@ impl Wollet {
         &self,
         script_pubkey: &Script,
     ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
-        let utxo_index = self.index(script_pubkey)?;
-        Ok(self
-            .descriptor
-            .descriptor()
-            .at_derivation_index(utxo_index)?)
+        let (ext_int, utxo_index) = self.index(script_pubkey)?;
+        self.descriptor.definite_descriptor(ext_int, utxo_index)
     }
 
     /// Add the PSET details with respect to the wallet

@@ -1,3 +1,4 @@
+use crate::descriptor::ExtInt;
 use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets, Txid};
 use crate::secp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
@@ -10,6 +11,7 @@ pub struct WalletTxOut {
     pub height: Option<u32>,
     pub unblinded: TxOutSecrets,
     pub wildcard_index: u32,
+    pub ext_int: ExtInt,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

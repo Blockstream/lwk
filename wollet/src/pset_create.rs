@@ -259,6 +259,7 @@ impl Wollet {
             }
         }
 
+        tracing::debug!("add outputs");
         // L-BTC inputs and outputs
         // Fee and L-BTC change after (re)issuance
         let mut satoshi_out = 0;
@@ -268,12 +269,14 @@ impl Wollet {
             satoshi_out += addressee.satoshi;
         }
 
+        tracing::debug!("add all lbtc inputs");
         // FIXME: For implementation simplicity now we always add all L-BTC inputs
         for utxo in self.asset_utxos(&self.policy_asset())? {
             self.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
             satoshi_in += utxo.unblinded.value;
         }
 
+        tracing::debug!("Set (re)issuance data");
         // Set (re)issuance data
         match issuance_request {
             IssuanceRequest::None => {}
@@ -387,10 +390,12 @@ impl Wollet {
 
         // TODO inputs/outputs(except fee) randomization, not trivial because of blinder_index on inputs
 
+        tracing::debug!("Blind the transaction");
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
 
+        tracing::debug!("Add details");
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         self.add_details(&mut pset)?;
 

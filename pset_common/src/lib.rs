@@ -78,9 +78,20 @@ fn is_mine(
             continue;
         }
         let wildcard_index = path[path.len() - 1];
-        let mine = derive_script_pubkey(descriptor, wildcard_index.into()).unwrap();
-        if &mine == script_pubkey {
-            return true;
+        for d in descriptor
+            .descriptor
+            .clone()
+            .into_single_descriptors()
+            .unwrap()
+        {
+            // TODO improve by checking only the descriptor ending with the given path
+            let mine = d
+                .at_derivation_index(wildcard_index.into())
+                .unwrap()
+                .script_pubkey();
+            if &mine == script_pubkey {
+                return true;
+            }
         }
     }
     false

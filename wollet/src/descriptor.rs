@@ -1,21 +1,17 @@
 use std::{
-    collections::HashSet,
     convert::{TryFrom, TryInto},
     fmt::Display,
     str::FromStr,
 };
 
-use elements::{
-    bitcoin::{address::WitnessVersion, bip32::ChildNumber},
-    Script,
-};
+use elements::bitcoin::{address::WitnessVersion, bip32::ChildNumber};
 use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
-use pset_common::derive_script_pubkey;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
@@ -82,9 +78,81 @@ impl FromStr for WolletDescriptor {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum ExtInt {
+    /// Eternal addess, shown when asked a payment
+    /// Wallet having a single descriptor are considered External
+    External,
+
+    /// Internal address, used for the change
+    Internal,
+}
+
+impl TryFrom<&Descriptor<DescriptorPublicKey>> for ExtInt {
+    type Error = ();
+
+    fn try_from(value: &Descriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
+        let mut ext_int = None;
+        // can keys have different derivation path???
+        value.for_each_key(|k| {
+            if let Some(path) = k.full_derivation_path() {
+                ext_int = path.into_iter().last().cloned();
+            }
+            false
+        });
+        match ext_int {
+            None => Err(()),
+            Some(ext_int) => Ok(ext_int.try_into()?),
+        }
+    }
+}
+impl TryFrom<ChildNumber> for ExtInt {
+    type Error = ();
+
+    fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
+        match value {
+            ChildNumber::Normal { index: 0 } => Ok(ExtInt::External),
+            ChildNumber::Normal { index: 1 } => Ok(ExtInt::Internal),
+            _ => Err(()),
+        }
+    }
+}
+
 impl WolletDescriptor {
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
         &self.0.descriptor
+    }
+
+    /// return the single descriptor if not multipath, if multipath returns the internal or the
+    /// external descriptor accordint to `int_or_ext`
+    fn inner_descriptor_if_available(&self, ext_int: ExtInt) -> WolletDescriptor {
+        let mut descriptors = self
+            .0
+            .descriptor
+            .clone()
+            .into_single_descriptors()
+            .expect("already done in TryFrom");
+        assert_ne!(descriptors.len(), 0);
+        let descriptor = if descriptors.len() == 1 {
+            descriptors.pop().unwrap()
+        } else {
+            match ext_int {
+                ExtInt::External => descriptors.remove(0),
+                ExtInt::Internal => descriptors.remove(1),
+            }
+        };
+        WolletDescriptor(ConfidentialDescriptor {
+            key: self.0.key.clone(),
+            descriptor,
+        })
+    }
+
+    pub fn change(
+        &self,
+        index: u32,
+        params: &'static AddressParams,
+    ) -> Result<Address, crate::error::Error> {
+        self.inner_address(index, params, ExtInt::Internal)
     }
 
     pub fn address(
@@ -92,14 +160,29 @@ impl WolletDescriptor {
         index: u32,
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
+        self.inner_address(index, params, ExtInt::External)
+    }
+
+    fn inner_address(
+        &self,
+        index: u32,
+        params: &'static AddressParams,
+        ext_int: ExtInt,
+    ) -> Result<Address, crate::error::Error> {
         Ok(self
+            .inner_descriptor_if_available(ext_int)
             .0
             .at_derivation_index(index)?
             .address(&crate::EC, params)?)
     }
 
-    pub fn derive_script_pubkey(&self, index: u32) -> Result<Script, crate::error::Error> {
-        Ok(derive_script_pubkey(&self.0, index)?)
+    pub(crate) fn definite_descriptor(
+        &self,
+        ext_int: ExtInt,
+        index: u32,
+    ) -> Result<Descriptor<elements_miniscript::DefiniteDescriptorKey>, crate::Error> {
+        let desc = self.inner_descriptor_if_available(ext_int);
+        Ok(desc.descriptor().at_derivation_index(index)?)
     }
 }
 

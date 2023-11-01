@@ -175,30 +175,53 @@ fn roundtrip() {
             (&signers5[..], desc5),
         ] {
             let server = &server;
-            let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+            let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
             s.spawn(move || {
-                wallet.fund_btc(server);
-                server.generate(1);
-                wallet.send_btc(signers, None, None);
-                let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
-                let node_address = server.node_getnewaddress();
-                wallet.send_asset(signers, &node_address, &asset, None);
-                let node_address1 = server.node_getnewaddress();
-                let node_address2 = server.node_getnewaddress();
-                wallet.send_many(
-                    signers,
-                    &node_address1,
-                    &asset,
-                    &node_address2,
-                    &wallet.policy_asset(),
-                    None,
-                );
-                wallet.reissueasset(signers, 10_000, &asset, None);
-                wallet.burnasset(signers, 5_000, &asset, None);
-                server.generate(2);
+                make_tests(wallet, server, signers);
             });
         }
     });
+}
+
+fn make_tests(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&Signer<'_>]) {
+    wallet.fund_btc(server);
+    server.generate(1);
+    wallet.send_btc(signers, None, None);
+    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
+    let node_address = server.node_getnewaddress();
+    wallet.send_asset(signers, &node_address, &asset, None);
+    let node_address1 = server.node_getnewaddress();
+    let node_address2 = server.node_getnewaddress();
+    wallet.send_many(
+        signers,
+        &node_address1,
+        &asset,
+        &node_address2,
+        &wallet.policy_asset(),
+        None,
+    );
+    wallet.reissueasset(signers, 10_000, &asset, None);
+    wallet.burnasset(signers, 5_000, &asset, None);
+    server.generate(2);
+}
+
+// TODO: to be merged in roundtrip once multipath development end
+#[test]
+fn multipath() {
+    let server = setup();
+
+    let signer = generate_signer();
+
+    let slip77_key = generate_slip77();
+    let desc = format!(
+        "ct(slip77({}),elwpkh({}/<0;1>/*))",
+        slip77_key,
+        signer.xpub()
+    );
+    let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let signers = [&Signer::Software(signer)];
+
+    make_tests(wallet, &server, &signers);
 }
 
 #[test]

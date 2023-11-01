@@ -1,3 +1,4 @@
+use crate::descriptor::ExtInt;
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::{sha256, Hash};
 use crate::util::ciborium_to_vec;
@@ -6,9 +7,11 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 use electrum_client::bitcoin::bip32::ChildNumber;
+use elements_miniscript::{Descriptor, DescriptorPublicKey};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -16,7 +19,7 @@ use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;
 
-pub fn new_store<P: AsRef<Path>>(path: P, desc: WolletDescriptor) -> Result<Store, Error> {
+pub fn new_store<P: AsRef<Path>>(path: P, desc: &WolletDescriptor) -> Result<Store, Error> {
     Store::new(&path, desc)
 }
 
@@ -28,10 +31,10 @@ pub struct RawCache {
     pub all_txs: HashMap<Txid, Transaction>,
 
     /// contains all my script up to an empty batch of BATCHSIZE
-    pub paths: HashMap<Script, ChildNumber>,
+    pub paths: HashMap<Script, (ExtInt, ChildNumber)>,
 
     /// inverse of `paths`
-    pub scripts: HashMap<ChildNumber, Script>,
+    pub scripts: HashMap<(ExtInt, ChildNumber), Script>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<u32>>,
@@ -42,8 +45,11 @@ pub struct RawCache {
     /// height and hash of tip of the blockchain
     pub tip: (u32, BlockHash),
 
-    /// last unused index for current descriptor
-    pub last_unused: AtomicU32,
+    /// last unused index for external addresses for current descriptor
+    pub last_unused_external: AtomicU32,
+
+    /// last unused index for internal addresses (changes) for current descriptor
+    pub last_unused_internal: AtomicU32,
 }
 
 impl Default for RawCache {
@@ -55,7 +61,8 @@ impl Default for RawCache {
             heights: HashMap::default(),
             unblinded: HashMap::default(),
             tip: (0, BlockHash::all_zeros()),
-            last_unused: 0.into(),
+            last_unused_internal: 0.into(),
+            last_unused_external: 0.into(),
         }
     }
 }
@@ -64,7 +71,6 @@ pub struct Store {
     pub cache: RawCache,
     path: PathBuf,
     cipher: Aes256GcmSiv,
-    descriptor: WolletDescriptor,
 }
 
 impl Drop for Store {
@@ -76,7 +82,7 @@ impl Drop for Store {
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
-    pub value: Vec<(Script, ChildNumber)>,
+    pub value: Vec<(Script, (ExtInt, ChildNumber))>,
 }
 
 impl RawCache {
@@ -120,7 +126,7 @@ fn load_decrypt<P: AsRef<Path>>(
 }
 
 impl Store {
-    pub fn new<P: AsRef<Path>>(path: P, descriptor: WolletDescriptor) -> Result<Store, Error> {
+    pub fn new<P: AsRef<Path>>(path: P, descriptor: &WolletDescriptor) -> Result<Store, Error> {
         /*
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
@@ -142,7 +148,6 @@ impl Store {
             cache,
             cipher,
             path,
-            descriptor,
         })
     }
 
@@ -170,7 +175,11 @@ impl Store {
         Ok(())
     }
 
-    pub fn get_script_batch(&self, batch: u32) -> Result<ScriptBatch, Error> {
+    pub fn get_script_batch(
+        &self,
+        batch: u32,
+        descriptor: &Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+    ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
             ..Default::default()
@@ -178,17 +187,18 @@ impl Store {
 
         let start = batch * BATCH_SIZE;
         let end = start + BATCH_SIZE;
+        let ext_int: ExtInt = descriptor.try_into().unwrap_or(ExtInt::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
-            let opt_script = self.cache.scripts.get(&child);
+            let opt_script = self.cache.scripts.get(&(ext_int, child));
             let script = match opt_script {
                 Some(script) => script.clone(),
                 None => {
                     result.cached = false;
-                    self.descriptor.derive_script_pubkey(j)?
+                    descriptor.at_derivation_index(j)?.script_pubkey()
                 }
             };
-            result.value.push((script, child));
+            result.value.push((script, (ext_int, child)));
         }
 
         Ok(result)
@@ -206,7 +216,7 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::Store;
+    use crate::{store::Store, WolletDescriptor};
     use elements::Txid;
     use elements_miniscript::ConfidentialDescriptor;
     use std::{convert::TryInto, str::FromStr};
@@ -230,11 +240,11 @@ mod tests {
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let mut store = Store::new(&dir, desc.clone().try_into().unwrap()).unwrap();
+        let mut store = Store::new(&dir, &desc.clone().try_into().unwrap()).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = Store::new(&dir, desc.try_into().unwrap()).unwrap();
+        let store = Store::new(&dir, &desc.try_into().unwrap()).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 
@@ -252,11 +262,14 @@ mod tests {
             master_blinding_key, xpub, checksum
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
+        let desc: WolletDescriptor = desc.try_into().unwrap();
 
-        let store = Store::new(&dir, desc.try_into().unwrap()).unwrap();
+        let store = Store::new(&dir, &desc).unwrap();
 
-        let x = store.get_script_batch(0).unwrap();
-        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), Normal { index: 0 })");
+        let x = store
+            .get_script_batch(0, &desc.as_ref().descriptor)
+            .unwrap();
+        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }))");
         assert_ne!(x.value[0], x.value[1]);
     }
 }

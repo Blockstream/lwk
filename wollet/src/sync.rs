@@ -1,4 +1,5 @@
 use crate::bitcoin::{self, Txid as BitcoinTxid};
+use crate::descriptor::ExtInt;
 use crate::elements::confidential::{Asset, Nonce, Value};
 use crate::elements::encode::deserialize as elements_deserialize;
 use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
@@ -28,54 +29,60 @@ pub fn sync(
 
     let mut last_unused = 0;
 
-    let mut batch_count = 0;
-    loop {
-        let batch = store.get_script_batch(batch_count)?;
-        let scripts_bitcoin: Vec<_> = batch
-            .value
-            .iter()
-            .map(|e| bitcoin::Script::from_bytes(e.0.as_bytes()))
-            .collect();
-        let result: Vec<Vec<GetHistoryRes>> = client.batch_script_get_history(scripts_bitcoin)?;
-        if !batch.cached {
-            scripts.extend(batch.value);
-        }
-        let max = result
-            .iter()
-            .enumerate()
-            .filter(|(_, v)| !v.is_empty())
-            .map(|(i, _)| i as u32)
-            .max();
-        if let Some(max) = max {
-            last_unused = 1 + max + batch_count * BATCH_SIZE;
-        };
-
-        let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
-
-        if flattened.is_empty() {
-            break;
-        }
-
-        for el in flattened {
-            // el.height = -1 means unconfirmed with unconfirmed parents
-            // el.height =  0 means unconfirmed with confirmed parents
-            // but we threat those tx the same
-            let height = el.height.max(0);
-            let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
-            if height == 0 {
-                txid_height.insert(txid, None);
-            } else {
-                txid_height.insert(txid, Some(height as u32));
+    for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
+        let mut batch_count = 0;
+        loop {
+            let batch = store.get_script_batch(batch_count, &descriptor)?;
+            let scripts_bitcoin: Vec<_> = batch
+                .value
+                .iter()
+                .map(|e| bitcoin::Script::from_bytes(e.0.as_bytes()))
+                .collect();
+            let result: Vec<Vec<GetHistoryRes>> =
+                client.batch_script_get_history(scripts_bitcoin)?;
+            if !batch.cached {
+                scripts.extend(batch.value);
             }
-        }
+            let max = result
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| !v.is_empty())
+                .map(|(i, _)| i as u32)
+                .max();
+            if let Some(max) = max {
+                last_unused = 1 + max + batch_count * BATCH_SIZE;
+            };
 
-        batch_count += 1;
+            let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
+
+            if flattened.is_empty() {
+                break;
+            }
+
+            for el in flattened {
+                // el.height = -1 means unconfirmed with unconfirmed parents
+                // el.height =  0 means unconfirmed with confirmed parents
+                // but we threat those tx the same
+                let height = el.height.max(0);
+                let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
+                if height == 0 {
+                    txid_height.insert(txid, None);
+                } else {
+                    txid_height.insert(txid, Some(height as u32));
+                }
+            }
+
+            batch_count += 1;
+        }
     }
 
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
 
-    let store_last_unused = store.cache.last_unused.load(atomic::Ordering::Relaxed);
+    let store_last_unused = store
+        .cache
+        .last_unused_external
+        .load(atomic::Ordering::Relaxed);
     let last_unused_changed = store_last_unused != last_unused;
 
     let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
@@ -87,27 +94,42 @@ pub fn sync(
         txid_height.retain(|txid, _| txids_unblinded.contains(txid));
 
         // Find the last used index in an output that we can unblind
-        let mut last_used = None;
+        let mut last_used_internal = None;
+        let mut last_used_external = None;
+
         for txid in txid_height.keys() {
             if let Some(tx) = store.cache.all_txs.get(txid) {
                 for output in &tx.output {
-                    if let Some(ChildNumber::Normal { index }) =
+                    if let Some((ext_int, ChildNumber::Normal { index })) =
                         store.cache.paths.get(&output.script_pubkey)
                     {
-                        match last_used {
-                            None => last_used = Some(index),
-                            Some(last) if index > last => last_used = Some(index),
-                            _ => {}
+                        match ext_int {
+                            ExtInt::External => match last_used_external {
+                                None => last_used_external = Some(index),
+                                Some(last) if index > last => last_used_external = Some(index),
+                                _ => {}
+                            },
+                            ExtInt::Internal => match last_used_internal {
+                                None => last_used_internal = Some(index),
+                                Some(last) if index > last => last_used_internal = Some(index),
+                                _ => {}
+                            },
                         }
                     }
                 }
             }
         }
-        if let Some(last_used) = last_used {
+        if let Some(last_used_external) = last_used_external {
             store
                 .cache
-                .last_unused
-                .store(last_used + 1, atomic::Ordering::Relaxed);
+                .last_unused_external
+                .store(last_used_external + 1, atomic::Ordering::Relaxed);
+        }
+        if let Some(last_used_internal) = last_used_internal {
+            store
+                .cache
+                .last_unused_external
+                .store(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
         // height map is used for the live list of transactions, since due to reorg or rbf tx
@@ -131,7 +153,7 @@ pub fn sync(
 
 fn download_txs(
     history_txs_id: &HashSet<Txid>,
-    scripts: &HashMap<Script, ChildNumber>,
+    scripts: &HashMap<Script, (ExtInt, ChildNumber)>,
     client: &Client,
     store: &mut Store,
     descriptor: &WolletDescriptor,

@@ -228,21 +228,19 @@ fn multipath() {
 fn unsupported_descriptor() {
     let signer1 = generate_signer();
     let signer2 = generate_signer();
+    let xpub1 = signer1.xpub();
+    let xpub2 = signer2.xpub();
     let view_key = generate_view_key();
-    let desc_p2pkh = format!("ct({},elpkh({}/*))", view_key, signer1.xpub());
-    let desc_p2sh = format!(
-        "ct({},elsh(multi(2,{}/*,{}/*)))",
-        view_key,
-        signer1.xpub(),
-        signer2.xpub()
-    );
-    let desc_p2tr = format!("ct({},eltr({}/*))", view_key, signer1.xpub());
-    let desc_no_wildcard = format!("ct({},elwpkh({}))", view_key, signer1.xpub());
+    let desc_p2pkh = format!("ct({view_key},elpkh({xpub1}/*))");
+    let desc_p2sh = format!("ct({view_key},elsh(multi(2,{xpub1}/*,{xpub2}/*)))",);
+    let desc_p2tr = format!("ct({view_key},eltr({xpub1}/*))");
+    let desc_no_wildcard = format!("ct({view_key},elwpkh({xpub1}))");
 
-    let desc_multi_path_1 = format!("ct({},elwpkh({}/<0;1;2>/*))", view_key, signer1.xpub());
-    let desc_multi_path_2 = format!("ct({},elwpkh({}/<0;1>/0/*))", view_key, signer1.xpub());
-    let desc_multi_path_3 = format!("ct({},elwpkh({}/<1;0>/*))", view_key, signer1.xpub());
-    let desc_multi_path_4 = format!("ct({},elwpkh({}/<0;2>/*))", view_key, signer1.xpub());
+    let desc_multi_path_1 = format!("ct({view_key},elwpkh({xpub1}/<0;1;2>/*))");
+    let desc_multi_path_2 = format!("ct({view_key},elwpkh({xpub1}/<0;1>/0/*))");
+    let desc_multi_path_3 = format!("ct({view_key},elwpkh({xpub1}/<1;0>/*))");
+    let desc_multi_path_4 = format!("ct({view_key},elwpkh({xpub1}/<0;2>/*))");
+    let desc_multi_path_5 = format!("ct({view_key},elwsh(multi(2,{xpub1}/<0;1>/*,{xpub2}/0/*)))");
 
     for (desc, err) in [
         (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
@@ -256,6 +254,7 @@ fn unsupported_descriptor() {
         (desc_multi_path_2, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_3, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_4, Error::UnsupportedMultipathDescriptor),
+        (desc_multi_path_5, Error::UnsupportedMultipathDescriptor),
     ] {
         new_unsupported_wallet(&desc, err);
     }

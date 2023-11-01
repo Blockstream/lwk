@@ -82,7 +82,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 s.config.network.clone(), // todo
                 &s.config.electrum_url,   // electrum_url
                 s.config.tls,             // tls
-                false,                    // validate_domain
+                s.config.validate_domain, // validate_domain
                 &s.config.datadir,        // data root
                 &r.descriptor,
             )?;

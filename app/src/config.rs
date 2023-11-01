@@ -10,6 +10,7 @@ pub struct Config {
     pub electrum_url: String,
     pub network: ElementsNetwork,
     pub tls: bool,
+    pub validate_domain: bool,
 }
 
 impl Default for Config {
@@ -20,6 +21,7 @@ impl Default for Config {
             electrum_url: "".into(),
             network: ElementsNetwork::LiquidTestnet,
             tls: false,
+            validate_domain: false,
         }
     }
 }

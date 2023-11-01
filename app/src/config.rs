@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use wollet::ElementsNetwork;
 
 use crate::consts;
 
@@ -7,6 +8,7 @@ pub struct Config {
     pub addr: SocketAddr,
     pub datadir: String,
     pub electrum_url: String,
+    pub network: ElementsNetwork,
 }
 
 impl Default for Config {
@@ -15,6 +17,7 @@ impl Default for Config {
             addr: consts::DEFAULT_ADDR.into(),
             datadir: "/tmp/.ks".into(),
             electrum_url: "".into(),
+            network: ElementsNetwork::LiquidTestnet,
         }
     }
 }

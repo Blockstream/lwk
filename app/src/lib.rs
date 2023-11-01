@@ -6,7 +6,7 @@ use client::Client;
 use config::Config;
 use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use wollet::{ElementsNetwork, Wollet, EC};
+use wollet::{Wollet, EC};
 
 pub mod client;
 pub mod config;
@@ -79,11 +79,11 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let wollet = Wollet::new(
-                ElementsNetwork::LiquidTestnet, // todo
-                &s.config.electrum_url,         // electrum_url
-                false,                          // tls
-                false,                          // validate_domain
-                &s.config.datadir,              // data root
+                s.config.network.clone(), // todo
+                &s.config.electrum_url,   // electrum_url
+                false,                    // tls
+                false,                    // validate_domain
+                &s.config.datadir,        // data root
                 &r.descriptor,
             )?;
             let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();

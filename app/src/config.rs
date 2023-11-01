@@ -25,3 +25,16 @@ impl Default for Config {
         }
     }
 }
+
+impl Config {
+    pub fn default_testnet() -> Self {
+        Self {
+            addr: consts::DEFAULT_ADDR.into(),
+            datadir: "/tmp/.ks".into(),
+            electrum_url: "blockstream.info:465".into(),
+            network: ElementsNetwork::LiquidTestnet,
+            tls: true,
+            validate_domain: true,
+        }
+    }
+}

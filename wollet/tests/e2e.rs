@@ -154,19 +154,14 @@ fn roundtrip() {
     let view_key = generate_view_key();
     let signer51 = generate_signer();
     let signer52 = generate_signer();
-    let desc5 = format!(
-        "ct({},elwsh(multi(2,{}/*,{}/*)))",
-        view_key,
-        signer51.xpub(),
-        signer52.xpub()
-    );
+    let xpub51: bitcoin::bip32::ExtendedPubKey = signer51.xpub();
+    let xpub52: bitcoin::bip32::ExtendedPubKey = signer52.xpub();
+    let desc5 = format!("ct({view_key},elwsh(multi(2,{xpub51}/*,{xpub52}/*)))");
 
     let signer6 = generate_signer();
-    let desc6 = format!(
-        "ct(slip77({}),elwpkh({}/<0;1>/*))",
-        slip77_key,
-        signer6.xpub()
-    );
+    let slip77_key = generate_slip77();
+    let xpub6: bitcoin::bip32::ExtendedPubKey = signer6.xpub();
+    let desc6 = format!("ct(slip77({slip77_key}),elwpkh({xpub6}/<0;1>/*))");
 
     let signers1 = [&Signer::Software(signer1)];
     let signers2 = [&Signer::Software(signer2)];

@@ -1,5 +1,5 @@
 use crate::config::{Config, ElementsNetwork};
-use crate::descriptor::ExtInt;
+use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
 use crate::elements::encode::{
     deserialize as elements_deserialize, serialize as elements_serialize,
@@ -130,6 +130,29 @@ impl Wollet {
         let address = self
             .descriptor
             .address(index, self.config.address_params())?;
+        Ok(AddressResult::new(address, index))
+    }
+
+    /// Get a wallet change address
+    ///
+    /// If a specific descriptor is given for change addresses  it's used to derive this address
+    /// Otherwise this is the same as `address()`
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
+    pub fn change(&self, index: Option<u32>) -> Result<AddressResult, Error> {
+        let index = match index {
+            Some(i) => i,
+            None => self
+                .store
+                .cache
+                .last_unused_internal
+                .load(atomic::Ordering::Relaxed),
+        };
+
+        let address = self
+            .descriptor
+            .change(index, self.config.address_params())?;
         Ok(AddressResult::new(address, index))
     }
 
@@ -286,7 +309,7 @@ impl Wollet {
         })
     }
 
-    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(ExtInt, u32), Error> {
+    pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(Chain, u32), Error> {
         let (ext_int, index) = self
             .store
             .cache

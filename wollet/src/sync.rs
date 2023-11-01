@@ -11,6 +11,7 @@ use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use pset_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::sync::atomic;
 
 #[derive(Default)]
@@ -27,10 +28,12 @@ pub fn sync(
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
 
-    let mut last_unused = 0;
+    let mut last_unused_external = 0;
+    let mut last_unused_internal = 0;
 
     for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
         let mut batch_count = 0;
+        let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
         loop {
             let batch = store.get_script_batch(batch_count, &descriptor)?;
             let scripts_bitcoin: Vec<_> = batch
@@ -50,7 +53,10 @@ pub fn sync(
                 .map(|(i, _)| i as u32)
                 .max();
             if let Some(max) = max {
-                last_unused = 1 + max + batch_count * BATCH_SIZE;
+                match chain {
+                    Chain::External => last_unused_external = 1 + max + batch_count * BATCH_SIZE,
+                    Chain::Internal => last_unused_internal = 1 + max + batch_count * BATCH_SIZE,
+                }
             };
 
             let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
@@ -79,11 +85,17 @@ pub fn sync(
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
 
-    let store_last_unused = store
+    let store_last_unused_external = store
+        .cache
+        .last_unused_external
+        .load(atomic::Ordering::Relaxed);
+    let store_last_unused_internal = store
         .cache
         .last_unused_internal
         .load(atomic::Ordering::Relaxed);
-    let last_unused_changed = store_last_unused != last_unused;
+
+    let last_unused_changed = store_last_unused_external != last_unused_external
+        || store_last_unused_internal != last_unused_internal;
 
     let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
         store.cache.all_txs.extend(new_txs.txs);

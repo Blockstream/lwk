@@ -132,6 +132,19 @@ End to end tests needs local servers:
 . .envrc  # not needed if you use direnv and you executed `direnv allow`
 ```
 
+And also the following docker images:
+
+```
+docker pull xenoky/local-jade-emulator:1.0.23
+docker pull tulipan81/blind_pin_server:v0.0.3
+```
+
+Unclean test execution leave dockers image running, to stop all docker in the machine:
+
+```
+docker stop $(docker ps -a -q)
+```
+
 To run end to end tests:
 
 ```

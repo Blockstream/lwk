@@ -753,7 +753,7 @@ pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
         .map(|s| {
             let fingerprint = s.fingerprint().unwrap();
             let xpub = s.xpub().unwrap();
-            format!("[{fingerprint}]{xpub}/1/*",)
+            format!("[{fingerprint}]{xpub}/<0;1>/*",)
         })
         .collect::<Vec<_>>()
         .join(",");

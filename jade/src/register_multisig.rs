@@ -49,8 +49,8 @@ pub enum Error {
     #[error("Only slip77 master blinding key are supported")]
     OnlySlip77Supported,
 
-    #[error("Only xpub keys are supported")]
-    OnlyXpubKeysAreSupported,
+    #[error("Single key are not supported")]
+    SinlgeKeyAreNotSupported,
 
     #[error("Unsupported descriptor type, only wsh is supported")]
     UnsupportedDescriptorType,
@@ -113,7 +113,8 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
     fn try_from(value: &DescriptorPublicKey) -> Result<Self, Self::Error> {
         let (xpub, origin) = match value {
             DescriptorPublicKey::XPub(x) => (x.xkey, x.origin.as_ref()),
-            _ => return Err(Error::OnlyXpubKeysAreSupported),
+            DescriptorPublicKey::MultiXPub(x) => (x.xkey, x.origin.as_ref()),
+            DescriptorPublicKey::Single(_) => return Err(Error::SinlgeKeyAreNotSupported),
         };
         Ok(MultisigSigner {
             fingerprint: value.master_fingerprint(),

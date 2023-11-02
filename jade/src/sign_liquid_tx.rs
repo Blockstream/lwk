@@ -80,6 +80,7 @@ impl std::fmt::Debug for Commitment {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Change {
     pub address: SingleOrMulti,
+    pub is_change: bool,
 }
 
 impl Serialize for Change {
@@ -205,6 +206,7 @@ mod test {
                 variant: Variant::ShWpkh,
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
             },
+            is_change: false,
         };
 
         assert_eq!(&serde_json::to_value(expected).unwrap(), change);

@@ -743,14 +743,18 @@ pub fn singlesig_desc(signer: &Signer, variant: Variant) -> String {
     let slip77_key = generate_slip77();
 
     // m / purpose' / coin_type' / account' / change / address_index
-    format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/1/*){suffix})")
+    format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})")
 }
 
 pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
     assert!(threshold <= signers.len());
     let xpubs = signers
         .iter()
-        .map(|s| format!("[{}]{}/1/*", s.fingerprint().unwrap(), s.xpub().unwrap()))
+        .map(|s| {
+            let fingerprint = s.fingerprint().unwrap();
+            let xpub = s.xpub().unwrap();
+            format!("[{fingerprint}]{xpub}/1/*",)
+        })
         .collect::<Vec<_>>()
         .join(",");
     let slip77 = generate_slip77();

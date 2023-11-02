@@ -211,6 +211,17 @@ impl Wollet {
         Ok(Addressee::from_address(satoshi, address.address(), asset))
     }
 
+    fn addressee_external(
+        &self,
+        satoshi: u64,
+        asset: AssetId,
+        last_unused: &mut u32,
+    ) -> Result<Addressee, Error> {
+        let address = self.address(Some(*last_unused))?;
+        *last_unused += 1;
+        Ok(Addressee::from_address(satoshi, address.address(), asset))
+    }
+
     fn create_pset(
         &self,
         addressees: Vec<UnvalidatedAddressee>,
@@ -291,14 +302,14 @@ impl Wollet {
 
                 let addressee = match address_asset {
                     Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
-                    None => self.addressee_change(satoshi_asset, asset, &mut last_unused)?,
+                    None => self.addressee_external(satoshi_asset, asset, &mut last_unused)?,
                 };
                 self.add_output(&mut pset, &addressee)?;
 
                 if satoshi_token > 0 {
                     let addressee = match address_token {
                         Some(address) => Addressee::from_address(satoshi_token, &address, token),
-                        None => self.addressee_change(satoshi_token, token, &mut last_unused)?,
+                        None => self.addressee_external(satoshi_token, token, &mut last_unused)?,
                     };
                     self.add_output(&mut pset, &addressee)?;
                 }

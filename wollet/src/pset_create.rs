@@ -355,7 +355,7 @@ impl Wollet {
 
                 let addressee = match address_asset {
                     Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
-                    None => self.addressee_change(satoshi_asset, asset, &mut last_unused)?,
+                    None => self.addressee_external(satoshi_asset, asset, &mut last_unused)?,
                 };
                 self.add_output(&mut pset, &addressee)?;
             }

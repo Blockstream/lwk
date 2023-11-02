@@ -240,7 +240,9 @@ impl Wollet {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
-        let mut last_unused = self.change(None)?.index();
+        let mut last_unused_internal = self.change(None)?.index();
+        let mut last_unused_external = self.address(None)?.index();
+
         let mut inp_weight = 0;
 
         // Assets inputs and outputs
@@ -258,8 +260,11 @@ impl Wollet {
                 if satoshi_in >= satoshi_out {
                     if satoshi_in > satoshi_out {
                         let satoshi_change = satoshi_in - satoshi_out;
-                        let addressee =
-                            self.addressee_change(satoshi_change, asset, &mut last_unused)?;
+                        let addressee = self.addressee_change(
+                            satoshi_change,
+                            asset,
+                            &mut last_unused_internal,
+                        )?;
                         self.add_output(&mut pset, &addressee)?;
                     }
                     break;
@@ -302,14 +307,20 @@ impl Wollet {
 
                 let addressee = match address_asset {
                     Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
-                    None => self.addressee_external(satoshi_asset, asset, &mut last_unused)?,
+                    None => {
+                        self.addressee_external(satoshi_asset, asset, &mut last_unused_external)?
+                    }
                 };
                 self.add_output(&mut pset, &addressee)?;
 
                 if satoshi_token > 0 {
                     let addressee = match address_token {
                         Some(address) => Addressee::from_address(satoshi_token, &address, token),
-                        None => self.addressee_external(satoshi_token, token, &mut last_unused)?,
+                        None => self.addressee_external(
+                            satoshi_token,
+                            token,
+                            &mut last_unused_external,
+                        )?,
                     };
                     self.add_output(&mut pset, &addressee)?;
                 }
@@ -318,31 +329,33 @@ impl Wollet {
                 let issuance = self.issuance(&asset)?;
                 let token = issuance.token;
                 // Find or add input for the token
-                let (idx, token_asset_bf) =
-                    match inp_txout_sec.iter().find(|(_, u)| u.asset == token) {
-                        Some((idx, u)) => (*idx, u.asset_bf),
-                        None => {
-                            // Add an input sending the token,
-                            let utxos_token = self.asset_utxos(&token)?;
-                            let utxo_token = utxos_token
-                                .first()
-                                .ok_or_else(|| Error::InsufficientFunds)?;
-                            let idx = self.add_input(
-                                &mut pset,
-                                &mut inp_txout_sec,
-                                &mut inp_weight,
-                                utxo_token,
-                            )?;
+                let (idx, token_asset_bf) = match inp_txout_sec
+                    .iter()
+                    .find(|(_, u)| u.asset == token)
+                {
+                    Some((idx, u)) => (*idx, u.asset_bf),
+                    None => {
+                        // Add an input sending the token,
+                        let utxos_token = self.asset_utxos(&token)?;
+                        let utxo_token = utxos_token
+                            .first()
+                            .ok_or_else(|| Error::InsufficientFunds)?;
+                        let idx = self.add_input(
+                            &mut pset,
+                            &mut inp_txout_sec,
+                            &mut inp_weight,
+                            utxo_token,
+                        )?;
 
-                            // and an outpout receiving the token
-                            let satoshi_token = utxo_token.unblinded.value;
-                            let addressee =
-                                self.addressee_change(satoshi_token, token, &mut last_unused)?;
-                            self.add_output(&mut pset, &addressee)?;
+                        // and an outpout receiving the token
+                        let satoshi_token = utxo_token.unblinded.value;
+                        let addressee =
+                            self.addressee_change(satoshi_token, token, &mut last_unused_internal)?;
+                        self.add_output(&mut pset, &addressee)?;
 
-                            (idx, utxo_token.unblinded.asset_bf)
-                        }
-                    };
+                        (idx, utxo_token.unblinded.asset_bf)
+                    }
+                };
 
                 // Set reissuance data
                 self.set_reissuance(
@@ -355,7 +368,9 @@ impl Wollet {
 
                 let addressee = match address_asset {
                     Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
-                    None => self.addressee_external(satoshi_asset, asset, &mut last_unused)?,
+                    None => {
+                        self.addressee_external(satoshi_asset, asset, &mut last_unused_external)?
+                    }
                 };
                 self.add_output(&mut pset, &addressee)?;
             }
@@ -368,8 +383,11 @@ impl Wollet {
             return Err(Error::InsufficientFunds);
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
-        let addressee =
-            self.addressee_change(satoshi_change, self.policy_asset(), &mut last_unused)?;
+        let addressee = self.addressee_change(
+            satoshi_change,
+            self.policy_asset(),
+            &mut last_unused_internal,
+        )?;
         self.add_output(&mut pset, &addressee)?;
         let fee_output =
             Output::new_explicit(Script::default(), temp_fee, self.policy_asset(), None);

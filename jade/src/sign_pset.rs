@@ -177,20 +177,17 @@ impl Jade {
                                     if let Some((multisig_name, multisig_meta)) =
                                         multisig_details.as_ref()
                                     {
-                                        // only the wildcard value is needed since the path is taken from the registered multisig wallet
-                                        if let Some(wildcard) = path.into_iter().last() {
-                                            let mut paths = vec![];
-                                            for _ in 0..multisig_meta.num_signers {
-                                                paths.push(vec![(*wildcard).into()]);
-                                            }
-                                            change = Some(Change {
-                                                address: SingleOrMulti::Multi {
-                                                    multisig_name: multisig_name.to_string(),
-                                                    paths,
-                                                },
-                                                is_change,
-                                            });
+                                        let mut paths = vec![];
+                                        for _ in 0..multisig_meta.num_signers {
+                                            paths.push(derivation_path_to_vec(path));
                                         }
+                                        change = Some(Change {
+                                            address: SingleOrMulti::Multi {
+                                                multisig_name: multisig_name.to_string(),
+                                                paths,
+                                            },
+                                            is_change,
+                                        });
                                     }
                                 }
                             }

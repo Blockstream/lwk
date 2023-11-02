@@ -111,8 +111,8 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
     type Error = Error;
 
     fn try_from(value: &DescriptorPublicKey) -> Result<Self, Self::Error> {
-        let (xpub, origin, derivation_path) = match value {
-            DescriptorPublicKey::XPub(x) => (x.xkey, x.origin.as_ref(), &x.derivation_path),
+        let (xpub, origin) = match value {
+            DescriptorPublicKey::XPub(x) => (x.xkey, x.origin.as_ref()),
             _ => return Err(Error::OnlyXpubKeysAreSupported),
         };
         Ok(MultisigSigner {
@@ -121,7 +121,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
                 .map(|o| derivation_path_to_vec(&o.1))
                 .unwrap_or(vec![]),
             xpub,
-            path: derivation_path_to_vec(derivation_path),
+            path: vec![], // to support multipath we avoid specifying the fixed part here and pass all the path at signing request phase
         })
     }
 }

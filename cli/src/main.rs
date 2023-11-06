@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use anyhow::Context;
 use app::config::Config;
 use clap::Parser;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
@@ -45,7 +46,12 @@ fn main() -> anyhow::Result<()> {
 
     match args.command {
         CliCommand::Server => {
-            app.run()?;
+            app.run().with_context(|| {
+                format!(
+                    "Cannot start the server at \"{}\". It is probably already running.",
+                    app.addr()
+                )
+            })?;
             // get the app version
             let version = client.version()?.version;
             tracing::info!("App running version {}", version);

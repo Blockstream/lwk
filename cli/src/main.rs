@@ -3,6 +3,7 @@ use std::{fs::File, sync::Once};
 use anyhow::{anyhow, Context};
 use app::config::Config;
 use clap::Parser;
+use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
 use crate::args::{CliCommand, Network};
@@ -20,10 +21,12 @@ fn main() -> anyhow::Result<()> {
     // - electrum server
     // - file/directory path
 
-    inner_main(args)
+    let value = inner_main(args)?;
+    println!("{value:#}");
+    Ok(())
 }
 
-fn inner_main(args: args::Cli) -> anyhow::Result<()> {
+fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     init_logging(&args);
 
     // start the app with default host/port
@@ -40,7 +43,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<()> {
     // get a client to make requests
     let client = app.client()?;
 
-    match args.command {
+    Ok(match args.command {
         CliCommand::Server => {
             app.run().with_context(|| {
                 format!(
@@ -53,6 +56,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<()> {
             tracing::info!("App running version {}", version);
 
             app.join_threads()?;
+            Value::Null
         }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
@@ -62,13 +66,11 @@ fn inner_main(args: args::Cli) -> anyhow::Result<()> {
                         app.addr()
                     )
                 })?;
-                println!("{}", serde_json::to_string(&j)?);
+                serde_json::to_value(&j)?
             }
         },
         CliCommand::Wallet(_) => todo!(),
-    }
-
-    Ok(())
+    })
 }
 
 fn init_logging(args: &args::Cli) {

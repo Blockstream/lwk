@@ -60,7 +60,12 @@ fn main() -> anyhow::Result<()> {
         }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
-                let j = client.generate_signer()?;
+                let j = client.generate_signer().with_context(|| {
+                    format!(
+                        "Cannot connect to \"{}\". Is the server running?",
+                        app.addr()
+                    )
+                })?;
                 println!("{}", serde_json::to_string(&j)?);
             }
         },

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wollet::bitcoin::bip32::ExtendedPubKey;
+use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::{Address, AssetId};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +32,7 @@ pub struct LoadSignerRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadSignerResponse {
+    pub id: XpubIdentifier,
     pub fingerprint: String,
     pub new: bool,
     pub xpub: ExtendedPubKey,

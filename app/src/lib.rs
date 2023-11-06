@@ -114,11 +114,13 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
             let fingerprint = signer.fingerprint()?.to_string();
             let xpub = signer.xpub()?;
+            let id = signer.id()?;
             let mut s = state.lock().unwrap();
-            let new = s.signers.insert(signer.id()?, signer).is_none();
+            let new = s.signers.insert(id, signer).is_none();
             Response::result(
                 request.id,
                 serde_json::to_value(model::LoadSignerResponse {
+                    id,
                     fingerprint,
                     new,
                     xpub,

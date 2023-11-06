@@ -95,3 +95,24 @@ fn init_logging(args: &args::Cli) {
         tracing::info!("CLI initialized with args: {:?}", args);
     });
 }
+
+#[cfg(test)]
+mod test {
+    use clap::Parser;
+
+    use crate::{args::Cli, inner_main};
+
+    fn sh(command: &str) {
+        let cli = Cli::try_parse_from(command.split(' ')).unwrap();
+        inner_main(cli).unwrap();
+    }
+
+    #[test]
+    fn test_commands() {
+        std::thread::spawn(|| {
+            sh("cli server");
+        });
+
+        sh("cli signer generate");
+    }
+}

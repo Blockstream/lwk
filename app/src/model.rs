@@ -30,10 +30,12 @@ pub struct LoadWalletResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadSignerRequest {
     pub mnemonic: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadSignerResponse {
+    pub name: String,
     pub id: XpubIdentifier,
     pub fingerprint: String,
     pub new: bool,

@@ -6,7 +6,6 @@ use client::Client;
 use config::Config;
 use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::{Wollet, EC};
 
 pub mod client;
@@ -21,7 +20,7 @@ pub struct State<'a> {
     // Ideally it should be in _another_ struct accessible by method_handler.
     pub config: Config,
     pub wollets: HashMap<String, Wollet>,
-    pub signers: HashMap<XpubIdentifier, Signer<'a>>,
+    pub signers: HashMap<String, Signer<'a>>,
 }
 
 pub struct App {
@@ -117,10 +116,11 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let xpub = signer.xpub()?;
             let id = signer.id()?;
             let mut s = state.lock().unwrap();
-            let new = s.signers.insert(id, signer).is_none();
+            let new = s.signers.insert(r.name.clone(), signer).is_none();
             Response::result(
                 request.id,
                 serde_json::to_value(model::LoadSignerResponse {
+                    name: r.name,
                     id,
                     fingerprint,
                     new,

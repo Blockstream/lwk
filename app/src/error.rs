@@ -12,4 +12,10 @@ pub enum Error {
     Jade(#[from] jade::Error),
     #[error("Jade Unlock Error: {0}")]
     Unlock(#[from] jade::unlock::Error),
+
+    #[error("Trying to start an already started server")]
+    AlreadyStarted,
+
+    #[error("Trying to join a non started server")]
+    NotStarted,
 }

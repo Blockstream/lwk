@@ -24,7 +24,7 @@ pub struct State<'a> {
 }
 
 pub struct App {
-    rpc: JsonRpcServer,
+    rpc: Option<JsonRpcServer>,
     config: Config,
 }
 
@@ -34,22 +34,34 @@ impl App {
     pub fn new(config: Config) -> Result<App> {
         tracing::info!("Creating new app with config: {:?}", config);
 
+        Ok(App { rpc: None, config })
+    }
+
+    pub fn run(&mut self) -> Result<()> {
+        if self.rpc.is_some() {
+            return Err(error::Error::AlreadyStarted);
+        }
         let state = Arc::new(Mutex::new(State {
-            config: config.clone(),
+            config: self.config.clone(),
             ..Default::default()
         }));
-        let server = tiny_http::Server::http(config.addr)?;
-        let rpc = tiny_jrpc::JsonRpcServer::new(server, state, method_handler);
+        let server = tiny_http::Server::http(self.config.addr)?;
 
-        Ok(App { rpc, config })
+        let rpc = tiny_jrpc::JsonRpcServer::new(server, state, method_handler);
+        self.rpc = Some(rpc);
+        Ok(())
     }
 
     pub fn addr(&self) -> SocketAddr {
         self.config.addr
     }
 
-    pub fn join_threads(&mut self) {
-        self.rpc.join_threads();
+    pub fn join_threads(&mut self) -> Result<()> {
+        self.rpc
+            .take()
+            .ok_or(error::Error::NotStarted)?
+            .join_threads();
+        Ok(())
     }
 
     pub fn client(&self) -> Result<Client> {
@@ -159,7 +171,9 @@ mod tests {
             addr,
             ..Default::default()
         };
-        App::new(config).unwrap()
+        let mut app = App::new(config).unwrap();
+        app.run().unwrap();
+        app
     }
 
     #[test]

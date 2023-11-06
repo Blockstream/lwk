@@ -75,10 +75,12 @@ test_coverage:
     - cargo nextest run --profile ci
     - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
     - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
+    - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage/ -p $(pwd)
   coverage: '/Coverage: \d+(?:\.\d+)?/'
   artifacts:
     paths:
       - target/coverage.xml
+      - target/coverage/
       - target/nextest/ci/junit.xml
     reports:
       coverage_report:

@@ -66,7 +66,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         app.addr()
                     )
                 })?;
-                serde_json::to_value(&j)?
+                serde_json::to_value(j)?
             }
         },
         CliCommand::Wallet(_) => todo!(),
@@ -115,7 +115,7 @@ mod test {
         std::thread::spawn(|| {
             sh("cli server");
         });
-
+        std::thread::sleep(std::time::Duration::from_millis(100));
         let result = sh("cli signer generate");
         assert!(result.get("mnemonic").is_some());
     }

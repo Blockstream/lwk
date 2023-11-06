@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, sync::Once};
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -8,6 +8,8 @@ use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 use crate::args::{CliCommand, Network};
 
 mod args;
+
+static TRACING_INIT: Once = Once::new();
 
 fn main() -> anyhow::Result<()> {
     let args = args::Cli::parse();
@@ -22,25 +24,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn inner_main(args: args::Cli) -> anyhow::Result<()> {
-    // set up logging
-    let file = File::options()
-        .create(true)
-        .append(true)
-        .open("debug.log")?;
-    let (appender, _guard) = if args.stderr {
-        tracing_appender::non_blocking(std::io::stderr())
-    } else {
-        tracing_appender::non_blocking(file)
-    };
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy();
-    let subscriber = FmtSubscriber::builder()
-        .with_env_filter(filter)
-        .with_writer(appender)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)?;
-    tracing::info!("CLI initialized with args: {:?}", args);
+    init_logging(&args);
 
     // start the app with default host/port
     let config = match args.network {
@@ -85,4 +69,29 @@ fn inner_main(args: args::Cli) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn init_logging(args: &args::Cli) {
+    TRACING_INIT.call_once(|| {
+        let file = File::options()
+            .create(true)
+            .append(true)
+            .open("debug.log")
+            .expect("must have write permission");
+        let (appender, _guard) = if args.stderr {
+            tracing_appender::non_blocking(std::io::stderr())
+        } else {
+            tracing_appender::non_blocking(file)
+        };
+        let filter = EnvFilter::builder()
+            .with_default_directive(LevelFilter::INFO.into())
+            .from_env_lossy();
+        let subscriber = FmtSubscriber::builder()
+            .with_env_filter(filter)
+            .with_writer(appender)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("called once because sync::once");
+        tracing::info!("CLI initialized with args: {:?}", args);
+    });
 }

@@ -5,6 +5,7 @@ pub use crate::software::{NewError, SignError, SwSigner};
 use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
+use elements_miniscript::elements::bitcoin::hash_types::XpubIdentifier;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use jade::derivation_path_to_vec;
 use jade::mutex_jade::MutexJade;
@@ -60,6 +61,10 @@ impl<'a> Signer<'a> {
                 Ok(s.get_xpub(params)?)
             }
         }
+    }
+
+    pub fn id(&self) -> Result<XpubIdentifier, SignerError> {
+        Ok(self.xpub()?.identifier())
     }
 
     pub fn fingerprint(&self) -> Result<Fingerprint, SignerError> {

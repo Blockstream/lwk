@@ -101,12 +101,13 @@ fn init_logging(args: &args::Cli) {
 #[cfg(test)]
 mod test {
     use clap::Parser;
+    use serde_json::Value;
 
     use crate::{args::Cli, inner_main};
 
-    fn sh(command: &str) {
+    fn sh(command: &str) -> Value {
         let cli = Cli::try_parse_from(command.split(' ')).unwrap();
-        inner_main(cli).unwrap();
+        inner_main(cli).unwrap()
     }
 
     #[test]
@@ -115,6 +116,7 @@ mod test {
             sh("cli server");
         });
 
-        sh("cli signer generate");
+        let result = sh("cli signer generate");
+        assert!(result.get("mnemonic").is_some());
     }
 }

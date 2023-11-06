@@ -18,6 +18,10 @@ fn main() -> anyhow::Result<()> {
     // - electrum server
     // - file/directory path
 
+    inner_main(args)
+}
+
+fn inner_main(args: args::Cli) -> anyhow::Result<()> {
     // set up logging
     let file = File::options()
         .create(true)

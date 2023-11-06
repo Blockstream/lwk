@@ -99,11 +99,12 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 &s.config.datadir,
                 &r.descriptor,
             )?;
-            let new = s.wollets.insert(r.descriptor.clone(), wollet).is_none();
+            let new = s.wollets.insert(r.name.clone(), wollet).is_none();
             Response::result(
                 request.id,
                 serde_json::to_value(model::LoadWalletResponse {
                     descriptor: r.descriptor,
+                    name: r.name,
                     new,
                 })?,
             )
@@ -131,7 +132,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::AddressRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let s = state.lock().unwrap();
-            let wollet = s.wollets.get(&r.descriptor).unwrap(); // TODO: unknown wallet
+            let wollet = s.wollets.get(&r.name).unwrap(); // TODO: unknown wallet
             let addr = wollet.address(r.index)?;
             Response::result(
                 request.id,
@@ -145,7 +146,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::BalanceRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let wollet = s.wollets.get_mut(&r.descriptor).unwrap(); // TODO: unknown wallet
+            let wollet = s.wollets.get_mut(&r.name).unwrap(); // TODO: unknown wallet
             wollet.sync_txs()?;
             let balance = wollet.balance()?;
             Response::result(

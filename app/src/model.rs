@@ -17,11 +17,13 @@ pub struct GenerateSignerResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadWalletRequest {
     pub descriptor: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadWalletResponse {
     pub descriptor: String,
+    pub name: String,
     pub new: bool,
 }
 
@@ -40,7 +42,7 @@ pub struct LoadSignerResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddressRequest {
-    pub descriptor: String,
+    pub name: String,
     pub index: Option<u32>,
 }
 
@@ -52,7 +54,7 @@ pub struct AddressResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BalanceRequest {
-    pub descriptor: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

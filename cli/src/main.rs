@@ -42,13 +42,15 @@ fn main() -> anyhow::Result<()> {
     let mut app = app::App::new(config)?;
     // get a client to make requests
     let client = app.client()?;
-    // get the app version
-    let version = client.version()?.version;
-    tracing::info!("App running version {}", version);
 
     match args.command {
         CliCommand::Server => {
-            app.join_threads();
+            app.run()?;
+            // get the app version
+            let version = client.version()?.version;
+            tracing::info!("App running version {}", version);
+
+            app.join_threads()?;
         }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {

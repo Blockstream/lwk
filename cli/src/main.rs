@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use app::config::Config;
 use clap::Parser;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
@@ -38,7 +38,11 @@ fn main() -> anyhow::Result<()> {
     let config = match args.network {
         Network::Mainnet => Config::default_mainnet(),
         Network::Testnet => Config::default_testnet(),
-        Network::Regtest => Config::default_regtest(&args.electrum_url),
+        Network::Regtest => Config::default_regtest(
+            &args
+                .electrum_url
+                .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
+        ),
     };
     let mut app = app::App::new(config)?;
     // get a client to make requests

@@ -15,8 +15,8 @@ pub struct Cli {
     pub network: Network,
 
     /// Electrum URL
-    #[structopt(short, long, default_value = "")]
-    pub electrum_url: String,
+    #[structopt(short, long)]
+    pub electrum_url: Option<String>,
 
     /// The sub command
     #[command(subcommand)]

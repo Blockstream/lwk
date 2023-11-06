@@ -23,7 +23,11 @@ fn main() -> anyhow::Result<()> {
         .create(true)
         .append(true)
         .open("debug.log")?;
-    let (appender, _guard) = tracing_appender::non_blocking(file);
+    let (appender, _guard) = if args.stderr {
+        tracing_appender::non_blocking(std::io::stderr())
+    } else {
+        tracing_appender::non_blocking(file)
+    };
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();

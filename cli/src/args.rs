@@ -18,6 +18,10 @@ pub struct Cli {
     #[structopt(short, long)]
     pub electrum_url: Option<String>,
 
+    /// Writes to stderr instead of the default `debug.log`
+    #[structopt(long)]
+    pub stderr: bool,
+
     /// The sub command
     #[command(subcommand)]
     pub command: CliCommand,

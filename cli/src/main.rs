@@ -6,7 +6,7 @@ use clap::Parser;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
-use crate::args::{CliCommand, Network};
+use crate::args::{CliCommand, Network, ServerCommand};
 
 mod args;
 
@@ -67,26 +67,33 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let client = app.client()?;
 
     Ok(match args.command {
-        CliCommand::Server => {
-            let (tx, rx) = std::sync::mpsc::channel();
-            ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
-                .expect("Error setting Ctrl-C handler");
+        CliCommand::Server(a) => {
+            match a.command {
+                ServerCommand::Start => {
+                    let (tx, rx) = std::sync::mpsc::channel();
+                    ctrlc::set_handler(move || {
+                        tx.send(()).expect("Could not send signal on channel.")
+                    })
+                    .expect("Error setting Ctrl-C handler");
 
-            app.run().with_context(|| {
-                format!(
-                    "Cannot start the server at \"{}\". It is probably already running.",
-                    app.addr()
-                )
-            })?;
-            // get the app version
-            let version = client.version()?.version;
-            tracing::info!("App running version {}", version);
+                    app.run().with_context(|| {
+                        format!(
+                            "Cannot start the server at \"{}\". It is probably already running.",
+                            app.addr()
+                        )
+                    })?;
+                    // get the app version
+                    let version = client.version()?.version;
+                    tracing::info!("App running version {}", version);
 
-            rx.recv().expect("Could not receive from channel.");
-            tracing::info!("Stopping");
-            app.stop()?;
-            app.join_threads()?;
-            tracing::info!("Threads ended");
+                    rx.recv().expect("Could not receive from channel.");
+                    tracing::info!("Stopping");
+                    app.stop()?;
+                    app.join_threads()?;
+                    tracing::info!("Threads ended");
+                }
+                ServerCommand::Stop => todo!(),
+            }
 
             Value::Null
         }
@@ -121,7 +128,7 @@ mod test {
     #[test]
     fn test_commands() {
         std::thread::spawn(|| {
-            sh("cli server");
+            sh("cli server start");
         });
         std::thread::sleep(std::time::Duration::from_millis(100));
         let result = sh("cli signer generate");

@@ -30,7 +30,7 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
     /// server only
-    Server,
+    Server(ServerArgs),
     /// signer
     Signer(SignerArgs),
     /// wallet
@@ -57,4 +57,16 @@ pub struct WalletArgs {
 #[derive(Debug, Subcommand)]
 pub enum WalletCommand {
     Balance,
+}
+
+#[derive(Debug, Args)]
+pub struct ServerArgs {
+    #[command(subcommand)]
+    pub command: ServerCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ServerCommand {
+    Start,
+    Stop,
 }

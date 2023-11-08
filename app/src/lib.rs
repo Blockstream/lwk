@@ -52,6 +52,13 @@ impl App {
         Ok(())
     }
 
+    pub fn stop(&self) -> Result<()> {
+        match self.rpc.as_ref() {
+            Some(rpc) => Ok(rpc.stop()),
+            None => Err(error::Error::NotStarted),
+        }
+    }
+
     pub fn addr(&self) -> SocketAddr {
         self.config.addr
     }
@@ -181,7 +188,7 @@ mod tests {
 
     #[test]
     fn version() {
-        let app = app_random_port();
+        let mut app = app_random_port();
         let addr = app.addr();
         let url = addr.to_string();
         dbg!(&url);
@@ -193,5 +200,8 @@ mod tests {
         let result = response.result.unwrap().to_string();
         let actual: model::VersionResponse = serde_json::from_str(&result).unwrap();
         assert_eq!(actual.version, consts::APP_VERSION);
+
+        app.stop().unwrap();
+        app.join_threads().unwrap();
     }
 }

@@ -68,6 +68,10 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
     Ok(match args.command {
         CliCommand::Server => {
+            let (tx, rx) = std::sync::mpsc::channel();
+            ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
+                .expect("Error setting Ctrl-C handler");
+
             app.run().with_context(|| {
                 format!(
                     "Cannot start the server at \"{}\". It is probably already running.",
@@ -78,7 +82,12 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             let version = client.version()?.version;
             tracing::info!("App running version {}", version);
 
+            rx.recv().expect("Could not receive from channel.");
+            tracing::info!("Stopping");
+            app.stop()?;
             app.join_threads()?;
+            tracing::info!("Threads ended");
+
             Value::Null
         }
         CliCommand::Signer(a) => match a.command {

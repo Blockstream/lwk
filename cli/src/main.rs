@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Once};
+use std::fs::File;
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -9,8 +9,6 @@ use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 use crate::args::{CliCommand, Network};
 
 mod args;
-
-static TRACING_INIT: Once = Once::new();
 
 fn main() -> anyhow::Result<()> {
     let args = args::Cli::parse();
@@ -27,7 +25,32 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
-    init_logging(&args);
+    let file = File::options()
+        .create(true)
+        .append(true)
+        .open("debug.log")
+        .expect("must have write permission");
+    let (appender, _guard) = if args.stderr {
+        tracing_appender::non_blocking(std::io::stderr())
+    } else {
+        tracing_appender::non_blocking(file)
+    };
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(filter)
+        .with_writer(appender)
+        .finish();
+    match tracing::subscriber::set_global_default(subscriber) {
+        Ok(_) => tracing::info!(
+            "logging initialized on {}",
+            if args.stderr { "stderr" } else { "debug.log" }
+        ),
+        Err(_) => tracing::debug!("logging already initialized"),
+    }
+
+    tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
     let config = match args.network {
@@ -73,31 +96,6 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     })
 }
 
-fn init_logging(args: &args::Cli) {
-    TRACING_INIT.call_once(|| {
-        let file = File::options()
-            .create(true)
-            .append(true)
-            .open("debug.log")
-            .expect("must have write permission");
-        let (appender, _guard) = if args.stderr {
-            tracing_appender::non_blocking(std::io::stderr())
-        } else {
-            tracing_appender::non_blocking(file)
-        };
-        let filter = EnvFilter::builder()
-            .with_default_directive(LevelFilter::INFO.into())
-            .from_env_lossy();
-        let subscriber = FmtSubscriber::builder()
-            .with_env_filter(filter)
-            .with_writer(appender)
-            .finish();
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("called once because sync::once");
-        tracing::info!("CLI initialized with args: {:?}", args);
-    });
-}
-
 #[cfg(test)]
 mod test {
     use clap::Parser;
@@ -106,7 +104,8 @@ mod test {
     use crate::{args::Cli, inner_main};
 
     fn sh(command: &str) -> Value {
-        let cli = Cli::try_parse_from(command.split(' ')).unwrap();
+        let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
+        cli.stderr = true;
         inner_main(cli).unwrap()
     }
 

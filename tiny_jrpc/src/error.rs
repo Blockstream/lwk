@@ -22,6 +22,8 @@ pub enum Error {
     SignerNew(#[from] signer::NewError),
     #[error("Signer Error: {0}")]
     Signer(#[from] signer::SignerError),
+    #[error("Received stop command")]
+    Stop,
 }
 
 impl Error {
@@ -57,6 +59,7 @@ impl Error {
             Error::Wollet(_) => (WOLLET_ERROR, "Watch Only wallet error.".to_string(), None),
             Error::SignerNew(_) => (SIGNER_NEW_ERROR, "Signer new error.".to_string(), None),
             Error::Signer(_) => (SIGNER_ERROR, "Signer error.".to_string(), None),
+            Error::Stop => (STOP_ERROR, "Stop error.".to_string(), None),
         };
 
         RpcError {
@@ -93,3 +96,5 @@ pub const INVALID_VERSION: i64 = -32_004;
 pub const WOLLET_ERROR: i64 = -32_005;
 pub const SIGNER_NEW_ERROR: i64 = -32_006;
 pub const SIGNER_ERROR: i64 = -32_007;
+
+pub const STOP_ERROR: i64 = -32_099;

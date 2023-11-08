@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use serde_json::value::to_raw_value;
+use serde_json::Value;
 
 use crate::model::*;
 use crate::Result;
@@ -46,5 +47,11 @@ impl Client {
         // todo: error
         dbg!(response.error);
         Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+    }
+
+    pub fn stop(&self) -> Result<Value> {
+        let request = self.client.build_request("stop", &[]);
+        let _response = self.client.send_request(request)?;
+        Ok(Value::Null)
     }
 }

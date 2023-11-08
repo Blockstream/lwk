@@ -54,7 +54,17 @@ impl App {
 
     pub fn stop(&self) -> Result<()> {
         match self.rpc.as_ref() {
-            Some(rpc) => Ok(rpc.stop()),
+            Some(rpc) => {
+                rpc.stop();
+                Ok(())
+            },
+            None => Err(error::Error::NotStarted),
+        }
+    }
+
+    pub fn is_running(&self) -> Result<bool> {
+        match self.rpc.as_ref() {
+            Some(rpc) => Ok(rpc.is_running()),
             None => Err(error::Error::NotStarted),
         }
     }
@@ -77,6 +87,7 @@ impl App {
 }
 
 fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
+    tracing::debug!("method: {}", request.method.as_str());
     let response = match request.method.as_str() {
         "generate_signer" => {
             let (_signer, mnemonic) = SwSigner::random(&EC)?;
@@ -160,6 +171,9 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 request.id,
                 serde_json::to_value(model::BalanceResponse { balance })?,
             )
+        }
+        "stop" => {
+            return Err(tiny_jrpc::error::Error::Stop);
         }
         _ => Response::unimplemented(request.id),
     };

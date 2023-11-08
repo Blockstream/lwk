@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -86,13 +86,33 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     let version = client.version()?.version;
                     tracing::info!("App running version {}", version);
 
-                    rx.recv().expect("Could not receive from channel.");
-                    tracing::info!("Stopping");
-                    app.stop()?;
+                    loop {
+                        match rx.recv_timeout(Duration::from_millis(100)) {
+                            Ok(_) => {
+                                tracing::info!("Stopping");
+                                app.stop()?;
+                            }
+                            Err(e) => match e {
+                                RecvTimeoutError::Timeout => {
+                                    if app.is_running().unwrap_or(false) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                RecvTimeoutError::Disconnected => {
+                                    return Err(anyhow!("RecvTimeoutError::Disconnected"))
+                                }
+                            },
+                        }
+                    }
+
                     app.join_threads()?;
                     tracing::info!("Threads ended");
                 }
-                ServerCommand::Stop => todo!(),
+                ServerCommand::Stop => {
+                    client.stop()?;
+                }
             }
 
             Value::Null
@@ -133,5 +153,8 @@ mod test {
         std::thread::sleep(std::time::Duration::from_millis(100));
         let result = sh("cli signer generate");
         assert!(result.get("mnemonic").is_some());
+
+        sh("cli server stop");
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }

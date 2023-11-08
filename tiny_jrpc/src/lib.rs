@@ -89,6 +89,10 @@ impl JsonRpcServer {
                             let id = request.id.clone();
                             match handle_request(request, state.clone(), func.clone()) {
                                 Ok(response) => response,
+                                Err(Error::Stop) => {
+                                    running.store(false, Ordering::SeqCst);
+                                    Response::from_error(id, Error::Stop)
+                                }
                                 Err(err) => Response::from_error(id, err),
                             }
                         }
@@ -122,6 +126,10 @@ impl JsonRpcServer {
 
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
     }
 
     pub fn join_threads(&mut self) {
@@ -179,6 +187,7 @@ where
     let id = request.id.clone();
     let response = match process(request, state) {
         Ok(response) => response,
+        Err(Error::Stop) => return Err(Error::Stop),
         Err(err) => {
             tracing::error!("Error processing request: {}", err);
             Response::error(

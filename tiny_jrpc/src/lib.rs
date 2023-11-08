@@ -1,7 +1,11 @@
 use std::{
     result,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
     thread::{self, JoinHandle},
+    time::Duration,
 };
 
 use error::{Error, METHOD_NOT_FOUND};
@@ -20,6 +24,7 @@ pub use tiny_http;
 pub struct JsonRpcServer {
     server: Arc<Server>,
     handles: Vec<JoinHandle<Result<()>>>,
+    running: Arc<AtomicBool>,
 }
 
 impl JsonRpcServer {
@@ -50,16 +55,26 @@ impl JsonRpcServer {
     {
         // todo config the number of threads
         let mut handles = Vec::with_capacity(4);
+        let running = Arc::new(AtomicBool::new(true));
 
         for _ in 0..4 {
             let server = server.clone();
             let func = func.clone();
             let state = state.clone();
+            let running = running.clone();
             let handle = thread::spawn(move || {
                 loop {
                     // receive http request
-                    let mut http_request = match server.recv() {
-                        Ok(request) => request,
+                    let mut http_request = match server.recv_timeout(Duration::from_millis(100)) {
+                        Ok(Some(request)) => request,
+                        Ok(None) => {
+                            // timeout, checks we aren't stopped
+                            if running.load(Ordering::SeqCst) {
+                                continue;
+                            } else {
+                                break;
+                            }
+                        }
                         Err(err) => {
                             // not much to do if recv fails
                             tracing::error!("recv error: {}", err);
@@ -88,10 +103,25 @@ impl JsonRpcServer {
                         tracing::error!("send_response error: {}", err);
                     }
                 }
+                Ok(())
             });
             handles.push(handle);
         }
-        Self { server, handles }
+
+        // ensure thread are starded
+        while !running.load(Ordering::SeqCst) {
+            std::thread::yield_now();
+        }
+
+        Self {
+            server,
+            handles,
+            running,
+        }
+    }
+
+    pub fn stop(&self) {
+        self.running.store(false, Ordering::SeqCst);
     }
 
     pub fn join_threads(&mut self) {
@@ -272,7 +302,7 @@ mod test {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
-        let rpc = JsonRpcServer::new(server, state, process);
+        let mut rpc = JsonRpcServer::new(server, state, process);
         let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
@@ -290,6 +320,9 @@ mod test {
         let result = response.result.unwrap();
         let expected = serde_json::to_string(&json!([raw])).unwrap();
         assert_eq!(result.get(), expected.as_str());
+
+        rpc.stop();
+        rpc.join_threads();
     }
 
     #[test]

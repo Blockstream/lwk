@@ -57,7 +57,7 @@ impl App {
             Some(rpc) => {
                 rpc.stop();
                 Ok(())
-            },
+            }
             None => Err(error::Error::NotStarted),
         }
     }

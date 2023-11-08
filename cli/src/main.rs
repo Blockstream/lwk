@@ -89,7 +89,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     loop {
                         match rx.recv_timeout(Duration::from_millis(100)) {
                             Ok(_) => {
-                                tracing::info!("Stopping");
+                                tracing::debug!("Stopping");
                                 app.stop()?;
                             }
                             Err(e) => match e {
@@ -108,7 +108,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     }
 
                     app.join_threads()?;
-                    tracing::info!("Threads ended");
+                    tracing::debug!("Threads ended");
                 }
                 ServerCommand::Stop => {
                     client.stop()?;

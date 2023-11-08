@@ -112,11 +112,6 @@ impl JsonRpcServer {
             handles.push(handle);
         }
 
-        // ensure thread are starded
-        while !running.load(Ordering::SeqCst) {
-            std::thread::yield_now();
-        }
-
         Self {
             server,
             handles,

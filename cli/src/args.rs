@@ -61,8 +61,14 @@ pub struct WalletArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum WalletCommand {
-    Load { descriptor: String },
+    Load {
+        descriptor: String,
+    },
     Unload,
+    Address {
+        #[arg(long)]
+        index: Option<u32>,
+    },
     Balance,
     Tx,
 }

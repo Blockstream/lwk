@@ -146,6 +146,12 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             args::WalletCommand::Tx => todo!(),
+            args::WalletCommand::Address { index } => {
+                let r = client
+                    .address(a.name, index)
+                    .with_context(is_the_server_running)?;
+                serde_json::to_value(r)?
+            }
         },
     })
 }
@@ -155,15 +161,12 @@ mod test {
     use clap::Parser;
     use serde_json::Value;
 
-    use crate::{
-        args::{Cli, Network},
-        inner_main,
-    };
+    use crate::{args::Cli, inner_main};
 
     fn sh(command: &str) -> Value {
         let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
         cli.stderr = true;
-        cli.network = Network::Regtest;
+        // cli.network = Network::Regtest;
         inner_main(cli).unwrap()
     }
 

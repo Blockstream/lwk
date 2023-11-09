@@ -24,6 +24,9 @@ pub enum Error {
     Signer(#[from] signer::SignerError),
     #[error("Received stop command")]
     Stop,
+
+    #[error("Not existing wallet name: {0}")]
+    WalletNotExist(String),
 }
 
 impl Error {
@@ -60,6 +63,11 @@ impl Error {
             Error::SignerNew(_) => (SIGNER_NEW_ERROR, "Signer new error.".to_string(), None),
             Error::Signer(_) => (SIGNER_ERROR, "Signer error.".to_string(), None),
             Error::Stop => (STOP_ERROR, "Stop error.".to_string(), None),
+            Error::WalletNotExist(_) => (
+                WALLET_NOT_EXIST_ERROR,
+                "Wallet not exist error.".to_string(),
+                None,
+            ),
         };
 
         RpcError {
@@ -96,5 +104,6 @@ pub const INVALID_VERSION: i64 = -32_004;
 pub const WOLLET_ERROR: i64 = -32_005;
 pub const SIGNER_NEW_ERROR: i64 = -32_006;
 pub const SIGNER_ERROR: i64 = -32_007;
+pub const WALLET_NOT_EXIST_ERROR: i64 = -32_008;
 
 pub const STOP_ERROR: i64 = -32_099;

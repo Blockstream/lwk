@@ -1,3 +1,5 @@
+use jsonrpc::error::RpcError;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Tiny HTTP Error: {0}")]
@@ -18,4 +20,10 @@ pub enum Error {
 
     #[error("Trying to join a non started server")]
     NotStarted,
+
+    #[error("In the response received neither the result nor the error are set")]
+    NeitherResultNorErrorSet,
+
+    #[error("Rpc returned an error {0:?}")]
+    RpcError(RpcError),
 }

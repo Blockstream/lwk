@@ -153,8 +153,12 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "address" => {
             let r: model::AddressRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
-            let s = state.lock().unwrap();
-            let wollet = s.wollets.get(&r.name).unwrap(); // TODO: unknown wallet
+            let mut s = state.lock().unwrap();
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            wollet.sync_txs()?; // To update the last unused index
             let addr = wollet.address(r.index)?;
             Response::result(
                 request.id,
@@ -168,7 +172,10 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::BalanceRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let wollet = s.wollets.get_mut(&r.name).unwrap(); // TODO: unknown wallet
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
             wollet.sync_txs()?;
             let balance = wollet.balance()?;
             Response::result(

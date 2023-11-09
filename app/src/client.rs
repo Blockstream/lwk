@@ -1,8 +1,10 @@
 use std::net::SocketAddr;
 
+use serde::de::DeserializeOwned;
 use serde_json::value::to_raw_value;
 use serde_json::Value;
 
+use crate::error::Error;
 use crate::model::*;
 use crate::Result;
 
@@ -20,44 +22,58 @@ impl Client {
     pub fn version(&self) -> Result<VersionResponse> {
         let request = self.client.build_request("version", None);
         let response = self.client.send_request(request)?;
-        // todo: error
-        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+        result_or_error(response)
     }
 
     pub fn generate_signer(&self) -> Result<GenerateSignerResponse> {
         let request = self.client.build_request("generate_signer", None);
         let response = self.client.send_request(request)?;
-        // todo: error
-        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+        result_or_error(response)
     }
 
     pub fn load_signer(&self, mnemonic: String) -> Result<LoadSignerResponse> {
         let params = to_raw_value(&mnemonic)?;
         let request = self.client.build_request("load_signer", Some(&params));
         let response = self.client.send_request(request)?;
-        // todo: error
-        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+        result_or_error(response)
     }
 
     pub fn load_wallet(&self, descriptor: String, name: String) -> Result<LoadWalletResponse> {
         let params = to_raw_value(&LoadWalletRequest { descriptor, name })?;
         let request = self.client.build_request("load_wallet", Some(&params));
         let response = self.client.send_request(request)?;
-        // todo: error
-        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+        result_or_error(response)
     }
 
     pub fn balance(&self, name: String) -> Result<BalanceResponse> {
         let params = to_raw_value(&BalanceRequest { name })?;
         let request = self.client.build_request("balance", Some(&params));
         let response = self.client.send_request(request)?;
-        // todo: error
-        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+        result_or_error(response)
+    }
+
+    pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse> {
+        let params = to_raw_value(&AddressRequest { name, index })?;
+        let request = self.client.build_request("address", Some(&params));
+        let response = self.client.send_request(request)?;
+        result_or_error(response)
     }
 
     pub fn stop(&self) -> Result<Value> {
         let request = self.client.build_request("stop", None);
         let _response = self.client.send_request(request)?;
         Ok(Value::Null)
+    }
+}
+
+fn result_or_error<T: DeserializeOwned>(
+    response: jsonrpc::Response,
+) -> std::result::Result<T, Error> {
+    match response.result.as_ref() {
+        Some(result) => Ok(serde_json::from_str(result.get()).unwrap()),
+        None => match response.error {
+            Some(rpc_err) => Err(Error::RpcError(rpc_err)),
+            None => Err(Error::NeitherResultNorErrorSet),
+        },
     }
 }

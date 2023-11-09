@@ -160,7 +160,7 @@ mod test {
 
     fn sh(command: &str) -> Value {
         let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
-        cli.stderr = true;
+        cli.stderr = std::env::var("RUST_LOG").is_ok();
         // cli.network = Network::Regtest;
         inner_main(cli).unwrap()
     }
@@ -173,6 +173,26 @@ mod test {
         std::thread::sleep(std::time::Duration::from_millis(100));
         let result = sh("cli signer generate");
         assert!(result.get("mnemonic").is_some());
+
+        let result = sh("cli wallets-list");
+        let wallets = result.get("wallets").unwrap();
+        assert!(wallets.as_array().unwrap().is_empty());
+
+        let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
+        let result = sh(&format!("cli wallet --name custody load {desc}"));
+        assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
+
+        let result = sh("cli wallets-list");
+        let wallets = result.get("wallets").unwrap();
+        assert!(!wallets.as_array().unwrap().is_empty());
+
+        let result = sh("cli wallet --name custody unload");
+        assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
+        assert!(result.get("unloaded").unwrap().as_bool().unwrap());
+
+        let result = sh("cli wallets-list");
+        let wallets = result.get("wallets").unwrap();
+        assert!(wallets.as_array().unwrap().is_empty());
 
         sh("cli server stop");
         std::thread::sleep(std::time::Duration::from_millis(100));

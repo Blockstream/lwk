@@ -24,7 +24,17 @@ pub struct LoadWalletRequest {
 pub struct LoadWalletResponse {
     pub descriptor: String,
     pub name: String,
-    pub new: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnloadWalletRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnloadWalletResponse {
+    pub descriptor: Option<String>,
+    pub unloaded: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

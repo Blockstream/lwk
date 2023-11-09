@@ -66,12 +66,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     // get a client to make requests
     let client = app.client()?;
 
-    let is_the_server_running = || {
-        format!(
-            "Cannot connect to \"{}\". Is the server running?",
-            app.addr()
-        )
-    };
+    let error_from = || format!("From \"{}\"", app.addr());
 
     Ok(match args.command {
         CliCommand::Server(a) => {
@@ -126,9 +121,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
-                let j = client
-                    .generate_signer()
-                    .with_context(is_the_server_running)?;
+                let j = client.generate_signer().with_context(error_from)?;
                 serde_json::to_value(j)?
             }
             args::SignerCommand::Sign => todo!(),
@@ -137,19 +130,20 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             args::WalletCommand::Load { descriptor } => {
                 let r = client
                     .load_wallet(descriptor, a.name)
-                    .with_context(is_the_server_running)?;
+                    .with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            args::WalletCommand::Unload => todo!(),
+            args::WalletCommand::Unload => {
+                let r = client.unload_wallet(a.name).with_context(error_from)?;
+                serde_json::to_value(r)?
+            }
             args::WalletCommand::Balance => {
-                let r = client.balance(a.name).with_context(is_the_server_running)?;
+                let r = client.balance(a.name).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
             args::WalletCommand::Tx => todo!(),
             args::WalletCommand::Address { index } => {
-                let r = client
-                    .address(a.name, index)
-                    .with_context(is_the_server_running)?;
+                let r = client.address(a.name, index).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
         },

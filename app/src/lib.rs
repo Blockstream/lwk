@@ -112,6 +112,9 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::LoadWalletRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
+            if s.wollets.contains_key(&r.name) {
+                return Err(tiny_jrpc::error::Error::WalletAlreadyLoaded(r.name));
+            }
             let wollet = Wollet::new(
                 s.config.network.clone(),
                 &s.config.electrum_url,
@@ -120,13 +123,25 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 &s.config.datadir,
                 &r.descriptor,
             )?;
-            let new = s.wollets.insert(r.name.clone(), wollet).is_none();
+            s.wollets.insert(r.name.clone(), wollet);
             Response::result(
                 request.id,
                 serde_json::to_value(model::LoadWalletResponse {
                     descriptor: r.descriptor,
                     name: r.name,
-                    new,
+                })?,
+            )
+        }
+        "unload_wallet" => {
+            let r: model::UnloadWalletRequest =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let mut s = state.lock().unwrap();
+            let old = s.wollets.remove(&r.name);
+            Response::result(
+                request.id,
+                serde_json::to_value(model::UnloadWalletResponse {
+                    unloaded: old.is_some(),
+                    descriptor: old.map(|w| w.descriptor().to_string()),
                 })?,
             )
         }

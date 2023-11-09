@@ -27,6 +27,9 @@ pub enum Error {
 
     #[error("Not existing wallet name: {0}")]
     WalletNotExist(String),
+
+    #[error("Wallet {0} is already loaded")]
+    WalletAlreadyLoaded(String),
 }
 
 impl Error {
@@ -68,6 +71,11 @@ impl Error {
                 "Wallet not exist error.".to_string(),
                 None,
             ),
+            Error::WalletAlreadyLoaded(_) => (
+                WALLET_ALREADY_LOADED,
+                "Wallet already loaded.".to_string(),
+                None,
+            ),
         };
 
         RpcError {
@@ -105,5 +113,6 @@ pub const WOLLET_ERROR: i64 = -32_005;
 pub const SIGNER_NEW_ERROR: i64 = -32_006;
 pub const SIGNER_ERROR: i64 = -32_007;
 pub const WALLET_NOT_EXIST_ERROR: i64 = -32_008;
+pub const WALLET_ALREADY_LOADED: i64 = -32_009;
 
 pub const STOP_ERROR: i64 = -32_099;

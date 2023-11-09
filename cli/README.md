@@ -56,7 +56,7 @@ Every command requires the server running.
 Generate a software signer ("stateless" request)
 
 ```sh
-cli signer generate
+$ cli signer generate
 ```
 
 is equivalent to:
@@ -81,6 +81,12 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 $ curl --header "Content-Type: application/json" --request POST --data '{"method":"balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
 ```
 
+Request an address:
+
+```sh
+$ cli wallet --name custody address
+$ cli wallet --name custody address --index 4
+```
 
 An error test case:
 

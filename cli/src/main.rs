@@ -147,6 +147,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
         },
+        CliCommand::WalletsList => serde_json::to_value(client.list_wallets()?)?,
     })
 }
 

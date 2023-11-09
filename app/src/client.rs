@@ -52,6 +52,12 @@ impl Client {
         result_or_error(response)
     }
 
+    pub fn list_wallets(&self) -> Result<ListWalletsResponse> {
+        let request = self.client.build_request("list_wallets", None);
+        let response = self.client.send_request(request)?;
+        result_or_error(response)
+    }
+
     pub fn balance(&self, name: String) -> Result<BalanceResponse> {
         let params = to_raw_value(&BalanceRequest { name })?;
         let request = self.client.build_request("balance", Some(&params));

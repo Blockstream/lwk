@@ -27,6 +27,11 @@ pub struct LoadWalletResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ListWalletsResponse {
+    pub wallets: Vec<LoadWalletResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UnloadWalletRequest {
     pub name: String,
 }

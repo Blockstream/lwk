@@ -35,6 +35,8 @@ pub enum CliCommand {
     Signer(SignerArgs),
     /// wallet
     Wallet(WalletArgs),
+
+    WalletsList,
 }
 
 #[derive(Debug, Args)]

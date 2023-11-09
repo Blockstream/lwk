@@ -8,6 +8,8 @@ use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::{Wollet, EC};
 
+use crate::model::{ListWalletsResponse, LoadWalletResponse};
+
 pub mod client;
 pub mod config;
 pub mod consts;
@@ -144,6 +146,19 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     descriptor: old.map(|w| w.descriptor().to_string()),
                 })?,
             )
+        }
+        "list_wallets" => {
+            let s = state.lock().unwrap();
+            let wallets: Vec<_> = s
+                .wollets
+                .iter()
+                .map(|(name, wollet)| LoadWalletResponse {
+                    descriptor: wollet.descriptor().to_string(),
+                    name: name.clone(),
+                })
+                .collect();
+            let r = ListWalletsResponse { wallets };
+            Response::result(request.id, serde_json::to_value(r)?)
         }
         "load_signer" => {
             let r: model::LoadSignerRequest =

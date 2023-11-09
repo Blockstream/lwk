@@ -186,6 +186,16 @@ mod test {
         let wallets = result.get("wallets").unwrap();
         assert!(!wallets.as_array().unwrap().is_empty());
 
+        let result = sh("cli wallet --name custody balance");
+        let balance_obj = result.get("balance").unwrap();
+        let asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
+        let policy_obj = balance_obj.get(asset).unwrap();
+        assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
+
+        let result = sh("cli wallet --name custody address --index 0");
+        assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
+        assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
+
         let result = sh("cli wallet --name custody unload");
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
         assert!(result.get("unloaded").unwrap().as_bool().unwrap());

@@ -117,6 +117,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             if s.wollets.contains_key(&r.name) {
                 return Err(tiny_jrpc::error::Error::WalletAlreadyLoaded(r.name));
             }
+            // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
                 s.config.network.clone(),
                 &s.config.electrum_url,

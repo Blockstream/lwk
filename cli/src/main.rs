@@ -158,11 +158,15 @@ mod test {
 
     use crate::{args::Cli, inner_main};
 
-    fn sh(command: &str) -> Value {
+    fn sh_result(command: &str) -> anyhow::Result<Value> {
         let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
         cli.stderr = std::env::var("RUST_LOG").is_ok();
         // cli.network = Network::Regtest;
-        inner_main(cli).unwrap()
+        inner_main(cli)
+    }
+
+    fn sh(command: &str) -> Value {
+        sh_result(command).unwrap()
     }
 
     #[test]
@@ -182,6 +186,9 @@ mod test {
         let result = sh(&format!("cli wallet --name custody load {desc}"));
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
+        let result = sh_result(&format!("cli wallet --name custody load {desc}"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet custody is already loaded"));
+
         let result = sh("cli wallets-list");
         let wallets = result.get("wallets").unwrap();
         assert!(!wallets.as_array().unwrap().is_empty());
@@ -191,6 +198,9 @@ mod test {
         let asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
         let policy_obj = balance_obj.get(asset).unwrap();
         assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
+
+        let result = sh_result("cli wallet --name notexist balance");
+        assert!(format!("{:?}", result.unwrap_err()).contains("Not existing wallet name: notexist"));
 
         let result = sh("cli wallet --name custody address --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");

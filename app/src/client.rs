@@ -36,7 +36,6 @@ impl Client {
         let request = self.client.build_request("load_signer", Some(&params));
         let response = self.client.send_request(request)?;
         // todo: error
-        dbg!(response.error);
         Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
     }
 
@@ -45,7 +44,14 @@ impl Client {
         let request = self.client.build_request("load_wallet", Some(&params));
         let response = self.client.send_request(request)?;
         // todo: error
-        dbg!(response.error);
+        Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
+    }
+
+    pub fn balance(&self, name: String) -> Result<BalanceResponse> {
+        let params = to_raw_value(&BalanceRequest { name })?;
+        let request = self.client.build_request("balance", Some(&params));
+        let response = self.client.send_request(request)?;
+        // todo: error
         Ok(serde_json::from_str(response.result.unwrap().get()).unwrap())
     }
 

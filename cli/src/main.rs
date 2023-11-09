@@ -66,6 +66,13 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     // get a client to make requests
     let client = app.client()?;
 
+    let is_the_server_running = || {
+        format!(
+            "Cannot connect to \"{}\". Is the server running?",
+            app.addr()
+        )
+    };
+
     Ok(match args.command {
         CliCommand::Server(a) => {
             match a.command {
@@ -119,16 +126,24 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         }
         CliCommand::Signer(a) => match a.command {
             args::SignerCommand::Generate => {
-                let j = client.generate_signer().with_context(|| {
-                    format!(
-                        "Cannot connect to \"{}\". Is the server running?",
-                        app.addr()
-                    )
-                })?;
+                let j = client
+                    .generate_signer()
+                    .with_context(is_the_server_running)?;
                 serde_json::to_value(j)?
             }
+            args::SignerCommand::Sign => todo!(),
         },
-        CliCommand::Wallet(_) => todo!(),
+        CliCommand::Wallet(a) => match a.command {
+            args::WalletCommand::Load { descriptor } => {
+                let r = client
+                    .load_wallet(descriptor, a.name)
+                    .with_context(is_the_server_running)?;
+                serde_json::to_value(r)?
+            }
+            args::WalletCommand::Unload => todo!(),
+            args::WalletCommand::Balance => todo!(),
+            args::WalletCommand::Tx => todo!(),
+        },
     })
 }
 

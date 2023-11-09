@@ -46,17 +46,25 @@ pub struct SignerArgs {
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
     Generate,
+    Sign,
 }
 
 #[derive(Debug, Args)]
 pub struct WalletArgs {
+    /// Wallet name
+    #[arg(short, long)]
+    pub name: String,
+
     #[command(subcommand)]
     pub command: WalletCommand,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum WalletCommand {
+    Load { descriptor: String },
+    Unload,
     Balance,
+    Tx,
 }
 
 #[derive(Debug, Args)]

@@ -312,9 +312,8 @@ mod test {
 
         let client = Client::simple_http(&url, None, None).unwrap();
         let val = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks";
-        let raw = to_raw_value(val).unwrap();
-        let params = &[raw.clone()];
-        let request = client.build_request("echo", params);
+        let params = to_raw_value(val).unwrap();
+        let request = client.build_request("echo", Some(&params));
         let req = request.clone();
 
         let response = client.send_request(request).unwrap();
@@ -322,7 +321,7 @@ mod test {
         assert_eq!(response.id, req.id);
         assert_eq!(response.jsonrpc.unwrap().as_str(), req.jsonrpc.unwrap());
         let result = response.result.unwrap();
-        let expected = serde_json::to_string(&json!([raw])).unwrap();
+        let expected = serde_json::to_string(&json!(params)).unwrap();
         assert_eq!(result.get(), expected.as_str());
 
         rpc.stop();
@@ -339,7 +338,7 @@ mod test {
         let url = format!("127.0.0.1:{}", port);
 
         let client = Client::simple_http(&url, None, None).unwrap();
-        let request = client.build_request("rpc.reserved", &[]);
+        let request = client.build_request("rpc.reserved", None);
 
         let response = client.send_request(request).unwrap();
         // dbg!(&response.error);

@@ -87,7 +87,11 @@ impl App {
 }
 
 fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
-    tracing::debug!("method: {}", request.method.as_str());
+    tracing::debug!(
+        "method: {} params: {:?} ",
+        request.method.as_str(),
+        request.params
+    );
     let response = match request.method.as_str() {
         "generate_signer" => {
             let (_signer, mnemonic) = SwSigner::random(&EC)?;
@@ -208,7 +212,7 @@ mod tests {
         dbg!(&url);
 
         let client = jsonrpc::Client::simple_http(&url, None, None).unwrap();
-        let request = client.build_request("version", &[]);
+        let request = client.build_request("version", None);
         let response = client.send_request(request).unwrap();
 
         let result = response.result.unwrap().to_string();

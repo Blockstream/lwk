@@ -94,6 +94,9 @@ pub enum WalletCommand {
         name: String,
     },
 
+    /// List existing loaded wallets
+    List,
+
     /// Get an address from the given wallet name
     Address {
         /// Wallet name
@@ -117,9 +120,6 @@ pub enum WalletCommand {
         #[arg(short, long)]
         name: String,
     },
-
-    /// List existing loaded wallets
-    List,
 }
 
 #[derive(Debug, Args)]

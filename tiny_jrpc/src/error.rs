@@ -40,6 +40,8 @@ pub enum Error {
 
 impl Error {
     pub fn as_rpc_error(&self) -> RpcError {
+        use RpcIntErrors::*;
+
         let (code, data) = match self {
             Error::Io(_) => (IO_ERROR, None),
             Error::Serde(_) => (PARSE_ERROR, None),
@@ -58,7 +60,7 @@ impl Error {
         };
 
         RpcError {
-            code,
+            code: code as i64,
             message: self.to_string(),
             data,
         }
@@ -67,33 +69,36 @@ impl Error {
 
 // from: https://www.jsonrpc.org/specification#error_object
 
-// -32700 	Parse error 	Invalid JSON was received by the server.  An error occurred on the server while parsing the JSON text.
-pub const PARSE_ERROR: i64 = -32_700;
+#[allow(non_camel_case_types)]
+pub enum RpcIntErrors {
+    // -32700 	Parse error 	Invalid JSON was received by the server.  An error occurred on the server while parsing the JSON text.
+    PARSE_ERROR = -32_700,
 
-// -32600 	Invalid Request 	The JSON sent is not a valid Request object.
-pub const INVALID_REQUEST: i64 = -32_600;
+    // -32600 	Invalid Request 	The JSON sent is not a valid Request object.
+    INVALID_REQUEST = -32_600,
 
-// -32601 	Method not found 	The method does not exist / is not available.
-pub const METHOD_NOT_FOUND: i64 = -32_601;
+    // -32601 	Method not found 	The method does not exist / is not available.
+    METHOD_NOT_FOUND = -32_601,
 
-// -32602 	Invalid params 	Invalid method parameter(s).
-pub const INVALID_PARAMS: i64 = -32_602;
+    // -32602 	Invalid params 	Invalid method parameter(s).
+    INVALID_PARAMS = -32_602,
 
-// -32603 	Internal error 	Internal JSON-RPC error.
-pub const INTERNAL_ERROR: i64 = -32_603;
+    // -32603 	Internal error 	Internal JSON-RPC error.
+    INTERNAL_ERROR = -32_603,
 
-// -32000 to -32099 	Server error 	Reserved for implementation-defined server-errors.
-pub const IO_ERROR: i64 = -32_000;
-pub const NO_CONTENT_TYPE: i64 = -32_001;
-pub const WRONG_CONTENT_TYPE: i64 = -32_002;
-pub const METHOD_RESERVED: i64 = -32_003;
-pub const INVALID_VERSION: i64 = -32_004;
-pub const WOLLET_ERROR: i64 = -32_005;
-pub const SIGNER_NEW_ERROR: i64 = -32_006;
-pub const SIGNER_ERROR: i64 = -32_007;
-pub const WALLET_NOT_EXIST_ERROR: i64 = -32_008;
-pub const WALLET_ALREADY_LOADED: i64 = -32_009;
-pub const SIGNER_NOT_EXIST_ERROR: i64 = -32_010;
-pub const SIGNER_ALREADY_LOADED: i64 = -32_011;
+    // -32000 to -32099 	Server error 	Reserved for implementation-defined server-errors.
+    IO_ERROR = -32_000,
+    NO_CONTENT_TYPE = -32_001,
+    WRONG_CONTENT_TYPE = -32_002,
+    METHOD_RESERVED = -32_003,
+    INVALID_VERSION = -32_004,
+    WOLLET_ERROR = -32_005,
+    SIGNER_NEW_ERROR = -32_006,
+    SIGNER_ERROR = -32_007,
+    WALLET_NOT_EXIST_ERROR = -32_008,
+    WALLET_ALREADY_LOADED = -32_009,
+    SIGNER_NOT_EXIST_ERROR = -32_010,
+    SIGNER_ALREADY_LOADED = -32_011,
 
-pub const STOP_ERROR: i64 = -32_099;
+    STOP_ERROR = -32_099,
+}

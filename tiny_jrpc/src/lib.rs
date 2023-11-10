@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use error::{Error, METHOD_NOT_FOUND};
+use error::{Error, RpcIntErrors};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Response as HttpResponse;
@@ -250,7 +250,12 @@ impl Response {
     }
 
     pub fn unimplemented(id: Option<Id>) -> Self {
-        Self::error(id, METHOD_NOT_FOUND, "Method not found.".into(), None)
+        Self::error(
+            id,
+            RpcIntErrors::METHOD_NOT_FOUND as i64,
+            "Method not found.".into(),
+            None,
+        )
     }
 
     pub fn is_error(&self) -> bool {

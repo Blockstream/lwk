@@ -66,7 +66,17 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     // get a client to make requests
     let client = app.client()?;
 
-    let error_from = || format!("From \"{}\"", app.addr());
+    // verify the server is up
+    if let CliCommand::Server(args::ServerArgs {
+        command: ServerCommand::Start,
+    }) = args.command
+    {
+        // unless I am starting it
+    } else {
+        if let Err(_) = client.version() {
+            return Err(anyhow!("Is the server at {:?} running?", app.addr()));
+        }
+    }
 
     Ok(match args.command {
         CliCommand::Server(a) => {
@@ -113,7 +123,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     tracing::debug!("Threads ended");
                 }
                 ServerCommand::Stop => {
-                    client.stop().with_context(error_from)?;
+                    client.stop()?;
                 }
             }
 
@@ -121,47 +131,39 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         }
         CliCommand::Signer(a) => match a.command {
             SignerCommand::Generate => {
-                let j = client.generate_signer().with_context(error_from)?;
+                let j = client.generate_signer()?;
                 serde_json::to_value(j)?
             }
             SignerCommand::Sign => todo!(),
             SignerCommand::Load { mnemonic, name } => {
-                let j: app::model::SignerResponse = client
-                    .load_signer(mnemonic, name)
-                    .with_context(error_from)?;
+                let j: app::model::SignerResponse = client.load_signer(mnemonic, name)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::List => {
-                serde_json::to_value(client.list_signers().with_context(error_from)?)?
-            }
+            SignerCommand::List => serde_json::to_value(client.list_signers()?)?,
             SignerCommand::Unload { name } => {
-                let r = client.unload_signer(name).with_context(error_from)?;
+                let r = client.unload_signer(name)?;
                 serde_json::to_value(r)?
             }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {
-                let r = client
-                    .load_wallet(descriptor, name)
-                    .with_context(error_from)?;
+                let r = client.load_wallet(descriptor, name)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Unload { name } => {
-                let r = client.unload_wallet(name).with_context(error_from)?;
+                let r = client.unload_wallet(name)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Balance { name } => {
-                let r = client.balance(name).with_context(error_from)?;
+                let r = client.balance(name)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Tx { name: _ } => todo!(),
             WalletCommand::Address { index, name } => {
-                let r = client.address(name, index).with_context(error_from)?;
+                let r = client.address(name, index)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::List => {
-                serde_json::to_value(client.list_wallets().with_context(error_from)?)?
-            }
+            WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
         },
     })
 }

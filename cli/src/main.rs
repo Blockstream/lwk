@@ -246,6 +246,11 @@ mod test {
         ));
         assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
+        let result = sh_result(&format!(
+            r#"cli signer load --mnemonic "{mnemonic}" --name ss2 "#
+        ));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
+
         let result = sh("cli signer list");
         let signers = result.get("signers").unwrap();
         assert!(!signers.as_array().unwrap().is_empty());

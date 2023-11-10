@@ -175,9 +175,22 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             if s.signers.contains_key(&r.name) {
                 return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(r.name));
             }
-            // TODO recognize different name same sigmer?
 
             let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
+
+            let vec: Vec<_> = s
+                .signers
+                .iter()
+                .filter(|(_, s)| s.id().unwrap() == signer.id().unwrap())
+                .map(|(n, _)| n)
+                .collect();
+            if let Some(existing) = vec.first() {
+                // TODO: maybe a different error more clear?
+                return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(
+                    existing.to_string(),
+                ));
+            }
+
             let resp: SignerResponse = (r.name.clone(), &signer).try_into()?;
 
             s.signers.insert(r.name, signer);

@@ -14,7 +14,7 @@ pub struct Cli {
     #[structopt(short, long, default_value = "testnet")]
     pub network: Network,
 
-    /// Electrum URL
+    /// Electrum URL, if not specified a reasonable default is specified according to the network
     #[structopt(short, long)]
     pub electrum_url: Option<String>,
 
@@ -29,11 +29,11 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
-    /// server only
+    /// To start and stop the server
     Server(ServerArgs),
-    /// signer
+    /// Signer related commands (generate, load, list, sign...)
     Signer(SignerArgs),
-    /// wallet
+    /// Wallet related commands (load, list, balance, address, tx...)
     Wallet(WalletArgs),
 }
 
@@ -45,7 +45,10 @@ pub struct SignerArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
+    /// Generate a softwawre signer, returns a mnemonic
     Generate,
+
+    /// Load a software signer from a mnemonic giving it a name
     Load {
         #[arg(long)]
         mnemonic: String,
@@ -53,7 +56,11 @@ pub enum SignerCommand {
         #[arg(long)]
         name: String,
     },
+
+    /// List loaded signers
     List,
+
+    /// Sign a transaction
     Sign,
 }
 
@@ -65,6 +72,7 @@ pub struct WalletArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum WalletCommand {
+    /// Load a wallet with a CT descriptor giving it a name
     Load {
         /// Wallet name
         #[arg(short, long)]
@@ -72,11 +80,15 @@ pub enum WalletCommand {
 
         descriptor: String,
     },
+
+    /// Unload a wallet
     Unload {
         /// Wallet name
         #[arg(short, long)]
         name: String,
     },
+
+    /// Get an address from the given wallet name
     Address {
         /// Wallet name
         #[arg(short, long)]
@@ -85,16 +97,22 @@ pub enum WalletCommand {
         #[arg(long)]
         index: Option<u32>,
     },
+
+    /// Get the balance of the given wallet name
     Balance {
         /// Wallet name
         #[arg(short, long)]
         name: String,
     },
+
+    /// Create an unsigned transaction (PSET) (send, issue, reissue, burn)
     Tx {
         /// Wallet name
         #[arg(short, long)]
         name: String,
     },
+
+    /// List existing loaded wallets
     List,
 }
 
@@ -106,6 +124,9 @@ pub struct ServerArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ServerCommand {
+    /// Start the server
     Start,
+
+    /// Stop the server, could be stopped also with SIGINT (ctrl-c)
     Stop,
 }

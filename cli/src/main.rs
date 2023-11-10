@@ -208,8 +208,15 @@ mod test {
         let result = sh(&format!("cli wallet load --name custody {desc}"));
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-        let result = sh_result(&format!("cli wallet load --name custody {desc}"));
+        let result = sh_result(&format!("cli wallet load --name custody anything"));
         assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+
+        let result = sh_result(&format!("cli wallet load --name differentname {desc}"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+
+        let result = sh_result(&format!("cli wallet load --name wrong wrong"));
+        assert!(format!("{:?}", result.unwrap_err())
+            .contains("Invalid descriptor: Not a CT Descriptor"));
 
         let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();

@@ -126,6 +126,22 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 &s.config.datadir,
                 &r.descriptor,
             )?;
+
+            let a = |w: &Wollet| w.address(Some(0)).unwrap().address().to_string();
+
+            let vec: Vec<_> = s
+                .wollets
+                .iter()
+                .filter(|(_, w)| a(w) == a(&wollet))
+                .map(|(n, _)| n)
+                .collect();
+            if let Some(existing) = vec.first() {
+                // TODO: maybe a different error more clear?
+                return Err(tiny_jrpc::error::Error::WalletAlreadyLoaded(
+                    existing.to_string(),
+                ));
+            }
+
             s.wollets.insert(r.name.clone(), wollet);
             Response::result(
                 request.id,

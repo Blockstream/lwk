@@ -175,7 +175,8 @@ mod test {
 
     #[track_caller]
     fn sh_result(command: &str) -> anyhow::Result<Value> {
-        let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
+        let shell_words = shellwords::split(command).unwrap();
+        let mut cli = Cli::try_parse_from(shell_words).unwrap();
         cli.stderr = std::env::var("RUST_LOG").is_ok();
         // cli.network = Network::Regtest;
         inner_main(cli)
@@ -239,8 +240,23 @@ mod test {
         assert!(signers.as_array().unwrap().is_empty());
 
         let result = sh("cli signer generate");
-        let _mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
-        // let result = sh("cli signer load --name ss --mnemonic {mnemonic}"); // TODO not supported in our test because of how we naively split the command
+        let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+        let result = sh(&format!(
+            r#"cli signer load --mnemonic "{mnemonic}" --name ss "#
+        ));
+        assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
+
+        let result = sh("cli signer list");
+        let signers = result.get("signers").unwrap();
+        assert!(!signers.as_array().unwrap().is_empty());
+
+        let result = sh("cli signer unload --name ss");
+        let unloaded = result.get("unloaded").unwrap();
+        assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
+
+        let result = sh("cli signer list");
+        let signers = result.get("signers").unwrap();
+        assert!(signers.as_array().unwrap().is_empty());
 
         sh("cli server stop");
         std::thread::sleep(std::time::Duration::from_millis(100));

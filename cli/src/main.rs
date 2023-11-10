@@ -72,10 +72,8 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     }) = args.command
     {
         // unless I am starting it
-    } else {
-        if let Err(_) = client.version() {
-            return Err(anyhow!("Is the server at {:?} running?", app.addr()));
-        }
+    } else if client.version().is_err() {
+        return Err(anyhow!("Is the server at {:?} running?", app.addr()));
     }
 
     Ok(match args.command {
@@ -208,13 +206,13 @@ mod test {
         let result = sh(&format!("cli wallet load --name custody {desc}"));
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-        let result = sh_result(&format!("cli wallet load --name custody anything"));
+        let result = sh_result("cli wallet load --name custody anything");
         assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
         let result = sh_result(&format!("cli wallet load --name differentname {desc}"));
         assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-        let result = sh_result(&format!("cli wallet load --name wrong wrong"));
+        let result = sh_result("cli wallet load --name wrong wrong");
         assert!(format!("{:?}", result.unwrap_err())
             .contains("Invalid descriptor: Not a CT Descriptor"));
 

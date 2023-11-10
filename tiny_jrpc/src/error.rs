@@ -25,74 +25,41 @@ pub enum Error {
     #[error("Received stop command")]
     Stop,
 
-    #[error("Wallet {0} does not exist")]
+    #[error("Wallet '{0}' does not exist")]
     WalletNotExist(String),
 
-    #[error("Wallet {0} is already loaded")]
+    #[error("Wallet '{0}' is already loaded")]
     WalletAlreadyLoaded(String),
 
-    #[error("Signer {0} does not exist")]
+    #[error("Signer '{0}' does not exist")]
     SignerNotExist(String),
 
-    #[error("Signer {0} is already loaded")]
+    #[error("Signer '{0}' is already loaded")]
     SignerAlreadyLoaded(String),
 }
 
 impl Error {
     pub fn as_rpc_error(&self) -> RpcError {
-        let (code, message, data) = match self {
-            Error::Io(_) => (IO_ERROR, "An IO error occurred.".to_string(), None),
-            Error::Serde(_) => (
-                PARSE_ERROR,
-                "Invalid JSON was received by the server.".to_string(),
-                None,
-            ),
-            Error::NoContentType => (
-                NO_CONTENT_TYPE,
-                "Content-Type header is missing.".to_string(),
-                None,
-            ),
-            Error::WrongContentType => (
-                WRONG_CONTENT_TYPE,
-                "Content-Type header is invalid, it should be 'application/json'.".to_string(),
-                None,
-            ),
-            Error::ReservedMethodPrefix => (
-                METHOD_RESERVED,
-                "Method names that begin with 'rpc.' are reserved for system extensions."
-                    .to_string(),
-                None,
-            ),
-            Error::InvalidVersion => (
-                INVALID_VERSION,
-                "jsonrpc version is invalid, it should be '2.0'.".to_string(),
-                None,
-            ),
-            Error::Wollet(_) => (WOLLET_ERROR, "Watch Only wallet error.".to_string(), None),
-            Error::SignerNew(_) => (SIGNER_NEW_ERROR, "Signer new error.".to_string(), None),
-            Error::Signer(_) => (SIGNER_ERROR, "Signer error.".to_string(), None),
-            Error::Stop => (STOP_ERROR, "Stop error.".to_string(), None),
-            Error::WalletNotExist(_) => (
-                WALLET_NOT_EXIST_ERROR,
-                "Wallet not exist error.".to_string(),
-                None,
-            ),
-            Error::WalletAlreadyLoaded(_) => (
-                WALLET_ALREADY_LOADED,
-                "Wallet already loaded.".to_string(),
-                None,
-            ),
-            Error::SignerAlreadyLoaded(_) => (
-                SIGNER_ALREADY_LOADED,
-                "Signer already loaded.".to_string(),
-                None,
-            ),
-            Error::SignerNotExist(_) => todo!(),
+        let (code, data) = match self {
+            Error::Io(_) => (IO_ERROR, None),
+            Error::Serde(_) => (PARSE_ERROR, None),
+            Error::NoContentType => (NO_CONTENT_TYPE, None),
+            Error::WrongContentType => (WRONG_CONTENT_TYPE, None),
+            Error::ReservedMethodPrefix => (METHOD_RESERVED, None),
+            Error::InvalidVersion => (INVALID_VERSION, None),
+            Error::Wollet(_) => (WOLLET_ERROR, None),
+            Error::SignerNew(_) => (SIGNER_NEW_ERROR, None),
+            Error::Signer(_) => (SIGNER_ERROR, None),
+            Error::Stop => (STOP_ERROR, None),
+            Error::WalletNotExist(_) => (WALLET_NOT_EXIST_ERROR, None),
+            Error::WalletAlreadyLoaded(_) => (WALLET_ALREADY_LOADED, None),
+            Error::SignerAlreadyLoaded(_) => (SIGNER_ALREADY_LOADED, None),
+            Error::SignerNotExist(_) => (SIGNER_NOT_EXIST_ERROR, None),
         };
 
         RpcError {
             code,
-            message,
+            message: self.to_string(),
             data,
         }
     }

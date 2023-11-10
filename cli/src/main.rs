@@ -207,7 +207,7 @@ mod test {
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
         let result = sh_result(&format!("cli wallet load --name custody {desc}"));
-        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet custody is already loaded"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
         let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();
@@ -220,7 +220,7 @@ mod test {
         assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
 
         let result = sh_result("cli wallet balance --name notexist");
-        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet notexist does not exist"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
 
         let result = sh("cli wallet address --name custody --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");

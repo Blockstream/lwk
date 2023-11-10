@@ -185,12 +185,7 @@ where
         Err(Error::Stop) => return Err(Error::Stop),
         Err(err) => {
             tracing::error!("Error processing request: {}", err);
-            Response::error(
-                id,
-                -32603,
-                "Internal error".into(),
-                Some(err.to_string().into()), // todo: dont expose this by default, config
-            )
+            Response::from_error(id, err)
         }
     };
 

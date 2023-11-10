@@ -31,8 +31,8 @@ impl Client {
         result_or_error(response)
     }
 
-    pub fn load_signer(&self, mnemonic: String) -> Result<LoadSignerResponse> {
-        let params = to_raw_value(&mnemonic)?;
+    pub fn load_signer(&self, mnemonic: String, name: String) -> Result<LoadSignerResponse> {
+        let params = to_raw_value(&LoadSignerRequest { mnemonic, name })?;
         let request = self.client.build_request("load_signer", Some(&params));
         let response = self.client.send_request(request)?;
         result_or_error(response)

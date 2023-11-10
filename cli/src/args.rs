@@ -48,6 +48,14 @@ pub struct SignerArgs {
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
     Generate,
+    Load {
+        #[arg(long)]
+        mnemonic: String,
+
+        #[arg(long)]
+        name: String,
+    },
+    List,
     Sign,
 }
 

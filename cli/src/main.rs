@@ -6,7 +6,7 @@ use clap::Parser;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
-use crate::args::{CliCommand, Network, ServerCommand};
+use crate::args::{CliCommand, Network, ServerCommand, SignerCommand, WalletCommand};
 
 mod args;
 
@@ -120,29 +120,36 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             Value::Null
         }
         CliCommand::Signer(a) => match a.command {
-            args::SignerCommand::Generate => {
+            SignerCommand::Generate => {
                 let j = client.generate_signer().with_context(error_from)?;
                 serde_json::to_value(j)?
             }
-            args::SignerCommand::Sign => todo!(),
+            SignerCommand::Sign => todo!(),
+            SignerCommand::Load { mnemonic, name } => {
+                let j: app::model::LoadSignerResponse = client
+                    .load_signer(mnemonic, name)
+                    .with_context(error_from)?;
+                serde_json::to_value(j)?
+            }
+            SignerCommand::List => todo!(),
         },
         CliCommand::Wallet(a) => match a.command {
-            args::WalletCommand::Load { descriptor } => {
+            WalletCommand::Load { descriptor } => {
                 let r = client
                     .load_wallet(descriptor, a.name)
                     .with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            args::WalletCommand::Unload => {
+            WalletCommand::Unload => {
                 let r = client.unload_wallet(a.name).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            args::WalletCommand::Balance => {
+            WalletCommand::Balance => {
                 let r = client.balance(a.name).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            args::WalletCommand::Tx => todo!(),
-            args::WalletCommand::Address { index } => {
+            WalletCommand::Tx => todo!(),
+            WalletCommand::Address { index } => {
                 let r = client.address(a.name, index).with_context(error_from)?;
                 serde_json::to_value(r)?
             }

@@ -234,6 +234,14 @@ mod test {
         let wallets = result.get("wallets").unwrap();
         assert!(wallets.as_array().unwrap().is_empty());
 
+        let result = sh("cli signer list");
+        let signers = result.get("signers").unwrap();
+        assert!(signers.as_array().unwrap().is_empty());
+
+        let result = sh("cli signer generate");
+        let _mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+        // let result = sh("cli signer load --name ss --mnemonic {mnemonic}"); // TODO not supported in our test because of how we naively split the command
+
         sh("cli server stop");
         std::thread::sleep(std::time::Duration::from_millis(100));
     }

@@ -17,7 +17,7 @@ pub struct GenerateSignerResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListSignersResponse {
-    pub signers: Vec<LoadSignerResponse>,
+    pub signers: Vec<SignerResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,14 +27,14 @@ pub struct LoadWalletRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoadWalletResponse {
+pub struct WalletResponse {
     pub descriptor: String,
     pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListWalletsResponse {
-    pub wallets: Vec<LoadWalletResponse>,
+    pub wallets: Vec<WalletResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,8 +44,7 @@ pub struct UnloadWalletRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnloadWalletResponse {
-    pub name: String,
-    pub descriptor: String,
+    pub unloaded: WalletResponse,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,12 +60,11 @@ pub struct UnloadSignerRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnloadSignerResponse {
-    pub name: String,
-    pub identifier: String,
+    pub unloaded: SignerResponse,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoadSignerResponse {
+pub struct SignerResponse {
     pub name: String,
     pub id: XpubIdentifier,
     pub fingerprint: String,
@@ -95,7 +93,7 @@ pub struct BalanceResponse {
     pub balance: HashMap<AssetId, u64>,
 }
 
-impl<'a> TryFrom<(String, &Signer<'a>)> for LoadSignerResponse {
+impl<'a> TryFrom<(String, &Signer<'a>)> for SignerResponse {
     type Error = SignerError;
 
     fn try_from(name_and_signer: (String, &Signer<'a>)) -> Result<Self, Self::Error> {

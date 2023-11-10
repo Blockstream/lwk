@@ -31,7 +31,7 @@ impl Client {
         result_or_error(response)
     }
 
-    pub fn load_signer(&self, mnemonic: String, name: String) -> Result<LoadSignerResponse> {
+    pub fn load_signer(&self, mnemonic: String, name: String) -> Result<SignerResponse> {
         let params = to_raw_value(&LoadSignerRequest { mnemonic, name })?;
         let request = self.client.build_request("load_signer", Some(&params));
         let response = self.client.send_request(request)?;
@@ -44,7 +44,7 @@ impl Client {
         result_or_error(response)
     }
 
-    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<LoadWalletResponse> {
+    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<WalletResponse> {
         let params = to_raw_value(&LoadWalletRequest { descriptor, name })?;
         let request = self.client.build_request("load_wallet", Some(&params));
         let response = self.client.send_request(request)?;

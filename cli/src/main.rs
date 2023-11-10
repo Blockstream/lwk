@@ -126,7 +126,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             }
             SignerCommand::Sign => todo!(),
             SignerCommand::Load { mnemonic, name } => {
-                let j: app::model::LoadSignerResponse = client
+                let j: app::model::SignerResponse = client
                     .load_signer(mnemonic, name)
                     .with_context(error_from)?;
                 serde_json::to_value(j)?
@@ -226,8 +226,9 @@ mod test {
         assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
         let result = sh("cli wallet unload --name custody");
-        assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
-        assert_eq!(result.get("name").unwrap().as_str().unwrap(), "custody");
+        let unloaded = result.get("unloaded").unwrap();
+        assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
+        assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
         let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();

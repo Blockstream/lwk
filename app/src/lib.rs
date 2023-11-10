@@ -8,9 +8,7 @@ use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::{Wollet, EC};
 
-use crate::model::{
-    ListSignersResponse, ListWalletsResponse, LoadSignerResponse, LoadWalletResponse,
-};
+use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
 
 pub mod client;
 pub mod config;
@@ -131,7 +129,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             s.wollets.insert(r.name.clone(), wollet);
             Response::result(
                 request.id,
-                serde_json::to_value(model::LoadWalletResponse {
+                serde_json::to_value(model::WalletResponse {
                     descriptor: r.descriptor,
                     name: r.name,
                 })?,
@@ -145,8 +143,10 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 Some(removed) => Response::result(
                     request.id,
                     serde_json::to_value(model::UnloadWalletResponse {
-                        name: r.name,
-                        descriptor: removed.descriptor().to_string(),
+                        unloaded: WalletResponse {
+                            name: r.name,
+                            descriptor: removed.descriptor().to_string(),
+                        },
                     })?,
                 ),
                 None => {
@@ -159,7 +159,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let wallets: Vec<_> = s
                 .wollets
                 .iter()
-                .map(|(name, wollet)| LoadWalletResponse {
+                .map(|(name, wollet)| WalletResponse {
                     descriptor: wollet.descriptor().to_string(),
                     name: name.clone(),
                 })
@@ -178,7 +178,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             // TODO recognize different name same sigmer?
 
             let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
-            let resp: LoadSignerResponse = (r.name.clone(), &signer).try_into()?;
+            let resp: SignerResponse = (r.name.clone(), &signer).try_into()?;
 
             s.signers.insert(r.name, signer);
             Response::result(request.id, serde_json::to_value(resp)?)
@@ -188,13 +188,13 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             match s.signers.remove(&r.name) {
-                Some(removed) => Response::result(
-                    request.id,
-                    serde_json::to_value(model::UnloadSignerResponse {
-                        name: r.name,
-                        identifier: removed.id()?.to_string(),
-                    })?,
-                ),
+                Some(removed) => {
+                    let signer: SignerResponse = (r.name.clone(), &removed).try_into()?;
+                    Response::result(
+                        request.id,
+                        serde_json::to_value(model::UnloadSignerResponse { unloaded: signer })?,
+                    )
+                }
                 None => {
                     return Err(tiny_jrpc::error::Error::SignerNotExist(r.name));
                 }

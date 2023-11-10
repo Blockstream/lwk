@@ -1,7 +1,9 @@
 use std::net::SocketAddr;
 
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::value::to_raw_value;
+use serde_json::value::RawValue;
 use serde_json::Value;
 
 use crate::error::Error;
@@ -19,87 +21,78 @@ impl Client {
         Ok(Self { client })
     }
 
-    pub fn version(&self) -> Result<VersionResponse> {
-        let request = self.client.build_request("version", None);
+    fn make_request<Req, Res>(
+        &self,
+        method: &str,
+        req: Option<Req>,
+    ) -> std::result::Result<Res, Error>
+    where
+        Req: Serialize,
+        Res: DeserializeOwned,
+    {
+        let params = req.map(|req| to_raw_value(&req)).transpose()?;
+        let request = self.client.build_request(method, params.as_ref());
+        tracing::trace!("---> {}", serde_json::to_string(&request).unwrap());
         let response = self.client.send_request(request)?;
-        result_or_error(response)
+        tracing::trace!("<--- {}", serde_json::to_string(&response).unwrap());
+        match response.result.as_ref() {
+            Some(result) => Ok(serde_json::from_str(result.get()).unwrap()),
+            None => match response.error {
+                Some(rpc_err) => Err(Error::RpcError(rpc_err)),
+                None => Err(Error::NeitherResultNorErrorSet),
+            },
+        }
+    }
+
+    pub fn version(&self) -> Result<VersionResponse> {
+        self.make_request("version", None::<Box<RawValue>>)
     }
 
     pub fn generate_signer(&self) -> Result<GenerateSignerResponse> {
-        let request = self.client.build_request("generate_signer", None);
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        self.make_request("generate_signer", None::<Box<RawValue>>)
     }
 
     pub fn load_signer(&self, mnemonic: String, name: String) -> Result<SignerResponse> {
-        let params = to_raw_value(&LoadSignerRequest { mnemonic, name })?;
-        let request = self.client.build_request("load_signer", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = LoadSignerRequest { mnemonic, name };
+        self.make_request("load_signer", Some(req))
     }
 
     pub fn list_wallets(&self) -> Result<ListWalletsResponse> {
-        let request = self.client.build_request("list_wallets", None);
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        self.make_request("list_wallets", None::<Box<RawValue>>)
     }
 
     pub fn load_wallet(&self, descriptor: String, name: String) -> Result<WalletResponse> {
-        let params = to_raw_value(&LoadWalletRequest { descriptor, name })?;
-        let request = self.client.build_request("load_wallet", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = LoadWalletRequest { descriptor, name };
+        self.make_request("load_wallet", Some(req))
     }
 
     pub fn unload_wallet(&self, name: String) -> Result<UnloadWalletResponse> {
-        let params = to_raw_value(&UnloadWalletRequest { name })?;
-        let request = self.client.build_request("unload_wallet", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = UnloadWalletRequest { name };
+        self.make_request("unload_wallet", Some(req))
     }
 
     pub fn unload_signer(&self, name: String) -> Result<UnloadSignerResponse> {
-        let params = to_raw_value(&UnloadSignerRequest { name })?;
-        let request = self.client.build_request("unload_signer", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = UnloadSignerRequest { name };
+        self.make_request("unload_signer", Some(req))
     }
 
     pub fn list_signers(&self) -> Result<ListSignersResponse> {
-        let request = self.client.build_request("list_signers", None);
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        self.make_request("list_signers", None::<Box<RawValue>>)
     }
 
     pub fn balance(&self, name: String) -> Result<BalanceResponse> {
-        let params = to_raw_value(&BalanceRequest { name })?;
-        let request = self.client.build_request("balance", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = BalanceRequest { name };
+        self.make_request("balance", Some(req))
     }
 
     pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse> {
-        let params = to_raw_value(&AddressRequest { name, index })?;
-        let request = self.client.build_request("address", Some(&params));
-        let response = self.client.send_request(request)?;
-        result_or_error(response)
+        let req = AddressRequest { name, index };
+        self.make_request("address", Some(req))
     }
 
     pub fn stop(&self) -> Result<Value> {
-        let request = self.client.build_request("stop", None);
-        let _response = self.client.send_request(request)?;
+        // TODO discriminate only stop error
+        let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);
         Ok(Value::Null)
-    }
-}
-
-fn result_or_error<T: DeserializeOwned>(
-    response: jsonrpc::Response,
-) -> std::result::Result<T, Error> {
-    match response.result.as_ref() {
-        Some(result) => Ok(serde_json::from_str(result.get()).unwrap()),
-        None => match response.error {
-            Some(rpc_err) => Err(Error::RpcError(rpc_err)),
-            None => Err(Error::NeitherResultNorErrorSet),
-        },
     }
 }

@@ -51,7 +51,7 @@ pub enum SignerCommand {
     /// Load a software signer from a mnemonic giving it a name
     Load {
         #[arg(long)]
-        mnemonic: String,
+        mnemonic: String, // TODO is it right to have the mnemonic as arg?
 
         #[arg(long)]
         name: String,

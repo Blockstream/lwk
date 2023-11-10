@@ -57,6 +57,12 @@ pub enum SignerCommand {
         name: String,
     },
 
+    /// Unload a software signer
+    Unload {
+        #[arg(long)]
+        name: String,
+    },
+
     /// List loaded signers
     List,
 

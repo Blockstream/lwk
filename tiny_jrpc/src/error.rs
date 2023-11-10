@@ -25,11 +25,17 @@ pub enum Error {
     #[error("Received stop command")]
     Stop,
 
-    #[error("Not existing wallet name: {0}")]
+    #[error("Wallet {0} does not exist")]
     WalletNotExist(String),
 
     #[error("Wallet {0} is already loaded")]
     WalletAlreadyLoaded(String),
+
+    #[error("Signer {0} does not exist")]
+    SignerNotExist(String),
+
+    #[error("Signer {0} is already loaded")]
+    SignerAlreadyLoaded(String),
 }
 
 impl Error {
@@ -76,6 +82,12 @@ impl Error {
                 "Wallet already loaded.".to_string(),
                 None,
             ),
+            Error::SignerAlreadyLoaded(_) => (
+                SIGNER_ALREADY_LOADED,
+                "Signer already loaded.".to_string(),
+                None,
+            ),
+            Error::SignerNotExist(_) => todo!(),
         };
 
         RpcError {
@@ -114,5 +126,7 @@ pub const SIGNER_NEW_ERROR: i64 = -32_006;
 pub const SIGNER_ERROR: i64 = -32_007;
 pub const WALLET_NOT_EXIST_ERROR: i64 = -32_008;
 pub const WALLET_ALREADY_LOADED: i64 = -32_009;
+pub const SIGNER_NOT_EXIST_ERROR: i64 = -32_010;
+pub const SIGNER_ALREADY_LOADED: i64 = -32_011;
 
 pub const STOP_ERROR: i64 = -32_099;

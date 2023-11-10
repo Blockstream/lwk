@@ -8,7 +8,9 @@ use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::{Wollet, EC};
 
-use crate::model::{ListWalletsResponse, LoadWalletResponse};
+use crate::model::{
+    ListSignersResponse, ListWalletsResponse, LoadSignerResponse, LoadWalletResponse,
+};
 
 pub mod client;
 pub mod config;
@@ -139,14 +141,18 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::UnloadWalletRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let old = s.wollets.remove(&r.name);
-            Response::result(
-                request.id,
-                serde_json::to_value(model::UnloadWalletResponse {
-                    unloaded: old.is_some(),
-                    descriptor: old.map(|w| w.descriptor().to_string()),
-                })?,
-            )
+            match s.wollets.remove(&r.name) {
+                Some(removed) => Response::result(
+                    request.id,
+                    serde_json::to_value(model::UnloadWalletResponse {
+                        name: r.name,
+                        descriptor: removed.descriptor().to_string(),
+                    })?,
+                ),
+                None => {
+                    return Err(tiny_jrpc::error::Error::WalletNotExist(r.name));
+                }
+            }
         }
         "list_wallets" => {
             let s = state.lock().unwrap();
@@ -164,22 +170,45 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "load_signer" => {
             let r: model::LoadSignerRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
-            let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
-            let fingerprint = signer.fingerprint()?.to_string();
-            let xpub = signer.xpub()?;
-            let id = signer.id()?;
             let mut s = state.lock().unwrap();
-            let new = s.signers.insert(r.name.clone(), signer).is_none();
-            Response::result(
-                request.id,
-                serde_json::to_value(model::LoadSignerResponse {
-                    name: r.name,
-                    id,
-                    fingerprint,
-                    new,
-                    xpub,
-                })?,
-            )
+
+            if s.signers.contains_key(&r.name) {
+                return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(r.name));
+            }
+            // TODO recognize different name same sigmer?
+
+            let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
+            let resp: LoadSignerResponse = (r.name.clone(), &signer).try_into()?;
+
+            s.signers.insert(r.name, signer);
+            Response::result(request.id, serde_json::to_value(resp)?)
+        }
+        "unload_signer" => {
+            let r: model::UnloadSignerRequest =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let mut s = state.lock().unwrap();
+            match s.signers.remove(&r.name) {
+                Some(removed) => Response::result(
+                    request.id,
+                    serde_json::to_value(model::UnloadSignerResponse {
+                        name: r.name,
+                        identifier: removed.id()?.to_string(),
+                    })?,
+                ),
+                None => {
+                    return Err(tiny_jrpc::error::Error::SignerNotExist(r.name));
+                }
+            }
+        }
+        "list_signers" => {
+            let s = state.lock().unwrap();
+            let signers: Vec<_> = s
+                .signers
+                .iter()
+                .map(|(name, signer)| (name.clone(), signer).try_into().unwrap()) // TODO
+                .collect();
+            let r = ListSignersResponse { signers };
+            Response::result(request.id, serde_json::to_value(r)?)
         }
         "address" => {
             let r: model::AddressRequest =

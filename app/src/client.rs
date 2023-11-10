@@ -38,6 +38,12 @@ impl Client {
         result_or_error(response)
     }
 
+    pub fn list_wallets(&self) -> Result<ListWalletsResponse> {
+        let request = self.client.build_request("list_wallets", None);
+        let response = self.client.send_request(request)?;
+        result_or_error(response)
+    }
+
     pub fn load_wallet(&self, descriptor: String, name: String) -> Result<LoadWalletResponse> {
         let params = to_raw_value(&LoadWalletRequest { descriptor, name })?;
         let request = self.client.build_request("load_wallet", Some(&params));
@@ -52,8 +58,15 @@ impl Client {
         result_or_error(response)
     }
 
-    pub fn list_wallets(&self) -> Result<ListWalletsResponse> {
-        let request = self.client.build_request("list_wallets", None);
+    pub fn unload_signer(&self, name: String) -> Result<UnloadSignerResponse> {
+        let params = to_raw_value(&UnloadSignerRequest { name })?;
+        let request = self.client.build_request("unload_signer", Some(&params));
+        let response = self.client.send_request(request)?;
+        result_or_error(response)
+    }
+
+    pub fn list_signers(&self) -> Result<ListSignersResponse> {
+        let request = self.client.build_request("list_signers", None);
         let response = self.client.send_request(request)?;
         result_or_error(response)
     }

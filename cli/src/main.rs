@@ -113,7 +113,7 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     tracing::debug!("Threads ended");
                 }
                 ServerCommand::Stop => {
-                    client.stop()?;
+                    client.stop().with_context(error_from)?;
                 }
             }
 
@@ -131,7 +131,13 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     .with_context(error_from)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::List => todo!(),
+            SignerCommand::List => {
+                serde_json::to_value(client.list_signers().with_context(error_from)?)?
+            }
+            SignerCommand::Unload { name } => {
+                let r = client.unload_signer(name).with_context(error_from)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {
@@ -153,7 +159,9 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.address(name, index).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
+            WalletCommand::List => {
+                serde_json::to_value(client.list_wallets().with_context(error_from)?)?
+            }
         },
     })
 }
@@ -180,6 +188,8 @@ mod test {
 
     #[test]
     fn test_commands() {
+        // This test use json `Value` so that changes in the model are noticed
+
         std::thread::spawn(|| {
             sh("cli server start");
         });
@@ -209,7 +219,7 @@ mod test {
         assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
 
         let result = sh_result("cli wallet balance --name notexist");
-        assert!(format!("{:?}", result.unwrap_err()).contains("Not existing wallet name: notexist"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet notexist does not exist"));
 
         let result = sh("cli wallet address --name custody --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
@@ -217,7 +227,7 @@ mod test {
 
         let result = sh("cli wallet unload --name custody");
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
-        assert!(result.get("unloaded").unwrap().as_bool().unwrap());
+        assert_eq!(result.get("name").unwrap().as_str().unwrap(), "custody");
 
         let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();

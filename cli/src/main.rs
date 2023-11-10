@@ -134,27 +134,27 @@ fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             SignerCommand::List => todo!(),
         },
         CliCommand::Wallet(a) => match a.command {
-            WalletCommand::Load { descriptor } => {
+            WalletCommand::Load { descriptor, name } => {
                 let r = client
-                    .load_wallet(descriptor, a.name)
+                    .load_wallet(descriptor, name)
                     .with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Unload => {
-                let r = client.unload_wallet(a.name).with_context(error_from)?;
+            WalletCommand::Unload { name } => {
+                let r = client.unload_wallet(name).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Balance => {
-                let r = client.balance(a.name).with_context(error_from)?;
+            WalletCommand::Balance { name } => {
+                let r = client.balance(name).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Tx => todo!(),
-            WalletCommand::Address { index } => {
-                let r = client.address(a.name, index).with_context(error_from)?;
+            WalletCommand::Tx { name: _ } => todo!(),
+            WalletCommand::Address { index, name } => {
+                let r = client.address(name, index).with_context(error_from)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
         },
-        CliCommand::WalletsList => serde_json::to_value(client.list_wallets()?)?,
     })
 }
 
@@ -165,6 +165,7 @@ mod test {
 
     use crate::{args::Cli, inner_main};
 
+    #[track_caller]
     fn sh_result(command: &str) -> anyhow::Result<Value> {
         let mut cli = Cli::try_parse_from(command.split(' ')).unwrap();
         cli.stderr = std::env::var("RUST_LOG").is_ok();
@@ -172,6 +173,7 @@ mod test {
         inner_main(cli)
     }
 
+    #[track_caller]
     fn sh(command: &str) -> Value {
         sh_result(command).unwrap()
     }
@@ -185,39 +187,39 @@ mod test {
         let result = sh("cli signer generate");
         assert!(result.get("mnemonic").is_some());
 
-        let result = sh("cli wallets-list");
+        let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();
         assert!(wallets.as_array().unwrap().is_empty());
 
         let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
-        let result = sh(&format!("cli wallet --name custody load {desc}"));
+        let result = sh(&format!("cli wallet load --name custody {desc}"));
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-        let result = sh_result(&format!("cli wallet --name custody load {desc}"));
+        let result = sh_result(&format!("cli wallet load --name custody {desc}"));
         assert!(format!("{:?}", result.unwrap_err()).contains("Wallet custody is already loaded"));
 
-        let result = sh("cli wallets-list");
+        let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();
         assert!(!wallets.as_array().unwrap().is_empty());
 
-        let result = sh("cli wallet --name custody balance");
+        let result = sh("cli wallet balance --name custody");
         let balance_obj = result.get("balance").unwrap();
         let asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
         let policy_obj = balance_obj.get(asset).unwrap();
         assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
 
-        let result = sh_result("cli wallet --name notexist balance");
+        let result = sh_result("cli wallet balance --name notexist");
         assert!(format!("{:?}", result.unwrap_err()).contains("Not existing wallet name: notexist"));
 
-        let result = sh("cli wallet --name custody address --index 0");
+        let result = sh("cli wallet address --name custody --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
         assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-        let result = sh("cli wallet --name custody unload");
+        let result = sh("cli wallet unload --name custody");
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
         assert!(result.get("unloaded").unwrap().as_bool().unwrap());
 
-        let result = sh("cli wallets-list");
+        let result = sh("cli wallet list");
         let wallets = result.get("wallets").unwrap();
         assert!(wallets.as_array().unwrap().is_empty());
 

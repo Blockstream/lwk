@@ -35,8 +35,6 @@ pub enum CliCommand {
     Signer(SignerArgs),
     /// wallet
     Wallet(WalletArgs),
-
-    WalletsList,
 }
 
 #[derive(Debug, Args)]
@@ -61,10 +59,6 @@ pub enum SignerCommand {
 
 #[derive(Debug, Args)]
 pub struct WalletArgs {
-    /// Wallet name
-    #[arg(short, long)]
-    pub name: String,
-
     #[command(subcommand)]
     pub command: WalletCommand,
 }
@@ -72,15 +66,36 @@ pub struct WalletArgs {
 #[derive(Debug, Subcommand)]
 pub enum WalletCommand {
     Load {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
         descriptor: String,
     },
-    Unload,
+    Unload {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+    },
     Address {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
         #[arg(long)]
         index: Option<u32>,
     },
-    Balance,
-    Tx,
+    Balance {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+    },
+    Tx {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+    },
+    List,
 }
 
 #[derive(Debug, Args)]

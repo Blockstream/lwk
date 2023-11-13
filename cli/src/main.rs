@@ -229,6 +229,10 @@ mod test {
         let result = sh_result("cli wallet balance --name notexist");
         assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
 
+        let result = sh("cli wallet address --name custody");
+        assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj2z8k7l7ewsnu");
+        assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 1);
+
         let result = sh("cli wallet address --name custody --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
         assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);

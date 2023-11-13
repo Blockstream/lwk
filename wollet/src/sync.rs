@@ -107,6 +107,17 @@ pub fn sync(
         let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
         txid_height.retain(|txid, _| txids_unblinded.contains(txid));
 
+        // height map is used for the live list of transactions, since due to reorg or rbf tx
+        // could disappear from the list, we clear the list and keep only the last values returned by the server
+        store.cache.heights.clear();
+        store.cache.heights.extend(&txid_height);
+
+        store
+            .cache
+            .scripts
+            .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
+        store.cache.paths.extend(scripts);
+
         // Find the last used index in an output that we can unblind
         let mut last_used_internal = None;
         let mut last_used_external = None;
@@ -147,16 +158,6 @@ pub fn sync(
                 .store(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
-        // height map is used for the live list of transactions, since due to reorg or rbf tx
-        // could disappear from the list, we clear the list and keep only the last values returned by the server
-        store.cache.heights.clear();
-        store.cache.heights.extend(txid_height);
-
-        store
-            .cache
-            .scripts
-            .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
-        store.cache.paths.extend(scripts);
         store.flush()?;
         true
     } else {

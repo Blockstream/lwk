@@ -31,7 +31,7 @@ impl Client {
         Res: DeserializeOwned,
     {
         let params = req.map(|req| to_raw_value(&req)).transpose()?;
-        let request = self.client.build_request(method, params.as_ref());
+        let request = self.client.build_request(method, params.as_deref());
         tracing::trace!("---> {}", serde_json::to_string(&request).unwrap());
         let response = self.client.send_request(request)?;
         tracing::trace!("<--- {}", serde_json::to_string(&response).unwrap());

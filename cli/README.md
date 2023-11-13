@@ -69,8 +69,8 @@ Load a wallet and request a balance ("stateful" request)
 
 
 ```sh
-$ cli wallet --name custody load "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
-$ cli wallet --name custody balance
+$ cli wallet load --name custody "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
+$ cli wallet balance --name custody
 ```
 
 is equivalent to:
@@ -84,8 +84,8 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 Request an address:
 
 ```sh
-$ cli wallet --name custody address
-$ cli wallet --name custody address --index 4
+$ cli wallet address --name custody
+$ cli wallet address --name custody --index 4
 ```
 
 An error test case:

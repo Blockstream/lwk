@@ -98,6 +98,8 @@ pub fn sync(
         || store_last_unused_internal != last_unused_internal;
 
     let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
+        tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty() );
+
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
 
@@ -131,6 +133,7 @@ pub fn sync(
                 }
             }
         }
+
         if let Some(last_used_external) = last_used_external {
             store
                 .cache

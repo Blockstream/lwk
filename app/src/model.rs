@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use wollet::bitcoin::bip32::ExtendedPubKey;
 use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::{Address, AssetId};
+use wollet::UnvalidatedAddressee;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionResponse {
@@ -91,6 +92,18 @@ pub struct BalanceRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BalanceResponse {
     pub balance: HashMap<AssetId, u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendRequest {
+    pub addressees: Vec<UnvalidatedAddressee>,
+    pub fee_rate: Option<f32>,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TxResponse {
+    pub base64: String,
 }
 
 impl<'a> TryFrom<(String, &Signer<'a>)> for SignerResponse {

@@ -142,7 +142,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.balance(name)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Tx { name: _ } => todo!(),
+            WalletCommand::CreatePset { name: _, .. } => todo!(),
             WalletCommand::Address { index, name } => {
                 let r = client.address(name, index)?;
                 serde_json::to_value(r)?

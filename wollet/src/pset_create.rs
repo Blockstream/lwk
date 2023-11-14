@@ -11,9 +11,11 @@ use crate::util::EC;
 use crate::wollet::Wollet;
 use pset_common::{AssetMetadata, PsetExt};
 use rand::thread_rng;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
+#[derive(Debug, Serialize, Deserialize)]
 // We make issuance and reissuance are mutually exclusive for simplicity
 enum IssuanceRequest {
     None,

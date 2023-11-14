@@ -272,6 +272,22 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::to_value(model::BalanceResponse { balance })?,
             )
         }
+        "send" => {
+            let r: model::SendRequest = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            wollet.sync_txs()?;
+            let tx = wollet.send_many(r.addressees, r.fee_rate)?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::TxResponse {
+                    base64: tx.to_string(),
+                })?,
+            )
+        }
         "stop" => {
             return Err(tiny_jrpc::error::Error::Stop);
         }

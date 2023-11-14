@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use serde_json::Value;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Network {
@@ -115,10 +116,18 @@ pub enum WalletCommand {
     },
 
     /// Create an unsigned transaction (PSET) (send, issue, reissue, burn)
-    Tx {
+    CreatePset {
         /// Wallet name
         #[arg(short, long)]
         name: String,
+
+        /// address:satoshi:assetid
+        #[arg(long)]
+        recipient: Vec<String>,
+
+        /// issuance
+        #[arg(long)]
+        issue: Value,
     },
 }
 

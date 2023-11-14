@@ -33,6 +33,7 @@ impl Addressee {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UnvalidatedAddressee {
     /// The amount to send in satoshi
     pub satoshi: u64,

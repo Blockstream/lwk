@@ -69,6 +69,9 @@ pub enum Error {
     #[error(transparent)]
     OutputUpdateError(#[from] elements_miniscript::psbt::OutputUpdateError),
 
+    #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
+
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 

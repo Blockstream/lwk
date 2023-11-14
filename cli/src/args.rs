@@ -1,5 +1,4 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use serde_json::Value;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Network {
@@ -116,19 +115,24 @@ pub enum WalletCommand {
     },
 
     /// Create an unsigned transaction (PSET) (send, issue, reissue, burn)
-    CreatePset {
+    Send {
         /// Wallet name
         #[arg(short, long)]
         name: String,
 
-        /// address:satoshi:assetid
-        #[arg(long)]
+        /// Specify a recipient in the form "address:satoshi:asset_id"
+        ///
+        /// Can be specified multiple times.
+        #[arg(long, required = true)]
         recipient: Vec<String>,
 
-        /// issuance
+        /// Fee rate to use
         #[arg(long)]
-        issue: Value,
+        fee_rate: Option<f32>,
     },
+
+    Issue {},
+    Reissue {},
 }
 
 #[derive(Debug, Args)]

@@ -5,6 +5,7 @@ use serde::Serialize;
 use serde_json::value::to_raw_value;
 use serde_json::value::RawValue;
 use serde_json::Value;
+use wollet::UnvalidatedAddressee;
 
 use crate::error::Error;
 use crate::model::*;
@@ -88,6 +89,20 @@ impl Client {
     pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse> {
         let req = AddressRequest { name, index };
         self.make_request("address", Some(req))
+    }
+
+    pub fn send_many(
+        &self,
+        name: String,
+        addressees: Vec<UnvalidatedAddressee>,
+        fee_rate: Option<f32>,
+    ) -> Result<SendResponse> {
+        let req = SendRequest {
+            addressees,
+            fee_rate,
+            name,
+        };
+        self.make_request("send_many", Some(req))
     }
 
     pub fn stop(&self) -> Result<Value> {

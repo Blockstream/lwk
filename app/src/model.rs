@@ -102,7 +102,7 @@ pub struct SendRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TxResponse {
+pub struct SendResponse {
     pub base64: String,
 }
 

@@ -142,12 +142,26 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.balance(name)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::CreatePset { name: _, .. } => todo!(),
+            WalletCommand::Send {
+                name,
+                recipient,
+                fee_rate,
+            } => {
+                let mut addressees = vec![];
+                for rec in recipient {
+                    addressees.push(rec.try_into()?);
+                }
+
+                let r = client.send_many(name, addressees, fee_rate)?;
+                serde_json::to_value(r)?
+            }
             WalletCommand::Address { index, name } => {
                 let r = client.address(name, index)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
+            WalletCommand::Issue {} => todo!(),
+            WalletCommand::Reissue {} => todo!(),
         },
     })
 }

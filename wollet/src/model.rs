@@ -1,7 +1,9 @@
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets, Txid};
 use crate::secp256k1::PublicKey;
+use crate::Error;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -33,7 +35,7 @@ impl Addressee {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UnvalidatedAddressee {
     /// The amount to send in satoshi
     pub satoshi: u64,
@@ -47,6 +49,25 @@ pub struct UnvalidatedAddressee {
     ///
     /// If empty, the policy asset
     pub asset: String,
+}
+
+impl TryFrom<String> for UnvalidatedAddressee {
+    type Error = crate::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let pieces: Vec<_> = value.split(':').collect();
+        if pieces.len() != 3 {
+            return Err(Error::Generic(
+                "Invalid number of elements in value, should be \"address:satoshi:assetid\""
+                    .to_string(),
+            ));
+        }
+        Ok(UnvalidatedAddressee {
+            satoshi: pieces[1].parse()?,
+            address: pieces[0].to_string(),
+            asset: pieces[2].to_string(),
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

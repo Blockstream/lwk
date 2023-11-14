@@ -272,7 +272,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::to_value(model::BalanceResponse { balance })?,
             )
         }
-        "send" => {
+        "send_many" => {
             let r: model::SendRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s
@@ -283,7 +283,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let tx = wollet.send_many(r.addressees, r.fee_rate)?;
             Response::result(
                 request.id,
-                serde_json::to_value(model::TxResponse {
+                serde_json::to_value(model::SendResponse {
                     base64: tx.to_string(),
                 })?,
             )

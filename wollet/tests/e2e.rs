@@ -495,8 +495,8 @@ fn create_pset_error() {
     // Invalid address
     let addressees = vec![UnvalidatedAddressee {
         satoshi: 1_000,
-        address: "",
-        asset: "",
+        address: "".to_string(),
+        asset: "".to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     let expected = "base58 error: base58ck data not even long enough for a checksum";
@@ -512,8 +512,8 @@ fn create_pset_error() {
     let not_conf_address = address.to_string();
     let addressees = vec![UnvalidatedAddressee {
         satoshi: 1_000,
-        address: &not_conf_address,
-        asset: "",
+        address: not_conf_address,
+        asset: "".to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
@@ -522,8 +522,8 @@ fn create_pset_error() {
     // Invalid amount
     let addressees = vec![UnvalidatedAddressee {
         satoshi: 0,
-        address: &address,
-        asset: "",
+        address: address.clone(),
+        asset: "".to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
@@ -531,8 +531,8 @@ fn create_pset_error() {
     // Invalid asset
     let addressees = vec![UnvalidatedAddressee {
         satoshi: 1_000,
-        address: &address,
-        asset: "aaaa",
+        address: address.clone(),
+        asset: "aaaa".to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(
@@ -544,8 +544,8 @@ fn create_pset_error() {
     // Not enough lbtc
     let addressees = vec![UnvalidatedAddressee {
         satoshi: 2_200_000_000_000_000,
-        address: &address,
-        asset: "",
+        address: address.clone(),
+        asset: "".to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
@@ -553,8 +553,8 @@ fn create_pset_error() {
     // Not enough asset
     let addressees = vec![UnvalidatedAddressee {
         satoshi: satoshi_a + 1,
-        address: &address,
-        asset: &asset,
+        address,
+        asset: asset.to_string(),
     }];
     let err = wallet.wollet.send_many(addressees, None).unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());

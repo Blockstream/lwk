@@ -33,19 +33,19 @@ impl Addressee {
     }
 }
 
-pub struct UnvalidatedAddressee<'a> {
+pub struct UnvalidatedAddressee {
     /// The amount to send in satoshi
     pub satoshi: u64,
 
     /// The address to send to
     ///
     /// If "burn", the output will be burned
-    pub address: &'a str,
+    pub address: String,
 
     /// The asset to send
     ///
     /// If empty, the policy asset
-    pub asset: &'a str,
+    pub asset: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

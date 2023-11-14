@@ -463,13 +463,13 @@ impl TestWollet {
         let addressees: Vec<UnvalidatedAddressee> = vec![
             UnvalidatedAddressee {
                 satoshi: 1_000,
-                address: &addr1,
-                asset: &ass1,
+                address: addr1,
+                asset: ass1,
             },
             UnvalidatedAddressee {
                 satoshi: 2_000,
-                address: &addr2,
-                asset: &ass2,
+                address: addr2,
+                asset: ass2,
             },
         ];
         let mut pset = self.wollet.send_many(addressees, fee_rate).unwrap();

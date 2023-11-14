@@ -81,7 +81,7 @@ impl Wollet {
 
     fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
         let satoshi = self.validate_satoshi(addressee.satoshi)?;
-        let asset = self.validate_asset(addressee.asset)?;
+        let asset = self.validate_asset(&addressee.asset)?;
         if addressee.address == "burn" {
             let burn_script = Script::new_op_return(&[]);
             Ok(Addressee {
@@ -91,7 +91,7 @@ impl Wollet {
                 asset,
             })
         } else {
-            let address = self.validate_address(addressee.address)?;
+            let address = self.validate_address(&addressee.address)?;
             Ok(Addressee::from_address(addressee.satoshi, &address, asset))
         }
     }
@@ -435,8 +435,8 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
-            address,
-            asset: "",
+            address: address.to_string(),
+            asset: "".to_string(),
         }];
         self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
@@ -451,8 +451,8 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
-            address,
-            asset,
+            address: address.to_string(),
+            asset: asset.to_string(),
         }];
         self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }
@@ -478,8 +478,8 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![UnvalidatedAddressee {
             satoshi,
-            address: "burn",
-            asset,
+            address: "burn".to_string(),
+            asset: asset.to_string(),
         }];
         self.create_pset(addressees, fee_rate, IssuanceRequest::None)
     }

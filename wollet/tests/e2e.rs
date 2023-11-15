@@ -17,7 +17,7 @@ const TEST_MNEMONIC: &str =
 fn liquid_send_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&Signer::Jade(&jade_init.jade)];
+    let signers = [&Signer::Jade(jade_init.jade)];
     liquid_send(&signers);
 }
 
@@ -32,7 +32,7 @@ fn liquid_send_software_signer() {
 fn liquid_issue_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&Signer::Jade(&jade_init.jade)];
+    let signers = [&Signer::Jade(jade_init.jade)];
     liquid_issue(&signers);
 }
 
@@ -681,7 +681,7 @@ fn jade_sign_wollet_pset() {
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let jade_signer = Signer::Jade(&jade_init.jade);
+    let jade_signer = Signer::Jade(jade_init.jade);
     // Compre strings so that we don't get mismatching regtest-testnet networks
     assert_eq!(
         jade_signer.xpub().unwrap().to_string(),
@@ -701,7 +701,7 @@ fn jade_single_sig() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let signer = Signer::Jade(&jade_init.jade);
+    let signer = Signer::Jade(jade_init.jade);
     // FIXME: implement Signer::xpub
     let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
 

@@ -33,7 +33,7 @@ pub trait Sign {
 
 pub enum Signer<'a> {
     Software(SwSigner<'a>),
-    Jade(&'a MutexJade),
+    Jade(MutexJade),
 }
 
 impl<'a> Signer<'a> {

@@ -57,7 +57,7 @@ fn emul_roundtrip_singlesig(variant: Variant) {
     let server = setup();
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = &[&Signer::Jade(&jade_init.jade)];
+    let signers = &[&Signer::Jade(jade_init.jade)];
     roundtrip(&server, signers, Some(variant), None);
 }
 
@@ -66,7 +66,7 @@ fn emul_roundtrip_multisig(threshold: usize) {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let sw_signer = generate_signer();
-    let signers = &[&Signer::Jade(&jade_init.jade), &Signer::Software(sw_signer)];
+    let signers = &[&Signer::Jade(jade_init.jade), &Signer::Software(sw_signer)];
     roundtrip(&server, signers, None, Some(threshold));
 }
 
@@ -94,14 +94,14 @@ mod serial {
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
         let server = setup();
-        let jade = serial::unlock();
-        let signers = &[&Signer::Jade(&jade)];
+        let jade_signer = Signer::Jade(serial::unlock());
+        let signers = &[&jade_signer];
 
         roundtrip(&server, signers, Some(Variant::Wpkh), None);
         roundtrip(&server, signers, Some(Variant::ShWpkh), None);
         // multisig
-        let sw_signer = generate_signer();
-        let signers = &[&Signer::Jade(&jade), &Signer::Software(sw_signer)];
+        let sw_signer = Signer::Software(generate_signer());
+        let signers = &[&jade_signer, &sw_signer];
         roundtrip(&server, signers, None, Some(2));
     }
 }

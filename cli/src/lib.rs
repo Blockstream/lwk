@@ -169,6 +169,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 #[cfg(test)]
 pub mod test {
     use clap::Parser;
+    use elements::pset::PartiallySignedTransaction;
     use serde_json::Value;
 
     use crate::{args::Cli, inner_main};
@@ -236,6 +237,10 @@ pub mod test {
         let result = sh("cli wallet address --name custody --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
         assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
+
+        let result = sh("cli wallet send --name custody --recipient tlq1qqwf6dzkyrukfzwmx3cxdpdx2z3zspgda0v7x874cewkucajdzrysa7z9fy0qnjvuz0ymqythd6jxy9d2e8ajka48efakgrp9t:2:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49");
+        let pset = result.get("pset").unwrap().as_str().unwrap();
+        let _: PartiallySignedTransaction = pset.parse().unwrap();
 
         let result = sh("cli wallet unload --name custody");
         let unloaded = result.get("unloaded").unwrap();

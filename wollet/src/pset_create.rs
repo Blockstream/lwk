@@ -9,7 +9,7 @@ use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
 use crate::wollet::Wollet;
-use pset_common::{AssetMetadata, PsetExt};
+use common::{AssetMetadata, PsetExt};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

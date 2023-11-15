@@ -22,7 +22,7 @@ tracing = "0.1"
 minreq = { version = "2.9", features = ["https"] }
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5" }
 
-pset_common = { path = "../pset_common" }
+common = { path = "../common" }
 
 # tokio = { version = "1.32.0", features = ["rt", "macros"] }
 

@@ -1,3 +1,4 @@
+use common::PsetExt;
 use elements::{
     bitcoin::bip32::ChildNumber,
     encode::serialize,
@@ -10,7 +11,6 @@ use elements::{
     script::Instruction,
     Script,
 };
-use pset_common::PsetExt;
 use std::collections::{HashMap, HashSet};
 
 use crate::{

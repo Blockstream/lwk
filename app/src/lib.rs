@@ -197,7 +197,23 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(r.name));
             }
 
-            let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
+            let signer = match r.kind.as_str() {
+                "software" => {
+                    if r.mnemonic.is_none() {
+                        return Err(tiny_jrpc::error::Error::Generic(
+                            "Mnemonic must be set for software signer".to_string(),
+                        ));
+                    }
+                    let mnemonic = r.mnemonic.unwrap();
+                    Signer::Software(SwSigner::new(&mnemonic, &EC)?)
+                }
+                _ => {
+                    return Err(tiny_jrpc::error::Error::Generic(
+                        "Invalid signer kind".to_string(),
+                    ));
+                }
+            };
+            //let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
 
             let vec: Vec<_> = s
                 .signers

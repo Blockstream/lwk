@@ -49,9 +49,15 @@ pub struct UnloadWalletResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum SignerKind {
+    Software,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoadSignerRequest {
-    pub mnemonic: String,
     pub name: String,
+    pub kind: String,
+    pub mnemonic: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

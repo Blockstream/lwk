@@ -53,8 +53,17 @@ impl Client {
         self.make_request("generate_signer", None::<Box<RawValue>>)
     }
 
-    pub fn load_signer(&self, mnemonic: String, name: String) -> Result<SignerResponse> {
-        let req = LoadSignerRequest { mnemonic, name };
+    pub fn load_signer(
+        &self,
+        name: String,
+        kind: String,
+        mnemonic: Option<String>,
+    ) -> Result<SignerResponse> {
+        let req = LoadSignerRequest {
+            name,
+            kind,
+            mnemonic,
+        };
         self.make_request("load_signer", Some(req))
     }
 

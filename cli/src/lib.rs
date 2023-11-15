@@ -119,8 +119,13 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(j)?
             }
             SignerCommand::Sign => todo!(),
-            SignerCommand::Load { mnemonic, name } => {
-                let j: app::model::SignerResponse = client.load_signer(mnemonic, name)?;
+            SignerCommand::Load {
+                name,
+                kind,
+                mnemonic,
+            } => {
+                let kind = kind.to_string();
+                let j = client.load_signer(name, kind, mnemonic)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::List => serde_json::to_value(client.list_signers()?)?,
@@ -270,7 +275,7 @@ pub mod test {
         let result = sh("cli signer generate");
         let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
         let result = sh(&format!(
-            r#"cli signer load --mnemonic "{mnemonic}" --name ss "#
+            r#"cli signer load --kind software --mnemonic "{mnemonic}" --name ss "#
         ));
         assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
@@ -286,7 +291,7 @@ pub mod test {
         );
 
         let result = sh_result(&format!(
-            r#"cli signer load --mnemonic "{mnemonic}" --name ss2 "#
+            r#"cli signer load --kind software --mnemonic "{mnemonic}" --name ss2 "#
         ));
         assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 

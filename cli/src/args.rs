@@ -45,6 +45,19 @@ pub struct SignerArgs {
     pub command: SignerCommand,
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum SignerKind {
+    Software,
+}
+
+impl std::fmt::Display for SignerKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SignerKind::Software => write!(f, "software"),
+        }
+    }
+}
+
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
     /// Generate a softwawre signer, returns a mnemonic
@@ -53,10 +66,13 @@ pub enum SignerCommand {
     /// Load a software signer from a mnemonic giving it a name
     Load {
         #[arg(long)]
-        mnemonic: String, // TODO is it right to have the mnemonic as arg?
+        name: String,
 
         #[arg(long)]
-        name: String,
+        kind: SignerKind,
+
+        #[arg(long)]
+        mnemonic: Option<String>, // TODO is it right to have the mnemonic as arg?
     },
 
     /// Unload a software signer

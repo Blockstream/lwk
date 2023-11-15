@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     io::ErrorKind,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use connection::Connection;
@@ -20,6 +20,7 @@ use serde_bytes::ByteBuf;
 use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 
 pub mod connection;
+pub mod consts;
 pub mod error;
 pub mod get_receive_address;
 pub mod mutex_jade;
@@ -30,6 +31,7 @@ pub mod sign_liquid_tx;
 pub mod sign_pset;
 pub mod unlock;
 
+pub use consts::{BAUD_RATE, TIMEOUT};
 pub use error::Error;
 pub use network::Network;
 
@@ -37,9 +39,6 @@ pub use network::Network;
 pub use serialport;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
-
-pub const TIMEOUT: Duration = Duration::from_secs(60);
-pub const BAUD_RATE: u32 = 115_200;
 
 #[derive(Debug)]
 pub struct Jade {

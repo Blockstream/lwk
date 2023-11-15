@@ -105,6 +105,20 @@ impl Client {
         self.make_request("send_many", Some(req))
     }
 
+    pub fn singlesig_descriptor(
+        &self,
+        name: String,
+        descriptor_blinding_key: String,
+        singlesig_kind: String,
+    ) -> Result<SinglesigDescriptorResponse> {
+        let req = SinglesigDescriptorRequest {
+            name,
+            descriptor_blinding_key,
+            singlesig_kind,
+        };
+        self.make_request("singlesig_descriptor", Some(req))
+    }
+
     pub fn stop(&self) -> Result<Value> {
         // TODO discriminate only stop error
         let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);

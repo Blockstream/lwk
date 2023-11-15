@@ -36,6 +36,10 @@ pub enum Error {
 
     #[error("Signer '{0}' is already loaded")]
     SignerAlreadyLoaded(String),
+
+    // TODO remove into specific errors
+    #[error("Generic error {0}")]
+    Generic(String),
 }
 
 impl Error {
@@ -57,6 +61,7 @@ impl Error {
             Error::WalletAlreadyLoaded(_) => (WALLET_ALREADY_LOADED, None),
             Error::SignerAlreadyLoaded(_) => (SIGNER_ALREADY_LOADED, None),
             Error::SignerNotExist(_) => (SIGNER_NOT_EXIST_ERROR, None),
+            Error::Generic(_) => (GENERIC, None),
         };
 
         RpcError {
@@ -100,5 +105,6 @@ pub enum RpcIntErrors {
     SIGNER_NOT_EXIST_ERROR = -32_010,
     SIGNER_ALREADY_LOADED = -32_011,
 
+    GENERIC = -32_098, // TODO remove
     STOP_ERROR = -32_099,
 }

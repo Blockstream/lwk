@@ -17,3 +17,4 @@ thiserror = "1"
 tracing = "0.1"
 
 wollet = { path = "../wollet" }
+rand = "0.8.5"

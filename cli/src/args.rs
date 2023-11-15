@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -89,10 +91,29 @@ pub enum BlindingKeyKind {
     Bare,
 }
 
+impl Display for BlindingKeyKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BlindingKeyKind::Slip77 => write!(f, "slip77"),
+            BlindingKeyKind::View => write!(f, "view"),
+            BlindingKeyKind::Bare => write!(f, "bare"),
+        }
+    }
+}
+
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SinglesigKind {
     Wpkh,
-    ShWpkh,
+    Shwpkh,
+}
+
+impl Display for SinglesigKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SinglesigKind::Wpkh => write!(f, "wpkh"),
+            SinglesigKind::Shwpkh => write!(f, "shwpkh"),
+        }
+    }
 }
 
 #[derive(Debug, Args)]

@@ -106,6 +106,18 @@ pub struct SendResponse {
     pub pset: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SinglesigDescriptorResponse {
+    pub descriptor: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SinglesigDescriptorRequest {
+    pub name: String,
+    pub descriptor_blinding_key: String,
+    pub singlesig_kind: String,
+}
+
 impl<'a> TryFrom<(String, &Signer<'a>)> for SignerResponse {
     type Error = SignerError;
 

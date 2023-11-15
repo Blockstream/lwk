@@ -132,7 +132,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 name,
                 descriptor_blinding_key,
                 kind,
-            } => todo!(),
+            } => {
+                let r = client.singlesig_descriptor(
+                    name,
+                    descriptor_blinding_key.to_string(),
+                    kind.to_string(),
+                )?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {

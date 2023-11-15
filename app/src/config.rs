@@ -1,3 +1,4 @@
+use jade::Network as JadeNetwork;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use wollet::elements::AssetId;
@@ -61,6 +62,14 @@ impl Config {
             network: ElementsNetwork::ElementsRegtest { policy_asset },
             tls: false,
             validate_domain: false,
+        }
+    }
+
+    pub fn jade_network(&self) -> JadeNetwork {
+        match self.network {
+            ElementsNetwork::Liquid => JadeNetwork::Liquid,
+            ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
+            ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::LocaltestLiquid,
         }
     }
 }

@@ -15,6 +15,9 @@ pub enum Error {
     #[error("Serial Error: {0}")]
     SerialError(#[from] serialport::Error),
 
+    #[error("No available ports")]
+    NoAvailablePorts,
+
     #[error("Jade returned neither an error nor a result")]
     JadeNeitherErrorNorResult,
 

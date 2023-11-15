@@ -27,6 +27,7 @@ fn roundtrip(
             desc
         }
     };
+    dbg!(&desc_str);
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(server);

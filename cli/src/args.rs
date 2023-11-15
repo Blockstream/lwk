@@ -68,6 +68,31 @@ pub enum SignerCommand {
 
     /// Sign a transaction
     Sign,
+
+    ///  Prints a singlesig descriptor using this signer key
+    SinglesigDescriptor {
+        #[arg(long)]
+        name: String,
+
+        #[arg(long)]
+        descriptor_blinding_key: BlindingKeyKind,
+
+        #[arg(long)]
+        kind: SinglesigKind,
+    },
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum BlindingKeyKind {
+    Slip77,
+    View,
+    Bare,
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum SinglesigKind {
+    Wpkh,
+    ShWpkh,
 }
 
 #[derive(Debug, Args)]

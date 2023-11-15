@@ -128,6 +128,11 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.unload_signer(name)?;
                 serde_json::to_value(r)?
             }
+            SignerCommand::SinglesigDescriptor {
+                name,
+                descriptor_blinding_key,
+                kind,
+            } => todo!(),
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {

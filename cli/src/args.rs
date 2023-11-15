@@ -48,12 +48,14 @@ pub struct SignerArgs {
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SignerKind {
     Software,
+    Serial,
 }
 
 impl std::fmt::Display for SignerKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             SignerKind::Software => write!(f, "software"),
+            SignerKind::Serial => write!(f, "serial"),
         }
     }
 }

@@ -22,6 +22,8 @@ pub enum Error {
     SignerNew(#[from] signer::NewError),
     #[error("Signer Error: {0}")]
     Signer(#[from] signer::SignerError),
+    #[error("Jade Error: {0}")]
+    Jade(#[from] jade::Error),
     #[error("Received stop command")]
     Stop,
 
@@ -61,6 +63,7 @@ impl Error {
             Error::WalletAlreadyLoaded(_) => (WALLET_ALREADY_LOADED, None),
             Error::SignerAlreadyLoaded(_) => (SIGNER_ALREADY_LOADED, None),
             Error::SignerNotExist(_) => (SIGNER_NOT_EXIST_ERROR, None),
+            Error::Jade(_) => (JADE_ERROR, None),
             Error::Generic(_) => (GENERIC, None),
         };
 
@@ -104,6 +107,7 @@ pub enum RpcIntErrors {
     WALLET_ALREADY_LOADED = -32_009,
     SIGNER_NOT_EXIST_ERROR = -32_010,
     SIGNER_ALREADY_LOADED = -32_011,
+    JADE_ERROR = -32_013,
 
     GENERIC = -32_098, // TODO remove
     STOP_ERROR = -32_099,

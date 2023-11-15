@@ -18,3 +18,4 @@ tracing = "0.1"
 #        of those cases elsewhere.
 wollet = { path = "../wollet" }
 signer = { path = "../signer" }
+jade = { path = "../jade", features = ["serial"] }

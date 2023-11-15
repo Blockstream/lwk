@@ -274,6 +274,17 @@ pub mod test {
         ));
         assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
+        let result = sh("cli signer singlesig-descriptor --name ss --descriptor-blinding-key slip77 --kind wpkh");
+        let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
+
+        let result = sh(&format!(
+            "cli wallet load --name desc_generated {desc_generated}"
+        ));
+        assert_eq!(
+            result.get("descriptor").unwrap().as_str().unwrap(),
+            desc_generated
+        );
+
         let result = sh_result(&format!(
             r#"cli signer load --mnemonic "{mnemonic}" --name ss2 "#
         ));

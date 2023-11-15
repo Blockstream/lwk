@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use client::Client;
 use config::Config;
 use jade::get_receive_address::Variant;
+use jade::mutex_jade::MutexJade;
 use rand::{thread_rng, Rng};
 use signer::{Signer, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
@@ -207,13 +208,22 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     let mnemonic = r.mnemonic.unwrap();
                     Signer::Software(SwSigner::new(&mnemonic, &EC)?)
                 }
+                "serial" => {
+                    let network = s.config.jade_network();
+                    let mut jade = MutexJade::from_serial(network)?;
+                    // TODO: move conditional unlocking to jade
+                    let jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
+                    if jade_state == jade::protocol::JadeState::Locked {
+                        jade.unlock().unwrap();
+                    }
+                    Signer::Jade(jade)
+                }
                 _ => {
                     return Err(tiny_jrpc::error::Error::Generic(
                         "Invalid signer kind".to_string(),
                     ));
                 }
             };
-            //let signer = Signer::Software(SwSigner::new(&r.mnemonic, &EC)?);
 
             let vec: Vec<_> = s
                 .signers

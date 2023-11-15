@@ -103,7 +103,7 @@ pub struct SendRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendResponse {
-    pub base64: String,
+    pub pset: String,
 }
 
 impl<'a> TryFrom<(String, &Signer<'a>)> for SignerResponse {

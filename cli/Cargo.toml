@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 app = { path = "../app" }
-wollet = { path = "../wollet" }
 clap = { version = "4.4.6", features = ["derive"] }
 # config = "0.13.3"
 tracing = "0.1"

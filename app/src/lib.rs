@@ -284,7 +284,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::SendResponse {
-                    base64: tx.to_string(),
+                    pset: tx.to_string(),
                 })?,
             )
         }

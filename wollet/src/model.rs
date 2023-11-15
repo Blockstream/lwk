@@ -57,6 +57,7 @@ impl TryFrom<String> for UnvalidatedAddressee {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let pieces: Vec<_> = value.split(':').collect();
         if pieces.len() != 3 {
+            // TODO make specific error
             return Err(Error::Generic(
                 "Invalid number of elements in value, should be \"address:satoshi:assetid\""
                     .to_string(),

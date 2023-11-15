@@ -2,6 +2,8 @@ use std::sync::{Mutex, PoisonError};
 
 use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
 
+use crate::consts::{BAUD_RATE, TIMEOUT};
+use crate::network::Network;
 use crate::{sign_pset, Jade};
 
 #[derive(Debug)]
@@ -11,6 +13,20 @@ impl MutexJade {
     pub fn new(jade: Jade) -> Self {
         Self(Mutex::new(jade))
     }
+
+    #[cfg(feature = "serial")]
+    pub fn from_serial(network: Network) -> Result<Self, crate::error::Error> {
+        let ports = serialport::available_ports()?;
+        if ports.is_empty() {
+            Err(crate::error::Error::NoAvailablePorts)
+        } else {
+            // TODO: only one serial jade supported
+            let path = &ports[0].port_name;
+            let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
+            Ok(Self::new(Jade::new(port.into(), network)))
+        }
+    }
+
     pub fn sign_pset(
         &self,
         pset: &mut PartiallySignedTransaction,

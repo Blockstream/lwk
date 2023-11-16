@@ -45,6 +45,7 @@ pub enum NewError {
 pub struct SwSigner<'a> {
     pub(crate) xprv: ExtendedPrivKey,
     pub(crate) secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
+    seed: [u8; 64],
 }
 
 impl<'a> core::fmt::Debug for SwSigner<'a> {
@@ -56,9 +57,10 @@ impl<'a> core::fmt::Debug for SwSigner<'a> {
 impl<'a> SwSigner<'a> {
     pub fn new(mnemonic: &str, secp: &'a Secp256k1<All>) -> Result<Self, NewError> {
         let mnemonic: Mnemonic = mnemonic.parse()?;
-        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
+        let seed = mnemonic.to_seed("");
+        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed)?;
 
-        Ok(Self { xprv, secp })
+        Ok(Self { xprv, secp, seed })
     }
 
     pub fn random(secp: &'a Secp256k1<All>) -> Result<(Self, Mnemonic), NewError> {

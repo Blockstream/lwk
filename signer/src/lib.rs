@@ -66,7 +66,7 @@ impl<'a> Signer for SwSigner<'a> {
     }
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        todo!()
+        Ok(self.slip77())
     }
 }
 
@@ -105,7 +105,7 @@ impl<'a> Signer for &AnySigner<'a> {
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(match self {
-            AnySigner::Software(ss) => ss.slip77()?,
+            AnySigner::Software(s) => s.slip77(),
             AnySigner::Jade(_) => todo!(),
         })
     }

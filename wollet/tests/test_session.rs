@@ -363,7 +363,7 @@ impl TestWollet {
     /// To specify an external recipient specify the `to` parameter
     pub fn send_btc(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         fee_rate: Option<f32>,
         external: Option<(Address, u64)>,
     ) {
@@ -408,7 +408,7 @@ impl TestWollet {
 
     pub fn send_asset(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         node_address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -448,7 +448,7 @@ impl TestWollet {
 
     pub fn send_many(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         addr1: &Address,
         asset1: &AssetId,
         addr2: &Address,
@@ -495,7 +495,7 @@ impl TestWollet {
 
     pub fn issueasset(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         satoshi_asset: u64,
         satoshi_token: u64,
         contract: &str,
@@ -559,7 +559,7 @@ impl TestWollet {
 
     pub fn reissueasset(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -609,7 +609,7 @@ impl TestWollet {
 
     pub fn burnasset(
         &mut self,
-        signers: &[&Signer],
+        signers: &[&AnySigner],
         satoshi_asset: u64,
         asset: &AssetId,
         fee_rate: Option<f32>,
@@ -731,7 +731,7 @@ pub fn generate_signer() -> SwSigner<'static> {
     SwSigner::new(&mnemonic, &wollet::EC).unwrap()
 }
 
-pub fn singlesig_desc(signer: &Signer, variant: Variant) -> String {
+pub fn singlesig_desc(signer: &AnySigner, variant: Variant) -> String {
     let (prefix, path, suffix) = match variant {
         Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
         Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
@@ -747,7 +747,7 @@ pub fn singlesig_desc(signer: &Signer, variant: Variant) -> String {
     format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})")
 }
 
-pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
+pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
     assert!(threshold <= signers.len());
     let xpubs = signers
         .iter()
@@ -762,7 +762,7 @@ pub fn multisig_desc(signers: &[&Signer], threshold: usize) -> String {
     format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
 }
 
-pub fn register_multisig(signers: &[&Signer], name: &str, desc: &str) {
+pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     // Register a multisig descriptor on each *jade* signer
     let desc: WolletDescriptor = desc.parse().unwrap();
     let desc: JadeDescriptor = desc.as_ref().try_into().unwrap();
@@ -773,7 +773,7 @@ pub fn register_multisig(signers: &[&Signer], name: &str, desc: &str) {
     };
 
     for signer in signers {
-        if let Signer::Jade(s) = signer {
+        if let AnySigner::Jade(s) = signer {
             s.register_multisig(params.clone());
         }
     }

@@ -2,7 +2,7 @@ pub mod init;
 
 use bs_containers::testcontainers::clients::Cli;
 use jade::get_receive_address::Variant;
-use signer::Signer;
+use signer::AnySigner;
 
 use crate::{
     test_jade::init::inner_jade_debug_initialization,
@@ -15,7 +15,7 @@ use crate::{
 
 fn roundtrip(
     server: &TestElectrumServer,
-    signers: &[&Signer],
+    signers: &[&AnySigner],
     variant: Option<Variant>,
     threshold: Option<usize>,
 ) {
@@ -56,7 +56,7 @@ fn emul_roundtrip_singlesig(variant: Variant) {
     let server = setup();
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = &[&Signer::Jade(jade_init.jade)];
+    let signers = &[&AnySigner::Jade(jade_init.jade)];
     roundtrip(&server, signers, Some(variant), None);
 }
 
@@ -65,7 +65,10 @@ fn emul_roundtrip_multisig(threshold: usize) {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let sw_signer = generate_signer();
-    let signers = &[&Signer::Jade(jade_init.jade), &Signer::Software(sw_signer)];
+    let signers = &[
+        &AnySigner::Jade(jade_init.jade),
+        &AnySigner::Software(sw_signer),
+    ];
     roundtrip(&server, signers, None, Some(threshold));
 }
 

@@ -26,16 +26,16 @@ pub enum SignerError {
     Bip32Error(#[from] elements::bitcoin::bip32::Error),
 }
 
-pub enum Signer<'a> {
+pub enum AnySigner<'a> {
     Software(SwSigner<'a>),
     Jade(MutexJade),
 }
 
-impl<'a> Signer<'a> {
+impl<'a> AnySigner<'a> {
     pub fn xpub(&self) -> Result<ExtendedPubKey, SignerError> {
         match self {
-            Signer::Software(s) => Ok(s.xpub()),
-            Signer::Jade(s) => {
+            AnySigner::Software(s) => Ok(s.xpub()),
+            AnySigner::Jade(s) => {
                 let params = jade::protocol::GetXpubParams {
                     network: jade::Network::LocaltestLiquid,
                     path: vec![],
@@ -47,8 +47,8 @@ impl<'a> Signer<'a> {
 
     pub fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, SignerError> {
         match self {
-            Signer::Software(s) => Ok(s.derive_xpub(path)?),
-            Signer::Jade(s) => {
+            AnySigner::Software(s) => Ok(s.derive_xpub(path)?),
+            AnySigner::Jade(s) => {
                 let params = jade::protocol::GetXpubParams {
                     network: jade::Network::LocaltestLiquid,
                     path: derivation_path_to_vec(path),
@@ -75,7 +75,7 @@ impl<'a> Sign for SwSigner<'a> {
     }
 }
 
-impl<'a> Sign for Signer<'a> {
+impl<'a> Sign for AnySigner<'a> {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
@@ -83,13 +83,13 @@ impl<'a> Sign for Signer<'a> {
     }
 }
 
-impl<'a> Sign for &Signer<'a> {
+impl<'a> Sign for &AnySigner<'a> {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
-            Signer::Software(signer) => signer.sign_pset(pset)?,
-            Signer::Jade(signer) => signer.sign_pset(pset)?,
+            AnySigner::Software(signer) => signer.sign_pset(pset)?,
+            AnySigner::Jade(signer) => signer.sign_pset(pset)?,
         })
     }
 }

@@ -8,7 +8,7 @@ use config::Config;
 use jade::get_receive_address::Variant;
 use jade::mutex_jade::MutexJade;
 use rand::{thread_rng, Rng};
-use signer::{Signer, SwSigner};
+use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::DerivationPath;
 use wollet::elements::hex::ToHex;
@@ -28,7 +28,7 @@ pub struct State<'a> {
     // Ideally it should be in _another_ struct accessible by method_handler.
     pub config: Config,
     pub wollets: HashMap<String, Wollet>,
-    pub signers: HashMap<String, Signer<'a>>,
+    pub signers: HashMap<String, AnySigner<'a>>,
 }
 
 pub struct App {
@@ -206,7 +206,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                         ));
                     }
                     let mnemonic = r.mnemonic.unwrap();
-                    Signer::Software(SwSigner::new(&mnemonic, &EC)?)
+                    AnySigner::Software(SwSigner::new(&mnemonic, &EC)?)
                 }
                 "serial" => {
                     let network = s.config.jade_network();
@@ -216,7 +216,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     if jade_state == jade::protocol::JadeState::Locked {
                         jade.unlock().unwrap();
                     }
-                    Signer::Jade(jade)
+                    AnySigner::Jade(jade)
                 }
                 _ => {
                     return Err(tiny_jrpc::error::Error::Generic(
@@ -365,7 +365,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
 // 1) rename crate pset_common -> common
 // 2) move things that must be trasversaly used but that not depend on anything in this workspace there
 //    like the following function if refactored taking xpub and fingerprint insteaf of singer
-fn singlesig_desc(signer: &Signer, variant: Variant) -> String {
+fn singlesig_desc(signer: &AnySigner, variant: Variant) -> String {
     let (prefix, path, suffix) = match variant {
         Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
         Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),

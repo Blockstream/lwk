@@ -18,14 +18,14 @@ const TEST_MNEMONIC: &str =
 fn liquid_send_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&Signer::Jade(jade_init.jade)];
+    let signers = [&AnySigner::Jade(jade_init.jade)];
     liquid_send(&signers);
 }
 
 #[test]
 fn liquid_send_software_signer() {
     let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
-    let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];
+    let signers: [&AnySigner<'_>; 1] = [&AnySigner::Software(signer)];
     liquid_send(&signers);
 }
 
@@ -33,18 +33,18 @@ fn liquid_send_software_signer() {
 fn liquid_issue_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&Signer::Jade(jade_init.jade)];
+    let signers = [&AnySigner::Jade(jade_init.jade)];
     liquid_issue(&signers);
 }
 
 #[test]
 fn liquid_issue_software_signer() {
     let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
-    let signers = [&Signer::Software(signer)];
+    let signers = [&AnySigner::Software(signer)];
     liquid_issue(&signers);
 }
 
-fn liquid_send(signers: &[&Signer]) {
+fn liquid_send(signers: &[&AnySigner]) {
     let server = setup();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
@@ -73,7 +73,7 @@ fn liquid_send(signers: &[&Signer]) {
     );
 }
 
-fn liquid_issue(signers: &[&Signer]) {
+fn liquid_issue(signers: &[&AnySigner]) {
     let server = setup();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
@@ -124,7 +124,7 @@ fn origin() {
     let desc_str = format!("ct({view_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
-    let signers: [&Signer<'_>; 1] = [&Signer::Software(signer)];
+    let signers: [&AnySigner<'_>; 1] = [&AnySigner::Software(signer)];
 
     let address = server.node_getnewaddress();
 
@@ -164,12 +164,15 @@ fn roundtrip() {
     let xpub6: bitcoin::bip32::ExtendedPubKey = signer6.xpub();
     let desc6 = format!("ct(slip77({slip77_key}),elwpkh({xpub6}/<0;1>/*))");
 
-    let signers1 = [&Signer::Software(signer1)];
-    let signers2 = [&Signer::Software(signer2)];
-    let signers3 = [&Signer::Software(signer3)];
-    let signers4 = [&Signer::Software(signer4)];
-    let signers5 = [&Signer::Software(signer51), &Signer::Software(signer52)];
-    let signers6 = [&Signer::Software(signer6)];
+    let signers1 = [&AnySigner::Software(signer1)];
+    let signers2 = [&AnySigner::Software(signer2)];
+    let signers3 = [&AnySigner::Software(signer3)];
+    let signers4 = [&AnySigner::Software(signer4)];
+    let signers5 = [
+        &AnySigner::Software(signer51),
+        &AnySigner::Software(signer52),
+    ];
+    let signers6 = [&AnySigner::Software(signer6)];
 
     std::thread::scope(|s| {
         for (signers, desc) in [
@@ -189,7 +192,11 @@ fn roundtrip() {
     });
 }
 
-fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&Signer<'_>]) {
+fn roundtrip_inner(
+    mut wallet: TestWollet,
+    server: &TestElectrumServer,
+    signers: &[&AnySigner<'_>],
+) {
     wallet.fund_btc(server);
     server.generate(1);
     wallet.send_btc(signers, None, None);
@@ -333,7 +340,7 @@ fn fee_rate() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = [&Signer::Software(signer)];
+    let signers = [&AnySigner::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -364,7 +371,7 @@ fn contract() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let signers = [&Signer::Software(signer)];
+    let signers = [&AnySigner::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
@@ -484,7 +491,7 @@ fn create_pset_error() {
     let satoshi_a = 100_000;
     let satoshi_t = 1;
     let (asset, token) = wallet.issueasset(
-        &[&Signer::Software(signer.clone())],
+        &[&AnySigner::Software(signer.clone())],
         satoshi_a,
         satoshi_t,
         "",
@@ -682,7 +689,7 @@ fn jade_sign_wollet_pset() {
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let jade_signer = Signer::Jade(jade_init.jade);
+    let jade_signer = AnySigner::Jade(jade_init.jade);
     // Compre strings so that we don't get mismatching regtest-testnet networks
     assert_eq!(
         jade_signer.xpub().unwrap().to_string(),
@@ -702,7 +709,7 @@ fn jade_single_sig() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let signer = Signer::Jade(jade_init.jade);
+    let signer = AnySigner::Jade(jade_init.jade);
     // FIXME: implement Signer::xpub
     let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
 

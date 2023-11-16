@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use signer::{Signer, SignerError};
+use signer::{AnySigner, SignerError};
 use std::collections::HashMap;
 use wollet::bitcoin::bip32::ExtendedPubKey;
 use wollet::bitcoin::hash_types::XpubIdentifier;
@@ -124,10 +124,10 @@ pub struct SinglesigDescriptorRequest {
     pub singlesig_kind: String,
 }
 
-impl<'a> TryFrom<(String, &Signer<'a>)> for SignerResponse {
+impl<'a> TryFrom<(String, &AnySigner<'a>)> for SignerResponse {
     type Error = SignerError;
 
-    fn try_from(name_and_signer: (String, &Signer<'a>)) -> Result<Self, Self::Error> {
+    fn try_from(name_and_signer: (String, &AnySigner<'a>)) -> Result<Self, Self::Error> {
         let (name, signer) = name_and_signer;
         let fingerprint = signer.fingerprint()?.to_string();
         let xpub = signer.xpub()?;

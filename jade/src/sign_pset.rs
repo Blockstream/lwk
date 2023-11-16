@@ -74,7 +74,12 @@ pub enum Error {
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
 impl Jade {
-    pub fn sign_pset(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
+    /// Sign a pset from a Jade
+    ///
+    /// Mostly equivalent to `Signer::sign`` but it takes self mutably to ensure calls to the jade
+    /// are not interleaved, use `MutexJade` which grant that by using a lock for something
+    /// implementing the `Signer` trait
+    pub fn sign(&mut self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
         let mut sigs_added_or_overwritten = 0;

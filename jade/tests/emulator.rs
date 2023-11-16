@@ -330,7 +330,7 @@ fn jade_sign_liquid_tx() {
     let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
     assert_eq!(pset.outputs().len(), 3);
 
-    initialized_jade.jade.sign_pset(&mut pset).unwrap();
+    initialized_jade.jade.sign(&mut pset).unwrap();
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

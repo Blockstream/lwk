@@ -64,7 +64,7 @@ impl Signer for &MutexJade {
     type Error = crate::sign_pset::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        self.0.lock().unwrap().sign_pset(pset)
+        self.0.lock().unwrap().sign(pset)
     }
 
     fn derive_xpub(

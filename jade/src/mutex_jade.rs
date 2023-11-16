@@ -13,12 +13,15 @@ use crate::{derivation_path_to_vec, Jade};
 #[derive(Debug)]
 pub struct MutexJade {
     inner: Mutex<Jade>,
+    network: Network,
 }
 
 impl MutexJade {
     pub fn new(jade: Jade) -> Self {
+        let network = jade.network;
         Self {
             inner: Mutex::new(jade),
+            network,
         }
     }
 
@@ -56,8 +59,7 @@ impl MutexJade {
     }
 
     pub fn network(&self) -> Network {
-        // TODO save network in MutexJade when creating the struct?
-        self.inner.lock().unwrap().network
+        self.network
     }
 }
 

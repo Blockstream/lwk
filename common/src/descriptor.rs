@@ -9,20 +9,28 @@ pub fn singlesig_desc<S: Signer>(
     signer: &S,
     script_variant: Singlesig,
     blinding_variant: BlindingKeyVariant,
-) -> Result<String, ()> {
+) -> Result<String, String> {
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", "84h/1h/0h", ""),
         Singlesig::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
     };
-    let master = signer.derive_xpub(&DerivationPath::master()).unwrap();
+
+    let master = signer
+        .derive_xpub(&DerivationPath::master())
+        .map_err(|e| format!("{:?}", e))?;
     let fingerprint = master.fingerprint();
 
     let xpub = signer
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
-        .unwrap();
+        .derive_xpub(
+            &DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{:?}", e))?,
+        )
+        .map_err(|e| format!("{:?}", e))?;
 
     let blinding_key = match blinding_variant {
-        BlindingKeyVariant::Slip77 => format!("slip77({})", signer.slip77().unwrap()),
+        BlindingKeyVariant::Slip77 => format!(
+            "slip77({})",
+            signer.slip77().map_err(|e| format!("{:?}", e))?
+        ),
     };
 
     // m / purpose' / coin_type' / account' / change / address_index

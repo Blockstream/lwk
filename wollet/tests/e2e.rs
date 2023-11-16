@@ -3,7 +3,7 @@ mod test_session;
 
 use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
-use common::Sign;
+use common::Signer;
 use elements::bitcoin::bip32::DerivationPath;
 use jade::protocol::GetXpubParams;
 use signer::*;

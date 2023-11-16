@@ -2,7 +2,7 @@ mod software;
 
 pub use crate::software::{NewError, SignError, SwSigner};
 
-use common::Sign;
+use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
@@ -67,7 +67,7 @@ impl<'a> AnySigner<'a> {
     }
 }
 
-impl<'a> Sign for SwSigner<'a> {
+impl<'a> Signer for SwSigner<'a> {
     type Error = SignError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
@@ -75,15 +75,15 @@ impl<'a> Sign for SwSigner<'a> {
     }
 }
 
-impl<'a> Sign for AnySigner<'a> {
+impl<'a> Signer for AnySigner<'a> {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        Sign::sign(&self, pset)
+        Signer::sign(&self, pset)
     }
 }
 
-impl<'a> Sign for &AnySigner<'a> {
+impl<'a> Signer for &AnySigner<'a> {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {

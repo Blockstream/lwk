@@ -6,7 +6,7 @@ mod sign;
 pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::error::Error;
 pub use crate::model::*;
-pub use crate::sign::Sign;
+pub use crate::sign::Signer;
 
 use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;

@@ -8,7 +8,7 @@ use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
 use bip39::Mnemonic;
-use common::Sign;
+use common::Signer;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -646,7 +646,7 @@ impl TestWollet {
         assert!(self.balance_btc() < balance_btc_before);
     }
 
-    pub fn sign<S: Sign>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
+    pub fn sign<S: Signer>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
         let sigs_added_or_overwritten = signer.sign(pset).unwrap();
         assert!(sigs_added_or_overwritten > 0);
     }

@@ -1,6 +1,6 @@
 use elements::pset::PartiallySignedTransaction;
 
-pub trait Sign {
+pub trait Signer {
     type Error: std::fmt::Debug;
 
     /// Try to sign the given pset, mutating it in place.

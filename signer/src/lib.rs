@@ -2,6 +2,7 @@ mod software;
 
 pub use crate::software::{NewError, SignError, SwSigner};
 
+use common::Sign;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
@@ -23,12 +24,6 @@ pub enum SignerError {
 
     #[error(transparent)]
     Bip32Error(#[from] elements::bitcoin::bip32::Error),
-}
-
-pub trait Sign {
-    /// Try to sign the given pset, mutating it in place.
-    /// returns how many signatures were added or overwritten
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError>;
 }
 
 pub enum Signer<'a> {
@@ -72,32 +67,26 @@ impl<'a> Signer<'a> {
     }
 }
 
-impl Sign for MutexJade {
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
-        Ok(self.sign_pset(pset)?)
-    }
-}
-
-impl Sign for &MutexJade {
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
-        Ok(self.sign_pset(pset)?)
-    }
-}
-
 impl<'a> Sign for SwSigner<'a> {
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
+    type Error = SignError;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(self.sign_pset(pset)?)
     }
 }
 
 impl<'a> Sign for Signer<'a> {
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
+    type Error = SignerError;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Sign::sign(&self, pset)
     }
 }
 
 impl<'a> Sign for &Signer<'a> {
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignerError> {
+    type Error = SignerError;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
             Signer::Software(signer) => signer.sign_pset(pset)?,
             Signer::Jade(signer) => signer.sign_pset(pset)?,

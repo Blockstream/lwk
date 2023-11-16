@@ -8,6 +8,7 @@ use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
 use bip39::Mnemonic;
+use common::Sign;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;

@@ -11,4 +11,5 @@ elements-miniscript = { git = "https://github.com/ElementsProject/elements-minis
 thiserror = "1.0.48"
 base64 = "0.13.0"
 
+common = { path = "../common" }
 jade = { path = "../jade" }

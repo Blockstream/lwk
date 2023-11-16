@@ -1,5 +1,6 @@
 use std::sync::{Mutex, PoisonError};
 
+use common::Sign;
 use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
 
 use crate::consts::{BAUD_RATE, TIMEOUT};
@@ -55,5 +56,21 @@ impl MutexJade {
 
     pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
         self.0.lock().unwrap().register_multisig(params).unwrap();
+    }
+}
+
+impl Sign for MutexJade {
+    type Error = crate::sign_pset::Error;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        Ok(self.sign_pset(pset)?)
+    }
+}
+
+impl Sign for &MutexJade {
+    type Error = crate::sign_pset::Error;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        Ok(self.sign_pset(pset)?)
     }
 }

@@ -100,13 +100,7 @@ impl<'a> Signer for &AnySigner<'a> {
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
         match self {
             AnySigner::Software(s) => Ok(s.derive_xpub(path)?),
-            AnySigner::Jade(s) => {
-                let params = jade::protocol::GetXpubParams {
-                    network: jade::Network::LocaltestLiquid,
-                    path: derivation_path_to_vec(path),
-                };
-                Ok(s.get_xpub(params)?)
-            }
+            AnySigner::Jade(s) => Ok(s.derive_xpub(path)?),
         }
     }
 

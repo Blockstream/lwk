@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use elements::bitcoin::bip32::DerivationPath;
+use thiserror::Error;
 
 use crate::Signer;
 
@@ -8,7 +9,7 @@ use crate::Signer;
 pub fn singlesig_desc<S: Signer>(
     signer: &S,
     script_variant: Singlesig,
-    blinding_variant: BlindingKeyVariant,
+    blinding_variant: BlindingKey,
 ) -> Result<String, String> {
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", "84h/1h/0h", ""),
@@ -27,7 +28,7 @@ pub fn singlesig_desc<S: Signer>(
         .map_err(|e| format!("{:?}", e))?;
 
     let blinding_key = match blinding_variant {
-        BlindingKeyVariant::Slip77 => format!(
+        BlindingKey::Slip77 => format!(
             "slip77({})",
             signer.slip77().map_err(|e| format!("{:?}", e))?
         ),
@@ -47,6 +48,37 @@ pub enum Singlesig {
     ShWpkh,
 }
 
-pub enum BlindingKeyVariant {
+#[derive(Error, Debug)]
+#[error("Invalid singlesig variant '{0}' supported variant are: 'wpkh', 'shwpkh'")]
+pub struct InvalidSinglesigVariant(String);
+
+impl FromStr for Singlesig {
+    type Err = InvalidSinglesigVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "wpkh" => Singlesig::Wpkh,
+            "shwpkh" => Singlesig::ShWpkh,
+            v => return Err(InvalidSinglesigVariant(v.to_string())),
+        })
+    }
+}
+
+pub enum BlindingKey {
     Slip77,
+}
+
+#[derive(Error, Debug)]
+#[error("Invalid blinding key variant '{0}' supported variant are: 'slip77'")]
+pub struct InvalidBlindingKeyVariant(String);
+
+impl FromStr for BlindingKey {
+    type Err = InvalidBlindingKeyVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "slip77" => BlindingKey::Slip77,
+            v => return Err(InvalidBlindingKeyVariant(v.to_string())),
+        })
+    }
 }

@@ -19,12 +19,7 @@ fn roundtrip(
     threshold: Option<usize>,
 ) {
     let desc_str = match signers.len() {
-        1 => singlesig_desc(
-            signers[0],
-            variant.unwrap(),
-            common::BlindingKeyVariant::Slip77,
-        )
-        .unwrap(),
+        1 => singlesig_desc(signers[0], variant.unwrap(), common::BlindingKey::Slip77).unwrap(),
         _ => {
             let desc = multisig_desc(signers, threshold.unwrap());
             register_multisig(signers, "custody", &desc);

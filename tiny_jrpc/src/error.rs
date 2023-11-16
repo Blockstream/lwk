@@ -44,6 +44,12 @@ pub enum Error {
     Generic(String),
 }
 
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Error::Generic(value)
+    }
+}
+
 impl Error {
     pub fn as_rpc_error(&self) -> RpcError {
         use RpcIntErrors::*;

@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
-use common::{singlesig_desc, BlindingKeyVariant, Signer, Singlesig};
+use common::{singlesig_desc, InvalidBlindingKeyVariant, InvalidSinglesigVariant, Signer};
 use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
@@ -323,25 +323,17 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .get(&r.name)
                 .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
 
-            let variant = match r.singlesig_kind.as_str() {
-                "wpkh" => Singlesig::Wpkh,
-                "shwpkh" => Singlesig::ShWpkh,
-                v => {
-                    return Err(tiny_jrpc::error::Error::Generic(format!(
-                        "invalid variant {}",
-                        v
-                    )))
-                }
-            };
+            let script_variant = r
+                .singlesig_kind
+                .parse()
+                .map_err(|e: InvalidSinglesigVariant| e.to_string())?;
 
-            if r.descriptor_blinding_key != "slip77" {
-                return Err(tiny_jrpc::error::Error::Generic(format!(
-                    "invalid or not yet implemented descriptor_blinding_key {}",
-                    r.descriptor_blinding_key
-                )));
-            }
+            let blinding_variant = r
+                .descriptor_blinding_key
+                .parse()
+                .map_err(|e: InvalidBlindingKeyVariant| e.to_string())?;
 
-            let descriptor = singlesig_desc(signer, variant, BlindingKeyVariant::Slip77).unwrap();
+            let descriptor = singlesig_desc(signer, script_variant, blinding_variant).unwrap();
             Response::result(
                 request.id,
                 serde_json::to_value(model::SinglesigDescriptorResponse { descriptor })?,

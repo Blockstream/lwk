@@ -30,7 +30,9 @@ pub fn singlesig_desc<S: Signer>(
     let blinding_key = match blinding_variant {
         BlindingKey::Slip77 => format!(
             "slip77({})",
-            signer.slip77().map_err(|e| format!("{:?}", e))?
+            signer
+                .slip77_master_blinding_key()
+                .map_err(|e| format!("{:?}", e))?
         ),
     };
 

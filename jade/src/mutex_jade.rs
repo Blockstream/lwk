@@ -86,7 +86,9 @@ impl Signer for &MutexJade {
         Ok(self.get_xpub(params).unwrap()) // TODO remove unwrap
     }
 
-    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+    fn slip77_master_blinding_key(
+        &self,
+    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         // TODO ask jade instead of doing it randomly
         let mut bytes = [0u8; 32];
         thread_rng().fill(&mut bytes);

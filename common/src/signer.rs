@@ -15,5 +15,5 @@ pub trait Signer {
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error>;
 
     /// Return the slip77 master blinding key
-    fn slip77(&self) -> Result<MasterBlindingKey, Self::Error>;
+    fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error>;
 }

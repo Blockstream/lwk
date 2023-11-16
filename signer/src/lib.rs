@@ -65,7 +65,9 @@ impl Signer for SwSigner {
         Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
     }
 
-    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+    fn slip77_master_blinding_key(
+        &self,
+    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(self.slip77())
     }
 }
@@ -81,8 +83,10 @@ impl Signer for AnySigner {
         Signer::derive_xpub(&self, path)
     }
 
-    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        Signer::slip77(&self)
+    fn slip77_master_blinding_key(
+        &self,
+    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+        Signer::slip77_master_blinding_key(&self)
     }
 }
 
@@ -103,10 +107,12 @@ impl Signer for &AnySigner {
         })
     }
 
-    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+    fn slip77_master_blinding_key(
+        &self,
+    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.slip77(),
-            AnySigner::Jade(s) => s.slip77()?,
+            AnySigner::Jade(s) => s.slip77_master_blinding_key()?,
         })
     }
 }

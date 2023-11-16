@@ -8,7 +8,6 @@ use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::bitcoin::hash_types::XpubIdentifier;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use jade::derivation_path_to_vec;
 use jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
@@ -83,7 +82,7 @@ impl<'a> Signer for AnySigner<'a> {
     }
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        todo!()
+        Signer::slip77(&self)
     }
 }
 
@@ -98,13 +97,16 @@ impl<'a> Signer for &AnySigner<'a> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        match self {
-            AnySigner::Software(s) => Ok(s.derive_xpub(path)?),
-            AnySigner::Jade(s) => Ok(s.derive_xpub(path)?),
-        }
+        Ok(match self {
+            AnySigner::Software(s) => s.derive_xpub(path)?,
+            AnySigner::Jade(s) => s.derive_xpub(path)?,
+        })
     }
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        todo!()
+        Ok(match self {
+            AnySigner::Software(ss) => ss.slip77()?,
+            AnySigner::Jade(_) => todo!(),
+        })
     }
 }

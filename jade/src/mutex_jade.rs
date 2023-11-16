@@ -2,6 +2,8 @@ use std::sync::{Mutex, PoisonError};
 
 use common::Signer;
 use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
+use elements_miniscript::slip77::MasterBlindingKey;
+use rand::{thread_rng, Rng};
 
 use crate::consts::{BAUD_RATE, TIMEOUT};
 use crate::network::Network;
@@ -85,6 +87,9 @@ impl Signer for &MutexJade {
     }
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        todo!()
+        // TODO ask jade instead of doing it randomly
+        let mut bytes = [0u8; 32];
+        thread_rng().fill(&mut bytes);
+        Ok(MasterBlindingKey::from_seed(&bytes[..]))
     }
 }

@@ -5,7 +5,7 @@ pub use crate::software::{NewError, SignError, SwSigner};
 use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements;
-use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
+use elements_miniscript::elements::bitcoin::bip32::ExtendedPubKey;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use jade::mutex_jade::MutexJade;
 
@@ -27,19 +27,6 @@ pub enum SignerError {
 pub enum AnySigner {
     Software(SwSigner),
     Jade(MutexJade),
-}
-
-impl AnySigner {
-    pub fn xpub(&self) -> Result<ExtendedPubKey, SignerError> {
-        match self {
-            AnySigner::Software(s) => Ok(s.xpub()),
-            AnySigner::Jade(s) => Ok(s.derive_xpub(&DerivationPath::master())?),
-        }
-    }
-
-    pub fn fingerprint(&self) -> Result<Fingerprint, SignerError> {
-        Ok(self.xpub()?.fingerprint())
-    }
 }
 
 impl Signer for AnySigner {

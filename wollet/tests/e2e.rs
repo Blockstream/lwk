@@ -5,7 +5,6 @@ use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
 use common::Signer;
 use elements::bitcoin::bip32::DerivationPath;
-use jade::protocol::GetXpubParams;
 use signer::*;
 use std::{collections::HashSet, str::FromStr};
 use test_session::*;
@@ -606,12 +605,7 @@ fn multisig_flow() {
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
 
     let signer2 = &jade_init.jade;
-    let signer2_xpub = signer2
-        .get_xpub(GetXpubParams {
-            network: jade::Network::LocaltestLiquid,
-            path: vec![],
-        })
-        .unwrap();
+    let signer2_xpub = signer2.xpub().unwrap();
     let signer2_fingerprint = signer2_xpub.fingerprint();
 
     // Someone generates the "view" descriptor blinding key

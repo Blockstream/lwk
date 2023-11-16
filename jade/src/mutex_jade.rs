@@ -31,13 +31,6 @@ impl MutexJade {
         }
     }
 
-    pub fn get_xpub(
-        &self,
-        params: crate::protocol::GetXpubParams,
-    ) -> Result<ExtendedPubKey, crate::error::Error> {
-        self.0.lock().unwrap().get_xpub(params)
-    }
-
     pub fn unlock(&self) -> Result<(), crate::unlock::Error> {
         self.0.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
     }
@@ -76,7 +69,8 @@ impl Signer for &MutexJade {
             network,
             path: derivation_path_to_vec(path),
         };
-        Ok(self.get_xpub(params).unwrap()) // TODO remove unwrap
+
+        Ok(self.0.lock().unwrap().get_xpub(params)?) // TODO remove unwrap
     }
 
     fn slip77_master_blinding_key(

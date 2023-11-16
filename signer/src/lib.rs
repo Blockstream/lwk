@@ -34,13 +34,7 @@ impl AnySigner {
     pub fn xpub(&self) -> Result<ExtendedPubKey, SignerError> {
         match self {
             AnySigner::Software(s) => Ok(s.xpub()),
-            AnySigner::Jade(s) => {
-                let params = jade::protocol::GetXpubParams {
-                    network: jade::Network::LocaltestLiquid,
-                    path: vec![],
-                };
-                Ok(s.get_xpub(params)?)
-            }
+            AnySigner::Jade(s) => Ok(s.derive_xpub(&DerivationPath::master())?),
         }
     }
 

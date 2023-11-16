@@ -63,9 +63,7 @@ impl<'a> SwSigner<'a> {
 
     pub fn random(secp: &'a Secp256k1<All>) -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
-        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed(""))?;
-
-        Ok((Self { xprv, secp }, mnemonic))
+        Ok((SwSigner::new(&mnemonic.to_string(), secp)?, mnemonic))
     }
 
     pub fn xpub(&self) -> ExtendedPubKey {

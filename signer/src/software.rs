@@ -1,17 +1,20 @@
 use bip39::Mnemonic;
-use elements_miniscript::elementssig_to_rawsig;
+use common::Signer;
 use elements_miniscript::{
+    bitcoin::{bip32::DerivationPath, PrivateKey},
     elements::{
         bitcoin::{
             bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
-            Network, PrivateKey,
+            Network,
         },
         hashes::Hash,
         pset::PartiallySignedTransaction,
         secp256k1_zkp::{All, Secp256k1},
         sighash::SighashCache,
     },
+    elementssig_to_rawsig,
     psbt::PsbtExt,
+    slip77::MasterBlindingKey,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -76,13 +79,12 @@ impl SwSigner {
     pub fn fingerprint(&self) -> Fingerprint {
         self.xprv.fingerprint(&self.secp)
     }
-    pub fn sign(&self, pset: &str) -> Result<String, SignError> {
-        let mut pset: PartiallySignedTransaction = pset.parse()?;
-        self.sign_pset(&mut pset)?;
-        Ok(pset.to_string())
-    }
+}
 
-    pub fn sign_pset(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, SignError> {
+impl Signer for SwSigner {
+    type Error = SignError;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         let tx = pset.extract_tx()?;
         let mut sighash_cache = SighashCache::new(&tx);
         let mut signature_added = 0;
@@ -124,6 +126,15 @@ impl SwSigner {
         }
 
         Ok(signature_added)
+    }
+
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+        let derived = self.xprv.derive_priv(&self.secp, path)?;
+        Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
+    }
+
+    fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
+        Ok(MasterBlindingKey::from_seed(&self.seed[..]))
     }
 }
 

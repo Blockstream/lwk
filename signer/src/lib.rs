@@ -8,7 +8,6 @@ use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::bitcoin::hash_types::XpubIdentifier;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use elements_miniscript::slip77::MasterBlindingKey;
 use jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
@@ -54,23 +53,6 @@ impl AnySigner {
     }
 }
 
-impl Signer for SwSigner {
-    type Error = SignError;
-
-    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        self.sign_pset(pset)
-    }
-
-    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        let derived = self.xprv.derive_priv(&self.secp, path)?;
-        Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
-    }
-
-    fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
-        Ok(MasterBlindingKey::from_seed(&self.seed[..]))
-    }
-}
-
 impl Signer for AnySigner {
     type Error = SignerError;
 
@@ -94,7 +76,7 @@ impl Signer for &AnySigner {
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
-            AnySigner::Software(signer) => signer.sign_pset(pset)?,
+            AnySigner::Software(signer) => signer.sign(pset)?,
             AnySigner::Jade(signer) => signer.sign(pset)?,
         })
     }

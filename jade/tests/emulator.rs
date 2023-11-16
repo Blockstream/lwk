@@ -22,7 +22,7 @@ use elements_miniscript::{
 };
 use jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
-    protocol::{JadeState, VersionInfoResult},
+    protocol::{IsAuthResult, JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
     Network,
 };
@@ -386,27 +386,30 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
     assert!(result);
 
     let result = jade_api.auth_user().unwrap();
-    let start_handshake_url = &result.urls()[0];
-    assert_eq!(
-        start_handshake_url,
-        &format!("{pin_server_url}/start_handshake")
-    );
+    if let IsAuthResult::AuthResult(result) = result {
+        // Unlock the jade
+        let start_handshake_url = &result.urls()[0];
+        assert_eq!(
+            start_handshake_url,
+            &format!("{pin_server_url}/start_handshake")
+        );
 
-    let resp = minreq::post(start_handshake_url).send().unwrap();
-    let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
-    verify(&params, &pin_server_pub_key);
+        let resp = minreq::post(start_handshake_url).send().unwrap();
+        let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
+        verify(&params, &pin_server_pub_key);
 
-    let result = jade_api.handshake_init(params).unwrap();
-    let handshake_data = result.data();
-    let next_url = &result.urls()[0];
-    assert_eq!(next_url, &format!("{pin_server_url}/set_pin"));
-    let data = serde_json::to_vec(&handshake_data).unwrap();
-    let resp = minreq::post(next_url).with_body(data).send().unwrap();
-    assert_eq!(resp.status_code, 200);
-    let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes()).unwrap();
+        let result = jade_api.handshake_init(params).unwrap();
+        let handshake_data = result.data();
+        let next_url = &result.urls()[0];
+        assert_eq!(next_url, &format!("{pin_server_url}/set_pin"));
+        let data = serde_json::to_vec(&handshake_data).unwrap();
+        let resp = minreq::post(next_url).with_body(data).send().unwrap();
+        assert_eq!(resp.status_code, 200);
+        let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes()).unwrap();
 
-    let result = jade_api.handshake_complete(params).unwrap();
-    assert!(result);
+        let result = jade_api.handshake_complete(params).unwrap();
+        assert!(result);
+    }
 
     InitializedJade {
         _pin_server: Some(pin_container),

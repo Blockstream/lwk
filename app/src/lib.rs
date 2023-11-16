@@ -206,12 +206,8 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 }
                 "serial" => {
                     let network = s.config.jade_network();
-                    let mut jade = MutexJade::from_serial(network)?;
-                    // TODO: move conditional unlocking to jade
-                    let jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-                    if jade_state == jade::protocol::JadeState::Locked {
-                        jade.unlock().unwrap();
-                    }
+                    let jade = MutexJade::from_serial(network)?;
+                    jade.unlock().unwrap();
                     AnySigner::Jade(jade)
                 }
                 _ => {

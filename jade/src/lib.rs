@@ -9,7 +9,7 @@ use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeInitParams, Params,
+    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeInitParams, IsAuthResult, Params,
     RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
     VersionInfoResult,
 };
@@ -126,7 +126,7 @@ impl Jade {
         self.send_request("add_entropy", Some(params))
     }
 
-    pub fn auth_user(&mut self) -> Result<AuthResult<String>> {
+    pub fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
         let epoch = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(error::Error::SystemTimeError)?

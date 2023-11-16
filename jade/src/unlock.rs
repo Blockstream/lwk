@@ -1,5 +1,5 @@
 use crate::{
-    protocol::{HandshakeCompleteParams, HandshakeInitParams},
+    protocol::{HandshakeCompleteParams, HandshakeInitParams, IsAuthResult},
     Jade,
 };
 
@@ -22,6 +22,9 @@ pub enum Error {
 
     #[error("The handshake complete call to the pin server failed")]
     HandshakeFailed,
+
+    #[error("Unexpected \"false\" result")]
+    UnexpectedFalse,
 }
 
 impl Jade {
@@ -31,29 +34,40 @@ impl Jade {
     /// and the host performs network calls to the pin server
     /// to decrypt the secret on the device.
     pub fn unlock(&mut self) -> Result<(), Error> {
-        let result = self.auth_user()?;
-        let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
-        let resp = minreq::post(url).send()?;
-        if resp.status_code != 200 {
-            return Err(Error::HttpStatus(url.to_string(), resp.status_code));
+        match self.auth_user()? {
+            IsAuthResult::AlreadyAuth(result) => {
+                if result {
+                    Ok(())
+                } else {
+                    // This should never happen
+                    Err(Error::UnexpectedFalse)
+                }
+            }
+            IsAuthResult::AuthResult(result) => {
+                let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
+                let resp = minreq::post(url).send()?;
+                if resp.status_code != 200 {
+                    return Err(Error::HttpStatus(url.to_string(), resp.status_code));
+                }
+
+                let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes())?;
+                let result = self.handshake_init(params)?;
+                let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
+                let data = serde_json::to_vec(result.data())?;
+                let resp = minreq::post(url).with_body(data).send()?;
+                if resp.status_code != 200 {
+                    return Err(Error::HttpStatus(url.to_string(), resp.status_code));
+                }
+                let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes())?;
+
+                let result = self.handshake_complete(params)?;
+
+                if !result {
+                    return Err(Error::HandshakeFailed);
+                }
+
+                Ok(())
+            }
         }
-
-        let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes())?;
-        let result = self.handshake_init(params)?;
-        let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
-        let data = serde_json::to_vec(result.data())?;
-        let resp = minreq::post(url).with_body(data).send()?;
-        if resp.status_code != 200 {
-            return Err(Error::HttpStatus(url.to_string(), resp.status_code));
-        }
-        let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes())?;
-
-        let result = self.handshake_complete(params)?;
-
-        if !result {
-            return Err(Error::HandshakeFailed);
-        }
-
-        Ok(())
     }
 }

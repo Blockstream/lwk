@@ -189,6 +189,13 @@ impl Debug for RegisteredMultisig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum IsAuthResult<T> {
+    AlreadyAuth(bool),
+    AuthResult(AuthResult<T>),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthResult<T> {
     http_request: HttpRequest<T>,
 }

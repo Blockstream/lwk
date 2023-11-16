@@ -33,7 +33,7 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
 
 #[cfg(feature = "serial")]
 pub mod serial {
-    use jade::{mutex_jade::MutexJade, protocol::JadeState, serialport, Jade};
+    use jade::{mutex_jade::MutexJade, serialport, Jade};
     use std::time::Duration;
 
     pub fn unlock() -> MutexJade {
@@ -48,16 +48,8 @@ pub mod serial {
             .unwrap();
 
         let jade = Jade::new(port.into(), network);
-        let mut jade = MutexJade::new(jade);
-
-        let mut jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        assert_ne!(jade_state, JadeState::Uninit);
-        assert_ne!(jade_state, JadeState::Unsaved);
-        if jade_state == JadeState::Locked {
-            jade.unlock().unwrap();
-            jade_state = jade.get_mut().unwrap().version_info().unwrap().jade_state;
-        }
-        assert_eq!(jade_state, JadeState::Ready);
+        let jade = MutexJade::new(jade);
+        jade.unlock().unwrap();
         jade
     }
 }

@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
-use common::{singlesig_desc, BlindingKeyVariant, Singlesig};
+use common::{singlesig_desc, BlindingKeyVariant, Signer, Singlesig};
 use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use wollet::bitcoin::bip32::DerivationPath;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
@@ -343,6 +345,36 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::SinglesigDescriptorResponse { descriptor })?,
+            )
+        }
+        "xpub" => {
+            let r: model::XpubRequest = serde_json::from_value(request.params.unwrap())?;
+            let s = state.lock().unwrap();
+
+            let signer = s
+                .signers
+                .get(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
+
+            // TODO network -> coin type
+            // TODO account
+            let path = match r.xpub_kind.as_str() {
+                "bip84" => "84h/1h/0h",
+                v => {
+                    return Err(tiny_jrpc::error::Error::Generic(format!(
+                        "invalid variant {}",
+                        v
+                    )))
+                }
+            };
+
+            let fingerprint = signer.fingerprint()?;
+            let xpub =
+                signer.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())?;
+            let keyorigin_xpub = format!("[{fingerprint}/{path}]{xpub}");
+            Response::result(
+                request.id,
+                serde_json::to_value(model::XpubResponse { keyorigin_xpub })?,
             )
         }
         "stop" => {

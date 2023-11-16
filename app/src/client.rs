@@ -128,6 +128,11 @@ impl Client {
         self.make_request("singlesig_descriptor", Some(req))
     }
 
+    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse> {
+        let req = XpubRequest { name, xpub_kind };
+        self.make_request("xpub", Some(req))
+    }
+
     pub fn stop(&self) -> Result<Value> {
         // TODO discriminate only stop error
         let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);

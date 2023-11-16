@@ -124,6 +124,17 @@ pub struct SinglesigDescriptorRequest {
     pub singlesig_kind: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct XpubRequest {
+    pub name: String,
+    pub xpub_kind: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct XpubResponse {
+    pub keyorigin_xpub: String,
+}
+
 impl TryFrom<(String, &AnySigner)> for SignerResponse {
     type Error = SignerError;
 

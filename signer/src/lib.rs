@@ -8,6 +8,7 @@ use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use elements_miniscript::elements::bitcoin::hash_types::XpubIdentifier;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
+use elements_miniscript::slip77::MasterBlindingKey;
 use jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
@@ -65,10 +66,8 @@ impl Signer for SwSigner {
         Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
     }
 
-    fn slip77_master_blinding_key(
-        &self,
-    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        Ok(self.slip77())
+    fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
+        Ok(MasterBlindingKey::from_seed(&self.seed[..]))
     }
 }
 
@@ -111,7 +110,7 @@ impl Signer for &AnySigner {
         &self,
     ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(match self {
-            AnySigner::Software(s) => s.slip77(),
+            AnySigner::Software(s) => s.slip77_master_blinding_key()?,
             AnySigner::Jade(s) => s.slip77_master_blinding_key()?,
         })
     }

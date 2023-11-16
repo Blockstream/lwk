@@ -1,6 +1,5 @@
 use bip39::Mnemonic;
 use elements_miniscript::elementssig_to_rawsig;
-use elements_miniscript::slip77::MasterBlindingKey;
 use elements_miniscript::{
     elements::{
         bitcoin::{
@@ -46,7 +45,7 @@ pub enum NewError {
 pub struct SwSigner {
     pub(crate) xprv: ExtendedPrivKey,
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
-    seed: [u8; 64],
+    pub(crate) seed: [u8; 64],
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -72,10 +71,6 @@ impl SwSigner {
 
     pub fn xpub(&self) -> ExtendedPubKey {
         ExtendedPubKey::from_priv(&self.secp, &self.xprv)
-    }
-
-    pub fn slip77(&self) -> MasterBlindingKey {
-        MasterBlindingKey::from_seed(&self.seed[..])
     }
 
     pub fn fingerprint(&self) -> Fingerprint {

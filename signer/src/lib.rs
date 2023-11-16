@@ -73,6 +73,10 @@ impl<'a> Signer for SwSigner<'a> {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         self.sign_pset(pset)
     }
+
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+        todo!()
+    }
 }
 
 impl<'a> Signer for AnySigner<'a> {
@@ -80,6 +84,10 @@ impl<'a> Signer for AnySigner<'a> {
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Signer::sign(&self, pset)
+    }
+
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+        todo!()
     }
 }
 
@@ -91,5 +99,9 @@ impl<'a> Signer for &AnySigner<'a> {
             AnySigner::Software(signer) => signer.sign_pset(pset)?,
             AnySigner::Jade(signer) => signer.sign_pset(pset)?,
         })
+    }
+
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+        todo!()
     }
 }

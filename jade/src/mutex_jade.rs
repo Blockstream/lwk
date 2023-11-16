@@ -65,4 +65,11 @@ impl Signer for &MutexJade {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         self.sign_pset(pset)
     }
+
+    fn derive_xpub(
+        &self,
+        path: &elements::bitcoin::bip32::DerivationPath,
+    ) -> Result<ExtendedPubKey, Self::Error> {
+        todo!()
+    }
 }

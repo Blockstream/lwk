@@ -8,7 +8,7 @@ use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use wollet::{Wollet, EC};
+use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
 
@@ -19,12 +19,12 @@ pub mod error;
 pub mod model;
 
 #[derive(Default)]
-pub struct State<'a> {
+pub struct State {
     // TODO: config is read-only, so it's not useful to wrap it in a mutex.
     // Ideally it should be in _another_ struct accessible by method_handler.
     pub config: Config,
     pub wollets: HashMap<String, Wollet>,
-    pub signers: HashMap<String, AnySigner<'a>>,
+    pub signers: HashMap<String, AnySigner>,
 }
 
 pub struct App {
@@ -98,7 +98,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
     );
     let response = match request.method.as_str() {
         "generate_signer" => {
-            let (_signer, mnemonic) = SwSigner::random(&EC)?;
+            let (_signer, mnemonic) = SwSigner::random()?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::GenerateSignerResponse {
@@ -202,7 +202,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                         ));
                     }
                     let mnemonic = r.mnemonic.unwrap();
-                    AnySigner::Software(SwSigner::new(&mnemonic, &EC)?)
+                    AnySigner::Software(SwSigner::new(&mnemonic)?)
                 }
                 "serial" => {
                     let network = s.config.jade_network();

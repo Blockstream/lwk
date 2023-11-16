@@ -24,8 +24,8 @@ fn liquid_send_jade_signer() {
 
 #[test]
 fn liquid_send_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
-    let signers: [&AnySigner<'_>; 1] = [&AnySigner::Software(signer)];
+    let signer = SwSigner::new(TEST_MNEMONIC).unwrap();
+    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
     liquid_send(&signers);
 }
 
@@ -39,7 +39,7 @@ fn liquid_issue_jade_signer() {
 
 #[test]
 fn liquid_issue_software_signer() {
-    let signer = SwSigner::new(TEST_MNEMONIC, &wollet::EC).unwrap();
+    let signer = SwSigner::new(TEST_MNEMONIC).unwrap();
     let signers = [&AnySigner::Software(signer)];
     liquid_issue(&signers);
 }
@@ -124,7 +124,7 @@ fn origin() {
     let desc_str = format!("ct({view_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
-    let signers: [&AnySigner<'_>; 1] = [&AnySigner::Software(signer)];
+    let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
 
     let address = server.node_getnewaddress();
 
@@ -192,11 +192,7 @@ fn roundtrip() {
     });
 }
 
-fn roundtrip_inner(
-    mut wallet: TestWollet,
-    server: &TestElectrumServer,
-    signers: &[&AnySigner<'_>],
-) {
+fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&AnySigner]) {
     wallet.fund_btc(server);
     server.generate(1);
     wallet.send_btc(signers, None, None);
@@ -673,7 +669,7 @@ fn multisig_flow() {
 fn jade_sign_wollet_pset() {
     let server = setup();
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let signer = SwSigner::new(mnemonic, &wollet::EC).unwrap();
+    let signer = SwSigner::new(mnemonic).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
@@ -711,7 +707,7 @@ fn jade_single_sig() {
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
     let signer = AnySigner::Jade(jade_init.jade);
     // FIXME: implement Signer::xpub
-    let xpub = SwSigner::new(mnemonic, &wollet::EC).unwrap().xpub();
+    let xpub = SwSigner::new(mnemonic).unwrap().xpub();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);

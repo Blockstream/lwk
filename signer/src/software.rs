@@ -43,20 +43,21 @@ pub enum NewError {
 }
 
 #[derive(Clone)]
-pub struct SwSigner<'a> {
+pub struct SwSigner {
     pub(crate) xprv: ExtendedPrivKey,
-    pub(crate) secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
+    pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     seed: [u8; 64],
 }
 
-impl<'a> core::fmt::Debug for SwSigner<'a> {
+impl core::fmt::Debug for SwSigner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signer({})", self.fingerprint())
     }
 }
 
-impl<'a> SwSigner<'a> {
-    pub fn new(mnemonic: &str, secp: &'a Secp256k1<All>) -> Result<Self, NewError> {
+impl SwSigner {
+    pub fn new(mnemonic: &str) -> Result<Self, NewError> {
+        let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed)?;
@@ -64,13 +65,13 @@ impl<'a> SwSigner<'a> {
         Ok(Self { xprv, secp, seed })
     }
 
-    pub fn random(secp: &'a Secp256k1<All>) -> Result<(Self, Mnemonic), NewError> {
+    pub fn random() -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
-        Ok((SwSigner::new(&mnemonic.to_string(), secp)?, mnemonic))
+        Ok((SwSigner::new(&mnemonic.to_string())?, mnemonic))
     }
 
     pub fn xpub(&self) -> ExtendedPubKey {
-        ExtendedPubKey::from_priv(self.secp, &self.xprv)
+        ExtendedPubKey::from_priv(&self.secp, &self.xprv)
     }
 
     pub fn slip77(&self) -> MasterBlindingKey {
@@ -78,7 +79,7 @@ impl<'a> SwSigner<'a> {
     }
 
     pub fn fingerprint(&self) -> Fingerprint {
-        self.xprv.fingerprint(self.secp)
+        self.xprv.fingerprint(&self.secp)
     }
     pub fn sign(&self, pset: &str) -> Result<String, SignError> {
         let mut pset: PartiallySignedTransaction = pset.parse()?;
@@ -110,9 +111,9 @@ impl<'a> SwSigner<'a> {
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
             for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
                 if &signer_fingerprint == fingerprint {
-                    let ext_derived = self.xprv.derive_priv(self.secp, derivation_path)?;
+                    let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;
                     let private_key = PrivateKey::new(ext_derived.private_key, Network::Bitcoin);
-                    let public_key = private_key.public_key(self.secp);
+                    let public_key = private_key.public_key(&self.secp);
                     if want_public_key == &public_key {
                         // fixme: for taproot use schnorr
                         let sig = self.secp.sign_ecdsa_low_r(&msg, &private_key.inner);
@@ -137,12 +138,11 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let secp = Secp256k1::new();
-        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", &secp).unwrap();
+        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
-            SwSigner::new("bad", &secp).unwrap_err().to_string()
+            SwSigner::new("bad").unwrap_err().to_string()
         );
         assert_eq!("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s", &signer.xpub().to_string())
     }

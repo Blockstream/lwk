@@ -25,12 +25,12 @@ pub enum SignerError {
     Bip32Error(#[from] elements::bitcoin::bip32::Error),
 }
 
-pub enum AnySigner<'a> {
-    Software(SwSigner<'a>),
+pub enum AnySigner {
+    Software(SwSigner),
     Jade(MutexJade),
 }
 
-impl<'a> AnySigner<'a> {
+impl AnySigner {
     pub fn xpub(&self) -> Result<ExtendedPubKey, SignerError> {
         match self {
             AnySigner::Software(s) => Ok(s.xpub()),
@@ -53,7 +53,7 @@ impl<'a> AnySigner<'a> {
     }
 }
 
-impl<'a> Signer for SwSigner<'a> {
+impl Signer for SwSigner {
     type Error = SignError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
@@ -61,8 +61,8 @@ impl<'a> Signer for SwSigner<'a> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        let derived = self.xprv.derive_priv(self.secp, path)?;
-        Ok(ExtendedPubKey::from_priv(self.secp, &derived))
+        let derived = self.xprv.derive_priv(&self.secp, path)?;
+        Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
     }
 
     fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
@@ -70,7 +70,7 @@ impl<'a> Signer for SwSigner<'a> {
     }
 }
 
-impl<'a> Signer for AnySigner<'a> {
+impl Signer for AnySigner {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
@@ -86,7 +86,7 @@ impl<'a> Signer for AnySigner<'a> {
     }
 }
 
-impl<'a> Signer for &AnySigner<'a> {
+impl Signer for &AnySigner {
     type Error = SignerError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {

@@ -725,9 +725,9 @@ pub fn generate_xprv() -> ExtendedPrivKey {
     ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap()
 }
 
-pub fn generate_signer() -> SwSigner<'static> {
+pub fn generate_signer() -> SwSigner {
     let mnemonic = generate_mnemonic();
-    SwSigner::new(&mnemonic, &wollet::EC).unwrap()
+    SwSigner::new(&mnemonic).unwrap()
 }
 
 pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {

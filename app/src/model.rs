@@ -124,10 +124,10 @@ pub struct SinglesigDescriptorRequest {
     pub singlesig_kind: String,
 }
 
-impl<'a> TryFrom<(String, &AnySigner<'a>)> for SignerResponse {
+impl TryFrom<(String, &AnySigner)> for SignerResponse {
     type Error = SignerError;
 
-    fn try_from(name_and_signer: (String, &AnySigner<'a>)) -> Result<Self, Self::Error> {
+    fn try_from(name_and_signer: (String, &AnySigner)) -> Result<Self, Self::Error> {
         let (name, signer) = name_and_signer;
         let fingerprint = signer.fingerprint()?.to_string();
         let xpub = signer.xpub()?;

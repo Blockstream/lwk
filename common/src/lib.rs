@@ -1,12 +1,12 @@
 mod asset_metadata;
 mod error;
 mod model;
-mod sign;
+mod signer;
 
 pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::error::Error;
 pub use crate::model::*;
-pub use crate::sign::Signer;
+pub use crate::signer::Signer;
 
 use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;

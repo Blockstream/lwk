@@ -8,7 +8,7 @@ use rand::{thread_rng, Rng};
 use crate::consts::{BAUD_RATE, TIMEOUT};
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
-use crate::{derivation_path_to_vec, sign_pset, Jade};
+use crate::{derivation_path_to_vec, Jade};
 
 #[derive(Debug)]
 pub struct MutexJade(Mutex<Jade>);
@@ -29,13 +29,6 @@ impl MutexJade {
             let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
             Ok(Self::new(Jade::new(port.into(), network)))
         }
-    }
-
-    pub fn sign_pset(
-        &self,
-        pset: &mut PartiallySignedTransaction,
-    ) -> Result<u32, sign_pset::Error> {
-        self.0.lock().unwrap().sign_pset(pset)
     }
 
     pub fn get_xpub(
@@ -71,7 +64,7 @@ impl Signer for &MutexJade {
     type Error = crate::sign_pset::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        self.sign_pset(pset)
+        self.0.lock().unwrap().sign_pset(pset)
     }
 
     fn derive_xpub(

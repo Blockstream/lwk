@@ -95,7 +95,7 @@ impl Signer for &AnySigner {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
             AnySigner::Software(signer) => signer.sign_pset(pset)?,
-            AnySigner::Jade(signer) => signer.sign_pset(pset)?,
+            AnySigner::Jade(signer) => signer.sign(pset)?,
         })
     }
 

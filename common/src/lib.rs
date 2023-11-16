@@ -5,7 +5,7 @@ mod model;
 mod signer;
 
 pub use crate::asset_metadata::{AssetMetadata, PsetExt};
-pub use crate::descriptor::singlesig_desc;
+pub use crate::descriptor::{singlesig_desc, BlindingKeyVariant, ScriptVariant};
 pub use crate::error::Error;
 pub use crate::model::*;
 pub use crate::signer::Signer;

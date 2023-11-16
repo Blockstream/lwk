@@ -1,18 +1,13 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
-use common::Signer;
+use common::{singlesig_desc, BlindingKeyVariant, ScriptVariant};
 use config::Config;
-use jade::get_receive_address::Variant;
 use jade::mutex_jade::MutexJade;
-use rand::{thread_rng, Rng};
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use wollet::bitcoin::bip32::DerivationPath;
-use wollet::elements::hex::ToHex;
 use wollet::{Wollet, EC};
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
@@ -331,8 +326,8 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
 
             let variant = match r.singlesig_kind.as_str() {
-                "wpkh" => Variant::Wpkh,
-                "shwpkh" => Variant::ShWpkh,
+                "wpkh" => ScriptVariant::Wpkh,
+                "shwpkh" => ScriptVariant::ShWpkh,
                 v => {
                     return Err(tiny_jrpc::error::Error::Generic(format!(
                         "invalid variant {}",
@@ -348,7 +343,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 )));
             }
 
-            let descriptor = singlesig_desc(signer, variant);
+            let descriptor = singlesig_desc(signer, variant, BlindingKeyVariant::Slip77).unwrap();
             Response::result(
                 request.id,
                 serde_json::to_value(model::SinglesigDescriptorResponse { descriptor })?,
@@ -360,32 +355,6 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         _ => Response::unimplemented(request.id),
     };
     Ok(response)
-}
-
-// TODO the following is duplicated from test_session:
-// 1) rename crate pset_common -> common
-// 2) move things that must be trasversaly used but that not depend on anything in this workspace there
-//    like the following function if refactored taking xpub and fingerprint insteaf of singer
-fn singlesig_desc(signer: &AnySigner, variant: Variant) -> String {
-    let (prefix, path, suffix) = match variant {
-        Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
-        Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
-    };
-    let fingerprint = signer.fingerprint().unwrap();
-    let xpub = signer
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
-        .unwrap();
-
-    let slip77_key = generate_slip77(); // TODO derive from mnemonic instead
-
-    // m / purpose' / coin_type' / account' / change / address_index
-    format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})")
-}
-
-pub fn generate_slip77() -> String {
-    let mut bytes = [0u8; 32];
-    thread_rng().fill(&mut bytes);
-    bytes.to_hex()
 }
 
 #[cfg(test)]

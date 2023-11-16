@@ -103,8 +103,8 @@ mod serial {
         let jade_signer = AnySigner::Jade(serial::unlock());
         let signers = &[&jade_signer];
 
-        roundtrip(&server, signers, Some(Variant::Wpkh), None);
-        roundtrip(&server, signers, Some(Variant::ShWpkh), None);
+        roundtrip(&server, signers, Some(Singlesig::Wpkh), None);
+        roundtrip(&server, signers, Some(Singlesig::ShWpkh), None);
         // multisig
         let sw_signer = AnySigner::Software(generate_signer());
         let signers = &[&jade_signer, &sw_signer];

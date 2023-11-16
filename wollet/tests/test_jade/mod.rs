@@ -96,13 +96,13 @@ mod serial {
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
         let server = setup();
-        let jade_signer = Signer::Jade(serial::unlock());
+        let jade_signer = AnySigner::Jade(serial::unlock());
         let signers = &[&jade_signer];
 
         roundtrip(&server, signers, Some(Variant::Wpkh), None);
         roundtrip(&server, signers, Some(Variant::ShWpkh), None);
         // multisig
-        let sw_signer = Signer::Software(generate_signer());
+        let sw_signer = AnySigner::Software(generate_signer());
         let signers = &[&jade_signer, &sw_signer];
         roundtrip(&server, signers, None, Some(2));
     }

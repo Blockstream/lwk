@@ -71,7 +71,7 @@ impl<'a> Signer for SwSigner<'a> {
     type Error = SignError;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        Ok(self.sign_pset(pset)?)
+        self.sign_pset(pset)
     }
 }
 

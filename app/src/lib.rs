@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
-use common::{singlesig_desc, BlindingKeyVariant, ScriptVariant};
+use common::{singlesig_desc, BlindingKeyVariant, Singlesig};
 use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
@@ -326,8 +326,8 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
 
             let variant = match r.singlesig_kind.as_str() {
-                "wpkh" => ScriptVariant::Wpkh,
-                "shwpkh" => ScriptVariant::ShWpkh,
+                "wpkh" => Singlesig::Wpkh,
+                "shwpkh" => Singlesig::ShWpkh,
                 v => {
                     return Err(tiny_jrpc::error::Error::Generic(format!(
                         "invalid variant {}",

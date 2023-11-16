@@ -1,7 +1,7 @@
 extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::bip32::{DerivationPath, ExtendedPrivKey};
+use crate::bitcoin::bip32::ExtendedPrivKey;
 use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
@@ -13,7 +13,6 @@ use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use jade::get_receive_address::Variant;
 use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
@@ -729,22 +728,6 @@ pub fn generate_xprv() -> ExtendedPrivKey {
 pub fn generate_signer() -> SwSigner<'static> {
     let mnemonic = generate_mnemonic();
     SwSigner::new(&mnemonic, &wollet::EC).unwrap()
-}
-
-pub fn singlesig_desc(signer: &AnySigner, variant: Variant) -> String {
-    let (prefix, path, suffix) = match variant {
-        Variant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
-        Variant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
-    };
-    let fingerprint = signer.fingerprint().unwrap();
-    let xpub = signer
-        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())
-        .unwrap();
-
-    let slip77_key = generate_slip77();
-
-    // m / purpose' / coin_type' / account' / change / address_index
-    format!("ct(slip77({slip77_key}),{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})")
 }
 
 pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {

@@ -1,14 +1,13 @@
 pub mod init;
 
 use bs_containers::testcontainers::clients::Cli;
-use jade::get_receive_address::Variant;
+use common::{singlesig_desc, Singlesig};
 use signer::AnySigner;
 
 use crate::{
     test_jade::init::inner_jade_debug_initialization,
     test_session::{
-        generate_signer, multisig_desc, register_multisig, setup, singlesig_desc,
-        TestElectrumServer, TestWollet,
+        generate_signer, multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
     },
     TEST_MNEMONIC,
 };
@@ -16,11 +15,16 @@ use crate::{
 fn roundtrip(
     server: &TestElectrumServer,
     signers: &[&AnySigner],
-    variant: Option<Variant>,
+    variant: Option<common::Singlesig>,
     threshold: Option<usize>,
 ) {
     let desc_str = match signers.len() {
-        1 => singlesig_desc(signers[0], variant.unwrap()),
+        1 => singlesig_desc(
+            signers[0],
+            variant.unwrap(),
+            common::BlindingKeyVariant::Slip77,
+        )
+        .unwrap(),
         _ => {
             let desc = multisig_desc(signers, threshold.unwrap());
             register_multisig(signers, "custody", &desc);
@@ -52,7 +56,7 @@ fn roundtrip(
     );
 }
 
-fn emul_roundtrip_singlesig(variant: Variant) {
+fn emul_roundtrip_singlesig(variant: Singlesig) {
     let server = setup();
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
@@ -74,12 +78,12 @@ fn emul_roundtrip_multisig(threshold: usize) {
 
 #[test]
 fn emul_roundtrip_wpkh() {
-    emul_roundtrip_singlesig(Variant::Wpkh);
+    emul_roundtrip_singlesig(Singlesig::Wpkh);
 }
 
 #[test]
 fn emul_roundtrip_shwpkh() {
-    emul_roundtrip_singlesig(Variant::ShWpkh);
+    emul_roundtrip_singlesig(Singlesig::ShWpkh);
 }
 
 #[test]

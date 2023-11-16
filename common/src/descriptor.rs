@@ -7,12 +7,12 @@ use crate::Signer;
 // TODO impl error handling
 pub fn singlesig_desc<S: Signer>(
     signer: &S,
-    script_variant: ScriptVariant,
+    script_variant: Singlesig,
     blinding_variant: BlindingKeyVariant,
 ) -> Result<String, ()> {
     let (prefix, path, suffix) = match script_variant {
-        ScriptVariant::Wpkh => ("elwpkh", "84h/1h/0h", ""),
-        ScriptVariant::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
+        Singlesig::Wpkh => ("elwpkh", "84h/1h/0h", ""),
+        Singlesig::ShWpkh => ("elsh(wpkh", "49h/1h/0h", ")"),
     };
     let master = signer.derive_xpub(&DerivationPath::master()).unwrap();
     let fingerprint = master.fingerprint();
@@ -31,8 +31,11 @@ pub fn singlesig_desc<S: Signer>(
     ))
 }
 
-pub enum ScriptVariant {
+pub enum Singlesig {
+    /// as defined by bip84
     Wpkh,
+
+    // as defined by bip49
     ShWpkh,
 }
 

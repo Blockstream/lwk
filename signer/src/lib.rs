@@ -65,6 +65,10 @@ impl<'a> Signer for SwSigner<'a> {
         let derived = self.xprv.derive_priv(self.secp, path)?;
         Ok(ExtendedPubKey::from_priv(self.secp, &derived))
     }
+
+    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+        todo!()
+    }
 }
 
 impl<'a> Signer for AnySigner<'a> {
@@ -76,6 +80,10 @@ impl<'a> Signer for AnySigner<'a> {
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
         Signer::derive_xpub(&self, path)
+    }
+
+    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+        todo!()
     }
 }
 
@@ -100,5 +108,9 @@ impl<'a> Signer for &AnySigner<'a> {
                 Ok(s.get_xpub(params)?)
             }
         }
+    }
+
+    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+        todo!()
     }
 }

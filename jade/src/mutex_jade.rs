@@ -83,4 +83,8 @@ impl Signer for &MutexJade {
         };
         Ok(self.get_xpub(params).unwrap()) // TODO remove unwrap
     }
+
+    fn slip77(&self) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
+        todo!()
+    }
 }

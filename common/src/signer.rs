@@ -2,6 +2,7 @@ use elements::{
     bitcoin::bip32::{DerivationPath, ExtendedPubKey},
     pset::PartiallySignedTransaction,
 };
+use elements_miniscript::slip77::MasterBlindingKey;
 
 pub trait Signer {
     type Error: std::fmt::Debug;
@@ -12,4 +13,7 @@ pub trait Signer {
 
     /// Derive an xpub from the master, path can contains hardened derivations
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error>;
+
+    /// Return the slip77 master blinding key
+    fn slip77(&self) -> Result<MasterBlindingKey, Self::Error>;
 }

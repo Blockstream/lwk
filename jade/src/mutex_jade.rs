@@ -11,11 +11,15 @@ use crate::protocol::GetXpubParams;
 use crate::{derivation_path_to_vec, Jade};
 
 #[derive(Debug)]
-pub struct MutexJade(Mutex<Jade>);
+pub struct MutexJade {
+    inner: Mutex<Jade>,
+}
 
 impl MutexJade {
     pub fn new(jade: Jade) -> Self {
-        Self(Mutex::new(jade))
+        Self {
+            inner: Mutex::new(jade),
+        }
     }
 
     #[cfg(feature = "serial")]
@@ -32,24 +36,28 @@ impl MutexJade {
     }
 
     pub fn unlock(&self) -> Result<(), crate::unlock::Error> {
-        self.0.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
+        self.inner.lock().unwrap().unlock() // TODO remove unwrap here and in the other methods
     }
 
     pub fn into_inner(self) -> Result<Jade, Box<PoisonError<Jade>>> {
-        self.0.into_inner().map_err(Box::new)
+        self.inner.into_inner().map_err(Box::new)
     }
 
     pub fn get_mut(&mut self) -> Result<&mut Jade, Box<PoisonError<&mut Jade>>> {
-        self.0.get_mut().map_err(Box::new)
+        self.inner.get_mut().map_err(Box::new)
     }
 
     pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
-        self.0.lock().unwrap().register_multisig(params).unwrap();
+        self.inner
+            .lock()
+            .unwrap()
+            .register_multisig(params)
+            .unwrap();
     }
 
     pub fn network(&self) -> Network {
         // TODO save network in MutexJade when creating the struct?
-        self.0.lock().unwrap().network
+        self.inner.lock().unwrap().network
     }
 }
 
@@ -57,7 +65,7 @@ impl Signer for &MutexJade {
     type Error = crate::sign_pset::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        self.0.lock().unwrap().sign(pset)
+        self.inner.lock().unwrap().sign(pset)
     }
 
     fn derive_xpub(
@@ -70,7 +78,7 @@ impl Signer for &MutexJade {
             path: derivation_path_to_vec(path),
         };
 
-        Ok(self.0.lock().unwrap().get_xpub(params)?) // TODO remove unwrap
+        Ok(self.inner.lock().unwrap().get_xpub(params)?) // TODO remove unwrap
     }
 
     fn slip77_master_blinding_key(

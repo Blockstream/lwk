@@ -45,19 +45,6 @@ impl<'a> AnySigner<'a> {
         }
     }
 
-    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, SignerError> {
-        match self {
-            AnySigner::Software(s) => Ok(s.derive_xpub(path)?),
-            AnySigner::Jade(s) => {
-                let params = jade::protocol::GetXpubParams {
-                    network: jade::Network::LocaltestLiquid,
-                    path: derivation_path_to_vec(path),
-                };
-                Ok(s.get_xpub(params)?)
-            }
-        }
-    }
-
     pub fn id(&self) -> Result<XpubIdentifier, SignerError> {
         Ok(self.xpub()?.identifier())
     }
@@ -75,7 +62,8 @@ impl<'a> Signer for SwSigner<'a> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        todo!()
+        let derived = self.xprv.derive_priv(self.secp, path)?;
+        Ok(ExtendedPubKey::from_priv(self.secp, &derived))
     }
 }
 
@@ -87,7 +75,7 @@ impl<'a> Signer for AnySigner<'a> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        todo!()
+        Signer::derive_xpub(&self, path)
     }
 }
 
@@ -102,6 +90,15 @@ impl<'a> Signer for &AnySigner<'a> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
-        todo!()
+        match self {
+            AnySigner::Software(s) => Ok(s.derive_xpub(path)?),
+            AnySigner::Jade(s) => {
+                let params = jade::protocol::GetXpubParams {
+                    network: jade::Network::LocaltestLiquid,
+                    path: derivation_path_to_vec(path),
+                };
+                Ok(s.get_xpub(params)?)
+            }
+        }
     }
 }

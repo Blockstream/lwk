@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
+use common::Signer;
 use config::Config;
 use jade::get_receive_address::Variant;
 use jade::mutex_jade::MutexJade;

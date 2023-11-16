@@ -5,7 +5,8 @@ use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction}
 
 use crate::consts::{BAUD_RATE, TIMEOUT};
 use crate::network::Network;
-use crate::{sign_pset, Jade};
+use crate::protocol::GetXpubParams;
+use crate::{derivation_path_to_vec, sign_pset, Jade};
 
 #[derive(Debug)]
 pub struct MutexJade(Mutex<Jade>);
@@ -57,6 +58,11 @@ impl MutexJade {
     pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
         self.0.lock().unwrap().register_multisig(params).unwrap();
     }
+
+    pub fn network(&self) -> Network {
+        // TODO save network in MutexJade when creating the struct?
+        self.0.lock().unwrap().network
+    }
 }
 
 impl Signer for &MutexJade {
@@ -70,6 +76,11 @@ impl Signer for &MutexJade {
         &self,
         path: &elements::bitcoin::bip32::DerivationPath,
     ) -> Result<ExtendedPubKey, Self::Error> {
-        todo!()
+        let network = self.network();
+        let params = GetXpubParams {
+            network,
+            path: derivation_path_to_vec(path),
+        };
+        Ok(self.get_xpub(params).unwrap()) // TODO remove unwrap
     }
 }

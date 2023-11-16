@@ -1,5 +1,4 @@
 use bip39::Mnemonic;
-use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elementssig_to_rawsig;
 use elements_miniscript::{
     elements::{
@@ -44,8 +43,8 @@ pub enum NewError {
 
 #[derive(Clone)]
 pub struct SwSigner<'a> {
-    xprv: ExtendedPrivKey,
-    secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
+    pub(crate) xprv: ExtendedPrivKey,
+    pub(crate) secp: &'a Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
 }
 
 impl<'a> core::fmt::Debug for SwSigner<'a> {
@@ -71,11 +70,6 @@ impl<'a> SwSigner<'a> {
 
     pub fn xpub(&self) -> ExtendedPubKey {
         ExtendedPubKey::from_priv(self.secp, &self.xprv)
-    }
-
-    pub fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, bip32::Error> {
-        let derived = self.xprv.derive_priv(self.secp, path)?;
-        Ok(ExtendedPubKey::from_priv(self.secp, &derived))
     }
 
     pub fn fingerprint(&self) -> Fingerprint {

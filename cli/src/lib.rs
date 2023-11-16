@@ -272,11 +272,9 @@ pub mod test {
         let signers = result.get("signers").unwrap();
         assert!(signers.as_array().unwrap().is_empty());
 
-        let result = sh("cli signer generate");
-        let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
-        let result = sh(&format!(
-            r#"cli signer load --kind software --mnemonic "{mnemonic}" --name ss "#
-        ));
+        let result = sh(
+            r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,
+        );
         assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
         let result = sh("cli signer singlesig-descriptor --name ss --descriptor-blinding-key slip77 --kind wpkh");
@@ -285,14 +283,16 @@ pub mod test {
         let result = sh(&format!(
             "cli wallet load --name desc_generated {desc_generated}"
         ));
-        assert_eq!(
-            result.get("descriptor").unwrap().as_str().unwrap(),
-            desc_generated
-        );
+        let result = result.get("descriptor").unwrap().as_str().unwrap();
+        assert_eq!(result, desc_generated);
 
-        let result = sh_result(&format!(
-            r#"cli signer load --kind software --mnemonic "{mnemonic}" --name ss2 "#
-        ));
+        let result = sh("cli wallet address --name desc_generated --index 0");
+        assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn");
+        assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
+
+        let result = sh_result(
+            r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss2 "#,
+        );
         assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
         let result = sh("cli signer list");

@@ -222,7 +222,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let vec: Vec<_> = s
                 .signers
                 .iter()
-                .filter(|(_, s)| s.id().unwrap() == signer.id().unwrap())
+                .filter(|(_, s)| s.identifier().unwrap() == signer.identifier().unwrap())
                 .map(|(n, _)| n)
                 .collect();
             if let Some(existing) = vec.first() {

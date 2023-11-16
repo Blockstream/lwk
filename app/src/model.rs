@@ -1,3 +1,4 @@
+use common::Signer;
 use serde::{Deserialize, Serialize};
 use signer::{AnySigner, SignerError};
 use std::collections::HashMap;
@@ -142,7 +143,7 @@ impl TryFrom<(String, &AnySigner)> for SignerResponse {
         let (name, signer) = name_and_signer;
         let fingerprint = signer.fingerprint()?.to_string();
         let xpub = signer.xpub()?;
-        let id = signer.id()?;
+        let id = signer.identifier()?;
 
         Ok(Self {
             name,

@@ -1,5 +1,8 @@
 use elements::{
-    bitcoin::bip32::{DerivationPath, ExtendedPubKey},
+    bitcoin::{
+        bip32::{DerivationPath, ExtendedPubKey, Fingerprint},
+        hash_types::XpubIdentifier,
+    },
     pset::PartiallySignedTransaction,
 };
 use elements_miniscript::slip77::MasterBlindingKey;
@@ -16,4 +19,12 @@ pub trait Signer {
 
     /// Return the slip77 master blinding key
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error>;
+
+    fn identifier(&self) -> Result<XpubIdentifier, Self::Error> {
+        Ok(self.derive_xpub(&DerivationPath::master())?.identifier())
+    }
+
+    fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
+        Ok(self.derive_xpub(&DerivationPath::master())?.fingerprint())
+    }
 }

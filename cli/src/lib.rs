@@ -145,6 +145,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 )?;
                 serde_json::to_value(r)?
             }
+            SignerCommand::Xpub { name, kind } => {
+                let r = client.xpub(name, kind.to_string())?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {
@@ -298,6 +302,10 @@ pub mod test {
         let result = sh("cli signer list");
         let signers = result.get("signers").unwrap();
         assert!(!signers.as_array().unwrap().is_empty());
+
+        let result = sh("cli signer xpub --name ss --kind bip84");
+        let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
+        assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
 
         let result = sh("cli signer unload --name ss");
         let unloaded = result.get("unloaded").unwrap();

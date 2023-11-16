@@ -60,6 +60,19 @@ impl std::fmt::Display for SignerKind {
     }
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum XpubKind {
+    Bip84,
+}
+
+impl std::fmt::Display for XpubKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            XpubKind::Bip84 => write!(f, "bip84"),
+        }
+    }
+}
+
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
     /// Generate a softwawre signer, returns a mnemonic
@@ -99,6 +112,15 @@ pub enum SignerCommand {
 
         #[arg(long)]
         kind: SinglesigKind,
+    },
+
+    /// Get an extended public key from the signer
+    Xpub {
+        #[arg(long)]
+        name: String,
+
+        #[arg(long)]
+        kind: XpubKind,
     },
 }
 

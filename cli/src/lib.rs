@@ -1,4 +1,10 @@
-use std::{fs::File, path::PathBuf, sync::mpsc::RecvTimeoutError, time::Duration};
+use std::{
+    fs::File,
+    net::{Ipv4Addr, SocketAddrV4},
+    path::PathBuf,
+    sync::mpsc::RecvTimeoutError,
+    time::Duration,
+};
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -228,11 +234,22 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
 #[cfg(test)]
 pub mod test {
+    use std::net::{Ipv4Addr, SocketAddrV4};
+
     use clap::Parser;
     use elements::pset::PartiallySignedTransaction;
     use serde_json::Value;
 
     use crate::{args::Cli, inner_main};
+
+    /// Returns a non-used local port if available.
+    ///
+    /// Note there is a race condition during the time the method check availability and the caller
+    fn get_available_port() -> anyhow::Result<u16> {
+        // using 0 as port let the system assign a port available
+        let t = std::net::TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0))?;
+        Ok(t.local_addr().map(|s| s.port())?)
+    }
 
     #[track_caller]
     fn sh_result(command: &str) -> anyhow::Result<Value> {

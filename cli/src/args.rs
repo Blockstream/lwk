@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, net::SocketAddr, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -27,6 +27,16 @@ pub struct Cli {
     /// The sub command
     #[command(subcommand)]
     pub command: CliCommand,
+
+    /// Where the log file and other data goes. Defaults to "/tmp/.ks"
+    // TODO we should add default_value = '/tmp/.ks' and remove it from Config::default
+    #[arg(long)]
+    pub datadir: Option<PathBuf>,
+
+    /// If launching the server is where it listens, otherwise is where the client connects to. Defaults to "127.0.0.1:32111"
+    // TODO we should add default_value = "127.0.0.1:32111" and remove it from Config::default
+    #[arg(long)]
+    pub addr: Option<SocketAddr>,
 }
 
 #[derive(Subcommand, Debug)]

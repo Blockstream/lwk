@@ -1,4 +1,4 @@
-use std::{fs::File, sync::mpsc::RecvTimeoutError, time::Duration};
+use std::{fs::File, path::PathBuf, sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -11,10 +11,27 @@ pub use args::Cli;
 mod args;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
+    let mut path = PathBuf::new();
+
+    path.push(args.datadir.as_ref().unwrap_or(&"/tmp/.ks".into()));
+
+    std::fs::create_dir_all(&path)
+        .with_context(|| format!("failing to create {}", path.display()))?;
+
+    if let CliCommand::Server(args::ServerArgs {
+        command: ServerCommand::Start { .. },
+    }) = args.command
+    {
+        path.push("debug.log")
+    } else {
+        path.push("debug-client.log")
+    }
+    let path_str = format!("{}", path.display());
+
     let file = File::options()
         .create(true)
         .append(true)
-        .open("debug.log")
+        .open(&path)
         .expect("must have write permission");
     let (appender, _guard) = if args.stderr {
         tracing_appender::non_blocking(std::io::stderr())
@@ -31,7 +48,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     match tracing::subscriber::set_global_default(subscriber) {
         Ok(_) => tracing::info!(
             "logging initialized on {}",
-            if args.stderr { "stderr" } else { "debug.log" }
+            if args.stderr { "stderr" } else { &path_str }
         ),
         Err(_) => tracing::debug!("logging already initialized"),
     }
@@ -39,7 +56,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
-    let config = match args.network {
+    let mut config = match args.network {
         Network::Mainnet => Config::default_mainnet(),
         Network::Testnet => Config::default_testnet(),
         Network::Regtest => Config::default_regtest(
@@ -48,13 +65,21 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
         ),
     };
+    if let Some(datadir) = &args.datadir {
+        config.datadir = datadir.display().to_string();
+    }
+
+    if let Some(addr) = &args.addr {
+        config.addr = *addr;
+    }
+
     let mut app = app::App::new(config)?;
     // get a client to make requests
     let client = app.client()?;
 
     // verify the server is up
     if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start,
+        command: ServerCommand::Start { .. },
     }) = args.command
     {
         // unless I am starting it
@@ -65,7 +90,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     Ok(match args.command {
         CliCommand::Server(a) => {
             match a.command {
-                ServerCommand::Start => {
+                ServerCommand::Start { .. } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     ctrlc::set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")
@@ -104,7 +129,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     }
 
                     app.join_threads()?;
-                    tracing::debug!("Threads ended");
+                    tracing::info!("Threads ended");
                 }
                 ServerCommand::Stop => {
                     client.stop()?;

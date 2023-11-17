@@ -1,10 +1,4 @@
-use std::{
-    fs::File,
-    net::{Ipv4Addr, SocketAddrV4},
-    path::PathBuf,
-    sync::mpsc::RecvTimeoutError,
-    time::Duration,
-};
+use std::{fs::File, path::PathBuf, sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::config::Config;
@@ -229,7 +223,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
 #[cfg(test)]
 pub mod test {
-    use std::net::{Ipv4Addr, SocketAddrV4};
+    use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
     use clap::Parser;
     use elements::pset::PartiallySignedTransaction;
@@ -240,10 +234,10 @@ pub mod test {
     /// Returns a non-used local port if available.
     ///
     /// Note there is a race condition during the time the method check availability and the caller
-    fn get_available_port() -> anyhow::Result<u16> {
+    fn get_available_addr() -> anyhow::Result<SocketAddr> {
         // using 0 as port let the system assign a port available
         let t = std::net::TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0))?;
-        Ok(t.local_addr().map(|s| s.port())?)
+        Ok(t.local_addr()?)
     }
 
     #[track_caller]
@@ -258,6 +252,18 @@ pub mod test {
     #[track_caller]
     pub fn sh(command: &str) -> Value {
         sh_result(command).unwrap()
+    }
+
+    #[test]
+    fn test_start_stop() {
+        let addr = get_available_addr().unwrap();
+        let t = std::thread::spawn(move || {
+            sh(&format!("cli --addr {addr} server start"));
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        sh(&format!("cli --addr {addr} server stop"));
+        t.join().unwrap();
     }
 
     #[test]

@@ -87,10 +87,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             match a.command {
                 ServerCommand::Start { .. } => {
                     let (tx, rx) = std::sync::mpsc::channel();
-                    ctrlc::set_handler(move || {
+                    let set_handler_result = ctrlc::try_set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")
-                    })
-                    .expect("Error setting Ctrl-C handler");
+                    });
 
                     app.run().with_context(|| {
                         format!(
@@ -102,27 +101,28 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     let version = client.version()?.version;
                     tracing::info!("App running version {}", version);
 
-                    loop {
-                        match rx.recv_timeout(Duration::from_millis(100)) {
-                            Ok(_) => {
-                                tracing::debug!("Stopping");
-                                app.stop()?;
-                            }
-                            Err(e) => match e {
-                                RecvTimeoutError::Timeout => {
-                                    if app.is_running().unwrap_or(false) {
-                                        continue;
-                                    } else {
-                                        break;
+                    if set_handler_result.is_ok() {
+                        loop {
+                            match rx.recv_timeout(Duration::from_millis(100)) {
+                                Ok(_) => {
+                                    tracing::debug!("Stopping");
+                                    app.stop()?;
+                                }
+                                Err(e) => match e {
+                                    RecvTimeoutError::Timeout => {
+                                        if app.is_running().unwrap_or(false) {
+                                            continue;
+                                        } else {
+                                            break;
+                                        }
                                     }
-                                }
-                                RecvTimeoutError::Disconnected => {
-                                    return Err(anyhow!("RecvTimeoutError::Disconnected"))
-                                }
-                            },
+                                    RecvTimeoutError::Disconnected => {
+                                        return Err(anyhow!("RecvTimeoutError::Disconnected"))
+                                    }
+                                },
+                            }
                         }
                     }
-
                     app.join_threads()?;
                     tracing::info!("Threads ended");
                 }

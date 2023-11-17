@@ -84,3 +84,22 @@ impl FromStr for DescriptorBlindingKey {
         })
     }
 }
+
+pub enum Bip {
+    Bip84,
+}
+
+#[derive(Error, Debug)]
+#[error("Invalid bip  variant '{0}' supported variant are: 'bip84'")]
+pub struct InvalidBipVariant(String);
+
+impl FromStr for Bip {
+    type Err = InvalidBipVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "bip84" => Bip::Bip84,
+            v => return Err(InvalidBipVariant(v.to_string())),
+        })
+    }
+}

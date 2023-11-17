@@ -6,8 +6,8 @@ mod signer;
 
 pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::descriptor::{
-    singlesig_desc, DescriptorBlindingKey, InvalidBlindingKeyVariant, InvalidSinglesigVariant,
-    Singlesig,
+    singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant, InvalidBlindingKeyVariant,
+    InvalidSinglesigVariant, Singlesig,
 };
 pub use crate::error::Error;
 pub use crate::model::*;

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use elements::{
     bitcoin::{
         bip32::{DerivationPath, ExtendedPubKey, Fingerprint},
@@ -6,6 +8,8 @@ use elements::{
     pset::PartiallySignedTransaction,
 };
 use elements_miniscript::slip77::MasterBlindingKey;
+
+use crate::descriptor::Bip;
 
 pub trait Signer {
     type Error: std::fmt::Debug;
@@ -33,5 +37,19 @@ pub trait Signer {
     /// Return the fingerprint of the signer (4 bytes)
     fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
         Ok(self.xpub()?.fingerprint())
+    }
+
+    /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
+    fn keyorigin_xpub(&self, bip: Bip) -> Result<String, Self::Error> {
+        // TODO network -> coin type
+        // TODO account
+        let path = match bip {
+            Bip::Bip84 => "84h/1h/0h",
+        };
+
+        let fingerprint = self.fingerprint()?;
+        let xpub = self.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())?;
+        let keyorigin_xpub = format!("[{fingerprint}/{path}]{xpub}");
+        Ok(keyorigin_xpub)
     }
 }

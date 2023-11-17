@@ -9,7 +9,7 @@ use crate::Signer;
 pub fn singlesig_desc<S: Signer>(
     signer: &S,
     script_variant: Singlesig,
-    blinding_variant: BlindingKey,
+    blinding_variant: DescriptorBlindingKey,
 ) -> Result<String, String> {
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", "84h/1h/0h", ""),
@@ -28,7 +28,7 @@ pub fn singlesig_desc<S: Signer>(
         .map_err(|e| format!("{:?}", e))?;
 
     let blinding_key = match blinding_variant {
-        BlindingKey::Slip77 => format!(
+        DescriptorBlindingKey::Slip77 => format!(
             "slip77({})",
             signer
                 .slip77_master_blinding_key()
@@ -66,7 +66,7 @@ impl FromStr for Singlesig {
     }
 }
 
-pub enum BlindingKey {
+pub enum DescriptorBlindingKey {
     Slip77,
 }
 
@@ -74,12 +74,12 @@ pub enum BlindingKey {
 #[error("Invalid blinding key variant '{0}' supported variant are: 'slip77'")]
 pub struct InvalidBlindingKeyVariant(String);
 
-impl FromStr for BlindingKey {
+impl FromStr for DescriptorBlindingKey {
     type Err = InvalidBlindingKeyVariant;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "slip77" => BlindingKey::Slip77,
+            "slip77" => DescriptorBlindingKey::Slip77,
             v => return Err(InvalidBlindingKeyVariant(v.to_string())),
         })
     }

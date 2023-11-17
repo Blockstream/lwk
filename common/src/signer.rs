@@ -20,15 +20,18 @@ pub trait Signer {
     /// Return the slip77 master blinding key
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error>;
 
+    /// Return the master xpub of the signer
     fn xpub(&self) -> Result<ExtendedPubKey, Self::Error> {
         self.derive_xpub(&DerivationPath::master())
     }
 
+    /// Return the full identifier of the signer
     fn identifier(&self) -> Result<XpubIdentifier, Self::Error> {
         Ok(self.xpub()?.identifier())
     }
 
+    /// Return the fingerprint of the signer (4 bytes)
     fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
-        Ok(self.derive_xpub(&DerivationPath::master())?.fingerprint())
+        Ok(self.xpub()?.fingerprint())
     }
 }

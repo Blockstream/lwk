@@ -28,15 +28,13 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: CliCommand,
 
-    /// Where the log file and other data goes. Defaults to "/tmp/.ks"
-    // TODO we should add default_value = '/tmp/.ks' and remove it from Config::default
-    #[arg(long)]
-    pub datadir: Option<PathBuf>,
+    /// Where the log file and other data goes.
+    #[arg(long, default_value = "/tmp/.ks")]
+    pub datadir: PathBuf,
 
-    /// If launching the server is where it listens, otherwise is where the client connects to. Defaults to "127.0.0.1:32111"
-    // TODO we should add default_value = "127.0.0.1:32111" and remove it from Config::default
-    #[arg(long)]
-    pub addr: Option<SocketAddr>,
+    /// If launching the server is where it listens, otherwise is where the client connects to.
+    #[arg(long, default_value = "127.0.0.1:32111")]
+    pub addr: SocketAddr,
 }
 
 #[derive(Subcommand, Debug)]

@@ -19,7 +19,7 @@ mod args;
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let mut path = PathBuf::new();
 
-    path.push(args.datadir.as_ref().unwrap_or(&"/tmp/.ks".into()));
+    path.push(&args.datadir);
 
     std::fs::create_dir_all(&path)
         .with_context(|| format!("failing to create {}", path.display()))?;
@@ -71,13 +71,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
         ),
     };
-    if let Some(datadir) = &args.datadir {
-        config.datadir = datadir.display().to_string();
-    }
-
-    if let Some(addr) = &args.addr {
-        config.addr = *addr;
-    }
+    config.datadir = args.datadir.display().to_string();
+    config.addr = args.addr;
 
     let mut app = app::App::new(config)?;
     // get a client to make requests

@@ -19,7 +19,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         .with_context(|| format!("failing to create {}", path.display()))?;
 
     if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start { .. },
+        command: ServerCommand::Start,
     }) = args.command
     {
         path.push("debug.log")
@@ -74,7 +74,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
     // verify the server is up
     if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start { .. },
+        command: ServerCommand::Start,
     }) = args.command
     {
         // unless I am starting it
@@ -85,7 +85,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     Ok(match args.command {
         CliCommand::Server(a) => {
             match a.command {
-                ServerCommand::Start { .. } => {
+                ServerCommand::Start => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let set_handler_result = ctrlc::try_set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")

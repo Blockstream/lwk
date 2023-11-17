@@ -301,6 +301,50 @@ pub mod test {
     }
 
     #[test]
+    fn test_wallet_load_unload_list() {
+        let addr = get_available_addr().unwrap();
+        let t = std::thread::spawn(move || {
+            sh(&format!("cli --addr {addr} server start"));
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        let result = sh(&format!("cli --addr {addr} wallet list"));
+        let wallets = result.get("wallets").unwrap();
+        assert!(wallets.as_array().unwrap().is_empty());
+
+        let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
+        let result = sh(&format!(
+            "cli --addr {addr} wallet load --name custody {desc}"
+        ));
+        assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
+
+        let result = sh_result(&format!(
+            "cli --addr {addr} wallet load --name custody anything"
+        ));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+
+        let result = sh_result(&format!(
+            "cli --addr {addr} wallet load --name differentname {desc}"
+        ));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+
+        let result = sh(&format!("cli --addr {addr} wallet list"));
+        let wallets = result.get("wallets").unwrap();
+        assert!(!wallets.as_array().unwrap().is_empty());
+
+        let result = sh(&format!("cli --addr {addr} wallet unload --name custody"));
+        let unloaded = result.get("unloaded").unwrap();
+        assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
+
+        let result = sh(&format!("cli --addr {addr} wallet list"));
+        let wallets = result.get("wallets").unwrap();
+        assert!(wallets.as_array().unwrap().is_empty());
+
+        sh(&format!("cli --addr {addr} server stop"));
+        t.join().unwrap();
+    }
+
+    #[test]
     fn test_commands() {
         // This test use json `Value` so that changes in the model are noticed
 
@@ -311,27 +355,13 @@ pub mod test {
         let result = sh("cli signer generate");
         assert!(result.get("mnemonic").is_some());
 
-        let result = sh("cli wallet list");
-        let wallets = result.get("wallets").unwrap();
-        assert!(wallets.as_array().unwrap().is_empty());
-
         let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
         let result = sh(&format!("cli wallet load --name custody {desc}"));
         assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-        let result = sh_result("cli wallet load --name custody anything");
-        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
-
-        let result = sh_result(&format!("cli wallet load --name differentname {desc}"));
-        assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
-
         let result = sh_result("cli wallet load --name wrong wrong");
         assert!(format!("{:?}", result.unwrap_err())
             .contains("Invalid descriptor: Not a CT Descriptor"));
-
-        let result = sh("cli wallet list");
-        let wallets = result.get("wallets").unwrap();
-        assert!(!wallets.as_array().unwrap().is_empty());
 
         let result = sh("cli wallet balance --name custody");
         let balance_obj = result.get("balance").unwrap();
@@ -358,10 +388,6 @@ pub mod test {
         let unloaded = result.get("unloaded").unwrap();
         assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
         assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
-
-        let result = sh("cli wallet list");
-        let wallets = result.get("wallets").unwrap();
-        assert!(wallets.as_array().unwrap().is_empty());
 
         let result = sh(
             r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,

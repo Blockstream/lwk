@@ -267,6 +267,40 @@ pub mod test {
     }
 
     #[test]
+    fn test_signer_load_unload_list() {
+        let addr = get_available_addr().unwrap();
+        let t = std::thread::spawn(move || {
+            sh(&format!("cli --addr {addr} server start"));
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        let result = sh(&format!("cli --addr {addr} signer list"));
+        let signers = result.get("signers").unwrap();
+        assert!(signers.as_array().unwrap().is_empty());
+
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let result = sh(&format!(
+            r#"cli --addr {addr} signer load --kind software --mnemonic "{mnemonic}" --name ss "#
+        ));
+        assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
+
+        let result = sh(&format!("cli --addr {addr} signer list"));
+        let signers = result.get("signers").unwrap();
+        assert!(!signers.as_array().unwrap().is_empty());
+
+        let result = sh(&format!("cli --addr {addr} signer unload --name ss"));
+        let unloaded = result.get("unloaded").unwrap();
+        assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
+
+        let result = sh(&format!("cli --addr {addr} signer list"));
+        let signers = result.get("signers").unwrap();
+        assert!(signers.as_array().unwrap().is_empty());
+
+        sh(&format!("cli --addr {addr} server stop"));
+        t.join().unwrap();
+    }
+
+    #[test]
     fn test_commands() {
         // This test use json `Value` so that changes in the model are noticed
 
@@ -329,10 +363,6 @@ pub mod test {
         let wallets = result.get("wallets").unwrap();
         assert!(wallets.as_array().unwrap().is_empty());
 
-        let result = sh("cli signer list");
-        let signers = result.get("signers").unwrap();
-        assert!(signers.as_array().unwrap().is_empty());
-
         let result = sh(
             r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,
         );
@@ -356,21 +386,9 @@ pub mod test {
         );
         assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
-        let result = sh("cli signer list");
-        let signers = result.get("signers").unwrap();
-        assert!(!signers.as_array().unwrap().is_empty());
-
         let result = sh("cli signer xpub --name ss --kind bip84");
         let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
         assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
-
-        let result = sh("cli signer unload --name ss");
-        let unloaded = result.get("unloaded").unwrap();
-        assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
-
-        let result = sh("cli signer list");
-        let signers = result.get("signers").unwrap();
-        assert!(signers.as_array().unwrap().is_empty());
 
         let result = sh(&format!("cli wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
         let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();

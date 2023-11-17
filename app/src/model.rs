@@ -126,6 +126,19 @@ pub struct SinglesigDescriptorRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct MultisigDescriptorRequest {
+    pub descriptor_blinding_key: String,
+    pub multisig_kind: String,
+    pub threshold: u32,
+    pub keyorigin_xpubs: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MultisigDescriptorResponse {
+    pub descriptor: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct XpubRequest {
     pub name: String,
     pub xpub_kind: String,

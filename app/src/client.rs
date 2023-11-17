@@ -128,6 +128,22 @@ impl Client {
         self.make_request("singlesig_descriptor", Some(req))
     }
 
+    pub fn multisig_descriptor(
+        &self,
+        descriptor_blinding_key: String,
+        multisig_kind: String,
+        threshold: u32,
+        keyorigin_xpubs: Vec<String>,
+    ) -> Result<MultisigDescriptorResponse> {
+        let req = MultisigDescriptorRequest {
+            descriptor_blinding_key,
+            multisig_kind,
+            threshold,
+            keyorigin_xpubs,
+        };
+        self.make_request("multisig_descriptor", Some(req))
+    }
+
     pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse> {
         let req = XpubRequest { name, xpub_kind };
         self.make_request("xpub", Some(req))

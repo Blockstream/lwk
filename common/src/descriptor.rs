@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use elements::bitcoin::bip32::DerivationPath;
+use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, KeySource};
 use thiserror::Error;
 
 use crate::Signer;
@@ -39,6 +39,46 @@ pub fn singlesig_desc<S: Signer>(
     // m / purpose' / coin_type' / account' / change / address_index
     Ok(format!(
         "ct({blinding_key},{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})"
+    ))
+}
+
+fn fmt_path(path: &DerivationPath) -> String {
+    path.to_string().replace("m/", "").replace('\'', "h")
+}
+
+// TODO impl error handling
+pub fn multisig_desc(
+    threshold: u32,
+    xpubs: Vec<(KeySource, ExtendedPubKey)>,
+    script_variant: Multisig,
+    blinding_variant: DescriptorBlindingKey,
+) -> Result<String, String> {
+    if threshold == 0 {
+        return Err("Threshold cannot be 0".into());
+    } else if threshold as usize > xpubs.len() {
+        return Err("Threshold cannot be greater than the number of xpubs".into());
+    }
+
+    let (prefix, suffix) = match script_variant {
+        Multisig::Wsh => ("elwsh(multi", ")"),
+    };
+
+    let blinding_key = match blinding_variant {
+        DescriptorBlindingKey::Slip77 => format!(
+            "slip77({})",
+            "1111111111111111111111111111111111111111111111111111111111111111"
+        ), // TODO: make the slip77key random, but where do we generate it?
+    };
+
+    let xpubs = xpubs
+        .iter()
+        .map(|((fingerprint, path), xpub)| {
+            format!("[{fingerprint}/{}]{xpub}/<0;1>/*", fmt_path(path))
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    Ok(format!(
+        "ct({blinding_key},{prefix}({threshold},{xpubs}){suffix})"
     ))
 }
 
@@ -100,6 +140,25 @@ impl FromStr for Bip {
         Ok(match s {
             "bip84" => Bip::Bip84,
             v => return Err(InvalidBipVariant(v.to_string())),
+        })
+    }
+}
+
+pub enum Multisig {
+    Wsh,
+}
+
+#[derive(Error, Debug)]
+#[error("Invalid multisig variant '{0}' supported variant are: 'wsh'")]
+pub struct InvalidMultisigVariant(String);
+
+impl FromStr for Multisig {
+    type Err = InvalidMultisigVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "wsh" => Multisig::Wsh,
+            v => return Err(InvalidMultisigVariant(v.to_string())),
         })
     }
 }

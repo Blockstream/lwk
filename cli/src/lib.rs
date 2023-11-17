@@ -183,6 +183,20 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
             WalletCommand::Issue {} => todo!(),
             WalletCommand::Reissue {} => todo!(),
+            WalletCommand::MultisigDescriptor {
+                descriptor_blinding_key,
+                kind,
+                threshold,
+                keyorigin_xpub,
+            } => {
+                let r = client.multisig_descriptor(
+                    descriptor_blinding_key.to_string(),
+                    kind.to_string(),
+                    threshold,
+                    keyorigin_xpub,
+                )?;
+                serde_json::to_value(r)?
+            }
         },
     })
 }
@@ -314,6 +328,15 @@ pub mod test {
         let result = sh("cli signer list");
         let signers = result.get("signers").unwrap();
         assert!(signers.as_array().unwrap().is_empty());
+
+        let result = sh(&format!("cli wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
+        let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
+
+        let result = sh(&format!(
+            "cli wallet load --name multi_desc_generated {multisig_desc_generated}"
+        ));
+        let result = result.get("descriptor").unwrap().as_str().unwrap();
+        assert_eq!(result, multisig_desc_generated);
 
         sh("cli server stop");
         std::thread::sleep(std::time::Duration::from_millis(100));

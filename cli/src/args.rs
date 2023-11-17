@@ -156,6 +156,19 @@ impl Display for SinglesigKind {
     }
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum MultisigKind {
+    Wsh,
+}
+
+impl Display for MultisigKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MultisigKind::Wsh => write!(f, "wsh"),
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub struct WalletArgs {
     #[command(subcommand)]
@@ -219,6 +232,21 @@ pub enum WalletCommand {
 
     Issue {},
     Reissue {},
+
+    /// Print a multisig descriptor
+    MultisigDescriptor {
+        #[arg(long)]
+        descriptor_blinding_key: BlindingKeyKind,
+
+        #[arg(long)]
+        kind: MultisigKind,
+
+        #[arg(long)]
+        threshold: u32,
+
+        #[arg(long, required = true)]
+        keyorigin_xpub: Vec<String>,
+    },
 }
 
 #[derive(Debug, Args)]

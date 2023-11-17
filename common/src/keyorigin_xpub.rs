@@ -1,0 +1,72 @@
+use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
+use std::str::FromStr;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+#[error("Invalid key origin xpub \"{0}\", expected [fingerprint/path]xpub")]
+pub struct InvalidKeyOriginXpub(String);
+
+// TODO: cleanup this fn
+pub fn keyorigin_xpub_from_str(
+    s: &str,
+) -> Result<((Fingerprint, DerivationPath), ExtendedPubKey), InvalidKeyOriginXpub> {
+    let parts: Vec<_> = s.split('[').collect();
+    if parts.len() != 2 {
+        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
+    }
+    if !parts[0].is_empty() {
+        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
+    }
+    let s = parts[1];
+
+    let parts: Vec<_> = s.split(']').collect();
+    if parts.len() != 2 {
+        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
+    }
+    let keyorigin = parts[0];
+    let xpub = parts[1];
+
+    if keyorigin.len() < 9 {
+        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
+    }
+    let fingerprint = &keyorigin[0..8];
+    if &keyorigin[8..9] != "/" {
+        return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
+    }
+    let path = format!("m/{}", &keyorigin[9..]);
+
+    let fingerprint =
+        Fingerprint::from_str(fingerprint).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+    let path = DerivationPath::from_str(&path).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+    let xpub = ExtendedPubKey::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+    Ok(((fingerprint, path), xpub))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_keyoriginxpub() {
+        let fingerprint = "11a345ad";
+        let path = "84h/1h/0h";
+        let xpub = "tpubDCTUqRMrF2GHZ6pi5FcamdyGZ3oDJtQMH4y5Hyh8Uu7CQ3Zymbh1hpM84aXyJhgBhuh6WcUpKteMeYdyYfVUDRrsz8FUeRdoaaSRKkyMx6Y";
+
+        let s = &format!("[{fingerprint}/{path}]{xpub}");
+        keyorigin_xpub_from_str(s).unwrap();
+
+        for s in [
+            &format!("{fingerprint}/{path}]{xpub}"),
+            &format!("[[{fingerprint}/{path}]{xpub}"),
+            &format!("x[{fingerprint}/{path}]{xpub}"),
+            &format!("[{fingerprint}/{path}]]{xpub}"),
+            &format!("[{fingerprint}]{xpub}"),
+            &format!("[{fingerprint}-{path}]{xpub}"),
+            &format!("[x1a345ad/{path}]{xpub}"),
+            &format!("[{fingerprint}/x/{path}]{xpub}"),
+            &format!("[{fingerprint}/{path}]1{xpub}"),
+        ] {
+            keyorigin_xpub_from_str(s).unwrap_err();
+        }
+    }
+}

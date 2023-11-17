@@ -1,15 +1,18 @@
 mod asset_metadata;
 mod descriptor;
 mod error;
+mod keyorigin_xpub;
 mod model;
 mod signer;
 
 pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::descriptor::{
-    singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant, InvalidBlindingKeyVariant,
-    InvalidSinglesigVariant, Singlesig,
+    multisig_desc, singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant,
+    InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,
+    Singlesig,
 };
 pub use crate::error::Error;
+pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::signer::Signer;
 

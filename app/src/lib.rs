@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use client::Client;
 use common::{
-    singlesig_desc, InvalidBipVariant, InvalidBlindingKeyVariant, InvalidSinglesigVariant, Signer,
+    keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
+    InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
 use config::Config;
 use jade::mutex_jade::MutexJade;
@@ -337,6 +338,39 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::SinglesigDescriptorResponse { descriptor })?,
+            )
+        }
+        "multisig_descriptor" => {
+            let r: model::MultisigDescriptorRequest =
+                serde_json::from_value(request.params.unwrap())?;
+
+            let multisig_variant = r
+                .multisig_kind
+                .parse()
+                .map_err(|e: InvalidMultisigVariant| e.to_string())?;
+
+            let blinding_variant = r
+                .descriptor_blinding_key
+                .parse()
+                .map_err(|e: InvalidBlindingKeyVariant| e.to_string())?;
+
+            let mut keyorigin_xpubs = vec![];
+            for keyorigin_xpub in r.keyorigin_xpubs {
+                keyorigin_xpubs.push(
+                    keyorigin_xpub_from_str(&keyorigin_xpub)
+                        .map_err(|e| tiny_jrpc::error::Error::Generic(e.to_string()))?,
+                );
+            }
+
+            let descriptor = multisig_desc(
+                r.threshold,
+                keyorigin_xpubs,
+                multisig_variant,
+                blinding_variant,
+            )?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::MultisigDescriptorResponse { descriptor })?,
             )
         }
         "xpub" => {

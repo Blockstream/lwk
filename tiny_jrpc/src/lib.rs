@@ -1,7 +1,10 @@
 #![doc = include_str!("../README.md")]
 
 use std::{
+    fs::File,
+    io::{ErrorKind, Read},
     result,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -10,12 +13,14 @@ use std::{
     time::Duration,
 };
 
+pub use config::Config;
 use error::{Error, RpcIntErrors};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
-use tiny_http::Response as HttpResponse;
 use tiny_http::Server;
+use tiny_http::{Header, Response as HttpResponse};
 
+pub mod config;
 pub mod error;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -27,43 +32,48 @@ pub struct JsonRpcServer {
     server: Arc<Server>,
     handles: Vec<JoinHandle<Result<()>>>,
     running: Arc<AtomicBool>,
+    config: Config,
 }
 
 impl JsonRpcServer {
-    ///
-    pub fn new<F, T>(server: Server, state: Arc<Mutex<T>>, func: F) -> Self
+    /// Creates and runs a new JSON RPC Server.
+    pub fn new<F, T>(server: Server, config: Config, state: Arc<Mutex<T>>, func: F) -> Self
     where
         F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
         T: Send + 'static,
     {
-        Self::run(Arc::new(server), state, func)
+        Self::run(Arc::new(server), config, state, func)
     }
 
-    ///
+    /// Returns a reference to the [`tiny_http::ListenAddr`] of the server.
     pub fn server_addr(&self) -> tiny_http::ListenAddr {
         self.server.server_addr()
     }
 
-    ///
+    /// Returns the IP port unless the underlying tiny_http server is listening on a Unix socket.
     pub fn port(&self) -> Option<u16> {
         self.server.server_addr().to_ip().map(|addr| addr.port())
     }
 
-    ///
-    fn run<F, T>(server: Arc<Server>, state: Arc<Mutex<T>>, func: F) -> Self
+    /// Returns a reference to the [`Config`] used when creating the JSON RPC Server.
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    fn run<F, T>(server: Arc<Server>, config: Config, state: Arc<Mutex<T>>, func: F) -> Self
     where
         F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
         T: Send + 'static,
     {
-        // todo config the number of threads
         let mut handles = Vec::with_capacity(4);
         let running = Arc::new(AtomicBool::new(true));
 
-        for _ in 0..4 {
+        for _ in 0..config.num_threads.get() {
             let server = server.clone();
             let func = func.clone();
             let state = state.clone();
             let running = running.clone();
+            let config = config.clone();
             let handle = thread::spawn(move || {
                 loop {
                     // receive http request
@@ -84,29 +94,118 @@ impl JsonRpcServer {
                         }
                     };
 
-                    // validate/parse the request
-                    let response = match validate_request(&mut http_request) {
-                        Ok(request) => {
-                            // handle the request
-                            let id = request.id.clone();
-                            match handle_request(request, state.clone(), func.clone()) {
-                                Ok(response) => response,
-                                Err(Error::Stop) => {
-                                    running.store(false, Ordering::SeqCst);
-                                    Response::from_error(id, Error::Stop)
+                    // check request method
+                    match http_request.method() {
+                        tiny_http::Method::Get => {
+                            // respond to the http GET request
+                            let Some(mut path) = config.serve_dir.clone() else {
+                                let message = "No serve_dir defined in server config.";
+                                let response = HttpResponse::from_string(message).with_status_code(500);
+                                send_http_response(http_request, response, message);
+                                continue;
+                            };
+                            // remove starting slash
+                            let file_name = http_request
+                                .url()
+                                .strip_prefix('/')
+                                .expect("url starts with slash");
+                            path.push(file_name);
+                            // add index.html to directories
+                            if path.is_dir() {
+                                path.push("index.html");
+                            }
+                            match File::open(path) {
+                                Ok(mut file) => {
+                                    let mut buf = Vec::new();
+                                    match file.read_to_end(&mut buf) {
+                                        Ok(n) => tracing::trace!("GET: read {} bytes", n),
+                                        Err(e) => {
+                                            let message = "500: Internal error";
+                                            let response = HttpResponse::from_string(message)
+                                                .with_status_code(500);
+                                            send_http_response(
+                                                http_request,
+                                                response,
+                                                format!("{}: {}", message, e).as_str(),
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                    // todo: content-type headers, this is non-trivial and not strictly necessary right now
+                                    let response = HttpResponse::from_data(buf);
+                                    let message = "File for GET request";
+                                    send_http_response(http_request, response, message);
                                 }
-                                Err(err) => Response::from_error(id, err),
+                                Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
+                                    // 404
+                                    let message = "404: File not found";
+                                    let response =
+                                        HttpResponse::from_string(message).with_status_code(404);
+                                    send_http_response(http_request, response, message);
+                                }
+                                Err(e) => {
+                                    // 500
+                                    let message = "500: Internal error";
+                                    let response =
+                                        HttpResponse::from_string(message).with_status_code(500);
+                                    send_http_response(
+                                        http_request,
+                                        response,
+                                        format!("{}: {}", message, e).as_str(),
+                                    );
+                                }
                             }
                         }
-                        Err(err) => {
-                            // no id since we couldn't validate the request...
-                            Response::from_error(None, err)
+                        tiny_http::Method::Options => {
+                            // respond to the http OPTIONS request, normally for CORS
+                            let allow = Header::from_str("Allow: GET, POST, OPTIONS")
+                                .expect("valid header");
+                            let mut response = HttpResponse::empty(204).with_header(allow);
+                            for header in config.headers.clone().into_iter() {
+                                response.add_header(header);
+                            }
+                            let message = "OPTIONS request";
+                            send_http_response(http_request, response, message);
                         }
-                    };
+                        tiny_http::Method::Post => {
+                            // validate/parse the jsonrpc POST request
+                            let response = match validate_jsonrpc_request(&mut http_request) {
+                                Ok(request) => {
+                                    // handle the request
+                                    let id = request.id.clone();
+                                    match handle_jsonrpc_request(
+                                        request,
+                                        state.clone(),
+                                        func.clone(),
+                                    ) {
+                                        Ok(response) => response,
+                                        Err(Error::Stop) => {
+                                            running.store(false, Ordering::SeqCst);
+                                            Response::from_error(id, Error::Stop)
+                                        }
+                                        Err(err) => Response::from_error(id, err),
+                                    }
+                                }
+                                Err(err) => {
+                                    // no id since we couldn't validate the request...
+                                    Response::from_error(None, err)
+                                }
+                            };
 
-                    // send the response
-                    if let Err(err) = send_response(http_request, response) {
-                        tracing::error!("send_response error: {}", err);
+                            // send the response
+                            if let Err(err) =
+                                send_jsonrpc_response(http_request, response, &config.headers)
+                            {
+                                tracing::error!("send_response error: {}", err);
+                            }
+                        }
+                        other => {
+                            let message =
+                                format!("500: Internal error - method {} not implemented.", other);
+                            let response =
+                                HttpResponse::from_string(&message).with_status_code(500);
+                            send_http_response(http_request, response, &message);
+                        }
                     }
                 }
                 Ok(())
@@ -118,17 +217,21 @@ impl JsonRpcServer {
             server,
             handles,
             running,
+            config,
         }
     }
 
+    /// Stops the server.
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
 
+    /// Returns true unless the server has been stopped.
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::SeqCst)
     }
 
+    /// Waits for the server threads to finish by calling `join` on each associated [`JoinHandle`].
     pub fn join_threads(&mut self) {
         while let Some(handle) = self.handles.pop() {
             let _ = handle.join();
@@ -136,7 +239,23 @@ impl JsonRpcServer {
     }
 }
 
-fn validate_request(http_request: &mut tiny_http::Request) -> Result<Request> {
+// sends the response and debug logs the status code and message, or logs the error.
+fn send_http_response<R>(http_request: tiny_http::Request, response: HttpResponse<R>, message: &str)
+where
+    R: Read,
+{
+    let status = response.status_code();
+    match http_request.respond(response) {
+        Ok(()) => tracing::debug!(
+            "Sent response with status code: {:?} and response message: {}",
+            status,
+            message
+        ),
+        Err(e) => tracing::error!("Error sending response: {}", e),
+    }
+}
+
+fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Request> {
     tracing::debug!(
         "received request - method: {:?}, url: {:?}, headers: {:?}",
         http_request.method(),
@@ -165,7 +284,11 @@ fn validate_request(http_request: &mut tiny_http::Request) -> Result<Request> {
     Ok(request)
 }
 
-fn handle_request<F, T>(request: Request, state: Arc<Mutex<T>>, process: F) -> Result<Response>
+fn handle_jsonrpc_request<F, T>(
+    request: Request,
+    state: Arc<Mutex<T>>,
+    process: F,
+) -> Result<Response>
 where
     F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
     T: Send + 'static,
@@ -194,9 +317,16 @@ where
     Ok(response)
 }
 
-fn send_response(request: tiny_http::Request, response: Response) -> Result<()> {
+fn send_jsonrpc_response(
+    request: tiny_http::Request,
+    response: Response,
+    headers: &[Header],
+) -> Result<()> {
     let data = serde_json::to_string(&response)?;
-    let response = HttpResponse::from_string(data);
+    let mut response = HttpResponse::from_string(data);
+    for header in headers.iter() {
+        response.add_header(header.clone());
+    }
     Ok(request.respond(response)?)
 }
 
@@ -285,6 +415,8 @@ pub enum Id {
 
 #[cfg(test)]
 mod test {
+    use std::{fs::File, io::Write, path::PathBuf};
+
     use super::*;
     use jsonrpc::Client;
     use serde_json::{json, value::to_raw_value};
@@ -308,7 +440,7 @@ mod test {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
-        let mut rpc = JsonRpcServer::new(server, state, process);
+        let mut rpc = JsonRpcServer::new(server, Config::default(), state, process);
         let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
@@ -335,7 +467,7 @@ mod test {
         let addr = "127.0.0.1:0";
         let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
-        let rpc = JsonRpcServer::new(server, state, process);
+        let rpc = JsonRpcServer::new(server, Config::default(), state, process);
         let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
@@ -343,7 +475,6 @@ mod test {
         let request = client.build_request("rpc.reserved", None);
 
         let response = client.send_request(request).unwrap();
-        // dbg!(&response.error);
         assert!(response.error.is_some());
     }
 
@@ -388,5 +519,86 @@ mod test {
         });
         assert_eq!(actual, expected);
         assert!(actual.get("result").is_none());
+    }
+
+    #[test]
+    fn http_options() {
+        let addr = "127.0.0.1:0";
+        let server = Server::http(addr).unwrap();
+        let state = Arc::new(Mutex::new(()));
+        let config = Config {
+            headers: vec![
+                Header::from_str("Access-Control-Allow-Origin: http://127.0.0.1:8000").unwrap(),
+                Header::from_str("Access-Control-Allow-Headers: content-type").unwrap(),
+            ],
+            ..Default::default()
+        };
+        let rpc = JsonRpcServer::new(server, config, state, process);
+        let port = rpc.port().unwrap();
+        let url = format!("http://127.0.0.1:{}", port);
+
+        let resp = minreq::options(url).send().unwrap();
+        assert_eq!(resp.status_code, 204);
+        assert_eq!(resp.headers.get("allow").unwrap(), "GET, POST, OPTIONS");
+        assert_eq!(
+            resp.headers.get("access-control-allow-origin").unwrap(),
+            "http://127.0.0.1:8000"
+        );
+        assert_eq!(
+            resp.headers.get("access-control-allow-headers").unwrap(),
+            "content-type"
+        );
+        assert!(resp.as_bytes().is_empty());
+    }
+
+    fn make_file(dir_path: PathBuf, file_name: String, data: &[u8]) -> File {
+        let mut path = dir_path;
+        path.push(file_name);
+        let mut file = File::create(path).unwrap();
+        file.write_all(data).unwrap();
+        file
+    }
+
+    #[test]
+    fn http_get() {
+        let addr = "127.0.0.1:0";
+        let server = Server::http(addr).unwrap();
+        let state = Arc::new(Mutex::new(()));
+
+        // create the http serve dir
+        let dir = tempfile::tempdir().unwrap();
+        let dir_path = dir.into_path();
+
+        let config = Config {
+            serve_dir: Some(dir_path.clone()),
+            ..Default::default()
+        };
+        let rpc = JsonRpcServer::new(server, config, state, process);
+        let port = rpc.port().unwrap();
+
+        // create files to GET
+        let file_types = [
+            ("html", "<!doctype html>".as_bytes()),
+            ("css", include_bytes!("../test/data/file.css")),
+            ("js", include_bytes!("../test/data/file.js")),
+            ("ico", include_bytes!("../test/data/file.ico")),
+            ("jpg", include_bytes!("../test/data/file.jpg")),
+            ("png", include_bytes!("../test/data/file.png")),
+            ("svg", include_bytes!("../test/data/file.svg")),
+        ];
+        for (ext, data) in file_types.into_iter() {
+            let file_name = format!("file.{}", ext);
+            let url = format!("http://127.0.0.1:{}/{}", port, file_name);
+            make_file(dir_path.clone(), file_name, data);
+            let resp = minreq::get(url).send().unwrap();
+            assert_eq!(resp.status_code, 200);
+            assert_eq!(resp.as_bytes(), data);
+        }
+
+        // 404
+        let url = format!("http://127.0.0.1:{}/missing.file", port);
+        let resp = minreq::get(url).send().unwrap();
+        assert_eq!(resp.status_code, 404);
+        assert_eq!(resp.as_str().unwrap(), "404: File not found");
     }
 }

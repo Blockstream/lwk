@@ -71,7 +71,12 @@ impl App {
         }));
         let server = tiny_http::Server::http(self.config.addr)?;
 
-        let rpc = tiny_jrpc::JsonRpcServer::new(server, state, method_handler);
+        let rpc = tiny_jrpc::JsonRpcServer::new(
+            server,
+            tiny_jrpc::Config::default(),
+            state,
+            method_handler,
+        );
         self.rpc = Some(rpc);
         Ok(())
     }

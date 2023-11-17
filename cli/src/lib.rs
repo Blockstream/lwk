@@ -284,6 +284,18 @@ pub mod test {
         ));
         assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
+        let result = sh(&format!("cli --addr {addr} signer generate"));
+        let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+        let result = sh_result(&format!(
+            r#"cli --addr {addr} signer load --kind software --mnemonic "{different_mnemonic}" --name ss"#,
+        ));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
+
+        let result = sh_result(&format!(
+            r#"cli --addr {addr} signer load --kind software --mnemonic "{mnemonic}" --name ss2 "#,
+        ));
+        assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
+
         let result = sh(&format!("cli --addr {addr} signer list"));
         let signers = result.get("signers").unwrap();
         assert!(!signers.as_array().unwrap().is_empty());
@@ -406,11 +418,6 @@ pub mod test {
         let result = sh("cli wallet address --name desc_generated --index 0");
         assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn");
         assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
-
-        let result = sh_result(
-            r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss2 "#,
-        );
-        assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
         let result = sh("cli signer xpub --name ss --kind bip84");
         let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();

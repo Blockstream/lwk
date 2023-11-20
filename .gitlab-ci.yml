@@ -103,3 +103,10 @@ audit:
   extends: .base
   script:
     - cargo audit -D warnings
+
+doc:
+  extends: .base
+  variables:
+    RUSTFLAGS: "-D warnings"
+  script:
+    - cargo doc --no-deps

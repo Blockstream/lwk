@@ -1,3 +1,4 @@
+use crate::bitcoin::bip32::Fingerprint;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
@@ -373,6 +374,20 @@ impl Wollet {
         Ok(())
     }
 
+    /// Get the signers' fingerprints involved in this descriptor
+    pub fn signers(&self) -> Vec<Fingerprint> {
+        let mut signers = vec![];
+        self.descriptor().descriptor.for_each_key(|k| {
+            // xpub without key origin and single pubkey unexpectedly return a master fingerprint,
+            // see tests below for the actual behaviour.
+            // This should not be dangerous though, worst case is that we report a signer that
+            // cannot sign.
+            signers.push(k.master_fingerprint());
+            true
+        });
+        signers
+    }
+
     /// Combine a vector of PSET
     pub fn combine(
         &self,
@@ -456,5 +471,47 @@ mod tests {
         let desc_str = format!("ct({},elwpkh({}))", descriptor_blinding_key, xpub);
         let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).unwrap());
         let _desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
+    }
+
+    fn new_wollet(desc: &str) -> Wollet {
+        let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
+        Wollet::new(
+            ElementsNetwork::LiquidTestnet,
+            "",
+            false,
+            false,
+            "/tmp/.ks",
+            desc,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_signers() {
+        let view_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+        let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+
+        let fp1 = Fingerprint::from_str("11111111").unwrap();
+        let fp2 = Fingerprint::from_str("22222222").unwrap();
+        let fp_xpub = Fingerprint::from_str("0a55db61").unwrap();
+        let fp_single = Fingerprint::from_str("51814f10").unwrap();
+
+        let signer1 = format!("[{fp1}/0h/0h/0h]{xpub}/0/*");
+        let signer1_mp = format!("[{fp1}/0h/0h/0h]{xpub}/<0;1>/*");
+        let signer2 = format!("[{fp2}/0h/0h/0h]{xpub}/0/*");
+        let signer_xpub = format!("{xpub}/0/*"); // no keyorigin
+        let signer_single = "020202020202020202020202020202020202020202020202020202020202020202";
+
+        let desc_s_1 = format!("ct({view_key},elwpkh({signer1}))");
+        let desc_s_1mp = format!("ct({view_key},elwpkh({signer1_mp}))");
+        let desc_s_xpub = format!("ct({view_key},elwpkh({signer_xpub}))");
+        let desc_m_1single = format!("ct({view_key},elwsh(multi(2,{signer1},{signer_single})))");
+        let desc_m_12 = format!("ct({view_key},elwsh(multi(2,{signer1},{signer2})))");
+
+        assert_eq!(new_wollet(&desc_s_1).signers(), vec![fp1]);
+        assert_eq!(new_wollet(&desc_s_1mp).signers(), vec![fp1]);
+        assert_eq!(new_wollet(&desc_s_xpub).signers(), vec![fp_xpub]);
+        assert_eq!(new_wollet(&desc_m_1single).signers(), vec![fp1, fp_single]);
+        assert_eq!(new_wollet(&desc_m_12).signers(), vec![fp1, fp2]);
     }
 }

@@ -21,10 +21,6 @@ shellwords = "1.1.0"
 elements = "0.23.0"
 electrsd = { version = "0.25.0", features = ["legacy"] }
 tempfile = "3.8.0"
-rand = "0.8.5"
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5" }
-electrum-client = "0.15.0"
-bip39 = "2.0.0"
 
 [[test]]
 name = "e2e"

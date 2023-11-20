@@ -1,5 +1,5 @@
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
-use electrum_client::ElectrumApi;
+use electrsd::electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::Amount;
 use elements::pset::PartiallySignedTransaction;

@@ -154,8 +154,17 @@ impl Client {
         self.make_request("sign", Some(req))
     }
 
-    pub fn broadcast(&self, dry_run: bool, pset: String) -> Result<BroadcastResponse> {
-        let req = BroadcastRequest { dry_run, pset };
+    pub fn broadcast(
+        &self,
+        name: String,
+        dry_run: bool,
+        pset: String,
+    ) -> Result<BroadcastResponse> {
+        let req = BroadcastRequest {
+            name,
+            dry_run,
+            pset,
+        };
         self.make_request("broadcast", Some(req))
     }
 

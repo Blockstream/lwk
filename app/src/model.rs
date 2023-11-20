@@ -157,6 +157,7 @@ pub struct SignRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BroadcastRequest {
+    pub name: String,
     pub dry_run: bool,
     pub pset: String,
 }

@@ -261,8 +261,13 @@ pub enum WalletCommand {
         keyorigin_xpub: Vec<String>,
     },
 
-    /// Broadcast a transaction
+    /// Try to finalize the PSET and broadcast the transaction
     Broadcast {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
+        /// Do the finalization without the broadcast
         #[arg(long)]
         dry_run: bool,
 

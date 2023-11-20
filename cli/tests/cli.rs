@@ -198,7 +198,15 @@ fn test_broadcast() {
 
     assert_ne!(pset_signed, pset_unsigned);
 
-    // TODO needs broadcast
+    let result = sh(&format!(
+        r#"cli {options} wallet broadcast --name w1 {pset_signed}"#
+    ));
+    assert!(result.get("txid").unwrap().as_str().is_some());
+
+    let result = sh(&format!("cli {options} wallet balance --name w1"));
+    let balance_obj = result.get("balance").unwrap();
+    let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
+    assert!(policy_obj.as_number().unwrap().as_u64().unwrap() < 1_000_000);
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

@@ -418,6 +418,26 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 })?,
             )
         }
+        "broadcast" => {
+            let r: model::BroadcastRequest = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let mut pset =
+                PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let tx = wollet.finalize(&mut pset)?;
+
+            if !r.dry_run {
+                wollet.broadcast(&tx)?;
+            }
+
+            Response::result(
+                request.id,
+                serde_json::to_value(model::BroadcastResponse { txid: tx.txid() })?,
+            )
+        }
         "stop" => {
             return Err(tiny_jrpc::error::Error::Stop);
         }

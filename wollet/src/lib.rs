@@ -1,3 +1,10 @@
+//! # Wollet
+//!
+//! An elements and liquid Watch-Only Wallet defined by a
+//! [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki).
+//!
+//! For an entry point see [`Wollet::new()`]
+
 mod config;
 mod descriptor;
 mod domain;

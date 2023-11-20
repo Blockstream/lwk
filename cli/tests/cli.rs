@@ -1,10 +1,16 @@
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::FromStr,
+};
 
 use clap::Parser;
-use elements::pset::PartiallySignedTransaction;
+use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
 
 use cli::{inner_main, Cli};
+use test_session::setup;
+
+mod test_session;
 
 /// Returns a non-used local port if available.
 ///
@@ -26,6 +32,7 @@ fn sh_result(command: &str) -> anyhow::Result<Value> {
 
 #[track_caller]
 pub fn sh(command: &str) -> Value {
+    dbg!(command);
     sh_result(command).unwrap()
 }
 
@@ -126,6 +133,66 @@ fn test_wallet_load_unload_list() {
     let result = sh(&format!("cli --addr {addr} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(wallets.as_array().unwrap().is_empty());
+
+    sh(&format!("cli --addr {addr} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_broadcast() {
+    let server = setup();
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
+    let options_clone = options.clone();
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli {options_clone} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let result = sh(&format!("cli {options} signer generate"));
+    let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+
+    let result = sh(&format!(
+        r#"cli {options} signer load --kind software --mnemonic "{mnemonic}" --name ss "#
+    ));
+    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
+
+    let result = sh(&format!(
+        r#"cli {options} signer singlesig-descriptor --name ss --descriptor-blinding-key slip77 --kind wpkh"#
+    ));
+    let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
+
+    let result = sh(&format!(
+        r#"cli {options} wallet load --name w1 {desc_generated}"#
+    ));
+    assert_eq!(
+        result.get("descriptor").unwrap().as_str().unwrap(),
+        desc_generated
+    );
+
+    let result = sh(&format!(r#"cli {options} wallet address --name w1"#));
+    let address = result.get("address").unwrap().as_str().unwrap();
+    let address = Address::from_str(&address).unwrap();
+
+    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
+    server.generate(101);
+    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
+
+    let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let result = sh(&format!("cli {options} wallet balance --name w1"));
+    let balance_obj = result.get("balance").unwrap();
+    let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
+    assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1_000_000);
+
+    let node_address = server.node_getnewaddress();
+    let result = sh(&format!(
+        r#"cli {options} wallet send --name w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
+    ));
+    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let _: PartiallySignedTransaction = pset.parse().unwrap();
+
+    // TODO needs signing and broadcast
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

@@ -2,7 +2,7 @@
 
 Building the needed executable requires [rust](https://www.rust-lang.org/tools/install):
 
-```
+```sh
 $ git clone git@gl.blockstream.io:leocomandini/bewallet.git keystone
 $ cd keystone
 $ cargo build --release
@@ -11,7 +11,7 @@ $ alias cli="$(pwd)/target/release/cli"
 
 Help shows available commands:
 
-```
+```sh
 $ cli --help
 ```
 

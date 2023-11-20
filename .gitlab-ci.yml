@@ -60,6 +60,7 @@ test_app:
 test_cli:
   extends: .base
   script:
+    - cd / && . ./env.sh && cd -
     - cargo test -p cli
 
 test_coverage:

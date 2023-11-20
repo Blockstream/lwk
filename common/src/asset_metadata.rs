@@ -83,7 +83,7 @@ impl AssetMetadata {
 
     /// Serialize this metadata as defined by ELIP0100
     ///
-    /// <compact size uint contractLen><contract><32-byte prevoutTxid><32-bit little endian uint prevoutIndex>
+    /// `<compact size uint contractLen><contract><32-byte prevoutTxid><32-bit little endian uint prevoutIndex>`
     pub fn serialize(&self) -> Vec<u8> {
         let mut result = vec![];
 

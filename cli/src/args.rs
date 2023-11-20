@@ -260,6 +260,14 @@ pub enum WalletCommand {
         #[arg(long, required = true)]
         keyorigin_xpub: Vec<String>,
     },
+
+    /// Broadcast a transaction
+    Broadcast {
+        #[arg(long)]
+        dry_run: bool,
+
+        pset: String,
+    },
 }
 
 #[derive(Debug, Args)]

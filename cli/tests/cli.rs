@@ -154,12 +154,12 @@ fn test_broadcast() {
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"cli {options} signer load --kind software --mnemonic "{mnemonic}" --name ss "#
+        r#"cli {options} signer load --kind software --mnemonic "{mnemonic}" --name s1 "#
     ));
-    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
+    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
     let result = sh(&format!(
-        r#"cli {options} signer singlesig-descriptor --name ss --descriptor-blinding-key slip77 --kind wpkh"#
+        r#"cli {options} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
@@ -190,9 +190,15 @@ fn test_broadcast() {
         r#"cli {options} wallet send --name w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
     ));
     let pset = result.get("pset").unwrap().as_str().unwrap();
-    let _: PartiallySignedTransaction = pset.parse().unwrap();
+    let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    // TODO needs signing and broadcast
+    let result = sh(&format!(r#"cli {options} signer sign --name s1 {pset}"#));
+    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
+
+    assert_ne!(pset_signed, pset_unsigned);
+
+    // TODO needs broadcast
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

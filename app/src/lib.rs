@@ -409,6 +409,8 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
 
             signer.sign(&mut pset)?;
 
+            // TODO we may want to return other details such as if signatures have been added
+
             Response::result(
                 request.id,
                 serde_json::to_value(model::PsetResponse {

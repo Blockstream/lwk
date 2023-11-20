@@ -1,14 +1,23 @@
+//! # App
+//!
+//! Contains the RPC server [`App`] wiring the RPC calls to the respective methods in [`Wollet`] or [`Signer`].
+//! The server can be configured via the [`Config`] struct.
+//!
+//! It also contains the RPC client [`Client`].
+//!
+//! Both the client and the server share the possible [`Error`]s.
+//!
+//! All the requests and responses are in the [`model`] module.
+
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use client::Client;
 use common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
-use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
@@ -17,10 +26,14 @@ use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
 
-pub mod client;
-pub mod config;
+pub use client::Client;
+pub use config::Config;
+pub use error::Error;
+
+mod client;
+mod config;
 pub mod consts;
-pub mod error;
+mod error;
 pub mod model;
 
 #[derive(Default)]

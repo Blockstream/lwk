@@ -8,6 +8,7 @@ use crate::consts;
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    /// The address where the RPC server is listening or the client is connecting to
     pub addr: SocketAddr,
     pub datadir: String,
     pub electrum_url: String,

@@ -1,7 +1,7 @@
 use std::{fs::File, path::PathBuf, sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
-use app::config::Config;
+use app::Config;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 

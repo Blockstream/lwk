@@ -1,4 +1,5 @@
 # BEWallet
+
 BEWallet is a collection of Rust crates for the keystone project.
 
 The keystone project aims to provide an easy solution to use
@@ -7,6 +8,7 @@ ability to create and sign issuance, reissuance and burn
 transactions.
 
 ## History
+
 BEWallet was [originally](https://github.com/LeoComandini/BEWallet/)
 a Elements/Liquid wallet library written in Rust to develop
 prototypes and experiments.
@@ -22,11 +24,13 @@ The code base has been entirely re-written, and now it has
 almost no similarity with the original code.
 
 ## Structure
+
 Instead of going for a monolithic approach, we opted to split
 the projects in different components that might be useful
 independently.
 
 ### Wollet
+
 A library for Elements/Liquid watch only wallets.
 
 The caller specifies a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
@@ -43,6 +47,7 @@ This module might be used by:
 * Exchanges who need a watch-only wallet to process incoming payments.
 
 ### Signer
+
 Library to interact with Elements/Liquid signers.
 
 Signer are capable of inspecting and signing PSETs.
@@ -59,6 +64,7 @@ This module might be used by:
 * AMP2
 
 ### Jade
+
 Library to interact with Jade.
 
 Unlock Jade, register multisig wallets, sign PSETs.
@@ -71,12 +77,15 @@ This module might be used by:
 * (Mobile) apps that needs to interact with Jade
 
 ### Hwi
+
 Placeholder crate, currently unused.
 
 Once we will have support for multiple HWW vendors,
 we can make `jade` a dependency of this crate.
 
+
 ### Pset details
+
 Utils to inspect a PSET.
 
 Get the net effect of a PSET on a given wallet,
@@ -88,6 +97,7 @@ Used by:
 * `signer`
 
 ### Bs cointainers
+
 Collections of docker containers wrappers to setup test cases
 using Blockstream projects:
 * Jade emulator
@@ -101,12 +111,14 @@ Used by:
 * `jade` (tests)
 
 ### Tiny jrpc
+
 Tiny json rpc server.
 
 Used by:
 * `app`
 
 ### App
+
 Handle the jrpc server and serves requests coming from clients
 such as `cli`.
 
@@ -159,6 +171,7 @@ RUST_LOG=jade=debug cargo test -- test_name  # filter only on specific module
 ```
 
 ### Test with physical Jade
+
 Tests using the serial need an additional dependency:
 ```
 apt install -y libudev-dev

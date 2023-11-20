@@ -83,23 +83,25 @@ Placeholder crate, currently unused.
 Once we will have support for multiple HWW vendors,
 we can make `jade` a dependency of this crate.
 
+### Common
 
-### Pset details
+A crate containing common code used in multiple other crate in the workspace, such as:
 
-Utils to inspect a PSET.
+ * Utils to inspect a PSET: get the net effect of a PSET on a given wallet, or get how many
+ signatures are missing, and which signers should provide them.
+ * Signer trait: contains the methods to be implemented by a signer such as signing a pset or
+ returning an xpub
 
-Get the net effect of a PSET on a given wallet,
-or get how many signatures are missing,
-and which signers should provide them.
+To avoid circular dependencies this crate must not depend on other crate of the workspace
 
 Used by:
 * `wollet`
 * `signer`
+* `jade`
 
 ### Bs cointainers
 
-Collections of docker containers wrappers to setup test cases
-using Blockstream projects:
+Collections of docker containers wrappers to setup test cases using Blockstream projects:
 * Jade emulator
 * Pin server
 
@@ -126,6 +128,7 @@ Used by:
 * `cli`
 
 ### Cli
+
 CLI to interact with the json rpc server.
 
 ## Tests
@@ -181,4 +184,12 @@ Test cannot be executed in parallel so we need the `--test-threads 1` flag.
 ```
 cargo test -p jade --features serial -- serial --include-ignored --test-threads 1
 cargo test -p wollet --features serial -- serial --include-ignored --test-threads 1
+```
+
+### Docs
+
+To generate documentation you can use
+
+```
+cargo doc --no-deps --open
 ```

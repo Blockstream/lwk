@@ -220,7 +220,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 )?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Broadcast { dry_run, pset } => todo!(),
+            WalletCommand::Broadcast { dry_run, pset } => {
+                let r: app::model::BroadcastResponse = client.broadcast(dry_run, pset)?;
+                serde_json::to_value(r)?
+            }
         },
     })
 }

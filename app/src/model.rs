@@ -4,7 +4,7 @@ use signer::{AnySigner, SignerError};
 use std::collections::HashMap;
 use wollet::bitcoin::bip32::ExtendedPubKey;
 use wollet::bitcoin::hash_types::XpubIdentifier;
-use wollet::elements::{Address, AssetId};
+use wollet::elements::{Address, AssetId, Txid};
 use wollet::UnvalidatedAddressee;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -153,6 +153,17 @@ pub struct XpubResponse {
 pub struct SignRequest {
     pub name: String,
     pub pset: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BroadcastRequest {
+    pub dry_run: bool,
+    pub pset: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BroadcastResponse {
+    pub txid: Txid,
 }
 
 impl TryFrom<(String, &AnySigner)> for SignerResponse {

@@ -173,7 +173,7 @@ fn test_broadcast() {
 
     let result = sh(&format!(r#"cli {options} wallet address --name w1"#));
     let address = result.get("address").unwrap().as_str().unwrap();
-    let address = Address::from_str(&address).unwrap();
+    let address = Address::from_str(address).unwrap();
 
     let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
     server.generate(101);

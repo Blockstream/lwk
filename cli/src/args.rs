@@ -108,7 +108,12 @@ pub enum SignerCommand {
     List,
 
     /// Sign a transaction
-    Sign,
+    Sign {
+        #[arg(long)]
+        name: String,
+
+        pset: String,
+    },
 
     ///  Prints a singlesig descriptor using this signer key
     SinglesigDescriptor {

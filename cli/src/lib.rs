@@ -138,7 +138,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.generate_signer()?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::Sign => todo!(),
+            SignerCommand::Sign { name, pset } => {
+                let r = client.sign(name, pset)?;
+                serde_json::to_value(r)?
+            }
             SignerCommand::Load {
                 name,
                 kind,

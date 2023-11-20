@@ -109,7 +109,7 @@ pub struct SendRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SendResponse {
+pub struct PsetResponse {
     pub pset: String,
 }
 
@@ -147,6 +147,12 @@ pub struct XpubRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct XpubResponse {
     pub keyorigin_xpub: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SignRequest {
+    pub name: String,
+    pub pset: String,
 }
 
 impl TryFrom<(String, &AnySigner)> for SignerResponse {

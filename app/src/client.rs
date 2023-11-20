@@ -105,7 +105,7 @@ impl Client {
         name: String,
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>,
-    ) -> Result<SendResponse> {
+    ) -> Result<PsetResponse> {
         let req = SendRequest {
             addressees,
             fee_rate,
@@ -147,6 +147,11 @@ impl Client {
     pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse> {
         let req = XpubRequest { name, xpub_kind };
         self.make_request("xpub", Some(req))
+    }
+
+    pub fn sign(&self, name: String, pset: String) -> Result<PsetResponse> {
+        let req = SignRequest { name, pset };
+        self.make_request("sign", Some(req))
     }
 
     pub fn stop(&self) -> Result<Value> {

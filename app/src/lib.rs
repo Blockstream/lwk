@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use client::Client;
@@ -11,6 +12,7 @@ use config::Config;
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
@@ -309,7 +311,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let tx = wollet.send_many(r.addressees, r.fee_rate)?;
             Response::result(
                 request.id,
-                serde_json::to_value(model::SendResponse {
+                serde_json::to_value(model::PsetResponse {
                     pset: tx.to_string(),
                 })?,
             )
@@ -391,6 +393,27 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::XpubResponse { keyorigin_xpub })?,
+            )
+        }
+        "sign" => {
+            let r: model::SignRequest = serde_json::from_value(request.params.unwrap())?;
+            let s = state.lock().unwrap();
+
+            let signer = s
+                .signers
+                .get(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
+
+            let mut pset =
+                PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+
+            signer.sign(&mut pset)?;
+
+            Response::result(
+                request.id,
+                serde_json::to_value(model::PsetResponse {
+                    pset: pset.to_string(),
+                })?,
             )
         }
         "stop" => {

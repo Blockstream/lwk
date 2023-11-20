@@ -3,10 +3,7 @@ use bs_containers::testcontainers::{
     clients::{self, Cli},
     Container,
 };
-use bs_containers::{
-    jade::{JadeEmulator, EMULATOR_PORT},
-    pin_server::{PinServer, PIN_SERVER_PORT},
-};
+use bs_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use elements::{
     bitcoin::{self, bip32::Fingerprint},
     pset::PartiallySignedTransaction,

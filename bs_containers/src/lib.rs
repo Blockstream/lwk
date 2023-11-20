@@ -6,8 +6,11 @@
 
 use std::process::Command;
 
-pub mod jade;
-pub mod pin_server;
+mod jade;
+mod pin_server;
+
+pub use jade::{JadeEmulator, EMULATOR_PORT};
+pub use pin_server::{PinServer, PIN_SERVER_PORT};
 
 pub use testcontainers;
 

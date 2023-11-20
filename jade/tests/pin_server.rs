@@ -1,7 +1,6 @@
 use bs_containers::testcontainers::clients::Cli;
 use bs_containers::{
-    pin_server::{PinServer, PIN_SERVER_PORT},
-    print_docker_logs_and_panic,
+    print_docker_logs_and_panic, {PinServer, PIN_SERVER_PORT},
 };
 use elements::bitcoin::{
     hashes::{hex::FromHex, sha256, Hash},

@@ -1,8 +1,8 @@
 // TODO duplicated code existing also in jade crate under test
 
 use bs_containers::{
-    jade::{JadeEmulator, EMULATOR_PORT},
     testcontainers::{clients::Cli, Container},
+    {JadeEmulator, EMULATOR_PORT},
 };
 use jade::{mutex_jade::MutexJade, protocol::DebugSetMnemonicParams, Jade};
 

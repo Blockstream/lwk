@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 // from:
 // https://github.com/bitcoin-core/HWI/blob/70ffb2be827e5b3d304203b4ded1f79c07b04a5f/hwilib/hwwclient.py
 // https://github.com/bitcoin-core/HWI/blob/70ffb2be827e5b3d304203b4ded1f79c07b04a5f/test/test_jade.py

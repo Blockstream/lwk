@@ -1,3 +1,5 @@
+//! Contains a software signer [`SwSigner`] and an [`AnySigner`] that can be a Jade or a Software signer
+
 mod software;
 
 pub use crate::software::{NewError, SignError, SwSigner};

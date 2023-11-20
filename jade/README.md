@@ -1,27 +1,9 @@
 # jade
 
-rust reimplementation of jade cbor messaging
+Library to interact with Jade.
 
-jade docs: https://github.com/Blockstream/Jade/blob/master/docs/index.rst
+Unlock Jade, register multisig wallets, sign PSETs.
 
-test uses [testcontainers](https://github.com/testcontainers/testcontainers-rs) and [insta](https://github.com/mitsuhiko/insta)
+[jade docs](https://github.com/Blockstream/Jade/blob/master/docs/index.rst)
 
-if you want to update the snapshots you'll need the cargo insta tool
-
-todo:
-
-emulator (docker image / tcp)
-
-- [x] add_entropy
-- [x] set_epoch
-- [x] ping
-- [x] version_info
-- [ ] ...
-
-hardware (serial / actual device)
-
-- [ ] auth_user
-- [ ] handshake_init
-- [ ] handshake_complete
-- [ ] logout
-- [ ] ...
+test uses [testcontainers](https://github.com/testcontainers/testcontainers-rs) (see bs_containers in the workspace)

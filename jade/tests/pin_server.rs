@@ -1,6 +1,6 @@
 use bs_containers::testcontainers::clients::Cli;
 use bs_containers::{
-    pin_server::{PinServerEmulator, PIN_SERVER_PORT},
+    pin_server::{PinServer, PIN_SERVER_PORT},
     print_docker_logs_and_panic,
 };
 use elements::bitcoin::{
@@ -13,8 +13,8 @@ use jade::protocol::HandshakeInitParams;
 #[test]
 fn pin_server() {
     let docker = Cli::default();
-    let tempdir = PinServerEmulator::tempdir();
-    let pin_server = PinServerEmulator::new(&tempdir);
+    let tempdir = PinServer::tempdir();
+    let pin_server = PinServer::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);
 

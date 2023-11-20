@@ -1,7 +1,7 @@
 //! Instances of [testcontainers](https://docs.rs/testcontainers/latest/testcontainers/):
 //!
-//! * [`pin_server::PinServerEmulator`] [Pin Server](https://github.com/Blockstream/blind_pin_server)
-//! * [`jade::JadeEmulator`] [Jade emulator](https://github.com/Blockstream/Jade/)
+//! * [`PinServer`] [Pin Server](https://github.com/Blockstream/blind_pin_server)
+//! * [`JadeEmulator`] [Jade emulator](https://github.com/Blockstream/Jade/)
 //!
 
 use std::process::Command;

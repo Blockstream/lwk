@@ -5,7 +5,7 @@ use bs_containers::testcontainers::{
 };
 use bs_containers::{
     jade::{JadeEmulator, EMULATOR_PORT},
-    pin_server::{PinServerEmulator, PIN_SERVER_PORT},
+    pin_server::{PinServer, PIN_SERVER_PORT},
 };
 use elements::{
     bitcoin::{self, bip32::Fingerprint},
@@ -99,7 +99,7 @@ fn update_pinserver() {
     let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
     let tempdir = tempdir().unwrap();
-    let pin_server = PinServerEmulator::new(&tempdir);
+    let pin_server = PinServer::new(&tempdir);
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
@@ -336,7 +336,7 @@ fn jade_sign_liquid_tx() {
 /// Note underscore prefixed var must be there even if they are not read so that they are not
 /// dropped
 struct InitializedJade<'a> {
-    _pin_server: Option<Container<'a, PinServerEmulator>>,
+    _pin_server: Option<Container<'a, PinServer>>,
     _jade_emul: Container<'a, JadeEmulator>,
     _tempdir: Option<TempDir>,
     jade: Jade,
@@ -365,8 +365,8 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
         jade: mut jade_api,
     } = inner_jade_create(docker, Network::LocaltestLiquid);
 
-    let tempdir = PinServerEmulator::tempdir();
-    let pin_server = PinServerEmulator::new(&tempdir);
+    let tempdir = PinServer::tempdir();
+    let pin_server = PinServer::new(&tempdir);
     let pin_server_pub_key = *pin_server.pub_key();
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
     let pin_container = docker.run(pin_server);

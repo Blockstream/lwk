@@ -8,12 +8,12 @@ use testcontainers::{core::WaitFor, Image, ImageArgs};
 pub const PIN_SERVER_PORT: u16 = 8_096;
 
 #[derive(Debug)]
-pub struct PinServerEmulator {
+pub struct PinServer {
     volumes: HashMap<String, String>,
     pub_key: PublicKey,
 }
 
-impl PinServerEmulator {
+impl PinServer {
     pub fn pub_key(&self) -> &PublicKey {
         &self.pub_key
     }
@@ -22,7 +22,7 @@ impl PinServerEmulator {
 const SERVER_PRIVATE_KEY: &str = "server_private_key.key";
 const PINS: &str = "pins";
 
-impl PinServerEmulator {
+impl PinServer {
     /// Create a PinServerEmulator
     ///
     /// takes the temporary directory as parameter to ensure it's not deleted when the
@@ -78,7 +78,7 @@ impl ImageArgs for Args {
     }
 }
 
-impl Image for PinServerEmulator {
+impl Image for PinServer {
     type Args = ();
 
     fn name(&self) -> String {

@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use std::{fs::File, path::PathBuf, sync::mpsc::RecvTimeoutError, time::Duration};
+use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::Config;
@@ -13,28 +13,7 @@ pub use args::Cli;
 mod args;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
-    let mut path = PathBuf::new();
-
-    path.push(&args.datadir);
-
-    std::fs::create_dir_all(&path)
-        .with_context(|| format!("failing to create {}", path.display()))?;
-
-    if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start,
-    }) = args.command
-    {
-        path.push("debug.log")
-    } else {
-        path.push("debug-client.log")
-    }
-
-    let file = File::options()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .expect("must have write permission");
-    let (appender, _guard) = tracing_appender::non_blocking(file);
+    let (appender, _guard) = tracing_appender::non_blocking(std::io::stderr());
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();

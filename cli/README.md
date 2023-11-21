@@ -37,16 +37,10 @@ Read the logs
 $ tail -f debug.log
 ```
 
-Or launch printing on stderr with:
-
-```sh
-$ cli --stderr server start
-```
-
 With more logs
 
 ```sh
-$ RUST_LOG=debug cli --stderr server start
+$ RUST_LOG=debug cli server start
 ```
 
 ## Client

@@ -28,18 +28,13 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     } else {
         path.push("debug-client.log")
     }
-    let path_str = format!("{}", path.display());
 
     let file = File::options()
         .create(true)
         .append(true)
         .open(&path)
         .expect("must have write permission");
-    let (appender, _guard) = if args.stderr {
-        tracing_appender::non_blocking(std::io::stderr())
-    } else {
-        tracing_appender::non_blocking(file)
-    };
+    let (appender, _guard) = tracing_appender::non_blocking(file);
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();
@@ -48,10 +43,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         .with_writer(appender)
         .finish();
     match tracing::subscriber::set_global_default(subscriber) {
-        Ok(_) => tracing::info!(
-            "logging initialized on {}",
-            if args.stderr { "stderr" } else { &path_str }
-        ),
+        Ok(_) => tracing::info!("logging initialized"),
         Err(_) => tracing::debug!("logging already initialized"),
     }
 

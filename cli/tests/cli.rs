@@ -24,8 +24,7 @@ fn get_available_addr() -> anyhow::Result<SocketAddr> {
 #[track_caller]
 fn sh_result(command: &str) -> anyhow::Result<Value> {
     let shell_words = shellwords::split(command).unwrap();
-    let mut cli = Cli::try_parse_from(shell_words).unwrap();
-    cli.stderr = std::env::var("RUST_LOG").is_ok();
+    let cli = Cli::try_parse_from(shell_words).unwrap();
     // cli.network = Network::Regtest;
     inner_main(cli)
 }

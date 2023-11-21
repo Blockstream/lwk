@@ -173,11 +173,24 @@ pub struct WalletDetailsRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum WalletType {
     Unknown,
     Wpkh,
     ShWpkh,
+    WshMulti(usize, usize),
+}
+
+impl std::fmt::Display for WalletType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            WalletType::Unknown => write!(f, "unknown"),
+            WalletType::Wpkh => write!(f, "wpkh"),
+            WalletType::ShWpkh => write!(f, "sh_wpkh"),
+            WalletType::WshMulti(threshold, num_pubkeys) => {
+                write!(f, "wsh_multi_{}of{}", threshold, num_pubkeys)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -190,7 +203,7 @@ pub struct SignerDetails {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalletDetailsResponse {
     #[serde(rename = "type")]
-    pub type_: WalletType,
+    pub type_: String,
     pub signers: Vec<SignerDetails>,
     pub warnings: String,
 }

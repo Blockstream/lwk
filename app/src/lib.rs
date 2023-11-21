@@ -22,7 +22,8 @@ use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::elements::pset::PartiallySignedTransaction;
-use wollet::elements_miniscript::descriptor::DescriptorType;
+use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
+use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
@@ -463,7 +464,18 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let type_ = match wollet.descriptor().descriptor.desc_type() {
                 DescriptorType::Wpkh => model::WalletType::Wpkh,
                 DescriptorType::ShWpkh => model::WalletType::ShWpkh,
-                _ => model::WalletType::Unknown,
+                _ => match &wollet.descriptor().descriptor {
+                    Descriptor::Wsh(wsh) => match wsh.as_inner() {
+                        WshInner::Ms(ms) => match &ms.node {
+                            Terminal::Multi(threshold, pubkeys) => {
+                                model::WalletType::WshMulti(*threshold, pubkeys.len())
+                            }
+                            _ => model::WalletType::Unknown,
+                        },
+                        _ => model::WalletType::Unknown,
+                    },
+                    _ => model::WalletType::Unknown,
+                },
             };
 
             let mut warnings: Vec<String> = vec![];
@@ -506,7 +518,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::WalletDetailsResponse {
-                    type_,
+                    type_: type_.to_string(),
                     signers,
                     warnings: warnings.join(", "),
                 })?,

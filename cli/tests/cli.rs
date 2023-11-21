@@ -210,7 +210,7 @@ fn test_wallet_details() {
 
     let r = sh(&format!("{cli} wallet details --name ms"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
@@ -228,7 +228,7 @@ fn test_wallet_details() {
         r.get("warnings").unwrap().as_str().unwrap(),
         "wallet has multiple signers with the same fingerprint"
     );
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");

@@ -17,31 +17,35 @@ $ cli --help
 
 ## Server
 
-Start the server
+### Start
 
 ```sh
 $ cli server start
 ```
 
-Stop the server
+Or with more logs:
 
-Hit ctrl-c on the terminal window where it started or
+
+```sh
+$ RUST_LOG=debug cli server start
+```
+
+Start the server in background and have logs on file
+
+```sh
+$ cli server start 2>debug.log &
+```
+
+### Stop
+
+If not in background hit ctrl-c in the terminal where it started or in another shell:
 
 ```sh
 $ cli server stop
 ```
 
-Read the logs
-
-```sh
-$ tail -f debug.log
-```
-
-With more logs
-
-```sh
-$ RUST_LOG=debug cli server start
-```
+Another way to terminate a server started in background is to type `fg` to bring the background
+process in the forground and then hit `ctrl-c`
 
 ## Client
 

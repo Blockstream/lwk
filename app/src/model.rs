@@ -177,6 +177,7 @@ pub struct WalletDetailsRequest {
 pub enum WalletType {
     Unknown,
     Wpkh,
+    ShWpkh,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

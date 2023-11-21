@@ -462,6 +462,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
 
             let type_ = match wollet.descriptor().descriptor.desc_type() {
                 DescriptorType::Wpkh => model::WalletType::Wpkh,
+                DescriptorType::ShWpkh => model::WalletType::ShWpkh,
                 _ => model::WalletType::Unknown,
             };
 

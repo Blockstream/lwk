@@ -171,6 +171,12 @@ fn test_wallet_details() {
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name ss {desc_ss}"));
 
+    let r = sh(&format!(
+        "{cli} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind shwpkh"
+    ));
+    let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load --name sssh {desc_sssh}"));
+
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
     let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
@@ -191,6 +197,13 @@ fn test_wallet_details() {
     let r = sh(&format!("{cli} wallet details --name ss"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wpkh");
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 1);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+
+    let r = sh(&format!("{cli} wallet details --name sssh"));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "sh_wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");

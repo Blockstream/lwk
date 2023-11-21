@@ -190,7 +190,7 @@ fn test_wallet_details() {
     // Details
     let r = sh(&format!("{cli} wallet details --name ss"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");

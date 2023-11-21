@@ -22,6 +22,7 @@ use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::elements::pset::PartiallySignedTransaction;
+use wollet::elements_miniscript::descriptor::DescriptorType;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
@@ -459,6 +460,11 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .get_mut(&r.name)
                 .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
 
+            let type_ = match wollet.descriptor().descriptor.desc_type() {
+                DescriptorType::Wpkh => model::WalletType::Wpkh,
+                _ => model::WalletType::Unknown,
+            };
+
             let mut warnings: Vec<String> = vec![];
 
             let has_unique_fingerprints = {
@@ -495,9 +501,6 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     }
                 })
                 .collect();
-
-            // TODO: single sig, multisig, NofM
-            let type_ = model::WalletType::Unknown;
 
             Response::result(
                 request.id,

@@ -176,6 +176,7 @@ pub struct WalletDetailsRequest {
 #[serde(rename_all = "snake_case")]
 pub enum WalletType {
     Unknown,
+    Wpkh,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

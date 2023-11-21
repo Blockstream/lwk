@@ -105,7 +105,10 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 
 ### Create a singlesig wallet
 
-By default will create a liquid testnet wallet
+First start the server
+```sh
+cli --network testnet server start
+```
 
 ```sh
 $ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
@@ -138,12 +141,12 @@ Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3
 Sign the pset
 
 ```sh
-$ SIGNED_PSET=$(cli signer sign --name s1 $UNSIGNED_PSET)
+$ SIGNED_PSET=$(cli signer sign --name s1 $UNSIGNED_PSET | jq -r .pset)
 ```
 
 Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)
 
 ```sh
-$ cli wallet broadcast --dry-run --name s1 $SIGNED_PSET)
+$ cli wallet broadcast --dry-run --name w1 $SIGNED_PSET)
 
 ```

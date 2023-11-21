@@ -139,6 +139,93 @@ fn test_wallet_load_unload_list() {
 }
 
 #[test]
+fn test_wallet_details() {
+    let server = setup();
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
+    let cli = format!("cli {options}");
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli {options} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let r = sh(&format!("{cli} signer generate"));
+    let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
+    let r = sh(&format!(
+        "{cli} signer load --kind software --mnemonic \"{m1}\" --name s1"
+    ));
+    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
+
+    let r = sh(&format!("{cli} signer generate"));
+    let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
+    let r = sh(&format!(
+        "{cli} signer load --kind software --mnemonic \"{m2}\" --name s2"
+    ));
+    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s2");
+
+    // Single sig wallet
+    let r = sh(&format!(
+        "{cli} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind wpkh"
+    ));
+    let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load --name ss {desc_ss}"));
+
+    // Multi sig wallet
+    let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
+    let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} signer xpub --name s2 --kind bip84"));
+    let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
+    let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load --name ms {desc_ms}"));
+
+    // Multi sig wallet, same signers
+    let r = sh(&format!("{cli} wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
+    let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!(
+        "{cli} wallet load --name ms_same_signers {desc_ms_same_signers}"
+    ));
+
+    // Details
+    let r = sh(&format!("{cli} wallet details --name ss"));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 1);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+
+    let r = sh(&format!("{cli} wallet details --name ms"));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 2);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s2");
+
+    sh(&format!("{cli} signer unload --name s2"));
+    let r = sh(&format!("{cli} wallet details --name ms"));
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 2);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert!(signers[1].get("name").is_none());
+
+    let r = sh(&format!("{cli} wallet details --name ms_same_signers"));
+    assert_eq!(
+        r.get("warnings").unwrap().as_str().unwrap(),
+        "wallet has multiple signers with the same fingerprint"
+    );
+    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "unknown");
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 2);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s1");
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
 fn test_broadcast() {
     let server = setup();
     let electrum_url = &server.electrs.electrum_url;

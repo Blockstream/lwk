@@ -168,6 +168,11 @@ impl Client {
         self.make_request("broadcast", Some(req))
     }
 
+    pub fn wallet_details(&self, name: String) -> Result<WalletDetailsResponse> {
+        let req = WalletDetailsRequest { name };
+        self.make_request("wallet_details", Some(req))
+    }
+
     pub fn stop(&self) -> Result<Value> {
         // TODO discriminate only stop error
         let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);

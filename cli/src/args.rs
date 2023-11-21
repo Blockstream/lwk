@@ -273,6 +273,13 @@ pub enum WalletCommand {
 
         pset: String,
     },
+
+    /// Get detailed information about the wallet
+    Details {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+    },
 }
 
 #[derive(Debug, Args)]

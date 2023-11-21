@@ -9,7 +9,7 @@
 //!
 //! All the requests and responses are in the [`model`] module.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -449,6 +449,63 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             Response::result(
                 request.id,
                 serde_json::to_value(model::BroadcastResponse { txid: tx.txid() })?,
+            )
+        }
+        "wallet_details" => {
+            let r: model::WalletDetailsRequest = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+
+            let mut warnings: Vec<String> = vec![];
+
+            let has_unique_fingerprints = {
+                let mut hs = HashSet::new();
+                wollet.signers().into_iter().all(|f| hs.insert(f))
+            };
+            if !has_unique_fingerprints {
+                warnings.push("wallet has multiple signers with the same fingerprint".into());
+            }
+
+            let signers: Vec<_> = wollet
+                .signers()
+                .iter()
+                .map(|fingerprint| {
+                    let names: Vec<_> = s
+                        .signers
+                        .iter()
+                        .filter(|(_, s)| &s.fingerprint().unwrap() == fingerprint)
+                        .map(|(n, _)| n)
+                        .collect();
+                    let name = match names.len() {
+                        0 => None,
+                        1 => Some(names[0].clone()),
+                        _ => {
+                            warnings.push(format!(
+                                "{fingerprint} corresponds to multiple loaded signers"
+                            ));
+                            None
+                        }
+                    };
+                    model::SignerDetails {
+                        name,
+                        fingerprint: *fingerprint,
+                    }
+                })
+                .collect();
+
+            // TODO: single sig, multisig, NofM
+            let type_ = model::WalletType::Unknown;
+
+            Response::result(
+                request.id,
+                serde_json::to_value(model::WalletDetailsResponse {
+                    type_,
+                    signers,
+                    warnings: warnings.join(", "),
+                })?,
             )
         }
         "stop" => {

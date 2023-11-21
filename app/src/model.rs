@@ -2,7 +2,7 @@ use common::Signer;
 use serde::{Deserialize, Serialize};
 use signer::{AnySigner, SignerError};
 use std::collections::HashMap;
-use wollet::bitcoin::bip32::ExtendedPubKey;
+use wollet::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::{Address, AssetId, Txid};
 use wollet::UnvalidatedAddressee;
@@ -165,6 +165,32 @@ pub struct BroadcastRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BroadcastResponse {
     pub txid: Txid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletDetailsRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletType {
+    Unknown,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SignerDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub fingerprint: Fingerprint,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletDetailsResponse {
+    #[serde(rename = "type")]
+    pub type_: WalletType,
+    pub signers: Vec<SignerDetails>,
+    pub warnings: String,
 }
 
 impl TryFrom<(String, &AnySigner)> for SignerResponse {

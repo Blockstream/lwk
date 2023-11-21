@@ -5,10 +5,12 @@ use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction}
 use elements_miniscript::slip77::MasterBlindingKey;
 use rand::{thread_rng, Rng};
 
-use crate::consts::{BAUD_RATE, TIMEOUT};
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
 use crate::{derivation_path_to_vec, Jade};
+
+#[cfg(feature = "serial")]
+use crate::consts::{BAUD_RATE, TIMEOUT};
 
 #[derive(Debug)]
 pub struct MutexJade {

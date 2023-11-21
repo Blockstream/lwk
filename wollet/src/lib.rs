@@ -24,5 +24,6 @@ pub use crate::model::{AddressResult, IssuanceDetails, UnvalidatedAddressee, Wal
 pub use crate::util::EC;
 pub use crate::wollet::Wollet;
 
+pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

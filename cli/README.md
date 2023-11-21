@@ -102,3 +102,48 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
   }
 }
 ```
+
+### Create a singlesig wallet
+
+By default will create a liquid testnet wallet
+
+```sh
+$ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
+$ cli signer load --kind software --mnemonic "$MNEMONIC" --name s1
+$ DESCRIPTOR=$(cli signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ cli wallet load --name w1 "$DESCRIPTOR"
+$ cli wallet address --name w1
+```
+
+Send some lbtc to the address
+
+```sh
+$ cli wallet balance --name w1
+```
+
+Should show a balance
+
+### Creating a transaction, signing and broadcasting
+
+You must have a loaded singlesig wallet `w1`, with the corresponding signer `w1` as created in the previous step.
+Must also have funds in the wallet.
+
+```sh
+$ UNSIGNED_PSET=$(cli wallet send --name w1 --recipient tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg:1000:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 | jq -r .pset)
+```
+
+Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 is the policy asset in testnet) to the address tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg
+
+
+Sign the pset
+
+```sh
+$ SIGNED_PSET=$(cli signer sign --name s1 $UNSIGNED_PSET)
+```
+
+Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)
+
+```sh
+$ cli wallet broadcast --dry-run --name s1 $SIGNED_PSET)
+
+```

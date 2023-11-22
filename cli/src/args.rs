@@ -222,7 +222,7 @@ pub enum WalletCommand {
         name: String,
     },
 
-    /// Create an unsigned transaction (PSET) (send, issue, reissue, burn)
+    /// Create an unsigned transaction (PSET)
     Send {
         /// Wallet name
         #[arg(short, long)]

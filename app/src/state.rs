@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use common::Signer;
 use signer::AnySigner;
 use tiny_jrpc::error::Error as TinyRpcError;
-use wollet::bitcoin::bip32::Fingerprint;
 use wollet::Wollet;
 
 use crate::config::Config;
@@ -112,14 +111,5 @@ impl Signers {
 
     pub fn iter(&self) -> impl Iterator<Item = (&String, &AnySigner)> {
         self.0.iter()
-    }
-
-    // TODO: we can improve here
-    pub fn by_fingerprint(&self, fingerprint: &Fingerprint) -> Vec<String> {
-        self.0
-            .iter()
-            .filter(|(_, s)| &s.fingerprint().unwrap() == fingerprint)
-            .map(|(n, _)| n.clone())
-            .collect()
     }
 }

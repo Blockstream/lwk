@@ -173,6 +173,7 @@ impl Client {
         self.make_request("wallet_details", Some(req))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn issue(
         &self,
         name: String,

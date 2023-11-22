@@ -186,7 +186,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 contract,
                 fee_rate,
             } => {
-                let contract = contract.map(|p| std::fs::read_to_string(p)).transpose()?;
+                let contract = contract.map(std::fs::read_to_string).transpose()?;
                 let r: app::model::PsetResponse = client.issue(
                     name,
                     satoshi_asset,

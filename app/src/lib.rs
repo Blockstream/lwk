@@ -27,7 +27,7 @@ use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
-use crate::state::State;
+use crate::state::{AppSigner, State};
 
 pub use client::Client;
 pub use config::Config;
@@ -193,13 +193,13 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                         ));
                     }
                     let mnemonic = r.mnemonic.unwrap();
-                    AnySigner::Software(SwSigner::new(&mnemonic)?)
+                    AppSigner::AvailableSigner(AnySigner::Software(SwSigner::new(&mnemonic)?))
                 }
                 "serial" => {
                     let network = s.config.jade_network();
                     let jade = MutexJade::from_serial(network)?;
                     jade.unlock().unwrap();
-                    AnySigner::Jade(jade)
+                    AppSigner::AvailableSigner(AnySigner::Jade(jade))
                 }
                 _ => {
                     return Err(tiny_jrpc::error::Error::Generic(
@@ -278,7 +278,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s.signers.get(&r.name)?;
+            let signer = s.signers.get_available(&r.name)?;
 
             let script_variant = r
                 .singlesig_kind
@@ -333,7 +333,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::XpubRequest = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s.signers.get(&r.name)?;
+            let signer = s.signers.get_available(&r.name)?;
 
             let bip = r
                 .xpub_kind
@@ -350,7 +350,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::SignRequest = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s.signers.get(&r.name)?;
+            let signer = s.signers.get_available(&r.name)?;
 
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
@@ -422,7 +422,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     let names: Vec<_> = s
                         .signers
                         .iter()
-                        .filter(|(_, s)| &s.fingerprint().unwrap() == fingerprint)
+                        .filter(|(_, s)| &s.fingerprint() == fingerprint)
                         .map(|(n, _)| n.clone())
                         .collect();
                     let name = match names.len() {

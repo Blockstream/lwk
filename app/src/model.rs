@@ -1,6 +1,7 @@
+use crate::state::AppSigner;
 use common::Signer;
 use serde::{Deserialize, Serialize};
-use signer::{AnySigner, SignerError};
+use signer::SignerError;
 use std::collections::HashMap;
 use wollet::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
 use wollet::bitcoin::hash_types::XpubIdentifier;
@@ -221,14 +222,19 @@ pub struct WalletDetailsResponse {
     pub warnings: String,
 }
 
-impl TryFrom<(String, &AnySigner)> for SignerResponse {
+impl TryFrom<(String, &AppSigner)> for SignerResponse {
     type Error = SignerError;
 
-    fn try_from(name_and_signer: (String, &AnySigner)) -> Result<Self, Self::Error> {
+    fn try_from(name_and_signer: (String, &AppSigner)) -> Result<Self, Self::Error> {
         let (name, signer) = name_and_signer;
-        let fingerprint = signer.fingerprint()?;
-        let xpub = Some(signer.xpub()?);
-        let id = Some(signer.identifier()?);
+        let (fingerprint, id, xpub) = match signer {
+            AppSigner::AvailableSigner(signer) => (
+                signer.fingerprint()?,
+                Some(signer.identifier()?),
+                Some(signer.xpub()?),
+            ),
+            AppSigner::ExternalSigner(fingerprint) => (fingerprint.clone(), None, None),
+        };
 
         Ok(Self {
             name,

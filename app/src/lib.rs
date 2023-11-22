@@ -169,7 +169,14 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         }
         "list_wallets" => {
             let s = state.lock().unwrap();
-            let wallets = s.wollets.vec();
+            let wallets = s
+                .wollets
+                .iter()
+                .map(|(name, wollet)| WalletResponse {
+                    descriptor: wollet.descriptor().to_string(),
+                    name: name.clone(),
+                })
+                .collect();
             let r = ListWalletsResponse { wallets };
             Response::result(request.id, serde_json::to_value(r)?)
         }

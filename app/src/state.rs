@@ -7,7 +7,7 @@ use wollet::bitcoin::bip32::Fingerprint;
 use wollet::Wollet;
 
 use crate::config::Config;
-use crate::model::{SignerResponse, WalletResponse};
+use crate::model::SignerResponse;
 
 #[derive(Default)]
 pub struct Wollets(HashMap<String, Wollet>);
@@ -66,15 +66,8 @@ impl Wollets {
             .ok_or_else(|| TinyRpcError::WalletNotExist(name.to_string()))
     }
 
-    // TODO: we can improve here
-    pub fn vec(&self) -> Vec<WalletResponse> {
-        self.0
-            .iter()
-            .map(|(name, wollet)| WalletResponse {
-                descriptor: wollet.descriptor().to_string(),
-                name: name.clone(),
-            })
-            .collect()
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Wollet)> {
+        self.0.iter()
     }
 }
 

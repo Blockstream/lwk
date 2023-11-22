@@ -177,7 +177,15 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
-            WalletCommand::Issue {} => todo!(),
+            WalletCommand::Issue {
+                name,
+                satoshi_asset,
+                address_asset,
+                satoshi_token,
+                address_token,
+                contract,
+                fee_rate,
+            } => todo!(),
             WalletCommand::Reissue {} => todo!(),
             WalletCommand::MultisigDesc {
                 descriptor_blinding_key,
@@ -205,6 +213,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r: app::model::WalletDetailsResponse = client.wallet_details(name)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::Issuances {} => todo!(),
         },
     })
 }

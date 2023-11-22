@@ -239,7 +239,44 @@ pub enum WalletCommand {
         fee_rate: Option<f32>,
     },
 
-    Issue {},
+    /// Issue an asset
+    Issue {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
+        /// The number of units of the newly issued asset
+        #[arg(long)]
+        satoshi_asset: u64,
+
+        /// Address receiving the newly issued asset.
+        /// If not specified an external address of the wallet identified by `name` will be used
+        #[arg(long)]
+        address_asset: Option<String>,
+
+        /// Number of reissuance token emitted, common choice are 0 or 1
+        #[arg(long)]
+        satoshi_token: u64,
+
+        /// Address receiving the reissuance token(s).
+        /// Must be specified is satoshi_token is greater than 0, otherwise could be
+        #[arg(long)]
+        address_token: Option<String>,
+
+        /// Path of the file containing the JSON contract
+        #[arg(long)]
+        contract: Option<PathBuf>,
+
+        // TODO default value
+        /// To optionally specify a fee
+        #[arg(long)]
+        fee_rate: Option<f32>,
+    },
+
+    /// Prints a list of issuances made by this wallet
+    Issuances {},
+
+    /// Reissue a previously issued asset, needs ownership of the issuance token
     Reissue {},
 
     /// Print a multisig descriptor

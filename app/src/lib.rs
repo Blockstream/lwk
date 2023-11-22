@@ -9,7 +9,7 @@
 //!
 //! All the requests and responses are in the [`model`] module.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -27,6 +27,7 @@ use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
 use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
+use crate::state::State;
 
 pub use client::Client;
 pub use config::Config;
@@ -37,15 +38,7 @@ mod config;
 pub mod consts;
 mod error;
 pub mod model;
-
-#[derive(Default)]
-pub struct State {
-    // TODO: config is read-only, so it's not useful to wrap it in a mutex.
-    // Ideally it should be in _another_ struct accessible by method_handler.
-    pub config: Config,
-    pub wollets: HashMap<String, Wollet>,
-    pub signers: HashMap<String, AnySigner>,
-}
+mod state;
 
 pub struct App {
     rpc: Option<JsonRpcServer>,
@@ -141,9 +134,6 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::LoadWalletRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            if s.wollets.contains_key(&r.name) {
-                return Err(tiny_jrpc::error::Error::WalletAlreadyLoaded(r.name));
-            }
             // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
                 s.config.network.clone(),
@@ -153,23 +143,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 &s.config.datadir,
                 &r.descriptor,
             )?;
-
-            let a = |w: &Wollet| w.address(Some(0)).unwrap().address().to_string();
-
-            let vec: Vec<_> = s
-                .wollets
-                .iter()
-                .filter(|(_, w)| a(w) == a(&wollet))
-                .map(|(n, _)| n)
-                .collect();
-            if let Some(existing) = vec.first() {
-                // TODO: maybe a different error more clear?
-                return Err(tiny_jrpc::error::Error::WalletAlreadyLoaded(
-                    existing.to_string(),
-                ));
-            }
-
-            s.wollets.insert(r.name.clone(), wollet);
+            s.wollets.insert(&r.name, wollet)?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::WalletResponse {
@@ -182,31 +156,20 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::UnloadWalletRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            match s.wollets.remove(&r.name) {
-                Some(removed) => Response::result(
-                    request.id,
-                    serde_json::to_value(model::UnloadWalletResponse {
-                        unloaded: WalletResponse {
-                            name: r.name,
-                            descriptor: removed.descriptor().to_string(),
-                        },
-                    })?,
-                ),
-                None => {
-                    return Err(tiny_jrpc::error::Error::WalletNotExist(r.name));
-                }
-            }
+            let removed = s.wollets.remove(&r.name)?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::UnloadWalletResponse {
+                    unloaded: WalletResponse {
+                        name: r.name,
+                        descriptor: removed.descriptor().to_string(),
+                    },
+                })?,
+            )
         }
         "list_wallets" => {
             let s = state.lock().unwrap();
-            let wallets: Vec<_> = s
-                .wollets
-                .iter()
-                .map(|(name, wollet)| WalletResponse {
-                    descriptor: wollet.descriptor().to_string(),
-                    name: name.clone(),
-                })
-                .collect();
+            let wallets = s.wollets.vec();
             let r = ListWalletsResponse { wallets };
             Response::result(request.id, serde_json::to_value(r)?)
         }
@@ -214,10 +177,6 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::LoadSignerRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-
-            if s.signers.contains_key(&r.name) {
-                return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(r.name));
-            }
 
             let signer = match r.kind.as_str() {
                 "software" => {
@@ -242,48 +201,24 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 }
             };
 
-            let vec: Vec<_> = s
-                .signers
-                .iter()
-                .filter(|(_, s)| s.identifier().unwrap() == signer.identifier().unwrap())
-                .map(|(n, _)| n)
-                .collect();
-            if let Some(existing) = vec.first() {
-                // TODO: maybe a different error more clear?
-                return Err(tiny_jrpc::error::Error::SignerAlreadyLoaded(
-                    existing.to_string(),
-                ));
-            }
-
             let resp: SignerResponse = (r.name.clone(), &signer).try_into()?;
-
-            s.signers.insert(r.name, signer);
+            s.signers.insert(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
         "unload_signer" => {
             let r: model::UnloadSignerRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            match s.signers.remove(&r.name) {
-                Some(removed) => {
-                    let signer: SignerResponse = (r.name.clone(), &removed).try_into()?;
-                    Response::result(
-                        request.id,
-                        serde_json::to_value(model::UnloadSignerResponse { unloaded: signer })?,
-                    )
-                }
-                None => {
-                    return Err(tiny_jrpc::error::Error::SignerNotExist(r.name));
-                }
-            }
+            let removed = s.signers.remove(&r.name)?;
+            let signer: SignerResponse = (r.name, &removed).try_into()?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::UnloadSignerResponse { unloaded: signer })?,
+            )
         }
         "list_signers" => {
             let s = state.lock().unwrap();
-            let signers: Vec<_> = s
-                .signers
-                .iter()
-                .map(|(name, signer)| (name.clone(), signer).try_into().unwrap()) // TODO
-                .collect();
+            let signers = s.signers.vec();
             let r = ListSignersResponse { signers };
             Response::result(request.id, serde_json::to_value(r)?)
         }
@@ -291,10 +226,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::AddressRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?; // To update the last unused index
             let addr = wollet.address(r.index)?;
             Response::result(
@@ -309,10 +241,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::BalanceRequest =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
             let balance = wollet.balance()?;
             Response::result(
@@ -323,10 +252,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "send_many" => {
             let r: model::SendRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
             let tx = wollet.send_many(r.addressees, r.fee_rate)?;
             Response::result(
@@ -341,10 +267,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s
-                .signers
-                .get(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
+            let signer = s.signers.get(&r.name)?;
 
             let script_variant = r
                 .singlesig_kind
@@ -399,10 +322,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::XpubRequest = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s
-                .signers
-                .get(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
+            let signer = s.signers.get(&r.name)?;
 
             let bip = r
                 .xpub_kind
@@ -419,10 +339,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let r: model::SignRequest = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
-            let signer = s
-                .signers
-                .get(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::SignerNotExist(r.name.to_string()))?;
+            let signer = s.signers.get(&r.name)?;
 
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
@@ -441,10 +358,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "broadcast" => {
             let r: model::BroadcastRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let tx = wollet.finalize(&mut pset)?;
@@ -461,10 +375,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "wallet_details" => {
             let r: model::WalletDetailsRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
 
             let type_ = match wollet.descriptor().descriptor.desc_type() {
                 DescriptorType::Wpkh => model::WalletType::Wpkh,
@@ -497,12 +408,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .signers()
                 .iter()
                 .map(|fingerprint| {
-                    let names: Vec<_> = s
-                        .signers
-                        .iter()
-                        .filter(|(_, s)| &s.fingerprint().unwrap() == fingerprint)
-                        .map(|(n, _)| n)
-                        .collect();
+                    let names = s.signers.by_fingerprint(fingerprint);
                     let name = match names.len() {
                         0 => None,
                         1 => Some(names[0].clone()),
@@ -532,10 +438,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         "issue" => {
             let r: model::IssueRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
-            let wollet = s
-                .wollets
-                .get_mut(&r.name)
-                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
             let tx = wollet.issue_asset(
                 r.satoshi_asset,

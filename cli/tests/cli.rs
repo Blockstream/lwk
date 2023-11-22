@@ -112,7 +112,7 @@ fn test_wallet_load_unload_list() {
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
     let result = sh_result(&format!(
-        "cli --addr {addr} wallet load --name custody anything"
+        "cli --addr {addr} wallet load --name custody {desc}"
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 

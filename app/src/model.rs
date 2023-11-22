@@ -173,6 +173,17 @@ pub struct WalletDetailsRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct IssueRequest {
+    pub name: String,
+    pub satoshi_asset: u64,
+    pub address_asset: Option<String>,
+    pub satoshi_token: u64,
+    pub address_token: Option<String>,
+    pub contract: Option<String>,
+    pub fee_rate: Option<f32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum WalletType {
     Unknown,
     Wpkh,

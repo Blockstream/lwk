@@ -180,10 +180,19 @@ impl Client {
         address_asset: Option<String>,
         satoshi_token: u64,
         address_token: Option<String>,
-        contract: Option<std::path::PathBuf>,
+        contract: Option<String>,
         fee_rate: Option<f32>,
     ) -> Result<PsetResponse> {
-        todo!()
+        let req = IssueRequest {
+            name,
+            satoshi_asset,
+            address_asset,
+            satoshi_token,
+            address_token,
+            contract,
+            fee_rate,
+        };
+        self.make_request("issue", Some(req))
     }
 
     pub fn stop(&self) -> Result<Value> {

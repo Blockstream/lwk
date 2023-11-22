@@ -173,6 +173,19 @@ impl Client {
         self.make_request("wallet_details", Some(req))
     }
 
+    pub fn issue(
+        &self,
+        name: String,
+        satoshi_asset: u64,
+        address_asset: Option<String>,
+        satoshi_token: u64,
+        address_token: Option<String>,
+        contract: Option<std::path::PathBuf>,
+        fee_rate: Option<f32>,
+    ) -> Result<PsetResponse> {
+        todo!()
+    }
+
     pub fn stop(&self) -> Result<Value> {
         // TODO discriminate only stop error
         let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);

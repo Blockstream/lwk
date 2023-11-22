@@ -185,7 +185,18 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 address_token,
                 contract,
                 fee_rate,
-            } => todo!(),
+            } => {
+                let r: app::model::PsetResponse = client.issue(
+                    name,
+                    satoshi_asset,
+                    address_asset,
+                    satoshi_token,
+                    address_token,
+                    contract,
+                    fee_rate,
+                )?;
+                serde_json::to_value(r)?
+            }
             WalletCommand::Reissue {} => todo!(),
             WalletCommand::MultisigDesc {
                 descriptor_blinding_key,

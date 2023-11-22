@@ -165,13 +165,13 @@ fn test_wallet_details() {
 
     // Single sig wallet
     let r = sh(&format!(
-        "{cli} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind wpkh"
+        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name ss {desc_ss}"));
 
     let r = sh(&format!(
-        "{cli} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind shwpkh"
+        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name sssh {desc_sssh}"));
@@ -181,12 +181,12 @@ fn test_wallet_details() {
     let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer xpub --name s2 --kind bip84"));
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name ms {desc_ms}"));
 
     // Multi sig wallet, same signers
-    let r = sh(&format!("{cli} wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
     let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!(
         "{cli} wallet load --name ms_same_signers {desc_ms_same_signers}"
@@ -258,7 +258,7 @@ fn test_broadcast() {
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
     let result = sh(&format!(
-        r#"cli {options} signer singlesig-descriptor --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
+        r#"cli {options} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
@@ -306,6 +306,58 @@ fn test_broadcast() {
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
     assert!(policy_obj.as_number().unwrap().as_u64().unwrap() < 1_000_000);
+
+    sh(&format!("cli --addr {addr} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_issue() {
+    // TODO copied from test_broadcast, make an extended setup fn creating a minimal env (1 signer, 1 funded wallt)
+    let server = setup();
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
+    let options_clone = options.clone();
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli {options_clone} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let result = sh(&format!("cli {options} signer generate"));
+    let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+
+    let result = sh(&format!(
+        r#"cli {options} signer load --kind software --mnemonic "{mnemonic}" --name s1 "#
+    ));
+    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
+
+    let result = sh(&format!(
+        r#"cli {options} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
+    ));
+    let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
+
+    let result = sh(&format!(
+        r#"cli {options} wallet load --name w1 {desc_generated}"#
+    ));
+    assert_eq!(
+        result.get("descriptor").unwrap().as_str().unwrap(),
+        desc_generated
+    );
+
+    let result = sh(&format!(r#"cli {options} wallet address --name w1"#));
+    let address = result.get("address").unwrap().as_str().unwrap();
+    let address = Address::from_str(address).unwrap();
+
+    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
+    server.generate(101);
+    std::thread::sleep(std::time::Duration::from_millis(15000)); // TODO poll instead of sleep?
+
+    // FIXME, returns thread 'test_issue' panicked at 'called `Result::unwrap()` on an `Err` value: Rpc returned an error RpcError { code: -32005, message: "Wollet Error: Missing vin", data: None }', cli/tests/cli.rs:357:18
+    // let result = sh(&format!(
+    //     r#"cli {options} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0"#
+    // ));
+    // dbg!(result);
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();
@@ -362,9 +414,8 @@ fn test_commands() {
     );
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
-    let result = sh(
-        "cli signer singlesig-descriptor --name ss --descriptor-blinding-key slip77 --kind wpkh",
-    );
+    let result =
+        sh("cli signer singlesig-desc --name ss --descriptor-blinding-key slip77 --kind wpkh");
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
@@ -381,7 +432,7 @@ fn test_commands() {
     let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
     assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
 
-    let result = sh(&format!("cli wallet multisig-descriptor --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
+    let result = sh(&format!("cli wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
     let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(

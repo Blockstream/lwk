@@ -100,7 +100,8 @@ impl JsonRpcServer {
                             // respond to the http GET request
                             let Some(mut path) = config.serve_dir.clone() else {
                                 let message = "No serve_dir defined in server config.";
-                                let response = HttpResponse::from_string(message).with_status_code(500);
+                                let response =
+                                    HttpResponse::from_string(message).with_status_code(500);
                                 send_http_response(http_request, response, message);
                                 continue;
                             };

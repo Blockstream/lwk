@@ -129,7 +129,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.unload_signer(name)?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::SinglesigDescriptor {
+            SignerCommand::SinglesigDesc {
                 name,
                 descriptor_blinding_key,
                 kind,
@@ -179,7 +179,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
             WalletCommand::Issue {} => todo!(),
             WalletCommand::Reissue {} => todo!(),
-            WalletCommand::MultisigDescriptor {
+            WalletCommand::MultisigDesc {
                 descriptor_blinding_key,
                 kind,
                 threshold,

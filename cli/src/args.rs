@@ -112,7 +112,7 @@ pub enum SignerCommand {
     },
 
     ///  Prints a singlesig descriptor using this signer key
-    SinglesigDescriptor {
+    SinglesigDesc {
         #[arg(long)]
         name: String,
 
@@ -243,7 +243,7 @@ pub enum WalletCommand {
     Reissue {},
 
     /// Print a multisig descriptor
-    MultisigDescriptor {
+    MultisigDesc {
         #[arg(long)]
         descriptor_blinding_key: BlindingKeyKind,
 

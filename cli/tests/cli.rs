@@ -94,6 +94,47 @@ fn test_signer_load_unload_list() {
 }
 
 #[test]
+fn test_signer_external() {
+    let addr = get_available_addr().unwrap();
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli --addr {addr} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let cli = format!("cli --addr {addr}");
+
+    let name = "ext";
+    let fingerprint = "11111111";
+    let r = sh(&format!(
+        "{cli} signer load --kind external --fingerprint {fingerprint} --name {name}"
+    ));
+    assert_eq!(r.get("name").unwrap().as_str().unwrap(), name);
+
+    // Some actions are not possible with the external signer
+    let r = sh_result(&format!("{cli} signer xpub --name {name} --kind bip84"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
+    let r = sh_result(&format!("{cli} signer sign --name {name} pset"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
+    let r = sh_result(&format!(
+        "{cli} signer singlesig-desc --name {name} --descriptor-blinding-key slip77 --kind wpkh"
+    ));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
+
+    // Load a wallet and see external signer name in the wallet details
+    let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
+    let view_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+    let desc = format!("ct({view_key},elwpkh([{fingerprint}/0h/0h/0h]{xpub}/<0;1>/*))#6026sscm");
+    sh(&format!("cli --addr {addr} wallet load --name ss {desc}"));
+
+    let r = sh(&format!("{cli} wallet details --name ss"));
+    let signers = r.get("signers").unwrap().as_array().unwrap();
+    assert_eq!(signers.len(), 1);
+    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), name);
+
+    sh(&format!("cli --addr {addr} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
 fn test_wallet_load_unload_list() {
     let addr = get_available_addr().unwrap();
     let t = std::thread::spawn(move || {

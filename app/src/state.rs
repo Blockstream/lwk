@@ -17,7 +17,7 @@ impl AppSigner {
     pub fn fingerprint(&self) -> Fingerprint {
         match self {
             AppSigner::AvailableSigner(s) => s.fingerprint().unwrap(), // TODO
-            AppSigner::ExternalSigner(f) => f.clone(),
+            AppSigner::ExternalSigner(f) => *f,
         }
     }
 }

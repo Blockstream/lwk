@@ -58,11 +58,13 @@ impl Client {
         name: String,
         kind: String,
         mnemonic: Option<String>,
+        fingerprint: Option<String>,
     ) -> Result<SignerResponse> {
         let req = LoadSignerRequest {
             name,
             kind,
             mnemonic,
+            fingerprint,
         };
         self.make_request("load_signer", Some(req))
     }

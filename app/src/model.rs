@@ -60,6 +60,7 @@ pub struct LoadSignerRequest {
     pub name: String,
     pub kind: String,
     pub mnemonic: Option<String>,
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -233,7 +234,7 @@ impl TryFrom<(String, &AppSigner)> for SignerResponse {
                 Some(signer.identifier()?),
                 Some(signer.xpub()?),
             ),
-            AppSigner::ExternalSigner(fingerprint) => (fingerprint.clone(), None, None),
+            AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
         };
 
         Ok(Self {

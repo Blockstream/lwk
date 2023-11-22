@@ -21,6 +21,7 @@ use common::{
 use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use wollet::bitcoin::bip32::Fingerprint;
 use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
@@ -200,6 +201,16 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                     let jade = MutexJade::from_serial(network)?;
                     jade.unlock().unwrap();
                     AppSigner::AvailableSigner(AnySigner::Jade(jade))
+                }
+                "external" => {
+                    if r.fingerprint.is_none() {
+                        return Err(tiny_jrpc::error::Error::Generic(
+                            "Fingerprint must be set for external signer".to_string(),
+                        ));
+                    }
+                    let fingerprint = Fingerprint::from_str(&r.fingerprint.unwrap())
+                        .map_err(|e| tiny_jrpc::error::Error::Generic(e.to_string()))?;
+                    AppSigner::ExternalSigner(fingerprint)
                 }
                 _ => {
                     return Err(tiny_jrpc::error::Error::Generic(

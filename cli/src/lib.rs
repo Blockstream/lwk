@@ -119,9 +119,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 name,
                 kind,
                 mnemonic,
+                fingerprint,
             } => {
                 let kind = kind.to_string();
-                let j = client.load_signer(name, kind, mnemonic)?;
+                let j = client.load_signer(name, kind, mnemonic, fingerprint)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::List => serde_json::to_value(client.list_signers()?)?,

@@ -53,6 +53,7 @@ pub struct SignerArgs {
 pub enum SignerKind {
     Software,
     Serial,
+    External,
 }
 
 impl std::fmt::Display for SignerKind {
@@ -60,6 +61,7 @@ impl std::fmt::Display for SignerKind {
         match self {
             SignerKind::Software => write!(f, "software"),
             SignerKind::Serial => write!(f, "serial"),
+            SignerKind::External => write!(f, "external"),
         }
     }
 }
@@ -92,6 +94,9 @@ pub enum SignerCommand {
 
         #[arg(long)]
         mnemonic: Option<String>, // TODO is it right to have the mnemonic as arg?
+
+        #[arg(long)]
+        fingerprint: Option<String>,
     },
 
     /// Unload a software signer

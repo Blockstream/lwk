@@ -74,9 +74,9 @@ pub struct UnloadSignerResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignerResponse {
     pub name: String,
+    pub fingerprint: Fingerprint,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<XpubIdentifier>,
-    pub fingerprint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xpub: Option<ExtendedPubKey>,
 }
@@ -226,7 +226,7 @@ impl TryFrom<(String, &AnySigner)> for SignerResponse {
 
     fn try_from(name_and_signer: (String, &AnySigner)) -> Result<Self, Self::Error> {
         let (name, signer) = name_and_signer;
-        let fingerprint = signer.fingerprint()?.to_string();
+        let fingerprint = signer.fingerprint()?;
         let xpub = Some(signer.xpub()?);
         let id = Some(signer.identifier()?);
 

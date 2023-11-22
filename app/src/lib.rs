@@ -225,7 +225,11 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
         }
         "list_signers" => {
             let s = state.lock().unwrap();
-            let signers = s.signers.vec();
+            let signers = s
+                .signers
+                .iter()
+                .map(|(name, signer)| (name.clone(), signer).try_into().unwrap()) // TODO
+                .collect();
             let r = ListSignersResponse { signers };
             Response::result(request.id, serde_json::to_value(r)?)
         }

@@ -351,13 +351,36 @@ fn test_issue() {
 
     let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
     server.generate(101);
-    std::thread::sleep(std::time::Duration::from_millis(15000)); // TODO poll instead of sleep?
+    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
 
-    // FIXME, returns thread 'test_issue' panicked at 'called `Result::unwrap()` on an `Err` value: Rpc returned an error RpcError { code: -32005, message: "Wollet Error: Missing vin", data: None }', cli/tests/cli.rs:357:18
-    // let result = sh(&format!(
-    //     r#"cli {options} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0"#
-    // ));
-    // dbg!(result);
+    let result = sh(&format!(
+        r#"cli {options} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0"#
+    ));
+    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
+
+    let result = sh(&format!(r#"cli {options} signer sign --name s1 {pset}"#));
+    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
+
+    assert_ne!(pset_signed, pset_unsigned);
+
+    let result = sh(&format!(
+        r#"cli {options} wallet broadcast --name w1 {pset_signed}"#
+    ));
+    assert!(result.get("txid").unwrap().as_str().is_some());
+
+    let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let result = sh(&format!("cli {options} wallet balance --name w1"));
+    let balance_obj = result.get("balance").unwrap();
+    let mut asset_found = false;
+    for (key, value) in balance_obj.as_object().unwrap() {
+        if key != regtest_policy_asset {
+            asset_found = true;
+            assert_eq!(value.as_u64().unwrap(), 1000);
+        }
+    }
+    assert!(asset_found);
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

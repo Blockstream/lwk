@@ -529,6 +529,28 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 })?,
             )
         }
+        "issue" => {
+            let r: model::IssueRequest = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s
+                .wollets
+                .get_mut(&r.name)
+                .ok_or_else(|| tiny_jrpc::error::Error::WalletNotExist(r.name.clone()))?;
+            let tx = wollet.issue_asset(
+                r.satoshi_asset,
+                r.address_asset.as_deref().unwrap_or(""),
+                r.satoshi_token,
+                r.address_token.as_deref().unwrap_or(""),
+                r.contract.as_deref().unwrap_or(""),
+                r.fee_rate,
+            )?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::PsetResponse {
+                    pset: tx.to_string(),
+                })?,
+            )
+        }
         "stop" => {
             return Err(tiny_jrpc::error::Error::Stop);
         }

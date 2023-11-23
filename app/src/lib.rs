@@ -430,22 +430,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 .signers()
                 .iter()
                 .map(|fingerprint| {
-                    let names: Vec<_> = s
-                        .signers
-                        .iter()
-                        .filter(|(_, s)| &s.fingerprint() == fingerprint)
-                        .map(|(n, _)| n.clone())
-                        .collect();
-                    let name = match names.len() {
-                        0 => None,
-                        1 => Some(names[0].clone()),
-                        _ => {
-                            warnings.push(format!(
-                                "{fingerprint} corresponds to multiple loaded signers"
-                            ));
-                            None
-                        }
-                    };
+                    let name = s.signers.name_from_fingerprint(fingerprint, &mut warnings);
                     model::SignerDetails {
                         name,
                         fingerprint: *fingerprint,

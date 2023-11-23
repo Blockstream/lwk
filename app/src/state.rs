@@ -137,4 +137,27 @@ impl Signers {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &AppSigner)> {
         self.0.iter()
     }
+
+    /// Get a name from the fingerprint
+    pub fn name_from_fingerprint(
+        &self,
+        fingerprint: &Fingerprint,
+        warnings: &mut Vec<String>,
+    ) -> Option<String> {
+        let names: Vec<_> = self
+            .iter()
+            .filter(|(_, s)| &s.fingerprint() == fingerprint)
+            .map(|(n, _)| n.clone())
+            .collect();
+        match names.len() {
+            0 => None,
+            1 => Some(names[0].clone()),
+            _ => {
+                warnings.push(format!(
+                    "{fingerprint} corresponds to multiple loaded signers"
+                ));
+                None
+            }
+        }
+    }
 }

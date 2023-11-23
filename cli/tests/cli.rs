@@ -508,3 +508,68 @@ fn test_commands() {
     sh("cli server stop");
     std::thread::sleep(std::time::Duration::from_millis(100));
 }
+
+#[test]
+fn test_multisig() {
+    let server = setup();
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
+    let options_clone = options.clone();
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli {options_clone} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let cli = format!("cli {options}");
+
+    let r = sh(&format!("{cli} signer generate"));
+    let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
+    sh(&format!(
+        r#"{cli} signer load --kind software --mnemonic "{m1}" --name s1 "#
+    ));
+    let r = sh(&format!("{cli} signer generate"));
+    let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
+    sh(&format!(
+        r#"{cli} signer load --kind software --mnemonic "{m2}" --name s2 "#
+    ));
+
+    let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
+    let keyorigin_xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} signer xpub --name s2 --kind bip84"));
+    let keyorigin_xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
+    let desc = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load --name multi {desc}"));
+
+    let r = sh(&format!("{cli} wallet address --name multi"));
+    let address = r.get("address").unwrap().as_str().unwrap();
+    let address = Address::from_str(address).unwrap();
+
+    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
+    server.generate(101);
+    std::thread::sleep(std::time::Duration::from_millis(5000));
+
+    let node_address = server.node_getnewaddress();
+    let satoshi = 1000;
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let recipient = format!("{node_address}:{satoshi}:{policy_asset}");
+    let r = sh(&format!(
+        "{cli} wallet send --name multi --recipient {recipient}"
+    ));
+    let pset_u = r.get("pset").unwrap().as_str().unwrap();
+
+    let r = sh(&format!("{cli} signer sign --name s1 {pset_u}"));
+    let pset_s1 = r.get("pset").unwrap().as_str().unwrap();
+
+    let r = sh(&format!("{cli} signer sign --name s2 {pset_u}"));
+    let pset_s2 = r.get("pset").unwrap().as_str().unwrap();
+
+    assert_ne!(pset_u, pset_s1);
+    assert_ne!(pset_u, pset_s2);
+    assert_ne!(pset_s1, pset_s2);
+    // TODO: combine and broadcast
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

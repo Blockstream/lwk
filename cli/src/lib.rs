@@ -236,6 +236,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             WalletCommand::Issuances {} => todo!(),
+            WalletCommand::Combine { name, pset } => {
+                let r: app::model::WalletCombineResponse = client.wallet_combine(name, pset)?;
+                serde_json::to_value(r)?
+            }
         },
     })
 }

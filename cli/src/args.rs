@@ -318,6 +318,18 @@ pub enum WalletCommand {
         #[arg(short, long)]
         name: String,
     },
+
+    Combine {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
+        /// PSETs to combine
+        ///
+        /// Can be specified multiple times.
+        #[arg(short, long, required = true)]
+        pset: Vec<String>,
+    },
 }
 
 #[derive(Debug, Args)]

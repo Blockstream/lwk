@@ -568,7 +568,14 @@ fn test_multisig() {
     assert_ne!(pset_u, pset_s1);
     assert_ne!(pset_u, pset_s2);
     assert_ne!(pset_s1, pset_s2);
-    // TODO: combine and broadcast
+
+    let r = sh(&format!(
+        "{cli} wallet combine --name multi -p {pset_s1} -p {pset_s2}"
+    ));
+    let pset_s = r.get("pset").unwrap().as_str().unwrap();
+
+    let r = sh(&format!("{cli} wallet broadcast --name multi {pset_s}"));
+    let _txid = r.get("txid").unwrap().as_str().unwrap();
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

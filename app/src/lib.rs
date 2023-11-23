@@ -462,6 +462,23 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 })?,
             )
         }
+        "wallet_combine" => {
+            let r: model::WalletCombineRequest = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s.wollets.get_mut(&r.name)?;
+
+            let mut psets = vec![];
+            for pset in r.pset {
+                psets.push(PartiallySignedTransaction::from_str(&pset).map_err(|e| e.to_string())?);
+            }
+            let pset = wollet.combine(&psets)?;
+            Response::result(
+                request.id,
+                serde_json::to_value(model::WalletCombineResponse {
+                    pset: pset.to_string(),
+                })?,
+            )
+        }
         "issue" => {
             let r: model::IssueRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();

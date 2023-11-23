@@ -245,3 +245,14 @@ impl TryFrom<(String, &AppSigner)> for SignerResponse {
         })
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletCombineRequest {
+    pub name: String,
+    pub pset: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletCombineResponse {
+    pub pset: String,
+}

@@ -256,3 +256,16 @@ pub struct WalletCombineRequest {
 pub struct WalletCombineResponse {
     pub pset: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletPsetDetailsRequest {
+    pub name: String,
+    pub pset: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletPsetDetailsResponse {
+    pub has_signatures_from: Vec<SignerDetails>,
+    pub missing_signatures_from: Vec<SignerDetails>,
+    pub warnings: String,
+}

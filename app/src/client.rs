@@ -180,6 +180,15 @@ impl Client {
         self.make_request("wallet_combine", Some(req))
     }
 
+    pub fn wallet_pset_details(
+        &self,
+        name: String,
+        pset: String,
+    ) -> Result<WalletPsetDetailsResponse> {
+        let req = WalletPsetDetailsRequest { name, pset };
+        self.make_request("wallet_pset_details", Some(req))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn issue(
         &self,

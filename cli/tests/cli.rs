@@ -569,6 +569,54 @@ fn test_multisig() {
     assert_ne!(pset_u, pset_s2);
     assert_ne!(pset_s1, pset_s2);
 
+    // FIXME: something is wrong with PartiallySignedTransaction to_string/from_str
+    /*
+    let r = sh(&format!(
+        "{cli} wallet pset-details --name multi -p {pset_u}"
+    ));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
+    assert_eq!(has_sigs.len(), 0);
+    let missing_sigs = r
+        .get("missing_signatures_from")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    assert_eq!(missing_sigs.len(), 2);
+    assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(missing_sigs[1].get("name").unwrap().as_str().unwrap(), "s2");
+
+    let r = sh(&format!(
+        "{cli} wallet pset-details --name multi -p {pset_s1}"
+    ));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
+    assert_eq!(has_sigs.len(), 1);
+    assert_eq!(has_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
+    let missing_sigs = r
+        .get("missing_signatures_from")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    assert_eq!(missing_sigs.len(), 1);
+    assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s2");
+
+    let r = sh(&format!(
+        "{cli} wallet pset-details --name multi -p {pset_s2}"
+    ));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
+    assert_eq!(has_sigs.len(), 1);
+    assert_eq!(has_sigs[0].get("name").unwrap().as_str().unwrap(), "s2");
+    let missing_sigs = r
+        .get("missing_signatures_from")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    assert_eq!(missing_sigs.len(), 1);
+    assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
+     * */
+
     let r = sh(&format!(
         "{cli} wallet combine --name multi -p {pset_s1} -p {pset_s2}"
     ));

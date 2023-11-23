@@ -330,6 +330,16 @@ pub enum WalletCommand {
         #[arg(short, long, required = true)]
         pset: Vec<String>,
     },
+
+    PsetDetails {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
+        /// PSET
+        #[arg(short, long, required = true)]
+        pset: String,
+    },
 }
 
 #[derive(Debug, Args)]

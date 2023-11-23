@@ -464,6 +464,40 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 })?,
             )
         }
+        "wallet_pset_details" => {
+            let r: model::WalletPsetDetailsRequest =
+                serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s.wollets.get_mut(&r.name)?;
+
+            let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let details = wollet.get_details(&pset)?;
+            let mut warnings = vec![];
+            let has_signatures_from = details
+                .fingerprints_has()
+                .iter()
+                .map(|f| model::SignerDetails {
+                    name: s.signers.name_from_fingerprint(f, &mut warnings),
+                    fingerprint: *f,
+                })
+                .collect();
+            let missing_signatures_from = details
+                .fingerprints_missing()
+                .iter()
+                .map(|f| model::SignerDetails {
+                    name: s.signers.name_from_fingerprint(f, &mut warnings),
+                    fingerprint: *f,
+                })
+                .collect();
+            Response::result(
+                request.id,
+                serde_json::to_value(model::WalletPsetDetailsResponse {
+                    has_signatures_from,
+                    missing_signatures_from,
+                    warnings: warnings.join(", "),
+                })?,
+            )
+        }
         "issue" => {
             let r: model::IssueRequest = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();

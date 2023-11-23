@@ -7,14 +7,12 @@
 //!
 //!  To avoid circular dependencies this crate must not depend on other crate of the workspace
 
-mod asset_metadata;
 mod descriptor;
 mod error;
 mod keyorigin_xpub;
 mod model;
 mod signer;
 
-pub use crate::asset_metadata::{AssetMetadata, PsetExt};
 pub use crate::descriptor::{
     multisig_desc, singlesig_desc, Bip, DescriptorBlindingKey, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Multisig,

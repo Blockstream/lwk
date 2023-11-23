@@ -1,4 +1,3 @@
-use common::PsetExt;
 use elements::{
     bitcoin::bip32::ChildNumber,
     encode::serialize,
@@ -206,7 +205,7 @@ impl Jade {
         let mut assets_info = vec![];
         for asset_id in asset_ids_in_tx {
             if let Some(Ok(meta)) = pset.get_asset_metadata(asset_id) {
-                if let Ok(contract) = serde_json::from_str::<Contract>(&meta.contract) {
+                if let Ok(contract) = serde_json::from_str::<Contract>(meta.contract()) {
                     let asset_info = AssetInfo {
                         asset_id: asset_id.to_string(),
                         contract,

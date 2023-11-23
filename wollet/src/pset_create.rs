@@ -9,7 +9,7 @@ use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
 use crate::wollet::Wollet;
-use common::{AssetMetadata, PsetExt};
+use elements::pset::elip100::AssetMetadata;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -171,13 +171,7 @@ impl Wollet {
         if let Some(contract) = contract.as_ref() {
             let issuance_prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
             let contract = serde_json::to_string(&contract)?;
-            pset.add_asset_metadata(
-                asset,
-                &AssetMetadata {
-                    contract,
-                    issuance_prevout,
-                },
-            );
+            pset.add_asset_metadata(asset, &AssetMetadata::new(contract, issuance_prevout));
         }
 
         Ok((asset, token))

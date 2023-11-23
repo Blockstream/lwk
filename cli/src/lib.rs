@@ -13,9 +13,18 @@ pub use args::Cli;
 mod args;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
+    let directive = if let CliCommand::Server(args::ServerArgs {
+        command: ServerCommand::Start,
+    }) = args.command
+    {
+        LevelFilter::INFO.into()
+    } else {
+        LevelFilter::WARN.into()
+    };
+
     let (appender, _guard) = tracing_appender::non_blocking(std::io::stderr());
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
+        .with_default_directive(directive)
         .from_env_lossy();
     let subscriber = FmtSubscriber::builder()
         .with_env_filter(filter)

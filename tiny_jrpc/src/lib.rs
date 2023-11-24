@@ -14,7 +14,8 @@ use std::{
 };
 
 pub use config::Config;
-use error::{Error, RpcIntErrors};
+pub use error::Error;
+use error::METHOD_NOT_FOUND;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Server;
@@ -383,12 +384,7 @@ impl Response {
     }
 
     pub fn unimplemented(id: Option<Id>) -> Self {
-        Self::error(
-            id,
-            RpcIntErrors::METHOD_NOT_FOUND as i64,
-            "Method not found.".into(),
-            None,
-        )
+        Self::error(id, METHOD_NOT_FOUND, "Method not found.".into(), None)
     }
 
     pub fn is_error(&self) -> bool {

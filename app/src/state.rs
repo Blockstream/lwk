@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use common::Signer;
 use signer::AnySigner;
-use tiny_jrpc::error::Error as TinyRpcError;
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::Wollet;
 
 use crate::config::Config;
+use crate::{Error, Result};
 
 pub enum AppSigner {
     AvailableSigner(AnySigner),
@@ -39,21 +39,21 @@ pub struct State {
 
 impl Wollets {
     #[allow(dead_code)]
-    pub fn get(&self, name: &str) -> tiny_jrpc::Result<&Wollet> {
+    pub fn get(&self, name: &str) -> Result<&Wollet> {
         self.0
             .get(name)
-            .ok_or_else(|| TinyRpcError::WalletNotExist(name.to_string()))
+            .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
 
-    pub fn get_mut(&mut self, name: &str) -> tiny_jrpc::Result<&mut Wollet> {
+    pub fn get_mut(&mut self, name: &str) -> Result<&mut Wollet> {
         self.0
             .get_mut(name)
-            .ok_or_else(|| TinyRpcError::WalletNotExist(name.to_string()))
+            .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
 
-    pub fn insert(&mut self, name: &str, wollet: Wollet) -> tiny_jrpc::Result<()> {
+    pub fn insert(&mut self, name: &str, wollet: Wollet) -> Result<()> {
         if self.0.contains_key(name) {
-            return Err(TinyRpcError::WalletAlreadyLoaded(name.to_string()));
+            return Err(Error::WalletAlreadyLoaded(name.to_string()));
         }
 
         let a = |w: &Wollet| w.address(Some(0)).unwrap().address().to_string();
@@ -66,17 +66,17 @@ impl Wollets {
             .collect();
         if let Some(existing) = vec.first() {
             // TODO: maybe a different error more clear?
-            return Err(TinyRpcError::WalletAlreadyLoaded(existing.to_string()));
+            return Err(Error::WalletAlreadyLoaded(existing.to_string()));
         }
 
         self.0.insert(name.to_string(), wollet);
         Ok(())
     }
 
-    pub fn remove(&mut self, name: &str) -> tiny_jrpc::Result<Wollet> {
+    pub fn remove(&mut self, name: &str) -> Result<Wollet> {
         self.0
             .remove(name)
-            .ok_or_else(|| TinyRpcError::WalletNotExist(name.to_string()))
+            .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Wollet)> {
@@ -85,31 +85,31 @@ impl Wollets {
 }
 
 impl Signers {
-    pub fn get(&self, name: &str) -> tiny_jrpc::Result<&AppSigner> {
+    pub fn get(&self, name: &str) -> Result<&AppSigner> {
         self.0
             .get(name)
-            .ok_or_else(|| TinyRpcError::SignerNotExist(name.to_string()))
+            .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
     #[allow(dead_code)]
-    pub fn get_mut(&mut self, name: &str) -> tiny_jrpc::Result<&mut AppSigner> {
+    pub fn get_mut(&mut self, name: &str) -> Result<&mut AppSigner> {
         self.0
             .get_mut(name)
-            .ok_or_else(|| TinyRpcError::SignerNotExist(name.to_string()))
+            .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
-    pub fn get_available(&self, name: &str) -> tiny_jrpc::Result<&AnySigner> {
+    pub fn get_available(&self, name: &str) -> Result<&AnySigner> {
         match self.get(name)? {
             AppSigner::AvailableSigner(signer) => Ok(signer),
-            AppSigner::ExternalSigner(_) => Err(TinyRpcError::Generic(
+            AppSigner::ExternalSigner(_) => Err(Error::Generic(
                 "Invalid operation for external signer".to_string(),
             )),
         }
     }
 
-    pub fn insert(&mut self, name: &str, signer: AppSigner) -> tiny_jrpc::Result<()> {
+    pub fn insert(&mut self, name: &str, signer: AppSigner) -> Result<()> {
         if self.0.contains_key(name) {
-            return Err(TinyRpcError::SignerAlreadyLoaded(name.to_string()));
+            return Err(Error::SignerAlreadyLoaded(name.to_string()));
         }
 
         // TODO: matchin for fingerprint is not ideal, we could have collisions
@@ -121,17 +121,17 @@ impl Signers {
             .collect();
         if let Some(existing) = vec.first() {
             // TODO: maybe a different error more clear?
-            return Err(TinyRpcError::SignerAlreadyLoaded(existing.to_string()));
+            return Err(Error::SignerAlreadyLoaded(existing.to_string()));
         }
 
         self.0.insert(name.to_string(), signer);
         Ok(())
     }
 
-    pub fn remove(&mut self, name: &str) -> tiny_jrpc::Result<AppSigner> {
+    pub fn remove(&mut self, name: &str) -> Result<AppSigner> {
         self.0
             .remove(name)
-            .ok_or_else(|| TinyRpcError::SignerNotExist(name.to_string()))
+            .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&String, &AppSigner)> {

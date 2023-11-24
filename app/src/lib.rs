@@ -110,6 +110,10 @@ impl App {
 }
 
 fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
+    Ok(inner_method_handler(request, state)?)
+}
+
+fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response> {
     tracing::debug!(
         "method: {} params: {:?} ",
         request.method.as_str(),
@@ -189,7 +193,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             let signer = match r.kind.as_str() {
                 "software" => {
                     if r.mnemonic.is_none() {
-                        return Err(tiny_jrpc::error::Error::Generic(
+                        return Err(Error::Generic(
                             "Mnemonic must be set for software signer".to_string(),
                         ));
                     }
@@ -204,18 +208,16 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
                 }
                 "external" => {
                     if r.fingerprint.is_none() {
-                        return Err(tiny_jrpc::error::Error::Generic(
+                        return Err(Error::Generic(
                             "Fingerprint must be set for external signer".to_string(),
                         ));
                     }
                     let fingerprint = Fingerprint::from_str(&r.fingerprint.unwrap())
-                        .map_err(|e| tiny_jrpc::error::Error::Generic(e.to_string()))?;
+                        .map_err(|e| Error::Generic(e.to_string()))?;
                     AppSigner::ExternalSigner(fingerprint)
                 }
                 _ => {
-                    return Err(tiny_jrpc::error::Error::Generic(
-                        "Invalid signer kind".to_string(),
-                    ));
+                    return Err(Error::Generic("Invalid signer kind".to_string()));
                 }
             };
 
@@ -325,7 +327,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             for keyorigin_xpub in r.keyorigin_xpubs {
                 keyorigin_xpubs.push(
                     keyorigin_xpub_from_str(&keyorigin_xpub)
-                        .map_err(|e| tiny_jrpc::error::Error::Generic(e.to_string()))?,
+                        .map_err(|e| Error::Generic(e.to_string()))?,
                 );
             }
 
@@ -519,7 +521,7 @@ fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Resu
             )
         }
         "stop" => {
-            return Err(tiny_jrpc::error::Error::Stop);
+            return Err(Error::Stop);
         }
         _ => Response::unimplemented(request.id),
     };

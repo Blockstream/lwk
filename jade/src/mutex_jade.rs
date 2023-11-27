@@ -53,6 +53,7 @@ impl MutexJade {
     }
 
     pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
+        self.unlock().unwrap(); // TODO: remove unwrap
         self.inner
             .lock()
             .unwrap()
@@ -69,6 +70,7 @@ impl Signer for &MutexJade {
     type Error = crate::sign_pset::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        self.unlock().unwrap(); // TODO: remove unwrap
         self.inner.lock().unwrap().sign(pset)
     }
 
@@ -82,6 +84,7 @@ impl Signer for &MutexJade {
             path: derivation_path_to_vec(path),
         };
 
+        self.unlock().unwrap(); // TODO: remove unwrap
         Ok(self.inner.lock().unwrap().get_xpub(params)?) // TODO remove unwrap
     }
 

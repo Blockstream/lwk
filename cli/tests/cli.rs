@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::FromStr,
 };
@@ -581,8 +582,10 @@ fn test_multisig() {
         .as_array()
         .unwrap();
     assert_eq!(missing_sigs.len(), 2);
-    assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
-    assert_eq!(missing_sigs[1].get("name").unwrap().as_str().unwrap(), "s2");
+    let f = |s: &Value| s.get("name").unwrap().as_str().unwrap().to_string();
+    let sigs: HashSet<_> = missing_sigs.iter().map(f).collect();
+    assert!(sigs.contains("s1"));
+    assert!(sigs.contains("s2"));
 
     let r = sh(&format!(
         "{cli} wallet pset-details --name multi -p {pset_s1}"

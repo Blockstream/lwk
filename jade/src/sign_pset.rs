@@ -30,6 +30,9 @@ pub enum Error {
     #[error(transparent)]
     Jade(#[from] crate::Error),
 
+    #[error(transparent)]
+    Unlock(#[from] crate::unlock::Error),
+
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
 

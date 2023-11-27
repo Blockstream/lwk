@@ -67,6 +67,14 @@ fn node_generate(client: &Client, block_num: u32) {
         .unwrap();
 }
 
+/// Serialize and deserialize a PSET
+///
+/// This allows us to catch early (de)serialization issues,
+/// which can be hit in practice since PSETs are passed around as b64 strings.
+fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction {
+    PartiallySignedTransaction::from_str(&pset.to_string()).unwrap()
+}
+
 pub struct TestElectrumServer {
     node: electrsd::bitcoind::BitcoinD,
     pub electrs: electrsd::ElectrsD,
@@ -374,6 +382,7 @@ impl TestWollet {
             .wollet
             .send_lbtc(recipient.1, &recipient.0.to_string(), fee_rate)
             .unwrap();
+        pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
@@ -423,6 +432,7 @@ impl TestWollet {
                 fee_rate,
             )
             .unwrap();
+        pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
@@ -473,6 +483,7 @@ impl TestWollet {
             },
         ];
         let mut pset = self.wollet.send_many(addressees, fee_rate).unwrap();
+        pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
@@ -505,6 +516,7 @@ impl TestWollet {
             .wollet
             .issue_asset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
             .unwrap();
+        pset = pset_rt(&pset);
 
         let issuance_input = &pset.inputs()[0].clone();
         let (asset, token) = issuance_input.issuance_ids();
@@ -571,6 +583,7 @@ impl TestWollet {
             .wollet
             .reissue_asset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
             .unwrap();
+        pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
@@ -619,6 +632,7 @@ impl TestWollet {
             .wollet
             .burn_asset(&asset.to_string(), satoshi_asset, fee_rate)
             .unwrap();
+        pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
         let fee = details.balance.fee as i64;
@@ -646,11 +660,13 @@ impl TestWollet {
     }
 
     pub fn sign<S: Signer>(&self, signer: &S, pset: &mut PartiallySignedTransaction) {
+        *pset = pset_rt(pset);
         let sigs_added_or_overwritten = signer.sign(pset).unwrap();
         assert!(sigs_added_or_overwritten > 0);
     }
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
+        *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
         let txid = self.wollet.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());

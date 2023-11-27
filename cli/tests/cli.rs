@@ -569,8 +569,6 @@ fn test_multisig() {
     assert_ne!(pset_u, pset_s2);
     assert_ne!(pset_s1, pset_s2);
 
-    // FIXME: something is wrong with PartiallySignedTransaction to_string/from_str
-    /*
     let r = sh(&format!(
         "{cli} wallet pset-details --name multi -p {pset_u}"
     ));
@@ -615,7 +613,6 @@ fn test_multisig() {
         .unwrap();
     assert_eq!(missing_sigs.len(), 1);
     assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
-     * */
 
     let r = sh(&format!(
         "{cli} wallet combine --name multi -p {pset_s1} -p {pset_s2}"

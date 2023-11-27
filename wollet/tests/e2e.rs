@@ -656,6 +656,7 @@ fn multisig_flow() {
         };
         assert!(f(&pset));
         assert!(!f(&pset_from_str));
+        // The rangeproof must be place in field `in_utxo_rangproof`.
     }
 
     // Collect and combine the PSETs

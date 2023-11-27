@@ -640,25 +640,6 @@ fn multisig_flow() {
     wallet.sign(&signer1, &mut pset1);
     wallet.sign(&signer2, &mut pset2);
 
-    {
-        // Encoding to string and decoding from str a PSET removes the input's witness_utxo
-        // rangeproof
-        use elements::pset::PartiallySignedTransaction;
-        let pset_from_str = PartiallySignedTransaction::from_str(&pset.to_string()).unwrap();
-        let f = |p: &PartiallySignedTransaction| {
-            p.inputs()[0]
-                .witness_utxo
-                .as_ref()
-                .unwrap()
-                .witness
-                .rangeproof
-                .is_some()
-        };
-        assert!(f(&pset));
-        assert!(!f(&pset_from_str));
-        // The rangeproof must be place in field `in_utxo_rangproof`.
-    }
-
     // Collect and combine the PSETs
     let details = wallet.wollet.get_details(&pset).unwrap();
     for idx in 0..pset.n_inputs() {

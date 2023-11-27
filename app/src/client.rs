@@ -9,14 +9,13 @@ use wollet::UnvalidatedAddressee;
 
 use crate::error::Error;
 use crate::model::*;
-use crate::Result;
 
 pub struct Client {
     client: jsonrpc::Client,
 }
 
 impl Client {
-    pub fn new(addr: SocketAddr) -> Result<Self> {
+    pub fn new(addr: SocketAddr) -> Result<Self, Error> {
         let url = addr.to_string();
         let client = jsonrpc::Client::simple_http(&url, None, None)?; // todo: auth
         Ok(Self { client })
@@ -45,11 +44,11 @@ impl Client {
         }
     }
 
-    pub fn version(&self) -> Result<VersionResponse> {
+    pub fn version(&self) -> Result<VersionResponse, Error> {
         self.make_request("version", None::<Box<RawValue>>)
     }
 
-    pub fn generate_signer(&self) -> Result<GenerateSignerResponse> {
+    pub fn generate_signer(&self) -> Result<GenerateSignerResponse, Error> {
         self.make_request("generate_signer", None::<Box<RawValue>>)
     }
 
@@ -59,7 +58,7 @@ impl Client {
         kind: String,
         mnemonic: Option<String>,
         fingerprint: Option<String>,
-    ) -> Result<SignerResponse> {
+    ) -> Result<SignerResponse, Error> {
         let req = LoadSignerRequest {
             name,
             kind,
@@ -69,35 +68,35 @@ impl Client {
         self.make_request("load_signer", Some(req))
     }
 
-    pub fn list_wallets(&self) -> Result<ListWalletsResponse> {
+    pub fn list_wallets(&self) -> Result<ListWalletsResponse, Error> {
         self.make_request("list_wallets", None::<Box<RawValue>>)
     }
 
-    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<WalletResponse> {
+    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<WalletResponse, Error> {
         let req = LoadWalletRequest { descriptor, name };
         self.make_request("load_wallet", Some(req))
     }
 
-    pub fn unload_wallet(&self, name: String) -> Result<UnloadWalletResponse> {
+    pub fn unload_wallet(&self, name: String) -> Result<UnloadWalletResponse, Error> {
         let req = UnloadWalletRequest { name };
         self.make_request("unload_wallet", Some(req))
     }
 
-    pub fn unload_signer(&self, name: String) -> Result<UnloadSignerResponse> {
+    pub fn unload_signer(&self, name: String) -> Result<UnloadSignerResponse, Error> {
         let req = UnloadSignerRequest { name };
         self.make_request("unload_signer", Some(req))
     }
 
-    pub fn list_signers(&self) -> Result<ListSignersResponse> {
+    pub fn list_signers(&self) -> Result<ListSignersResponse, Error> {
         self.make_request("list_signers", None::<Box<RawValue>>)
     }
 
-    pub fn balance(&self, name: String) -> Result<BalanceResponse> {
+    pub fn balance(&self, name: String) -> Result<BalanceResponse, Error> {
         let req = BalanceRequest { name };
         self.make_request("balance", Some(req))
     }
 
-    pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse> {
+    pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse, Error> {
         let req = AddressRequest { name, index };
         self.make_request("address", Some(req))
     }
@@ -107,7 +106,7 @@ impl Client {
         name: String,
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>,
-    ) -> Result<PsetResponse> {
+    ) -> Result<PsetResponse, Error> {
         let req = SendRequest {
             addressees,
             fee_rate,
@@ -121,7 +120,7 @@ impl Client {
         name: String,
         descriptor_blinding_key: String,
         singlesig_kind: String,
-    ) -> Result<SinglesigDescriptorResponse> {
+    ) -> Result<SinglesigDescriptorResponse, Error> {
         let req = SinglesigDescriptorRequest {
             name,
             descriptor_blinding_key,
@@ -136,7 +135,7 @@ impl Client {
         multisig_kind: String,
         threshold: u32,
         keyorigin_xpubs: Vec<String>,
-    ) -> Result<MultisigDescriptorResponse> {
+    ) -> Result<MultisigDescriptorResponse, Error> {
         let req = MultisigDescriptorRequest {
             descriptor_blinding_key,
             multisig_kind,
@@ -146,12 +145,12 @@ impl Client {
         self.make_request("multisig_descriptor", Some(req))
     }
 
-    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse> {
+    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse, Error> {
         let req = XpubRequest { name, xpub_kind };
         self.make_request("xpub", Some(req))
     }
 
-    pub fn sign(&self, name: String, pset: String) -> Result<PsetResponse> {
+    pub fn sign(&self, name: String, pset: String) -> Result<PsetResponse, Error> {
         let req = SignRequest { name, pset };
         self.make_request("sign", Some(req))
     }
@@ -161,7 +160,7 @@ impl Client {
         name: String,
         dry_run: bool,
         pset: String,
-    ) -> Result<BroadcastResponse> {
+    ) -> Result<BroadcastResponse, Error> {
         let req = BroadcastRequest {
             name,
             dry_run,
@@ -170,12 +169,16 @@ impl Client {
         self.make_request("broadcast", Some(req))
     }
 
-    pub fn wallet_details(&self, name: String) -> Result<WalletDetailsResponse> {
+    pub fn wallet_details(&self, name: String) -> Result<WalletDetailsResponse, Error> {
         let req = WalletDetailsRequest { name };
         self.make_request("wallet_details", Some(req))
     }
 
-    pub fn wallet_combine(&self, name: String, pset: Vec<String>) -> Result<WalletCombineResponse> {
+    pub fn wallet_combine(
+        &self,
+        name: String,
+        pset: Vec<String>,
+    ) -> Result<WalletCombineResponse, Error> {
         let req = WalletCombineRequest { name, pset };
         self.make_request("wallet_combine", Some(req))
     }
@@ -184,7 +187,7 @@ impl Client {
         &self,
         name: String,
         pset: String,
-    ) -> Result<WalletPsetDetailsResponse> {
+    ) -> Result<WalletPsetDetailsResponse, Error> {
         let req = WalletPsetDetailsRequest { name, pset };
         self.make_request("wallet_pset_details", Some(req))
     }
@@ -199,7 +202,7 @@ impl Client {
         address_token: Option<String>,
         contract: Option<String>,
         fee_rate: Option<f32>,
-    ) -> Result<PsetResponse> {
+    ) -> Result<PsetResponse, Error> {
         let req = IssueRequest {
             name,
             satoshi_asset,
@@ -212,9 +215,9 @@ impl Client {
         self.make_request("issue", Some(req))
     }
 
-    pub fn stop(&self) -> Result<Value> {
+    pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
-        let _: Result<Value> = self.make_request("stop", None::<Box<RawValue>>);
+        let _: Result<Value, Error> = self.make_request("stop", None::<Box<RawValue>>);
         Ok(Value::Null)
     }
 }

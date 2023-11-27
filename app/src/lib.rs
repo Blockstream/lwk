@@ -46,16 +46,14 @@ pub struct App {
     config: Config,
 }
 
-pub type Result<T> = std::result::Result<T, error::Error>;
-
 impl App {
-    pub fn new(config: Config) -> Result<App> {
+    pub fn new(config: Config) -> Result<App, Error> {
         tracing::info!("Creating new app with config: {:?}", config);
 
         Ok(App { rpc: None, config })
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub fn run(&mut self) -> Result<(), Error> {
         if self.rpc.is_some() {
             return Err(error::Error::AlreadyStarted);
         }
@@ -75,7 +73,7 @@ impl App {
         Ok(())
     }
 
-    pub fn stop(&self) -> Result<()> {
+    pub fn stop(&self) -> Result<(), Error> {
         match self.rpc.as_ref() {
             Some(rpc) => {
                 rpc.stop();
@@ -85,7 +83,7 @@ impl App {
         }
     }
 
-    pub fn is_running(&self) -> Result<bool> {
+    pub fn is_running(&self) -> Result<bool, Error> {
         match self.rpc.as_ref() {
             Some(rpc) => Ok(rpc.is_running()),
             None => Err(error::Error::NotStarted),
@@ -96,7 +94,7 @@ impl App {
         self.config.addr
     }
 
-    pub fn join_threads(&mut self) -> Result<()> {
+    pub fn join_threads(&mut self) -> Result<(), Error> {
         self.rpc
             .take()
             .ok_or(error::Error::NotStarted)?
@@ -104,16 +102,19 @@ impl App {
         Ok(())
     }
 
-    pub fn client(&self) -> Result<Client> {
+    pub fn client(&self) -> Result<Client, Error> {
         Client::new(self.config.addr)
     }
 }
 
-fn method_handler(request: Request, state: Arc<Mutex<State>>) -> tiny_jrpc::Result<Response> {
+fn method_handler(
+    request: Request,
+    state: Arc<Mutex<State>>,
+) -> Result<Response, tiny_jrpc::Error> {
     Ok(inner_method_handler(request, state)?)
 }
 
-fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response> {
+fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response, Error> {
     tracing::debug!(
         "method: {} params: {:?} ",
         request.method.as_str(),

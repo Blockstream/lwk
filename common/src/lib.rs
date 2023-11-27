@@ -161,7 +161,12 @@ pub fn pset_balance(
                 // We expect the input to be unblindable with the descriptor blinding key
                 let private_blinding_key = derive_blinding_key(descriptor, &txout.script_pubkey)
                     .ok_or(Error::MissingPrivateBlindingKey)?;
-                let txout_secrets = txout
+                // However the rangeproof is stored in another field
+                // since the output witness, which includes the rangeproof,
+                // is not serialized.
+                let mut txout_with_rangeproof = txout.clone();
+                txout_with_rangeproof.witness.rangeproof = input.in_utxo_rangeproof.clone();
+                let txout_secrets = txout_with_rangeproof
                     .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::InputMineNotUnblindable { idx })?;
                 if (asset_comm, amount_comm) != commitments(&secp, &txout_secrets) {

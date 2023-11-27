@@ -134,7 +134,13 @@ impl Wollet {
         utxo: &WalletTxOut,
     ) -> Result<usize, Error> {
         let mut input = Input::from_prevout(utxo.outpoint);
-        input.witness_utxo = Some(self.get_txout(&utxo.outpoint)?);
+        let txout = self.get_txout(&utxo.outpoint)?;
+        // This field is used by stateless blinders or signers to
+        // learn the blinding factors and unblinded values of this input.
+        // We need this since the output witness, which includes the
+        // rangeproof, is not serialized.
+        input.in_utxo_rangeproof = txout.witness.rangeproof.clone();
+        input.witness_utxo = Some(txout);
 
         pset.add_input(input);
         let idx = pset.inputs().len() - 1;

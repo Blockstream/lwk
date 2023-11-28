@@ -21,6 +21,9 @@ pub enum Error {
     #[error("Wollet Error: {0}")]
     Wollet(#[from] wollet::Error),
 
+    #[error("Hex Error: {0}")]
+    Hex(wollet::elements::hex::Error),
+
     #[error("Trying to start an already started server")]
     AlreadyStarted,
 
@@ -62,6 +65,11 @@ pub enum Error {
 impl From<String> for Error {
     fn from(message: String) -> Self {
         Error::Generic(message)
+    }
+}
+impl From<wollet::elements::hex::Error> for Error {
+    fn from(value: wollet::elements::hex::Error) -> Self {
+        Error::Hex(value)
     }
 }
 

@@ -244,6 +244,18 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     client.wallet_pset_details(name, pset)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::Contract {
+                domain,
+                issuer_pubkey,
+                name,
+                precision,
+                ticker,
+                version,
+            } => {
+                let r: app::model::ContractResponse =
+                    client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
+                serde_json::to_value(r)?
+            }
         },
     })
 }

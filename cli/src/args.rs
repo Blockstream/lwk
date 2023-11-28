@@ -244,6 +244,34 @@ pub enum WalletCommand {
         fee_rate: Option<f32>,
     },
 
+    /// Helper to create a valid JSON contract
+    Contract {
+        /// Http domain of the issuer
+        #[arg(long)]
+        domain: String,
+
+        /// Http domain of the issuer
+        #[arg(long)]
+        issuer_pubkey: String,
+
+        /// Name of the asset
+        #[arg(long)]
+        name: String,
+
+        /// Precision of the asset, as in number of digits to represent fractional part.
+        #[arg(long, default_value = "0")]
+        precision: u8,
+
+        /// Ticker of the asset
+        #[arg(long)]
+        ticker: String,
+
+        /// Version
+        // TODO since now only 0 exists, should we default to 0 internally without giving the option to override?
+        #[arg(long, default_value = "0")]
+        version: u8,
+    },
+
     /// Issue an asset
     Issue {
         /// Wallet name

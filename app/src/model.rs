@@ -244,29 +244,6 @@ pub struct WalletDetailsResponse {
     pub warnings: String,
 }
 
-impl TryFrom<(String, &AppSigner)> for SignerResponse {
-    type Error = SignerError;
-
-    fn try_from(name_and_signer: (String, &AppSigner)) -> Result<Self, Self::Error> {
-        let (name, signer) = name_and_signer;
-        let (fingerprint, id, xpub) = match signer {
-            AppSigner::AvailableSigner(signer) => (
-                signer.fingerprint()?,
-                Some(signer.identifier()?),
-                Some(signer.xpub()?),
-            ),
-            AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
-        };
-
-        Ok(Self {
-            name,
-            id,
-            fingerprint,
-            xpub,
-        })
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalletCombineRequest {
     pub name: String,

@@ -545,6 +545,29 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
     Ok(response)
 }
 
+impl TryFrom<(String, &AppSigner)> for SignerResponse {
+    type Error = signer::SignerError;
+
+    fn try_from(name_and_signer: (String, &AppSigner)) -> Result<Self, Self::Error> {
+        let (name, signer) = name_and_signer;
+        let (fingerprint, id, xpub) = match signer {
+            AppSigner::AvailableSigner(signer) => (
+                signer.fingerprint()?,
+                Some(signer.identifier()?),
+                Some(signer.xpub()?),
+            ),
+            AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
+        };
+
+        Ok(Self {
+            name,
+            id,
+            fingerprint,
+            xpub,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::TcpListener;

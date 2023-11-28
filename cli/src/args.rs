@@ -268,9 +268,9 @@ pub enum WalletCommand {
         #[arg(long)]
         address_token: Option<String>,
 
-        /// Path of the file containing the JSON contract
+        /// Specify the JSON contract as string, you can use the included util to generate it
         #[arg(long)]
-        contract: Option<PathBuf>,
+        contract: Option<String>,
 
         // TODO default value
         /// To optionally specify a fee

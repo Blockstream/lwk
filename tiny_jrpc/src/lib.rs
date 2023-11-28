@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use std::{
+    fmt::Display,
     fs::File,
     io::{ErrorKind, Read},
     str::FromStr,
@@ -399,6 +400,12 @@ pub struct RpcError {
     code: i64,
     message: String,
     data: Option<Value>,
+}
+
+impl Display for RpcError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

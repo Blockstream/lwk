@@ -33,6 +33,7 @@ use crate::state::{AppSigner, State};
 pub use client::Client;
 pub use config::Config;
 pub use error::Error;
+pub use tiny_jrpc::RpcError;
 
 mod client;
 mod config;

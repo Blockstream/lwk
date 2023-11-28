@@ -57,11 +57,15 @@ impl From<String> for Error {
 }
 
 impl Error {
-    pub fn new_implementation_defined(e: &impl Display, code: ImplementationDefinedCode) -> Self {
+    pub fn new_implementation_defined(
+        e: &impl Display,
+        code: ImplementationDefinedCode,
+        data: Option<serde_json::Value>,
+    ) -> Self {
         Error::Implementation(ImplementationDefinedError {
             message: e.to_string(),
             code,
-            data: None,
+            data,
         })
     }
 }

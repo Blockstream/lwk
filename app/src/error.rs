@@ -1,3 +1,4 @@
+use serde_json::json;
 use tiny_jrpc::error::ImplementationDefinedCode;
 
 #[derive(Debug, thiserror::Error)]
@@ -62,6 +63,7 @@ pub enum Error {
 }
 
 impl Error {
+    /// Return error codes, no different variants should return the same value
     pub fn as_impl_defined_code(&self) -> ImplementationDefinedCode {
         match self {
             Error::Jade(_) => ImplementationDefinedCode::new(-32_013).unwrap(),
@@ -73,6 +75,15 @@ impl Error {
             Error::SignerNotExist(_) => ImplementationDefinedCode::new(-32_010).unwrap(),
             Error::SignerAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_011).unwrap(),
             _ => tiny_jrpc::error::GENERIC,
+        }
+    }
+
+    /// Used to create error as structured data, easily parsable by the caller
+    pub fn as_error_value(&self) -> Option<serde_json::Value> {
+        match self {
+            Error::WalletNotExist(n) => Some(json!({"name": n.to_string()})),
+            Error::SignerNotExist(n) => Some(json!({"name": n.to_string()})),
+            _ => None,
         }
     }
 }
@@ -87,7 +98,11 @@ impl From<Error> for tiny_jrpc::error::Error {
     fn from(value: Error) -> Self {
         match value {
             Error::Stop => tiny_jrpc::error::Error::Stop,
-            e => tiny_jrpc::error::Error::new_implementation_defined(&e, e.as_impl_defined_code()),
+            e => tiny_jrpc::error::Error::new_implementation_defined(
+                &e,
+                e.as_impl_defined_code(),
+                e.as_error_value(),
+            ),
         }
     }
 }

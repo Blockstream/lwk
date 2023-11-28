@@ -63,6 +63,15 @@ is equivalent to:
 $ curl --header "Content-Type: application/json" --request POST --data '{"method":"generate_signer","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 ```
 
+To see RPC data exchanged via the cli commands enable app log tracing eg:
+
+```sh
+$ RUST_LOG=app=trace cargo run -- wallet balance --name ciao
+2023-11-28T09:00:54.268336Z TRACE app::client: ---> {"method":"balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
+2023-11-28T09:00:54.269207Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
+```
+
+
 Load a wallet and request a balance ("stateful" request)
 
 
@@ -95,8 +104,8 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
   "id": 1,
   "error": {
     "code": -32603,
-    "message": "Internal error",
-    "data": "Serde JSON Error: missing field `descriptor`"
+    "message": "Serde JSON Error: missing field `descriptor`",
+    "data": null
   }
 }
 ```

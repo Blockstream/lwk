@@ -4,69 +4,111 @@ use crate::RpcError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("IO Error: {0}")]
-    Io(#[from] io::Error),
-    #[error("Serde JSON Error: {0}")]
-    Serde(#[from] serde_json::Error),
-    #[error("Request is missing Content-Type Header")]
-    NoContentType,
-    #[error("Request Content-Type is not specified as application/json")]
-    WrongContentType,
-    #[error("Reserved method prefix 'rpc.'")]
-    ReservedMethodPrefix,
-    #[error("'jsonrpc' version should be '2.0'")]
-    InvalidVersion,
+    #[error(transparent)]
+    Inner(#[from] InnerError),
 
-    #[error("Implementation defined error({code}): {message}")]
-    ImplementationDefined {
-        message: String,
-        code: ImplementationDefinedCode,
-        data: Option<serde_json::Value>,
-    },
+    #[error(transparent)]
+    Implementation(#[from] ImplementationDefinedError),
 
     #[error("Received stop command")]
     Stop,
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("Implementation defined error({code}): {message}")]
+pub struct ImplementationDefinedError {
+    message: String,
+    code: ImplementationDefinedCode,
+    data: Option<serde_json::Value>,
+}
+
+/// Caller should not instantiate this, but rely on [`ImplementationDefinedError`] or the
+/// [`Error::Stop`] variant
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum InnerError {
+    #[error("IO Error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Serde JSON Error: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("Request is missing Content-Type Header")]
+    NoContentType,
+
+    #[error("Request Content-Type is not specified as application/json")]
+    WrongContentType,
+
+    #[error("Reserved method prefix 'rpc.'")]
+    ReservedMethodPrefix,
+
+    #[error("'jsonrpc' version should be '2.0'")]
+    InvalidVersion,
+}
+
 impl From<String> for Error {
     fn from(message: String) -> Self {
-        Error::ImplementationDefined {
+        Error::Implementation(ImplementationDefinedError {
             message,
             code: GENERIC,
             data: None,
-        }
+        })
     }
 }
 
 impl Error {
     pub fn new_implementation_defined(e: impl Display, code: ImplementationDefinedCode) -> Self {
-        Error::ImplementationDefined {
+        Error::Implementation(ImplementationDefinedError {
             message: e.to_string(),
             code,
             data: None,
-        }
+        })
     }
+}
 
-    pub fn as_rpc_error(&self) -> RpcError {
+pub(crate) trait AsRpcError {
+    fn as_rpc_error(&self) -> RpcError;
+}
+
+impl AsRpcError for InnerError {
+    fn as_rpc_error(&self) -> RpcError {
         let (code, data) = match self {
-            Error::Io(_) => (IO_ERROR, None),
-            Error::Serde(_) => (PARSE_ERROR, None),
-            Error::NoContentType => (NO_CONTENT_TYPE, None),
-            Error::WrongContentType => (WRONG_CONTENT_TYPE, None),
-            Error::ReservedMethodPrefix => (METHOD_RESERVED, None),
-            Error::InvalidVersion => (INVALID_VERSION, None),
-            Error::ImplementationDefined {
-                message: _,
-                code,
-                data,
-            } => (code.into(), data.clone()),
-            Error::Stop => (STOP_ERROR, None),
+            InnerError::Io(_) => (IO_ERROR, None),
+            InnerError::Serde(_) => (PARSE_ERROR, None),
+            InnerError::NoContentType => (NO_CONTENT_TYPE, None),
+            InnerError::WrongContentType => (WRONG_CONTENT_TYPE, None),
+            InnerError::ReservedMethodPrefix => (METHOD_RESERVED, None),
+            InnerError::InvalidVersion => (INVALID_VERSION, None),
         };
 
         RpcError {
             code,
             message: self.to_string(),
             data,
+        }
+    }
+}
+
+impl AsRpcError for ImplementationDefinedError {
+    fn as_rpc_error(&self) -> RpcError {
+        RpcError {
+            code: self.code.0,
+            message: self.message.clone(),
+            data: self.data.clone(),
+        }
+    }
+}
+
+impl AsRpcError for Error {
+    fn as_rpc_error(&self) -> RpcError {
+        match self {
+            Error::Inner(e) => e.as_rpc_error(),
+            Error::Implementation(e) => e.as_rpc_error(),
+            Error::Stop => RpcError {
+                code: STOP_ERROR,
+                message: "Server stopped".to_string(),
+                data: None,
+            },
         }
     }
 }

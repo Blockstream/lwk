@@ -6,7 +6,7 @@ use wollet::bitcoin::bip32::Fingerprint;
 use wollet::Wollet;
 
 use crate::config::Config;
-use crate::{Error, Result};
+use crate::Error;
 
 pub enum AppSigner {
     AvailableSigner(AnySigner),
@@ -39,19 +39,19 @@ pub struct State {
 
 impl Wollets {
     #[allow(dead_code)]
-    pub fn get(&self, name: &str) -> Result<&Wollet> {
+    pub fn get(&self, name: &str) -> Result<&Wollet, Error> {
         self.0
             .get(name)
             .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
 
-    pub fn get_mut(&mut self, name: &str) -> Result<&mut Wollet> {
+    pub fn get_mut(&mut self, name: &str) -> Result<&mut Wollet, Error> {
         self.0
             .get_mut(name)
             .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
 
-    pub fn insert(&mut self, name: &str, wollet: Wollet) -> Result<()> {
+    pub fn insert(&mut self, name: &str, wollet: Wollet) -> Result<(), Error> {
         if self.0.contains_key(name) {
             return Err(Error::WalletAlreadyLoaded(name.to_string()));
         }
@@ -73,7 +73,7 @@ impl Wollets {
         Ok(())
     }
 
-    pub fn remove(&mut self, name: &str) -> Result<Wollet> {
+    pub fn remove(&mut self, name: &str) -> Result<Wollet, Error> {
         self.0
             .remove(name)
             .ok_or_else(|| Error::WalletNotExist(name.to_string()))
@@ -85,20 +85,20 @@ impl Wollets {
 }
 
 impl Signers {
-    pub fn get(&self, name: &str) -> Result<&AppSigner> {
+    pub fn get(&self, name: &str) -> Result<&AppSigner, Error> {
         self.0
             .get(name)
             .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
     #[allow(dead_code)]
-    pub fn get_mut(&mut self, name: &str) -> Result<&mut AppSigner> {
+    pub fn get_mut(&mut self, name: &str) -> Result<&mut AppSigner, Error> {
         self.0
             .get_mut(name)
             .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
-    pub fn get_available(&self, name: &str) -> Result<&AnySigner> {
+    pub fn get_available(&self, name: &str) -> Result<&AnySigner, Error> {
         match self.get(name)? {
             AppSigner::AvailableSigner(signer) => Ok(signer),
             AppSigner::ExternalSigner(_) => Err(Error::Generic(
@@ -107,7 +107,7 @@ impl Signers {
         }
     }
 
-    pub fn insert(&mut self, name: &str, signer: AppSigner) -> Result<()> {
+    pub fn insert(&mut self, name: &str, signer: AppSigner) -> Result<(), Error> {
         if self.0.contains_key(name) {
             return Err(Error::SignerAlreadyLoaded(name.to_string()));
         }
@@ -128,7 +128,7 @@ impl Signers {
         Ok(())
     }
 
-    pub fn remove(&mut self, name: &str) -> Result<AppSigner> {
+    pub fn remove(&mut self, name: &str) -> Result<AppSigner, Error> {
         self.0
             .remove(name)
             .ok_or_else(|| Error::SignerNotExist(name.to_string()))

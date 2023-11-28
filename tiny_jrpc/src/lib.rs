@@ -3,7 +3,6 @@
 use std::{
     fs::File,
     io::{ErrorKind, Read},
-    result,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -15,7 +14,7 @@ use std::{
 
 pub use config::Config;
 pub use error::Error;
-use error::METHOD_NOT_FOUND;
+use error::{AsRpcError, InnerError, METHOD_NOT_FOUND};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use tiny_http::Server;
@@ -24,14 +23,12 @@ use tiny_http::{Header, Response as HttpResponse};
 pub mod config;
 pub mod error;
 
-pub type Result<T> = result::Result<T, Error>;
-
 // re-export
 pub use tiny_http;
 
 pub struct JsonRpcServer {
     server: Arc<Server>,
-    handles: Vec<JoinHandle<Result<()>>>,
+    handles: Vec<JoinHandle<Result<(), Error>>>,
     running: Arc<AtomicBool>,
     config: Config,
 }
@@ -40,7 +37,7 @@ impl JsonRpcServer {
     /// Creates and runs a new JSON RPC Server.
     pub fn new<F, T>(server: Server, config: Config, state: Arc<Mutex<T>>, func: F) -> Self
     where
-        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response, Error> + Clone + Send + Sync + 'static,
         T: Send + 'static,
     {
         Self::run(Arc::new(server), config, state, func)
@@ -63,7 +60,7 @@ impl JsonRpcServer {
 
     fn run<F, T>(server: Arc<Server>, config: Config, state: Arc<Mutex<T>>, func: F) -> Self
     where
-        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+        F: Fn(Request, Arc<Mutex<T>>) -> Result<Response, Error> + Clone + Send + Sync + 'static,
         T: Send + 'static,
     {
         let mut handles = Vec::with_capacity(4);
@@ -257,7 +254,7 @@ where
     }
 }
 
-fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Request> {
+fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Request, InnerError> {
     tracing::debug!(
         "received request - method: {:?}, url: {:?}, headers: {:?}",
         http_request.method(),
@@ -270,11 +267,11 @@ fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Req
         .headers()
         .iter()
         .find(|h| h.field.as_str().as_str() == "Content-Type")
-        .ok_or(error::Error::NoContentType)?;
+        .ok_or(InnerError::NoContentType)?;
 
     // check content-type is application/json
     if content_header.value.as_str() != "application/json" {
-        return Err(error::Error::WrongContentType);
+        return Err(InnerError::WrongContentType);
     }
 
     // parse json into request
@@ -290,19 +287,19 @@ fn handle_jsonrpc_request<F, T>(
     request: Request,
     state: Arc<Mutex<T>>,
     process: F,
-) -> Result<Response>
+) -> Result<Response, Error>
 where
-    F: Fn(Request, Arc<Mutex<T>>) -> Result<Response> + Clone + Send + Sync + 'static,
+    F: Fn(Request, Arc<Mutex<T>>) -> Result<Response, Error> + Clone + Send + Sync + 'static,
     T: Send + 'static,
 {
     // check jsonrpc version
     if request.jsonrpc.as_str() != "2.0" {
-        return Err(error::Error::InvalidVersion);
+        return Err(error::Error::Inner(InnerError::InvalidVersion));
     }
 
     // check method is not reserved (ie: starts with "rpc.")
     if request.method.starts_with("rpc.") {
-        return Err(error::Error::ReservedMethodPrefix);
+        return Err(error::Error::Inner(InnerError::ReservedMethodPrefix));
     }
 
     // call the method handler
@@ -310,10 +307,11 @@ where
     let response = match process(request, state) {
         Ok(response) => response,
         Err(Error::Stop) => return Err(Error::Stop),
-        Err(err) => {
+        Err(Error::Inner(err)) => {
             tracing::error!("Error processing request: {}", err);
             Response::from_error(id, err)
         }
+        Err(Error::Implementation(err)) => Response::from_error(id, err),
     };
 
     Ok(response)
@@ -323,7 +321,7 @@ fn send_jsonrpc_response(
     request: tiny_http::Request,
     response: Response,
     headers: &[Header],
-) -> Result<()> {
+) -> Result<(), InnerError> {
     let data = serde_json::to_string(&response)?;
     let mut response = HttpResponse::from_string(data);
     for header in headers.iter() {
@@ -374,7 +372,7 @@ impl Response {
         }
     }
 
-    pub fn from_error(id: Option<Id>, error: error::Error) -> Self {
+    pub(crate) fn from_error<E: AsRpcError>(id: Option<Id>, error: E) -> Self {
         Self {
             jsonrpc: "2.0".into(),
             id,
@@ -419,7 +417,7 @@ mod test {
     use serde_json::{json, value::to_raw_value};
     use tiny_http::Server;
 
-    fn process(request: Request, _state: Arc<Mutex<()>>) -> Result<Response> {
+    fn process(request: Request, _state: Arc<Mutex<()>>) -> Result<Response, Error> {
         let response = match request.method.as_str() {
             "echo" => Response {
                 jsonrpc: request.jsonrpc,

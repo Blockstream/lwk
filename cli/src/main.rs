@@ -13,7 +13,16 @@ fn main() -> anyhow::Result<()> {
     // - electrum server
     // - file/directory path
 
-    let value = inner_main(args)?;
-    println!("{value:#}");
+    let value = match inner_main(args) {
+        Ok(value) => value,
+        Err(e) => {
+            let e: app::Error = e.downcast().unwrap();
+            match e {
+                app::Error::RpcError(e) => serde_json::to_value(&e)?,
+                e => return Err(e.into()),
+            }
+        }
+    };
+    println!("{:#}", value);
     Ok(())
 }

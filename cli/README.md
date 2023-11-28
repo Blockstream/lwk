@@ -67,8 +67,16 @@ To see RPC data exchanged via the cli commands enable app log tracing eg:
 
 ```sh
 $ RUST_LOG=app=trace cargo run -- wallet balance --name ciao
-2023-11-28T09:00:54.268336Z TRACE app::client: ---> {"method":"balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
-2023-11-28T09:00:54.269207Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
+...
+2023-11-28T09:36:18.696846Z TRACE app::client: ---> {"method":"balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
+2023-11-28T09:36:18.697675Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
+{
+  "code": -32008,
+  "data": {
+    "name": "ciao"
+  },
+  "message": "Wallet 'ciao' does not exist"
+}
 ```
 
 

@@ -196,7 +196,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 contract,
                 fee_rate,
             } => {
-                let contract = contract.map(std::fs::read_to_string).transpose()?;
                 let r: app::model::PsetResponse = client.issue(
                     name,
                     satoshi_asset,
@@ -243,6 +242,18 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             WalletCommand::PsetDetails { name, pset } => {
                 let r: app::model::WalletPsetDetailsResponse =
                     client.wallet_pset_details(name, pset)?;
+                serde_json::to_value(r)?
+            }
+            WalletCommand::Contract {
+                domain,
+                issuer_pubkey,
+                name,
+                precision,
+                ticker,
+                version,
+            } => {
+                let r: app::model::ContractResponse =
+                    client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
                 serde_json::to_value(r)?
             }
         },

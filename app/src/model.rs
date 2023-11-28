@@ -188,6 +188,27 @@ pub struct IssueRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ContractRequest {
+    pub domain: String,
+    pub issuer_pubkey: String,
+    pub name: String,
+    pub precision: u8,
+    pub ticker: String,
+    pub version: u8,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContractResponse {
+    #[serde(flatten)]
+    contract: wollet::Contract,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Entity {
+    domain: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum WalletType {
     Unknown,
     Wpkh,

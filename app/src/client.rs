@@ -215,6 +215,26 @@ impl Client {
         self.make_request("issue", Some(req))
     }
 
+    pub fn contract(
+        &self,
+        domain: String,
+        issuer_pubkey: String,
+        name: String,
+        precision: u8,
+        ticker: String,
+        version: u8,
+    ) -> Result<ContractResponse, Error> {
+        let req = ContractRequest {
+            domain,
+            issuer_pubkey,
+            name,
+            precision,
+            ticker,
+            version,
+        };
+        self.make_request("contract", Some(req))
+    }
+
     pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
         let _: Result<Value, Error> = self.make_request("stop", None::<Box<RawValue>>);

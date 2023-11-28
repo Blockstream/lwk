@@ -22,6 +22,7 @@ use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
+use wollet::elements::hex::FromHex;
 use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
@@ -521,6 +522,20 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     pset: tx.to_string(),
                 })?,
             )
+        }
+        "contract" => {
+            let r: model::ContractRequest = serde_json::from_value(request.params.unwrap())?;
+            let c = wollet::Contract {
+                entity: wollet::Entity::Domain(r.domain),
+                issuer_pubkey: Vec::<u8>::from_hex(&r.issuer_pubkey)?,
+                name: r.name,
+                precision: r.precision,
+                ticker: r.ticker,
+                version: r.version,
+            };
+            c.validate()?; // TODO: validation should be done at Contract creation
+
+            Response::result(request.id, serde_json::to_value(c)?)
         }
         "stop" => {
             return Err(Error::Stop);

@@ -28,8 +28,10 @@ use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInn
 use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
-use crate::model::{ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse};
 use crate::state::{AppSigner, State};
+use rpc_model::model::{
+    self, ListSignersResponse, ListWalletsResponse, SignerResponse, WalletResponse,
+};
 
 pub use client::Client;
 pub use config::Config;
@@ -40,7 +42,6 @@ mod client;
 mod config;
 pub mod consts;
 mod error;
-pub mod model;
 mod state;
 
 pub struct App {
@@ -224,7 +225,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 }
             };
 
-            let resp: SignerResponse = (r.name.clone(), &signer).try_into()?;
+            let resp: SignerResponse = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
@@ -233,7 +234,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let removed = s.signers.remove(&r.name)?;
-            let signer: SignerResponse = (r.name, &removed).try_into()?;
+            let signer: SignerResponse = signer_response_from(&r.name, &removed)?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::UnloadSignerResponse { unloaded: signer })?,
@@ -241,12 +242,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         "list_signers" => {
             let s = state.lock().unwrap();
-            let signers = s
+            let signers: Result<Vec<_>, _> = s
                 .signers
                 .iter()
-                .map(|(name, signer)| (name.clone(), signer).try_into().unwrap()) // TODO
+                .map(|(name, signer)| signer_response_from(name, signer))
                 .collect();
-            let r = ListSignersResponse { signers };
+            let r = ListSignersResponse { signers: signers? };
             Response::result(request.id, serde_json::to_value(r)?)
         }
         "address" => {
@@ -281,7 +282,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let tx = wollet.send_many(r.addressees, r.fee_rate)?;
+            let tx = wollet.send_many(
+                r.addressees
+                    .into_iter()
+                    .map(unvalidated_addressee)
+                    .collect(),
+                r.fee_rate,
+            )?;
             Response::result(
                 request.id,
                 serde_json::to_value(model::PsetResponse {
@@ -545,27 +552,35 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
     Ok(response)
 }
 
-impl TryFrom<(String, &AppSigner)> for SignerResponse {
-    type Error = signer::SignerError;
-
-    fn try_from(name_and_signer: (String, &AppSigner)) -> Result<Self, Self::Error> {
-        let (name, signer) = name_and_signer;
-        let (fingerprint, id, xpub) = match signer {
-            AppSigner::AvailableSigner(signer) => (
-                signer.fingerprint()?,
-                Some(signer.identifier()?),
-                Some(signer.xpub()?),
-            ),
-            AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
-        };
-
-        Ok(Self {
-            name,
-            id,
-            fingerprint,
-            xpub,
-        })
+fn unvalidated_addressee(
+    a: rpc_model::model::UnvalidatedAddressee,
+) -> wollet::UnvalidatedAddressee {
+    wollet::UnvalidatedAddressee {
+        satoshi: a.satoshi,
+        address: a.address,
+        asset: a.asset,
     }
+}
+
+fn signer_response_from(
+    name: &str,
+    signer: &AppSigner,
+) -> Result<SignerResponse, signer::SignerError> {
+    let (fingerprint, id, xpub) = match signer {
+        AppSigner::AvailableSigner(signer) => (
+            signer.fingerprint()?,
+            Some(signer.identifier()?),
+            Some(signer.xpub()?),
+        ),
+        AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
+    };
+
+    Ok(SignerResponse {
+        name: name.to_string(),
+        id,
+        fingerprint,
+        xpub,
+    })
 }
 
 #[cfg(test)]

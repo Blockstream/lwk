@@ -4,6 +4,7 @@ use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::Config;
+use rpc_model::model;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
@@ -196,7 +197,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 contract,
                 fee_rate,
             } => {
-                let r: app::model::PsetResponse = client.issue(
+                let r: model::PsetResponse = client.issue(
                     name,
                     satoshi_asset,
                     address_asset,
@@ -227,21 +228,20 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 pset,
                 name,
             } => {
-                let r: app::model::BroadcastResponse = client.broadcast(name, dry_run, pset)?;
+                let r: model::BroadcastResponse = client.broadcast(name, dry_run, pset)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Details { name } => {
-                let r: app::model::WalletDetailsResponse = client.wallet_details(name)?;
+                let r: model::WalletDetailsResponse = client.wallet_details(name)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Issuances {} => todo!(),
             WalletCommand::Combine { name, pset } => {
-                let r: app::model::WalletCombineResponse = client.wallet_combine(name, pset)?;
+                let r: model::WalletCombineResponse = client.wallet_combine(name, pset)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::PsetDetails { name, pset } => {
-                let r: app::model::WalletPsetDetailsResponse =
-                    client.wallet_pset_details(name, pset)?;
+                let r: model::WalletPsetDetailsResponse = client.wallet_pset_details(name, pset)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Contract {
@@ -252,7 +252,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 ticker,
                 version,
             } => {
-                let r: app::model::ContractResponse =
+                let r: model::ContractResponse =
                     client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
                 serde_json::to_value(r)?
             }

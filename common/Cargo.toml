@@ -3,9 +3,8 @@ name = "common"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 elements = "0.23.0"
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5" }
 thiserror = "1.0.48"
+# avoid deps to the workspace

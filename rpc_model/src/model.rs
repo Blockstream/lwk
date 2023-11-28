@@ -1,12 +1,8 @@
-use crate::state::AppSigner;
-use common::Signer;
+use elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
+use elements::bitcoin::hash_types::XpubIdentifier;
+use elements::{Address, AssetId, Txid};
 use serde::{Deserialize, Serialize};
-use signer::SignerError;
 use std::collections::HashMap;
-use wollet::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
-use wollet::bitcoin::hash_types::XpubIdentifier;
-use wollet::elements::{Address, AssetId, Txid};
-use wollet::UnvalidatedAddressee;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionResponse {
@@ -113,6 +109,22 @@ pub struct SendRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct UnvalidatedAddressee {
+    /// The amount to send in satoshi
+    pub satoshi: u64,
+
+    /// The address to send to
+    ///
+    /// If "burn", the output will be burned
+    pub address: String,
+
+    /// The asset to send
+    ///
+    /// If empty, the policy asset
+    pub asset: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PsetResponse {
     pub pset: String,
 }
@@ -200,7 +212,17 @@ pub struct ContractRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ContractResponse {
     #[serde(flatten)]
-    contract: wollet::Contract,
+    contract: Contract,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Contract {
+    pub entity: Entity,
+    pub issuer_pubkey: String,
+    pub name: String,
+    pub precision: u8,
+    pub ticker: String,
+    pub version: u8,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

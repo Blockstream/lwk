@@ -108,7 +108,7 @@ impl Client {
         fee_rate: Option<f32>,
     ) -> Result<PsetResponse, Error> {
         let req = SendRequest {
-            addressees,
+            addressees: addressees.into_iter().map(unvalidate_addressee).collect(),
             fee_rate,
             name,
         };
@@ -239,5 +239,13 @@ impl Client {
         // TODO discriminate only stop error
         let _: Result<Value, Error> = self.make_request("stop", None::<Box<RawValue>>);
         Ok(Value::Null)
+    }
+}
+
+fn unvalidate_addressee(a: wollet::UnvalidatedAddressee) -> rpc_model::model::UnvalidatedAddressee {
+    rpc_model::model::UnvalidatedAddressee {
+        satoshi: a.satoshi,
+        address: a.address,
+        asset: a.asset,
     }
 }

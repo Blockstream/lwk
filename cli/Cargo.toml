@@ -8,6 +8,7 @@ autotests = false
 [dependencies]
 anyhow = "1.0.75"
 app = { path = "../app" }
+rpc_model = { path = "../rpc_model" }
 clap = { version = "4.4.6", features = ["derive"] }
 # config = "0.13.3"
 tracing = "0.1"

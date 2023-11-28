@@ -1,0 +1,9 @@
+[package]
+name = "rpc_model"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+elements = { version = "0.23.0", features = ["serde"] }
+serde = { version = "1.0.193", features = ["derive"] }
+# avoid deps to the workspace

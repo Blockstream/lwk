@@ -57,7 +57,7 @@ impl From<String> for Error {
 }
 
 impl Error {
-    pub fn new_implementation_defined(e: impl Display, code: ImplementationDefinedCode) -> Self {
+    pub fn new_implementation_defined(e: &impl Display, code: ImplementationDefinedCode) -> Self {
         Error::Implementation(ImplementationDefinedError {
             message: e.to_string(),
             code,
@@ -144,7 +144,7 @@ const STOP_ERROR: i64 = -32_099;
 pub struct ImplementationDefinedCode(i64);
 impl ImplementationDefinedCode {
     pub const fn new(val: i64) -> Option<Self> {
-        if val > -32000 || val < -32999 {
+        if val > -32004 || val < -32099 {
             None
         } else {
             Some(Self(val))

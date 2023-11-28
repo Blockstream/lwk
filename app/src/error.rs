@@ -1,3 +1,5 @@
+use tiny_jrpc::error::ImplementationDefinedCode;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Tiny HTTP Error: {0}")]
@@ -59,6 +61,22 @@ pub enum Error {
     Generic(String),
 }
 
+impl Error {
+    pub fn as_impl_defined_code(&self) -> ImplementationDefinedCode {
+        match self {
+            Error::Jade(_) => ImplementationDefinedCode::new(-32_013).unwrap(),
+            Error::Wollet(_) => ImplementationDefinedCode::new(-32_005).unwrap(),
+            Error::SignerNew(_) => ImplementationDefinedCode::new(-32_006).unwrap(),
+            Error::Signer(_) => ImplementationDefinedCode::new(-32_007).unwrap(),
+            Error::WalletNotExist(_) => ImplementationDefinedCode::new(-32_008).unwrap(),
+            Error::WalletAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_009).unwrap(),
+            Error::SignerNotExist(_) => ImplementationDefinedCode::new(-32_010).unwrap(),
+            Error::SignerAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_011).unwrap(),
+            _ => tiny_jrpc::error::GENERIC,
+        }
+    }
+}
+
 impl From<String> for Error {
     fn from(message: String) -> Self {
         Error::Generic(message)
@@ -67,18 +85,9 @@ impl From<String> for Error {
 
 impl From<Error> for tiny_jrpc::error::Error {
     fn from(value: Error) -> Self {
-        // TODO map errors to specific implementation defined codes.
-        // WOLLET_ERROR = -32_005,
-        // SIGNER_NEW_ERROR = -32_006,
-        // SIGNER_ERROR = -32_007,
-        // WALLET_NOT_EXIST_ERROR = -32_008,
-        // WALLET_ALREADY_LOADED = -32_009,
-        // SIGNER_NOT_EXIST_ERROR = -32_010,
-        // SIGNER_ALREADY_LOADED = -32_011,
-        // JADE_ERROR = -32_013,
         match value {
             Error::Stop => tiny_jrpc::error::Error::Stop,
-            e => tiny_jrpc::error::Error::new_implementation_defined(e, tiny_jrpc::error::GENERIC),
+            e => tiny_jrpc::error::Error::new_implementation_defined(&e, e.as_impl_defined_code()),
         }
     }
 }

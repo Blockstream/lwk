@@ -5,6 +5,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// An empty response.
+#[derive(JsonSchema)]
+pub struct Empty {}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Version {
     pub version: String,

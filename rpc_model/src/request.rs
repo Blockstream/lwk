@@ -1,6 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// An empty request, doesn't require any param.
+#[derive(JsonSchema)]
+pub struct Empty {}
+
 /// Request a JSON schema of a method of the RPC
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Schema {

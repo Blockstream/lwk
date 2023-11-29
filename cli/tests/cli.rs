@@ -645,7 +645,7 @@ fn test_schema() {
     });
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    let request_to_impl = ["list", "issuances", "reissue"]; // TODO: remove
+    let request_to_impl = ["issuances", "reissue"]; // TODO: remove
     let response_to_impl = [
         "address",
         "issuances",
@@ -669,7 +669,7 @@ fn test_schema() {
         }
     }
 
-    let request_to_impl = ["generate", "load", "list"]; // TODO: remove
+    let request_to_impl = ["load"]; // TODO: remove
     let response_to_impl = ["load", "unload", "list"]; // TODO: remove
 
     for a in SignerSubCommandsEnum::value_variants() {

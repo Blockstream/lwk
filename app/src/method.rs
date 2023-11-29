@@ -42,21 +42,18 @@ pub enum Method {
     Stop,
 }
 impl Method {
-    pub(crate) fn schema(
-        &self,
-        direction: rpc_model::request::Direction,
-    ) -> Result<Value, serde_json::Error> {
+    pub(crate) fn schema(&self, direction: request::Direction) -> Result<Value, serde_json::Error> {
         serde_json::to_value(match direction {
             Direction::Request => match self {
                 Method::Schema => schema_for!(request::Schema),
-                Method::GenerateSigner => RootSchema::default(),
-                Method::Version => RootSchema::default(),
+                Method::GenerateSigner => schema_for!(request::Empty),
+                Method::Version => schema_for!(request::Empty),
                 Method::LoadWallet => schema_for!(request::LoadWallet),
                 Method::UnloadWallet => schema_for!(request::UnloadWallet),
-                Method::ListWallets => RootSchema::default(),
+                Method::ListWallets => schema_for!(request::Empty),
                 Method::LoadSigner => schema_for!(request::LoadSigner),
                 Method::UnloadSigner => schema_for!(request::UnloadSigner),
-                Method::ListSigners => RootSchema::default(),
+                Method::ListSigners => schema_for!(request::Empty),
                 Method::Address => schema_for!(request::Address),
                 Method::Balance => schema_for!(request::Balance),
                 Method::SendMany => schema_for!(request::Send),
@@ -71,10 +68,10 @@ impl Method {
                 Method::Issue => schema_for!(request::Issue),
                 Method::Contract => schema_for!(request::Contract),
                 Method::AssetDetails => schema_for!(request::AssetDetails),
-                Method::Stop => RootSchema::default(),
+                Method::Stop => schema_for!(request::Empty),
             },
             Direction::Response => match self {
-                Method::Schema => RootSchema::default(),
+                Method::Schema => RootSchema::default(), //TODO schema of schema?
                 Method::GenerateSigner => schema_for!(response::GenerateSigner),
                 Method::Version => schema_for!(response::Version),
                 Method::LoadWallet => schema_for!(response::Wallet),
@@ -97,7 +94,7 @@ impl Method {
                 Method::Issue => schema_for!(response::Pset),
                 Method::Contract => schema_for!(response::Contract),
                 Method::AssetDetails => schema_for!(response::AssetDetails),
-                Method::Stop => RootSchema::default(),
+                Method::Stop => schema_for!(response::Empty),
             },
         })
     }

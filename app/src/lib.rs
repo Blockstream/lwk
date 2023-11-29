@@ -7,7 +7,7 @@
 //!
 //! Both the client and the server share the possible [`Error`]s.
 //!
-//! All the requests and responses are in the [`rpc_model`] crate.
+//! All the requests and responses data model are in the [`rpc_model`] crate.
 
 use std::collections::HashSet;
 use std::net::SocketAddr;

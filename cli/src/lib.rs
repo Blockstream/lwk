@@ -4,7 +4,6 @@ use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::Config;
-use rpc_model::request::Direction;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
@@ -12,6 +11,7 @@ use crate::args::{CliCommand, Network, ServerCommand, SignerCommand, WalletComma
 pub use args::Cli;
 
 mod args;
+mod schema;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let directive = if let CliCommand::Server(args::ServerArgs {
@@ -256,17 +256,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
         },
-        CliCommand::Schema(a) => match a.command {
-            args::DirectionCommand::Request(b) => match b.command {
-                args::MainCommand::Wallet(c) => match c.command {
-                    args::WalletSubCommandsEnum::Load => {
-                        client.schema("load_wallet", Direction::Request)?
-                    }
-                    args::WalletSubCommandsEnum::List => todo!(),
-                },
-                args::MainCommand::Signer(_) => todo!(),
-            },
-            args::DirectionCommand::Response(_) => todo!(),
-        },
+        CliCommand::Schema(a) => schema::schema(a, client)?,
     })
 }

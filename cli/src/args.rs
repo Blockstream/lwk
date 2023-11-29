@@ -84,7 +84,20 @@ pub struct WalletSubCommands {
 #[derive(Debug, Subcommand)]
 pub enum WalletSubCommandsEnum {
     Load,
+    Unload,
     List,
+    Address,
+    Balance,
+    Send,
+    Contract,
+    Issue,
+    Issuances,
+    Reissue,
+    MultisigDesc,
+    Broadcast,
+    Details,
+    Combine,
+    PsetDetails,
 }
 
 #[derive(Debug, Args)]
@@ -95,8 +108,13 @@ pub struct SignerSubCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum SignerSubCommandsEnum {
+    Generate,
     Load,
+    Unload,
     List,
+    Sign,
+    SinglesigDesc,
+    Xpub,
 }
 
 #[derive(ValueEnum, Clone, Debug)]

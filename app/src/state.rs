@@ -179,3 +179,13 @@ impl Signers {
         }
     }
 }
+
+impl State {
+    #[allow(dead_code)]
+    pub fn get_asset(&self, asset: &AssetId) -> Result<&AppAsset, Error> {
+        self.assets
+            .0
+            .get(asset)
+            .ok_or_else(|| Error::AssetNotExist(asset.to_string()))
+    }
+}

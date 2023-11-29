@@ -57,6 +57,9 @@ pub enum Error {
     #[error("Signer '{0}' is already loaded")]
     SignerAlreadyLoaded(String),
 
+    #[error("Asset '{0}' does not exist")]
+    AssetNotExist(String),
+
     #[error(transparent)]
     MethodNotExist(#[from] crate::method::MethodNotExist),
 

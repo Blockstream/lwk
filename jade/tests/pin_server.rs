@@ -1,7 +1,5 @@
 use bs_containers::testcontainers::clients::Cli;
-use bs_containers::{
-    print_docker_logs_and_panic, {PinServer, PIN_SERVER_PORT},
-};
+use bs_containers::{PinServer, PIN_SERVER_PORT};
 use elements::bitcoin::{
     hashes::{hex::FromHex, sha256, Hash},
     secp256k1::{ecdsa::Signature, Message, Secp256k1},
@@ -23,9 +21,7 @@ fn pin_server() {
     assert_eq!(result.status_code, 200);
 
     let start_handshake_url = format!("{pin_server_url}/start_handshake");
-    let resp = minreq::post(start_handshake_url)
-        .send()
-        .unwrap_or_else(|_| print_docker_logs_and_panic(container.id()));
+    let resp = minreq::post(start_handshake_url).send().unwrap();
     let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
     verify(&params, &pin_server_pub_key);
 }

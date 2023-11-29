@@ -4,8 +4,6 @@
 //! * [`JadeEmulator`] [Jade emulator](https://github.com/Blockstream/Jade/)
 //!
 
-use std::process::Command;
-
 mod jade;
 mod pin_server;
 
@@ -14,9 +12,9 @@ pub use pin_server::{PinServer, PIN_SERVER_PORT};
 
 pub use testcontainers;
 
-pub fn print_docker_logs_and_panic(id: &str) -> ! {
-    let output = Command::new("docker").arg("logs").arg(id).output().unwrap();
-    let s = String::from_utf8(output.stdout).unwrap();
-    println!("{s}");
-    panic!("print docker logs and panic");
-}
+// pub fn print_docker_logs_and_panic(id: &str) -> ! {
+//     let output = std::process::Command::new("docker").arg("logs").arg(id).output().unwrap();
+//     let s = String::from_utf8(output.stdout).unwrap();
+//     println!("{s}");
+//     panic!("print docker logs and panic");
+// }

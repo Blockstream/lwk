@@ -235,6 +235,14 @@ impl Client {
         self.make_request("contract", Some(req))
     }
 
+    pub fn schema(&self, arg: &str, direction: request::Direction) -> Result<Value, Error> {
+        let req = request::Schema {
+            method: arg.to_string(),
+            direction,
+        };
+        self.make_request("schema", Some(req))
+    }
+
     pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
         let _: Result<Value, Error> = self.make_request("stop", None::<Box<RawValue>>);

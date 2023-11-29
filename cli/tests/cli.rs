@@ -630,3 +630,18 @@ fn test_multisig() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_schema() {
+    let addr = get_available_addr().unwrap();
+    let t = std::thread::spawn(move || {
+        sh(&format!("cli --addr {addr} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let result = sh(&format!("cli --addr {addr} schema request wallet load"));
+    assert!(result.get("$schema").is_some());
+
+    sh(&format!("cli --addr {addr} server stop"));
+    t.join().unwrap();
+}

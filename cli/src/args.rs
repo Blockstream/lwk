@@ -41,12 +41,62 @@ pub enum CliCommand {
     Signer(SignerArgs),
     /// Wallet related commands (load, list, balance, address, tx...)
     Wallet(WalletArgs),
+    /// Returns JSON schema of a RPC request/response for a given command
+    Schema(SchemaArgs),
 }
 
 #[derive(Debug, Args)]
 pub struct SignerArgs {
     #[command(subcommand)]
     pub command: SignerCommand,
+}
+
+#[derive(Debug, Args)]
+pub struct SchemaArgs {
+    #[command(subcommand)]
+    pub command: DirectionCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum DirectionCommand {
+    Request(MainCommandArgs),
+    Response(MainCommandArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct MainCommandArgs {
+    #[command(subcommand)]
+    pub command: MainCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MainCommand {
+    Wallet(WalletSubCommands),
+    Signer(SignerSubCommands),
+}
+
+#[derive(Debug, Args)]
+pub struct WalletSubCommands {
+    #[command(subcommand)]
+    pub command: WalletSubCommandsEnum,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum WalletSubCommandsEnum {
+    Load,
+    List,
+}
+
+#[derive(Debug, Args)]
+pub struct SignerSubCommands {
+    #[command(subcommand)]
+    pub command: SignerSubCommandsEnum,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SignerSubCommandsEnum {
+    Load,
+    List,
 }
 
 #[derive(ValueEnum, Clone, Debug)]

@@ -12,6 +12,9 @@ use serde_json::Value;
 pub struct MethodNotExist {
     name: String,
 }
+
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(enum_iterator::Sequence))]
 pub(crate) enum Method {
     Schema,
     GenerateSigner,
@@ -131,5 +134,51 @@ impl FromStr for Method {
                 })
             }
         })
+    }
+}
+
+impl std::fmt::Display for Method {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Method::Schema => "schema",
+            Method::GenerateSigner => "generate_signer",
+            Method::Version => "version",
+            Method::LoadWallet => "load_wallet",
+            Method::UnloadWallet => "unload_wallet",
+            Method::ListWallets => "list_wallets",
+            Method::LoadSigner => "load_signer",
+            Method::UnloadSigner => "unload_signer",
+            Method::ListSigners => "list_signers",
+            Method::Address => "address",
+            Method::Balance => "balance",
+            Method::SendMany => "send_many",
+            Method::SinglesigDescriptor => "singlesig_descriptor",
+            Method::MultisigDescriptor => "multisig_descriptor",
+            Method::Xpub => "xpub",
+            Method::Sign => "sign",
+            Method::Broadcast => "broadcast",
+            Method::WalletDetails => "wallet_details",
+            Method::WalletCombine => "wallet_combine",
+            Method::WalletPsetDetails => "wallet_pset_details",
+            Method::Issue => "issue",
+            Method::Contract => "contract",
+            Method::Stop => "stop",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use enum_iterator::all;
+
+    use super::Method;
+
+    #[test]
+    fn method_roundtrip() {
+        let all = all::<Method>().collect::<Vec<_>>();
+        for m in all {
+            assert_eq!(m, m.to_string().parse().unwrap())
+        }
     }
 }

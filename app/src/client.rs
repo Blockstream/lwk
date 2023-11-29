@@ -8,6 +8,7 @@ use serde_json::Value;
 use wollet::UnvalidatedAddressee;
 
 use crate::error::Error;
+use crate::method::Method;
 use crate::{request, response};
 
 pub struct Client {
@@ -235,7 +236,7 @@ impl Client {
         self.make_request("contract", Some(req))
     }
 
-    pub fn schema(&self, arg: &str, direction: request::Direction) -> Result<Value, Error> {
+    pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),
             direction,

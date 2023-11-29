@@ -41,7 +41,7 @@ mod client;
 mod config;
 pub mod consts;
 mod error;
-mod method;
+pub mod method;
 mod state;
 
 pub struct App {

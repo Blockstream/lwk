@@ -15,7 +15,7 @@ pub struct MethodNotExist {
 
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(enum_iterator::Sequence))]
-pub(crate) enum Method {
+pub enum Method {
     Schema,
     GenerateSigner,
     Version,

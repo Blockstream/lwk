@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use common::Signer;
 use signer::AnySigner;
 use wollet::bitcoin::bip32::Fingerprint;
+use wollet::elements::AssetId;
+use wollet::Contract;
 use wollet::Wollet;
 
 use crate::config::Config;
@@ -22,11 +24,26 @@ impl AppSigner {
     }
 }
 
+#[allow(dead_code)]
+pub enum AppAsset {
+    /// The policy asset (L-BTC)
+    PolicyAsset,
+
+    /// An asset with contract committed to it
+    RegistryAsset(Contract),
+
+    /// A reissuance token for an asset
+    ReissuanceToken(AssetId),
+}
+
 #[derive(Default)]
 pub struct Wollets(HashMap<String, Wollet>);
 
 #[derive(Default)]
 pub struct Signers(HashMap<String, AppSigner>);
+
+#[derive(Default)]
+pub struct Assets(HashMap<AssetId, AppAsset>);
 
 #[derive(Default)]
 pub struct State {
@@ -35,6 +52,7 @@ pub struct State {
     pub config: Config,
     pub wollets: Wollets,
     pub signers: Signers,
+    pub assets: Assets,
 }
 
 impl Wollets {

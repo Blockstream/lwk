@@ -4,11 +4,11 @@ use std::{
     str::FromStr,
 };
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
 
-use cli::{inner_main, Cli};
+use cli::{inner_main, Cli, WalletSubCommandsEnum};
 use test_session::setup;
 
 mod test_session;
@@ -639,8 +639,29 @@ fn test_schema() {
     });
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    let result = sh(&format!("cli --addr {addr} schema request wallet load"));
-    assert!(result.get("$schema").is_some());
+    let request_to_impl = ["list", "issuances", "reissue"]; // TODO: remove
+    let response_to_impl = [
+        "address",
+        "issuances",
+        "reissue",
+        "broadcast",
+        "details",
+        "pset-details",
+    ]; // TODO: remove
+
+    for a in WalletSubCommandsEnum::value_variants() {
+        let a = a.to_possible_value();
+        let cmd = a.map(|e| e.get_name().to_string()).unwrap();
+        if !request_to_impl.contains(&cmd.as_str()) {
+            let result = sh(&format!("cli --addr {addr} schema request wallet {cmd}"));
+            assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        }
+
+        if !response_to_impl.contains(&cmd.as_str()) {
+            let result = sh(&format!("cli --addr {addr} schema response wallet {cmd}"));
+            assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        }
+    }
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

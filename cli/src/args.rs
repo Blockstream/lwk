@@ -81,7 +81,7 @@ pub struct WalletSubCommands {
     pub command: WalletSubCommandsEnum,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, ValueEnum, Clone)]
 pub enum WalletSubCommandsEnum {
     Load,
     Unload,
@@ -106,7 +106,7 @@ pub struct SignerSubCommands {
     pub command: SignerSubCommandsEnum,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, ValueEnum, Clone)]
 pub enum SignerSubCommandsEnum {
     Generate,
     Load,

@@ -8,7 +8,7 @@ use serde_json::Value;
 use wollet::UnvalidatedAddressee;
 
 use crate::error::Error;
-use crate::model::*;
+use crate::{request, response};
 
 pub struct Client {
     client: jsonrpc::Client,
@@ -44,11 +44,11 @@ impl Client {
         }
     }
 
-    pub fn version(&self) -> Result<VersionResponse, Error> {
+    pub fn version(&self) -> Result<response::Version, Error> {
         self.make_request("version", None::<Box<RawValue>>)
     }
 
-    pub fn generate_signer(&self) -> Result<GenerateSignerResponse, Error> {
+    pub fn generate_signer(&self) -> Result<response::GenerateSigner, Error> {
         self.make_request("generate_signer", None::<Box<RawValue>>)
     }
 
@@ -58,8 +58,8 @@ impl Client {
         kind: String,
         mnemonic: Option<String>,
         fingerprint: Option<String>,
-    ) -> Result<SignerResponse, Error> {
-        let req = LoadSignerRequest {
+    ) -> Result<response::Signer, Error> {
+        let req = request::LoadSigner {
             name,
             kind,
             mnemonic,
@@ -68,36 +68,36 @@ impl Client {
         self.make_request("load_signer", Some(req))
     }
 
-    pub fn list_wallets(&self) -> Result<ListWalletsResponse, Error> {
+    pub fn list_wallets(&self) -> Result<response::ListWallets, Error> {
         self.make_request("list_wallets", None::<Box<RawValue>>)
     }
 
-    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<WalletResponse, Error> {
-        let req = LoadWalletRequest { descriptor, name };
+    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<response::Wallet, Error> {
+        let req = request::LoadWallet { descriptor, name };
         self.make_request("load_wallet", Some(req))
     }
 
-    pub fn unload_wallet(&self, name: String) -> Result<UnloadWalletResponse, Error> {
-        let req = UnloadWalletRequest { name };
+    pub fn unload_wallet(&self, name: String) -> Result<response::UnloadWallet, Error> {
+        let req = request::UnloadWallet { name };
         self.make_request("unload_wallet", Some(req))
     }
 
-    pub fn unload_signer(&self, name: String) -> Result<UnloadSignerResponse, Error> {
-        let req = UnloadSignerRequest { name };
+    pub fn unload_signer(&self, name: String) -> Result<response::UnloadSigner, Error> {
+        let req = request::UnloadSigner { name };
         self.make_request("unload_signer", Some(req))
     }
 
-    pub fn list_signers(&self) -> Result<ListSignersResponse, Error> {
+    pub fn list_signers(&self) -> Result<response::ListSigners, Error> {
         self.make_request("list_signers", None::<Box<RawValue>>)
     }
 
-    pub fn balance(&self, name: String) -> Result<BalanceResponse, Error> {
-        let req = BalanceRequest { name };
+    pub fn balance(&self, name: String) -> Result<response::Balance, Error> {
+        let req = request::Balance { name };
         self.make_request("balance", Some(req))
     }
 
-    pub fn address(&self, name: String, index: Option<u32>) -> Result<AddressResponse, Error> {
-        let req = AddressRequest { name, index };
+    pub fn address(&self, name: String, index: Option<u32>) -> Result<response::Address, Error> {
+        let req = request::Address { name, index };
         self.make_request("address", Some(req))
     }
 
@@ -106,8 +106,8 @@ impl Client {
         name: String,
         addressees: Vec<UnvalidatedAddressee>,
         fee_rate: Option<f32>,
-    ) -> Result<PsetResponse, Error> {
-        let req = SendRequest {
+    ) -> Result<response::Pset, Error> {
+        let req = request::Send {
             addressees: addressees.into_iter().map(unvalidate_addressee).collect(),
             fee_rate,
             name,
@@ -120,8 +120,8 @@ impl Client {
         name: String,
         descriptor_blinding_key: String,
         singlesig_kind: String,
-    ) -> Result<SinglesigDescriptorResponse, Error> {
-        let req = SinglesigDescriptorRequest {
+    ) -> Result<response::SinglesigDescriptor, Error> {
+        let req = request::SinglesigDescriptor {
             name,
             descriptor_blinding_key,
             singlesig_kind,
@@ -135,8 +135,8 @@ impl Client {
         multisig_kind: String,
         threshold: u32,
         keyorigin_xpubs: Vec<String>,
-    ) -> Result<MultisigDescriptorResponse, Error> {
-        let req = MultisigDescriptorRequest {
+    ) -> Result<response::MultisigDescriptor, Error> {
+        let req = request::MultisigDescriptor {
             descriptor_blinding_key,
             multisig_kind,
             threshold,
@@ -145,13 +145,13 @@ impl Client {
         self.make_request("multisig_descriptor", Some(req))
     }
 
-    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<XpubResponse, Error> {
-        let req = XpubRequest { name, xpub_kind };
+    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<response::Xpub, Error> {
+        let req = request::Xpub { name, xpub_kind };
         self.make_request("xpub", Some(req))
     }
 
-    pub fn sign(&self, name: String, pset: String) -> Result<PsetResponse, Error> {
-        let req = SignRequest { name, pset };
+    pub fn sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {
+        let req = request::Sign { name, pset };
         self.make_request("sign", Some(req))
     }
 
@@ -160,8 +160,8 @@ impl Client {
         name: String,
         dry_run: bool,
         pset: String,
-    ) -> Result<BroadcastResponse, Error> {
-        let req = BroadcastRequest {
+    ) -> Result<response::Broadcast, Error> {
+        let req = request::Broadcast {
             name,
             dry_run,
             pset,
@@ -169,8 +169,8 @@ impl Client {
         self.make_request("broadcast", Some(req))
     }
 
-    pub fn wallet_details(&self, name: String) -> Result<WalletDetailsResponse, Error> {
-        let req = WalletDetailsRequest { name };
+    pub fn wallet_details(&self, name: String) -> Result<response::WalletDetails, Error> {
+        let req = request::WalletDetails { name };
         self.make_request("wallet_details", Some(req))
     }
 
@@ -178,8 +178,8 @@ impl Client {
         &self,
         name: String,
         pset: Vec<String>,
-    ) -> Result<WalletCombineResponse, Error> {
-        let req = WalletCombineRequest { name, pset };
+    ) -> Result<response::WalletCombine, Error> {
+        let req = request::WalletCombine { name, pset };
         self.make_request("wallet_combine", Some(req))
     }
 
@@ -187,8 +187,8 @@ impl Client {
         &self,
         name: String,
         pset: String,
-    ) -> Result<WalletPsetDetailsResponse, Error> {
-        let req = WalletPsetDetailsRequest { name, pset };
+    ) -> Result<response::WalletPsetDetails, Error> {
+        let req = request::WalletPsetDetails { name, pset };
         self.make_request("wallet_pset_details", Some(req))
     }
 
@@ -202,8 +202,8 @@ impl Client {
         address_token: Option<String>,
         contract: Option<String>,
         fee_rate: Option<f32>,
-    ) -> Result<PsetResponse, Error> {
-        let req = IssueRequest {
+    ) -> Result<response::Pset, Error> {
+        let req = request::Issue {
             name,
             satoshi_asset,
             address_asset,
@@ -223,8 +223,8 @@ impl Client {
         precision: u8,
         ticker: String,
         version: u8,
-    ) -> Result<ContractResponse, Error> {
-        let req = ContractRequest {
+    ) -> Result<response::Contract, Error> {
+        let req = request::Contract {
             domain,
             issuer_pubkey,
             name,
@@ -242,8 +242,8 @@ impl Client {
     }
 }
 
-fn unvalidate_addressee(a: wollet::UnvalidatedAddressee) -> rpc_model::model::UnvalidatedAddressee {
-    rpc_model::model::UnvalidatedAddressee {
+fn unvalidate_addressee(a: wollet::UnvalidatedAddressee) -> request::UnvalidatedAddressee {
+    request::UnvalidatedAddressee {
         satoshi: a.satoshi,
         address: a.address,
         asset: a.asset,

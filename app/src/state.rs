@@ -181,6 +181,11 @@ impl Signers {
 }
 
 impl State {
+    pub fn insert_policy_asset(&mut self) {
+        let asset_id = self.config.network.policy_asset();
+        self.assets.0.insert(asset_id, AppAsset::PolicyAsset);
+    }
+
     #[allow(dead_code)]
     pub fn get_asset(&self, asset: &AssetId) -> Result<&AppAsset, Error> {
         self.assets

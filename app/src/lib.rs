@@ -60,10 +60,12 @@ impl App {
         if self.rpc.is_some() {
             return Err(error::Error::AlreadyStarted);
         }
-        let state = Arc::new(Mutex::new(State {
+        let mut state = State {
             config: self.config.clone(),
             ..Default::default()
-        }));
+        };
+        state.insert_policy_asset();
+        let state = Arc::new(Mutex::new(state));
         let server = tiny_http::Server::http(self.config.addr)?;
 
         let rpc = tiny_jrpc::JsonRpcServer::new(

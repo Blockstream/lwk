@@ -128,6 +128,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Err(e) => return Ok(Response::unimplemented(request.id, e.to_string())),
     };
     let response = match method {
+        Method::Schema => {
+            let r: request::Schema = serde_json::from_value(request.params.unwrap_or_default())?;
+            let method: Method = r.method.parse()?;
+            Response::result(request.id, method.schema(r.direction)?)
+        }
         Method::GenerateSigner => {
             let (_signer, mnemonic) = SwSigner::random()?;
             Response::result(

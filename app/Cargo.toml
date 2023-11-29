@@ -19,3 +19,4 @@ common = { path = "../common" }
 rpc_model = { path = "../rpc_model" }
 wollet = { path = "../wollet" }
 rand = "0.8.5"
+schemars = "0.8.16"

@@ -1,6 +1,23 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Request a JSON schema of a method of the RPC
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Schema {
+    /// Name of the method to request the schema for
+    pub method: String,
+
+    /// Specify if requesting the schema for the request or  the response
+    pub direction: Direction,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Direction {
+    Request,
+    Response,
+}
+
 /// Load a wallet in the server
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LoadWallet {

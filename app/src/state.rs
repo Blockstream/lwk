@@ -36,6 +36,16 @@ pub enum AppAsset {
     ReissuanceToken(AssetId),
 }
 
+impl AppAsset {
+    pub fn name(&self) -> String {
+        match self {
+            AppAsset::PolicyAsset => "bitcoin".into(),
+            AppAsset::RegistryAsset(contract) => contract.name.clone(),
+            AppAsset::ReissuanceToken(asset_id) => format!("reissuance token for {asset_id}"),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Wollets(HashMap<String, Wollet>);
 

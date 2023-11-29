@@ -1,8 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+/// Load a wallet in the server
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadWallet {
+    /// The read-only descriptor describing the wallet outputs
     pub descriptor: String,
+
+    /// The name given to the wallet, will be needed for calls related to the wallet
     pub name: String,
 }
 

@@ -24,7 +24,7 @@ impl Client {
 
     fn make_request<Req, Res>(
         &self,
-        method: &str,
+        method: Method,
         req: Option<Req>,
     ) -> std::result::Result<Res, Error>
     where
@@ -32,7 +32,8 @@ impl Client {
         Res: DeserializeOwned,
     {
         let params = req.map(|req| to_raw_value(&req)).transpose()?;
-        let request = self.client.build_request(method, params.as_deref());
+        let method = method.to_string();
+        let request = self.client.build_request(&method, params.as_deref());
         tracing::trace!("---> {}", serde_json::to_string(&request).unwrap());
         let response = self.client.send_request(request)?;
         tracing::trace!("<--- {}", serde_json::to_string(&response).unwrap());
@@ -46,11 +47,11 @@ impl Client {
     }
 
     pub fn version(&self) -> Result<response::Version, Error> {
-        self.make_request("version", None::<Box<RawValue>>)
+        self.make_request(Method::Version, None::<Box<RawValue>>)
     }
 
     pub fn generate_signer(&self) -> Result<response::GenerateSigner, Error> {
-        self.make_request("generate_signer", None::<Box<RawValue>>)
+        self.make_request(Method::GenerateSigner, None::<Box<RawValue>>)
     }
 
     pub fn load_signer(
@@ -66,40 +67,40 @@ impl Client {
             mnemonic,
             fingerprint,
         };
-        self.make_request("load_signer", Some(req))
+        self.make_request(Method::LoadSigner, Some(req))
     }
 
     pub fn list_wallets(&self) -> Result<response::ListWallets, Error> {
-        self.make_request("list_wallets", None::<Box<RawValue>>)
+        self.make_request(Method::ListWallets, None::<Box<RawValue>>)
     }
 
     pub fn load_wallet(&self, descriptor: String, name: String) -> Result<response::Wallet, Error> {
         let req = request::LoadWallet { descriptor, name };
-        self.make_request("load_wallet", Some(req))
+        self.make_request(Method::LoadWallet, Some(req))
     }
 
     pub fn unload_wallet(&self, name: String) -> Result<response::UnloadWallet, Error> {
         let req = request::UnloadWallet { name };
-        self.make_request("unload_wallet", Some(req))
+        self.make_request(Method::UnloadWallet, Some(req))
     }
 
     pub fn unload_signer(&self, name: String) -> Result<response::UnloadSigner, Error> {
         let req = request::UnloadSigner { name };
-        self.make_request("unload_signer", Some(req))
+        self.make_request(Method::UnloadSigner, Some(req))
     }
 
     pub fn list_signers(&self) -> Result<response::ListSigners, Error> {
-        self.make_request("list_signers", None::<Box<RawValue>>)
+        self.make_request(Method::ListSigners, None::<Box<RawValue>>)
     }
 
     pub fn balance(&self, name: String) -> Result<response::Balance, Error> {
         let req = request::Balance { name };
-        self.make_request("balance", Some(req))
+        self.make_request(Method::Balance, Some(req))
     }
 
     pub fn address(&self, name: String, index: Option<u32>) -> Result<response::Address, Error> {
         let req = request::Address { name, index };
-        self.make_request("address", Some(req))
+        self.make_request(Method::Address, Some(req))
     }
 
     pub fn send_many(
@@ -113,7 +114,7 @@ impl Client {
             fee_rate,
             name,
         };
-        self.make_request("send_many", Some(req))
+        self.make_request(Method::SendMany, Some(req))
     }
 
     pub fn singlesig_descriptor(
@@ -127,7 +128,7 @@ impl Client {
             descriptor_blinding_key,
             singlesig_kind,
         };
-        self.make_request("singlesig_descriptor", Some(req))
+        self.make_request(Method::SinglesigDescriptor, Some(req))
     }
 
     pub fn multisig_descriptor(
@@ -143,17 +144,17 @@ impl Client {
             threshold,
             keyorigin_xpubs,
         };
-        self.make_request("multisig_descriptor", Some(req))
+        self.make_request(Method::MultisigDescriptor, Some(req))
     }
 
     pub fn xpub(&self, name: String, xpub_kind: String) -> Result<response::Xpub, Error> {
         let req = request::Xpub { name, xpub_kind };
-        self.make_request("xpub", Some(req))
+        self.make_request(Method::Xpub, Some(req))
     }
 
     pub fn sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {
         let req = request::Sign { name, pset };
-        self.make_request("sign", Some(req))
+        self.make_request(Method::Sign, Some(req))
     }
 
     pub fn broadcast(
@@ -167,12 +168,12 @@ impl Client {
             dry_run,
             pset,
         };
-        self.make_request("broadcast", Some(req))
+        self.make_request(Method::Broadcast, Some(req))
     }
 
     pub fn wallet_details(&self, name: String) -> Result<response::WalletDetails, Error> {
         let req = request::WalletDetails { name };
-        self.make_request("wallet_details", Some(req))
+        self.make_request(Method::WalletDetails, Some(req))
     }
 
     pub fn wallet_combine(
@@ -181,7 +182,7 @@ impl Client {
         pset: Vec<String>,
     ) -> Result<response::WalletCombine, Error> {
         let req = request::WalletCombine { name, pset };
-        self.make_request("wallet_combine", Some(req))
+        self.make_request(Method::WalletCombine, Some(req))
     }
 
     pub fn wallet_pset_details(
@@ -190,7 +191,7 @@ impl Client {
         pset: String,
     ) -> Result<response::WalletPsetDetails, Error> {
         let req = request::WalletPsetDetails { name, pset };
-        self.make_request("wallet_pset_details", Some(req))
+        self.make_request(Method::WalletPsetDetails, Some(req))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -213,7 +214,7 @@ impl Client {
             contract,
             fee_rate,
         };
-        self.make_request("issue", Some(req))
+        self.make_request(Method::Issue, Some(req))
     }
 
     pub fn contract(
@@ -233,7 +234,7 @@ impl Client {
             ticker,
             version,
         };
-        self.make_request("contract", Some(req))
+        self.make_request(Method::Contract, Some(req))
     }
 
     pub fn asset_details(&self, asset_id: String) -> Result<response::AssetDetails, Error> {
@@ -246,12 +247,12 @@ impl Client {
             method: arg.to_string(),
             direction,
         };
-        self.make_request("schema", Some(req))
+        self.make_request(Method::Schema, Some(req))
     }
 
     pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
-        let _: Result<Value, Error> = self.make_request("stop", None::<Box<RawValue>>);
+        let _: Result<Value, Error> = self.make_request(Method::Stop, None::<Box<RawValue>>);
         Ok(Value::Null)
     }
 }

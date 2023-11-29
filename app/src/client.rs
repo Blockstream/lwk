@@ -236,6 +236,11 @@ impl Client {
         self.make_request("contract", Some(req))
     }
 
+    pub fn asset_details(&self, asset_id: String) -> Result<response::AssetDetails, Error> {
+        let req = request::AssetDetails { asset_id };
+        self.make_request("asset_details", Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

@@ -41,6 +41,8 @@ pub enum CliCommand {
     Signer(SignerArgs),
     /// Wallet related commands (load, list, balance, address, tx...)
     Wallet(WalletArgs),
+    /// Asset related commands
+    Asset(AssetArgs),
     /// Returns JSON schema of a RPC request/response for a given command
     Schema(SchemaArgs),
 }
@@ -435,6 +437,22 @@ pub enum WalletCommand {
         /// PSET
         #[arg(short, long, required = true)]
         pset: String,
+    },
+}
+
+#[derive(Debug, Args)]
+pub struct AssetArgs {
+    #[command(subcommand)]
+    pub command: AssetCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AssetCommand {
+    /// Get detailed information about an asset
+    Details {
+        /// Asset ID in hex
+        #[arg(short, long)]
+        asset: String,
     },
 }
 

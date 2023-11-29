@@ -7,7 +7,7 @@ use app::Config;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
-use crate::args::{CliCommand, Network, ServerCommand, SignerCommand, WalletCommand};
+use crate::args::{AssetCommand, CliCommand, Network, ServerCommand, SignerCommand, WalletCommand};
 pub use args::Cli;
 
 pub use args::{SignerSubCommandsEnum, WalletSubCommandsEnum};
@@ -255,6 +255,12 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 version,
             } => {
                 let r = client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
+                serde_json::to_value(r)?
+            }
+        },
+        CliCommand::Asset(a) => match a.command {
+            AssetCommand::Details { asset } => {
+                let r = client.asset_details(asset)?;
                 serde_json::to_value(r)?
             }
         },

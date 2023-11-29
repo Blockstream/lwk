@@ -57,6 +57,9 @@ pub enum Error {
     #[error("Signer '{0}' is already loaded")]
     SignerAlreadyLoaded(String),
 
+    #[error(transparent)]
+    MethodNotExist(#[from] crate::method::MethodNotExist),
+
     #[error("Received stop command")]
     Stop,
 
@@ -77,6 +80,7 @@ impl Error {
             Error::WalletAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_009).unwrap(),
             Error::SignerNotExist(_) => ImplementationDefinedCode::new(-32_010).unwrap(),
             Error::SignerAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_011).unwrap(),
+
             _ => tiny_jrpc::error::GENERIC,
         }
     }

@@ -382,8 +382,8 @@ impl Response {
         }
     }
 
-    pub fn unimplemented(id: Option<Id>) -> Self {
-        Self::error(id, METHOD_NOT_FOUND, "Method not found.".into(), None)
+    pub fn unimplemented(id: Option<Id>, message: String) -> Self {
+        Self::error(id, METHOD_NOT_FOUND, message, None)
     }
 
     pub fn is_error(&self) -> bool {

@@ -28,6 +28,7 @@ use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInn
 use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
+use crate::method::Method;
 use crate::state::{AppSigner, State};
 use rpc_model::{request, response};
 
@@ -40,6 +41,7 @@ mod client;
 mod config;
 pub mod consts;
 mod error;
+mod method;
 mod state;
 
 pub struct App {
@@ -121,8 +123,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         request.method.as_str(),
         request.params
     );
-    let response = match request.method.as_str() {
-        "generate_signer" => {
+    let method: Method = match request.method.as_str().parse() {
+        Ok(method) => method,
+        Err(e) => return Ok(Response::unimplemented(request.id, e.to_string())),
+    };
+    let response = match method {
+        Method::GenerateSigner => {
             let (_signer, mnemonic) = SwSigner::random()?;
             Response::result(
                 request.id,
@@ -131,13 +137,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "version" => Response::result(
+        Method::Version => Response::result(
             request.id,
             serde_json::to_value(response::Version {
                 version: consts::APP_VERSION.into(),
             })?,
         ),
-        "load_wallet" => {
+        Method::LoadWallet => {
             let r: request::LoadWallet =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
@@ -159,7 +165,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "unload_wallet" => {
+        Method::UnloadWallet => {
             let r: request::UnloadWallet =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
@@ -174,7 +180,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "list_wallets" => {
+        Method::ListWallets => {
             let s = state.lock().unwrap();
             let wallets = s
                 .wollets
@@ -187,7 +193,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r = response::ListWallets { wallets };
             Response::result(request.id, serde_json::to_value(r)?)
         }
-        "load_signer" => {
+        Method::LoadSigner => {
             let r: request::LoadSigner =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
@@ -227,7 +233,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.signers.insert(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
-        "unload_signer" => {
+        Method::UnloadSigner => {
             let r: request::UnloadSigner =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
@@ -238,7 +244,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::UnloadSigner { unloaded: signer })?,
             )
         }
-        "list_signers" => {
+        Method::ListSigners => {
             let s = state.lock().unwrap();
             let signers: Result<Vec<_>, _> = s
                 .signers
@@ -248,7 +254,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r = response::ListSigners { signers: signers? };
             Response::result(request.id, serde_json::to_value(r)?)
         }
-        "address" => {
+        Method::Address => {
             let r: request::Address = serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -262,7 +268,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "balance" => {
+        Method::Balance => {
             let r: request::Balance = serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -273,7 +279,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::Balance { balance })?,
             )
         }
-        "send_many" => {
+        Method::SendMany => {
             let r: request::Send = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -292,7 +298,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "singlesig_descriptor" => {
+        Method::SinglesigDescriptor => {
             let r: request::SinglesigDescriptor = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
@@ -314,7 +320,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::SinglesigDescriptor { descriptor })?,
             )
         }
-        "multisig_descriptor" => {
+        Method::MultisigDescriptor => {
             let r: request::MultisigDescriptor = serde_json::from_value(request.params.unwrap())?;
 
             let multisig_variant = r
@@ -346,7 +352,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::MultisigDescriptor { descriptor })?,
             )
         }
-        "xpub" => {
+        Method::Xpub => {
             let r: request::Xpub = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
@@ -363,7 +369,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::Xpub { keyorigin_xpub })?,
             )
         }
-        "sign" => {
+        Method::Sign => {
             let r: request::Sign = serde_json::from_value(request.params.unwrap())?;
             let s = state.lock().unwrap();
 
@@ -383,7 +389,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "broadcast" => {
+        Method::Broadcast => {
             let r: request::Broadcast = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -400,7 +406,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::Broadcast { txid: tx.txid() })?,
             )
         }
-        "wallet_details" => {
+        Method::WalletDetails => {
             let r: request::WalletDetails = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -453,7 +459,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "wallet_combine" => {
+        Method::WalletCombine => {
             let r: request::WalletCombine = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -470,7 +476,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "wallet_pset_details" => {
+        Method::WalletPsetDetails => {
             let r: request::WalletPsetDetails = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -503,7 +509,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "issue" => {
+        Method::Issue => {
             let r: request::Issue = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -523,7 +529,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        "contract" => {
+        Method::Contract => {
             let r: request::Contract = serde_json::from_value(request.params.unwrap())?;
             let c = wollet::Contract {
                 entity: wollet::Entity::Domain(r.domain),
@@ -537,10 +543,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(request.id, serde_json::to_value(c)?)
         }
-        "stop" => {
+        Method::Stop => {
             return Err(Error::Stop);
         }
-        _ => Response::unimplemented(request.id),
     };
     Ok(response)
 }

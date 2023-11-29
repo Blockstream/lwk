@@ -173,6 +173,11 @@ pub struct WalletPsetDetails {
     pub pset: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetDetails {
+    pub asset_id: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

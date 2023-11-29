@@ -154,3 +154,8 @@ pub struct WalletPsetDetails {
     pub missing_signatures_from: Vec<SignerDetails>,
     pub warnings: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetDetails {
+    pub name: String,
+}

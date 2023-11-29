@@ -40,11 +40,6 @@ pub struct UnloadWallet {
     pub unloaded: Wallet,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub enum SignerKind {
-    Software,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnloadSigner {
     pub unloaded: Signer,
@@ -109,27 +104,6 @@ pub struct Contract {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Entity {
     domain: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub enum WalletType {
-    Unknown,
-    Wpkh,
-    ShWpkh,
-    WshMulti(usize, usize),
-}
-
-impl std::fmt::Display for WalletType {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            WalletType::Unknown => write!(f, "unknown"),
-            WalletType::Wpkh => write!(f, "wpkh"),
-            WalletType::ShWpkh => write!(f, "sh_wpkh"),
-            WalletType::WshMulti(threshold, num_pubkeys) => {
-                write!(f, "wsh_multi_{}of{}", threshold, num_pubkeys)
-            }
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

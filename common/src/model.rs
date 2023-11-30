@@ -2,7 +2,7 @@ use elements_miniscript::elements::bitcoin::{
     bip32::{Fingerprint, KeySource},
     key::PublicKey,
 };
-use elements_miniscript::elements::AssetId;
+use elements_miniscript::elements::{AssetId, AssetIssuance};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -17,12 +17,25 @@ pub struct PsetSignatures {
     pub missing_signature: Vec<(PublicKey, KeySource)>,
 }
 
+/// Wrapper around `AssetIssuance` to extract data more nicely
+#[derive(Debug)]
+pub struct Issuance(AssetIssuance);
+
+impl Issuance {
+    pub fn new(issuance: AssetIssuance) -> Self {
+        Self(issuance)
+    }
+}
+
 #[derive(Debug)]
 pub struct PsetDetails {
     pub balance: PsetBalance,
 
     /// For each input, existing or missing signatures
     pub sig_details: Vec<PsetSignatures>,
+
+    /// For each input, the corresponding issuance
+    pub issuances: Vec<Issuance>,
 }
 
 impl PsetDetails {

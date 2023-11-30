@@ -16,7 +16,7 @@ use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
 use crate::WolletDescriptor;
-use common::{pset_balance, pset_signatures, PsetDetails};
+use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
 use elements_miniscript::psbt::PsbtExt;
@@ -308,6 +308,7 @@ impl Wollet {
         Ok(PsetDetails {
             balance: pset_balance(pset, self.descriptor())?,
             sig_details: pset_signatures(pset),
+            issuances: pset_issuances(pset),
         })
     }
 

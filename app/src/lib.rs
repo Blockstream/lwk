@@ -519,6 +519,33 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect();
+            let issuances = details
+                .issuances
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| e.is_issuance())
+                .map(|(vin, e)| response::Issuance {
+                    asset: e.asset().expect("issuance").to_string(),
+                    token: e.token().expect("issuance").to_string(),
+                    is_blinded: e.is_blinded(),
+                    vin: vin as u32,
+                    asset_satoshi: e.asset_satoshi().unwrap_or(0),
+                    token_satoshi: e.token_satoshi().unwrap_or(0),
+                })
+                .collect();
+            let reissuances = details
+                .issuances
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| e.is_reissuance())
+                .map(|(vin, e)| response::Reissuance {
+                    asset: e.asset().expect("reissuance").to_string(),
+                    token: e.token().expect("reissuance").to_string(),
+                    is_blinded: e.is_blinded(),
+                    vin: vin as u32,
+                    asset_satoshi: e.asset_satoshi().unwrap_or(0),
+                })
+                .collect();
 
             Response::result(
                 request.id,
@@ -527,6 +554,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     missing_signatures_from,
                     balance,
                     fee: details.balance.fee,
+                    issuances,
+                    reissuances,
                     warnings: warnings.join(", "),
                 })?,
             )

@@ -124,11 +124,32 @@ pub struct WalletCombine {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Issuance {
+    pub asset: String,
+    pub token: String,
+    pub is_blinded: bool,
+    pub vin: u32,
+    pub asset_satoshi: u64,
+    pub token_satoshi: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Reissuance {
+    pub asset: String,
+    pub token: String,
+    pub is_blinded: bool,
+    pub vin: u32,
+    pub asset_satoshi: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletPsetDetails {
     pub has_signatures_from: Vec<SignerDetails>,
     pub missing_signatures_from: Vec<SignerDetails>,
     pub balance: HashMap<String, i64>,
     pub fee: u64,
+    pub issuances: Vec<Issuance>,
+    pub reissuances: Vec<Reissuance>,
     pub warnings: String,
 }
 

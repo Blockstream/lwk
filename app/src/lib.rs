@@ -526,6 +526,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     has_signatures_from,
                     missing_signatures_from,
                     balance,
+                    fee: details.balance.fee,
                     warnings: warnings.join(", "),
                 })?,
             )

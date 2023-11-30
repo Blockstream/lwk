@@ -430,7 +430,7 @@ fn test_issue() {
         "cli {options} asset details --asset {regtest_policy_asset}"
     ));
     let name = result.get("name").unwrap().as_str().unwrap();
-    assert_eq!(name, "bitcoin");
+    assert_eq!(name, "liquid bitcoin");
 
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();

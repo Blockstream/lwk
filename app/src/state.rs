@@ -39,7 +39,7 @@ pub enum AppAsset {
 impl AppAsset {
     pub fn name(&self) -> String {
         match self {
-            AppAsset::PolicyAsset => "bitcoin".into(),
+            AppAsset::PolicyAsset => "liquid bitcoin".into(),
             AppAsset::RegistryAsset(contract) => contract.name.clone(),
             AppAsset::ReissuanceToken(asset_id) => format!("reissuance token for {asset_id}"),
         }

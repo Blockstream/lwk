@@ -34,6 +34,10 @@ impl Issuance {
     pub fn is_issuance(&self) -> bool {
         !self.is_null() && self.0.asset_blinding_nonce == ZERO_TWEAK
     }
+
+    pub fn is_reissuance(&self) -> bool {
+        !self.is_null() && self.0.asset_blinding_nonce != ZERO_TWEAK
+    }
 }
 
 #[derive(Debug)]

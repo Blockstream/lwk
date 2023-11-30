@@ -246,7 +246,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_pset_details(name, pset)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Contract {
+        },
+        CliCommand::Asset(a) => match a.command {
+            AssetCommand::Contract {
                 domain,
                 issuer_pubkey,
                 name,
@@ -257,8 +259,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
                 serde_json::to_value(r)?
             }
-        },
-        CliCommand::Asset(a) => match a.command {
             AssetCommand::Details { asset } => {
                 let r = client.asset_details(asset)?;
                 serde_json::to_value(r)?

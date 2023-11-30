@@ -30,7 +30,6 @@ impl From<WalletSubCommandsEnum> for Method {
             WalletSubCommandsEnum::Address => Method::Address,
             WalletSubCommandsEnum::Balance => Method::Balance,
             WalletSubCommandsEnum::Send => Method::SendMany,
-            WalletSubCommandsEnum::Contract => Method::Contract,
             WalletSubCommandsEnum::Issue => Method::Issue,
             WalletSubCommandsEnum::Issuances => todo!(),
             WalletSubCommandsEnum::Reissue => todo!(),
@@ -60,6 +59,7 @@ impl From<SignerSubCommandsEnum> for Method {
 impl From<AssetSubCommandsEnum> for Method {
     fn from(value: AssetSubCommandsEnum) -> Self {
         match value {
+            AssetSubCommandsEnum::Contract => Method::Contract,
             AssetSubCommandsEnum::Details => Method::AssetDetails,
         }
     }

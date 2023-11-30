@@ -395,7 +395,7 @@ fn test_issue() {
     server.generate(101);
     std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
 
-    let result = sh(&format!("cli {options} wallet contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
+    let result = sh(&format!("cli {options} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&result).unwrap();
     let result = sh(&format!(
         r#"cli {options} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"#

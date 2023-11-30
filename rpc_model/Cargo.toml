@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-elements = { version = "0.23.0", features = ["serde"] }
 schemars = "0.8.16"
 serde = { version = "1.0.193", features = ["derive"] }
+# avoid deps to the workspace
 
 [dev-dependencies]
 serde_json = "1.0.108"
-# avoid deps to the workspace

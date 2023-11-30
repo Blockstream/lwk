@@ -1,6 +1,7 @@
-#![deny(missing_docs)] // TODO move to crate level
-
 //! Data models of every requests made via RPC
+
+#[cfg(doc)]
+use crate::response;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -30,7 +31,7 @@ pub enum Direction {
     Response,
 }
 
-/// Load a wallet in the server
+/// Request to load a wallet in the server, returning [`response::Wallet`]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LoadWallet {
     /// The read-only descriptor describing the wallet outputs

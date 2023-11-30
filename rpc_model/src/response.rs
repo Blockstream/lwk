@@ -270,7 +270,7 @@ pub struct AssetDetails {
 /// Asset details
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Asset {
-    /// The asset id of the asset
+    /// The asset identifier (32 bytes as 64 hex chars)
     pub asset_id: String,
 
     /// The name of the asset

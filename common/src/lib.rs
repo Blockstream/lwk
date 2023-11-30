@@ -275,8 +275,5 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
 }
 
 pub fn pset_issuances(pset: &PartiallySignedTransaction) -> Vec<Issuance> {
-    pset.inputs()
-        .iter()
-        .map(|input| Issuance::new(input.asset_issuance()))
-        .collect()
+    pset.inputs().iter().map(Issuance::new).collect()
 }

@@ -2,6 +2,7 @@ use elements_miniscript::elements::bitcoin::{
     bip32::{Fingerprint, KeySource},
     key::PublicKey,
 };
+use elements_miniscript::elements::pset::Input;
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance};
 use std::collections::{HashMap, HashSet};
@@ -18,37 +19,60 @@ pub struct PsetSignatures {
     pub missing_signature: Vec<(PublicKey, KeySource)>,
 }
 
-/// Wrapper around `AssetIssuance` to extract data more nicely
 #[derive(Debug)]
-pub struct Issuance(AssetIssuance);
+pub struct Issuance {
+    asset: AssetId,
+    token: AssetId,
+    inner: AssetIssuance,
+}
 
 impl Issuance {
-    pub fn new(issuance: AssetIssuance) -> Self {
-        Self(issuance)
+    pub fn new(input: &Input) -> Self {
+        // There are meaningless if inner is null
+        let (asset, token) = input.issuance_ids();
+        Self {
+            asset,
+            token,
+            inner: input.asset_issuance(),
+        }
     }
 
     pub fn is_null(&self) -> bool {
-        self.0.is_null()
+        self.inner.is_null()
     }
 
     pub fn is_issuance(&self) -> bool {
-        !self.is_null() && self.0.asset_blinding_nonce == ZERO_TWEAK
+        !self.is_null() && self.inner.asset_blinding_nonce == ZERO_TWEAK
     }
 
     pub fn is_reissuance(&self) -> bool {
-        !self.is_null() && self.0.asset_blinding_nonce != ZERO_TWEAK
+        !self.is_null() && self.inner.asset_blinding_nonce != ZERO_TWEAK
     }
 
     pub fn is_blinded(&self) -> bool {
-        self.0.amount.is_confidential() || self.0.inflation_keys.is_confidential()
+        self.inner.amount.is_confidential() || self.inner.inflation_keys.is_confidential()
     }
 
     pub fn asset_satoshi(&self) -> Option<u64> {
-        self.0.amount.explicit()
+        self.inner.amount.explicit()
     }
 
     pub fn token_satoshi(&self) -> Option<u64> {
-        self.0.inflation_keys.explicit()
+        self.inner.inflation_keys.explicit()
+    }
+
+    pub fn asset(&self) -> Option<AssetId> {
+        match self.is_null() {
+            true => None,
+            false => Some(self.asset),
+        }
+    }
+
+    pub fn token(&self) -> Option<AssetId> {
+        match self.is_null() {
+            true => None,
+            false => Some(self.token),
+        }
     }
 }
 

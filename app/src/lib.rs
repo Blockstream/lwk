@@ -425,19 +425,19 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let wollet = s.wollets.get_mut(&r.name)?;
 
             let type_ = match wollet.descriptor().descriptor.desc_type() {
-                DescriptorType::Wpkh => request::WalletType::Wpkh,
-                DescriptorType::ShWpkh => request::WalletType::ShWpkh,
+                DescriptorType::Wpkh => response::WalletType::Wpkh,
+                DescriptorType::ShWpkh => response::WalletType::ShWpkh,
                 _ => match &wollet.descriptor().descriptor {
                     Descriptor::Wsh(wsh) => match wsh.as_inner() {
                         WshInner::Ms(ms) => match &ms.node {
                             Terminal::Multi(threshold, pubkeys) => {
-                                request::WalletType::WshMulti(*threshold, pubkeys.len())
+                                response::WalletType::WshMulti(*threshold, pubkeys.len())
                             }
-                            _ => request::WalletType::Unknown,
+                            _ => response::WalletType::Unknown,
                         },
-                        _ => request::WalletType::Unknown,
+                        _ => response::WalletType::Unknown,
                     },
-                    _ => request::WalletType::Unknown,
+                    _ => response::WalletType::Unknown,
                 },
             };
 

@@ -168,3 +168,32 @@ pub struct Asset {
 pub struct ListAssets {
     pub assets: Vec<Asset>,
 }
+
+/// The wallet type // TODO move to response
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub enum WalletType {
+    /// Unknow type
+    Unknown,
+
+    /// Witness pay to public key hash (segwit)
+    Wpkh,
+
+    /// Script hash Witness pay to public key hash (nested segwit)
+    ShWpkh,
+
+    /// Witnes script hash, multisig N of M
+    WshMulti(usize, usize),
+}
+
+impl std::fmt::Display for WalletType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            WalletType::Unknown => write!(f, "unknown"),
+            WalletType::Wpkh => write!(f, "wpkh"),
+            WalletType::ShWpkh => write!(f, "sh_wpkh"),
+            WalletType::WshMulti(threshold, num_pubkeys) => {
+                write!(f, "wsh_multi_{}of{}", threshold, num_pubkeys)
+            }
+        }
+    }
+}

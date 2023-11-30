@@ -137,3 +137,14 @@ pub struct WalletPsetDetails {
 pub struct AssetDetails {
     pub name: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Asset {
+    pub asset_id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ListAssets {
+    pub assets: Vec<Asset>,
+}

@@ -61,6 +61,7 @@ impl From<AssetSubCommandsEnum> for Method {
         match value {
             AssetSubCommandsEnum::Contract => Method::Contract,
             AssetSubCommandsEnum::Details => Method::AssetDetails,
+            AssetSubCommandsEnum::List => Method::ListAssets,
         }
     }
 }

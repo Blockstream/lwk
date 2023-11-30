@@ -190,6 +190,12 @@ impl Signers {
     }
 }
 
+impl Assets {
+    pub fn iter(&self) -> impl Iterator<Item = (&AssetId, &AppAsset)> {
+        self.0.iter()
+    }
+}
+
 impl State {
     pub fn insert_policy_asset(&mut self) {
         let asset_id = self.config.network.policy_asset();

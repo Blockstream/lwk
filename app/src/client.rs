@@ -242,6 +242,10 @@ impl Client {
         self.make_request(Method::AssetDetails, Some(req))
     }
 
+    pub fn list_assets(&self) -> Result<response::ListAssets, Error> {
+        self.make_request(Method::ListAssets, None::<Box<RawValue>>)
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

@@ -432,6 +432,10 @@ fn test_issue() {
     let name = result.get("name").unwrap().as_str().unwrap();
     assert_eq!(name, "liquid bitcoin");
 
+    let result = sh(&format!("cli {options} asset list"));
+    let assets = result.get("assets").unwrap().as_array().unwrap();
+    assert_eq!(assets.len(), 1);
+
     sh(&format!("cli --addr {addr} server stop"));
     t.join().unwrap();
 }

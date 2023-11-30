@@ -130,6 +130,7 @@ pub struct AssetSubCommands {
 pub enum AssetSubCommandsEnum {
     Contract,
     Details,
+    List,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -467,6 +468,9 @@ pub enum AssetCommand {
         #[arg(short, long)]
         asset: String,
     },
+
+    /// List assets
+    List,
 }
 
 #[derive(Debug, Args)]

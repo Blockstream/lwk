@@ -561,6 +561,19 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::AssetDetails { name: asset.name() })?,
             )
         }
+        Method::ListAssets => {
+            let s = state.lock().unwrap();
+            let assets = s
+                .assets
+                .iter()
+                .map(|(asset_id, asset)| response::Asset {
+                    asset_id: asset_id.to_string(),
+                    name: asset.name(),
+                })
+                .collect();
+            let r = response::ListAssets { assets };
+            Response::result(request.id, serde_json::to_value(r)?)
+        }
         Method::Stop => {
             return Err(Error::Stop);
         }

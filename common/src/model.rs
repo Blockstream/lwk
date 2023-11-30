@@ -38,6 +38,10 @@ impl Issuance {
     pub fn is_reissuance(&self) -> bool {
         !self.is_null() && self.0.asset_blinding_nonce != ZERO_TWEAK
     }
+
+    pub fn is_blinded(&self) -> bool {
+        self.0.amount.is_confidential() || self.0.inflation_keys.is_confidential()
+    }
 }
 
 #[derive(Debug)]

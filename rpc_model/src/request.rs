@@ -1,3 +1,7 @@
+#![deny(missing_docs)] // TODO move to crate level
+
+//! Data models of every requests made via RPC
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -15,10 +19,14 @@ pub struct Schema {
     pub direction: Direction,
 }
 
+/// The direction, to the server (request) or from the server (response)
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Direction {
+    /// Request, to the server
     Request,
+
+    /// Response, from the server
     Response,
 }
 
@@ -32,42 +40,68 @@ pub struct LoadWallet {
     pub name: String,
 }
 
+/// Unload the wallet identified by the given name
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnloadWallet {
+    /// The name given to the wallet
     pub name: String,
 }
 
+/// Load a signer in the server
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct LoadSigner {
+    /// The name of the signer, will be needed to reference it in other calls
     pub name: String,
+
+    /// The kind of the wallet. // TODO make enum
     pub kind: String,
+
+    /// The mnemonic, only needed for loading software signers
     pub mnemonic: Option<String>,
+
+    /// The fingerprint identifyng the signer, only needed for external signers
     pub fingerprint: Option<String>,
 }
 
+/// Unload the signer identified by the given name
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnloadSigner {
+    /// The name of the signer
     pub name: String,
 }
 
+/// Request a receiving address
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Address {
+    /// The wallet name
     pub name: String,
+
+    /// The derivation index for the wildcard, if missing the first unused index is used
     pub index: Option<u32>,
 }
 
+/// The balance of a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
+    /// The wallet name
     pub name: String,
 }
 
+/// Send a transaction from a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Send {
-    pub addressees: Vec<UnvalidatedAddressee>,
-    pub fee_rate: Option<f32>,
+    /// The wallet name creating the transaction
     pub name: String,
+
+    /// Recipient addressees
+    pub addressees: Vec<UnvalidatedAddressee>,
+
+    /// Optiona fee rate in sat/vb
+    pub fee_rate: Option<f32>,
 }
 
+/// An unvalidated addressee, containing, other than the address, the amount in satoshi to be sent
+/// and the asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnvalidatedAddressee {
     /// The amount to send in satoshi
@@ -84,71 +118,135 @@ pub struct UnvalidatedAddressee {
     pub asset: String,
 }
 
+/// A request containing information to create a single signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SinglesigDescriptor {
+    /// The signer name
     pub name: String,
+
+    /// The blinding key
     pub descriptor_blinding_key: String,
+
+    /// The singlesig kind // TODO enum
     pub singlesig_kind: String,
 }
 
+/// A request containing information to create a multi signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MultisigDescriptor {
+    /// The blinding key
     pub descriptor_blinding_key: String,
+
+    /// The multisig kind // TODO enum
     pub multisig_kind: String,
+
+    /// The number of signatures required to spend
     pub threshold: u32,
+
+    /// The partecipants in the multisig wallet xpubs with key origin
     pub keyorigin_xpubs: Vec<String>,
 }
 
+/// Request to a signer for a derived xpub
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Xpub {
+    /// The signer name
     pub name: String,
+
+    /// The xpub kind // TODO enum
     pub xpub_kind: String,
 }
 
+/// A request to sign a PSET
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Sign {
+    /// The signer name
     pub name: String,
+
+    /// The PSET in base64
     pub pset: String,
 }
 
+/// Request to broadcast a transaction
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Broadcast {
+    /// The wallet name
     pub name: String,
+
+    /// Perform transaction extraction and verification but avoid doing the last broadcast step // TODO verification is not complete at the moment
     pub dry_run: bool,
+
+    /// The PSET in base64
     pub pset: String,
 }
 
+/// Request details for a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletDetails {
+    /// The wallet name
     pub name: String,
 }
 
+/// Request to do an issuance
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Issue {
+    /// The wallet name doing the issuance
     pub name: String,
+
+    /// The number of units of the asset created
     pub satoshi_asset: u64,
+
+    /// The address receiving the asset, if missing a receiving address from the wallet doing the issuance is used
     pub address_asset: Option<String>,
+
+    /// The number of reissuance token to be created
     pub satoshi_token: u64,
+
+    /// The address receiving the reissuance token, if missing a receiving address from the wallet doing the issuance is used
     pub address_token: Option<String>,
+
+    /// The contract defininig asset metadata, such as name, ticker and precision. See [`Contract`] request to create
     pub contract: Option<String>,
+
+    /// The optional fee rate
     pub fee_rate: Option<f32>,
 }
 
+/// A request creating a contract in the JSON format expected by the issue call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Contract {
+    /// Domain of the issuer
     pub domain: String,
+
+    /// Pubkey of the issuer in hex format (33 bytes/66 chars)
     pub issuer_pubkey: String,
+
+    /// The name of the asset to be created
     pub name: String,
+
+    /// The precision of the amount of the created asset, for example 2 means two digits after the decimal separator
     pub precision: u8,
+
+    /// The ticker of the asset
     pub ticker: String,
+
+    /// The protocol version (0)
     pub version: u8,
 }
 
+/// The wallet type // TODO move to response
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub enum WalletType {
+    /// Unknow type
     Unknown,
+
+    /// Witness pay to public key hash (segwit)
     Wpkh,
+
+    /// Script hash Witness pay to public key hash (nested segwit)
     ShWpkh,
+
+    /// Witnes script hash, multisig N of M
     WshMulti(usize, usize),
 }
 
@@ -165,20 +263,30 @@ impl std::fmt::Display for WalletType {
     }
 }
 
+/// Request to combine PSETs
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletCombine {
+    /// The wallet name
     pub name: String,
+
+    /// A list of PSET to combine
     pub pset: Vec<String>,
 }
 
+/// Request to see details of a PSET
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletPsetDetails {
+    /// The wallet name
     pub name: String,
+
+    /// The PSET in base64 to inspect
     pub pset: String,
 }
 
+/// Request to have details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {
+    /// The asset identifier
     pub asset_id: String,
 }
 

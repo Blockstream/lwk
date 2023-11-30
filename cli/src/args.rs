@@ -75,6 +75,7 @@ pub struct MainCommandArgs {
 pub enum MainCommand {
     Wallet(WalletSubCommands),
     Signer(SignerSubCommands),
+    Asset(AssetSubCommands),
 }
 
 #[derive(Debug, Args)]
@@ -117,6 +118,17 @@ pub enum SignerSubCommandsEnum {
     Sign,
     SinglesigDesc,
     Xpub,
+}
+
+#[derive(Debug, Args)]
+pub struct AssetSubCommands {
+    #[command(subcommand)]
+    pub command: AssetSubCommandsEnum,
+}
+
+#[derive(Debug, Subcommand, ValueEnum, Clone)]
+pub enum AssetSubCommandsEnum {
+    Details,
 }
 
 #[derive(ValueEnum, Clone, Debug)]

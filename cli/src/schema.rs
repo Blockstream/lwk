@@ -2,17 +2,19 @@ use app::method::Method;
 use rpc_model::request::Direction;
 use serde_json::Value;
 
-use crate::args::{self, SignerSubCommandsEnum, WalletSubCommandsEnum};
+use crate::args::{self, AssetSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum};
 
 pub(crate) fn schema(a: args::SchemaArgs, client: app::Client) -> Result<Value, anyhow::Error> {
     Ok(match a.command {
         args::DirectionCommand::Request(req) => match req.command {
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
+            args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
         },
         args::DirectionCommand::Response(res) => match res.command {
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
+            args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
         },
     })
 }
@@ -49,6 +51,14 @@ impl From<SignerSubCommandsEnum> for Method {
             SignerSubCommandsEnum::Sign => Method::Sign,
             SignerSubCommandsEnum::SinglesigDesc => Method::SinglesigDescriptor,
             SignerSubCommandsEnum::Xpub => Method::Xpub,
+        }
+    }
+}
+
+impl From<AssetSubCommandsEnum> for Method {
+    fn from(value: AssetSubCommandsEnum) -> Self {
+        match value {
+            AssetSubCommandsEnum::Details => Method::AssetDetails,
         }
     }
 }

@@ -376,17 +376,14 @@ fn test_issue() {
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!(
-        r#"{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
+        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
-    let desc_generated = r.get("descriptor").unwrap().as_str().unwrap();
+    let desc = r.get("descriptor").unwrap().as_str().unwrap();
 
-    let r = sh(&format!(r#"{cli} wallet load --name w1 {desc_generated}"#));
-    assert_eq!(
-        r.get("descriptor").unwrap().as_str().unwrap(),
-        desc_generated
-    );
+    let r = sh(&format!("{cli} wallet load --name w1 {desc}"));
+    assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let r = sh(&format!(r#"{cli} wallet address --name w1"#));
+    let r = sh(&format!("{cli} wallet address --name w1"));
     let address = r.get("address").unwrap().as_str().unwrap();
     let address = Address::from_str(address).unwrap();
 
@@ -397,37 +394,33 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
     let r = sh(&format!(
-        r#"{cli} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"#
+        "{cli} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let r = sh(&format!(r#"{cli} signer sign --name s1 {pset}"#));
+    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
     assert_ne!(pset_signed, pset_unsigned);
 
-    let r = sh(&format!(
-        r#"{cli} wallet broadcast --name w1 {pset_signed}"#
-    ));
+    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset_signed}"));
     assert!(r.get("txid").unwrap().as_str().is_some());
 
-    let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let r = sh(&format!("{cli} wallet balance --name w1"));
     let balance_obj = r.get("balance").unwrap();
     let mut asset_found = false;
     for (key, value) in balance_obj.as_object().unwrap() {
-        if key != regtest_policy_asset {
+        if key != policy_asset {
             asset_found = true;
             assert_eq!(value.as_u64().unwrap(), 1000);
         }
     }
     assert!(asset_found);
 
-    let r = sh(&format!(
-        "{cli} asset details --asset {regtest_policy_asset}"
-    ));
+    let r = sh(&format!("{cli} asset details --asset {policy_asset}"));
     let name = r.get("name").unwrap().as_str().unwrap();
     assert_eq!(name, "liquid bitcoin");
 

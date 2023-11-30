@@ -46,6 +46,10 @@ impl Issuance {
     pub fn asset_satoshi(&self) -> Option<u64> {
         self.0.amount.explicit()
     }
+
+    pub fn token_satoshi(&self) -> Option<u64> {
+        self.0.inflation_keys.explicit()
+    }
 }
 
 #[derive(Debug)]

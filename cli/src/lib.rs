@@ -10,7 +10,7 @@ use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 use crate::args::{AssetCommand, CliCommand, Network, ServerCommand, SignerCommand, WalletCommand};
 pub use args::Cli;
 
-pub use args::{SignerSubCommandsEnum, WalletSubCommandsEnum};
+pub use args::{AssetSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum};
 
 mod args;
 mod schema;

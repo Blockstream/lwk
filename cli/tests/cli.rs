@@ -8,7 +8,7 @@ use clap::{Parser, ValueEnum};
 use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
 
-use cli::{inner_main, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum};
+use cli::{inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum};
 use test_session::setup;
 
 mod test_session;
@@ -669,6 +669,16 @@ fn test_schema() {
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
 
         let result = sh(&format!("cli --addr {addr} schema response signer {cmd}"));
+        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+    }
+
+    for a in AssetSubCommandsEnum::value_variants() {
+        let a = a.to_possible_value();
+        let cmd = a.map(|e| e.get_name().to_string()).unwrap();
+        let result = sh(&format!("cli --addr {addr} schema request asset {cmd}"));
+        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+
+        let result = sh(&format!("cli --addr {addr} schema response asset {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
     }
 

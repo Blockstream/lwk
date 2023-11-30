@@ -25,6 +25,10 @@ impl Issuance {
     pub fn new(issuance: AssetIssuance) -> Self {
         Self(issuance)
     }
+
+    pub fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
 }
 
 #[derive(Debug)]

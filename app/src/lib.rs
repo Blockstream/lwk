@@ -9,7 +9,7 @@
 //!
 //! All the requests and responses data model are in the [`rpc_model`] crate.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -513,11 +513,19 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     fingerprint: f.to_string(),
                 })
                 .collect();
+            let balance: HashMap<String, i64> = details
+                .balance
+                .balances
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletPsetDetails {
                     has_signatures_from,
                     missing_signatures_from,
+                    balance,
                     warnings: warnings.join(", "),
                 })?,
             )

@@ -127,6 +127,7 @@ pub struct WalletCombine {
 pub struct WalletPsetDetails {
     pub has_signatures_from: Vec<SignerDetails>,
     pub missing_signatures_from: Vec<SignerDetails>,
+    pub balance: HashMap<String, i64>,
     pub warnings: String,
 }
 

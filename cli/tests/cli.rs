@@ -586,6 +586,7 @@ fn test_multisig() {
         "{cli} wallet pset-details --name multi -p {pset_u}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
     assert_eq!(has_sigs.len(), 0);
     let missing_sigs = r
@@ -603,6 +604,7 @@ fn test_multisig() {
         "{cli} wallet pset-details --name multi -p {pset_s1}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
     assert_eq!(has_sigs.len(), 1);
     assert_eq!(has_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
@@ -618,6 +620,7 @@ fn test_multisig() {
         "{cli} wallet pset-details --name multi -p {pset_s2}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
     let has_sigs = r.get("has_signatures_from").unwrap().as_array().unwrap();
     assert_eq!(has_sigs.len(), 1);
     assert_eq!(has_sigs[0].get("name").unwrap().as_str().unwrap(), "s2");

@@ -16,7 +16,7 @@ pub struct GenerateSigner {
     pub mnemonic: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ListSigners {
     pub signers: Vec<Signer>,
 }
@@ -37,12 +37,12 @@ pub struct UnloadWallet {
     pub unloaded: Wallet,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnloadSigner {
     pub unloaded: Signer,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Signer {
     pub name: String,
     pub fingerprint: String,
@@ -52,7 +52,7 @@ pub struct Signer {
     pub xpub: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Address {
     pub address: String,
     pub index: u32,
@@ -83,7 +83,7 @@ pub struct Xpub {
     pub keyorigin_xpub: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Broadcast {
     pub txid: String,
 }
@@ -103,14 +103,14 @@ pub struct Entity {
     domain: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignerDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     pub fingerprint: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletDetails {
     #[serde(rename = "type")]
     pub type_: String,
@@ -123,7 +123,7 @@ pub struct WalletCombine {
     pub pset: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletPsetDetails {
     pub has_signatures_from: Vec<SignerDetails>,
     pub missing_signatures_from: Vec<SignerDetails>,

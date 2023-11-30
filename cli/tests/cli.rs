@@ -430,15 +430,8 @@ fn test_issue() {
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let r = sh(&format!("{cli} wallet balance --name w1"));
-    let balance_obj = r.get("balance").unwrap();
-    let mut asset_found = false;
-    for (key, value) in balance_obj.as_object().unwrap() {
-        if key != policy_asset {
-            asset_found = true;
-            assert_eq!(value.as_u64().unwrap(), 1000);
-        }
-    }
-    assert!(asset_found);
+    let balance = r.get("balance").unwrap().as_object().unwrap();
+    assert_eq!(balance.get(asset).unwrap().as_u64().unwrap(), 1000);
 
     let r = sh(&format!("{cli} asset details --asset {policy_asset}"));
     let name = r.get("name").unwrap().as_str().unwrap();

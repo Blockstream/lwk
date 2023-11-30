@@ -1,6 +1,3 @@
-use elements::bitcoin::bip32::{ExtendedPubKey, Fingerprint};
-use elements::bitcoin::hash_types::XpubIdentifier;
-use elements::{AssetId, Txid};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,22 +45,22 @@ pub struct UnloadSigner {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Signer {
     pub name: String,
-    pub fingerprint: Fingerprint,
+    pub fingerprint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<XpubIdentifier>,
+    pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub xpub: Option<ExtendedPubKey>,
+    pub xpub: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Address {
-    pub address: elements::Address,
+    pub address: String,
     pub index: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
-    pub balance: HashMap<AssetId, u64>,
+    pub balance: HashMap<String, u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -88,7 +85,7 @@ pub struct Xpub {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Broadcast {
-    pub txid: Txid,
+    pub txid: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -110,7 +107,7 @@ pub struct Entity {
 pub struct SignerDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    pub fingerprint: Fingerprint,
+    pub fingerprint: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

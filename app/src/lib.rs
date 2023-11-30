@@ -270,7 +270,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(
                 request.id,
                 serde_json::to_value(response::Address {
-                    address: addr.address().clone(),
+                    address: addr.address().to_string(),
                     index: addr.index(),
                 })?,
             )
@@ -280,7 +280,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let balance = wollet.balance()?;
+            let balance = wollet
+                .balance()?
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
             Response::result(
                 request.id,
                 serde_json::to_value(response::Balance { balance })?,
@@ -410,7 +414,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(
                 request.id,
-                serde_json::to_value(response::Broadcast { txid: tx.txid() })?,
+                serde_json::to_value(response::Broadcast {
+                    txid: tx.txid().to_string(),
+                })?,
             )
         }
         Method::WalletDetails => {
@@ -452,7 +458,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     let name = s.signers.name_from_fingerprint(fingerprint, &mut warnings);
                     response::SignerDetails {
                         name,
-                        fingerprint: *fingerprint,
+                        fingerprint: fingerprint.to_string(),
                     }
                 })
                 .collect();
@@ -496,7 +502,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .iter()
                 .map(|f| response::SignerDetails {
                     name: s.signers.name_from_fingerprint(f, &mut warnings),
-                    fingerprint: *f,
+                    fingerprint: f.to_string(),
                 })
                 .collect();
             let missing_signatures_from = details
@@ -504,7 +510,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .iter()
                 .map(|f| response::SignerDetails {
                     name: s.signers.name_from_fingerprint(f, &mut warnings),
-                    fingerprint: *f,
+                    fingerprint: f.to_string(),
                 })
                 .collect();
             Response::result(
@@ -591,9 +597,9 @@ fn signer_response_from(
 
     Ok(response::Signer {
         name: name.to_string(),
-        id,
-        fingerprint,
-        xpub,
+        id: id.map(|i| i.to_string()),
+        fingerprint: fingerprint.to_string(),
+        xpub: xpub.map(|x| x.to_string()),
     })
 }
 

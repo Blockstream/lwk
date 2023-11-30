@@ -2,6 +2,7 @@ use elements_miniscript::elements::bitcoin::{
     bip32::{Fingerprint, KeySource},
     key::PublicKey,
 };
+use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance};
 use std::collections::{HashMap, HashSet};
 
@@ -28,6 +29,10 @@ impl Issuance {
 
     pub fn is_null(&self) -> bool {
         self.0.is_null()
+    }
+
+    pub fn is_issuance(&self) -> bool {
+        !self.is_null() && self.0.asset_blinding_nonce == ZERO_TWEAK
     }
 }
 

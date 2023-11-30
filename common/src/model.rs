@@ -49,7 +49,7 @@ impl Issuance {
         !self.is_null() && self.inner.asset_blinding_nonce != ZERO_TWEAK
     }
 
-    pub fn is_blinded(&self) -> bool {
+    pub fn is_confidential(&self) -> bool {
         self.inner.amount.is_confidential() || self.inner.inflation_keys.is_confidential()
     }
 

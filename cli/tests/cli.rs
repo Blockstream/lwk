@@ -407,7 +407,7 @@ fn test_issue() {
     assert_eq!(issuances.len(), 1);
     let issuance = &issuances[0].as_object().unwrap();
     assert_eq!(issuance.get("vin").unwrap().as_u64().unwrap(), 0);
-    assert!(!issuance.get("is_blinded").unwrap().as_bool().unwrap());
+    assert!(!issuance.get("is_confidential").unwrap().as_bool().unwrap());
     let asset = issuance.get("asset").unwrap().as_str().unwrap();
     let token = issuance.get("token").unwrap().as_str().unwrap();
     let asset_sats = issuance.get("asset_satoshi").unwrap().as_u64().unwrap();

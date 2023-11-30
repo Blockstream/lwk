@@ -527,7 +527,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .map(|(vin, e)| response::Issuance {
                     asset: e.asset().expect("issuance").to_string(),
                     token: e.token().expect("issuance").to_string(),
-                    is_blinded: e.is_blinded(),
+                    is_confidential: e.is_confidential(),
                     vin: vin as u32,
                     asset_satoshi: e.asset_satoshi().unwrap_or(0),
                     token_satoshi: e.token_satoshi().unwrap_or(0),
@@ -541,7 +541,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .map(|(vin, e)| response::Reissuance {
                     asset: e.asset().expect("reissuance").to_string(),
                     token: e.token().expect("reissuance").to_string(),
-                    is_blinded: e.is_blinded(),
+                    is_confidential: e.is_confidential(),
                     vin: vin as u32,
                     asset_satoshi: e.asset_satoshi().unwrap_or(0),
                 })

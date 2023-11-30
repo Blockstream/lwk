@@ -127,7 +127,7 @@ pub struct WalletCombine {
 pub struct Issuance {
     pub asset: String,
     pub token: String,
-    pub is_blinded: bool,
+    pub is_confidential: bool,
     pub vin: u32,
     pub asset_satoshi: u64,
     pub token_satoshi: u64,
@@ -137,7 +137,7 @@ pub struct Issuance {
 pub struct Reissuance {
     pub asset: String,
     pub token: String,
-    pub is_blinded: bool,
+    pub is_confidential: bool,
     pub vin: u32,
     pub asset_satoshi: u64,
 }

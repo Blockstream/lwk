@@ -76,6 +76,7 @@ pub enum MainCommand {
     Wallet(WalletSubCommands),
     Signer(SignerSubCommands),
     Asset(AssetSubCommands),
+    Schema,
 }
 
 #[derive(Debug, Args)]

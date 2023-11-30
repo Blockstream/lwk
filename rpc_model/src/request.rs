@@ -11,7 +11,7 @@ pub struct Schema {
     /// Name of the method to request the schema for
     pub method: String,
 
-    /// Specify if requesting the schema for the request or  the response
+    /// Specify if requesting the schema for the request or the response
     pub direction: Direction,
 }
 

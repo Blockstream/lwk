@@ -4,7 +4,7 @@ use rpc_model::{
     request::{self, Direction},
     response,
 };
-use schemars::{schema::RootSchema, schema_for};
+use schemars::schema_for;
 use serde_json::Value;
 
 #[derive(Debug, thiserror::Error)]
@@ -71,7 +71,7 @@ impl Method {
                 Method::Stop => schema_for!(request::Empty),
             },
             Direction::Response => match self {
-                Method::Schema => RootSchema::default(), //TODO schema of schema?
+                Method::Schema => return serde_json::from_str(include_str!("../schema.json")),
                 Method::GenerateSigner => schema_for!(response::GenerateSigner),
                 Method::Version => schema_for!(response::Version),
                 Method::LoadWallet => schema_for!(response::Wallet),

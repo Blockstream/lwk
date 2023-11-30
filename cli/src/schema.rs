@@ -10,11 +10,13 @@ pub(crate) fn schema(a: args::SchemaArgs, client: app::Client) -> Result<Value, 
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
             args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
+            args::MainCommand::Schema => client.schema(Method::Schema, Direction::Request)?,
         },
         args::DirectionCommand::Response(res) => match res.command {
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
             args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
+            args::MainCommand::Schema => client.schema(Method::Schema, Direction::Response)?,
         },
     })
 }

@@ -239,7 +239,7 @@ impl Client {
 
     pub fn asset_details(&self, asset_id: String) -> Result<response::AssetDetails, Error> {
         let req = request::AssetDetails { asset_id };
-        self.make_request("asset_details", Some(req))
+        self.make_request(Method::AssetDetails, Some(req))
     }
 
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {

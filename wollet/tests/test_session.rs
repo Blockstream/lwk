@@ -528,6 +528,13 @@ impl TestWollet {
         let (asset, token) = issuance_input.issuance_ids();
 
         let details = self.wollet.get_details(&pset).unwrap();
+        assert_eq!(n_issuances(&details), 1);
+        assert_eq!(n_reissuances(&details), 0);
+        let issuance = &details.issuances[0];
+        assert_eq!(asset, issuance.asset().unwrap());
+        assert_eq!(token, issuance.token().unwrap());
+        assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap());
+        assert_eq!(satoshi_token, issuance.token_satoshi().unwrap());
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -542,8 +549,6 @@ impl TestWollet {
             *details.balance.balances.get(&token).unwrap_or(&0),
             satoshi_token as i64
         );
-        assert_eq!(n_issuances(&details), 1);
-        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -594,6 +599,17 @@ impl TestWollet {
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 1);
+        let reissuance = details
+            .issuances
+            .iter()
+            .find(|e| e.is_reissuance())
+            .unwrap();
+        assert_eq!(asset, &reissuance.asset().unwrap());
+        assert_eq!(issuance.token, reissuance.token().unwrap());
+        assert_eq!(satoshi_asset, reissuance.asset_satoshi().unwrap());
+        assert!(reissuance.token_satoshi().is_none());
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
         assert_eq!(
@@ -608,8 +624,6 @@ impl TestWollet {
             *details.balance.balances.get(&issuance.token).unwrap(),
             0i64
         );
-        assert_eq!(n_issuances(&details), 0);
-        assert_eq!(n_reissuances(&details), 1);
 
         for signer in signers {
             self.sign(signer, &mut pset);

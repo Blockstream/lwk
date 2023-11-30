@@ -395,6 +395,8 @@ impl TestWollet {
             *details.balance.balances.get(&self.policy_asset()).unwrap(),
             balance
         );
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -445,6 +447,8 @@ impl TestWollet {
             *details.balance.balances.get(asset).unwrap(),
             -(satoshi as i64)
         );
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -491,6 +495,8 @@ impl TestWollet {
         // Checking the balance here has a bit too many cases:
         // asset1,2 are btc, asset1,2 are equal, addr1,2 belong to the wallet
         // Skipping the checks here
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -536,6 +542,8 @@ impl TestWollet {
             *details.balance.balances.get(&token).unwrap_or(&0),
             satoshi_token as i64
         );
+        assert_eq!(n_issuances(&details), 1);
+        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -600,6 +608,8 @@ impl TestWollet {
             *details.balance.balances.get(&issuance.token).unwrap(),
             0i64
         );
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 1);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -648,6 +658,8 @@ impl TestWollet {
             *details.balance.balances.get(asset).unwrap_or(&0),
             expected_asset
         );
+        assert_eq!(n_issuances(&details), 0);
+        assert_eq!(n_reissuances(&details), 0);
 
         for signer in signers {
             self.sign(signer, &mut pset);
@@ -776,4 +788,16 @@ pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
             s.register_multisig(params.clone());
         }
     }
+}
+
+fn n_issuances(details: &common::PsetDetails) -> usize {
+    details.issuances.iter().filter(|e| e.is_issuance()).count()
+}
+
+fn n_reissuances(details: &common::PsetDetails) -> usize {
+    details
+        .issuances
+        .iter()
+        .filter(|e| e.is_reissuance())
+        .count()
 }

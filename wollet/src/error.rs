@@ -133,6 +133,9 @@ pub enum Error {
 
     #[error("Private blinding key not available")]
     MissingPrivateBlindingKey,
+
+    #[error("Contract does not commit to asset id")]
+    ContractDoesNotCommitToAssetId,
 }
 
 // cannot derive automatically with this error because of trait bound

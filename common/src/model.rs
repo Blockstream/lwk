@@ -42,6 +42,10 @@ impl Issuance {
     pub fn is_blinded(&self) -> bool {
         self.0.amount.is_confidential() || self.0.inflation_keys.is_confidential()
     }
+
+    pub fn asset_satoshi(&self) -> Option<u64> {
+        self.0.amount.explicit()
+    }
 }
 
 #[derive(Debug)]

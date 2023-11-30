@@ -399,6 +399,26 @@ fn test_issue() {
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
+    let r = sh(&format!("{cli} wallet pset-details --name w1 -p {pset}"));
+    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
+    assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
+    let issuances = r.get("issuances").unwrap().as_array().unwrap();
+    assert_eq!(issuances.len(), 1);
+    let issuance = &issuances[0].as_object().unwrap();
+    assert_eq!(issuance.get("vin").unwrap().as_u64().unwrap(), 0);
+    assert!(!issuance.get("is_blinded").unwrap().as_bool().unwrap());
+    let asset = issuance.get("asset").unwrap().as_str().unwrap();
+    let token = issuance.get("token").unwrap().as_str().unwrap();
+    let asset_sats = issuance.get("asset_satoshi").unwrap().as_u64().unwrap();
+    let token_sats = issuance.get("token_satoshi").unwrap().as_u64().unwrap();
+    assert_eq!(asset_sats, 1000);
+    assert_eq!(token_sats, 0);
+    let balance = r.get("balance").unwrap().as_object().unwrap();
+    // TODO: util to check balance with less unwrap
+    assert_eq!(balance.get(asset).unwrap().as_i64().unwrap(), 1000);
+    assert!(balance.get(token).is_none());
+
     let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();

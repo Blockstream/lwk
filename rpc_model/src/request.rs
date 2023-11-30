@@ -101,8 +101,7 @@ pub struct Send {
     pub fee_rate: Option<f32>,
 }
 
-/// An unvalidated addressee, containing, other than the address, the amount in satoshi to be sent
-/// and the asset
+///  An addressee which has yet to be validated
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnvalidatedAddressee {
     /// The amount to send in satoshi
@@ -125,7 +124,7 @@ pub struct SinglesigDescriptor {
     /// The signer name
     pub name: String,
 
-    /// The blinding key
+    /// The descriptor blinding key
     pub descriptor_blinding_key: String,
 
     /// The singlesig kind // TODO enum
@@ -135,7 +134,7 @@ pub struct SinglesigDescriptor {
 /// A request containing information to create a multi signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct MultisigDescriptor {
-    /// The blinding key
+    /// The descriptor blinding key
     pub descriptor_blinding_key: String,
 
     /// The multisig kind // TODO enum

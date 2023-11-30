@@ -176,11 +176,11 @@ pub struct SignerDetails {
 /// Details of a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletDetails {
-    /// type of the wallet // TODO make enum
+    /// Type of the wallet // TODO make enum
     #[serde(rename = "type")]
     pub type_: String,
 
-    /// signers of this wallet
+    /// Signers of this wallet
     pub signers: Vec<SignerDetails>,
 
     /// Warnings on this wallet
@@ -197,10 +197,10 @@ pub struct WalletCombine {
 /// Response containing detail of a PSET
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Issuance {
-    /// asset id
+    /// Asset id
     pub asset: String,
 
-    /// token id
+    /// Token id
     pub token: String,
 
     /// Wheter the issuance is confidential

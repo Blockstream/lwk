@@ -257,7 +257,7 @@ impl Jade {
             &hex::encode(&buf),
         );
 
-        self.conn.write_all(&buf).unwrap(); // TODO handle this
+        self.conn.write_all(&buf).map_err(|e| Error::IoError(e))?; // not sure why the map_err is needed
 
         let mut rx = [0u8; 4096];
 

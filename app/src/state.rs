@@ -155,7 +155,7 @@ impl Signers {
         };
         if let Some(signer) = jade {
             // replace the existing AppSigner::JadeId with AppSigner::AvailableSigner
-            self.insert(name, signer)?;
+            self.0.insert(name.to_string(), signer);
         }
 
         match self.get(name)? {

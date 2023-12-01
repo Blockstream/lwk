@@ -7,10 +7,13 @@ use serde::{Deserialize, Serialize};
 pub enum Error {
     #[error("Jade Error: {0}")]
     JadeError(ErrorDetails),
+
     #[error("IO Error: {0}")]
     IoError(std::io::Error),
+
     #[error("SystemTime Error: {0}")]
     SystemTimeError(SystemTimeError),
+
     #[cfg(feature = "serial")]
     #[error("Serial Error: {0}")]
     SerialError(#[from] serialport::Error),

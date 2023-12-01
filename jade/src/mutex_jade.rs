@@ -98,3 +98,22 @@ impl Signer for &MutexJade {
         Ok(MasterBlindingKey::from_seed(&bytes[..]))
     }
 }
+
+impl Signer for MutexJade {
+    type Error = crate::sign_pset::Error;
+
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        Signer::sign(&self, pset)
+    }
+
+    fn derive_xpub(
+        &self,
+        path: &elements::bitcoin::bip32::DerivationPath,
+    ) -> Result<ExtendedPubKey, Self::Error> {
+        Signer::derive_xpub(&self, path)
+    }
+
+    fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
+        Signer::slip77_master_blinding_key(&self)
+    }
+}

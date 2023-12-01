@@ -279,6 +279,10 @@ impl Client {
         self.make_request(Method::Schema, Some(req))
     }
 
+    pub fn signer_jade_id(&self) -> Result<Value, Error> {
+        self.make_request(Method::SignerJadeId, None::<Box<RawValue>>)
+    }
+
     pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
         let _: Result<Value, Error> = self.make_request(Method::Stop, None::<Box<RawValue>>);

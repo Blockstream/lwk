@@ -180,6 +180,9 @@ pub enum SignerCommand {
     /// Generate a softwawre signer, returns a mnemonic
     Generate,
 
+    /// Probe connected Jades, unlocks and returns identifiers that allows to load a Jade
+    JadeId,
+
     /// Load a software signer giving it a name
     LoadSoftware {
         #[arg(long)]

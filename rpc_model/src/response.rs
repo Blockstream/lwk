@@ -291,6 +291,13 @@ pub struct ListAssets {
     pub assets: Vec<Asset>,
 }
 
+/// Asset details
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct JadeId {
+    /// The jade full identifier (20 bytes as 40 hex chars), the first 4 bytes are the fingerprint
+    pub identifier: String,
+}
+
 /// The wallet type // TODO move to response
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub enum WalletType {

@@ -44,6 +44,7 @@ pub enum Method {
     ListAssets,
     AssetInsert,
     Stop,
+    SignerJadeId,
 }
 impl Method {
     pub(crate) fn schema(&self, direction: request::Direction) -> Result<Value, serde_json::Error> {
@@ -77,6 +78,7 @@ impl Method {
                 Method::ListAssets => schema_for!(request::Empty),
                 Method::AssetInsert => schema_for!(request::AssetInsert),
                 Method::Stop => schema_for!(request::Empty),
+                Method::SignerJadeId => schema_for!(request::Empty),
             },
             Direction::Response => match self {
                 Method::Schema => return serde_json::from_str(include_str!("../schema.json")),
@@ -106,7 +108,8 @@ impl Method {
                 Method::AssetDetails => schema_for!(response::AssetDetails),
                 Method::ListAssets => schema_for!(response::ListAssets),
                 Method::AssetInsert => schema_for!(response::Empty),
-                Method::Stop => schema_for!(response::Empty),
+                Method::Stop => schema_for!(request::Empty),
+                Method::SignerJadeId => schema_for!(response::JadeId),
             },
         })
     }
@@ -144,6 +147,7 @@ impl FromStr for Method {
             "asset_details" => Method::AssetDetails,
             "list_assets" => Method::ListAssets,
             "asset_insert" => Method::AssetInsert,
+            "signer_jade_id" => Method::SignerJadeId,
             "stop" => Method::Stop,
             _ => {
                 return Err(MethodNotExist {
@@ -185,6 +189,7 @@ impl std::fmt::Display for Method {
             Method::ListAssets => "list_assets",
             Method::AssetInsert => "asset_insert",
             Method::Stop => "stop",
+            Method::SignerJadeId => "signer_jade_id",
         };
         write!(f, "{}", s)
     }

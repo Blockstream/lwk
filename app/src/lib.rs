@@ -18,6 +18,7 @@ use common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
+use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
@@ -629,6 +630,18 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 r.is_confidential,
             )?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
+
+        Method::SignerJadeId => {
+            let s = state.lock().unwrap();
+            let network = s.config.jade_network();
+            let jade = MutexJade::from_serial(network)?;
+            jade.unlock()?;
+            let identifier = jade.identifier().unwrap().to_string(); // TODO remove unwrap
+            Response::result(
+                request.id,
+                serde_json::to_value(response::JadeId { identifier })?,
+            )
         }
         Method::Stop => {
             return Err(Error::Stop);

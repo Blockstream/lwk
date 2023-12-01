@@ -123,6 +123,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.generate_signer()?;
                 serde_json::to_value(j)?
             }
+            SignerCommand::JadeId => {
+                let j = client.signer_jade_id()?;
+                serde_json::to_value(j)?
+            }
             SignerCommand::Sign { name, pset } => {
                 let r = client.sign(name, pset)?;
                 serde_json::to_value(r)?

@@ -1,6 +1,6 @@
 use crate::domain::verify_domain_name;
 use crate::elements::hashes::{sha256, Hash};
-use crate::elements::{AssetId, ContractHash};
+use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use once_cell::sync::Lazy;
@@ -82,6 +82,21 @@ pub fn asset_ids(txin: &elements::TxIn, contract: &Contract) -> Result<(AssetId,
     Ok(txin.issuance_ids())
 }
 
+/// Compute the asset id and reissuance token id
+///
+/// The ids are derived from the contract.
+/// This implicitly proves that the contract commits to the ids.
+pub fn issuance_ids(
+    contract: &Contract,
+    issuance_prevout: OutPoint,
+    is_confidential: bool,
+) -> Result<(AssetId, AssetId), Error> {
+    let entropy = AssetId::generate_asset_entropy(issuance_prevout, contract.contract_hash()?);
+    let asset_id = AssetId::from_entropy(entropy);
+    let token_id = AssetId::reissuance_token_from_entropy(entropy, is_confidential);
+    Ok((asset_id, token_id))
+}
+
 pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     let contract_str = serde_json::to_string(contract)?;
 
@@ -147,16 +162,19 @@ mod tests {
         let tx: elements::Transaction =
             elements::encode::deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
 
+        let asset_usdt = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
+        let token_usdt = "59fe4d2127ba9f16bd6850a3e6271a166e7ed2e1669f6c107d655791c94ee98f";
+
         let mut contract = Contract::from_value(&contract_value).unwrap();
         let (asset, token) = asset_ids(&tx.input[0], &contract).unwrap();
-        assert_eq!(
-            &asset.to_string(),
-            "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"
-        );
-        assert_eq!(
-            &token.to_string(),
-            "59fe4d2127ba9f16bd6850a3e6271a166e7ed2e1669f6c107d655791c94ee98f"
-        );
+        assert_eq!(&asset.to_string(), asset_usdt);
+        assert_eq!(&token.to_string(), token_usdt);
+
+        let issuance_prevout = tx.input[0].previous_output;
+        let is_confidential = tx.input[0].asset_issuance.amount.is_confidential();
+        let (asset, token) = issuance_ids(&contract, issuance_prevout, is_confidential).unwrap();
+        assert_eq!(&asset.to_string(), asset_usdt);
+        assert_eq!(&token.to_string(), token_usdt);
 
         // Error cases
         contract.version = 1;

@@ -21,7 +21,7 @@ pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::WolletDescriptor;
 pub use crate::error::Error;
 pub use crate::model::{AddressResult, IssuanceDetails, UnvalidatedAddressee, WalletTxOut};
-pub use crate::registry::{asset_ids, Contract, Entity};
+pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::util::EC;
 pub use crate::wollet::Wollet;
 

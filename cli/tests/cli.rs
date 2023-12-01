@@ -448,82 +448,88 @@ fn test_issue() {
 #[test]
 fn test_commands() {
     // This test use json `Value` so that changes in the model are noticed
+    let addr = get_available_addr().unwrap();
+    let options = format!("--addr {addr}");
+    let cli = format!("cli {options}");
 
-    std::thread::spawn(|| {
-        sh("cli server start");
+    std::thread::spawn(move || {
+        sh(&format!("cli {options} server start"));
     });
     std::thread::sleep(std::time::Duration::from_millis(100));
-    let result = sh("cli signer generate");
+    let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
 
     let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
-    let result = sh(&format!("cli wallet load --name custody {desc}"));
+    let result = sh(&format!("{cli} wallet load --name custody {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result("cli wallet load --name wrong wrong");
+    let result = sh_result(&format!("{cli} wallet load --name wrong wrong"));
     assert!(
         format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
     );
 
-    let result = sh("cli wallet balance --name custody");
+    let result = sh(&format!("{cli}  wallet balance --name custody"));
     let balance_obj = result.get("balance").unwrap();
     let asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
     let policy_obj = balance_obj.get(asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
 
-    let result = sh_result("cli wallet balance --name notexist");
+    let result = sh_result(&format!("{cli}  wallet balance --name notexist"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
 
-    let result = sh("cli wallet address --name custody");
+    let result = sh(&format!("{cli} wallet address --name custody"));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj2z8k7l7ewsnu");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 1);
 
-    let result = sh("cli wallet address --name custody --index 0");
+    let result = sh(&format!("{cli} wallet address --name custody --index 0"));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-    let result = sh("cli wallet send --name custody --recipient tlq1qqwf6dzkyrukfzwmx3cxdpdx2z3zspgda0v7x874cewkucajdzrysa7z9fy0qnjvuz0ymqythd6jxy9d2e8ajka48efakgrp9t:2:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49");
+    let result = sh(&format!("{cli} wallet send --name custody --recipient tlq1qqwf6dzkyrukfzwmx3cxdpdx2z3zspgda0v7x874cewkucajdzrysa7z9fy0qnjvuz0ymqythd6jxy9d2e8ajka48efakgrp9t:2:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let _: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let result = sh("cli wallet unload --name custody");
+    let result = sh(&format!("{cli}  wallet unload --name custody"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
-    let result = sh(
-        r#"cli signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,
-    );
+    let result = sh(&format!(
+        r#"{cli} signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#
+    ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
-    let result =
-        sh("cli signer singlesig-desc --name ss --descriptor-blinding-key slip77 --kind wpkh");
+    let result = sh(&format!(
+        "{cli} signer singlesig-desc --name ss --descriptor-blinding-key slip77 --kind wpkh"
+    ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "cli wallet load --name desc_generated {desc_generated}"
+        "{cli} wallet load --name desc_generated {desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, desc_generated);
 
-    let result = sh("cli wallet address --name desc_generated --index 0");
+    let result = sh(&format!(
+        "{cli} wallet address --name desc_generated --index 0"
+    ));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-    let result = sh("cli signer xpub --name ss --kind bip84");
+    let result = sh(&format!("{cli} signer xpub --name ss --kind bip84"));
     let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
     assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
 
-    let result = sh(&format!("cli wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
+    let result = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
     let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "cli wallet load --name multi_desc_generated {multisig_desc_generated}"
+        "{cli} wallet load --name multi_desc_generated {multisig_desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, multisig_desc_generated);
 
-    sh("cli server stop");
+    sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
 }
 

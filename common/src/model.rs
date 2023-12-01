@@ -66,31 +66,19 @@ impl Issuance {
     }
 
     pub fn asset(&self) -> Option<AssetId> {
-        match self.is_null() {
-            true => None,
-            false => Some(self.asset),
-        }
+        (!self.is_null()).then_some(self.asset)
     }
 
     pub fn token(&self) -> Option<AssetId> {
-        match self.is_null() {
-            true => None,
-            false => Some(self.token),
-        }
+        (!self.is_null()).then_some(self.token)
     }
 
     pub fn prev_txid(&self) -> Option<Txid> {
-        match self.is_null() {
-            true => None,
-            false => Some(self.prev_txid),
-        }
+        (!self.is_null()).then_some(self.prev_txid)
     }
 
     pub fn prev_vout(&self) -> Option<u32> {
-        match self.is_null() {
-            true => None,
-            false => Some(self.prev_vout),
-        }
+        (!self.is_null()).then_some(self.prev_vout)
     }
 }
 

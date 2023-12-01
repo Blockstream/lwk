@@ -1,4 +1,4 @@
-//! Data models of every requests made via RPC
+//! Data models of every response made via RPC
 
 #[cfg(doc)]
 use crate::request;

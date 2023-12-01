@@ -122,7 +122,9 @@ pub struct SignerSubCommands {
 #[derive(Debug, Subcommand, ValueEnum, Clone)]
 pub enum SignerSubCommandsEnum {
     Generate,
-    Load,
+    LoadSoftware,
+    LoadJade,
+    LoadExternal,
     Unload,
     List,
     Sign,

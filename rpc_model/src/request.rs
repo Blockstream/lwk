@@ -50,18 +50,30 @@ pub struct UnloadWallet {
 
 /// Load a signer in the server
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct LoadSigner {
+pub struct SignerLoadSoftware {
     /// The name of the signer, will be needed to reference it in other calls
     pub name: String,
 
-    /// The kind of the wallet. // TODO make enum
-    pub kind: String,
+    /// The mnemonic (12 or 24 words)
+    pub mnemonic: String,
+}
 
-    /// The mnemonic, only needed for loading software signers
-    pub mnemonic: Option<String>,
+/// Load a signer in the server
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerLoadJade {
+    /// The name of the signer, will be needed to reference it in other calls
+    pub name: String,
+    // TODO add identifier
+}
 
-    /// The fingerprint identifyng the signer, only needed for external signers
-    pub fingerprint: Option<String>,
+/// Load a signer in the server
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerLoadExternal {
+    /// The name of the signer, will be needed to reference it in other calls
+    pub name: String,
+
+    /// The fingerprint identifyng the external signer
+    pub fingerprint: String,
 }
 
 /// Unload the signer identified by the given name

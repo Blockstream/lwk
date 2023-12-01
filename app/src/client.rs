@@ -54,20 +54,27 @@ impl Client {
         self.make_request(Method::GenerateSigner, None::<Box<RawValue>>)
     }
 
-    pub fn load_signer(
+    pub fn signer_load_software(
         &self,
         name: String,
-        kind: String,
-        mnemonic: Option<String>,
-        fingerprint: Option<String>,
+        mnemonic: String,
     ) -> Result<response::Signer, Error> {
-        let req = request::LoadSigner {
-            name,
-            kind,
-            mnemonic,
-            fingerprint,
-        };
-        self.make_request(Method::LoadSigner, Some(req))
+        let req = request::SignerLoadSoftware { name, mnemonic };
+        self.make_request(Method::SignerLoadSoftware, Some(req))
+    }
+
+    pub fn signer_load_jade(&self, name: String) -> Result<response::Signer, Error> {
+        let req = request::SignerLoadJade { name };
+        self.make_request(Method::SignerLoadJade, Some(req))
+    }
+
+    pub fn signer_load_external(
+        &self,
+        name: String,
+        fingerprint: String,
+    ) -> Result<response::Signer, Error> {
+        let req = request::SignerLoadExternal { name, fingerprint };
+        self.make_request(Method::SignerLoadExternal, Some(req))
     }
 
     pub fn list_wallets(&self) -> Result<response::ListWallets, Error> {

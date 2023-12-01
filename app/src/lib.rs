@@ -200,42 +200,35 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r = response::ListWallets { wallets };
             Response::result(request.id, serde_json::to_value(r)?)
         }
-        Method::LoadSigner => {
-            let r: request::LoadSigner =
+        Method::SignerLoadSoftware => {
+            let r: request::SignerLoadSoftware =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-
-            let signer = match r.kind.as_str() {
-                "software" => {
-                    if r.mnemonic.is_none() {
-                        return Err(Error::Generic(
-                            "Mnemonic must be set for software signer".to_string(),
-                        ));
-                    }
-                    let mnemonic = r.mnemonic.unwrap();
-                    AppSigner::AvailableSigner(AnySigner::Software(SwSigner::new(&mnemonic)?))
-                }
-                "serial" => {
-                    let network = s.config.jade_network();
-                    let jade = MutexJade::from_serial(network)?;
-                    jade.unlock().unwrap();
-                    AppSigner::AvailableSigner(AnySigner::Jade(jade))
-                }
-                "external" => {
-                    if r.fingerprint.is_none() {
-                        return Err(Error::Generic(
-                            "Fingerprint must be set for external signer".to_string(),
-                        ));
-                    }
-                    let fingerprint = Fingerprint::from_str(&r.fingerprint.unwrap())
-                        .map_err(|e| Error::Generic(e.to_string()))?;
-                    AppSigner::ExternalSigner(fingerprint)
-                }
-                _ => {
-                    return Err(Error::Generic("Invalid signer kind".to_string()));
-                }
-            };
-
+            let mnemonic = r.mnemonic;
+            let signer = AppSigner::AvailableSigner(AnySigner::Software(SwSigner::new(&mnemonic)?));
+            let resp: response::Signer = signer_response_from(&r.name, &signer)?;
+            s.signers.insert(&r.name, signer)?;
+            Response::result(request.id, serde_json::to_value(resp)?)
+        }
+        Method::SignerLoadJade => {
+            let r: request::SignerLoadJade =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let mut s = state.lock().unwrap();
+            let network = s.config.jade_network();
+            let jade = MutexJade::from_serial(network)?;
+            jade.unlock().unwrap();
+            let signer = AppSigner::AvailableSigner(AnySigner::Jade(jade));
+            let resp: response::Signer = signer_response_from(&r.name, &signer)?;
+            s.signers.insert(&r.name, signer)?;
+            Response::result(request.id, serde_json::to_value(resp)?)
+        }
+        Method::SignerLoadExternal => {
+            let r: request::SignerLoadExternal =
+                serde_json::from_value(request.params.unwrap_or_default())?;
+            let mut s = state.lock().unwrap();
+            let fingerprint =
+                Fingerprint::from_str(&r.fingerprint).map_err(|e| Error::Generic(e.to_string()))?;
+            let signer = AppSigner::ExternalSigner(fingerprint);
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(resp)?)

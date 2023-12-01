@@ -257,7 +257,7 @@ impl Jade {
             &hex::encode(&buf),
         );
 
-        self.conn.write_all(&buf).unwrap();
+        self.conn.write_all(&buf).unwrap(); // TODO handle this
 
         let mut rx = [0u8; 4096];
 

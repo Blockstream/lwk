@@ -193,6 +193,10 @@ pub enum SignerCommand {
     LoadJade {
         #[arg(long)]
         name: String,
+
+        /// Identifier of the jade (20 bytes as 40 hex chars)
+        #[arg(long)]
+        id: String,
     },
 
     /// Load a signer (software, serial, external) giving it a name

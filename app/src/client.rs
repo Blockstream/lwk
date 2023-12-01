@@ -63,8 +63,8 @@ impl Client {
         self.make_request(Method::SignerLoadSoftware, Some(req))
     }
 
-    pub fn signer_load_jade(&self, name: String) -> Result<response::Signer, Error> {
-        let req = request::SignerLoadJade { name };
+    pub fn signer_load_jade(&self, name: String, id: String) -> Result<response::Signer, Error> {
+        let req = request::SignerLoadJade { name, id };
         self.make_request(Method::SignerLoadJade, Some(req))
     }
 

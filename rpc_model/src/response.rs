@@ -79,6 +79,7 @@ pub struct Signer {
 
     /// Master xpub of the signer
     pub xpub: Option<String>,
+    // TODO add kind of signer?
 }
 
 /// Address response

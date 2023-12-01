@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use common::Signer;
+use jade::mutex_jade::MutexJade;
+use jade::Network;
 use signer::AnySigner;
 use wollet::bitcoin::bip32::Fingerprint;
+use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::{AssetId, OutPoint, Txid};
 use wollet::Contract;
 use wollet::Wollet;
@@ -11,6 +14,7 @@ use crate::config::Config;
 use crate::Error;
 
 pub enum AppSigner {
+    JadeId(XpubIdentifier, Network),
     AvailableSigner(AnySigner),
     ExternalSigner(Fingerprint),
 }
@@ -20,8 +24,14 @@ impl AppSigner {
         match self {
             AppSigner::AvailableSigner(s) => s.fingerprint().unwrap(), // TODO
             AppSigner::ExternalSigner(f) => *f,
+            AppSigner::JadeId(id, _) => id_to_fingerprint(id),
         }
     }
+}
+
+// TODO upstream as method of XKeyIdentifier to rust-bitcoin
+pub fn id_to_fingerprint(id: &XpubIdentifier) -> Fingerprint {
+    id[0..4].try_into().expect("4 is the fingerprint length")
 }
 
 #[allow(dead_code)]
@@ -126,12 +136,28 @@ impl Signers {
             .ok_or_else(|| Error::SignerNotExist(name.to_string()))
     }
 
-    pub fn get_available(&self, name: &str) -> Result<&AnySigner, Error> {
+    /// Get an available signer identified by name.
+    ///
+    /// In some cases, like with a jade not currently linked, it may try to connect to it first
+    pub fn get_available(&mut self, name: &str) -> Result<&AnySigner, Error> {
+        let jade = if let AppSigner::JadeId(_id, network) = self.get(name)? {
+            let jade = MutexJade::from_serial(*network)?; // TODO check id matches
+            jade.unlock()?;
+            Some(AppSigner::AvailableSigner(AnySigner::Jade(jade)))
+        } else {
+            None
+        };
+        if let Some(signer) = jade {
+            // replace the existing AppSigner::JadeId with AppSigner::AvailableSigner
+            self.insert(name, signer)?;
+        }
+
         match self.get(name)? {
             AppSigner::AvailableSigner(signer) => Ok(signer),
             AppSigner::ExternalSigner(_) => Err(Error::Generic(
                 "Invalid operation for external signer".to_string(),
             )),
+            AppSigner::JadeId(_, _) => panic!("Should not happen because it attempts to connect"),
         }
     }
 

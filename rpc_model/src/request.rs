@@ -63,7 +63,9 @@ pub struct SignerLoadSoftware {
 pub struct SignerLoadJade {
     /// The name of the signer, will be needed to reference it in other calls
     pub name: String,
-    // TODO add identifier
+
+    /// Full identifier of the jade
+    pub id: String,
 }
 
 /// Load a signer in the server

@@ -18,10 +18,11 @@ use common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
-use jade::mutex_jade::MutexJade;
 use signer::{AnySigner, SwSigner};
+use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
+use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::hex::FromHex;
 use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
@@ -214,10 +215,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::SignerLoadJade =
                 serde_json::from_value(request.params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
-            let network = s.config.jade_network();
-            let jade = MutexJade::from_serial(network)?;
-            jade.unlock().unwrap();
-            let signer = AppSigner::AvailableSigner(AnySigner::Jade(jade));
+            let id = XpubIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
+            let signer = AppSigner::JadeId(id, s.config.jade_network());
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(resp)?)
@@ -304,7 +303,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::SinglesigDescriptor => {
             let r: request::SinglesigDescriptor = serde_json::from_value(request.params.unwrap())?;
-            let s = state.lock().unwrap();
+            let mut s = state.lock().unwrap();
 
             let signer = s.signers.get_available(&r.name)?;
 
@@ -358,7 +357,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::Xpub => {
             let r: request::Xpub = serde_json::from_value(request.params.unwrap())?;
-            let s = state.lock().unwrap();
+            let mut s = state.lock().unwrap();
 
             let signer = s.signers.get_available(&r.name)?;
 
@@ -375,7 +374,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::Sign => {
             let r: request::Sign = serde_json::from_value(request.params.unwrap())?;
-            let s = state.lock().unwrap();
+            let mut s = state.lock().unwrap();
 
             let signer = s.signers.get_available(&r.name)?;
 
@@ -657,6 +656,7 @@ fn signer_response_from(
             Some(signer.xpub()?),
         ),
         AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
+        AppSigner::JadeId(id, _) => (id_to_fingerprint(id), Some(*id), None),
     };
 
     Ok(response::Signer {

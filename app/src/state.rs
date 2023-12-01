@@ -13,6 +13,7 @@ use wollet::Wollet;
 use crate::config::Config;
 use crate::Error;
 
+#[derive(Debug)]
 pub enum AppSigner {
     JadeId(XpubIdentifier, Network),
     AvailableSigner(AnySigner),
@@ -140,19 +141,33 @@ impl Signers {
     ///
     /// In some cases, like with a jade not currently linked, it may try to connect to it first
     pub fn get_available(&mut self, name: &str) -> Result<&AnySigner, Error> {
-        let jade = if let AppSigner::JadeId(id, network) = self.get(name)? {
-            let jade = MutexJade::from_serial(*network)?;
-            jade.unlock()?;
-            if id != &jade.identifier()? {
-                return Err(Error::Generic(format!(
-                    "Connected jade identifier doesn't match with loaded signer {}",
-                    name
-                )));
+        let app_signer = self.get(name)?;
+        tracing::debug!("get_available({}) return {:?}", name, app_signer);
+        let jade = match app_signer {
+            AppSigner::JadeId(id, network) => {
+                // try to connect JadeId -> AvailableSigner(Jade)
+                let jade = MutexJade::from_serial(*network)?;
+                jade.unlock()?;
+                if id != &jade.identifier()? {
+                    return Err(Error::Generic(format!(
+                        "Connected jade identifier doesn't match with loaded signer {}",
+                        name
+                    )));
+                }
+                Some(AppSigner::AvailableSigner(AnySigner::Jade(jade, *id)))
             }
-            Some(AppSigner::AvailableSigner(AnySigner::Jade(jade)))
-        } else {
-            None
+            AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {
+                // verify connection, if fails AvailableSigner(Jade) -> JadeId
+                if let Err(_) = j.unlock() {
+                    // TODO ensure identifier it's cached
+                    Some(AppSigner::JadeId(*id, j.network()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
         };
+
         if let Some(signer) = jade {
             // replace the existing AppSigner::JadeId with AppSigner::AvailableSigner
             self.0.insert(name.to_string(), signer);
@@ -163,7 +178,9 @@ impl Signers {
             AppSigner::ExternalSigner(_) => Err(Error::Generic(
                 "Invalid operation for external signer".to_string(),
             )),
-            AppSigner::JadeId(_, _) => panic!("Should not happen because it attempts to connect"),
+            AppSigner::JadeId(_, _) => Err(Error::Generic(
+                "Invalid operation jade is not connected".to_string(),
+            )),
         }
     }
 

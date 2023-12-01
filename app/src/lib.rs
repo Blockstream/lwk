@@ -318,7 +318,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .parse()
                 .map_err(|e: InvalidBlindingKeyVariant| e.to_string())?;
 
-            let descriptor = singlesig_desc(signer, script_variant, blinding_variant).unwrap();
+            let descriptor = singlesig_desc(signer, script_variant, blinding_variant)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::SinglesigDescriptor { descriptor })?,

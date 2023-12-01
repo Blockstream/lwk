@@ -6,6 +6,7 @@ pub use crate::software::{NewError, SignError, SwSigner};
 
 use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
+use elements_miniscript::bitcoin::hash_types::XpubIdentifier;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::ExtendedPubKey;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
@@ -26,9 +27,10 @@ pub enum SignerError {
     Bip32Error(#[from] elements::bitcoin::bip32::Error),
 }
 
+#[derive(Debug)]
 pub enum AnySigner {
     Software(SwSigner),
-    Jade(MutexJade),
+    Jade(MutexJade, XpubIdentifier),
 }
 
 impl Signer for AnySigner {
@@ -55,14 +57,14 @@ impl Signer for &AnySigner {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
             AnySigner::Software(signer) => signer.sign(pset)?,
-            AnySigner::Jade(signer) => signer.sign(pset)?,
+            AnySigner::Jade(signer, _) => signer.sign(pset)?,
         })
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.derive_xpub(path)?,
-            AnySigner::Jade(s) => s.derive_xpub(path)?,
+            AnySigner::Jade(s, _) => s.derive_xpub(path)?,
         })
     }
 
@@ -71,7 +73,7 @@ impl Signer for &AnySigner {
     ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.slip77_master_blinding_key()?,
-            AnySigner::Jade(s) => s.slip77_master_blinding_key()?,
+            AnySigner::Jade(s, _) => s.slip77_master_blinding_key()?,
         })
     }
 }

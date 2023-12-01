@@ -37,13 +37,19 @@ pub struct Cli {
 pub enum CliCommand {
     /// To start and stop the server
     Server(ServerArgs),
+
     /// Signer related commands (generate, load, list, sign...)
     Signer(SignerArgs),
+
     /// Wallet related commands (load, list, balance, address, tx...)
     Wallet(WalletArgs),
+
     /// Asset related commands
     Asset(AssetArgs),
-    /// Returns JSON schema of a RPC request/response for a given command
+
+    /// Returns JSON schema of a RPC request/response for a given command.
+    ///
+    /// For example if you want a description of the fields returned by `wallet list` use `schema response wallet list`
     Schema(SchemaArgs),
 }
 

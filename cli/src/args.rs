@@ -67,7 +67,10 @@ pub struct SchemaArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum DirectionCommand {
+    /// Schemas for requests to the server
     Request(MainCommandArgs),
+
+    /// Schemas for responses from the server
     Response(MainCommandArgs),
 }
 

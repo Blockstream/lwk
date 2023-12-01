@@ -4,7 +4,7 @@ use elements_miniscript::elements::bitcoin::{
 };
 use elements_miniscript::elements::pset::Input;
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
-use elements_miniscript::elements::{AssetId, AssetIssuance, Txid};
+use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -23,8 +23,7 @@ pub struct PsetSignatures {
 pub struct Issuance {
     asset: AssetId,
     token: AssetId,
-    prev_txid: Txid,
-    prev_vout: u32,
+    prev_output: OutPoint,
     inner: AssetIssuance,
 }
 
@@ -32,11 +31,11 @@ impl Issuance {
     pub fn new(input: &Input) -> Self {
         // There are meaningless if inner is null
         let (asset, token) = input.issuance_ids();
+        let prev_output = OutPoint::new(input.previous_txid, input.previous_output_index);
         Self {
             asset,
             token,
-            prev_txid: input.previous_txid,
-            prev_vout: input.previous_output_index,
+            prev_output,
             inner: input.asset_issuance(),
         }
     }
@@ -74,11 +73,11 @@ impl Issuance {
     }
 
     pub fn prev_txid(&self) -> Option<Txid> {
-        (!self.is_null()).then_some(self.prev_txid)
+        (!self.is_null()).then_some(self.prev_output.txid)
     }
 
     pub fn prev_vout(&self) -> Option<u32> {
-        (!self.is_null()).then_some(self.prev_vout)
+        (!self.is_null()).then_some(self.prev_output.vout)
     }
 }
 

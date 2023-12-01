@@ -1,7 +1,7 @@
 pub mod init;
 
 use bs_containers::testcontainers::clients::Cli;
-use common::{singlesig_desc, Singlesig};
+use common::{singlesig_desc, Signer, Singlesig};
 use signer::AnySigner;
 
 use crate::{
@@ -60,7 +60,8 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
     let server = setup();
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = &[&AnySigner::Jade(jade_init.jade)];
+    let xpub_identifier = jade_init.jade.identifier().unwrap();
+    let signers = &[&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     roundtrip(&server, signers, Some(variant), None);
 }
 
@@ -69,8 +70,9 @@ fn emul_roundtrip_multisig(threshold: usize) {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let sw_signer = generate_signer();
+    let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[
-        &AnySigner::Jade(jade_init.jade),
+        &AnySigner::Jade(jade_init.jade, xpub_identifier),
         &AnySigner::Software(sw_signer),
     ];
     roundtrip(&server, signers, None, Some(threshold));

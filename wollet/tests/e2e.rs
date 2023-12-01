@@ -4,7 +4,7 @@ mod test_session;
 use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
 use common::Signer;
-use elements::bitcoin::bip32::DerivationPath;
+use elements::bitcoin::{bip32::DerivationPath, hash_types::XpubIdentifier};
 use signer::*;
 use std::{collections::HashSet, str::FromStr};
 use test_session::*;
@@ -17,7 +17,8 @@ const TEST_MNEMONIC: &str =
 fn liquid_send_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&AnySigner::Jade(jade_init.jade)];
+    let xpub_identifier = jade_init.jade.identifier().unwrap();
+    let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_send(&signers);
 }
 
@@ -32,7 +33,8 @@ fn liquid_send_software_signer() {
 fn liquid_issue_jade_signer() {
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
-    let signers = [&AnySigner::Jade(jade_init.jade)];
+    let xpub_identifier = jade_init.jade.identifier().unwrap();
+    let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_issue(&signers);
 }
 
@@ -679,7 +681,9 @@ fn jade_sign_wollet_pset() {
 
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let jade_signer = AnySigner::Jade(jade_init.jade);
+
+    let xpub_identifier = jade_init.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade_init.jade, xpub_identifier);
     // Compre strings so that we don't get mismatching regtest-testnet networks
     assert_eq!(
         jade_signer.xpub().unwrap().to_string(),
@@ -699,7 +703,10 @@ fn jade_single_sig() {
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
-    let signer = AnySigner::Jade(jade_init.jade);
+    let signer = AnySigner::Jade(
+        jade_init.jade,
+        XpubIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
+    );
     // FIXME: implement Signer::xpub
     let xpub = SwSigner::new(mnemonic).unwrap().xpub();
 

@@ -42,6 +42,7 @@ pub enum Method {
     Contract,
     AssetDetails,
     ListAssets,
+    AssetInsert,
     Stop,
 }
 impl Method {
@@ -74,6 +75,7 @@ impl Method {
                 Method::Contract => schema_for!(request::Contract),
                 Method::AssetDetails => schema_for!(request::AssetDetails),
                 Method::ListAssets => schema_for!(request::Empty),
+                Method::AssetInsert => schema_for!(request::AssetInsert),
                 Method::Stop => schema_for!(request::Empty),
             },
             Direction::Response => match self {
@@ -103,6 +105,7 @@ impl Method {
                 Method::Contract => schema_for!(response::Contract),
                 Method::AssetDetails => schema_for!(response::AssetDetails),
                 Method::ListAssets => schema_for!(response::ListAssets),
+                Method::AssetInsert => schema_for!(response::Empty),
                 Method::Stop => schema_for!(response::Empty),
             },
         })
@@ -140,6 +143,7 @@ impl FromStr for Method {
             "contract" => Method::Contract,
             "asset_details" => Method::AssetDetails,
             "list_assets" => Method::ListAssets,
+            "asset_insert" => Method::AssetInsert,
             "stop" => Method::Stop,
             _ => {
                 return Err(MethodNotExist {
@@ -179,6 +183,7 @@ impl std::fmt::Display for Method {
             Method::Contract => "contract",
             Method::AssetDetails => "asset_details",
             Method::ListAssets => "list_assets",
+            Method::AssetInsert => "asset_insert",
             Method::Stop => "stop",
         };
         write!(f, "{}", s)

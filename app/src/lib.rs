@@ -613,6 +613,24 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r = response::ListAssets { assets };
             Response::result(request.id, serde_json::to_value(r)?)
         }
+        Method::AssetInsert => {
+            let r: request::AssetInsert = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
+                .map_err(|e| Error::Generic(e.to_string()))?;
+            let prev_txid = wollet::elements::Txid::from_str(&r.prev_txid)
+                .map_err(|e| Error::Generic(e.to_string()))?;
+            let contract = serde_json::Value::from_str(&r.contract)?;
+            let contract = wollet::Contract::from_value(&contract)?;
+            s.insert_asset(
+                asset_id,
+                prev_txid,
+                r.prev_vout,
+                contract,
+                r.is_confidential,
+            )?;
+            Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
         Method::Stop => {
             return Err(Error::Stop);
         }

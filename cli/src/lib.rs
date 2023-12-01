@@ -266,6 +266,17 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             AssetCommand::List => serde_json::to_value(client.list_assets()?)?,
+            AssetCommand::Insert {
+                asset,
+                contract,
+                prev_txid,
+                prev_vout,
+                is_confidential,
+            } => {
+                let r =
+                    client.asset_insert(asset, contract, prev_txid, prev_vout, is_confidential)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Schema(a) => schema::schema(a, client)?,
     })

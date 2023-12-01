@@ -492,6 +492,32 @@ pub enum AssetCommand {
 
     /// List assets
     List,
+
+    /// Insert an asset
+    Insert {
+        /// Asset ID in hex
+        #[arg(short, long)]
+        asset: String,
+
+        /// The JSON contract
+        ///
+        /// You can fetch it from the asset registry
+        /// (e.g. `wget https://assets.blockstream.info/<ASSET-ID-HEX>`)
+        #[arg(long)]
+        contract: String,
+
+        /// Issuance prevout txid
+        #[arg(long)]
+        prev_txid: String,
+
+        /// Issuance prevout vout
+        #[arg(long)]
+        prev_vout: u32,
+
+        /// Whether the issuance was blinded or not
+        #[arg(long, default_value_t = false)]
+        is_confidential: bool,
+    },
 }
 
 #[derive(Debug, Args)]

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use common::Signer;
 use signer::AnySigner;
 use wollet::bitcoin::bip32::Fingerprint;
-use wollet::elements::AssetId;
+use wollet::elements::{AssetId, OutPoint, Txid};
 use wollet::Contract;
 use wollet::Wollet;
 
@@ -208,5 +208,28 @@ impl State {
             .0
             .get(asset)
             .ok_or_else(|| Error::AssetNotExist(asset.to_string()))
+    }
+
+    pub fn insert_asset(
+        &mut self,
+        asset_id: AssetId,
+        prev_txid: Txid,
+        prev_vout: u32,
+        contract: Contract,
+        is_confidential: bool,
+    ) -> Result<(), Error> {
+        let previous_output = OutPoint::new(prev_txid, prev_vout);
+        let (asset_id_c, token_id) =
+            wollet::issuance_ids(&contract, previous_output, is_confidential)?;
+        if asset_id != asset_id_c {
+            return Err(Error::InvalidContractForAsset(asset_id.to_string()));
+        }
+        self.assets
+            .0
+            .insert(asset_id, AppAsset::RegistryAsset(contract));
+        self.assets
+            .0
+            .insert(token_id, AppAsset::ReissuanceToken(asset_id_c));
+        Ok(())
     }
 }

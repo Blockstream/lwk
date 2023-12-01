@@ -253,6 +253,24 @@ impl Client {
         self.make_request(Method::ListAssets, None::<Box<RawValue>>)
     }
 
+    pub fn asset_insert(
+        &self,
+        asset_id: String,
+        contract: String,
+        prev_txid: String,
+        prev_vout: u32,
+        is_confidential: bool,
+    ) -> Result<response::Empty, Error> {
+        let req = request::AssetInsert {
+            asset_id,
+            contract,
+            prev_txid,
+            prev_vout,
+            is_confidential,
+        };
+        self.make_request(Method::AssetInsert, Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

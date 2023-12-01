@@ -273,6 +273,25 @@ pub struct AssetDetails {
     pub asset_id: String,
 }
 
+/// Request to insert an asset
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetInsert {
+    /// Asset ID in hex
+    pub asset_id: String,
+
+    /// Contract committed to the asset id
+    pub contract: String,
+
+    /// Previous output txid corresponding to the issuance input
+    pub prev_txid: String,
+
+    /// Previous output vout corresponding to the issuance input
+    pub prev_vout: u32,
+
+    /// Whether the issuance was blinded or not
+    pub is_confidential: bool,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

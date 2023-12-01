@@ -414,6 +414,9 @@ fn test_issue() {
     let token_sats = issuance.get("token_satoshi").unwrap().as_u64().unwrap();
     assert_eq!(asset_sats, 1000);
     assert_eq!(token_sats, 0);
+    let prev_txid = issuance.get("prev_txid").unwrap().as_str().unwrap();
+    let prev_vout = issuance.get("prev_vout").unwrap().as_u64().unwrap();
+
     let balance = r.get("balance").unwrap().as_object().unwrap();
     // TODO: util to check balance with less unwrap
     assert_eq!(balance.get(asset).unwrap().as_i64().unwrap(), 1000);
@@ -440,6 +443,24 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset list"));
     let assets = r.get("assets").unwrap().as_array().unwrap();
     assert_eq!(assets.len(), 1);
+
+    let prevout = format!("--prev-txid {prev_txid} --prev-vout {prev_vout}");
+    sh(&format!(
+        "{cli} asset insert --asset {asset} --contract '{contract}' {prevout}"
+    ));
+
+    let result = sh(&format!("{cli} asset list"));
+    let assets = result.get("assets").unwrap().as_array().unwrap();
+    assert_eq!(assets.len(), 3);
+
+    let r = sh(&format!("{cli} asset details --asset {asset}"));
+    let name = r.get("name").unwrap().as_str().unwrap();
+    assert_eq!(name, "example");
+
+    let r = sh(&format!("{cli} asset details --asset {token}"));
+    let name = r.get("name").unwrap().as_str().unwrap();
+    let reissuance_token_name = &format!("reissuance token for {asset}");
+    assert_eq!(name, reissuance_token_name);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

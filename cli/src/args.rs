@@ -501,8 +501,9 @@ pub enum AssetCommand {
 
         /// The JSON contract
         ///
-        /// You can fetch it from the asset registry
-        /// (e.g. `wget https://assets.blockstream.info/<ASSET-ID-HEX>`)
+        /// You can fetch it from the asset registry from
+        /// `https://assets.blockstream.info/<ASSET-ID-HEX>`
+        /// alongside the issuenace prevout.
         #[arg(long)]
         contract: String,
 

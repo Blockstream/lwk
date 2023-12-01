@@ -273,8 +273,13 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 prev_vout,
                 is_confidential,
             } => {
-                let r =
-                    client.asset_insert(asset, contract, prev_txid, prev_vout, is_confidential)?;
+                let r = client.asset_insert(
+                    asset,
+                    contract,
+                    prev_txid,
+                    prev_vout,
+                    Some(is_confidential),
+                )?;
                 serde_json::to_value(r)?
             }
         },

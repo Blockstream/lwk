@@ -289,7 +289,7 @@ pub struct AssetInsert {
     pub prev_vout: u32,
 
     /// Whether the issuance was blinded or not
-    pub is_confidential: bool,
+    pub is_confidential: Option<bool>,
 }
 
 #[cfg(test)]

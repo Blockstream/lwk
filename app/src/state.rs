@@ -216,9 +216,10 @@ impl State {
         prev_txid: Txid,
         prev_vout: u32,
         contract: Contract,
-        is_confidential: bool,
+        is_confidential: Option<bool>,
     ) -> Result<(), Error> {
         let previous_output = OutPoint::new(prev_txid, prev_vout);
+        let is_confidential = is_confidential.unwrap_or(false);
         let (asset_id_c, token_id) =
             wollet::issuance_ids(&contract, previous_output, is_confidential)?;
         if asset_id != asset_id_c {

@@ -259,7 +259,7 @@ impl Client {
         contract: String,
         prev_txid: String,
         prev_vout: u32,
-        is_confidential: bool,
+        is_confidential: Option<bool>,
     ) -> Result<response::Empty, Error> {
         let req = request::AssetInsert {
             asset_id,

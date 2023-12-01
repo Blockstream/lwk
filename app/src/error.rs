@@ -27,6 +27,9 @@ pub enum Error {
     #[error("Hex Error: {0}")]
     Hex(wollet::elements::hex::Error),
 
+    #[error(transparent)]
+    JadePset(#[from] jade::sign_pset::Error),
+
     #[error("Trying to start an already started server")]
     AlreadyStarted,
 

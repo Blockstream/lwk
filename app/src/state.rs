@@ -140,9 +140,15 @@ impl Signers {
     ///
     /// In some cases, like with a jade not currently linked, it may try to connect to it first
     pub fn get_available(&mut self, name: &str) -> Result<&AnySigner, Error> {
-        let jade = if let AppSigner::JadeId(_id, network) = self.get(name)? {
-            let jade = MutexJade::from_serial(*network)?; // TODO check id matches
+        let jade = if let AppSigner::JadeId(id, network) = self.get(name)? {
+            let jade = MutexJade::from_serial(*network)?;
             jade.unlock()?;
+            if id != &jade.identifier()? {
+                return Err(Error::Generic(format!(
+                    "Connected jade identifier doesn't match with loaded signer {}",
+                    name
+                )));
+            }
             Some(AppSigner::AvailableSigner(AnySigner::Jade(jade)))
         } else {
             None

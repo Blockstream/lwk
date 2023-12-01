@@ -637,7 +637,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let network = s.config.jade_network();
             let jade = MutexJade::from_serial(network)?;
             jade.unlock()?;
-            let identifier = jade.identifier().unwrap().to_string(); // TODO remove unwrap
+            let identifier = jade.identifier()?.to_string();
             Response::result(
                 request.id,
                 serde_json::to_value(response::JadeId { identifier })?,

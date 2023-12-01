@@ -81,6 +81,7 @@ pub struct MainCommandArgs {
 }
 
 #[derive(Debug, Subcommand)]
+#[clap(disable_help_flag = true, disable_help_subcommand = true)]
 pub enum MainCommand {
     Wallet(WalletSubCommands),
     Signer(SignerSubCommands),

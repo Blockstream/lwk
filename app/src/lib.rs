@@ -524,6 +524,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     vin: vin as u32,
                     asset_satoshi: e.asset_satoshi().unwrap_or(0),
                     token_satoshi: e.token_satoshi().unwrap_or(0),
+                    prev_txid: e.prev_txid().expect("issuance").to_string(),
+                    prev_vout: e.prev_vout().expect("issuance"),
                 })
                 .collect();
             let reissuances = details

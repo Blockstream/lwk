@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// An empty response.
-#[derive(JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Empty {}
 
 /// Server version response
@@ -214,6 +214,12 @@ pub struct Issuance {
 
     /// Number of reissuance token
     pub token_satoshi: u64,
+
+    /// Previous output txid corresponding to the issuance input
+    pub prev_txid: String,
+
+    /// Previous output vout corresponding to the issuance input
+    pub prev_vout: u32,
 }
 
 /// Details about a reissuance

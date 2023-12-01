@@ -159,7 +159,7 @@ impl Signers {
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {
                 // verify connection, if fails AvailableSigner(Jade) -> JadeId
-                if let Err(_) = j.unlock() {
+                if j.unlock().is_err() {
                     // TODO ensure identifier it's cached
                     Some(AppSigner::JadeId(*id, j.network()))
                 } else {

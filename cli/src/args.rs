@@ -178,7 +178,7 @@ pub enum SignerCommand {
     /// Generate a softwawre signer, returns a mnemonic
     Generate,
 
-    /// Load a software signer from a mnemonic giving it a name
+    /// Load a signer (software, serial, external) giving it a name
     Load {
         #[arg(long)]
         name: String,

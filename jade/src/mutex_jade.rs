@@ -35,6 +35,7 @@ impl MutexJade {
         } else {
             // TODO: only one serial jade supported
             let path = &ports[0].port_name;
+            tracing::info!("serial port {path}");
             let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
             Ok(Self::new(Jade::new(port.into(), network)))
         }

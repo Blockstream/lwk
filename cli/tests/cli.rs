@@ -62,19 +62,19 @@ fn test_signer_load_unload_list() {
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let result = sh(&format!(
-        r#"cli --addr {addr} signer load --kind software --mnemonic "{mnemonic}" --name ss "#
+        r#"cli --addr {addr} signer load-software --mnemonic "{mnemonic}" --name ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
     let result = sh(&format!("cli --addr {addr} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     let result = sh_result(&format!(
-        r#"cli --addr {addr} signer load --kind software --mnemonic "{different_mnemonic}" --name ss"#,
+        r#"cli --addr {addr} signer load-software --mnemonic "{different_mnemonic}" --name ss"#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
     let result = sh_result(&format!(
-        r#"cli --addr {addr} signer load --kind software --mnemonic "{mnemonic}" --name ss2 "#,
+        r#"cli --addr {addr} signer load-software --mnemonic "{mnemonic}" --name ss2 "#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
@@ -106,7 +106,7 @@ fn test_signer_external() {
     let name = "ext";
     let fingerprint = "11111111";
     let r = sh(&format!(
-        "{cli} signer load --kind external --fingerprint {fingerprint} --name {name}"
+        "{cli} signer load-external --fingerprint {fingerprint} --name {name}"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), name);
 
@@ -194,14 +194,14 @@ fn test_wallet_details() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load --kind software --mnemonic \"{m1}\" --name s1"
+        "{cli} signer load-software --mnemonic \"{m1}\" --name s1"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load --kind software --mnemonic \"{m2}\" --name s2"
+        "{cli} signer load-software --mnemonic \"{m2}\" --name s2"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s2");
 
@@ -295,7 +295,7 @@ fn test_broadcast() {
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"cli {options} signer load --kind software --mnemonic "{mnemonic}" --name s1 "#
+        r#"cli {options} signer load-software --mnemonic "{mnemonic}" --name s1 "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
@@ -371,7 +371,7 @@ fn test_issue() {
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
 
     let r = sh(&format!(
-        r#"{cli} signer load --kind software --mnemonic "{mnemonic}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1 "#
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
@@ -492,7 +492,7 @@ fn test_commands() {
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
     let result = sh(
-        r#"cli signer load --kind software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,
+        r#"cli signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#,
     );
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
@@ -543,12 +543,12 @@ fn test_multisig() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load --kind software --mnemonic "{m1}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{m1}" --name s1 "#
     ));
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load --kind software --mnemonic "{m2}" --name s2 "#
+        r#"{cli} signer load-software --mnemonic "{m2}" --name s2 "#
     ));
 
     let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));

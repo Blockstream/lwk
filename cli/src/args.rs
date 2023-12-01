@@ -178,19 +178,28 @@ pub enum SignerCommand {
     /// Generate a softwawre signer, returns a mnemonic
     Generate,
 
-    /// Load a signer (software, serial, external) giving it a name
-    Load {
+    /// Load a software signer giving it a name
+    LoadSoftware {
         #[arg(long)]
         name: String,
 
         #[arg(long)]
-        kind: SignerKind,
+        mnemonic: String, // TODO is it right to have the mnemonic as arg?
+    },
+
+    /// Load a Jade signer giving it a name
+    LoadJade {
+        #[arg(long)]
+        name: String,
+    },
+
+    /// Load a signer (software, serial, external) giving it a name
+    LoadExternal {
+        #[arg(long)]
+        name: String,
 
         #[arg(long)]
-        mnemonic: Option<String>, // TODO is it right to have the mnemonic as arg?
-
-        #[arg(long)]
-        fingerprint: Option<String>,
+        fingerprint: String,
     },
 
     /// Unload a software signer

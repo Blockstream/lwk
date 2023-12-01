@@ -127,14 +127,20 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.sign(name, pset)?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::Load {
-                name,
-                kind,
-                mnemonic,
-                fingerprint,
-            } => {
-                let kind = kind.to_string();
-                let j = client.load_signer(name, kind, mnemonic, fingerprint)?;
+
+            SignerCommand::LoadSoftware { name, mnemonic } => {
+                let kind = "software".to_owned();
+                let j = client.load_signer(name, kind, Some(mnemonic), None)?;
+                serde_json::to_value(j)?
+            }
+            SignerCommand::LoadJade { name } => {
+                let kind = "serial".to_owned();
+                let j = client.load_signer(name, kind, None, None)?;
+                serde_json::to_value(j)?
+            }
+            SignerCommand::LoadExternal { name, fingerprint } => {
+                let kind = "external".to_owned();
+                let j = client.load_signer(name, kind, None, Some(fingerprint))?;
                 serde_json::to_value(j)?
             }
             SignerCommand::List => serde_json::to_value(client.list_signers()?)?,

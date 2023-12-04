@@ -36,7 +36,6 @@ pub fn id_to_fingerprint(id: &XpubIdentifier) -> Fingerprint {
     id[0..4].try_into().expect("4 is the fingerprint length")
 }
 
-#[allow(dead_code)]
 pub enum AppAsset {
     /// The policy asset (L-BTC)
     PolicyAsset,
@@ -265,7 +264,6 @@ impl State {
         self.assets.0.insert(asset_id, AppAsset::PolicyAsset);
     }
 
-    #[allow(dead_code)]
     pub fn get_asset(&self, asset: &AssetId) -> Result<&AppAsset, Error> {
         self.assets
             .0

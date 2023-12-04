@@ -643,9 +643,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::SignerJadeId => {
-            let s = state.lock().unwrap();
-            let network = s.config.jade_network();
-            let jade = MutexJade::from_serial(network)?;
+            let r: request::SignerJadeId = serde_json::from_value(request.params.unwrap())?;
+
+            let network = {
+                let s = state.lock().unwrap();
+                s.config.jade_network()
+            };
+
+            let jade = match r.emulator {
+                Some(emulator) => MutexJade::from_socket(emulator, network)?,
+                None => MutexJade::from_serial(network)?,
+            };
             jade.unlock()?;
             let identifier = jade.identifier()?.to_string();
             Response::result(

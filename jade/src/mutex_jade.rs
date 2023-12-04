@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::sync::{Mutex, PoisonError};
 
 use common::Signer;
@@ -5,6 +6,7 @@ use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction}
 use elements_miniscript::slip77::MasterBlindingKey;
 use rand::{thread_rng, Rng};
 
+use crate::connection::Connection;
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
 use crate::{derivation_path_to_vec, Jade};
@@ -39,6 +41,13 @@ impl MutexJade {
             let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
             Ok(Self::new(Jade::new(port.into(), network)))
         }
+    }
+
+    pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, crate::error::Error> {
+        let stream = std::net::TcpStream::connect(socket).unwrap(); // TODO unwrap
+        let conn = Connection::TcpStream(stream.into());
+        let jade = Jade::new(conn, network);
+        Ok(Self::new(jade))
     }
 
     pub fn unlock(&self) -> Result<(), crate::unlock::Error> {

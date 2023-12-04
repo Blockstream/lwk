@@ -4,6 +4,7 @@ use std::{
     str::FromStr,
 };
 
+use bs_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use clap::{Parser, ValueEnum};
 use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
@@ -470,6 +471,36 @@ fn test_issue() {
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+}
+
+#[test]
+fn test_jade_emulator() {
+    // This test use json `Value` so that changes in the model are noticed
+    let addr = get_available_addr().unwrap();
+    let options = format!("--addr {addr}");
+    let cli = format!("cli {options}");
+
+    let docker = clients::Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+    let jade_addr = format!("127.0.0.1:{}", port);
+
+    std::thread::spawn(move || {
+        sh(&format!("cli {options} server start"));
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let result = sh(&format!("{cli} signer jade-id --emulator {jade_addr}"));
+    let identifier = result.get("identifier").unwrap().as_str().unwrap();
+    assert_eq!(identifier, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");
+
+    let result = sh(&format!(
+        "{cli} signer load-jade --name emul --id {identifier}  --emulator {jade_addr}"
+    ));
+    assert!(result.get("id").is_some());
+
+    sh(&format!("{cli} server stop"));
+    std::thread::sleep(std::time::Duration::from_millis(100));
 }
 
 #[test]

@@ -58,7 +58,7 @@ impl TestElectrumServer {
         conf.p2p = electrsd::bitcoind::P2P::Yes;
         conf.network = network;
 
-        let node = electrsd::bitcoind::BitcoinD::with_conf(&node_exec, &conf).unwrap();
+        let node = electrsd::bitcoind::BitcoinD::with_conf(node_exec, &conf).unwrap();
 
         node_generate(&node.client, 1);
         node.client.call::<Value>("rescanblockchain", &[]).unwrap();
@@ -83,7 +83,7 @@ impl TestElectrumServer {
         conf.view_stderr = view_stdout;
         conf.http_enabled = false;
         conf.network = network;
-        let electrs = electrsd::ElectrsD::with_conf(&electrs_exec, &node, &conf).unwrap();
+        let electrs = electrsd::ElectrsD::with_conf(electrs_exec, &node, &conf).unwrap();
 
         node_generate(&node.client, 100);
         electrs.trigger().unwrap();

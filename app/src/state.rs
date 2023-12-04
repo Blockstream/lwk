@@ -7,6 +7,7 @@ use jade::Network;
 use signer::AnySigner;
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
+use wollet::elements::pset::elip100::AssetMetadata;
 use wollet::elements::{AssetId, OutPoint, Txid};
 use wollet::Contract;
 use wollet::Wollet;
@@ -46,6 +47,12 @@ pub struct RegistryAssetData {
     contract: Contract,
 }
 
+impl RegistryAssetData {
+    pub fn contract_str(&self) -> String {
+        serde_json::to_string(&self.contract).expect("contract")
+    }
+}
+
 pub enum AppAsset {
     /// The policy asset (L-BTC)
     PolicyAsset(AssetId),
@@ -74,6 +81,19 @@ impl AppAsset {
             AppAsset::RegistryAsset(d) => d.contract.ticker.clone(),
             AppAsset::ReissuanceToken(d) => {
                 format!("reissuance token for {}", d.contract.ticker)
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn asset_metadata(&self) -> Option<AssetMetadata> {
+        match self {
+            AppAsset::PolicyAsset(_) => None,
+            AppAsset::RegistryAsset(d) => {
+                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout))
+            }
+            AppAsset::ReissuanceToken(d) => {
+                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout))
             }
         }
     }

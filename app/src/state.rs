@@ -36,34 +36,44 @@ pub fn id_to_fingerprint(id: &XpubIdentifier) -> Fingerprint {
     id[0..4].try_into().expect("4 is the fingerprint length")
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct RegistryAssetData {
+    asset_id: AssetId,
+    token_id: AssetId,
+    issuance_prevout: OutPoint,
+    issuance_is_confidential: bool,
+    contract: Contract,
+}
+
 pub enum AppAsset {
     /// The policy asset (L-BTC)
-    PolicyAsset,
+    PolicyAsset(AssetId),
 
     /// An asset with contract committed to it
-    RegistryAsset(Contract),
+    RegistryAsset(RegistryAssetData),
 
     /// A reissuance token for an asset
-    ReissuanceToken((AssetId, Contract)),
+    ReissuanceToken(RegistryAssetData),
 }
 
 impl AppAsset {
     pub fn name(&self) -> String {
         match self {
-            AppAsset::PolicyAsset => "liquid bitcoin".into(),
-            AppAsset::RegistryAsset(contract) => contract.name.clone(),
-            AppAsset::ReissuanceToken((_, contract)) => {
-                format!("reissuance token for {}", contract.name)
+            AppAsset::PolicyAsset(_) => "liquid bitcoin".into(),
+            AppAsset::RegistryAsset(d) => d.contract.name.clone(),
+            AppAsset::ReissuanceToken(d) => {
+                format!("reissuance token for {}", d.contract.name)
             }
         }
     }
 
     pub fn ticker(&self) -> String {
         match self {
-            AppAsset::PolicyAsset => "L-BTC".into(),
-            AppAsset::RegistryAsset(contract) => contract.ticker.clone(),
-            AppAsset::ReissuanceToken((_, contract)) => {
-                format!("reissuance token for {}", contract.ticker)
+            AppAsset::PolicyAsset(_) => "L-BTC".into(),
+            AppAsset::RegistryAsset(d) => d.contract.ticker.clone(),
+            AppAsset::ReissuanceToken(d) => {
+                format!("reissuance token for {}", d.contract.ticker)
             }
         }
     }
@@ -261,7 +271,9 @@ impl Assets {
 impl State {
     pub fn insert_policy_asset(&mut self) {
         let asset_id = self.config.network.policy_asset();
-        self.assets.0.insert(asset_id, AppAsset::PolicyAsset);
+        self.assets
+            .0
+            .insert(asset_id, AppAsset::PolicyAsset(asset_id));
     }
 
     pub fn get_asset(&self, asset: &AssetId) -> Result<&AppAsset, Error> {
@@ -286,12 +298,19 @@ impl State {
         if asset_id != asset_id_c {
             return Err(Error::InvalidContractForAsset(asset_id.to_string()));
         }
+        let data = RegistryAssetData {
+            asset_id,
+            token_id,
+            issuance_prevout: previous_output,
+            issuance_is_confidential: is_confidential,
+            contract,
+        };
         self.assets
             .0
-            .insert(asset_id, AppAsset::RegistryAsset(contract.clone()));
+            .insert(asset_id, AppAsset::RegistryAsset(data.clone()));
         self.assets
             .0
-            .insert(token_id, AppAsset::ReissuanceToken((asset_id_c, contract)));
+            .insert(token_id, AppAsset::ReissuanceToken(data));
         Ok(())
     }
 

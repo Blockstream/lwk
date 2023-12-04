@@ -286,6 +286,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 )?;
                 serde_json::to_value(r)?
             }
+            AssetCommand::Remove { asset } => {
+                let r = client.asset_remove(asset)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Schema(a) => schema::schema(a, client)?,
     })

@@ -294,6 +294,13 @@ pub struct AssetInsert {
     pub is_confidential: Option<bool>,
 }
 
+/// Request to remove an asset
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetRemove {
+    /// The asset identifier
+    pub asset_id: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

@@ -526,6 +526,13 @@ pub enum AssetCommand {
         #[arg(long, default_value_t = false)]
         is_confidential: bool,
     },
+
+    /// Remove an asset
+    Remove {
+        /// Asset ID in hex
+        #[arg(short, long)]
+        asset: String,
+    },
 }
 
 #[derive(Debug, Args)]

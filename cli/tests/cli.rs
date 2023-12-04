@@ -462,6 +462,11 @@ fn test_issue() {
     let reissuance_token_name = &format!("reissuance token for {asset}");
     assert_eq!(name, reissuance_token_name);
 
+    sh(&format!("{cli} asset remove --asset {token}"));
+    let r = sh(&format!("{cli} asset list"));
+    let assets = r.get("assets").unwrap().as_array().unwrap();
+    assert_eq!(assets.len(), 2);
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

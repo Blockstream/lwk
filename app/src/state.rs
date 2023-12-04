@@ -283,4 +283,12 @@ impl State {
             .insert(token_id, AppAsset::ReissuanceToken(asset_id_c));
         Ok(())
     }
+
+    pub fn remove_asset(&mut self, asset: &AssetId) -> Result<(), Error> {
+        self.assets
+            .0
+            .remove(asset)
+            .ok_or_else(|| Error::AssetNotExist(asset.to_string()))?;
+        Ok(())
+    }
 }

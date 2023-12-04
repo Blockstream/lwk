@@ -43,6 +43,7 @@ pub enum Method {
     AssetDetails,
     ListAssets,
     AssetInsert,
+    AssetRemove,
     Stop,
     SignerJadeId,
 }
@@ -77,6 +78,7 @@ impl Method {
                 Method::AssetDetails => schema_for!(request::AssetDetails),
                 Method::ListAssets => schema_for!(request::Empty),
                 Method::AssetInsert => schema_for!(request::AssetInsert),
+                Method::AssetRemove => schema_for!(request::AssetRemove),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(request::Empty),
             },
@@ -108,6 +110,7 @@ impl Method {
                 Method::AssetDetails => schema_for!(response::AssetDetails),
                 Method::ListAssets => schema_for!(response::ListAssets),
                 Method::AssetInsert => schema_for!(response::Empty),
+                Method::AssetRemove => schema_for!(request::Empty),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(response::JadeId),
             },
@@ -147,6 +150,7 @@ impl FromStr for Method {
             "asset_details" => Method::AssetDetails,
             "list_assets" => Method::ListAssets,
             "asset_insert" => Method::AssetInsert,
+            "asset_remove" => Method::AssetRemove,
             "signer_jade_id" => Method::SignerJadeId,
             "stop" => Method::Stop,
             _ => {
@@ -188,6 +192,7 @@ impl std::fmt::Display for Method {
             Method::AssetDetails => "asset_details",
             Method::ListAssets => "list_assets",
             Method::AssetInsert => "asset_insert",
+            Method::AssetRemove => "asset_remove",
             Method::Stop => "stop",
             Method::SignerJadeId => "signer_jade_id",
         };

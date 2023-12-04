@@ -271,6 +271,11 @@ impl Client {
         self.make_request(Method::AssetInsert, Some(req))
     }
 
+    pub fn asset_remove(&self, asset_id: String) -> Result<response::Empty, Error> {
+        let req = request::AssetRemove { asset_id };
+        self.make_request(Method::AssetRemove, Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

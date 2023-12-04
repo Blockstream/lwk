@@ -44,7 +44,7 @@ pub enum AppAsset {
     RegistryAsset(Contract),
 
     /// A reissuance token for an asset
-    ReissuanceToken(AssetId),
+    ReissuanceToken((AssetId, Contract)),
 }
 
 impl AppAsset {
@@ -52,7 +52,9 @@ impl AppAsset {
         match self {
             AppAsset::PolicyAsset => "liquid bitcoin".into(),
             AppAsset::RegistryAsset(contract) => contract.name.clone(),
-            AppAsset::ReissuanceToken(asset_id) => format!("reissuance token for {asset_id}"),
+            AppAsset::ReissuanceToken((_, contract)) => {
+                format!("reissuance token for {}", contract.name)
+            }
         }
     }
 }
@@ -277,10 +279,10 @@ impl State {
         }
         self.assets
             .0
-            .insert(asset_id, AppAsset::RegistryAsset(contract));
+            .insert(asset_id, AppAsset::RegistryAsset(contract.clone()));
         self.assets
             .0
-            .insert(token_id, AppAsset::ReissuanceToken(asset_id_c));
+            .insert(token_id, AppAsset::ReissuanceToken((asset_id_c, contract)));
         Ok(())
     }
 

@@ -457,9 +457,9 @@ fn test_issue() {
     let name = r.get("name").unwrap().as_str().unwrap();
     assert_eq!(name, "example");
 
+    let reissuance_token_name = &format!("reissuance token for {name}");
     let r = sh(&format!("{cli} asset details --asset {token}"));
     let name = r.get("name").unwrap().as_str().unwrap();
-    let reissuance_token_name = &format!("reissuance token for {asset}");
     assert_eq!(name, reissuance_token_name);
 
     sh(&format!("{cli} asset remove --asset {token}"));

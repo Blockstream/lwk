@@ -310,15 +310,15 @@ impl State {
         self.get_asset(&asset)
     }
 
-    pub fn balance_with_tickers<T: Copy>(&self, balance: HashMap<String, T>) -> HashMap<String, T> {
+    pub fn replace_id_with_ticker(
+        &self,
+        balance: impl IntoIterator<Item = (String, i64)>,
+    ) -> HashMap<String, i64> {
         balance
-            .iter()
+            .into_iter()
             .map(|(k, v)| {
-                let t = self
-                    .get_asset_from_str(k)
-                    .map(|a| a.ticker())
-                    .unwrap_or_else(|_| k.to_string());
-                (t, *v)
+                let t = self.get_asset_from_str(&k).map(|a| a.ticker()).unwrap_or(k);
+                (t, v)
             })
             .collect()
     }

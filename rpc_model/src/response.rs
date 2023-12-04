@@ -96,7 +96,7 @@ pub struct Address {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
     /// A map of the balance of every asset in the wallet
-    pub balance: HashMap<String, u64>,
+    pub balance: HashMap<String, i64>,
 }
 
 /// PSET response

@@ -276,10 +276,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut balance = wollet
                 .balance()?
                 .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
+                .map(|(k, v)| (k.to_string(), v as i64))
                 .collect();
             if r.with_tickers {
-                balance = s.balance_with_tickers(balance);
+                balance = s.replace_id_with_ticker(balance);
             }
             Response::result(
                 request.id,
@@ -516,7 +516,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .map(|(k, v)| (k.to_string(), v))
                 .collect();
             if r.with_tickers {
-                balance = s.balance_with_tickers(balance);
+                balance = s.replace_id_with_ticker(balance);
             }
             let issuances = details
                 .issuances

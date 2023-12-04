@@ -57,6 +57,16 @@ impl AppAsset {
             }
         }
     }
+
+    pub fn ticker(&self) -> String {
+        match self {
+            AppAsset::PolicyAsset => "L-BTC".into(),
+            AppAsset::RegistryAsset(contract) => contract.ticker.clone(),
+            AppAsset::ReissuanceToken((_, contract)) => {
+                format!("reissuance token for {}", contract.ticker)
+            }
+        }
+    }
 }
 
 #[derive(Default)]

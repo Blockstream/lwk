@@ -272,6 +272,9 @@ pub struct WalletPsetDetails {
 pub struct AssetDetails {
     /// Name of the asset
     pub name: String,
+
+    /// Ticker of the asset
+    pub ticker: String,
 }
 
 /// Asset details

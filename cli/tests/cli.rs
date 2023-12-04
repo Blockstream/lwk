@@ -439,6 +439,7 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset details --asset {policy_asset}"));
     let name = r.get("name").unwrap().as_str().unwrap();
     assert_eq!(name, "liquid bitcoin");
+    assert_eq!(r.get("ticker").unwrap().as_str().unwrap(), "L-BTC");
 
     let r = sh(&format!("{cli} asset list"));
     let assets = r.get("assets").unwrap().as_array().unwrap();

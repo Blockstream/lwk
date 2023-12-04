@@ -54,44 +54,12 @@ pub struct Jade {
     master_xpub: Option<ExtendedPubKey>,
 }
 
-#[cfg(feature = "serial")]
-#[derive(Debug)]
-pub struct SerialJade {
-    pub jade: Jade,
-    pub network: Network,
-    pub path: String,
-    pub version: VersionInfoResult,
-}
-
 impl Jade {
     pub fn new(conn: Connection, network: Network) -> Self {
         Self {
             conn,
             network,
             master_xpub: None,
-        }
-    }
-
-    #[cfg(feature = "serial")]
-    pub fn scan_serial() -> Result<Option<SerialJade>> {
-        let ports = serialport::available_ports()?;
-        if ports.is_empty() {
-            Ok(None)
-        } else {
-            // todo: loop through ports?
-            let path = ports[0].port_name.clone();
-            let port = serialport::new(&path, BAUD_RATE).timeout(TIMEOUT).open()?;
-
-            let network = Network::TestnetLiquid; // todo: network selection
-            let mut jade = Jade::new(port.into(), network);
-            let version = jade.version_info()?;
-
-            Ok(Some(SerialJade {
-                jade,
-                network,
-                path,
-                version,
-            }))
         }
     }
 

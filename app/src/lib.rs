@@ -509,12 +509,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     fingerprint: f.to_string(),
                 })
                 .collect();
-            let balance: HashMap<String, i64> = details
+            let mut balance: HashMap<String, i64> = details
                 .balance
                 .balances
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect();
+            if r.with_tickers {
+                balance = s.balance_with_tickers(balance);
+            }
             let issuances = details
                 .issuances
                 .iter()

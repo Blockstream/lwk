@@ -463,6 +463,10 @@ pub enum WalletCommand {
         /// PSET
         #[arg(short, long, required = true)]
         pset: String,
+
+        /// Replace asset ids with tickers when possible
+        #[arg(long, action)]
+        with_tickers: bool,
     },
 }
 

@@ -274,6 +274,9 @@ pub struct WalletPsetDetails {
 
     /// The PSET in base64 to inspect
     pub pset: String,
+
+    /// Replace asset ids with tickers when possible
+    pub with_tickers: bool,
 }
 
 /// Request to have details of an asset

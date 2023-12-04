@@ -423,6 +423,12 @@ fn test_issue() {
     assert_eq!(balance.get(asset).unwrap().as_i64().unwrap(), 1000);
     assert!(balance.get(token).is_none());
 
+    let r = sh(&format!(
+        "{cli} wallet pset-details --name w1 -p {pset} --with-tickers"
+    ));
+    let balance = r.get("balance").unwrap().as_object().unwrap();
+    assert!(balance.get("L-BTC").unwrap().as_i64().unwrap() < 0);
+
     let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();

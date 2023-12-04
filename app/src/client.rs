@@ -201,8 +201,13 @@ impl Client {
         &self,
         name: String,
         pset: String,
+        with_tickers: bool,
     ) -> Result<response::WalletPsetDetails, Error> {
-        let req = request::WalletPsetDetails { name, pset };
+        let req = request::WalletPsetDetails {
+            name,
+            pset,
+            with_tickers,
+        };
         self.make_request(Method::WalletPsetDetails, Some(req))
     }
 

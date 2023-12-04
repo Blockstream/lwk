@@ -437,6 +437,10 @@ fn test_issue() {
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert_eq!(balance.get(asset).unwrap().as_u64().unwrap(), 1000);
 
+    let r = sh(&format!("{cli} wallet balance --name w1 --with-tickers"));
+    let balance = r.get("balance").unwrap().as_object().unwrap();
+    assert!(balance.get("L-BTC").unwrap().as_u64().unwrap() > 0);
+
     let r = sh(&format!("{cli} asset details --asset {policy_asset}"));
     let name = r.get("name").unwrap().as_str().unwrap();
     assert_eq!(name, "liquid bitcoin");

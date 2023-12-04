@@ -273,11 +273,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let balance = wollet
+            let mut balance = wollet
                 .balance()?
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect();
+            if r.with_tickers {
+                balance = s.balance_with_tickers(balance);
+            }
             Response::result(
                 request.id,
                 serde_json::to_value(response::Balance { balance })?,

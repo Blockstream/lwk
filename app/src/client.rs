@@ -105,8 +105,8 @@ impl Client {
         self.make_request(Method::ListSigners, None::<Box<RawValue>>)
     }
 
-    pub fn balance(&self, name: String) -> Result<response::Balance, Error> {
-        let req = request::Balance { name };
+    pub fn balance(&self, name: String, with_tickers: bool) -> Result<response::Balance, Error> {
+        let req = request::Balance { name, with_tickers };
         self.make_request(Method::Balance, Some(req))
     }
 

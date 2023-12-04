@@ -174,8 +174,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.unload_wallet(name)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Balance { name } => {
-                let r = client.balance(name)?;
+            WalletCommand::Balance { name, with_tickers } => {
+                let r = client.balance(name, with_tickers)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Send {

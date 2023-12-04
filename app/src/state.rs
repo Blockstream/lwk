@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use common::Signer;
 use jade::mutex_jade::MutexJade;
@@ -302,5 +303,23 @@ impl State {
             .remove(asset)
             .ok_or_else(|| Error::AssetNotExist(asset.to_string()))?;
         Ok(())
+    }
+
+    fn get_asset_from_str(&self, asset: &str) -> Result<&AppAsset, Error> {
+        let asset = AssetId::from_str(asset).map_err(|e| Error::Generic(e.to_string()))?;
+        self.get_asset(&asset)
+    }
+
+    pub fn balance_with_tickers<T: Copy>(&self, balance: HashMap<String, T>) -> HashMap<String, T> {
+        balance
+            .iter()
+            .map(|(k, v)| {
+                let t = self
+                    .get_asset_from_str(k)
+                    .map(|a| a.ticker())
+                    .unwrap_or_else(|_| k.to_string());
+                (t, *v)
+            })
+            .collect()
     }
 }

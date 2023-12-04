@@ -105,6 +105,9 @@ pub struct Address {
 pub struct Balance {
     /// The wallet name
     pub name: String,
+
+    /// Replace asset ids with tickers when possible
+    pub with_tickers: bool,
 }
 
 /// Send a transaction from a wallet

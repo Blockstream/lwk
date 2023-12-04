@@ -123,8 +123,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.generate_signer()?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::JadeId => {
-                let j = client.signer_jade_id()?;
+            SignerCommand::JadeId { emulator } => {
+                let j = client.signer_jade_id(emulator)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::Sign { name, pset } => {
@@ -135,8 +135,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.signer_load_software(name, mnemonic)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::LoadJade { name, id } => {
-                let j = client.signer_load_jade(name, id)?;
+            SignerCommand::LoadJade { name, id, emulator } => {
+                let j = client.signer_load_jade(name, id, emulator)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::LoadExternal { name, fingerprint } => {

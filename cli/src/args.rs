@@ -181,7 +181,11 @@ pub enum SignerCommand {
     Generate,
 
     /// Probe connected Jades, unlocks and returns identifiers that allows to load a Jade
-    JadeId,
+    JadeId {
+        /// The socket address to connect to jade emulator
+        #[arg(long)]
+        emulator: Option<SocketAddr>,
+    },
 
     /// Load a software signer giving it a name
     LoadSoftware {
@@ -200,6 +204,10 @@ pub enum SignerCommand {
         /// Identifier of the jade (20 bytes as 40 hex chars)
         #[arg(long)]
         id: String,
+
+        /// The socket address to connect to jade emulator
+        #[arg(long)]
+        emulator: Option<SocketAddr>,
     },
 
     /// Load a signer (software, serial, external) giving it a name

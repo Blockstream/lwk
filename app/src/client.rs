@@ -63,8 +63,13 @@ impl Client {
         self.make_request(Method::SignerLoadSoftware, Some(req))
     }
 
-    pub fn signer_load_jade(&self, name: String, id: String) -> Result<response::Signer, Error> {
-        let req = request::SignerLoadJade { name, id };
+    pub fn signer_load_jade(
+        &self,
+        name: String,
+        id: String,
+        emulator: Option<SocketAddr>,
+    ) -> Result<response::Signer, Error> {
+        let req = request::SignerLoadJade { name, id, emulator };
         self.make_request(Method::SignerLoadJade, Some(req))
     }
 
@@ -284,8 +289,9 @@ impl Client {
         self.make_request(Method::Schema, Some(req))
     }
 
-    pub fn signer_jade_id(&self) -> Result<Value, Error> {
-        self.make_request(Method::SignerJadeId, None::<Box<RawValue>>)
+    pub fn signer_jade_id(&self, emulator: Option<SocketAddr>) -> Result<Value, Error> {
+        let req = request::SignerJadeId { emulator };
+        self.make_request(Method::SignerJadeId, Some(req))
     }
 
     pub fn stop(&self) -> Result<Value, Error> {

@@ -1,5 +1,7 @@
 //! Data models of every requests made via RPC
 
+use std::net::SocketAddr;
+
 #[cfg(doc)]
 use crate::response;
 
@@ -66,6 +68,9 @@ pub struct SignerLoadJade {
 
     /// Full identifier of the jade
     pub id: String,
+
+    /// If set, instead of looking for physical jade, try to connect to the emulator at the following port
+    pub emulator: Option<SocketAddr>,
 }
 
 /// Load a signer in the server
@@ -299,6 +304,13 @@ pub struct AssetInsert {
 pub struct AssetRemove {
     /// The asset identifier
     pub asset_id: String,
+}
+
+/// Request to obtain jade identifiers
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerJadeId {
+    /// If set, instead of looking for physical jade, try to connect to the emulator at the following port
+    pub emulator: Option<SocketAddr>,
 }
 
 #[cfg(test)]

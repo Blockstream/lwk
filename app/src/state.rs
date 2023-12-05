@@ -1,9 +1,13 @@
 use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use common::Signer;
 use jade::mutex_jade::MutexJade;
 use jade::Network;
+use serde::Serialize;
 use signer::AnySigner;
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
@@ -366,5 +370,18 @@ impl State {
                 (t, v)
             })
             .collect()
+    }
+
+    pub fn persist<T: Serialize>(&mut self, data: T) -> Result<(), Error> {
+        let data = serde_json::to_string(&data)?;
+        let mut path = PathBuf::from(&self.config.datadir);
+        path.push("state.json");
+        let mut file = OpenOptions::new()
+            .create_new(!path.exists())
+            .write(true)
+            .append(true)
+            .open(path)?;
+        writeln!(file, "{}", data)?;
+        Ok(())
     }
 }

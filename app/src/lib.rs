@@ -155,7 +155,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         ),
         Method::LoadWallet => {
             let r: request::LoadWallet =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
@@ -167,6 +167,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 &r.descriptor,
             )?;
             s.wollets.insert(&r.name, wollet)?;
+
+            s.persist(&request)?;
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::Wallet {
@@ -177,9 +180,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::UnloadWallet => {
             let r: request::UnloadWallet =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let removed = s.wollets.remove(&r.name)?;
+            s.persist(&request)?;
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::UnloadWallet {
@@ -205,41 +210,45 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::SignerLoadSoftware => {
             let r: request::SignerLoadSoftware =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let mnemonic = r.mnemonic;
             let signer = AppSigner::AvailableSigner(AnySigner::Software(SwSigner::new(&mnemonic)?));
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
         Method::SignerLoadJade => {
             let r: request::SignerLoadJade =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let id = XpubIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
             let signer = AppSigner::JadeId(id, s.config.jade_network());
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
         Method::SignerLoadExternal => {
             let r: request::SignerLoadExternal =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let fingerprint =
                 Fingerprint::from_str(&r.fingerprint).map_err(|e| Error::Generic(e.to_string()))?;
             let signer = AppSigner::ExternalSigner(fingerprint);
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
         Method::UnloadSigner => {
             let r: request::UnloadSigner =
-                serde_json::from_value(request.params.unwrap_or_default())?;
+                serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let removed = s.signers.remove(&r.name)?;
             let signer: response::Signer = signer_response_from(&r.name, &removed)?;
+            s.persist(&request)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::UnloadSigner { unloaded: signer })?,
@@ -644,7 +653,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(request.id, serde_json::to_value(r)?)
         }
         Method::AssetInsert => {
-            let r: request::AssetInsert = serde_json::from_value(request.params.unwrap())?;
+            let r: request::AssetInsert = serde_json::from_value(request.clone().params.unwrap())?;
             let mut s = state.lock().unwrap();
             let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
@@ -659,14 +668,16 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 contract,
                 r.is_confidential,
             )?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::AssetRemove => {
-            let r: request::AssetRemove = serde_json::from_value(request.params.unwrap())?;
+            let r: request::AssetRemove = serde_json::from_value(request.clone().params.unwrap())?;
             let mut s = state.lock().unwrap();
             let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             s.remove_asset(&asset_id)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::SignerJadeId => {

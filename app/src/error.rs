@@ -30,6 +30,9 @@ pub enum Error {
     #[error(transparent)]
     JadePset(#[from] jade::sign_pset::Error),
 
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
     #[error("Trying to start an already started server")]
     AlreadyStarted,
 

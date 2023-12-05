@@ -77,26 +77,46 @@ fn test_start_stop_persist() {
     sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1"#
     ));
+    let result = sh(&format!("{cli} signer generate"));
+    let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
+    sh(&format!(
+        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --name s2"#,
+    ));
+    sh(&format!(r#"{cli} signer unload --name s2"#)); // Verify unloads are handled
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
-    for _ in 0..2 {
-        // doing it twice to verify the initial load doesn't persist itself ("doubling" the state)
-        let t = {
-            let cli = cli.clone();
-            std::thread::spawn(move || {
-                sh(&format!("{cli} server start"));
-            })
-        };
-        std::thread::sleep(std::time::Duration::from_millis(100));
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
-        let result = sh(&format!("{cli} signer list"));
-        let signers = result.get("signers").unwrap();
-        assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+    let result = sh(&format!("{cli} signer list"));
+    let signers = result.get("signers").unwrap();
+    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
 
-        sh(&format!("{cli} server stop"));
-        t.join().unwrap();
-    }
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    // restarting another time to verify the initial load doesn't double the state
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let result = sh(&format!("{cli} signer list"));
+    let signers = result.get("signers").unwrap();
+    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
 }
 
 #[test]

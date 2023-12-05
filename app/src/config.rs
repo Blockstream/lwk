@@ -84,7 +84,7 @@ impl Config {
         path
     }
 
-    /// Returns the path of the state file under datadri
+    /// Returns the path of the state file under datadir
     pub fn state_path(&self) -> PathBuf {
         let mut path = self.datadir();
         path.push("state.json");

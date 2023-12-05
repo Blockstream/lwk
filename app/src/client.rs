@@ -22,7 +22,7 @@ impl Client {
         Ok(Self { client })
     }
 
-    fn make_request<Req, Res>(
+    pub(crate) fn make_request<Req, Res>(
         &self,
         method: Method,
         req: Option<Req>,

@@ -128,6 +128,7 @@ pub struct State {
     pub wollets: Wollets,
     pub signers: Signers,
     pub assets: Assets,
+    pub do_persist: bool,
 }
 
 impl Wollets {
@@ -373,15 +374,17 @@ impl State {
     }
 
     pub fn persist<T: Serialize>(&mut self, data: T) -> Result<(), Error> {
-        let data = serde_json::to_string(&data)?;
-        let mut path = PathBuf::from(&self.config.datadir);
-        path.push("state.json");
-        let mut file = OpenOptions::new()
-            .create_new(!path.exists())
-            .write(true)
-            .append(true)
-            .open(path)?;
-        writeln!(file, "{}", data)?;
+        if self.do_persist {
+            let data = serde_json::to_string(&data)?;
+            let mut path = PathBuf::from(&self.config.datadir);
+            path.push("state.json"); // TODO get the file path from a single method, appending also the network
+            let mut file = OpenOptions::new()
+                .create_new(!path.exists())
+                .write(true)
+                .append(true)
+                .open(path)?;
+            writeln!(file, "{}", data)?;
+        }
         Ok(())
     }
 }

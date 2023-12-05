@@ -82,6 +82,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                             app.addr()
                         )
                     })?;
+
                     // get the app version
                     let version = client.version()?.version;
                     tracing::info!("App running version {}", version);

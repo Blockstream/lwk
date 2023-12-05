@@ -11,6 +11,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
@@ -19,6 +20,7 @@ use common::{
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
 use jade::mutex_jade::MutexJade;
+use serde_json::Value;
 use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
@@ -74,9 +76,33 @@ impl App {
         let rpc = tiny_jrpc::JsonRpcServer::new(
             server,
             tiny_jrpc::Config::default(),
-            state,
+            state.clone(),
             method_handler,
         );
+
+        let mut path = PathBuf::from(&self.config.datadir);
+        path.push("state.json");
+        match std::fs::read_to_string(&path) {
+            Ok(string) => {
+                tracing::info!(
+                    "Loading previous state, {} elements",
+                    string.lines().count()
+                );
+
+                let client = self.client()?;
+
+                for line in string.lines() {
+                    let r: Request = serde_json::from_str(line)?;
+                    let method: Method = r.method.parse()?;
+                    let _value: Value = client.make_request(method, r.params)?;
+                }
+            }
+            Err(_) => {
+                tracing::info!("There is no previous state at {path:?}");
+            }
+        }
+        state.lock().map_err(|e| e.to_string())?.do_persist = true;
+
         self.rpc = Some(rpc);
         Ok(())
     }

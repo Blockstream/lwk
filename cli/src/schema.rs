@@ -46,6 +46,7 @@ impl From<SignerSubCommandsEnum> for Method {
     fn from(value: SignerSubCommandsEnum) -> Self {
         match value {
             SignerSubCommandsEnum::Generate => Method::GenerateSigner,
+            SignerSubCommandsEnum::JadeId => Method::SignerJadeId,
             SignerSubCommandsEnum::LoadSoftware => Method::SignerLoadSoftware,
             SignerSubCommandsEnum::LoadJade => Method::SignerLoadJade,
             SignerSubCommandsEnum::LoadExternal => Method::SignerLoadExternal,

@@ -508,6 +508,15 @@ fn test_issue() {
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
+    let recipient = format!("--recipient burn:1:{asset}");
+    let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let _txid = r.get("txid").unwrap().as_str().unwrap();
+    assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

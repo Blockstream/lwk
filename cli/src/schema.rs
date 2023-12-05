@@ -64,6 +64,8 @@ impl From<AssetSubCommandsEnum> for Method {
             AssetSubCommandsEnum::Contract => Method::Contract,
             AssetSubCommandsEnum::Details => Method::AssetDetails,
             AssetSubCommandsEnum::List => Method::ListAssets,
+            AssetSubCommandsEnum::Insert => Method::AssetInsert,
+            AssetSubCommandsEnum::Remove => Method::AssetRemove,
         }
     }
 }

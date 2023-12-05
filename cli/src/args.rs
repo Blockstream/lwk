@@ -143,6 +143,8 @@ pub enum AssetSubCommandsEnum {
     Contract,
     Details,
     List,
+    Insert,
+    Remove,
 }
 
 #[derive(ValueEnum, Clone, Debug)]

@@ -364,7 +364,8 @@ pub enum WalletCommand {
         ///
         /// Can be specified multiple times.
         ///
-        /// Address can either be a valid address or "burn" if you want to burn the asset.
+        /// Address can either be a valid address or "burn" if you want to burn the asset, i.e.
+        /// create a provably unspendable output.
         #[arg(long, required = true)]
         recipient: Vec<String>,
 

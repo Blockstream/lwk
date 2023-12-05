@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::FromStr,
+    thread::JoinHandle,
 };
 
 use bs_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
@@ -10,7 +11,8 @@ use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
 
 use cli::{inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum};
-use test_session::setup;
+use tempfile::TempDir;
+use test_session::{setup, TestElectrumServer};
 
 mod test_session;
 
@@ -43,72 +45,78 @@ pub fn sh(command: &str) -> Value {
     sh_result(command).unwrap()
 }
 
-#[test]
-fn test_start_stop() {
+fn setup_cli() -> (JoinHandle<()>, TempDir, String, TestElectrumServer) {
+    let server = setup();
+    let electrum_url = &server.electrs.electrum_url;
     let addr = get_available_addr().unwrap();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli --addr {addr} server start"));
-    });
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let cli =
+        format!("cli --addr {addr} --datadir {datadir} -n regtest --electrum-url {electrum_url}");
+
+    let t = {
+        let cli = cli.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start"));
+        })
+    };
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    sh(&format!("cli --addr {addr} server stop"));
+    (t, tmp, cli, server)
+}
+
+#[test]
+fn test_start_stop() {
+    let (t, _tmp, cli, _server) = setup_cli();
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
 
 #[test]
 fn test_signer_load_unload_list() {
-    let addr = get_available_addr().unwrap();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli --addr {addr} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (t, _tmp, cli, _server) = setup_cli();
 
-    let result = sh(&format!("cli --addr {addr} signer list"));
+    let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
     assert!(signers.as_array().unwrap().is_empty());
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let result = sh(&format!(
-        r#"cli --addr {addr} signer load-software --mnemonic "{mnemonic}" --name ss "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
-    let result = sh(&format!("cli --addr {addr} signer generate"));
+    let result = sh(&format!("{cli} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     let result = sh_result(&format!(
-        r#"cli --addr {addr} signer load-software --mnemonic "{different_mnemonic}" --name ss"#,
+        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --name ss"#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
     let result = sh_result(&format!(
-        r#"cli --addr {addr} signer load-software --mnemonic "{mnemonic}" --name ss2 "#,
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name ss2 "#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
-    let result = sh(&format!("cli --addr {addr} signer list"));
+    let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
     assert!(!signers.as_array().unwrap().is_empty());
 
-    let result = sh(&format!("cli --addr {addr} signer unload --name ss"));
+    let result = sh(&format!("{cli} signer unload --name ss"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
 
-    let result = sh(&format!("cli --addr {addr} signer list"));
+    let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
     assert!(signers.as_array().unwrap().is_empty());
 
-    sh(&format!("cli --addr {addr} server stop"));
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
 
 #[test]
 fn test_signer_external() {
-    let addr = get_available_addr().unwrap();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli --addr {addr} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    let cli = format!("cli --addr {addr}");
+    let (t, _tmp, cli, _server) = setup_cli();
 
     let name = "ext";
     let fingerprint = "11111111";
@@ -131,72 +139,54 @@ fn test_signer_external() {
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let view_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
     let desc = format!("ct({view_key},elwpkh([{fingerprint}/0h/0h/0h]{xpub}/<0;1>/*))#6026sscm");
-    sh(&format!("cli --addr {addr} wallet load --name ss {desc}"));
+    sh(&format!("{cli} wallet load --name ss {desc}"));
 
     let r = sh(&format!("{cli} wallet details --name ss"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), name);
 
-    sh(&format!("cli --addr {addr} server stop"));
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
 
 #[test]
 fn test_wallet_load_unload_list() {
-    let addr = get_available_addr().unwrap();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli --addr {addr} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (t, _tmp, cli, _server) = setup_cli();
 
-    let result = sh(&format!("cli --addr {addr} wallet list"));
+    let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(wallets.as_array().unwrap().is_empty());
 
     let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
-    let result = sh(&format!(
-        "cli --addr {addr} wallet load --name custody {desc}"
-    ));
+    let result = sh(&format!("{cli} wallet load --name custody {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!(
-        "cli --addr {addr} wallet load --name custody {desc}"
-    ));
+    let result = sh_result(&format!("{cli} wallet load --name custody {desc}"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-    let result = sh_result(&format!(
-        "cli --addr {addr} wallet load --name differentname {desc}"
-    ));
+    let result = sh_result(&format!("{cli} wallet load --name differentname {desc}"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-    let result = sh(&format!("cli --addr {addr} wallet list"));
+    let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(!wallets.as_array().unwrap().is_empty());
 
-    let result = sh(&format!("cli --addr {addr} wallet unload --name custody"));
+    let result = sh(&format!("{cli} wallet unload --name custody"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
-    let result = sh(&format!("cli --addr {addr} wallet list"));
+    let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(wallets.as_array().unwrap().is_empty());
 
-    sh(&format!("cli --addr {addr} server stop"));
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
 
 #[test]
 fn test_wallet_details() {
-    let server = setup();
-    let electrum_url = &server.electrs.electrum_url;
-    let addr = get_available_addr().unwrap();
-    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
-    let cli = format!("cli {options}");
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli {options} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (t, _tmp, cli, _server) = setup_cli();
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -288,38 +278,28 @@ fn test_wallet_details() {
 
 #[test]
 fn test_broadcast() {
-    let server = setup();
-    let electrum_url = &server.electrs.electrum_url;
-    let addr = get_available_addr().unwrap();
-    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
-    let options_clone = options.clone();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli {options_clone} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (t, _tmp, cli, server) = setup_cli();
 
-    let result = sh(&format!("cli {options} signer generate"));
+    let result = sh(&format!("{cli} signer generate"));
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"cli {options} signer load-software --mnemonic "{mnemonic}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1 "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
     let result = sh(&format!(
-        r#"cli {options} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
+        r#"{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
-    let result = sh(&format!(
-        r#"cli {options} wallet load --name w1 {desc_generated}"#
-    ));
+    let result = sh(&format!(r#"{cli} wallet load --name w1 {desc_generated}"#));
     assert_eq!(
         result.get("descriptor").unwrap().as_str().unwrap(),
         desc_generated
     );
 
-    let result = sh(&format!(r#"cli {options} wallet address --name w1"#));
+    let result = sh(&format!(r#"{cli} wallet address --name w1"#));
     let address = result.get("address").unwrap().as_str().unwrap();
     let address = Address::from_str(address).unwrap();
 
@@ -328,51 +308,41 @@ fn test_broadcast() {
     std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
 
     let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let result = sh(&format!("cli {options} wallet balance --name w1"));
+    let result = sh(&format!("{cli} wallet balance --name w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1_000_000);
 
     let node_address = server.node_getnewaddress();
     let result = sh(&format!(
-        r#"cli {options} wallet send --name w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
+        r#"{cli} wallet send --name w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
     ));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let result = sh(&format!(r#"cli {options} signer sign --name s1 {pset}"#));
+    let result = sh(&format!(r#"{cli} signer sign --name s1 {pset}"#));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
     assert_ne!(pset_signed, pset_unsigned);
 
     let result = sh(&format!(
-        r#"cli {options} wallet broadcast --name w1 {pset_signed}"#
+        r#"{cli} wallet broadcast --name w1 {pset_signed}"#
     ));
     assert!(result.get("txid").unwrap().as_str().is_some());
 
-    let result = sh(&format!("cli {options} wallet balance --name w1"));
+    let result = sh(&format!("{cli} wallet balance --name w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
     assert!(policy_obj.as_number().unwrap().as_u64().unwrap() < 1_000_000);
 
-    sh(&format!("cli --addr {addr} server stop"));
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
 
 #[test]
 fn test_issue() {
-    // TODO copied from test_broadcast, make an extended setup fn creating a minimal env (1 signer, 1 funded wallt)
-    let server = setup();
-    let electrum_url = &server.electrs.electrum_url;
-    let addr = get_available_addr().unwrap();
-    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
-    let options_clone = options.clone();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli {options_clone} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    let cli = format!("cli {options}");
+    let (t, _tmp, cli, server) = setup_cli();
 
     let r = sh(&format!("{cli} signer generate"));
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -523,20 +493,12 @@ fn test_issue() {
 
 #[test]
 fn test_jade_emulator() {
-    // This test use json `Value` so that changes in the model are noticed
-    let addr = get_available_addr().unwrap();
-    let options = format!("--addr {addr}");
-    let cli = format!("cli {options}");
+    let (t, _tmp, cli, _server) = setup_cli();
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let jade_addr = format!("127.0.0.1:{}", port);
-
-    std::thread::spawn(move || {
-        sh(&format!("cli {options} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
 
     let result = sh(&format!("{cli} signer jade-id --emulator {jade_addr}"));
     let identifier = result.get("identifier").unwrap().as_str().unwrap();
@@ -549,19 +511,13 @@ fn test_jade_emulator() {
 
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
+    t.join().unwrap();
 }
 
 #[test]
 fn test_commands() {
-    // This test use json `Value` so that changes in the model are noticed
-    let addr = get_available_addr().unwrap();
-    let options = format!("--addr {addr}");
-    let cli = format!("cli {options}");
+    let (t, _tmp, cli, server) = setup_cli();
 
-    std::thread::spawn(move || {
-        sh(&format!("cli {options} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
     let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
 
@@ -574,24 +530,30 @@ fn test_commands() {
         format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
     );
 
+    let expected = Address::from_str("el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry").unwrap();
+    let _txid = server.node_sendtoaddress(&expected, 1_000_000, None);
+    server.generate(101);
+    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
+
     let result = sh(&format!("{cli}  wallet balance --name custody"));
     let balance_obj = result.get("balance").unwrap();
-    let asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
+    dbg!(&balance_obj);
+    let asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let policy_obj = balance_obj.get(asset).unwrap();
-    assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 100000);
+    assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1000000);
 
     let result = sh_result(&format!("{cli}  wallet balance --name notexist"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
 
     let result = sh(&format!("{cli} wallet address --name custody"));
-    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj2z8k7l7ewsnu");
+    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 1);
 
     let result = sh(&format!("{cli} wallet address --name custody --index 0"));
-    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjypuqfev6wuwh");
+    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-    let result = sh(&format!("{cli} wallet send --name custody --recipient tlq1qqwf6dzkyrukfzwmx3cxdpdx2z3zspgda0v7x874cewkucajdzrysa7z9fy0qnjvuz0ymqythd6jxy9d2e8ajka48efakgrp9t:2:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"));
+    let result = sh(&format!("{cli} wallet send --name custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let _: PartiallySignedTransaction = pset.parse().unwrap();
 
@@ -619,7 +581,7 @@ fn test_commands() {
     let result = sh(&format!(
         "{cli} wallet address --name desc_generated --index 0"
     ));
-    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn");
+    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
     let result = sh(&format!("{cli} signer xpub --name ss --kind bip84"));
@@ -637,20 +599,12 @@ fn test_commands() {
 
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
+    t.join().unwrap();
 }
 
 #[test]
 fn test_multisig() {
-    let server = setup();
-    let electrum_url = &server.electrs.electrum_url;
-    let addr = get_available_addr().unwrap();
-    let options = format!("-n regtest --electrum-url {electrum_url} --addr {addr}");
-    let options_clone = options.clone();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli {options_clone} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    let cli = format!("cli {options}");
+    let (t, _tmp, cli, server) = setup_cli();
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -772,42 +726,38 @@ fn test_multisig() {
 
 #[test]
 fn test_schema() {
-    let addr = get_available_addr().unwrap();
-    let t = std::thread::spawn(move || {
-        sh(&format!("cli --addr {addr} server start"));
-    });
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (t, _tmp, cli, _server) = setup_cli();
 
     for a in WalletSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
-        let result = sh(&format!("cli --addr {addr} schema request wallet {cmd}"));
+        let result = sh(&format!("{cli} schema request wallet {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
 
-        let result = sh(&format!("cli --addr {addr} schema response wallet {cmd}"));
+        let result = sh(&format!("{cli} schema response wallet {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
     }
 
     for a in SignerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
-        let result = sh(&format!("cli --addr {addr} schema request signer {cmd}"));
+        let result = sh(&format!("{cli} schema request signer {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
 
-        let result = sh(&format!("cli --addr {addr} schema response signer {cmd}"));
+        let result = sh(&format!("{cli} schema response signer {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
     }
 
     for a in AssetSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
-        let result = sh(&format!("cli --addr {addr} schema request asset {cmd}"));
+        let result = sh(&format!("{cli} schema request asset {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
 
-        let result = sh(&format!("cli --addr {addr} schema response asset {cmd}"));
+        let result = sh(&format!("{cli} schema response asset {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
     }
 
-    sh(&format!("cli --addr {addr} server stop"));
+    sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

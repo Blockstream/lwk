@@ -479,6 +479,15 @@ fn test_issue() {
     let assets = r.get("assets").unwrap().as_array().unwrap();
     assert_eq!(assets.len(), 2);
 
+    let node_address = server.node_getnewaddress();
+    let recipient = format!("--recipient {node_address}:1:{asset}");
+    let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let _txid = r.get("txid").unwrap().as_str().unwrap();
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

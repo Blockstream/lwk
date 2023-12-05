@@ -406,7 +406,29 @@ pub enum WalletCommand {
     Issuances {},
 
     /// Reissue a previously issued asset, needs ownership of the issuance token
-    Reissue {},
+    Reissue {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+
+        /// The asset to re-issue
+        #[arg(long)]
+        asset: String,
+
+        /// The number of units of the re-issued asset
+        #[arg(long)]
+        satoshi_asset: u64,
+
+        /// Address receiving the re-issued asset.
+        /// If not specified an external address of the wallet identified by `name` will be used
+        #[arg(long)]
+        address_asset: Option<String>,
+
+        // TODO default value
+        /// To optionally specify a fee
+        #[arg(long)]
+        fee_rate: Option<f32>,
+    },
 
     /// Print a multisig descriptor
     MultisigDesc {

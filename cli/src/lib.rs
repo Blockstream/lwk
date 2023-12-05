@@ -216,7 +216,16 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 )?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Reissue {} => todo!(),
+            WalletCommand::Reissue {
+                name,
+                asset,
+                satoshi_asset,
+                address_asset,
+                fee_rate,
+            } => {
+                let r = client.reissue(name, asset, satoshi_asset, address_asset, fee_rate)?;
+                serde_json::to_value(r)?
+            }
             WalletCommand::MultisigDesc {
                 descriptor_blinding_key,
                 kind,

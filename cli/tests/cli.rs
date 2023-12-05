@@ -401,7 +401,7 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
     let r = sh(&format!(
-        "{cli} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"
+        "{cli} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
@@ -420,14 +420,14 @@ fn test_issue() {
     let asset_sats = issuance.get("asset_satoshi").unwrap().as_u64().unwrap();
     let token_sats = issuance.get("token_satoshi").unwrap().as_u64().unwrap();
     assert_eq!(asset_sats, 1000);
-    assert_eq!(token_sats, 0);
+    assert_eq!(token_sats, 1);
     let prev_txid = issuance.get("prev_txid").unwrap().as_str().unwrap();
     let prev_vout = issuance.get("prev_vout").unwrap().as_u64().unwrap();
 
     let balance = r.get("balance").unwrap().as_object().unwrap();
     // TODO: util to check balance with less unwrap
     assert_eq!(balance.get(asset).unwrap().as_i64().unwrap(), 1000);
-    assert!(balance.get(token).is_none());
+    assert_eq!(balance.get(token).unwrap().as_i64().unwrap(), 1);
 
     let r = sh(&format!(
         "{cli} wallet pset-details --name w1 -p {pset} --with-tickers"
@@ -497,6 +497,16 @@ fn test_issue() {
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     let asset_balance_post = get_balance(&cli, "w1", asset);
     assert_eq!(asset_balance_pre, asset_balance_post + 1);
+
+    let r = sh(&format!(
+        "{cli} wallet reissue --name w1 --asset {asset} --satoshi-asset 1"
+    ));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let _txid = r.get("txid").unwrap().as_str().unwrap();
+    assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

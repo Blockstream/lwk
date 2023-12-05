@@ -583,6 +583,25 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
+        Method::Reissue => {
+            let r: request::Reissue = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s.wollets.get_mut(&r.name)?;
+            wollet.sync_txs()?;
+            let mut pset = wollet.reissue_asset(
+                &r.asset,
+                r.satoshi_asset,
+                r.address_asset.as_deref().unwrap_or(""),
+                r.fee_rate,
+            )?;
+            add_contracts(&mut pset, s.assets.iter());
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Pset {
+                    pset: pset.to_string(),
+                })?,
+            )
+        }
         Method::Contract => {
             let r: request::Contract = serde_json::from_value(request.params.unwrap())?;
             let c = wollet::Contract {

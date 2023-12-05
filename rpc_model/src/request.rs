@@ -234,6 +234,25 @@ pub struct Issue {
     pub fee_rate: Option<f32>,
 }
 
+/// Request to do a reissuance
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Reissue {
+    /// The wallet name doing the reissuance
+    pub name: String,
+
+    /// The asset to reissue
+    pub asset: String,
+
+    /// The number of units of the asset created
+    pub satoshi_asset: u64,
+
+    /// The address receiving the asset, if missing a receiving address from the wallet doing the reissuance is used
+    pub address_asset: Option<String>,
+
+    /// The optional fee rate
+    pub fee_rate: Option<f32>,
+}
+
 /// A request creating a contract in the JSON format expected by the issue call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Contract {

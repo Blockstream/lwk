@@ -234,6 +234,24 @@ impl Client {
         self.make_request(Method::Issue, Some(req))
     }
 
+    pub fn reissue(
+        &self,
+        name: String,
+        asset: String,
+        satoshi_asset: u64,
+        address_asset: Option<String>,
+        fee_rate: Option<f32>,
+    ) -> Result<response::Pset, Error> {
+        let req = request::Reissue {
+            name,
+            asset,
+            satoshi_asset,
+            address_asset,
+            fee_rate,
+        };
+        self.make_request(Method::Reissue, Some(req))
+    }
+
     pub fn contract(
         &self,
         domain: String,

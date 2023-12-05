@@ -211,6 +211,11 @@ impl Client {
         self.make_request(Method::WalletPsetDetails, Some(req))
     }
 
+    pub fn wallet_utxos(&self, name: String) -> Result<response::WalletUtxos, Error> {
+        let req = request::WalletUtxos { name };
+        self.make_request(Method::WalletUtxos, Some(req))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn issue(
         &self,

@@ -534,6 +534,10 @@ fn test_issue() {
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
 
+    let r = sh(&format!("{cli} wallet utxos --name w1"));
+    let utxos = r.get("utxos").unwrap().as_array().unwrap();
+    assert!(!utxos.is_empty());
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

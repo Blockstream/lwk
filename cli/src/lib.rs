@@ -265,6 +265,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_pset_details(name, pset, with_tickers)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::Utxos { name } => {
+                let r = client.wallet_utxos(name)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Asset(a) => match a.command {
             AssetCommand::Contract {

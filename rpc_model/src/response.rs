@@ -267,6 +267,35 @@ pub struct WalletPsetDetails {
     pub warnings: String,
 }
 
+/// Unspent Transaction Output
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Utxo {
+    /// Transction ID
+    pub txid: String,
+
+    /// Output index
+    pub vout: u32,
+
+    /// Height
+    pub height: Option<u32>,
+
+    /// Output script pubkey
+    pub script_pubkey: String,
+
+    /// Output asset
+    pub asset: String,
+
+    /// Output value in satoshi
+    pub value: u64,
+}
+
+/// Wallet unspent transaction outputs
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletUtxos {
+    /// UTXOs
+    pub utxos: Vec<Utxo>,
+}
+
 /// Details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

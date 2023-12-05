@@ -37,6 +37,7 @@ impl From<WalletSubCommandsEnum> for Method {
             WalletSubCommandsEnum::Details => Method::WalletDetails,
             WalletSubCommandsEnum::Combine => Method::WalletCombine,
             WalletSubCommandsEnum::PsetDetails => Method::WalletPsetDetails,
+            WalletSubCommandsEnum::Utxos => Method::WalletUtxos,
         }
     }
 }

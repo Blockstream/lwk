@@ -25,7 +25,7 @@ use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
-use wollet::elements::hex::FromHex;
+use wollet::elements::hex::{FromHex, ToHex};
 use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements::AssetId;
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
@@ -596,6 +596,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
+        Method::WalletUtxos => {
+            let r: request::WalletUtxos = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s.wollets.get_mut(&r.name)?;
+            wollet.sync_txs()?;
+            let utxos: Vec<response::Utxo> = wollet.utxos()?.iter().map(convert_utxo).collect();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::WalletUtxos { utxos })?,
+            )
+        }
         Method::Issue => {
             let r: request::Issue = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
@@ -775,6 +786,17 @@ fn add_contracts<'a>(
                 }
             }
         }
+    }
+}
+
+fn convert_utxo(u: &wollet::WalletTxOut) -> response::Utxo {
+    response::Utxo {
+        txid: u.outpoint.txid.to_string(),
+        vout: u.outpoint.vout,
+        height: u.height,
+        script_pubkey: u.script_pubkey.to_hex(),
+        asset: u.unblinded.asset.to_string(),
+        value: u.unblinded.value,
     }
 }
 

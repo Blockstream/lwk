@@ -110,6 +110,7 @@ pub enum WalletSubCommandsEnum {
     Details,
     Combine,
     PsetDetails,
+    Utxos,
 }
 
 #[derive(Debug, Args)]
@@ -490,6 +491,12 @@ pub enum WalletCommand {
         /// Replace asset ids with tickers when possible
         #[arg(long, action)]
         with_tickers: bool,
+    },
+
+    Utxos {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
     },
 }
 

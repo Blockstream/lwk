@@ -298,6 +298,13 @@ pub struct WalletPsetDetails {
     pub with_tickers: bool,
 }
 
+/// Request to get the wallet unspet transaction Outputs
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletUtxos {
+    /// The wallet name
+    pub name: String,
+}
+
 /// Request to have details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

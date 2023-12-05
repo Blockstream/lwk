@@ -483,6 +483,7 @@ fn test_issue() {
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
+    // TODO: add PSET introspection verifying there are asset metadata
     let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));

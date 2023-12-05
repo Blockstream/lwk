@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use common::Signer;
@@ -376,8 +375,7 @@ impl State {
     pub fn persist<T: Serialize>(&mut self, data: T) -> Result<(), Error> {
         if self.do_persist {
             let data = serde_json::to_string(&data)?;
-            let mut path = PathBuf::from(&self.config.datadir);
-            path.push("state.json"); // TODO get the file path from a single method, appending also the network
+            let path = self.config.state_path();
             let mut file = OpenOptions::new()
                 .create_new(!path.exists())
                 .write(true)

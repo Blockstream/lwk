@@ -46,6 +46,14 @@ impl ElementsNetwork {
             ElementsNetwork::ElementsRegtest { policy_asset } => *policy_asset,
         }
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ElementsNetwork::Liquid => "liquid",
+            ElementsNetwork::LiquidTestnet => "liquid-testnet",
+            ElementsNetwork::ElementsRegtest { .. } => "liquid-regtest",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

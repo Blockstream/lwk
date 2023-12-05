@@ -11,7 +11,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
@@ -80,8 +79,7 @@ impl App {
             method_handler,
         );
 
-        let mut path = PathBuf::from(&self.config.datadir);
-        path.push("state.json");
+        let path = self.config.state_path();
         match std::fs::read_to_string(&path) {
             Ok(string) => {
                 tracing::info!(

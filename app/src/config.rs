@@ -1,5 +1,7 @@
 use jade::Network as JadeNetwork;
+use std::fs;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
@@ -72,5 +74,20 @@ impl Config {
             ElementsNetwork::LiquidTestnet => JadeNetwork::TestnetLiquid,
             ElementsNetwork::ElementsRegtest { .. } => JadeNetwork::LocaltestLiquid,
         }
+    }
+
+    /// Appends the network to the given datadir
+    pub fn datadir(&self) -> PathBuf {
+        let mut path: PathBuf = self.datadir.as_str().into();
+        path.push(self.network.as_str());
+        fs::create_dir_all(&path).unwrap(); // TODO
+        path
+    }
+
+    /// Returns the path of the state file under datadri
+    pub fn state_path(&self) -> PathBuf {
+        let mut path = self.datadir();
+        path.push("state.json");
+        path
     }
 }

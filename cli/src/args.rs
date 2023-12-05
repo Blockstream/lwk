@@ -104,7 +104,6 @@ pub enum WalletSubCommandsEnum {
     Balance,
     Send,
     Issue,
-    Issuances,
     Reissue,
     MultisigDesc,
     Broadcast,
@@ -404,9 +403,6 @@ pub enum WalletCommand {
         #[arg(long)]
         fee_rate: Option<f32>,
     },
-
-    /// Prints a list of issuances made by this wallet
-    Issuances {},
 
     /// Reissue a previously issued asset, needs ownership of the issuance token
     Reissue {

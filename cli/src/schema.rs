@@ -31,7 +31,6 @@ impl From<WalletSubCommandsEnum> for Method {
             WalletSubCommandsEnum::Balance => Method::Balance,
             WalletSubCommandsEnum::Send => Method::SendMany,
             WalletSubCommandsEnum::Issue => Method::Issue,
-            WalletSubCommandsEnum::Issuances => todo!(),
             WalletSubCommandsEnum::Reissue => Method::Reissue,
             WalletSubCommandsEnum::MultisigDesc => Method::MultisigDescriptor,
             WalletSubCommandsEnum::Broadcast => Method::Broadcast,

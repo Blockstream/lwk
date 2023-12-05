@@ -66,10 +66,37 @@ fn setup_cli() -> (JoinHandle<()>, TempDir, String, TestElectrumServer) {
 }
 
 #[test]
-fn test_start_stop() {
+fn test_start_stop_persist() {
     let (t, _tmp, cli, _server) = setup_cli();
+
+    let result = sh(&format!("{cli} signer list"));
+    let signers = result.get("signers").unwrap();
+    assert_eq!(signers.as_array().unwrap().len(), 0);
+
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    sh(&format!(
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1"#
+    ));
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
+
+    for _ in 0..2 {
+        // doing it twice to verify the initial load doesn't persist itself ("doubling" the state)
+        let t = {
+            let cli = cli.clone();
+            std::thread::spawn(move || {
+                sh(&format!("{cli} server start"));
+            })
+        };
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        let result = sh(&format!("{cli} signer list"));
+        let signers = result.get("signers").unwrap();
+        assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+
+        sh(&format!("{cli} server stop"));
+        t.join().unwrap();
+    }
 }
 
 #[test]

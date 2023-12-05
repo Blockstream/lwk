@@ -97,6 +97,14 @@ impl AppAsset {
             }
         }
     }
+
+    pub fn asset_id(&self) -> AssetId {
+        match self {
+            AppAsset::PolicyAsset(asset) => *asset,
+            AppAsset::RegistryAsset(d) => d.asset_id,
+            AppAsset::ReissuanceToken(d) => d.token_id,
+        }
+    }
 }
 
 #[derive(Default)]

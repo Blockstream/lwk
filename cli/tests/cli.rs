@@ -23,6 +23,12 @@ fn get_available_addr() -> anyhow::Result<SocketAddr> {
     Ok(t.local_addr()?)
 }
 
+fn get_balance(cli: &str, wallet: &str, asset: &str) -> u64 {
+    let r = sh(&format!("{cli} wallet balance --name {wallet}"));
+    let b = r.get("balance").unwrap().as_object().unwrap();
+    b.get(asset).unwrap().as_u64().unwrap()
+}
+
 #[track_caller]
 fn sh_result(command: &str) -> anyhow::Result<Value> {
     let shell_words = shellwords::split(command).unwrap();
@@ -479,6 +485,7 @@ fn test_issue() {
     let assets = r.get("assets").unwrap().as_array().unwrap();
     assert_eq!(assets.len(), 2);
 
+    let asset_balance_pre = get_balance(&cli, "w1", asset);
     let node_address = server.node_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
@@ -488,6 +495,8 @@ fn test_issue() {
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
+    let asset_balance_post = get_balance(&cli, "w1", asset);
+    assert_eq!(asset_balance_pre, asset_balance_post + 1);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

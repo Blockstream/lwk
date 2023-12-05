@@ -26,12 +26,13 @@ use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::hex::FromHex;
 use wollet::elements::pset::PartiallySignedTransaction;
+use wollet::elements::AssetId;
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
 
 use crate::method::Method;
-use crate::state::{AppSigner, State};
+use crate::state::{AppAsset, AppSigner, State};
 use rpc_model::{request, response};
 
 pub use client::Client;
@@ -291,13 +292,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let tx = wollet.send_many(
+            let mut tx = wollet.send_many(
                 r.addressees
                     .into_iter()
                     .map(unvalidated_addressee)
                     .collect(),
                 r.fee_rate,
             )?;
+            add_contracts(&mut tx, s.assets.iter());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -702,6 +704,24 @@ fn signer_response_from(
         fingerprint: fingerprint.to_string(),
         xpub: xpub.map(|x| x.to_string()),
     })
+}
+
+fn add_contracts<'a>(
+    pset: &mut PartiallySignedTransaction,
+    assets: impl Iterator<Item = (&'a AssetId, &'a AppAsset)>,
+) {
+    let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
+    for (_, asset) in assets {
+        if let AppAsset::RegistryAsset(_) = asset {
+            // Policy asset and reissuance tokens do not require the contract
+            let asset_id = asset.asset_id();
+            if assets_in_pset.contains(&asset_id) {
+                if let Some(metadata) = asset.asset_metadata() {
+                    pset.add_asset_metadata(asset_id, &metadata);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

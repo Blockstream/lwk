@@ -87,8 +87,8 @@ impl Wollet {
         if let Ok(client) = self.config.electrum_url().build_client() {
             let descriptor = self.descriptor.clone();
             match sync(&client, &mut self.store, &descriptor) {
-                Ok(true) => tracing::info!("there are new transcations"),
-                Ok(false) => tracing::debug!("there aren't new transcations"),
+                Ok(true) => tracing::info!("there are new transactions"),
+                Ok(false) => tracing::debug!("there aren't new transactions"),
                 Err(e) => tracing::warn!("Error during sync, {:?}", e),
             }
         }

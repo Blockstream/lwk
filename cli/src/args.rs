@@ -185,7 +185,7 @@ impl std::fmt::Display for XpubKind {
 
 #[derive(Debug, Subcommand)]
 pub enum SignerCommand {
-    /// Generate a softwawre signer, returns a mnemonic
+    /// Generate a software signer, returns a mnemonic
     Generate,
 
     /// Probe connected Jades, unlocks and returns identifiers that allows to load a Jade

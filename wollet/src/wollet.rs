@@ -25,7 +25,7 @@ use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
@@ -158,10 +158,13 @@ impl Wollet {
         Ok(AddressResult::new(address, index))
     }
 
-    /// Get the wallet UTXOs
-    pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
+    pub fn txos_inner(&self, unspent: bool) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
-        let spent = self.store.spent()?;
+        let spent = if unspent {
+            self.store.spent()?
+        } else {
+            HashSet::new()
+        };
         for (tx_id, height) in self.store.cache.heights.iter() {
             let tx = self
                 .store
@@ -205,6 +208,11 @@ impl Wollet {
         txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
+    }
+
+    /// Get the wallet UTXOs
+    pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
+        self.txos_inner(true)
     }
 
     pub(crate) fn balance_from_utxos(

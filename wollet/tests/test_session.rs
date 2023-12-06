@@ -411,6 +411,7 @@ impl TestWollet {
         let tx = self.get_tx_from_list(&txid);
         // We only sent, so all balances are negative
         assert!(tx.balance.values().all(|v| *v < 0));
+        assert_eq!(tx.fee, fee as u64);
 
         self.wollet.descriptor().descriptor.for_each_key(|k| {
             if let DescriptorPublicKey::XPub(x) = k {

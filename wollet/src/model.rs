@@ -22,6 +22,7 @@ pub struct WalletTx {
     pub tx: Transaction,
     pub height: Option<u32>,
     pub balance: HashMap<AssetId, i64>,
+    pub fee: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

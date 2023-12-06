@@ -268,6 +268,7 @@ impl Wollet {
                 tx: tx.clone(),
                 height: **height,
                 balance: tx_balance(tx, &txos),
+                fee: tx_fee(tx),
             });
         }
 
@@ -450,6 +451,14 @@ fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMa
         }
     }
     balance
+}
+
+fn tx_fee(tx: &Transaction) -> u64 {
+    tx.output
+        .iter()
+        .filter(|o| o.script_pubkey.is_empty())
+        .map(|o| o.value.explicit().unwrap_or(0))
+        .sum()
 }
 
 #[cfg(test)]

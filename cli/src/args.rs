@@ -120,6 +120,7 @@ pub enum WalletSubCommandsEnum {
     Combine,
     PsetDetails,
     Utxos,
+    Txs,
 }
 
 #[derive(Debug, Args)]
@@ -504,6 +505,12 @@ pub enum WalletCommand {
     },
 
     Utxos {
+        /// Wallet name
+        #[arg(short, long)]
+        name: String,
+    },
+
+    Txs {
         /// Wallet name
         #[arg(short, long)]
         name: String,

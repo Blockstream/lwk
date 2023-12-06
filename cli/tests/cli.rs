@@ -538,6 +538,10 @@ fn test_issue() {
     let utxos = r.get("utxos").unwrap().as_array().unwrap();
     assert!(!utxos.is_empty());
 
+    let r = sh(&format!("{cli} wallet txs --name w1"));
+    let txs = r.get("txs").unwrap().as_array().unwrap();
+    assert!(!txs.is_empty());
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

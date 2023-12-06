@@ -305,6 +305,13 @@ pub struct WalletUtxos {
     pub name: String,
 }
 
+/// Request to get the wallet transactions
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletTxs {
+    /// The wallet name
+    pub name: String,
+}
+
 /// Request to have details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

@@ -607,6 +607,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::WalletUtxos { utxos })?,
             )
         }
+        Method::WalletTxs => {
+            let r: request::WalletTxs = serde_json::from_value(request.params.unwrap())?;
+            let mut s = state.lock().unwrap();
+            let wollet = s.wollets.get_mut(&r.name)?;
+            wollet.sync_txs()?;
+            let txs: Vec<response::Tx> = wollet.transactions()?.iter().map(convert_tx).collect();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::WalletTxs { txs })?,
+            )
+        }
         Method::Issue => {
             let r: request::Issue = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
@@ -797,6 +808,14 @@ fn convert_utxo(u: &wollet::WalletTxOut) -> response::Utxo {
         script_pubkey: u.script_pubkey.to_hex(),
         asset: u.unblinded.asset.to_string(),
         value: u.unblinded.value,
+    }
+}
+
+fn convert_tx(tx: &(wollet::elements::Transaction, Option<u32>)) -> response::Tx {
+    let (tx, height) = tx;
+    response::Tx {
+        txid: tx.txid().to_string(),
+        height: *height,
     }
 }
 

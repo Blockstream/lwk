@@ -296,6 +296,23 @@ pub struct WalletUtxos {
     pub utxos: Vec<Utxo>,
 }
 
+/// Transaction
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Tx {
+    /// Transction ID
+    pub txid: String,
+
+    /// Height
+    pub height: Option<u32>,
+}
+
+/// Wallet transactions
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletTxs {
+    /// Transactions
+    pub txs: Vec<Tx>,
+}
+
 /// Details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

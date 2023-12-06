@@ -188,7 +188,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             } => {
                 let mut addressees = vec![];
                 for rec in recipient {
-                    addressees.push(rec.try_into()?);
+                    addressees.push(
+                        rec.try_into()
+                            .with_context(|| "error parsing recipient argument")?,
+                    );
                 }
 
                 let r = client.send_many(name, addressees, fee_rate)?;

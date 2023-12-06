@@ -87,6 +87,8 @@ test_coverage:
 
 build_cli:
   extends: .base
+  only:
+    - ks@leocomandini/BEWallet
   script:
     - cargo build --release -p cli
   artifacts:

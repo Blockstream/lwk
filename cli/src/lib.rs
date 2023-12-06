@@ -4,6 +4,7 @@ use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
 use anyhow::{anyhow, Context};
 use app::Config;
+use clap::CommandFactory;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
@@ -60,7 +61,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     // verify the server is up
     if let CliCommand::Server(args::ServerArgs {
         command: ServerCommand::Start,
-    }) = args.command
+    })
+    | CliCommand::GenerateCompletion { .. } = args.command
     {
         // unless I am starting it
     } else if client.version().is_err() {
@@ -309,5 +311,11 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             }
         },
         CliCommand::Schema(a) => schema::schema(a, client)?,
+        CliCommand::GenerateCompletion { shell } => {
+            let mut result = vec![];
+            clap_complete::generate(shell, &mut Cli::command(), "cli", &mut result);
+            let s = String::from_utf8(result)?;
+            Value::String(s)
+        }
     })
 }

@@ -1,6 +1,7 @@
 use std::{fmt::Display, net::SocketAddr, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap_complete::Shell;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Network {
@@ -56,6 +57,9 @@ pub enum CliCommand {
     ///
     /// For example if you want a description of the fields returned by `wallet list` use `schema response wallet list`
     Schema(SchemaArgs),
+
+    #[clap(hide = true)]
+    GenerateCompletion { shell: Shell },
 }
 
 #[derive(Debug, Args)]

@@ -15,6 +15,15 @@ Help shows available commands:
 $ cli --help
 ```
 
+Install bash completion with:
+
+```sh
+$ cli generate-completion bash | jq -r . | sudo tee /usr/share/bash-completion/completions/cli
+```
+
+Other shell are available: bash, elvish, fish, powershell, zsh.
+The destination file path `/usr/share/bash-completion/completions/cli` may change according to your distro.
+
 ## Server
 
 ### Start

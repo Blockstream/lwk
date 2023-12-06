@@ -1,7 +1,7 @@
 //! # App
 //!
 //! Contains the RPC server [`App`] wiring the RPC calls to the respective methods in [`Wollet`] or [`Signer`].
-//! The server can be configured via the [`Config`] struct.
+//! The server can be configured via the [`Config`] struct and a convenient [cli](../cli/index.html) exists to call it.
 //!
 //! It also contains the RPC client [`Client`].
 //!

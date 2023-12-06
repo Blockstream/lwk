@@ -6,7 +6,7 @@ use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
-use crate::elements::{Address, AssetId, ContractHash, OutPoint, Transaction, TxOutWitness, Txid};
+use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Txid};
 use bip39::Mnemonic;
 use common::Signer;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
@@ -315,7 +315,7 @@ impl TestWollet {
         self.balance(&self.wollet.policy_asset())
     }
 
-    fn get_tx_from_list(&mut self, txid: &str) -> Transaction {
+    fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
         self.wollet.sync_txs().unwrap();
         let list = self.wollet.transactions().unwrap();
         let filtered_list: Vec<_> = list
@@ -328,7 +328,7 @@ impl TestWollet {
             "just made tx {} is not in tx list",
             txid
         );
-        filtered_list.first().unwrap().clone().tx
+        filtered_list.first().unwrap().clone()
     }
 
     pub fn fund(
@@ -344,7 +344,10 @@ impl TestWollet {
         let address = address.unwrap_or_else(|| self.address());
         let txid = server.node_sendtoaddress(&address, satoshi, asset);
         self.wait_for_tx(&txid);
-        let wallet_txid = self.get_tx_from_list(&txid).txid().to_string();
+        let tx = self.get_tx_from_list(&txid);
+        // We only received, all balances are positive
+        assert!(tx.balance.values().all(|v| *v > 0));
+        let wallet_txid = tx.tx.txid().to_string();
         assert_eq!(txid, wallet_txid);
 
         let utxos_after = self.wollet.utxos().unwrap().len();
@@ -402,9 +405,12 @@ impl TestWollet {
             self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
-        self.send(&mut pset);
+        let txid = self.send(&mut pset).to_string();
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
+        let tx = self.get_tx_from_list(&txid);
+        // We only sent, so all balances are negative
+        assert!(tx.balance.values().all(|v| *v < 0));
 
         self.wollet.descriptor().descriptor.for_each_key(|k| {
             if let DescriptorPublicKey::XPub(x) = k {

@@ -215,6 +215,14 @@ impl Wollet {
         self.txos_inner(true)
     }
 
+    fn txos(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
+        Ok(self
+            .txos_inner(false)?
+            .iter()
+            .map(|txo| (txo.outpoint, txo.clone()))
+            .collect())
+    }
+
     pub(crate) fn balance_from_utxos(
         &self,
         utxos: &[WalletTxOut],
@@ -247,6 +255,7 @@ impl Wollet {
             }
         });
 
+        let txos = self.txos()?;
         for (tx_id, height) in my_txids.iter() {
             let tx = self
                 .store
@@ -258,6 +267,7 @@ impl Wollet {
             txs.push(WalletTx {
                 tx: tx.clone(),
                 height: **height,
+                balance: tx_balance(tx, &txos),
             });
         }
 
@@ -424,6 +434,22 @@ impl Wollet {
         let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
+}
+
+fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {
+    let mut balance = HashMap::new();
+    let txid = tx.txid();
+    for out_idx in 0..tx.output.len() {
+        if let Some(txout) = txos.get(&OutPoint::new(txid, out_idx as u32)) {
+            *balance.entry(txout.unblinded.asset).or_default() += txout.unblinded.value as i64;
+        }
+    }
+    for input in &tx.input {
+        if let Some(txout) = txos.get(&input.previous_output) {
+            *balance.entry(txout.unblinded.asset).or_default() -= txout.unblinded.value as i64;
+        }
+    }
+    balance
 }
 
 #[cfg(test)]

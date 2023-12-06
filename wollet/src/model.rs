@@ -3,6 +3,7 @@ use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecr
 use crate::secp256k1::PublicKey;
 use crate::Error;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
@@ -20,6 +21,7 @@ pub struct WalletTxOut {
 pub struct WalletTx {
     pub tx: Transaction,
     pub height: Option<u32>,
+    pub balance: HashMap<AssetId, i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

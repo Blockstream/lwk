@@ -24,11 +24,6 @@ fmt:
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
 
-build:
-  extends: .base
-  script:
-    - cargo build --all-features --all-targets
-
 test_wollet:
   extends: .base
   script:

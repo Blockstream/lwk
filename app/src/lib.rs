@@ -820,6 +820,7 @@ fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
             .iter()
             .map(|(k, v)| (k.to_string(), *v))
             .collect(),
+        fee: tx.fee,
     }
 }
 

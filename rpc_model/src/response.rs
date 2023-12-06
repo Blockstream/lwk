@@ -307,6 +307,9 @@ pub struct Tx {
 
     /// Net balance for the transaction
     pub balance: HashMap<String, i64>,
+
+    /// Fee
+    pub fee: u64,
 }
 
 /// Wallet transactions

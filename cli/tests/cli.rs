@@ -545,6 +545,7 @@ fn test_issue() {
     for tx in txs {
         let balance = tx.get("balance").unwrap().as_object().unwrap();
         assert!(balance.get(policy_asset).is_some());
+        assert!(tx.get("fee").unwrap().as_u64().unwrap() > 0);
     }
 
     sh(&format!("{cli} server stop"));

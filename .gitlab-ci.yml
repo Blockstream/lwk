@@ -102,7 +102,8 @@ build_cli:
 audit:
   extends: .base
   script:
-    - cargo audit -D warnings
+    # ignore unmantained serde_cbor
+    - cargo audit -D warnings --ignore RUSTSEC-2021-0127
 
 doc:
   extends: .base

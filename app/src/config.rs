@@ -12,7 +12,7 @@ use crate::consts;
 pub struct Config {
     /// The address where the RPC server is listening or the client is connecting to
     pub addr: SocketAddr,
-    pub datadir: String,
+    pub datadir: PathBuf,
     pub electrum_url: String,
     pub network: ElementsNetwork,
     pub tls: bool,
@@ -23,7 +23,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: "/tmp/.ks".into(),
+            datadir: Config::default_home(),
             electrum_url: "".into(),
             network: ElementsNetwork::LiquidTestnet,
             tls: false,
@@ -36,7 +36,7 @@ impl Config {
     pub fn default_testnet() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: "/tmp/.ks".into(),
+            datadir: Config::default_home(),
             electrum_url: "blockstream.info:465".into(),
             network: ElementsNetwork::LiquidTestnet,
             tls: true,
@@ -47,7 +47,7 @@ impl Config {
     pub fn default_mainnet() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: "/tmp/.ks".into(),
+            datadir: Config::default_home(),
             electrum_url: "blockstream.info:995".into(),
             network: ElementsNetwork::Liquid,
             tls: true,
@@ -60,7 +60,7 @@ impl Config {
         let policy_asset = AssetId::from_str(policy_asset).unwrap();
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: "/tmp/.ks".into(),
+            datadir: Config::default_home(),
             electrum_url: electrum_url.into(),
             network: ElementsNetwork::ElementsRegtest { policy_asset },
             tls: false,
@@ -76,9 +76,16 @@ impl Config {
         }
     }
 
+    pub fn default_home() -> PathBuf {
+        let mut path = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push(".ks");
+        fs::create_dir_all(&path).unwrap(); // TODO
+        path
+    }
+
     /// Appends the network to the given datadir
     pub fn datadir(&self) -> PathBuf {
-        let mut path: PathBuf = self.datadir.as_str().into();
+        let mut path: PathBuf = self.datadir.clone();
         path.push(self.network.as_str());
         fs::create_dir_all(&path).unwrap(); // TODO
         path

@@ -187,7 +187,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 &s.config.electrum_url,
                 s.config.tls,
                 s.config.validate_domain,
-                &s.config.datadir,
+                &s.config.datadir.display().to_string(),
                 &r.descriptor,
             )?;
             s.wollets.insert(&r.name, wollet)?;

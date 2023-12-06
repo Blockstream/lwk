@@ -24,9 +24,12 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: CliCommand,
 
-    /// Where the log file and other data goes.
-    #[arg(long, default_value = "/tmp/.ks")]
-    pub datadir: PathBuf,
+    /// Where the log file, server state, and other data goes.
+    ///
+    /// If not specified is `$HOME/.ks`.
+    /// If failing to determine the home directory the current dir `./.ks` is used
+    #[arg(long)]
+    pub datadir: Option<PathBuf>,
 
     /// If launching the server is where it listens, otherwise is where the client connects to.
     #[arg(long, default_value = "127.0.0.1:32111")]

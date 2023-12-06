@@ -20,6 +20,7 @@ rpc_model = { path = "../rpc_model" }
 wollet = { path = "../wollet" }
 rand = "0.8.5"
 schemars = "0.8.16"
+home = "0.5.5"
 
 [dev-dependencies]
 enum-iterator = "1.4.1"

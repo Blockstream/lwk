@@ -50,7 +50,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
         ),
     };
-    config.datadir = args.datadir.display().to_string();
+    config.datadir = args.datadir.unwrap_or_else(Config::default_home);
     config.addr = args.addr;
 
     let mut app = app::App::new(config)?;

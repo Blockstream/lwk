@@ -403,7 +403,7 @@ impl Wollet {
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
-        psbt::finalize(pset, &EC, BlockHash::all_zeros()).unwrap();
+        psbt::finalize(pset, &EC, BlockHash::all_zeros())?;
         Ok(pset.extract_tx()?)
     }
 

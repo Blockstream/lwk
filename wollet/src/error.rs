@@ -49,6 +49,9 @@ pub enum Error {
     ElementsMiniscript(#[from] elements_miniscript::Error),
 
     #[error(transparent)]
+    ElementsMiniscriptPset(#[from] elements_miniscript::psbt::Error),
+
+    #[error(transparent)]
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
 
     #[error(transparent)]

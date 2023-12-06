@@ -22,10 +22,6 @@ fmt:
   extends: .base
   script:
     - cargo fmt --check
-
-clippy:
-  extends: .base
-  script:
     - cargo clippy --all-targets -- -D warnings
 
 build:

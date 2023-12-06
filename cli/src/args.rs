@@ -9,6 +9,8 @@ pub enum Network {
     Regtest,
 }
 
+/// A liquid wallet with watch-only confidential descriptors and hardware signers.
+/// WARNING: not yet for production use, expect bugs, breaking changes and loss of funds.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {

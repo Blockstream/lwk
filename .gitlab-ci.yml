@@ -42,7 +42,7 @@ test_jade:
 test_minor:
   extends: .base
   script:
-    - cargo test -p tiny_jrpc -p app
+    - cargo test -p tiny_jrpc -p app -p bs_containers -p common -p hwi -p rpc_model -p signer
 
 test_cli:
   extends: .base

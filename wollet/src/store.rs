@@ -1,7 +1,6 @@
 use crate::descriptor::Chain;
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::{sha256, Hash};
-use crate::util::ciborium_to_vec;
 use crate::{Error, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::{AeadInPlace, NewAead};
@@ -97,7 +96,7 @@ impl RawCache {
 
     fn try_new<P: AsRef<Path>>(path: P, cipher: &Aes256GcmSiv) -> Result<Self, Error> {
         let decrypted = load_decrypt("cache", path, cipher)?;
-        let store = ciborium::from_reader(&decrypted[..])?;
+        let store = serde_cbor::from_reader(&decrypted[..])?;
         Ok(store)
     }
 }
@@ -155,7 +154,7 @@ impl Store {
         let mut nonce_bytes = [0u8; 12];
         thread_rng().fill(&mut nonce_bytes);
         let nonce = GenericArray::from_slice(&nonce_bytes);
-        let mut plaintext = ciborium_to_vec(value)?;
+        let mut plaintext = serde_cbor::to_vec(value)?;
 
         self.cipher.encrypt_in_place(nonce, b"", &mut plaintext)?;
         let ciphertext = plaintext;

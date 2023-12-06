@@ -43,10 +43,7 @@ pub enum Error {
     HexBitcoinHashes(#[from] crate::hashes::hex::Error),
 
     #[error(transparent)]
-    DeserializeCBORError(#[from] ciborium::de::Error<std::io::Error>),
-
-    #[error(transparent)]
-    SerializeCBORError(#[from] ciborium::ser::Error<std::io::Error>),
+    SerdeCbor(#[from] serde_cbor::Error),
 
     #[error(transparent)]
     ElementsMiniscript(#[from] elements_miniscript::Error),

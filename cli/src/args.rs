@@ -478,6 +478,7 @@ pub enum WalletCommand {
         name: String,
     },
 
+    /// Combine PSETs
     Combine {
         /// Wallet name
         #[arg(short, long)]
@@ -490,6 +491,7 @@ pub enum WalletCommand {
         pset: Vec<String>,
     },
 
+    /// Get the details of a PSET
     PsetDetails {
         /// Wallet name
         #[arg(short, long)]
@@ -504,12 +506,14 @@ pub enum WalletCommand {
         with_tickers: bool,
     },
 
+    /// Get the wallet unspent transaction outputs
     Utxos {
         /// Wallet name
         #[arg(short, long)]
         name: String,
     },
 
+    /// Get the wallet transactions
     Txs {
         /// Wallet name
         #[arg(short, long)]

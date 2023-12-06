@@ -67,10 +67,10 @@ impl TryFrom<String> for UnvalidatedAddressee {
         let pieces: Vec<_> = value.split(':').collect();
         if pieces.len() != 3 {
             // TODO make specific error
-            return Err(Error::Generic(
-                "Invalid number of elements in value, should be \"address:satoshi:assetid\""
-                    .to_string(),
-            ));
+            return Err(Error::Generic(format!(
+                r#"Invalid number of elements in string "{}", should be "address:satoshi:assetid"#,
+                value,
+            )));
         }
         Ok(UnvalidatedAddressee {
             satoshi: pieces[1].parse()?,

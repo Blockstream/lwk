@@ -11,7 +11,7 @@ use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
-use crate::model::{AddressResult, IssuanceDetails, WalletTxOut};
+use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::{new_store, Store};
 use crate::sync::sync;
 use crate::util::EC;
@@ -226,7 +226,7 @@ impl Wollet {
     }
 
     /// Get the wallet transactions with their heights (if confirmed)
-    pub fn transactions(&self) -> Result<Vec<(Transaction, Option<u32>)>, Error> {
+    pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
         let mut txs = vec![];
         let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();
         my_txids.sort_by(|a, b| {
@@ -247,7 +247,10 @@ impl Wollet {
                 .get(*tx_id)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
-            txs.push((tx.clone(), **height));
+            txs.push(WalletTx {
+                tx: tx.clone(),
+                height: **height,
+            });
         }
 
         Ok(txs)
@@ -256,7 +259,8 @@ impl Wollet {
     /// Get the wallet (re)issuances
     pub fn issuances(&self) -> Result<Vec<IssuanceDetails>, Error> {
         let mut r = vec![];
-        for (tx, _) in self.transactions()? {
+        for tx in self.transactions()? {
+            let tx = tx.tx;
             for (vin, txin) in tx.input.iter().enumerate() {
                 if txin.has_issuance() {
                     let contract_hash =

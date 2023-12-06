@@ -1,5 +1,5 @@
 use crate::descriptor::Chain;
-use crate::elements::{Address, AssetId, OutPoint, Script, TxOutSecrets, Txid};
+use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::secp256k1::PublicKey;
 use crate::Error;
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,12 @@ pub struct WalletTxOut {
     pub unblinded: TxOutSecrets,
     pub wildcard_index: u32,
     pub ext_int: Chain,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WalletTx {
+    pub tx: Transaction,
+    pub height: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

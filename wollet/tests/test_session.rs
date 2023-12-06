@@ -296,7 +296,7 @@ impl TestWollet {
         for _ in 0..120 {
             self.wollet.sync_txs().unwrap();
             let list = self.wollet.transactions().unwrap();
-            if list.iter().any(|e| e.0.txid().to_string() == txid) {
+            if list.iter().any(|e| e.tx.txid().to_string() == txid) {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -320,7 +320,7 @@ impl TestWollet {
         let list = self.wollet.transactions().unwrap();
         let filtered_list: Vec<_> = list
             .iter()
-            .filter(|e| e.0.txid().to_string() == txid)
+            .filter(|e| e.tx.txid().to_string() == txid)
             .cloned()
             .collect();
         assert!(
@@ -328,7 +328,7 @@ impl TestWollet {
             "just made tx {} is not in tx list",
             txid
         );
-        filtered_list.first().unwrap().clone().0
+        filtered_list.first().unwrap().clone().tx
     }
 
     pub fn fund(

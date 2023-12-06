@@ -811,11 +811,10 @@ fn convert_utxo(u: &wollet::WalletTxOut) -> response::Utxo {
     }
 }
 
-fn convert_tx(tx: &(wollet::elements::Transaction, Option<u32>)) -> response::Tx {
-    let (tx, height) = tx;
+fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
     response::Tx {
-        txid: tx.txid().to_string(),
-        height: *height,
+        txid: tx.tx.txid().to_string(),
+        height: tx.height,
     }
 }
 

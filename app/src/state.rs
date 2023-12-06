@@ -382,6 +382,7 @@ impl State {
                 .append(true)
                 .open(path)?;
             writeln!(file, "{}", data)?;
+            file.sync_all()?;
         }
         Ok(())
     }

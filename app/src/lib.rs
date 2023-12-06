@@ -815,6 +815,11 @@ fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
     response::Tx {
         txid: tx.tx.txid().to_string(),
         height: tx.height,
+        balance: tx
+            .balance
+            .iter()
+            .map(|(k, v)| (k.to_string(), *v))
+            .collect(),
     }
 }
 

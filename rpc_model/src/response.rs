@@ -304,6 +304,9 @@ pub struct Tx {
 
     /// Height
     pub height: Option<u32>,
+
+    /// Net balance for the transaction
+    pub balance: HashMap<String, i64>,
 }
 
 /// Wallet transactions

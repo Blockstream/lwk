@@ -542,6 +542,11 @@ fn test_issue() {
     let txs = r.get("txs").unwrap().as_array().unwrap();
     assert!(!txs.is_empty());
 
+    for tx in txs {
+        let balance = tx.get("balance").unwrap().as_object().unwrap();
+        assert!(balance.get(policy_asset).is_some());
+    }
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

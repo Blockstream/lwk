@@ -217,7 +217,7 @@ impl Jade {
             params,
         };
         let mut buf = Vec::new();
-        ciborium::into_writer(&req, &mut buf)?;
+        serde_cbor::to_writer(&mut buf, &req)?;
         tracing::debug!(
             "\n--->\t{:#?}\n\t({} bytes) {}",
             &req,
@@ -234,7 +234,7 @@ impl Jade {
             match self.conn.read(&mut rx[total..]) {
                 Ok(len) => {
                     total += len;
-                    match ciborium::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
+                    match serde_cbor::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
                         Ok(r) => {
                             if let Some(result) = r.result {
                                 tracing::debug!(
@@ -252,16 +252,17 @@ impl Jade {
                         }
 
                         Err(e) => {
-                            let res = ciborium::from_reader::<ciborium::Value, &[u8]>(&rx[..total]);
+                            let res =
+                                serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(&rx[..total]);
                             if let Ok(value) = res {
                                 // The value returned is a valid CBOR, but our structs doesn't map it correctly
                                 dbg!(&value);
-                                return Err(Error::Des(e));
+                                return Err(Error::SerdeCbor(e));
                             }
 
                             if len == 0 {
                                 // There is no more data coming from jade and we can't parse its message, return error
-                                return Err(Error::Des(e));
+                                return Err(Error::SerdeCbor(e));
                             } else {
                                 // it may be the parsing failed because there is other data to be read
                             }

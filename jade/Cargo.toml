@@ -6,7 +6,7 @@ autotests = false
 
 [dependencies]
 # anyhow = "1"
-ciborium = "0.2.1"
+serde_cbor = "0.11.2"
 hex = "0.4.3"
 rand = "0.8.5"
 # reqwest = { version = "0.11.19", features = ["blocking", "json"] }

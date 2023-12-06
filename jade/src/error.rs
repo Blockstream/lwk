@@ -1,7 +1,7 @@
 use std::time::SystemTimeError;
 
-use ciborium::Value;
 use serde::{Deserialize, Serialize};
+use serde_cbor::Value;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -25,10 +25,7 @@ pub enum Error {
     JadeNeitherErrorNorResult,
 
     #[error(transparent)]
-    Ser(#[from] ciborium::ser::Error<std::io::Error>),
-
-    #[error(transparent)]
-    Des(#[from] ciborium::de::Error<std::io::Error>),
+    SerdeCbor(#[from] serde_cbor::Error),
 
     #[error(transparent)]
     Bip32(#[from] elements::bitcoin::bip32::Error),

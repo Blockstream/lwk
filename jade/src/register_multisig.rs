@@ -44,8 +44,6 @@ impl std::fmt::Debug for JadeDescriptor {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    // #[error(transparent)]
-    // Ser(#[from] ciborium::ser::Error<std::io::Error>),
     #[error("Only slip77 master blinding key are supported")]
     OnlySlip77Supported,
 

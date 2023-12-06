@@ -75,7 +75,8 @@ impl From<Box<dyn serialport::SerialPort>> for Connection {
 
 #[cfg(test)]
 mod test {
-    use ciborium::Value;
+
+    use serde_cbor::Value;
 
     use crate::{protocol::Response, Jade};
 
@@ -91,7 +92,7 @@ mod test {
             error: None,
         };
         let mut data = Vec::new();
-        ciborium::ser::into_writer(&resp, &mut data).unwrap();
+        serde_cbor::to_writer(&mut data, &resp).unwrap();
 
         let connection = Connection::PartialReadTest { data, status: 0 };
 

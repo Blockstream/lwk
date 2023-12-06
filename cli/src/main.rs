@@ -6,12 +6,6 @@ mod args;
 
 fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
-    // config
-    // - network
-    // - config file
-    // - json rpc host/port
-    // - electrum server
-    // - file/directory path
 
     let value = match inner_main(args) {
         Ok(value) => value,

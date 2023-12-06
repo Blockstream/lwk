@@ -38,15 +38,11 @@ test_jade:
     - docker pull xenoky/local-jade-emulator:1.0.23
     - cargo test -p jade
 
-test_jrpc:
+# run tests for minor crates all together
+test_minor:
   extends: .base
   script:
-    - cargo test -p tiny_jrpc
-
-test_app:
-  extends: .base
-  script:
-    - cargo test -p app
+    - cargo test -p tiny_jrpc -p app
 
 test_cli:
   extends: .base

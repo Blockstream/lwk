@@ -546,6 +546,8 @@ fn test_issue() {
         let balance = tx.get("balance").unwrap().as_object().unwrap();
         assert!(balance.get(policy_asset).is_some());
         assert!(tx.get("fee").unwrap().as_u64().unwrap() > 0);
+        let types = ["issuance", "reissuance", "burn", "incoming", "outgoing"];
+        assert!(types.contains(&tx.get("type").unwrap().as_str().unwrap()));
     }
 
     sh(&format!("{cli} server stop"));

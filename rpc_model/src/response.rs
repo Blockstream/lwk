@@ -310,6 +310,10 @@ pub struct Tx {
 
     /// Fee
     pub fee: u64,
+
+    /// Type
+    #[serde(rename = "type")]
+    pub type_: String,
 }
 
 /// Wallet transactions

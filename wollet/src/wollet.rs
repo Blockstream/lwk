@@ -264,11 +264,16 @@ impl Wollet {
                 .get(*tx_id)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
 
+            let balance = tx_balance(tx, &txos);
+            let fee = tx_fee(tx);
+            let policy_asset = self.policy_asset();
+            let type_ = tx_type(tx, &policy_asset, &balance, fee);
             txs.push(WalletTx {
                 tx: tx.clone(),
                 height: **height,
-                balance: tx_balance(tx, &txos),
-                fee: tx_fee(tx),
+                balance,
+                fee,
+                type_,
             });
         }
 
@@ -459,6 +464,45 @@ fn tx_fee(tx: &Transaction) -> u64 {
         .filter(|o| o.script_pubkey.is_empty())
         .map(|o| o.value.explicit().unwrap_or(0))
         .sum()
+}
+
+/// Get a string that hopefully defines the transaction type.
+///
+/// Defining clear rules for types is highly arbitrary so here we provide a string that should
+/// define the type, but it might be inaccurate in some cases.
+fn tx_type(
+    tx: &Transaction,
+    policy_asset: &AssetId,
+    balance: &HashMap<AssetId, i64>,
+    fee: u64,
+) -> String {
+    let burn_script = Script::new_op_return(&[]);
+    if tx
+        .input
+        .iter()
+        .any(|i| !i.asset_issuance.is_null() && i.asset_issuance.asset_blinding_nonce == ZERO_TWEAK)
+    {
+        "issuance".to_string()
+    } else if tx
+        .input
+        .iter()
+        .any(|i| !i.asset_issuance.is_null() && i.asset_issuance.asset_blinding_nonce != ZERO_TWEAK)
+    {
+        "reissuance".to_string()
+    } else if tx.output.iter().any(|o| o.script_pubkey == burn_script) {
+        "burn".to_string()
+    } else if balance.len() == 1 && balance.get(policy_asset) == Some(&(fee as i64)) {
+        "redeposit".to_string()
+    } else if balance.is_empty() {
+        "unknown".to_string()
+    } else if balance.values().all(|v| *v > 0) {
+        "incoming".to_string()
+    } else if balance.values().all(|v| *v < 0) {
+        // redeposit case handled above
+        "outgoing".to_string()
+    } else {
+        "unknown".to_string()
+    }
 }
 
 #[cfg(test)]

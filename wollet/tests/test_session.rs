@@ -347,6 +347,7 @@ impl TestWollet {
         let tx = self.get_tx_from_list(&txid);
         // We only received, all balances are positive
         assert!(tx.balance.values().all(|v| *v > 0));
+        assert_eq!(&tx.type_, "incoming");
         let wallet_txid = tx.tx.txid().to_string();
         assert_eq!(txid, wallet_txid);
 
@@ -411,6 +412,7 @@ impl TestWollet {
         let tx = self.get_tx_from_list(&txid);
         // We only sent, so all balances are negative
         assert!(tx.balance.values().all(|v| *v < 0));
+        assert_eq!(&tx.type_, "outgoing");
         assert_eq!(tx.fee, fee as u64);
 
         self.wollet.descriptor().descriptor.for_each_key(|k| {
@@ -561,7 +563,10 @@ impl TestWollet {
             self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
-        self.send(&mut pset);
+        let txid = self.send(&mut pset);
+
+        let tx = self.get_tx_from_list(&txid.to_string());
+        assert_eq!(&tx.type_, "issuance");
 
         assert_eq!(self.balance(&asset), satoshi_asset);
         assert_eq!(self.balance(&token), satoshi_token);
@@ -638,6 +643,9 @@ impl TestWollet {
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
 
+        let tx = self.get_tx_from_list(&txid.to_string());
+        assert_eq!(&tx.type_, "reissuance");
+
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
         assert_eq!(self.balance(&issuance.token), balance_token_before);
         assert!(self.balance_btc() < balance_btc_before);
@@ -686,7 +694,10 @@ impl TestWollet {
             self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
-        self.send(&mut pset);
+        let txid = self.send(&mut pset);
+
+        let tx = self.get_tx_from_list(&txid.to_string());
+        assert_eq!(&tx.type_, "burn");
 
         assert_eq!(self.balance(asset), balance_asset_before - satoshi_asset);
         assert!(self.balance_btc() < balance_btc_before);

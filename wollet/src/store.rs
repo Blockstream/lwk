@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;
+pub type Height = u32;
 
 pub fn new_store<P: AsRef<Path>>(path: P, desc: &WolletDescriptor) -> Result<Store, Error> {
     Store::new(&path, desc)
@@ -36,13 +37,13 @@ pub struct RawCache {
     pub scripts: HashMap<(Chain, ChildNumber), Script>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
-    pub heights: HashMap<Txid, Option<u32>>,
+    pub heights: HashMap<Txid, Option<Height>>,
 
     /// unblinded values
     pub unblinded: HashMap<OutPoint, TxOutSecrets>,
 
     /// height and hash of tip of the blockchain
-    pub tip: (u32, BlockHash),
+    pub tip: (Height, BlockHash),
 
     /// last unused index for external addresses for current descriptor
     pub last_unused_external: AtomicU32,

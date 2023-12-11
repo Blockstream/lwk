@@ -355,6 +355,8 @@ impl TestWollet {
         assert_eq!(&tx.type_, "incoming");
         let wallet_txid = tx.tx.txid().to_string();
         assert_eq!(txid, wallet_txid);
+        assert_eq!(tx.inputs.iter().filter(|o| o.is_some()).count(), 0);
+        assert_eq!(tx.outputs.iter().filter(|o| o.is_some()).count(), 1);
 
         let utxos_after = self.wollet.utxos().unwrap().len();
         let balance_after = self.balance(&asset.unwrap_or(self.policy_asset()));
@@ -419,6 +421,8 @@ impl TestWollet {
         assert!(tx.balance.values().all(|v| *v < 0));
         assert_eq!(&tx.type_, "outgoing");
         assert_eq!(tx.fee, fee as u64);
+        assert!(tx.inputs.iter().filter(|o| o.is_some()).count() > 0);
+        assert!(tx.outputs.iter().filter(|o| o.is_some()).count() > 0);
 
         self.wollet.descriptor().descriptor.for_each_key(|k| {
             if let DescriptorPublicKey::XPub(x) = k {

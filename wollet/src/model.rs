@@ -26,6 +26,8 @@ pub struct WalletTx {
     pub fee: u64,
     pub type_: String,
     pub timestamp: Option<Timestamp>,
+    pub inputs: Vec<Option<WalletTxOut>>,
+    pub outputs: Vec<Option<WalletTxOut>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

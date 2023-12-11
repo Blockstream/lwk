@@ -269,6 +269,8 @@ impl Wollet {
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
+            let inputs = tx_inputs(tx, &txos);
+            let outputs = tx_outputs(tx, &txos);
             txs.push(WalletTx {
                 tx: tx.clone(),
                 height: **height,
@@ -276,6 +278,8 @@ impl Wollet {
                 fee,
                 type_,
                 timestamp,
+                inputs,
+                outputs,
             });
         }
 
@@ -505,6 +509,19 @@ fn tx_type(
     } else {
         "unknown".to_string()
     }
+}
+
+fn tx_inputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Option<WalletTxOut>> {
+    tx.input
+        .iter()
+        .map(|i| txos.get(&i.previous_output).cloned())
+        .collect()
+}
+
+fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Option<WalletTxOut>> {
+    (0..(tx.output.len() as u32))
+        .map(|idx| txos.get(&OutPoint::new(tx.txid(), idx)).cloned())
+        .collect()
 }
 
 #[cfg(test)]

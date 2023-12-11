@@ -821,6 +821,7 @@ fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
             .map(|(k, v)| (k.to_string(), *v))
             .collect(),
         fee: tx.fee,
+        timestamp: tx.timestamp,
         type_: tx.type_.clone(),
     }
 }

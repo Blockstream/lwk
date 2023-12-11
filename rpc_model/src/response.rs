@@ -302,8 +302,11 @@ pub struct Tx {
     /// Transction ID
     pub txid: String,
 
-    /// Height
+    /// Height of the block containing the transaction, present only if the tx is confirmed.
     pub height: Option<u32>,
+
+    /// Timestamp of the block containing the transaction, present only if the tx is confirmed.
+    pub timestamp: Option<u32>,
 
     /// Net balance for the transaction
     pub balance: HashMap<String, i64>,

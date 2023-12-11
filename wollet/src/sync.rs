@@ -4,12 +4,13 @@ use crate::elements::confidential::{Asset, Nonce, Value};
 use crate::elements::encode::deserialize as elements_deserialize;
 use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
-use crate::store::{Store, BATCH_SIZE};
+use crate::store::{Height, Store, Timestamp, BATCH_SIZE};
 use crate::util::EC;
 use crate::WolletDescriptor;
 use common::derive_blinding_key;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
+use elements::BlockHeader;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::sync::atomic;
@@ -84,6 +85,8 @@ pub fn sync(
 
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
+    let history_txs_heights: HashSet<Height> = txid_height.values().filter_map(|e| *e).collect();
+    let timstamps = download_headers(&history_txs_heights, &client, store)?;
 
     let store_last_unused_external = store
         .cache
@@ -97,8 +100,12 @@ pub fn sync(
     let last_unused_changed = store_last_unused_external != last_unused_external
         || store_last_unused_internal != last_unused_internal;
 
-    let changed = if !new_txs.txs.is_empty() || last_unused_changed || !scripts.is_empty() {
-        tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty() );
+    let changed = if !new_txs.txs.is_empty()
+        || last_unused_changed
+        || !scripts.is_empty()
+        || !timstamps.is_empty()
+    {
+        tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !headers.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timstamps.is_empty() );
 
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
@@ -111,6 +118,8 @@ pub fn sync(
         // could disappear from the list, we clear the list and keep only the last values returned by the server
         store.cache.heights.clear();
         store.cache.heights.extend(&txid_height);
+
+        store.cache.timestamps.extend(timstamps);
 
         store
             .cache
@@ -236,6 +245,32 @@ fn download_txs(
     } else {
         Ok(DownloadTxResult::default())
     }
+}
+
+fn download_headers(
+    history_txs_heights: &HashSet<Height>,
+    client: &Client,
+    store: &mut Store,
+) -> Result<Vec<(Height, Timestamp)>, Error> {
+    let mut result = vec![];
+    let mut heights_in_db: HashSet<Height> =
+        store.cache.heights.iter().filter_map(|(_, h)| *h).collect();
+    heights_in_db.insert(0);
+    let heights_to_download: Vec<Height> = history_txs_heights
+        .difference(&heights_in_db)
+        .cloned()
+        .collect();
+    if !heights_to_download.is_empty() {
+        let headers_bytes_downloaded =
+            client.batch_block_header_raw(heights_to_download.clone())?;
+        for vec in headers_bytes_downloaded {
+            let header: BlockHeader = elements::encode::deserialize(&vec)?;
+            result.push((header.height, header.time));
+        }
+        tracing::info!("{} headers_downloaded", heights_to_download.len());
+    }
+
+    Ok(result)
 }
 
 pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {

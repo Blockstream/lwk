@@ -86,7 +86,7 @@ pub fn sync(
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
     let history_txs_heights: HashSet<Height> = txid_height.values().filter_map(|e| *e).collect();
-    let timstamps = download_headers(&history_txs_heights, client, store)?;
+    let timestamps = download_headers(&history_txs_heights, client, store)?;
 
     let store_last_unused_external = store
         .cache
@@ -103,9 +103,9 @@ pub fn sync(
     let changed = if !new_txs.txs.is_empty()
         || last_unused_changed
         || !scripts.is_empty()
-        || !timstamps.is_empty()
+        || !timestamps.is_empty()
     {
-        tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !headers.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timstamps.is_empty() );
+        tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
@@ -119,7 +119,7 @@ pub fn sync(
         store.cache.heights.clear();
         store.cache.heights.extend(&txid_height);
 
-        store.cache.timestamps.extend(timstamps);
+        store.cache.timestamps.extend(timestamps);
 
         store
             .cache

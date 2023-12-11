@@ -253,9 +253,8 @@ fn download_headers(
     store: &mut Store,
 ) -> Result<Vec<(Height, Timestamp)>, Error> {
     let mut result = vec![];
-    let mut heights_in_db: HashSet<Height> =
+    let heights_in_db: HashSet<Height> =
         store.cache.heights.iter().filter_map(|(_, h)| *h).collect();
-    heights_in_db.insert(0);
     let heights_to_download: Vec<Height> = history_txs_heights
         .difference(&heights_in_db)
         .cloned()

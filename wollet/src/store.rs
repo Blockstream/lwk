@@ -18,6 +18,7 @@ use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
+pub type Timestamp = u32;
 
 pub fn new_store<P: AsRef<Path>>(path: P, desc: &WolletDescriptor) -> Result<Store, Error> {
     Store::new(&path, desc)
@@ -45,6 +46,9 @@ pub struct RawCache {
     /// height and hash of tip of the blockchain
     pub tip: (Height, BlockHash),
 
+    /// Contains the time of blocks at the given height. There are only heights containinig wallet txs
+    pub timestamps: HashMap<Height, Timestamp>,
+
     /// last unused index for external addresses for current descriptor
     pub last_unused_external: AtomicU32,
 
@@ -63,6 +67,7 @@ impl Default for RawCache {
             tip: (0, BlockHash::all_zeros()),
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
+            timestamps: HashMap::default(),
         }
     }
 }

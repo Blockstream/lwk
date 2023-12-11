@@ -93,7 +93,7 @@ fn test_start_stop_persist() {
             sh(&format!("{cli} server start"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
@@ -109,7 +109,7 @@ fn test_start_stop_persist() {
             sh(&format!("{cli} server start"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();

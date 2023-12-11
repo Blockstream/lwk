@@ -13,13 +13,6 @@ thiserror = "1"
 tiny_http = "0.12.0"
 tracing = "0.1"
 
-# FIXME: these dependencies are here to handle errors that originate in those crates,
-#        ideally they should not be there, but this require to move the error handling
-#        of those cases elsewhere.
-wollet = { path = "../wollet" }
-signer = { path = "../signer" }
-jade = { path = "../jade", features = ["serial"] }
-
 [dev-dependencies]
 minreq = "2.9"
 tempfile = "3.8.0"

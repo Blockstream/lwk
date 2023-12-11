@@ -216,8 +216,12 @@ impl Client {
         self.make_request(Method::WalletUtxos, Some(req))
     }
 
-    pub fn wallet_txs(&self, name: String) -> Result<response::WalletTxs, Error> {
-        let req = request::WalletTxs { name };
+    pub fn wallet_txs(
+        &self,
+        name: String,
+        with_tickers: bool,
+    ) -> Result<response::WalletTxs, Error> {
+        let req = request::WalletTxs { name, with_tickers };
         self.make_request(Method::WalletTxs, Some(req))
     }
 

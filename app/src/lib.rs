@@ -612,7 +612,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let txs: Vec<response::Tx> = wollet.transactions()?.iter().map(convert_tx).collect();
+            let mut txs: Vec<response::Tx> =
+                wollet.transactions()?.iter().map(convert_tx).collect();
+            if r.with_tickers {
+                for tx in &mut txs {
+                    tx.balance = s.replace_id_with_ticker(tx.balance.clone());
+                }
+            }
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletTxs { txs })?,

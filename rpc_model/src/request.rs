@@ -310,6 +310,9 @@ pub struct WalletUtxos {
 pub struct WalletTxs {
     /// The wallet name
     pub name: String,
+
+    /// Replace asset ids with tickers when possible
+    pub with_tickers: bool,
 }
 
 /// Request to have details of an asset

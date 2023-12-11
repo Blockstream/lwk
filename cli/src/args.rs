@@ -518,6 +518,10 @@ pub enum WalletCommand {
         /// Wallet name
         #[arg(short, long)]
         name: String,
+
+        /// Replace asset ids with tickers when possible
+        #[arg(long, action)]
+        with_tickers: bool,
     },
 }
 

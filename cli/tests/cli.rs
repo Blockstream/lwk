@@ -557,7 +557,7 @@ fn test_issue() {
 
     server.generate(1);
 
-    let r = sh(&format!("{cli} wallet txs --name w1"));
+    let r = sh(&format!("{cli} wallet txs --name w1 --with-tickers"));
     let txs = r.get("txs").unwrap().as_array().unwrap();
     assert!(!txs.is_empty());
 
@@ -565,6 +565,9 @@ fn test_issue() {
         assert!(tx.get("height").is_some());
         assert!(tx.get("timestamp").is_some());
     }
+
+    let balance = txs[0].get("balance").unwrap().as_object().unwrap();
+    assert!(balance.contains_key("L-BTC"));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

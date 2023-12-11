@@ -268,12 +268,14 @@ impl Wollet {
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
+            let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
             txs.push(WalletTx {
                 tx: tx.clone(),
                 height: **height,
                 balance,
                 fee,
                 type_,
+                timestamp,
             });
         }
 

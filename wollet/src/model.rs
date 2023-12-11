@@ -1,6 +1,7 @@
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::secp256k1::PublicKey;
+use crate::store::Timestamp;
 use crate::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,6 +25,7 @@ pub struct WalletTx {
     pub balance: HashMap<AssetId, i64>,
     pub fee: u64,
     pub type_: String,
+    pub timestamp: Option<Timestamp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -545,9 +545,25 @@ fn test_issue() {
     for tx in txs {
         let balance = tx.get("balance").unwrap().as_object().unwrap();
         assert!(balance.get(policy_asset).is_some());
+
+        if tx.get("height").is_some() {
+            assert!(tx.get("timestamp").is_some());
+        }
+
         assert!(tx.get("fee").unwrap().as_u64().unwrap() > 0);
         let types = ["issuance", "reissuance", "burn", "incoming", "outgoing"];
         assert!(types.contains(&tx.get("type").unwrap().as_str().unwrap()));
+    }
+
+    server.generate(1);
+
+    let r = sh(&format!("{cli} wallet txs --name w1"));
+    let txs = r.get("txs").unwrap().as_array().unwrap();
+    assert!(!txs.is_empty());
+
+    for tx in txs {
+        assert!(tx.get("height").is_some());
+        assert!(tx.get("timestamp").is_some());
     }
 
     sh(&format!("{cli} server stop"));

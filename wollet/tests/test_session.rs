@@ -318,6 +318,11 @@ impl TestWollet {
     fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
         self.wollet.sync_txs().unwrap();
         let list = self.wollet.transactions().unwrap();
+        for tx in list.iter() {
+            if tx.height.is_some() {
+                assert!(tx.timestamp.is_some());
+            }
+        }
         let filtered_list: Vec<_> = list
             .iter()
             .filter(|e| e.tx.txid().to_string() == txid)

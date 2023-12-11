@@ -86,7 +86,7 @@ pub fn sync(
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
     let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
     let history_txs_heights: HashSet<Height> = txid_height.values().filter_map(|e| *e).collect();
-    let timstamps = download_headers(&history_txs_heights, &client, store)?;
+    let timstamps = download_headers(&history_txs_heights, client, store)?;
 
     let store_last_unused_external = store
         .cache

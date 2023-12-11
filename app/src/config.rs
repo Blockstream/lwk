@@ -17,6 +17,7 @@ pub struct Config {
     pub network: ElementsNetwork,
     pub tls: bool,
     pub validate_domain: bool,
+    pub explorer_url: String,
 }
 
 impl Default for Config {
@@ -28,6 +29,7 @@ impl Default for Config {
             network: ElementsNetwork::LiquidTestnet,
             tls: false,
             validate_domain: false,
+            explorer_url: "".into(),
         }
     }
 }
@@ -41,6 +43,7 @@ impl Config {
             network: ElementsNetwork::LiquidTestnet,
             tls: true,
             validate_domain: true,
+            explorer_url: "https://blockstream.info/liquidtestnet/".into(),
         }
     }
 
@@ -52,6 +55,7 @@ impl Config {
             network: ElementsNetwork::Liquid,
             tls: true,
             validate_domain: true,
+            explorer_url: "https://blockstream.info/liquid/".into(),
         }
     }
 
@@ -65,6 +69,7 @@ impl Config {
             network: ElementsNetwork::ElementsRegtest { policy_asset },
             tls: false,
             validate_domain: false,
+            explorer_url: "".into(),
         }
     }
 

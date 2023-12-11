@@ -27,7 +27,7 @@ use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::hex::{FromHex, ToHex};
 use wollet::elements::pset::PartiallySignedTransaction;
-use wollet::elements::AssetId;
+use wollet::elements::{AssetId, TxOutSecrets};
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
 use wollet::Wollet;
@@ -610,10 +610,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::WalletTxs => {
             let r: request::WalletTxs = serde_json::from_value(request.params.unwrap())?;
             let mut s = state.lock().unwrap();
+            let explorer_url = s.config.explorer_url.clone();
             let wollet = s.wollets.get_mut(&r.name)?;
             wollet.sync_txs()?;
-            let mut txs: Vec<response::Tx> =
-                wollet.transactions()?.iter().map(convert_tx).collect();
+            let mut txs: Vec<response::Tx> = wollet
+                .transactions()?
+                .iter()
+                .map(|tx| convert_tx(tx, &explorer_url))
+                .collect();
             if r.with_tickers {
                 for tx in &mut txs {
                     tx.balance = s.replace_id_with_ticker(tx.balance.clone());
@@ -817,9 +821,26 @@ fn convert_utxo(u: &wollet::WalletTxOut) -> response::Utxo {
     }
 }
 
-fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
+fn fmt_txoutsecrets(s: &TxOutSecrets) -> String {
+    format!("{},{},{},{}", s.value, s.asset, s.value_bf, s.asset_bf)
+}
+
+fn fmt_wallet_txouts(txouts: &[Option<wollet::WalletTxOut>]) -> Vec<String> {
+    txouts
+        .iter()
+        .filter(|e| e.is_some())
+        .map(|e| fmt_txoutsecrets(&e.as_ref().unwrap().unblinded))
+        .collect()
+}
+
+fn convert_tx(tx: &wollet::WalletTx, explorer_url: &str) -> response::Tx {
+    let txid = tx.tx.txid().to_string();
+    let mut blinded = fmt_wallet_txouts(&tx.inputs);
+    blinded.extend(fmt_wallet_txouts(&tx.outputs));
+    let blinded = blinded.join(",");
+    let unblinded_url = format!("{explorer_url}tx/{txid}#blinded={blinded}");
     response::Tx {
-        txid: tx.tx.txid().to_string(),
+        txid,
         height: tx.height,
         balance: tx
             .balance
@@ -829,6 +850,7 @@ fn convert_tx(tx: &wollet::WalletTx) -> response::Tx {
         fee: tx.fee,
         timestamp: tx.timestamp,
         type_: tx.type_.clone(),
+        unblinded_url,
     }
 }
 

@@ -553,6 +553,9 @@ fn test_issue() {
         assert!(tx.get("fee").unwrap().as_u64().unwrap() > 0);
         let types = ["issuance", "reissuance", "burn", "incoming", "outgoing"];
         assert!(types.contains(&tx.get("type").unwrap().as_str().unwrap()));
+        // Always received or spent L-BTC
+        let url = tx.get("unblinded_url").unwrap().as_str().unwrap();
+        assert!(url.contains(policy_asset));
     }
 
     server.generate(1);

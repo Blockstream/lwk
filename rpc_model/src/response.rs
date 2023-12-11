@@ -317,6 +317,9 @@ pub struct Tx {
     /// Type
     #[serde(rename = "type")]
     pub type_: String,
+
+    /// Unblinded url
+    pub unblinded_url: String,
 }
 
 /// Wallet transactions

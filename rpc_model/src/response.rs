@@ -64,7 +64,7 @@ pub struct UnloadSigner {
 }
 
 /// Response of a signer
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Signer {
     /// The signer name
     pub name: String,

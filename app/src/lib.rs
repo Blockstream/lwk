@@ -285,7 +285,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .iter()
                 .map(|(name, signer)| signer_response_from(name, signer))
                 .collect();
-            let r = response::ListSigners { signers: signers? };
+            let mut signers = signers?;
+            signers.sort();
+            let r = response::ListSigners { signers };
             Response::result(request.id, serde_json::to_value(r)?)
         }
         Method::Address => {

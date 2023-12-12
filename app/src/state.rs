@@ -6,8 +6,10 @@ use std::str::FromStr;
 use common::Signer;
 use jade::mutex_jade::MutexJade;
 use jade::Network;
+use rpc_model::request;
 use serde::Serialize;
 use signer::AnySigner;
+use tiny_jrpc::Request;
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::hash_types::XpubIdentifier;
 use wollet::elements::pset::elip100::AssetMetadata;
@@ -16,6 +18,7 @@ use wollet::Contract;
 use wollet::Wollet;
 
 use crate::config::Config;
+use crate::method::Method;
 use crate::Error;
 
 #[derive(Debug)]
@@ -385,5 +388,74 @@ impl State {
             file.sync_all()?;
         }
         Ok(())
+    }
+
+    fn _as_requests(&self) -> Result<Vec<Request>, Error> {
+        let mut requests = vec![];
+
+        // Wollets
+        for (n, w) in self.wollets.iter() {
+            let params = request::LoadWallet {
+                descriptor: w.descriptor().to_string(),
+                name: n.to_string(),
+            };
+            let r = Request {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: Method::LoadWallet.to_string(),
+                params: Some(serde_json::to_value(params).unwrap()),
+            };
+            requests.push(r);
+        }
+
+        // Signers
+        for (n, s) in self.signers.iter() {
+            let (params, method) = match s {
+                AppSigner::JadeId(id, _) => {
+                    let params = request::SignerLoadJade {
+                        name: n.to_string(),
+                        id: id.to_string(),
+                        emulator: None, // ?
+                    };
+                    (serde_json::to_value(params)?, Method::SignerLoadJade)
+                }
+                AppSigner::AvailableSigner(a) => match a {
+                    AnySigner::Software(a) => {
+                        let params = request::SignerLoadSoftware {
+                            name: n.to_string(),
+                            mnemonic: a.mnemonic().to_string(),
+                        };
+                        (serde_json::to_value(params)?, Method::SignerLoadSoftware)
+                    }
+                    AnySigner::Jade(_, id) => {
+                        let params = request::SignerLoadJade {
+                            name: n.to_string(),
+                            id: id.to_string(),
+                            emulator: None, // ?
+                        };
+                        (serde_json::to_value(params)?, Method::SignerLoadJade)
+                    }
+                },
+                AppSigner::ExternalSigner(f) => {
+                    let params = request::SignerLoadExternal {
+                        name: n.to_string(),
+                        fingerprint: f.to_string(),
+                    };
+                    (serde_json::to_value(params)?, Method::SignerLoadExternal)
+                }
+            };
+
+            let r = Request {
+                jsonrpc: "2.0".into(),
+                id: None,
+                method: method.to_string(),
+                params: Some(params),
+            };
+            requests.push(r);
+        }
+
+        // TODO assets
+
+        Ok(requests)
     }
 }

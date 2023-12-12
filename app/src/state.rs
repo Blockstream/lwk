@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use common::Signer;
 use jade::mutex_jade::MutexJade;
@@ -390,7 +391,26 @@ impl State {
         Ok(())
     }
 
-    fn _as_requests(&self) -> Result<Vec<Request>, Error> {
+    pub fn persist_all(&mut self) -> Result<(), Error> {
+        let path = self.config.state_path();
+        let mut temp = path.clone();
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        temp.set_file_name(millis.to_string());
+        let mut file = File::create(&temp)?;
+        for req in self.as_requests()? {
+            let data = serde_json::to_string(&req)?;
+            writeln!(file, "{}", data)?;
+        }
+        std::fs::rename(temp, path)?;
+        file.sync_all()?;
+
+        Ok(())
+    }
+
+    fn as_requests(&self) -> Result<Vec<Request>, Error> {
         let mut requests = vec![];
 
         // Wollets

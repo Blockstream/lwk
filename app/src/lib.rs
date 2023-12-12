@@ -207,7 +207,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::from_value(request.clone().params.unwrap_or_default())?;
             let mut s = state.lock().unwrap();
             let removed = s.wollets.remove(&r.name)?;
-            s.persist(&request)?;
+            s.persist_all()?;
 
             Response::result(
                 request.id,
@@ -272,7 +272,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock().unwrap();
             let removed = s.signers.remove(&r.name)?;
             let signer: response::Signer = signer_response_from(&r.name, &removed)?;
-            s.persist(&request)?;
+            s.persist_all()?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::UnloadSigner { unloaded: signer })?,
@@ -733,7 +733,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             s.remove_asset(&asset_id)?;
-            s.persist(&request)?;
+            s.persist_all()?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::SignerJadeId => {

@@ -84,6 +84,11 @@ fn test_start_stop_persist() {
     ));
     sh(&format!(r#"{cli} signer unload --name s2"#)); // Verify unloads are handled
 
+    let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
+    sh(&format!("{cli} wallet load --name custody {desc}"));
+    sh(&format!(r#"{cli} wallet unload --name custody"#)); // Verify unloads are handled
+    sh(&format!("{cli} wallet load --name custody {desc}"));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -97,6 +102,10 @@ fn test_start_stop_persist() {
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
+    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+
+    let result = sh(&format!("{cli} wallet list"));
+    let signers = result.get("wallets").unwrap();
     assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
 
     sh(&format!("{cli} server stop"));
@@ -113,6 +122,10 @@ fn test_start_stop_persist() {
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
+    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+
+    let result = sh(&format!("{cli} wallet list"));
+    let signers = result.get("wallets").unwrap();
     assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
 
     sh(&format!("{cli} server stop"));

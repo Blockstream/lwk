@@ -454,7 +454,28 @@ impl State {
             requests.push(r);
         }
 
-        // TODO assets
+        // Assets
+        for (_, a) in self.assets.iter() {
+            match a {
+                AppAsset::RegistryAsset(a) => {
+                    let params = request::AssetInsert {
+                        asset_id: a.asset_id.to_string(),
+                        contract: a.contract_str(),
+                        prev_txid: a.issuance_prevout.txid.to_string(),
+                        prev_vout: a.issuance_prevout.vout,
+                        is_confidential: Some(a.issuance_is_confidential),
+                    };
+                    let r = Request {
+                        jsonrpc: "2.0".into(),
+                        id: None,
+                        method: Method::AssetInsert.to_string(),
+                        params: Some(serde_json::to_value(params).unwrap()),
+                    };
+                    requests.push(r);
+                }
+                _ => continue,
+            }
+        }
 
         Ok(requests)
     }

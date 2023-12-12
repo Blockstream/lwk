@@ -48,7 +48,7 @@ pub enum NewError {
 pub struct SwSigner {
     pub(crate) xprv: ExtendedPrivKey,
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
-    pub(crate) seed: [u8; 64],
+    pub(crate) mnemonic: Mnemonic,
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -64,7 +64,11 @@ impl SwSigner {
         let seed = mnemonic.to_seed("");
         let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed)?;
 
-        Ok(Self { xprv, secp, seed })
+        Ok(Self {
+            xprv,
+            secp,
+            mnemonic,
+        })
     }
 
     pub fn random() -> Result<(Self, Mnemonic), NewError> {
@@ -74,6 +78,14 @@ impl SwSigner {
 
     pub fn xpub(&self) -> ExtendedPubKey {
         ExtendedPubKey::from_priv(&self.secp, &self.xprv)
+    }
+
+    pub fn seed(&self) -> [u8; 64] {
+        self.mnemonic.to_seed("")
+    }
+
+    pub fn mnemonic(&self) -> Mnemonic {
+        self.mnemonic.clone()
     }
 
     pub fn fingerprint(&self) -> Fingerprint {
@@ -134,7 +146,7 @@ impl Signer for SwSigner {
     }
 
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
-        Ok(MasterBlindingKey::from_seed(&self.seed[..]))
+        Ok(MasterBlindingKey::from_seed(&self.seed()[..]))
     }
 }
 

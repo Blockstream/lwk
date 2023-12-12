@@ -79,7 +79,7 @@ impl App {
             method_handler,
         );
 
-        let path = self.config.state_path();
+        let path = self.config.state_path()?;
         match std::fs::read_to_string(&path) {
             Ok(string) => {
                 tracing::info!(

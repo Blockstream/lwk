@@ -379,7 +379,7 @@ impl State {
     pub fn persist<T: Serialize>(&mut self, data: T) -> Result<(), Error> {
         if self.do_persist {
             let data = serde_json::to_string(&data)?;
-            let path = self.config.state_path();
+            let path = self.config.state_path()?;
             let mut file = OpenOptions::new()
                 .create_new(!path.exists())
                 .write(true)
@@ -392,7 +392,7 @@ impl State {
     }
 
     pub fn persist_all(&mut self) -> Result<(), Error> {
-        let path = self.config.state_path();
+        let path = self.config.state_path()?;
         let mut temp = path.clone();
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)

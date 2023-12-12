@@ -6,7 +6,7 @@ use std::str::FromStr;
 use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
 
-use crate::consts;
+use crate::{consts, Error};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -24,7 +24,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: Config::default_home(),
+            datadir: Config::default_home().unwrap(), // TODO
             electrum_url: "".into(),
             network: ElementsNetwork::LiquidTestnet,
             tls: false,
@@ -38,7 +38,7 @@ impl Config {
     pub fn default_testnet() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: Config::default_home(),
+            datadir: Config::default_home().unwrap(), // TODO
             electrum_url: "blockstream.info:465".into(),
             network: ElementsNetwork::LiquidTestnet,
             tls: true,
@@ -50,7 +50,7 @@ impl Config {
     pub fn default_mainnet() -> Self {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: Config::default_home(),
+            datadir: Config::default_home().unwrap(), // TODO
             electrum_url: "blockstream.info:995".into(),
             network: ElementsNetwork::Liquid,
             tls: true,
@@ -64,7 +64,7 @@ impl Config {
         let policy_asset = AssetId::from_str(policy_asset).unwrap();
         Self {
             addr: consts::DEFAULT_ADDR.into(),
-            datadir: Config::default_home(),
+            datadir: Config::default_home().unwrap(), // TODO
             electrum_url: electrum_url.into(),
             network: ElementsNetwork::ElementsRegtest { policy_asset },
             tls: false,
@@ -81,25 +81,25 @@ impl Config {
         }
     }
 
-    pub fn default_home() -> PathBuf {
-        let mut path = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    pub fn default_home() -> Result<PathBuf, Error> {
+        let mut path = home::home_dir().ok_or(Error::Generic("Cannot get home dir".into()))?;
         path.push(".ks");
-        fs::create_dir_all(&path).unwrap(); // TODO
-        path
+        fs::create_dir_all(&path)?;
+        Ok(path)
     }
 
     /// Appends the network to the given datadir
-    pub fn datadir(&self) -> PathBuf {
+    pub fn datadir(&self) -> Result<PathBuf, Error> {
         let mut path: PathBuf = self.datadir.clone();
         path.push(self.network.as_str());
-        fs::create_dir_all(&path).unwrap(); // TODO
-        path
+        fs::create_dir_all(&path)?;
+        Ok(path)
     }
 
     /// Returns the path of the state file under datadir
-    pub fn state_path(&self) -> PathBuf {
-        let mut path = self.datadir();
+    pub fn state_path(&self) -> Result<PathBuf, Error> {
+        let mut path = self.datadir()?;
         path.push("state.json");
-        path
+        Ok(path)
     }
 }

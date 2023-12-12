@@ -84,6 +84,13 @@ fn test_start_stop_persist() {
     ));
     sh(&format!(r#"{cli} signer unload --name s2"#)); // Verify unloads are handled
 
+    sh(&format!(
+        "{cli} signer load-external --fingerprint 11111111 --name s2"
+    ));
+    sh(&format!(
+        "{cli} signer load-jade --id 2111111111111111111111111111111111111112 --name s3"
+    ));
+
     let desc = "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63";
     sh(&format!("{cli} wallet load --name custody {desc}"));
     sh(&format!(r#"{cli} wallet unload --name custody"#)); // Verify unloads are handled
@@ -99,7 +106,7 @@ fn test_start_stop_persist() {
 
     let expected_signers = sh(&format!("{cli} signer list"));
     let r = expected_signers.get("signers").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 1);
+    assert_eq!(r.as_array().unwrap().len(), 3);
 
     let expected_wallets = sh(&format!("{cli} wallet list"));
     let r = expected_wallets.get("wallets").unwrap();

@@ -89,6 +89,14 @@ fn test_start_stop_persist() {
     sh(&format!(r#"{cli} wallet unload --name custody"#)); // Verify unloads are handled
     sh(&format!("{cli} wallet load --name custody {desc}"));
 
+    let contract = "{\"entity\":{\"domain\":\"tether.to\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Tether USD\",\"precision\":8,\"ticker\":\"USDt\",\"version\":0}";
+    let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
+    let prev_txid = "9596d259270ef5bac0020435e6d859aea633409483ba64e232b8ba04ce288668";
+    let prev_vout = 0;
+    sh(&format!(
+        "{cli} asset insert --asset {asset} --contract '{contract}' --prev-txid {prev_txid} --prev-vout {prev_vout}"
+    ));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -105,8 +113,12 @@ fn test_start_stop_persist() {
     assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
 
     let result = sh(&format!("{cli} wallet list"));
-    let signers = result.get("wallets").unwrap();
-    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+    let wallets = result.get("wallets").unwrap();
+    assert_eq!(wallets.as_array().unwrap().len(), 1, "persist not working");
+
+    let result = sh(&format!("{cli} asset list"));
+    let assets = result.get("assets").unwrap();
+    assert_eq!(assets.as_array().unwrap().len(), 3, "persist not working");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -125,8 +137,12 @@ fn test_start_stop_persist() {
     assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
 
     let result = sh(&format!("{cli} wallet list"));
-    let signers = result.get("wallets").unwrap();
-    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+    let wallets = result.get("wallets").unwrap();
+    assert_eq!(wallets.as_array().unwrap().len(), 1, "persist not working");
+
+    let result = sh(&format!("{cli} asset list"));
+    let assets = result.get("assets").unwrap();
+    assert_eq!(assets.as_array().unwrap().len(), 3, "persist not working");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

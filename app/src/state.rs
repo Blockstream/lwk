@@ -123,7 +123,6 @@ pub struct Signers(HashMap<String, AppSigner>);
 #[derive(Default)]
 pub struct Assets(HashMap<AssetId, AppAsset>);
 
-#[derive(Default)]
 pub struct State {
     // TODO: config is read-only, so it's not useful to wrap it in a mutex.
     // Ideally it should be in _another_ struct accessible by method_handler.

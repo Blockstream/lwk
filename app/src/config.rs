@@ -20,20 +20,6 @@ pub struct Config {
     pub explorer_url: String,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            addr: consts::DEFAULT_ADDR.into(),
-            datadir: Config::default_home().unwrap(), // TODO
-            electrum_url: "".into(),
-            network: ElementsNetwork::LiquidTestnet,
-            tls: false,
-            validate_domain: false,
-            explorer_url: "".into(),
-        }
-    }
-}
-
 impl Config {
     pub fn default_testnet(datadir: PathBuf) -> Self {
         Self {

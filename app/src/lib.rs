@@ -66,7 +66,10 @@ impl App {
         }
         let mut state = State {
             config: self.config.clone(),
-            ..Default::default()
+            wollets: Default::default(),
+            signers: Default::default(),
+            assets: Default::default(),
+            do_persist: false,
         };
         state.insert_policy_asset();
         let state = Arc::new(Mutex::new(state));
@@ -868,10 +871,9 @@ mod tests {
             .unwrap()
             .local_addr()
             .unwrap();
-        let config = Config {
-            addr,
-            ..Default::default()
-        };
+        let tempdir = tempfile::tempdir().unwrap();
+        let mut config = Config::default_testnet(tempdir.path().to_path_buf());
+        config.addr = addr;
         let mut app = App::new(config).unwrap();
         app.run().unwrap();
         app

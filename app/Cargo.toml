@@ -24,3 +24,4 @@ home = "0.5.5"
 
 [dev-dependencies]
 enum-iterator = "1.4.1"
+tempfile = "3.8.1"

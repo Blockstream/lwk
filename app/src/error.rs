@@ -1,3 +1,5 @@
+use std::sync::{MutexGuard, PoisonError};
+
 use serde_json::json;
 use tiny_jrpc::error::ImplementationDefinedCode;
 
@@ -72,6 +74,9 @@ pub enum Error {
     #[error(transparent)]
     MethodNotExist(#[from] crate::method::MethodNotExist),
 
+    #[error("Poison error: {0}")]
+    PoisonError(String),
+
     #[error("Received stop command")]
     Stop,
 
@@ -128,5 +133,11 @@ impl From<Error> for tiny_jrpc::error::Error {
                 e.as_error_value(),
             ),
         }
+    }
+}
+
+impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
+    fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
+        Error::PoisonError(e.to_string())
     }
 }

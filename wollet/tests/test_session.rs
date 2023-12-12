@@ -826,7 +826,7 @@ pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
 
     for signer in signers {
         if let AnySigner::Jade(s, _) = signer {
-            s.register_multisig(params.clone());
+            s.register_multisig(params.clone()).unwrap();
         }
     }
 }

@@ -65,13 +65,14 @@ impl MutexJade {
         self.inner.get_mut().map_err(Box::new)
     }
 
-    pub fn register_multisig(&self, params: crate::register_multisig::RegisterMultisigParams) {
-        self.unlock().unwrap();
-        self.inner
-            .lock()
-            .unwrap()
-            .register_multisig(params)
-            .unwrap();
+    pub fn register_multisig(
+        &self,
+        params: crate::register_multisig::RegisterMultisigParams,
+    ) -> Result<(), crate::error::Error> {
+        self.unlock()
+            .map_err(|e| Error::PoisonError(e.to_string()))?;
+        self.inner.lock().unwrap().register_multisig(params)?;
+        Ok(())
     }
 
     pub fn network(&self) -> Network {

@@ -42,18 +42,19 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // start the app with default host/port
+    let datadir = args
+        .datadir
+        .unwrap_or_else(|| Config::default_home().unwrap_or(std::path::PathBuf::from(".")));
     let mut config = match args.network {
-        Network::Mainnet => Config::default_mainnet(),
-        Network::Testnet => Config::default_testnet(),
+        Network::Mainnet => Config::default_mainnet(datadir),
+        Network::Testnet => Config::default_testnet(datadir),
         Network::Regtest => Config::default_regtest(
             &args
                 .electrum_url
                 .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
+            datadir,
         ),
     };
-    config.datadir = args
-        .datadir
-        .unwrap_or_else(|| Config::default_home().unwrap_or(std::path::PathBuf::from(".")));
     config.addr = args.addr;
 
     let mut app = app::App::new(config)?;

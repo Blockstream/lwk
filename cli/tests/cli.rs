@@ -97,6 +97,18 @@ fn test_start_stop_persist() {
         "{cli} asset insert --asset {asset} --contract '{contract}' --prev-txid {prev_txid} --prev-vout {prev_vout}"
     ));
 
+    let expected_signers = sh(&format!("{cli} signer list"));
+    let r = expected_signers.get("signers").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 1);
+
+    let expected_wallets = sh(&format!("{cli} wallet list"));
+    let r = expected_wallets.get("wallets").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 1);
+
+    let expected_assets = sh(&format!("{cli} asset list"));
+    let r = expected_assets.get("assets").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 3);
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 
@@ -109,16 +121,13 @@ fn test_start_stop_persist() {
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
     let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+    assert_eq!(expected_signers, result, "persist not working");
 
     let result = sh(&format!("{cli} wallet list"));
-    let wallets = result.get("wallets").unwrap();
-    assert_eq!(wallets.as_array().unwrap().len(), 1, "persist not working");
+    assert_eq!(expected_wallets, result, "persist not working");
 
     let result = sh(&format!("{cli} asset list"));
-    let assets = result.get("assets").unwrap();
-    assert_eq!(assets.as_array().unwrap().len(), 3, "persist not working");
+    assert_eq!(expected_assets, result, "persist not working");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -133,16 +142,13 @@ fn test_start_stop_persist() {
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
     let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert_eq!(signers.as_array().unwrap().len(), 1, "persist not working");
+    assert_eq!(expected_signers, result, "persist not working");
 
     let result = sh(&format!("{cli} wallet list"));
-    let wallets = result.get("wallets").unwrap();
-    assert_eq!(wallets.as_array().unwrap().len(), 1, "persist not working");
+    assert_eq!(expected_wallets, result, "persist not working");
 
     let result = sh(&format!("{cli} asset list"));
-    let assets = result.get("assets").unwrap();
-    assert_eq!(assets.as_array().unwrap().len(), 3, "persist not working");
+    assert_eq!(expected_assets, result, "persist not working");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

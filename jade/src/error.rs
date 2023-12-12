@@ -35,6 +35,9 @@ pub enum Error {
         init: crate::Network,
         passed: crate::Network,
     },
+
+    #[error("Poison error: {0}")]
+    PoisonError(String),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

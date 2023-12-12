@@ -44,7 +44,7 @@ impl MutexJade {
     }
 
     pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, crate::error::Error> {
-        let stream = std::net::TcpStream::connect(socket).unwrap(); // TODO unwrap
+        let stream = std::net::TcpStream::connect(socket)?;
         let conn = Connection::TcpStream(stream);
         let jade = Jade::new(conn, network);
         Ok(Self::new(jade))

@@ -8,8 +8,8 @@ pub enum Error {
     #[error("Jade Error: {0}")]
     JadeError(ErrorDetails),
 
-    #[error("IO Error: {0}")]
-    IoError(std::io::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
 
     #[error("SystemTime Error: {0}")]
     SystemTimeError(SystemTimeError),

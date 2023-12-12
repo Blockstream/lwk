@@ -340,7 +340,7 @@ pub struct AssetDetails {
 }
 
 /// Asset details
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Asset {
     /// The asset identifier (32 bytes as 64 hex chars)
     pub asset_id: String,

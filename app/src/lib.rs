@@ -697,7 +697,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::ListAssets => {
             let s = state.lock().unwrap();
-            let assets = s
+            let mut assets: Vec<_> = s
                 .assets
                 .iter()
                 .map(|(asset_id, asset)| response::Asset {
@@ -705,6 +705,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     name: asset.name(),
                 })
                 .collect();
+            assets.sort();
             let r = response::ListAssets { assets };
             Response::result(request.id, serde_json::to_value(r)?)
         }

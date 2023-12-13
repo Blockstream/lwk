@@ -80,7 +80,7 @@ pub struct Store {
 
 impl Drop for Store {
     fn drop(&mut self) {
-        self.flush().unwrap();
+        let _ = self.flush();
     }
 }
 

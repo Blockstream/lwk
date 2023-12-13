@@ -10,7 +10,7 @@ static DOMAIN_LABEL: Lazy<RegexSet> = Lazy::new(|| {
         r"^[[:alnum:]]+$",
         r"^[[:alnum:]]+[[:alnum:]-]*[[:alnum:]]+$",
     ])
-    .unwrap()
+    .expect("static")
 });
 
 pub fn verify_domain_name(domain: &str) -> Result<(), Error> {

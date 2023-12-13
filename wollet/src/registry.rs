@@ -8,8 +8,9 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-static RE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").unwrap());
-static RE_TICKER: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9.\-]{3,24}$").unwrap());
+static RE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").expect("static"));
+static RE_TICKER: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[a-zA-Z0-9.\-]{3,24}$").expect("static"));
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Entity {

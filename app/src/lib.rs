@@ -841,8 +841,8 @@ fn fmt_txoutsecrets(s: &TxOutSecrets) -> String {
 fn fmt_wallet_txouts(txouts: &[Option<wollet::WalletTxOut>]) -> Vec<String> {
     txouts
         .iter()
-        .filter(|e| e.is_some())
-        .map(|e| fmt_txoutsecrets(&e.as_ref().unwrap().unblinded))
+        .filter_map(|f| f.as_ref())
+        .map(|e| fmt_txoutsecrets(&e.unblinded))
         .collect()
 }
 

@@ -23,6 +23,7 @@ pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::signer::Signer;
 
+use elements::confidential::{Asset, Value};
 use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;
 use elements_miniscript::descriptor::DescriptorSecretKey;
@@ -152,11 +153,10 @@ pub fn pset_balance(
                 }
 
                 // We expect the input to be blinded
-                if !(txout.asset.is_confidential() && txout.value.is_confidential()) {
-                    return Err(Error::InputNotBlinded { idx });
-                }
-                let asset_comm = txout.asset.commitment().unwrap();
-                let amount_comm = txout.value.commitment().unwrap();
+                let (asset_comm, amount_comm) = match (txout.asset, txout.value) {
+                    (Asset::Confidential(g), Value::Confidential(c)) => (g, c),
+                    _ => return Err(Error::InputNotBlinded { idx }),
+                };
 
                 // We expect the input to be unblindable with the descriptor blinding key
                 let private_blinding_key = derive_blinding_key(descriptor, &txout.script_pubkey)

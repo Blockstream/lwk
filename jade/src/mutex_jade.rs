@@ -9,7 +9,7 @@ use rand::{thread_rng, Rng};
 use crate::connection::Connection;
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
-use crate::{derivation_path_to_vec, Error, Jade};
+use crate::{derivation_path_to_vec, Jade};
 
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};
@@ -51,10 +51,7 @@ impl MutexJade {
     }
 
     pub fn unlock(&self) -> Result<(), crate::Error> {
-        self.inner
-            .lock()
-            .map_err(|e| Error::PoisonError(e.to_string()))?
-            .unlock()
+        self.inner.lock()?.unlock()
     }
 
     pub fn into_inner(self) -> Result<Jade, Box<PoisonError<Jade>>> {
@@ -70,7 +67,7 @@ impl MutexJade {
         params: crate::register_multisig::RegisterMultisigParams,
     ) -> Result<(), crate::error::Error> {
         self.unlock()?;
-        self.inner.lock().unwrap().register_multisig(params)?;
+        self.inner.lock()?.register_multisig(params)?;
         Ok(())
     }
 
@@ -84,7 +81,7 @@ impl Signer for &MutexJade {
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         self.unlock()?;
-        self.inner.lock().unwrap().sign(pset)
+        self.inner.lock()?.sign(pset)
     }
 
     fn derive_xpub(
@@ -98,11 +95,7 @@ impl Signer for &MutexJade {
         };
 
         self.unlock()?;
-        Ok(self
-            .inner
-            .lock()
-            .map_err(|e| Error::PoisonError(e.to_string()))?
-            .get_xpub(params)?)
+        Ok(self.inner.lock()?.get_xpub(params)?)
     }
 
     fn slip77_master_blinding_key(

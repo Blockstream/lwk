@@ -1,4 +1,7 @@
-use std::time::SystemTimeError;
+use std::{
+    sync::{MutexGuard, PoisonError},
+    time::SystemTimeError,
+};
 
 use serde::{Deserialize, Serialize};
 use serde_cbor::Value;
@@ -110,5 +113,11 @@ pub struct ErrorDetails {
 impl std::fmt::Display for ErrorDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Error code: {} - message: {}", self.code, self.message)
+    }
+}
+
+impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
+    fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
+        Error::PoisonError(e.to_string())
     }
 }

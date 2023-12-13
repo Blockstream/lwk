@@ -253,7 +253,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::SignerLoadJade = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let id = XpubIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
-            let signer = AppSigner::JadeId(id, s.config.jade_network());
+            let signer = match r.emulator {
+                Some(socket) => {
+                    // The emulator is meant to be used only in testing, we don't aim to handle connection/disconnection
+                    let jade = MutexJade::from_socket(socket, s.config.jade_network())?;
+                    AppSigner::AvailableSigner(AnySigner::Jade(jade, id))
+                }
+                None => AppSigner::JadeId(id, s.config.jade_network()),
+            };
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             s.persist(&request)?;

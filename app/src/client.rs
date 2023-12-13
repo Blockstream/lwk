@@ -34,11 +34,11 @@ impl Client {
         let params = req.map(|req| to_raw_value(&req)).transpose()?;
         let method = method.to_string();
         let request = self.client.build_request(&method, params.as_deref());
-        tracing::trace!("---> {}", serde_json::to_string(&request).unwrap());
+        tracing::trace!("---> {}", serde_json::to_string(&request)?);
         let response = self.client.send_request(request)?;
-        tracing::trace!("<--- {}", serde_json::to_string(&response).unwrap());
+        tracing::trace!("<--- {}", serde_json::to_string(&response)?);
         match response.result.as_ref() {
-            Some(result) => Ok(serde_json::from_str(result.get()).unwrap()),
+            Some(result) => Ok(serde_json::from_str(result.get())?),
             None => match response.error {
                 Some(rpc_err) => Err(Error::RpcError(rpc_err)),
                 None => Err(Error::NeitherResultNorErrorSet),

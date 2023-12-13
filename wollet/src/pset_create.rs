@@ -170,7 +170,7 @@ impl Wollet {
         }
         let contract_hash = match contract.as_ref() {
             Some(contract) => contract.contract_hash()?,
-            None => ContractHash::from_slice(&[0u8; 32]).unwrap(),
+            None => ContractHash::from_slice(&[0u8; 32]).expect("static"),
         };
         input.issuance_asset_entropy = Some(contract_hash.to_byte_array());
 

@@ -431,7 +431,7 @@ impl State {
                 jsonrpc: "2.0".into(),
                 id: None,
                 method: Method::LoadWallet.to_string(),
-                params: Some(serde_json::to_value(params).unwrap()),
+                params: Some(serde_json::to_value(params)?),
             };
             requests.push(r);
         }
@@ -497,7 +497,7 @@ impl State {
                         jsonrpc: "2.0".into(),
                         id: None,
                         method: Method::AssetInsert.to_string(),
-                        params: Some(serde_json::to_value(params).unwrap()),
+                        params: Some(serde_json::to_value(params)?),
                     };
                     requests.push(r);
                 }

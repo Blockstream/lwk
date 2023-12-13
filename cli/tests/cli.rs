@@ -719,12 +719,9 @@ fn test_jade_emulator() {
     ));
     assert!(result.get("id").is_some());
 
-    // TODO: use emul as a signer once it can handle requests
     // Use jade in a multisig wallet
     sw_signer(&cli, "sw");
-    sw_signer(&cli, "sw1");
-    let signers = &["sw", "sw1"];
-    //let signers = &["sw", "emul"];  // TODO
+    let signers = &["sw", "emul"];
     multisig_wallet(&cli, "multi", 2, signers);
     fund(&server, &cli, "multi", 10_000);
     let addr = address(&cli, "multi");

@@ -152,12 +152,20 @@ impl Wollets {
             return Err(Error::WalletAlreadyLoaded(name.to_string()));
         }
 
-        let a = |w: &Wollet| w.address(Some(0)).unwrap().address().to_string();
+        let first_addr = |w: &Wollet| w.address(Some(0)).map(|a| a.address().clone());
+        let other = first_addr(&wollet)?;
+
+        let ours: Vec<_> = self
+            .0
+            .values()
+            .map(|w| first_addr(&w))
+            .collect::<Result<_, _>>()?;
 
         let vec: Vec<_> = self
             .0
-            .iter()
-            .filter(|(_, w)| a(w) == a(&wollet))
+            .keys()
+            .zip(ours.iter())
+            .filter(|(_, b)| &other == *b)
             .map(|(n, _)| n)
             .collect();
         if let Some(existing) = vec.first() {

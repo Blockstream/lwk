@@ -83,14 +83,18 @@ impl Error {
     /// Return error codes, no different variants should return the same value
     pub fn as_impl_defined_code(&self) -> ImplementationDefinedCode {
         match self {
-            Error::Jade(_) => ImplementationDefinedCode::new(-32_013).unwrap(),
-            Error::Wollet(_) => ImplementationDefinedCode::new(-32_005).unwrap(),
-            Error::SignerNew(_) => ImplementationDefinedCode::new(-32_006).unwrap(),
-            Error::Signer(_) => ImplementationDefinedCode::new(-32_007).unwrap(),
-            Error::WalletNotExist(_) => ImplementationDefinedCode::new(-32_008).unwrap(),
-            Error::WalletAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_009).unwrap(),
-            Error::SignerNotExist(_) => ImplementationDefinedCode::new(-32_010).unwrap(),
-            Error::SignerAlreadyLoaded(_) => ImplementationDefinedCode::new(-32_011).unwrap(),
+            Error::Jade(_) => ImplementationDefinedCode::new(-32_013).expect("static"),
+            Error::Wollet(_) => ImplementationDefinedCode::new(-32_005).expect("static"),
+            Error::SignerNew(_) => ImplementationDefinedCode::new(-32_006).expect("static"),
+            Error::Signer(_) => ImplementationDefinedCode::new(-32_007).expect("static"),
+            Error::WalletNotExist(_) => ImplementationDefinedCode::new(-32_008).expect("static"),
+            Error::WalletAlreadyLoaded(_) => {
+                ImplementationDefinedCode::new(-32_009).expect("static")
+            }
+            Error::SignerNotExist(_) => ImplementationDefinedCode::new(-32_010).expect("static"),
+            Error::SignerAlreadyLoaded(_) => {
+                ImplementationDefinedCode::new(-32_011).expect("static")
+            }
 
             _ => tiny_jrpc::error::GENERIC,
         }

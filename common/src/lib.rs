@@ -191,7 +191,7 @@ pub fn pset_balance(
             {
                 return Err(Error::BlindedFee);
             }
-            fee = Some(output.amount.unwrap());
+            fee = Some(output.amount.expect("previous if prevent this to be none"));
             continue;
         }
 

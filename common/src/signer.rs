@@ -48,7 +48,8 @@ pub trait Signer {
         };
 
         let fingerprint = self.fingerprint()?;
-        let xpub = self.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).unwrap())?;
+        let xpub =
+            self.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).expect("static"))?; // TODO avoid string use ChildNumber directly
         let keyorigin_xpub = format!("[{fingerprint}/{path}]{xpub}");
         Ok(keyorigin_xpub)
     }

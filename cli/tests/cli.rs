@@ -65,6 +65,89 @@ fn setup_cli() -> (JoinHandle<()>, TempDir, String, TestElectrumServer) {
     (t, tmp, cli, server)
 }
 
+fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
+    v.get(key).unwrap().as_str().unwrap()
+}
+
+fn sw_signer(cli: &str, name: &str) {
+    let r = sh(&format!("{cli} signer generate"));
+    let mnemonic = get_str(&r, "mnemonic");
+    sh(&format!(
+        "{cli} signer load-software --mnemonic \"{mnemonic}\" --name {name}"
+    ));
+}
+
+fn keyorigin(cli: &str, signer: &str) -> String {
+    let r = sh(&format!("{cli} signer xpub --name {signer} --kind bip84"));
+    get_str(&r, "keyorigin_xpub").to_string()
+}
+
+fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
+    let xpubs = signers
+        .iter()
+        .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s)))
+        .collect::<Vec<_>>()
+        .join("");
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold {threshold}{xpubs}"));
+    let d = get_str(&r, "descriptor");
+    sh(&format!("{cli} wallet load --name {name} {d}"));
+}
+
+fn txs(cli: &str, wallet: &str) -> Vec<Value> {
+    let r = sh(&format!("{cli} wallet txs --name {wallet}"));
+    r.get("txs").unwrap().as_array().unwrap().to_vec()
+}
+
+fn tx(cli: &str, wallet: &str, txid: &str) -> Option<Value> {
+    txs(cli, wallet)
+        .into_iter()
+        .find(|tx| get_str(tx, "txid") == txid)
+}
+
+fn wait_ms(ms: u64) {
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+}
+
+fn wait_tx(cli: &str, wallet: &str, txid: &str) {
+    let ms = 500;
+    let times = 20;
+    for _ in 0..times {
+        wait_ms(ms);
+        if tx(cli, wallet, txid).is_some() {
+            return;
+        }
+    }
+    panic!("Waited tx {txid} for {}s", ms * times / 1000)
+}
+
+fn address(cli: &str, wallet: &str) -> String {
+    let r = sh(&format!("{cli} wallet address --name {wallet}"));
+    get_str(&r, "address").to_string()
+}
+
+fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
+    let addr = Address::from_str(&address(cli, wallet)).unwrap();
+
+    let txid = server.node_sendtoaddress(&addr, sats, None);
+    server.generate(2);
+    wait_tx(cli, wallet, &txid);
+}
+
+fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers: &[&str]) {
+    let recipient = format!(" --recipient {address}:{sats}:{asset}");
+    let r = sh(&format!("{cli} wallet send --name {wallet} {recipient}"));
+    let mut pset = get_str(&r, "pset").to_string();
+
+    for signer in signers {
+        let r = sh(&format!("{cli} signer sign --name {signer} {pset}"));
+        pset = get_str(&r, "pset").to_string();
+    }
+
+    let r = sh(&format!("{cli} wallet broadcast --name {wallet} {pset}"));
+    let txid = get_str(&r, "txid");
+    wait_tx(cli, wallet, txid);
+}
+
 #[test]
 fn test_start_stop_persist() {
     let (t, _tmp, cli, _server) = setup_cli();
@@ -620,7 +703,7 @@ fn test_issue() {
 
 #[test]
 fn test_jade_emulator() {
-    let (t, _tmp, cli, _server) = setup_cli();
+    let (t, _tmp, cli, server) = setup_cli();
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
@@ -635,6 +718,18 @@ fn test_jade_emulator() {
         "{cli} signer load-jade --name emul --id {identifier}  --emulator {jade_addr}"
     ));
     assert!(result.get("id").is_some());
+
+    // TODO: use emul as a signer once it can handle requests
+    // Use jade in a multisig wallet
+    sw_signer(&cli, "sw");
+    sw_signer(&cli, "sw1");
+    let signers = &["sw", "sw1"];
+    //let signers = &["sw", "emul"];  // TODO
+    multisig_wallet(&cli, "multi", 2, signers);
+    fund(&server, &cli, "multi", 10_000);
+    let addr = address(&cli, "multi");
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    send(&cli, "multi", &addr, policy_asset, 1_000, signers);
 
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));

@@ -20,9 +20,6 @@ pub enum Error {
     #[error("Jade Error: {0}")]
     Jade(#[from] jade::Error),
 
-    #[error("Jade Unlock Error: {0}")]
-    Unlock(#[from] jade::unlock::Error),
-
     #[error("Wollet Error: {0}")]
     Wollet(#[from] wollet::Error),
 

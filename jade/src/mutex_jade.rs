@@ -50,7 +50,7 @@ impl MutexJade {
         Ok(Self::new(jade))
     }
 
-    pub fn unlock(&self) -> Result<(), crate::unlock::Error> {
+    pub fn unlock(&self) -> Result<(), crate::Error> {
         self.inner
             .lock()
             .map_err(|e| Error::PoisonError(e.to_string()))?
@@ -69,8 +69,7 @@ impl MutexJade {
         &self,
         params: crate::register_multisig::RegisterMultisigParams,
     ) -> Result<(), crate::error::Error> {
-        self.unlock()
-            .map_err(|e| Error::PoisonError(e.to_string()))?;
+        self.unlock()?;
         self.inner.lock().unwrap().register_multisig(params)?;
         Ok(())
     }

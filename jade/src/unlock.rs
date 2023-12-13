@@ -1,31 +1,7 @@
 use crate::{
     protocol::{HandshakeCompleteParams, HandshakeInitParams, IsAuthResult},
-    Jade,
+    Error, Jade,
 };
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error(transparent)]
-    Jade(#[from] crate::Error),
-
-    #[error(transparent)]
-    Http(#[from] minreq::Error),
-
-    #[error(transparent)]
-    SerdeJson(#[from] serde_json::Error),
-
-    #[error("Http request to {0} returned {1} instead of 200")]
-    HttpStatus(String, i32),
-
-    #[error("Jade authentication returned a response without urlA")]
-    MissingUrlA,
-
-    #[error("The handshake complete call to the pin server failed")]
-    HandshakeFailed,
-
-    #[error("Unexpected \"false\" result")]
-    UnexpectedFalse,
-}
 
 impl Jade {
     /// Unlock an already initialized Jade.

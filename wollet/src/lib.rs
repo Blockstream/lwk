@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 //! # Wollet
 //!
 //! An elements and liquid Watch-Only Wallet defined by a

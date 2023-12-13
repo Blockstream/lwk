@@ -195,11 +195,11 @@ mod test {
     fn parse_change() {
         let json = include_str!("../test_data/sign_liquid_tx_request.json");
 
-        let resp: Value = serde_json::from_str(json).unwrap();
+        let resp: Value = serde_json::from_str(json).expect("test");
 
-        let params = resp.get("params").unwrap();
-        let changes = params.get("change").unwrap();
-        let change = changes.get(1).unwrap();
+        let params = resp.get("params").expect("test");
+        let changes = params.get("change").expect("test");
+        let change = changes.get(1).expect("test");
 
         let expected = Change {
             address: SingleOrMulti::Single {
@@ -209,6 +209,6 @@ mod test {
             is_change: false,
         };
 
-        assert_eq!(&serde_json::to_value(expected).unwrap(), change);
+        assert_eq!(&serde_json::to_value(expected).expect("test"), change);
     }
 }

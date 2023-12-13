@@ -13,8 +13,8 @@ pub use pin_server::{PinServer, PIN_SERVER_PORT};
 pub use testcontainers;
 
 // pub fn print_docker_logs_and_panic(id: &str) -> ! {
-//     let output = std::process::Command::new("docker").arg("logs").arg(id).output().unwrap();
-//     let s = String::from_utf8(output.stdout).unwrap();
+//     let output = std::process::Command::new("docker").arg("logs").arg(id).output().expect("test");
+//     let s = String::from_utf8(output.stdout).expect("test");
 //     println!("{s}");
 //     panic!("print docker logs and panic");
 // }

@@ -134,7 +134,7 @@ impl WolletDescriptor {
             .expect("already done in TryFrom");
         assert_ne!(descriptors.len(), 0);
         let descriptor = if descriptors.len() == 1 {
-            descriptors.pop().unwrap()
+            descriptors.pop().expect("inside len==1 branch")
         } else {
             match ext_int {
                 Chain::External => descriptors.remove(0),

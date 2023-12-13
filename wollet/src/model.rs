@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn test_asset_roundtrip() {
         let hex = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let asset = AssetId::from_str(hex).unwrap();
+        let asset = AssetId::from_str(hex).expect("test");
         assert_eq!(asset.to_string(), hex);
     }
 }

@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_db_roundtrip() {
-        let tempdir = TempDir::new().unwrap();
+        let tempdir = TempDir::new().expect("test");
         let mut dir = tempdir.path().to_path_buf();
         dir.push("store");
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
@@ -240,22 +240,22 @@ mod tests {
             "ct(slip77({}),elwpkh({}/*))#{}",
             master_blinding_key, xpub, checksum
         );
-        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
+        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).expect("test");
         let txid =
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
-                .unwrap();
+                .expect("test");
 
-        let mut store = Store::new(&dir, &desc.clone().try_into().unwrap()).unwrap();
+        let mut store = Store::new(&dir, &desc.clone().try_into().expect("test")).expect("test");
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = Store::new(&dir, &desc.try_into().unwrap()).unwrap();
+        let store = Store::new(&dir, &desc.try_into().expect("test")).expect("test");
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 
     #[test]
     fn test_address_derivation() {
-        let tempdir = TempDir::new().unwrap();
+        let tempdir = TempDir::new().expect("test");
         let mut dir = tempdir.path().to_path_buf();
         dir.push("store");
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
@@ -266,14 +266,14 @@ mod tests {
             "ct(slip77({}),elwpkh({}/*))#{}",
             master_blinding_key, xpub, checksum
         );
-        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
-        let desc: WolletDescriptor = desc.try_into().unwrap();
+        let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).expect("test");
+        let desc: WolletDescriptor = desc.try_into().expect("test");
 
-        let store = Store::new(&dir, &desc).unwrap();
+        let store = Store::new(&dir, &desc).expect("test");
 
         let x = store
             .get_script_batch(0, &desc.as_ref().descriptor)
-            .unwrap();
+            .expect("test");
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }))");
         assert_ne!(x.value[0], x.value[1]);
     }

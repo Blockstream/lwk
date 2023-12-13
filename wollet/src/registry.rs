@@ -116,22 +116,22 @@ mod tests {
     #[test]
     fn test_registry() {
         let contract_string = "{\"entity\":{\"domain\":\"tether.to\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Tether USD\",\"precision\":8,\"ticker\":\"USDt\",\"version\":0}";
-        let contract_value = serde_json::Value::from_str(contract_string).unwrap();
-        let contract = Contract::from_value(&contract_value).unwrap();
-        contract.validate().unwrap();
+        let contract_value = serde_json::Value::from_str(contract_string).expect("test");
+        let contract = Contract::from_value(&contract_value).expect("test");
+        contract.validate().expect("test");
         assert_eq!(
-            serde_json::to_string(&contract).unwrap(),
+            serde_json::to_string(&contract).expect("test"),
             contract_string.to_string()
         );
         // From
         // https://blockstream.info/liquid/tx/abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d?input:0&expand
         assert_eq!(
-            contract.contract_hash().unwrap().to_string(),
+            contract.contract_hash().expect("test").to_string(),
             "3c7f0a53c2ff5b99590620d7f6604a7a3a7bfbaaa6aa61f7bfc7833ca03cde82".to_string()
         );
 
         // Failing tests
-        let mut contract = Contract::from_value(&contract_value).unwrap();
+        let mut contract = Contract::from_value(&contract_value).expect("test");
 
         contract.entity = Entity::Domain("Tether.to".to_string());
         assert!(contract.validate().is_err());
@@ -160,19 +160,21 @@ mod tests {
         // https://blockstream.info/liquid/api/tx/abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d/hex
         let tx_hex = include_str!("../tests/data/usdt-issuance-tx.hex");
         let tx: elements::Transaction =
-            elements::encode::deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
+            elements::encode::deserialize(&Vec::<u8>::from_hex(tx_hex).expect("test"))
+                .expect("test");
 
         let asset_usdt = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
         let token_usdt = "59fe4d2127ba9f16bd6850a3e6271a166e7ed2e1669f6c107d655791c94ee98f";
 
-        let mut contract = Contract::from_value(&contract_value).unwrap();
-        let (asset, token) = asset_ids(&tx.input[0], &contract).unwrap();
+        let mut contract = Contract::from_value(&contract_value).expect("test");
+        let (asset, token) = asset_ids(&tx.input[0], &contract).expect("test");
         assert_eq!(&asset.to_string(), asset_usdt);
         assert_eq!(&token.to_string(), token_usdt);
 
         let issuance_prevout = tx.input[0].previous_output;
         let is_confidential = tx.input[0].asset_issuance.amount.is_confidential();
-        let (asset, token) = issuance_ids(&contract, issuance_prevout, is_confidential).unwrap();
+        let (asset, token) =
+            issuance_ids(&contract, issuance_prevout, is_confidential).expect("test");
         assert_eq!(&asset.to_string(), asset_usdt);
         assert_eq!(&token.to_string(), token_usdt);
 

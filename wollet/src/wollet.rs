@@ -545,8 +545,9 @@ mod tests {
             "ct(slip77({}),elwpkh({}))#{}",
             master_blinding_key, xpub, checksum
         );
-        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
-        let addr = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
+        let desc =
+            ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).expect("test");
+        let addr = desc.address(&EC, &AddressParams::ELEMENTS).expect("test");
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";
         assert_eq!(addr.to_string(), expected_addr.to_string());
     }
@@ -555,14 +556,15 @@ mod tests {
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
         let seed = [0u8; 16];
-        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap();
+        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).expect("test");
         let xpub = ExtendedPubKey::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
-        let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
-        let address = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
+        let desc =
+            ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).expect("test");
+        let address = desc.address(&EC, &AddressParams::ELEMENTS).expect("test");
         // and extract the public blinding key
-        let pk_from_addr = address.blinding_pubkey.unwrap();
+        let pk_from_addr = address.blinding_pubkey.expect("test");
 
         // Get the public blinding key from the descriptor blinding key
         let key = match desc.key {
@@ -580,12 +582,13 @@ mod tests {
         let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
         let desc_str = format!("ct({},elwpkh({}))", descriptor_blinding_key, xpub);
-        let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).unwrap());
-        let _desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
+        let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).expect("test"));
+        let _desc =
+            ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).expect("test");
     }
 
     fn new_wollet(desc: &str) -> Wollet {
-        let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
+        let desc = &format!("{}#{}", desc, desc_checksum(desc).expect("test"));
         Wollet::new(
             ElementsNetwork::LiquidTestnet,
             "",
@@ -594,7 +597,7 @@ mod tests {
             "/tmp/.ks",
             desc,
         )
-        .unwrap()
+        .expect("test")
     }
 
     #[test]
@@ -602,10 +605,10 @@ mod tests {
         let view_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
 
-        let fp1 = Fingerprint::from_str("11111111").unwrap();
-        let fp2 = Fingerprint::from_str("22222222").unwrap();
-        let fp_xpub = Fingerprint::from_str("0a55db61").unwrap();
-        let fp_single = Fingerprint::from_str("51814f10").unwrap();
+        let fp1 = Fingerprint::from_str("11111111").expect("test");
+        let fp2 = Fingerprint::from_str("22222222").expect("test");
+        let fp_xpub = Fingerprint::from_str("0a55db61").expect("test");
+        let fp_single = Fingerprint::from_str("51814f10").expect("test");
 
         let signer1 = format!("[{fp1}/0h/0h/0h]{xpub}/0/*");
         let signer1_mp = format!("[{fp1}/0h/0h/0h]{xpub}/<0;1>/*");

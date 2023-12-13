@@ -19,56 +19,8 @@ use crate::{
     sign_liquid_tx::{
         AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, TxInputParams,
     },
-    Jade,
+    Error, Jade,
 };
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error(transparent)]
-    Pset(#[from] elements::pset::Error),
-
-    #[error(transparent)]
-    Jade(#[from] crate::Error),
-
-    #[error("Missing asset id in output {0}")]
-    MissingAssetIdInOutput(usize),
-
-    #[error("Missing blind asset proof in output {0}")]
-    MissingBlindAssetProofInOutput(usize),
-
-    #[error("Missing asset commitment in output {0}")]
-    MissingAssetCommInOutput(usize),
-
-    #[error("Missing blinding key in output {0}")]
-    MissingBlindingKeyInOutput(usize),
-
-    #[error("Missing amount in output {0}")]
-    MissingAmountInOutput(usize),
-
-    #[error("Missing amount commitment in output {0}")]
-    MissingAmountCommInOutput(usize),
-
-    #[error("Missing blind value proof in output {0}")]
-    MissingBlindValueProofInOutput(usize),
-
-    #[error("Missing witness utxo in input {0}")]
-    MissingWitnessUtxoInInput(usize),
-
-    #[error("Non confidential input {0}")]
-    NonConfidentialInput(usize),
-
-    #[error("Expecting bip 32 derivation for input {0}")]
-    MissingBip32DerivInput(usize),
-
-    #[error("Previous script pubkey is wsh but witness script is missing in input {0}")]
-    MissingWitnessScript(usize),
-
-    #[error("Unsupported spending script pubkey: {0}")]
-    UnsupportedScriptPubkeyType(String),
-
-    #[error("Multiple registered multisig, please remove all multisigs but one from the physical device")]
-    MultipleRegisteredMultisig,
-}
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 

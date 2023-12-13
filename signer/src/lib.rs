@@ -18,9 +18,6 @@ pub enum SignerError {
     Software(#[from] SignError),
 
     #[error(transparent)]
-    Jade(#[from] jade::sign_pset::Error),
-
-    #[error(transparent)]
     JadeError(#[from] jade::error::Error),
 
     #[error(transparent)]

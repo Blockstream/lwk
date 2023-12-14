@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").expect("test");
+        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",

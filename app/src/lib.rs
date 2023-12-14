@@ -879,12 +879,12 @@ mod tests {
         let addr = TcpListener::bind("127.0.0.1:0")
             .unwrap()
             .local_addr()
-            .expect("test");
-        let tempdir = tempfile::tempdir().expect("test");
+            .unwrap();
+        let tempdir = tempfile::tempdir().unwrap();
         let mut config = Config::default_testnet(tempdir.path().to_path_buf());
         config.addr = addr;
-        let mut app = App::new(config).expect("test");
-        app.run().expect("test");
+        let mut app = App::new(config).unwrap();
+        app.run().unwrap();
         app
     }
 
@@ -895,15 +895,15 @@ mod tests {
         let url = addr.to_string();
         dbg!(&url);
 
-        let client = jsonrpc::Client::simple_http(&url, None, None).expect("test");
+        let client = jsonrpc::Client::simple_http(&url, None, None).unwrap();
         let request = client.build_request("version", None);
-        let response = client.send_request(request).expect("test");
+        let response = client.send_request(request).unwrap();
 
-        let result = response.result.expect("test").to_string();
-        let actual: response::Version = serde_json::from_str(&result).expect("test");
+        let result = response.result.unwrap().to_string();
+        let actual: response::Version = serde_json::from_str(&result).unwrap();
         assert_eq!(actual.version, consts::APP_VERSION);
 
-        app.stop().expect("test");
-        app.join_threads().expect("test");
+        app.stop().unwrap();
+        app.join_threads().unwrap();
     }
 }

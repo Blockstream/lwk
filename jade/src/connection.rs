@@ -92,12 +92,12 @@ mod test {
             error: None,
         };
         let mut data = Vec::new();
-        serde_cbor::to_writer(&mut data, &resp).expect("test");
+        serde_cbor::to_writer(&mut data, &resp).unwrap();
 
         let connection = Connection::PartialReadTest { data, status: 0 };
 
         let mut jade = Jade::new(connection, crate::Network::LocaltestLiquid);
-        let result: Value = jade.send_request("", None).expect("test");
+        let result: Value = jade.send_request("", None).unwrap();
         assert_eq!(result, text);
     }
 }

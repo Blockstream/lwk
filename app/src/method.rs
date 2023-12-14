@@ -225,7 +225,7 @@ mod test {
     fn method_roundtrip() {
         let all = all::<Method>().collect::<Vec<_>>();
         for m in all {
-            assert_eq!(m, m.to_string().parse().expect("test"))
+            assert_eq!(m, m.to_string().parse().unwrap())
         }
     }
 }

@@ -27,17 +27,18 @@ impl PinServer {
     ///
     /// takes the temporary directory as parameter to ensure it's not deleted when the
     /// docker containers runtime convert the Image into RunnableImage, consuming the struct
-    pub fn new(dir: &TempDir) -> Self {
+    pub fn new(dir: &TempDir) -> Result<Self, std::io::Error> {
         // docker run -v $PWD/server_private_key.key:/server_private_key.key -v $PWD/pinsdir:/pins -p 8096:8096 xenoky/dockerized_pinserver
 
         let file_path = dir.path().join(SERVER_PRIVATE_KEY);
-        let mut file = std::fs::File::create(&file_path).unwrap();
+        let mut file = std::fs::File::create(&file_path)?;
         let mut random_buff = [0u8; 32];
         let mut rng = thread_rng();
         rng.fill_bytes(&mut random_buff);
-        file.write_all(&random_buff).unwrap();
+        file.write_all(&random_buff)?;
 
-        let prv_key = PrivateKey::from_slice(&random_buff, bitcoin::Network::Regtest).unwrap();
+        let prv_key =
+            PrivateKey::from_slice(&random_buff, bitcoin::Network::Regtest).expect("32 bytes");
         let pin_server_pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
 
         assert!(file_path.is_absolute() && file_path.exists());
@@ -49,22 +50,21 @@ impl PinServer {
         );
         volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
 
-        Self {
+        Ok(Self {
             volumes,
             pub_key: pin_server_pub_key,
-        }
+        })
     }
 
     /// Creates a tempdir
     ///
     /// under gitlab env using tempdir may cause issue, thus in this env the temp dir is created
     /// under the project dir
-    pub fn tempdir() -> TempDir {
+    pub fn tempdir() -> Result<TempDir, std::io::Error> {
         match std::env::var("CI_PROJECT_DIR") {
             Ok(var) => TempDir::new_in(var),
             Err(_) => tempfile::tempdir(),
         }
-        .unwrap()
     }
 }
 

@@ -400,7 +400,7 @@ impl State {
         let mut temp = path.clone();
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("Clock may have gone backwards")
             .as_millis();
         temp.set_file_name(millis.to_string());
         let mut file = File::create(&temp)?;

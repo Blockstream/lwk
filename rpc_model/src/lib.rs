@@ -1,4 +1,5 @@
-#![deny(missing_docs)] // TODO move to crate level
+#![deny(missing_docs)]
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 //! Contains the data model to communicate with the RPC server divided
 //! in [`request`]s and [`response`]s.

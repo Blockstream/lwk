@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 //! # App
 //!
 //! Contains the RPC server [`App`] wiring the RPC calls to the respective methods in [`Wollet`] or [`Signer`].
@@ -875,7 +877,7 @@ mod tests {
 
     fn app_random_port() -> App {
         let addr = TcpListener::bind("127.0.0.1:0")
-            .expect("test")
+            .unwrap()
             .local_addr()
             .expect("test");
         let tempdir = tempfile::tempdir().expect("test");

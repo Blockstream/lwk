@@ -66,7 +66,7 @@ mod test {
             &format!("[{fingerprint}/x/{path}]{xpub}"),
             &format!("[{fingerprint}/{path}]1{xpub}"),
         ] {
-            keyorigin_xpub_from_str(s).unwrap_err();
+            keyorigin_xpub_from_str(s).expect_err("test");
         }
     }
 }

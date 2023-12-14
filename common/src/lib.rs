@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 //! A crate containing common code used in multiple other crate in the workspace, such as:
 //!
 //!   * Utils to inspect a PSET: get the net effect of a PSET on a given wallet [`pset_balance()`], or get how many

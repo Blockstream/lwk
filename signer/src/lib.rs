@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 //! Contains a software signer [`SwSigner`] and an [`AnySigner`] that can be a Jade or a Software signer
 
 mod software;

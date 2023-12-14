@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 //! Instances of [testcontainers](https://docs.rs/testcontainers/latest/testcontainers/):
 //!
 //! * [`PinServer`] [Pin Server](https://github.com/Blockstream/blind_pin_server)

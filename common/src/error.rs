@@ -65,4 +65,7 @@ pub enum Error {
 
     #[error(transparent)]
     DescConversion(#[from] elements_miniscript::descriptor::ConversionError),
+
+    #[error(transparent)]
+    Miniscript(#[from] elements_miniscript::Error),
 }

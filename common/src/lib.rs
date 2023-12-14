@@ -88,7 +88,7 @@ fn is_mine(
     script_pubkey: &Script,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     bip32_derivation: &BTreeMap<PublicKey, KeySource>,
-) -> bool {
+) -> Result<bool, Error> {
     for (_, path) in bip32_derivation.values() {
         // TODO should I check descriptor derivation path is compatible with given bip32_derivation?
         // TODO consider fingerprint if available
@@ -96,23 +96,17 @@ fn is_mine(
             continue;
         }
         let wildcard_index = path[path.len() - 1];
-        for d in descriptor
-            .descriptor
-            .clone()
-            .into_single_descriptors()
-            .unwrap()
-        {
+        for d in descriptor.descriptor.clone().into_single_descriptors()? {
             // TODO improve by checking only the descriptor ending with the given path
             let mine = d
-                .at_derivation_index(wildcard_index.into())
-                .unwrap()
+                .at_derivation_index(wildcard_index.into())?
                 .script_pubkey();
             if &mine == script_pubkey {
-                return true;
+                return Ok(true);
             }
         }
     }
-    false
+    Ok(false)
 }
 
 pub fn pset_balance(
@@ -135,7 +129,9 @@ pub fn pset_balance(
                 });
             }
             Some(txout) => {
-                if !is_mine(&txout.script_pubkey, descriptor, &input.bip32_derivation) {
+                if !is_mine(&txout.script_pubkey, descriptor, &input.bip32_derivation)
+                    .unwrap_or(false)
+                {
                     // Ignore outputs we don't own
                     continue;
                 }
@@ -195,7 +191,7 @@ pub fn pset_balance(
             continue;
         }
 
-        if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation) {
+        if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation).unwrap_or(false) {
             // Ignore outputs we don't own
             continue;
         }

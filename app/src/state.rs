@@ -30,12 +30,12 @@ pub enum AppSigner {
 }
 
 impl AppSigner {
-    pub fn fingerprint(&self) -> Fingerprint {
-        match self {
-            AppSigner::AvailableSigner(s) => s.fingerprint().unwrap(), // TODO
+    pub fn fingerprint(&self) -> Result<Fingerprint, Error> {
+        Ok(match self {
+            AppSigner::AvailableSigner(s) => s.fingerprint()?,
             AppSigner::ExternalSigner(f) => *f,
             AppSigner::JadeId(id, _) => id_to_fingerprint(id),
-        }
+        })
     }
 }
 
@@ -251,14 +251,10 @@ impl Signers {
         if self.0.contains_key(name) {
             return Err(Error::SignerAlreadyLoaded(name.to_string()));
         }
+        let inserting_fingerprint = signer.fingerprint()?;
 
         // TODO: matchin for fingerprint is not ideal, we could have collisions
-        let vec: Vec<_> = self
-            .0
-            .iter()
-            .filter(|(_, s)| s.fingerprint() == signer.fingerprint())
-            .map(|(n, _)| n)
-            .collect();
+        let vec: Vec<_> = self.names_matching_fingerprint(&inserting_fingerprint)?;
         if let Some(existing) = vec.first() {
             // TODO: maybe a different error more clear?
             return Err(Error::SignerAlreadyLoaded(existing.to_string()));
@@ -278,17 +274,29 @@ impl Signers {
         self.0.iter()
     }
 
+    fn names_matching_fingerprint(&self, fingerprint: &Fingerprint) -> Result<Vec<String>, Error> {
+        let fingerprints = self
+            .iter()
+            .map(|s| s.1.fingerprint())
+            .collect::<Result<Vec<Fingerprint>, Error>>()?;
+
+        Ok(self
+            .iter()
+            .map(|(n, _)| n)
+            .zip(fingerprints.iter())
+            .filter(|(_, b)| *b == fingerprint)
+            .map(|(n, _)| n.clone())
+            .collect())
+    }
+
     /// Get a name from the fingerprint
     pub fn name_from_fingerprint(
         &self,
         fingerprint: &Fingerprint,
         warnings: &mut Vec<String>,
     ) -> Option<String> {
-        let names: Vec<_> = self
-            .iter()
-            .filter(|(_, s)| &s.fingerprint() == fingerprint)
-            .map(|(n, _)| n.clone())
-            .collect();
+        let names = self.names_matching_fingerprint(fingerprint).ok()?;
+
         match names.len() {
             0 => None,
             1 => Some(names[0].clone()),
@@ -400,7 +408,7 @@ impl State {
         let mut temp = path.clone();
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("Clock may have gone backwards")
             .as_millis();
         temp.set_file_name(millis.to_string());
         let mut file = File::create(&temp)?;

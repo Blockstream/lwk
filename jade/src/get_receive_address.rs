@@ -76,7 +76,7 @@ mod test {
             "path": [2147483697, 2147483648, 2147483648, 0, 143]
         }
         "#;
-        let single_value: Value = serde_json::from_str(single_str).expect("test");
+        let single_value: Value = serde_json::from_str(single_str).unwrap();
         let single_struct = GetReceiveAddressParams {
             network: crate::Network::Liquid,
             address: SingleOrMulti::Single {
@@ -84,10 +84,7 @@ mod test {
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
             },
         };
-        assert_eq!(
-            single_value,
-            serde_json::to_value(single_struct).expect("test")
-        );
+        assert_eq!(single_value, serde_json::to_value(single_struct).unwrap());
 
         let multi_str = r#"
         {
@@ -99,7 +96,7 @@ mod test {
             ]
         }
         "#;
-        let multi_value: Value = serde_json::from_str(multi_str).expect("test");
+        let multi_value: Value = serde_json::from_str(multi_str).unwrap();
         let multi_struct = GetReceiveAddressParams {
             network: crate::Network::Liquid,
             address: SingleOrMulti::Multi {
@@ -107,9 +104,6 @@ mod test {
                 paths: vec![vec![0, 43], vec![0, 14]],
             },
         };
-        assert_eq!(
-            multi_value,
-            serde_json::to_value(multi_struct).expect("test")
-        );
+        assert_eq!(multi_value, serde_json::to_value(multi_struct).unwrap());
     }
 }

@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 use std::{
     fmt::Display,
@@ -440,27 +441,24 @@ mod test {
     #[test]
     fn echo() {
         let addr = "127.0.0.1:0";
-        let server = Server::http(addr).expect("test");
+        let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
         let mut rpc = JsonRpcServer::new(server, Config::default(), state, process);
-        let port = rpc.port().expect("test");
+        let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
-        let client = Client::simple_http(&url, None, None).expect("test");
+        let client = Client::simple_http(&url, None, None).unwrap();
         let val = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks";
-        let params = to_raw_value(val).expect("test");
+        let params = to_raw_value(val).unwrap();
         let request = client.build_request("echo", Some(&params));
         let req = request.clone();
 
-        let response = client.send_request(request).expect("test");
+        let response = client.send_request(request).unwrap();
 
         assert_eq!(response.id, req.id);
-        assert_eq!(
-            response.jsonrpc.expect("test").as_str(),
-            req.jsonrpc.expect("test")
-        );
-        let result = response.result.expect("test");
-        let expected = serde_json::to_string(&json!(params)).expect("test");
+        assert_eq!(response.jsonrpc.unwrap().as_str(), req.jsonrpc.unwrap());
+        let result = response.result.unwrap();
+        let expected = serde_json::to_string(&json!(params)).unwrap();
         assert_eq!(result.get(), expected.as_str());
 
         rpc.stop();
@@ -470,16 +468,16 @@ mod test {
     #[test]
     fn rpc_dot_reserved() {
         let addr = "127.0.0.1:0";
-        let server = Server::http(addr).expect("test");
+        let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
         let rpc = JsonRpcServer::new(server, Config::default(), state, process);
-        let port = rpc.port().expect("test");
+        let port = rpc.port().unwrap();
         let url = format!("127.0.0.1:{}", port);
 
-        let client = Client::simple_http(&url, None, None).expect("test");
+        let client = Client::simple_http(&url, None, None).unwrap();
         let request = client.build_request("rpc.reserved", None);
 
-        let response = client.send_request(request).expect("test");
+        let response = client.send_request(request).unwrap();
         assert!(response.error.is_some());
     }
 
@@ -492,7 +490,7 @@ mod test {
             result: Some(Value::Bool(true)),
             error: None,
         };
-        let actual = serde_json::to_value(response).expect("test");
+        let actual = serde_json::to_value(response).unwrap();
         let expected = json!({
             "jsonrpc": "2.0",
             "result": true,
@@ -512,7 +510,7 @@ mod test {
                 data: None,
             }),
         };
-        let actual = serde_json::to_value(response).expect("test");
+        let actual = serde_json::to_value(response).unwrap();
         let expected = json!({
             "jsonrpc": "2.0",
             "error": {
@@ -529,36 +527,28 @@ mod test {
     #[test]
     fn http_options() {
         let addr = "127.0.0.1:0";
-        let server = Server::http(addr).expect("test");
+        let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
         let config = Config {
             headers: vec![
-                Header::from_str("Access-Control-Allow-Origin: http://127.0.0.1:8000")
-                    .expect("test"),
-                Header::from_str("Access-Control-Allow-Headers: content-type").expect("test"),
+                Header::from_str("Access-Control-Allow-Origin: http://127.0.0.1:8000").unwrap(),
+                Header::from_str("Access-Control-Allow-Headers: content-type").unwrap(),
             ],
             ..Default::default()
         };
         let rpc = JsonRpcServer::new(server, config, state, process);
-        let port = rpc.port().expect("test");
+        let port = rpc.port().unwrap();
         let url = format!("http://127.0.0.1:{}", port);
 
-        let resp = minreq::options(url).send().expect("test");
+        let resp = minreq::options(url).send().unwrap();
         assert_eq!(resp.status_code, 204);
+        assert_eq!(resp.headers.get("allow").unwrap(), "GET, POST, OPTIONS");
         assert_eq!(
-            resp.headers.get("allow").expect("test"),
-            "GET, POST, OPTIONS"
-        );
-        assert_eq!(
-            resp.headers
-                .get("access-control-allow-origin")
-                .expect("test"),
+            resp.headers.get("access-control-allow-origin").unwrap(),
             "http://127.0.0.1:8000"
         );
         assert_eq!(
-            resp.headers
-                .get("access-control-allow-headers")
-                .expect("test"),
+            resp.headers.get("access-control-allow-headers").unwrap(),
             "content-type"
         );
         assert!(resp.as_bytes().is_empty());
@@ -567,19 +557,19 @@ mod test {
     fn make_file(dir_path: PathBuf, file_name: String, data: &[u8]) -> File {
         let mut path = dir_path;
         path.push(file_name);
-        let mut file = File::create(path).expect("test");
-        file.write_all(data).expect("test");
+        let mut file = File::create(path).unwrap();
+        file.write_all(data).unwrap();
         file
     }
 
     #[test]
     fn http_get() {
         let addr = "127.0.0.1:0";
-        let server = Server::http(addr).expect("test");
+        let server = Server::http(addr).unwrap();
         let state = Arc::new(Mutex::new(()));
 
         // create the http serve dir
-        let dir = tempfile::tempdir().expect("test");
+        let dir = tempfile::tempdir().unwrap();
         let dir_path = dir.into_path();
 
         let config = Config {
@@ -587,7 +577,7 @@ mod test {
             ..Default::default()
         };
         let rpc = JsonRpcServer::new(server, config, state, process);
-        let port = rpc.port().expect("test");
+        let port = rpc.port().unwrap();
 
         // create files to GET
         let file_types = [
@@ -603,15 +593,15 @@ mod test {
             let file_name = format!("file.{}", ext);
             let url = format!("http://127.0.0.1:{}/{}", port, file_name);
             make_file(dir_path.clone(), file_name, data);
-            let resp = minreq::get(url).send().expect("test");
+            let resp = minreq::get(url).send().unwrap();
             assert_eq!(resp.status_code, 200);
             assert_eq!(resp.as_bytes(), data);
         }
 
         // 404
         let url = format!("http://127.0.0.1:{}/missing.file", port);
-        let resp = minreq::get(url).send().expect("test");
+        let resp = minreq::get(url).send().unwrap();
         assert_eq!(resp.status_code, 404);
-        assert_eq!(resp.as_str().expect("test"), "404: File not found");
+        assert_eq!(resp.as_str().unwrap(), "404: File not found");
     }
 }

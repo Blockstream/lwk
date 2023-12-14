@@ -10,8 +10,8 @@ use jade::protocol::HandshakeInitParams;
 #[test]
 fn pin_server() {
     let docker = Cli::default();
-    let tempdir = PinServer::tempdir();
-    let pin_server = PinServer::new(&tempdir);
+    let tempdir = PinServer::tempdir().unwrap();
+    let pin_server = PinServer::new(&tempdir).unwrap();
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);
 

@@ -151,7 +151,7 @@ mod test {
     fn parse_register_multisig() {
         let json = include_str!("../test_data/register_multisig_request.json");
 
-        let _resp: Request<RegisterMultisigParams> = serde_json::from_str(json).expect("test");
+        let _resp: Request<RegisterMultisigParams> = serde_json::from_str(json).unwrap();
     }
 
     #[test]
@@ -164,9 +164,9 @@ mod test {
             for k in kind {
                 // TODO add keyorigin
                 let desc = format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/*,{b}/*)))");
-                let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().expect("test");
+                let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 
-                let jade_desc: JadeDescriptor = (&desc).try_into().expect("test");
+                let jade_desc: JadeDescriptor = (&desc).try_into().unwrap();
 
                 assert_eq!(
                     jade_desc,
@@ -174,18 +174,18 @@ mod test {
                         variant: "wsh(multi(k))".to_string(),
                         sorted: k == "sortedmulti",
                         threshold: t,
-                        master_blinding_key: hex::decode(slip77_key).expect("test"),
+                        master_blinding_key: hex::decode(slip77_key).unwrap(),
                         signers: vec![
                             MultisigSigner {
                                 fingerprint: Fingerprint::from([146, 26, 57, 253]),
                                 derivation: vec![],
-                                xpub: a.parse().expect("test"),
+                                xpub: a.parse().unwrap(),
                                 path: vec![]
                             },
                             MultisigSigner {
                                 fingerprint: Fingerprint::from([195, 206, 35, 178]),
                                 derivation: vec![],
-                                xpub: b.parse().expect("test"),
+                                xpub: b.parse().unwrap(),
                                 path: vec![]
                             }
                         ]

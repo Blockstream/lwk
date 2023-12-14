@@ -53,7 +53,7 @@ mod test {
         let xpub = "tpubDCTUqRMrF2GHZ6pi5FcamdyGZ3oDJtQMH4y5Hyh8Uu7CQ3Zymbh1hpM84aXyJhgBhuh6WcUpKteMeYdyYfVUDRrsz8FUeRdoaaSRKkyMx6Y";
 
         let s = &format!("[{fingerprint}/{path}]{xpub}");
-        keyorigin_xpub_from_str(s).expect("test");
+        keyorigin_xpub_from_str(s).unwrap();
 
         for s in [
             &format!("{fingerprint}/{path}]{xpub}"),
@@ -66,7 +66,7 @@ mod test {
             &format!("[{fingerprint}/x/{path}]{xpub}"),
             &format!("[{fingerprint}/{path}]1{xpub}"),
         ] {
-            keyorigin_xpub_from_str(s).unwrap_err();
+            keyorigin_xpub_from_str(s).expect_err("test");
         }
     }
 }

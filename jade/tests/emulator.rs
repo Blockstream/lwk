@@ -96,7 +96,7 @@ fn update_pinserver() {
     let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
 
     let tempdir = tempdir().unwrap();
-    let pin_server = PinServer::new(&tempdir);
+    let pin_server = PinServer::new(&tempdir).unwrap();
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
@@ -362,8 +362,8 @@ fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
         jade: mut jade_api,
     } = inner_jade_create(docker, Network::LocaltestLiquid);
 
-    let tempdir = PinServer::tempdir();
-    let pin_server = PinServer::new(&tempdir);
+    let tempdir = PinServer::tempdir().unwrap();
+    let pin_server = PinServer::new(&tempdir).unwrap();
     let pin_server_pub_key = *pin_server.pub_key();
     assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
     let pin_container = docker.run(pin_server);

@@ -2,6 +2,7 @@
 
 members = [
     "app",
+    "ks_bindings",
     "cli",
     "hwi",
     "jade",
@@ -13,7 +14,6 @@ members = [
     "rpc_model",
 ]
 resolver = "2"
-
 
 [patch.crates-io]
 elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "add54c80ba1821a16b88af59de16009f28379853" }

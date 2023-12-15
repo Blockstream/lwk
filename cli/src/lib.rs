@@ -328,5 +328,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             let s = String::from_utf8(result)?;
             Value::String(s)
         }
+        CliCommand::Generate { .. } => {
+            uniffi::uniffi_bindgen_main();
+            Value::Null
+        }
     })
 }

@@ -60,6 +60,20 @@ pub enum CliCommand {
 
     #[clap(hide = true)]
     GenerateCompletion { shell: Shell },
+
+    /// Generate bindings, this is here so that we have a unique binary across the workspace.
+    /// The fields are just a copy of what you need in [`uniffi::uniffi_bindgen_main()`] so that
+    /// this subcommand is compatible with that. To use any other option available there it must be
+    /// elencated also here
+    #[clap(hide = true)]
+    Generate {
+        #[arg(long)]
+        library: String,
+        #[arg(long)]
+        language: String,
+        #[arg(long)]
+        out_dir: String,
+    },
 }
 
 #[derive(Debug, Args)]

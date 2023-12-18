@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/ks-builder@sha256:fd20ba4164cadd18140d462f6554d7d1c75c9b7f599a3894999a59542a7f7c94
+  image: xenoky/ks-builder@sha256:e50f912d14f09d9f10d0694472b149bca8d92c306e828a7ba1bb75c63028a68f
   tags:
     - cloud
   retry:

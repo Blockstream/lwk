@@ -1,14 +1,18 @@
-FROM rust:1.70
+FROM rust:1.74.1
 
 RUN apt update -qq
 RUN apt upgrade --no-install-recommends -yqq
-RUN apt install -y libudev-dev
+
+# libxml2-utils for xmllint
+# libudev-dev for jade serial
+RUN apt install -y libudev-dev libxml2-utils
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
 
 RUN cargo install cargo-audit
+RUN cargo install cargo-nextest
 RUN cargo install grcov
 
 COPY download_bins.sh /download_bins.sh
@@ -19,11 +23,3 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 COPY env.sh /env.sh
-
-
-#### move following lines upper when redoing all layers
-
-RUN cargo install cargo-nextest
-
-# libxml2-utils for xmllint
-RUN apt install -y libxml2-utils

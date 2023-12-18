@@ -62,15 +62,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     // get a client to make requests
     let client = app.client()?;
 
-    // verify the server is up
-    if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start,
-    })
-    | CliCommand::GenerateCompletion { .. }
-    | CliCommand::Generate { .. } = args.command
-    {
-        // unless I am starting it
-    } else if client.version().is_err() {
+    // verify the server is up if needed
+    if args.command.requires_server_running() && client.version().is_err() {
         return Err(anyhow!("Is the server at {:?} running?", app.addr()));
     }
 
@@ -329,6 +322,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             let s = String::from_utf8(result)?;
             Value::String(s)
         }
+
+        #[cfg(feature = "bindings")]
         CliCommand::Generate { .. } => {
             uniffi::uniffi_bindgen_main();
             Value::Null

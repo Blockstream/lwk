@@ -66,6 +66,7 @@ pub enum CliCommand {
     /// this subcommand is compatible with that. To use any other option available there it must be
     /// elencated also here
     #[clap(hide = true)]
+    #[cfg(feature = "bindings")]
     Generate {
         #[arg(long)]
         library: String,
@@ -74,6 +75,30 @@ pub enum CliCommand {
         #[arg(long)]
         out_dir: String,
     },
+}
+
+#[allow(dead_code)] // not sure why it's needed but without there is a warning even if the fn is called
+impl CliCommand {
+    #[cfg(not(feature = "bindings"))]
+    pub(crate) fn requires_server_running(&self) -> bool {
+        !matches!(
+            self,
+            CliCommand::Server(crate::args::ServerArgs {
+                command: ServerCommand::Start,
+            }) | CliCommand::GenerateCompletion { .. }
+        )
+    }
+
+    #[cfg(feature = "bindings")]
+    pub(crate) fn requires_server_running(&self) -> bool {
+        !matches!(
+            self,
+            CliCommand::Server(crate::args::ServerArgs {
+                command: ServerCommand::Start,
+            }) | CliCommand::GenerateCompletion { .. }
+                | CliCommand::Generate { .. }
+        )
+    }
 }
 
 #[derive(Debug, Args)]

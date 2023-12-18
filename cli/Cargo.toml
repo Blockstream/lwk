@@ -17,7 +17,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ctrlc = { version = "3.4.1", features = ["termination"] }
 serde_json = "1"
 clap_complete = "4.4.4"
-uniffi = { version = "0.25.3", features = ["cli"] }
+uniffi = { version = "0.25.3", features = ["cli"], optional = true }
 
 [dev-dependencies]
 shellwords = "1.1.0"
@@ -25,6 +25,9 @@ elements = "0.23.0"
 electrsd = { version = "0.25.0", features = ["legacy"] }
 tempfile = "3.8.0"
 bs_containers = { path = "../bs_containers" }
+
+[features]
+bindings = ["uniffi"]
 
 [[test]]
 name = "e2e"

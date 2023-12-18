@@ -9,7 +9,7 @@ use elements::{hashes::hex::FromHex, hex::ToHex};
 uniffi::setup_scaffolding!();
 
 #[derive(uniffi::Enum)]
-enum ElementsNetwork {
+pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,
     ElementsRegtest { policy_asset: String },
@@ -40,7 +40,7 @@ impl From<wollet::Error> for Error {
 }
 
 #[derive(uniffi::Object)]
-struct Wollet {
+pub struct Wollet {
     inner: Mutex<wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
 }
 

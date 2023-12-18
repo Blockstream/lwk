@@ -193,3 +193,7 @@ To generate documentation you can use
 ```
 cargo doc --no-deps --open
 ```
+
+### Bindings
+
+See `ks_bindings/README.md`

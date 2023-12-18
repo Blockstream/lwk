@@ -66,7 +66,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     if let CliCommand::Server(args::ServerArgs {
         command: ServerCommand::Start,
     })
-    | CliCommand::GenerateCompletion { .. } = args.command
+    | CliCommand::GenerateCompletion { .. }
+    | CliCommand::Generate { .. } = args.command
     {
         // unless I am starting it
     } else if client.version().is_err() {

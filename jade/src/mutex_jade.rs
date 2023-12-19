@@ -20,20 +20,6 @@ pub struct MutexJade {
     network: Network,
 }
 
-#[cfg(feature = "serial")]
-fn enumerate_ports() -> Result<Vec<serialport::SerialPortInfo>, serialport::Error> {
-    serialport::available_ports()
-}
-
-#[cfg(feature = "serial")]
-pub fn first_port() -> Result<String, Error> {
-    Ok(enumerate_ports()?
-        .get(0)
-        .ok_or(Error::NoAvailablePorts)?
-        .port_name
-        .to_string())
-}
-
 impl MutexJade {
     pub fn new(jade: Jade) -> Self {
         let network = jade.network;
@@ -56,7 +42,7 @@ impl MutexJade {
     /// Try to unlock a jade on any available serial port, returning all of the attempts
     pub fn from_any_serial(network: Network) -> Vec<Result<Self, Error>> {
         let mut result = vec![];
-        for port in enumerate_ports().unwrap_or_default() {
+        for port in serialport::available_ports().unwrap_or_default() {
             let jade_res = Self::from_serial(network, &port.port_name);
             result.push(jade_res);
         }

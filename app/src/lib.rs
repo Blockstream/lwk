@@ -13,6 +13,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
+use std::num::NonZeroU8;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
@@ -77,12 +78,13 @@ impl App {
         let state = Arc::new(Mutex::new(state));
         let server = tiny_http::Server::http(self.config.addr)?;
 
-        let rpc = tiny_jrpc::JsonRpcServer::new(
-            server,
-            tiny_jrpc::Config::default(),
-            state.clone(),
-            method_handler,
-        );
+        // TODO, for some reasons, using the default number of threads (4) cause a request to be
+        // replied after 15 seconds, using 1 instead seems to not have that issue.
+        let config = tiny_jrpc::Config::builder()
+            .with_num_threads(NonZeroU8::new(1).expect("static"))
+            .build();
+
+        let rpc = tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
 
         let path = self.config.state_path()?;
         match std::fs::read_to_string(&path) {

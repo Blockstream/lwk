@@ -8,6 +8,8 @@ elements = "0.23.0"
 thiserror = "1.0.50"
 uniffi = { version = "0.25.3" }
 wollet = { path = "../wollet" }
+common = { path = "../common" }
+signer = { path = "../signer" }
 
 [build-dependencies]
 uniffi = { version = "0.25.3", features = ["build"] }

@@ -9,7 +9,7 @@ use rand::{thread_rng, Rng};
 use crate::connection::Connection;
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
-use crate::{derivation_path_to_vec, Jade};
+use crate::{derivation_path_to_vec, Error, Jade};
 
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};
@@ -18,6 +18,20 @@ use crate::consts::{BAUD_RATE, TIMEOUT};
 pub struct MutexJade {
     inner: Mutex<Jade>,
     network: Network,
+}
+
+#[cfg(feature = "serial")]
+fn enumerate_ports() -> Result<Vec<serialport::SerialPortInfo>, serialport::Error> {
+    serialport::available_ports()
+}
+
+#[cfg(feature = "serial")]
+pub fn first_port() -> Result<String, Error> {
+    Ok(enumerate_ports()?
+        .get(0)
+        .ok_or(Error::NoAvailablePorts)?
+        .port_name
+        .to_string())
 }
 
 impl MutexJade {
@@ -30,20 +44,15 @@ impl MutexJade {
     }
 
     #[cfg(feature = "serial")]
-    pub fn from_serial(network: Network) -> Result<Self, crate::error::Error> {
-        let ports = serialport::available_ports()?;
-        if ports.is_empty() {
-            Err(crate::error::Error::NoAvailablePorts)
-        } else {
-            // TODO: only one serial jade supported
-            let path = &ports[0].port_name;
-            tracing::info!("serial port {path}");
-            let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
-            Ok(Self::new(Jade::new(port.into(), network)))
-        }
+    pub fn from_serial(network: Network, port_name: &str) -> Result<Self, Error> {
+        tracing::info!("serial port {port_name}");
+        let port = serialport::new(port_name, BAUD_RATE)
+            .timeout(TIMEOUT)
+            .open()?;
+        Ok(Self::new(Jade::new(port.into(), network)))
     }
 
-    pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, crate::error::Error> {
+    pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, Error> {
         let stream = std::net::TcpStream::connect(socket)?;
         let conn = Connection::TcpStream(stream);
         let jade = Jade::new(conn, network);
@@ -65,7 +74,7 @@ impl MutexJade {
     pub fn register_multisig(
         &self,
         params: crate::register_multisig::RegisterMultisigParams,
-    ) -> Result<(), crate::error::Error> {
+    ) -> Result<(), Error> {
         self.unlock()?;
         self.inner.lock()?.register_multisig(params)?;
         Ok(())

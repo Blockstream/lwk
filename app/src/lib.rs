@@ -20,7 +20,7 @@ use common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
-use jade::mutex_jade::MutexJade;
+use jade::mutex_jade::{first_port, MutexJade};
 use serde_json::Value;
 use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
@@ -761,7 +761,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let jade = match r.emulator {
                 Some(emulator) => MutexJade::from_socket(emulator, network)?,
-                None => MutexJade::from_serial(network)?,
+                None => MutexJade::from_serial(network, &first_port()?)?,
             };
             jade.unlock()?;
             let identifier = jade.identifier()?.to_string();

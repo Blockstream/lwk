@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use common::Signer;
-use jade::mutex_jade::MutexJade;
+use jade::mutex_jade::{first_port, MutexJade};
 use jade::Network;
 use rpc_model::request;
 use serde::Serialize;
@@ -207,7 +207,7 @@ impl Signers {
         let jade = match app_signer {
             AppSigner::JadeId(id, network) => {
                 // try to connect JadeId -> AvailableSigner(Jade)
-                let jade = MutexJade::from_serial(*network)?;
+                let jade = MutexJade::from_serial(*network, &first_port()?)?;
                 jade.unlock()?;
                 let jade_id = jade.identifier()?;
                 if id != &jade_id {

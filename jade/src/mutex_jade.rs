@@ -9,7 +9,7 @@ use rand::{thread_rng, Rng};
 use crate::connection::Connection;
 use crate::network::Network;
 use crate::protocol::GetXpubParams;
-use crate::{derivation_path_to_vec, Jade};
+use crate::{derivation_path_to_vec, Error, Jade};
 
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};
@@ -30,20 +30,43 @@ impl MutexJade {
     }
 
     #[cfg(feature = "serial")]
-    pub fn from_serial(network: Network) -> Result<Self, crate::error::Error> {
-        let ports = serialport::available_ports()?;
-        if ports.is_empty() {
-            Err(crate::error::Error::NoAvailablePorts)
-        } else {
-            // TODO: only one serial jade supported
-            let path = &ports[0].port_name;
-            tracing::info!("serial port {path}");
-            let port = serialport::new(path, BAUD_RATE).timeout(TIMEOUT).open()?;
-            Ok(Self::new(Jade::new(port.into(), network)))
-        }
+    pub fn from_serial(network: Network, port_name: &str) -> Result<Self, Error> {
+        tracing::info!("serial port {port_name}");
+        let port = serialport::new(port_name, BAUD_RATE)
+            .timeout(TIMEOUT)
+            .open()?;
+        Ok(Self::new(Jade::new(port.into(), network)))
     }
 
-    pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, crate::error::Error> {
+    #[cfg(feature = "serial")]
+    /// Try to unlock a jade on any available serial port, returning all of the attempts
+    pub fn from_any_serial(network: Network) -> Vec<Result<Self, Error>> {
+        let mut result = vec![];
+        for port in serialport::available_ports().unwrap_or_default() {
+            let jade_res = Self::from_serial(network, &port.port_name);
+            result.push(jade_res);
+        }
+        result
+    }
+
+    #[cfg(feature = "serial")]
+    pub fn from_serial_matching_id(
+        network: Network,
+        id: &elements::bitcoin::hash_types::XpubIdentifier,
+    ) -> Option<Self> {
+        Self::from_any_serial(network)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .find(|e| {
+                if let Ok(c) = e.identifier() {
+                    &c == id
+                } else {
+                    false
+                }
+            })
+    }
+
+    pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, Error> {
         let stream = std::net::TcpStream::connect(socket)?;
         let conn = Connection::TcpStream(stream);
         let jade = Jade::new(conn, network);
@@ -65,7 +88,7 @@ impl MutexJade {
     pub fn register_multisig(
         &self,
         params: crate::register_multisig::RegisterMultisigParams,
-    ) -> Result<(), crate::error::Error> {
+    ) -> Result<(), Error> {
         self.unlock()?;
         self.inner.lock()?.register_multisig(params)?;
         Ok(())

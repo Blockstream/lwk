@@ -63,6 +63,23 @@ impl MutexJade {
         result
     }
 
+    #[cfg(feature = "serial")]
+    pub fn from_serial_matching_id(
+        network: Network,
+        id: &elements::bitcoin::hash_types::XpubIdentifier,
+    ) -> Option<Self> {
+        Self::from_any_serial(network)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .find(|e| {
+                if let Ok(c) = e.identifier() {
+                    &c == id
+                } else {
+                    false
+                }
+            })
+    }
+
     pub fn from_socket(socket: SocketAddr, network: Network) -> Result<Self, Error> {
         let stream = std::net::TcpStream::connect(socket)?;
         let conn = Connection::TcpStream(stream);

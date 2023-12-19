@@ -173,7 +173,7 @@ impl Jade {
         }
 
         let params = SignLiquidTxParams {
-            network: crate::Network::LocaltestLiquid,
+            network: self.network,
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: true,

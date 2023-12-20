@@ -1,7 +1,7 @@
 extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::bip32::ExtendedPrivKey;
+use crate::bitcoin::bip32::{DerivationPath, ExtendedPrivKey};
 use crate::bitcoin::{Amount, Network, PrivateKey};
 use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
@@ -805,8 +805,10 @@ pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
         .iter()
         .map(|s| {
             let fingerprint = s.fingerprint().unwrap();
-            let xpub = s.xpub().unwrap();
-            format!("[{fingerprint}]{xpub}/<0;1>/*",)
+            let path_str = "/84h/0h/0h";
+            let path = DerivationPath::from_str(&format!("m{path_str}")).unwrap();
+            let xpub = s.derive_xpub(&path).unwrap();
+            format!("[{fingerprint}{path_str}]{xpub}/<0;1>/*",)
         })
         .collect::<Vec<_>>()
         .join(",");

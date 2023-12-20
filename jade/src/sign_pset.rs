@@ -135,7 +135,14 @@ impl Jade {
                                     {
                                         let mut paths = vec![];
                                         for _ in 0..multisig_meta.num_signers {
-                                            paths.push(derivation_path_to_vec(path));
+                                            // FIXME: here we should only pass the paths that were
+                                            // not passed when calling register_multisig. However
+                                            // deducing them now is not trivial, thus we only take
+                                            // the last 2 elements in the derivation path which we
+                                            // expect to be "0|1,*"
+                                            let v = derivation_path_to_vec(path);
+                                            let v = v[(path.len() - 2)..].to_vec();
+                                            paths.push(v);
                                         }
                                         change = Some(Change {
                                             address: SingleOrMulti::Multi {

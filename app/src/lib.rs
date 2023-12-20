@@ -22,6 +22,7 @@ use common::{
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
 use jade::mutex_jade::MutexJade;
+use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use serde_json::Value;
 use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
@@ -409,6 +410,23 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 request.id,
                 serde_json::to_value(response::MultisigDescriptor { descriptor })?,
             )
+        }
+        Method::RegisterMultisig => {
+            let r: request::RegisterMultisig = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+
+            let network = s.config.jade_network();
+            let descriptor: JadeDescriptor = s.wollets.get(&r.wallet)?.descriptor().try_into()?;
+            let signer = s.signers.get_available(&r.name)?;
+
+            if let AnySigner::Jade(jade, _id) = signer {
+                jade.register_multisig(RegisterMultisigParams {
+                    network,
+                    multisig_name: r.wallet,
+                    descriptor,
+                })?;
+            }
+            Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::Xpub => {
             let r: request::Xpub = serde_json::from_value(params)?;

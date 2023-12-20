@@ -91,6 +91,11 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold {threshold}{xpubs}"));
     let d = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --name {name} {d}"));
+    for signer in signers {
+        sh(&format!(
+            "{cli} signer register-multisig --name {signer} --wallet {name}"
+        ));
+    }
 }
 
 fn txs(cli: &str, wallet: &str) -> Vec<Value> {

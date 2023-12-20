@@ -169,6 +169,16 @@ pub struct MultisigDescriptor {
     pub keyorigin_xpubs: Vec<String>,
 }
 
+/// Request to register a multisig wallet on a signer
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct RegisterMultisig {
+    /// The signer name
+    pub name: String,
+
+    /// The wallet name
+    pub wallet: String,
+}
+
 /// Request to a signer for a derived xpub
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Xpub {

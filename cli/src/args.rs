@@ -308,6 +308,20 @@ pub enum SignerCommand {
         #[arg(long)]
         kind: XpubKind,
     },
+
+    /// Register a multisig wallet
+    ///
+    /// This is needed to correctly display change outputs Jade.
+    /// For other signers this command does nothing.
+    RegisterMultisig {
+        /// Signer name
+        #[arg(long)]
+        name: String,
+
+        /// Wallet name
+        #[arg(long)]
+        wallet: String,
+    },
 }
 
 #[derive(ValueEnum, Clone, Debug)]

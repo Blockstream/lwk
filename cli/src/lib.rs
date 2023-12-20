@@ -165,6 +165,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.xpub(name, kind.to_string())?;
                 serde_json::to_value(r)?
             }
+            SignerCommand::RegisterMultisig { name, wallet } => {
+                let r = client.register_multisig(name, wallet)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, name } => {

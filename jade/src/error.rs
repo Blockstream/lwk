@@ -101,6 +101,18 @@ pub enum Error {
 
     #[error("Multiple registered multisig, please remove all multisigs but one from the physical device")]
     MultipleRegisteredMultisig,
+
+    #[error("Only slip77 master blinding key are supported")]
+    OnlySlip77Supported,
+
+    #[error("Single key are not supported")]
+    SinlgeKeyAreNotSupported,
+
+    #[error("Unsupported descriptor type, only wsh is supported")]
+    UnsupportedDescriptorType,
+
+    #[error("Unsupported descriptor variant, only multi or sortedmulti are supported")]
+    UnsupportedDescriptorVariant,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

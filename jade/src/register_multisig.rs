@@ -8,7 +8,7 @@ use elements_miniscript::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{derivation_path_to_vec, Network};
+use crate::{derivation_path_to_vec, Error, Network};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RegisterMultisigParams {
@@ -40,21 +40,6 @@ impl std::fmt::Debug for JadeDescriptor {
             .field("signers", &self.signers)
             .finish()
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Only slip77 master blinding key are supported")]
-    OnlySlip77Supported,
-
-    #[error("Single key are not supported")]
-    SinlgeKeyAreNotSupported,
-
-    #[error("Unsupported descriptor type, only wsh is supported")]
-    UnsupportedDescriptorType,
-
-    #[error("Unsupported descriptor variant, only multi or sortedmulti are supported")]
-    UnsupportedDescriptorVariant,
 }
 
 impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {

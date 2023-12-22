@@ -2,7 +2,7 @@ extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
 use crate::bitcoin::bip32::{DerivationPath, ExtendedPrivKey};
-use crate::bitcoin::{Amount, Network, PrivateKey};
+use crate::bitcoin::{Amount, Network};
 use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
@@ -783,9 +783,7 @@ pub fn generate_slip77() -> String {
 pub fn generate_view_key() -> String {
     let mut bytes = [0u8; 32];
     thread_rng().fill(&mut bytes);
-    PrivateKey::from_slice(&bytes, Network::Regtest)
-        .unwrap()
-        .to_wif()
+    bytes.to_hex()
 }
 
 pub fn generate_xprv() -> ExtendedPrivKey {

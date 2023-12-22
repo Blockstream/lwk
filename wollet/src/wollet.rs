@@ -577,7 +577,8 @@ mod tests {
 
     #[test]
     fn test_view_single() {
-        let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+        let descriptor_blinding_key =
+            "1111111111111111111111111111111111111111111111111111111111111111";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
         let desc_str = format!("ct({},elwpkh({}))", descriptor_blinding_key, xpub);
         let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).unwrap());
@@ -599,7 +600,7 @@ mod tests {
 
     #[test]
     fn test_signers() {
-        let view_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
 
         let fp1 = Fingerprint::from_str("11111111").unwrap();

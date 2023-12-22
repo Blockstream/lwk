@@ -20,7 +20,7 @@ thiserror = "1"
 tracing = "0.1"
 
 minreq = { version = "2.9", features = ["https"] }
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5" }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25" }
 
 common = { path = "../common" }
 

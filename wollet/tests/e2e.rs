@@ -96,7 +96,8 @@ fn view() {
     let server = setup();
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
-    let descriptor_blinding_key = "L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q";
+    let descriptor_blinding_key =
+        "1111111111111111111111111111111111111111111111111111111111111111";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 

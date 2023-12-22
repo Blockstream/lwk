@@ -22,7 +22,7 @@ serde_cbor = "0.11.2"
 aes-gcm-siv = "0.10.0"
 electrum-client = "0.15.0"
 bip39 = "2.0.0"
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "af410f6f6e4b645977e26e0809acae1a33e986b5", features = [
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25", features = [
     "serde",
 ] }
 thiserror = "1.0.48"

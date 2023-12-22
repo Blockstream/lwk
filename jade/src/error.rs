@@ -106,7 +106,7 @@ pub enum Error {
     OnlySlip77Supported,
 
     #[error("Single key are not supported")]
-    SinlgeKeyAreNotSupported,
+    SingleKeyAreNotSupported,
 
     #[error("Unsupported descriptor type, only wsh is supported")]
     UnsupportedDescriptorType,

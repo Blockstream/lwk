@@ -97,7 +97,7 @@ impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
         let (xpub, origin) = match value {
             DescriptorPublicKey::XPub(x) => (x.xkey, x.origin.as_ref()),
             DescriptorPublicKey::MultiXPub(x) => (x.xkey, x.origin.as_ref()),
-            DescriptorPublicKey::Single(_) => return Err(Error::SinlgeKeyAreNotSupported),
+            DescriptorPublicKey::Single(_) => return Err(Error::SingleKeyAreNotSupported),
         };
         Ok(MultisigSigner {
             fingerprint: value.master_fingerprint(),

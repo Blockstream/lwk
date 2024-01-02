@@ -197,9 +197,7 @@ impl Wollet {
             .transactions()?
             .iter()
             .map(|t| Tx {
-                txid: Txid {
-                    val: t.tx.txid().to_string(),
-                },
+                txid: t.tx.txid().into(),
                 inputs: t
                     .inputs
                     .iter()
@@ -263,7 +261,7 @@ impl Wollet {
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };
         match wollet.broadcast(&tx) {
-            Ok(txid) => Ok(Txid { val: txid.to_hex() }),
+            Ok(txid) => Ok(txid.into()),
             Err(e) => Err(Error::from(e)),
         }
     }

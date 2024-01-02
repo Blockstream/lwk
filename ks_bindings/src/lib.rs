@@ -279,7 +279,7 @@ impl Wollet {
 
     fn broadcast(&self, tx_hex: String) -> Result<Txid, Error> {
         let wollet = self.inner.lock().unwrap();
-        let tx = match Transaction::deserialize(&Hex::from(Hex { val: tx_hex }).bytes()) {
+        let tx = match Transaction::deserialize(&Hex { val: tx_hex }.bytes()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };
@@ -330,7 +330,7 @@ mod tests {
 
         let out_address = "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x";
         let satoshis = 900;
-        let fee_rate = 280 as f32; // this seems like absolute fees
+        let fee_rate = 280_f32; // this seems like absolute fees
         let pset_string = wollet
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();

@@ -4,7 +4,7 @@ use elements::hex::ToHex;
 
 use crate::UniffiCustomTypeConverter;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Txid {
     inner: elements::Txid,
 }

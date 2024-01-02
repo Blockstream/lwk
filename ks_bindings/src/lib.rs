@@ -7,7 +7,6 @@ use std::{
 
 use common::Signer;
 use elements::{
-    hashes::hex::FromHex,
     hex::ToHex,
     pset::{
         serialize::{Deserialize, Serialize},
@@ -18,6 +17,7 @@ use elements::{
 
 mod types;
 
+use types::hex::Hex;
 pub use types::txid::Txid;
 
 uniffi::setup_scaffolding!();
@@ -79,29 +79,6 @@ pub struct TxIn {
 pub struct TxOut {
     script_pubkey: Hex,
     value: u64,
-}
-
-#[derive(PartialEq, Eq)]
-pub struct Hex {
-    val: String,
-}
-impl Hex {
-    pub fn bytes(&self) -> Vec<u8> {
-        Vec::<u8>::from_hex(&self.val).expect("enforced by invariants")
-    }
-}
-uniffi::custom_type!(Hex, String);
-impl UniffiCustomTypeConverter for Hex {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
-        Vec::<u8>::from_hex(&val)?;
-        Ok(Hex { val })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.val
-    }
 }
 
 #[derive(uniffi::Object)]
@@ -215,9 +192,7 @@ impl Wollet {
                     .map(|o| {
                         o.as_ref().map(|o| TxOut {
                             value: o.unblinded.value,
-                            script_pubkey: Hex {
-                                val: o.script_pubkey.as_bytes().to_hex(),
-                            },
+                            script_pubkey: o.script_pubkey.as_bytes().into(),
                         })
                     })
                     .collect(),
@@ -254,12 +229,12 @@ impl Wollet {
         Ok(tx)
     }
 
-    fn broadcast(&self, tx_hex: String) -> Result<Txid, Error> {
-        let wollet = self.inner.lock()?;
-        let tx = match Transaction::deserialize(&Hex { val: tx_hex }.bytes()) {
+    fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
+        let tx = match Transaction::deserialize(tx_hex.as_ref()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };
+        let wollet = self.inner.lock()?;
         match wollet.broadcast(&tx) {
             Ok(txid) => Ok(txid.into()),
             Err(e) => Err(Error::from(e)),
@@ -294,8 +269,8 @@ mod tests {
         for tx in txs {
             for output in tx.outputs {
                 let script_pubkey = match output.as_ref() {
-                    Some(out) => &out.script_pubkey.val,
-                    None => "Not a spendable scriptpubkey",
+                    Some(out) => out.script_pubkey.to_string(),
+                    None => "Not a spendable scriptpubkey".to_string(),
                 };
                 let value = match output.as_ref() {
                     Some(out) => out.value,
@@ -312,7 +287,7 @@ mod tests {
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();
         let signed_hex = wollet.sign_tx(mnemonic.to_string(), pset_string).unwrap();
-        let txid = wollet.broadcast(signed_hex).unwrap();
-        println!("BROADCASTED TX!\nTXID: {:?}", txid.val);
+        let txid = wollet.broadcast(signed_hex.parse().unwrap()).unwrap();
+        println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

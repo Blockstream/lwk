@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fmt,
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
 };
 
 use common::Signer;
@@ -39,7 +39,9 @@ impl From<ElementsNetwork> for wollet::ElementsNetwork {
 pub enum Error {
     #[error("{msg}")]
     Generic { msg: String },
-    // TODO change the lock().unwraps with lock()? by having a variant here
+
+    #[error("Poison error: {msg}")]
+    PoisonError { msg: String },
 }
 
 impl From<wollet::Error> for Error {
@@ -47,6 +49,12 @@ impl From<wollet::Error> for Error {
         Error::Generic {
             msg: value.to_string(),
         }
+    }
+}
+
+impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
+    fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
+        Error::PoisonError { msg: e.to_string() }
     }
 }
 
@@ -178,17 +186,17 @@ impl Wollet {
     }
 
     fn descriptor(&self) -> Result<String, Error> {
-        Ok(self.inner.lock().unwrap().descriptor().to_string())
+        Ok(self.inner.lock()?.descriptor().to_string())
     }
 
     fn address(&self, index: Option<u32>) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+        let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
         Ok(address.address().to_string())
     }
 
     fn sync(&self) -> Result<(), Error> {
-        let mut wollet = self.inner.lock().unwrap();
+        let mut wollet = self.inner.lock()?;
         wollet.sync_tip()?;
         wollet.sync_txs()?;
         Ok(())
@@ -197,8 +205,7 @@ impl Wollet {
     fn balance(&self) -> Result<HashMap<String, u64>, Error> {
         let m: HashMap<_, _> = self
             .inner
-            .lock()
-            .unwrap()
+            .lock()?
             .balance()?
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
@@ -213,8 +220,7 @@ impl Wollet {
     fn transactions(&self) -> Result<Vec<Tx>, Error> {
         Ok(self
             .inner
-            .lock()
-            .unwrap()
+            .lock()?
             .transactions()?
             .iter()
             .map(|t| Tx {
@@ -254,13 +260,13 @@ impl Wollet {
         satoshis: u64,
         fee_rate: f32,
     ) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+        let wollet = self.inner.lock()?;
         let pset = wollet.send_lbtc(satoshis, &out_address, Some(fee_rate))?;
         Ok(pset.to_string())
     }
 
     fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+        let wollet = self.inner.lock()?;
         let mut pset = match PartiallySignedTransaction::from_str(&pset_string) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
@@ -278,7 +284,7 @@ impl Wollet {
     }
 
     fn broadcast(&self, tx_hex: String) -> Result<Txid, Error> {
-        let wollet = self.inner.lock().unwrap();
+        let wollet = self.inner.lock()?;
         let tx = match Transaction::deserialize(&Hex { val: tx_hex }.bytes()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),

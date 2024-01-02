@@ -22,13 +22,13 @@ just build-bindings
 just env-bindings
 ```
 
-...automatically starts a python shell...
-
 ```python
->>> import ks_bindings as ks
->>> w=ks.Wollet(ks.ElementsNetwork.LIQUID_TESTNET(), "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hR
-LsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "/tmp/")
->>> w.sync()
->>> w.balance()
-{'144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49': 100000}
+import ks_bindings as ks
+mnemonic="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+ctDesc=ks.SingleSigCtDesc(mnemonic)
+print(ctDesc)
+w=ks.Wollet(ks.ElementsNetwork.LIQUID_TESTNET(), ctDesc, "/tmp/ks")
+w.sync()
+w.balance()
+# {'144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49': 100000}
 ```

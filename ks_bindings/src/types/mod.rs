@@ -3,5 +3,6 @@
 //! * restrict the possible values of the builtin type, for example [`hex::Hex`] restrict the
 //! possible values of the builtin String type to only numbers and letter from 'a' to 'e'
 
+pub mod asset_id;
 pub mod hex;
 pub mod txid;

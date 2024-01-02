@@ -17,7 +17,8 @@ use elements::{
 
 mod types;
 
-use types::hex::Hex;
+pub use types::asset_id::AssetId;
+pub use types::hex::Hex;
 pub use types::txid::Txid;
 
 uniffi::setup_scaffolding!();
@@ -26,14 +27,18 @@ uniffi::setup_scaffolding!();
 pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,
-    ElementsRegtest { policy_asset: String },
+    ElementsRegtest { policy_asset: AssetId },
 }
 impl From<ElementsNetwork> for wollet::ElementsNetwork {
     fn from(value: ElementsNetwork) -> Self {
         match value {
             ElementsNetwork::Liquid => wollet::ElementsNetwork::Liquid,
             ElementsNetwork::LiquidTestnet => wollet::ElementsNetwork::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => todo!(),
+            ElementsNetwork::ElementsRegtest { policy_asset } => {
+                wollet::ElementsNetwork::ElementsRegtest {
+                    policy_asset: policy_asset.into(),
+                }
+            }
         }
     }
 }

@@ -82,7 +82,7 @@ pub struct Wollet {
 #[uniffi::export]
 impl Wollet {
     #[uniffi::constructor]
-    fn new(
+    pub fn new(
         network: ElementsNetwork,
         descriptor: Arc<SingleSigCTDesc>,
         datadir: String,
@@ -95,24 +95,24 @@ impl Wollet {
         }))
     }
 
-    fn descriptor(&self) -> Result<String, Error> {
+    pub fn descriptor(&self) -> Result<String, Error> {
         Ok(self.inner.lock()?.descriptor().to_string())
     }
 
-    fn address(&self, index: Option<u32>) -> Result<String, Error> {
+    pub fn address(&self, index: Option<u32>) -> Result<String, Error> {
         let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
         Ok(address.address().to_string())
     }
 
-    fn sync(&self) -> Result<(), Error> {
+    pub fn sync(&self) -> Result<(), Error> {
         let mut wollet = self.inner.lock()?;
         wollet.sync_tip()?;
         wollet.sync_txs()?;
         Ok(())
     }
 
-    fn balance(&self) -> Result<HashMap<String, u64>, Error> {
+    pub fn balance(&self) -> Result<HashMap<String, u64>, Error> {
         let m: HashMap<_, _> = self
             .inner
             .lock()?
@@ -123,11 +123,11 @@ impl Wollet {
         Ok(m)
     }
 
-    fn transaction(&self, txid: Txid) -> Result<Option<Tx>, Error> {
+    pub fn transaction(&self, txid: Txid) -> Result<Option<Tx>, Error> {
         Ok(self.transactions()?.into_iter().find(|e| e.txid == txid))
     }
 
-    fn transactions(&self) -> Result<Vec<Tx>, Error> {
+    pub fn transactions(&self) -> Result<Vec<Tx>, Error> {
         Ok(self
             .inner
             .lock()?
@@ -160,7 +160,7 @@ impl Wollet {
             .collect())
     }
 
-    fn create_lbtc_tx(
+    pub fn create_lbtc_tx(
         &self,
         out_address: String,
         satoshis: u64,
@@ -171,7 +171,7 @@ impl Wollet {
         Ok(pset.to_string())
     }
 
-    fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
+    pub fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
         let wollet = self.inner.lock()?;
         let mut pset = match PartiallySignedTransaction::from_str(&pset_string) {
             Ok(result) => result,
@@ -189,7 +189,7 @@ impl Wollet {
         Ok(tx)
     }
 
-    fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
+    pub fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
         let tx = match Transaction::deserialize(tx_hex.as_ref()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),

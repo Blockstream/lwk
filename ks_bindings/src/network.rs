@@ -1,4 +1,4 @@
-use crate::AssetId;
+use crate::types::AssetId;
 
 #[derive(uniffi::Enum, Debug)]
 pub enum ElementsNetwork {

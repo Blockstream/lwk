@@ -16,12 +16,10 @@ use elements::{
 };
 
 mod network;
-mod types;
+pub mod types;
 
 use network::ElementsNetwork;
-pub use types::asset_id::AssetId;
-pub use types::hex::Hex;
-pub use types::txid::Txid;
+use types::{Hex, Txid};
 
 uniffi::setup_scaffolding!();
 

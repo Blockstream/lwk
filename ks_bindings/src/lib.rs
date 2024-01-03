@@ -15,33 +15,15 @@ use elements::{
     Transaction,
 };
 
+mod network;
 mod types;
 
+use network::ElementsNetwork;
 pub use types::asset_id::AssetId;
 pub use types::hex::Hex;
 pub use types::txid::Txid;
 
 uniffi::setup_scaffolding!();
-
-#[derive(uniffi::Enum)]
-pub enum ElementsNetwork {
-    Liquid,
-    LiquidTestnet,
-    ElementsRegtest { policy_asset: AssetId },
-}
-impl From<ElementsNetwork> for wollet::ElementsNetwork {
-    fn from(value: ElementsNetwork) -> Self {
-        match value {
-            ElementsNetwork::Liquid => wollet::ElementsNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => wollet::ElementsNetwork::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset } => {
-                wollet::ElementsNetwork::ElementsRegtest {
-                    policy_asset: policy_asset.into(),
-                }
-            }
-        }
-    }
-}
 
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum Error {
@@ -128,13 +110,9 @@ impl Wollet {
         descriptor: Arc<SingleSigCTDesc>,
         datadir: String,
     ) -> Result<Arc<Self>, Error> {
-        let url = match network {
-            ElementsNetwork::Liquid => "blockstream.info:995",
-            ElementsNetwork::LiquidTestnet => "blockstream.info:465",
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => todo!(),
-        };
+        let url = network.electrum_url().to_string();
         let inner =
-            wollet::Wollet::new(network.into(), url, true, true, &datadir, &descriptor.val)?;
+            wollet::Wollet::new(network.into(), &url, true, true, &datadir, &descriptor.val)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))

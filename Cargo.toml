@@ -17,4 +17,3 @@ resolver = "2"
 
 [patch.crates-io]
 elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "add54c80ba1821a16b88af59de16009f28379853" }
-jsonrpc = { git = "https://github.com/RCasatta/rust-jsonrpc", rev = "2c3f4622a5fe7df7b434d163267d4cb21d246cdd" }              # https://github.com/apoelstra/rust-jsonrpc/pull/108

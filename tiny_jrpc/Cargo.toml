@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-jsonrpc = "0.16.0"
+jsonrpc = "0.17.0"
 serde = "1.0.188"
 serde_derive = "1.0.188"
 serde_json = "1.0.106"

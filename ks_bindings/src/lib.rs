@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
-    fmt,
     str::FromStr,
     sync::{Arc, Mutex},
 };
 
 use common::Signer;
+use desc::SingleSigCTDesc;
 use elements::{
     hex::ToHex,
     pset::{
@@ -15,64 +15,18 @@ use elements::{
     Transaction,
 };
 
+mod desc;
 mod error;
 mod network;
+pub mod tx;
 pub mod types;
 
 pub use error::Error;
 use network::ElementsNetwork;
+use tx::{Tx, TxIn, TxOut};
 use types::{Hex, Txid};
 
 uniffi::setup_scaffolding!();
-
-#[derive(uniffi::Record)]
-pub struct Tx {
-    txid: Txid,
-    inputs: Vec<Option<TxIn>>,
-    outputs: Vec<Option<TxOut>>,
-}
-
-#[derive(uniffi::Record)]
-pub struct TxIn {
-    prevout_txid: Txid,
-    prevout_vout: u32,
-    value: u64,
-}
-
-#[derive(uniffi::Record)]
-pub struct TxOut {
-    script_pubkey: Hex,
-    value: u64,
-}
-
-#[derive(uniffi::Object)]
-#[uniffi::export(Display)]
-pub struct SingleSigCTDesc {
-    val: String,
-}
-
-#[uniffi::export]
-impl SingleSigCTDesc {
-    #[uniffi::constructor]
-    pub fn new(mnemonic: String) -> Result<Arc<Self>, Error> {
-        let signer = match signer::SwSigner::new(&mnemonic) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
-        let script_variant = common::Singlesig::Wpkh;
-        let blinding_variant = common::DescriptorBlindingKey::Slip77;
-        let desc_str = match common::singlesig_desc(&signer, script_variant, blinding_variant) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
-        Ok(Arc::new(SingleSigCTDesc { val: desc_str }))
-    }
-}
-impl fmt::Display for SingleSigCTDesc {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.val)
-    }
-}
 
 #[derive(uniffi::Object)]
 pub struct Wollet {
@@ -81,6 +35,7 @@ pub struct Wollet {
 
 #[uniffi::export]
 impl Wollet {
+    /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
     pub fn new(
         network: ElementsNetwork,
@@ -88,8 +43,14 @@ impl Wollet {
         datadir: String,
     ) -> Result<Arc<Self>, Error> {
         let url = network.electrum_url().to_string();
-        let inner =
-            wollet::Wollet::new(network.into(), &url, true, true, &datadir, &descriptor.val)?;
+        let inner = wollet::Wollet::new(
+            network.into(),
+            &url,
+            true,
+            true,
+            &datadir,
+            descriptor.as_str(),
+        )?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))

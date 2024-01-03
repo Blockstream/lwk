@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 elements = "0.23.0"
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25" }
+elements-miniscript = "0.2"
 thiserror = "1.0.48"
 # avoid deps to the workspace

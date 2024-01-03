@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 bip39 = { version = "2.0.0", features = ["rand"] }
-elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25" }
+elements-miniscript = "0.2"
 thiserror = "1.0.48"
 base64 = "0.13.0"
 

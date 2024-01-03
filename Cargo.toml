@@ -17,3 +17,4 @@ resolver = "2"
 
 [patch.crates-io]
 elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "add54c80ba1821a16b88af59de16009f28379853" }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25" }

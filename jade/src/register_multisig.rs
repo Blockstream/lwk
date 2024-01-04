@@ -1,5 +1,5 @@
 use elements::{
-    bitcoin::bip32::{ExtendedPubKey, Fingerprint},
+    bitcoin::bip32::{Fingerprint, Xpub},
     hex::ToHex,
 };
 use elements_miniscript::{
@@ -117,7 +117,7 @@ pub struct MultisigSigner {
     /// From the master node (m) to the xpub
     pub derivation: Vec<u32>,
 
-    pub xpub: ExtendedPubKey,
+    pub xpub: Xpub,
 
     /// From the xpub to the signer
     pub path: Vec<u32>,

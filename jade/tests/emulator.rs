@@ -11,7 +11,7 @@ use elements::{
     Address, AddressParams,
 };
 use elements::{
-    bitcoin::{bip32::ExtendedPubKey, sign_message::signed_msg_hash},
+    bitcoin::{bip32::Xpub, sign_message::signed_msg_hash},
     hashes::Hash,
 };
 use elements_miniscript::{
@@ -231,7 +231,7 @@ fn jade_register_multisig_check_address() {
 
     let multisig_name = "you_and_me".to_string();
     let jade_master_xpub = jade.get_master_xpub().unwrap();
-    let other_signer: ExtendedPubKey= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap();
+    let other_signer: Xpub= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
 
     let desc =
@@ -309,7 +309,7 @@ fn jade_sign_message() {
     };
     let xpub = initialized_jade.jade.get_xpub(params).unwrap();
     let msg_hash = signed_msg_hash(message);
-    let message = Message::from_slice(msg_hash.as_byte_array()).unwrap();
+    let message = Message::from_digest_slice(msg_hash.as_byte_array()).unwrap();
     let signature = Signature::from_compact(&signature_bytes).unwrap();
 
     assert!(Secp256k1::verification_only()

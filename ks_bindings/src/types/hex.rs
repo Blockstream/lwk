@@ -27,7 +27,7 @@ impl From<&[u8]> for Hex {
 }
 
 impl FromStr for Hex {
-    type Err = elements::bitcoin::hashes::hex::Error;
+    type Err = elements::hashes::hex::HexToBytesError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Vec::<u8>::from_hex(s)?.into())

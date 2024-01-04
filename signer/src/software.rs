@@ -4,7 +4,7 @@ use elements_miniscript::{
     bitcoin::{self, bip32::DerivationPath, PrivateKey},
     elements::{
         bitcoin::{
-            bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
+            bip32::{self, Fingerprint, Xpriv, Xpub},
             Network,
         },
         hashes::Hash,
@@ -46,7 +46,7 @@ pub enum NewError {
 
 #[derive(Clone)]
 pub struct SwSigner {
-    pub(crate) xprv: ExtendedPrivKey,
+    pub(crate) xprv: Xpriv,
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     pub(crate) mnemonic: Mnemonic,
 }
@@ -73,7 +73,7 @@ impl SwSigner {
             bitcoin::Network::Testnet
         };
 
-        let xprv = ExtendedPrivKey::new_master(network, &seed)?;
+        let xprv = Xpriv::new_master(network, &seed)?;
 
         Ok(Self {
             xprv,
@@ -87,8 +87,8 @@ impl SwSigner {
         Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
     }
 
-    pub fn xpub(&self) -> ExtendedPubKey {
-        ExtendedPubKey::from_priv(&self.secp, &self.xprv)
+    pub fn xpub(&self) -> Xpub {
+        Xpub::from_priv(&self.secp, &self.xprv)
     }
 
     pub fn seed(&self) -> [u8; 64] {
@@ -151,9 +151,9 @@ impl Signer for SwSigner {
         Ok(signature_added)
     }
 
-    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<Xpub, Self::Error> {
         let derived = self.xprv.derive_priv(&self.secp, path)?;
-        Ok(ExtendedPubKey::from_priv(&self.secp, &derived))
+        Ok(Xpub::from_priv(&self.secp, &derived))
     }
 
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {

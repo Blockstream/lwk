@@ -1,4 +1,4 @@
-use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
+use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -9,7 +9,7 @@ pub struct InvalidKeyOriginXpub(String);
 // TODO: cleanup this fn
 pub fn keyorigin_xpub_from_str(
     s: &str,
-) -> Result<((Fingerprint, DerivationPath), ExtendedPubKey), InvalidKeyOriginXpub> {
+) -> Result<((Fingerprint, DerivationPath), Xpub), InvalidKeyOriginXpub> {
     let parts: Vec<_> = s.split('[').collect();
     if parts.len() != 2 {
         return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
@@ -38,7 +38,7 @@ pub fn keyorigin_xpub_from_str(
     let fingerprint =
         Fingerprint::from_str(fingerprint).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     let path = DerivationPath::from_str(&path).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
-    let xpub = ExtendedPubKey::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+    let xpub = Xpub::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     Ok(((fingerprint, path), xpub))
 }
 

@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use elements::bitcoin::{address::WitnessVersion, bip32::ChildNumber};
+use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,

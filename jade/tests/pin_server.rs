@@ -33,7 +33,7 @@ pub fn verify(params: &HandshakeInitParams, pin_server_pub_key: &PublicKey) {
     let signature_bytes = Vec::<u8>::from_hex(&params.sig).unwrap();
     let signature = Signature::from_compact(&signature_bytes).unwrap();
 
-    let message = Message::from_slice(&ske_hash[..]).unwrap();
+    let message = Message::from_digest_slice(&ske_hash[..]).unwrap();
 
     let verify = Secp256k1::verification_only()
         .verify_ecdsa(&message, &signature, &pin_server_pub_key.inner)

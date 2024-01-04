@@ -497,8 +497,8 @@ fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Op
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
-    use crate::elements::bitcoin::network::constants::Network;
+    use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
+    use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
     use common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use elements_miniscript::confidential::bare::tweak_private_key;
@@ -527,8 +527,8 @@ mod tests {
     fn test_blinding_private() {
         // Get a confidential address from a "view" descriptor
         let seed = [0u8; 16];
-        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap();
-        let xpub = ExtendedPubKey::from_priv(&EC, &xprv);
+        let xprv = Xpriv::new_master(Network::Regtest, &seed).unwrap();
+        let xpub = Xpub::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
         let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();

@@ -12,7 +12,7 @@ use serde::Serialize;
 use signer::AnySigner;
 use tiny_jrpc::Request;
 use wollet::bitcoin::bip32::Fingerprint;
-use wollet::bitcoin::hash_types::XpubIdentifier;
+use wollet::bitcoin::XKeyIdentifier;
 use wollet::elements::pset::elip100::AssetMetadata;
 use wollet::elements::{AssetId, OutPoint, Txid};
 use wollet::Contract;
@@ -24,7 +24,7 @@ use crate::Error;
 
 #[derive(Debug)]
 pub enum AppSigner {
-    JadeId(XpubIdentifier, Network),
+    JadeId(XKeyIdentifier, Network),
     AvailableSigner(AnySigner),
     ExternalSigner(Fingerprint),
 }
@@ -40,7 +40,7 @@ impl AppSigner {
 }
 
 // TODO upstream as method of XKeyIdentifier to rust-bitcoin
-pub fn id_to_fingerprint(id: &XpubIdentifier) -> Fingerprint {
+pub fn id_to_fingerprint(id: &XKeyIdentifier) -> Fingerprint {
     id[0..4].try_into().expect("4 is the fingerprint length")
 }
 

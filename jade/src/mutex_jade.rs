@@ -3,7 +3,7 @@ use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use common::Signer;
-use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
+use elements::{bitcoin::bip32::Xpub, pset::PartiallySignedTransaction};
 use elements_miniscript::slip77::MasterBlindingKey;
 use rand::{thread_rng, Rng};
 
@@ -92,7 +92,7 @@ impl MutexJade {
     #[cfg(feature = "serial")]
     pub fn from_serial_matching_id(
         network: Network,
-        id: &elements::bitcoin::hash_types::XpubIdentifier,
+        id: &elements::bitcoin::XKeyIdentifier,
         timeout: Option<Duration>,
     ) -> Option<Self> {
         Self::from_any_serial(network, timeout)
@@ -151,7 +151,7 @@ impl Signer for &MutexJade {
     fn derive_xpub(
         &self,
         path: &elements::bitcoin::bip32::DerivationPath,
-    ) -> Result<ExtendedPubKey, Self::Error> {
+    ) -> Result<Xpub, Self::Error> {
         let network = self.network();
         let params = GetXpubParams {
             network,
@@ -182,7 +182,7 @@ impl Signer for MutexJade {
     fn derive_xpub(
         &self,
         path: &elements::bitcoin::bip32::DerivationPath,
-    ) -> Result<ExtendedPubKey, Self::Error> {
+    ) -> Result<Xpub, Self::Error> {
         Signer::derive_xpub(&self, path)
     }
 

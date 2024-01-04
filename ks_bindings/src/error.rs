@@ -52,8 +52,16 @@ impl From<elements::bitcoin::transaction::ParseOutPointError> for LwkError {
     }
 }
 
-impl From<elements::hashes::hex::Error> for LwkError {
-    fn from(value: elements::hashes::hex::Error) -> Self {
+impl From<elements::hashes::hex::HexToBytesError> for Error {
+    fn from(value: elements::hashes::hex::HexToBytesError) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
+impl From<elements::hashes::hex::HexToArrayError> for Error {
+    fn from(value: elements::hashes::hex::HexToArrayError) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
         }

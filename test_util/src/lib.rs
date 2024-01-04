@@ -1,7 +1,7 @@
 extern crate wollet;
 
 use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::bip32::{DerivationPath, ExtendedPrivKey};
+use crate::bitcoin::bip32::{DerivationPath, Xpriv};
 use crate::bitcoin::{Amount, Network};
 use crate::elements::hashes::Hash;
 use crate::elements::hex::ToHex;
@@ -782,10 +782,10 @@ pub fn generate_view_key() -> String {
     bytes.to_hex()
 }
 
-pub fn generate_xprv() -> ExtendedPrivKey {
+pub fn generate_xprv() -> Xpriv {
     let mut seed = [0u8; 16];
     thread_rng().fill(&mut seed);
-    ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap()
+    Xpriv::new_master(Network::Regtest, &seed).unwrap()
 }
 
 pub fn generate_signer() -> SwSigner {

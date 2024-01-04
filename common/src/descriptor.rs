@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, KeySource};
+use elements::bitcoin::bip32::{DerivationPath, KeySource, Xpub};
 use thiserror::Error;
 
 use crate::Signer;
@@ -51,7 +51,7 @@ fn fmt_path(path: &DerivationPath) -> String {
 // TODO impl error handling
 pub fn multisig_desc(
     threshold: u32,
-    xpubs: Vec<(KeySource, ExtendedPubKey)>,
+    xpubs: Vec<(KeySource, Xpub)>,
     script_variant: Multisig,
     blinding_variant: DescriptorBlindingKey,
 ) -> Result<String, String> {

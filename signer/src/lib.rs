@@ -9,9 +9,9 @@ pub use bip39;
 
 use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
-use elements_miniscript::bitcoin::hash_types::XpubIdentifier;
+use elements_miniscript::bitcoin::XKeyIdentifier;
 use elements_miniscript::elements;
-use elements_miniscript::elements::bitcoin::bip32::ExtendedPubKey;
+use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use jade::mutex_jade::MutexJade;
 
@@ -30,7 +30,7 @@ pub enum SignerError {
 #[derive(Debug)]
 pub enum AnySigner {
     Software(SwSigner),
-    Jade(MutexJade, XpubIdentifier),
+    Jade(MutexJade, XKeyIdentifier),
 }
 
 impl Signer for AnySigner {
@@ -40,7 +40,7 @@ impl Signer for AnySigner {
         Signer::sign(&self, pset)
     }
 
-    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<Xpub, Self::Error> {
         Signer::derive_xpub(&self, path)
     }
 
@@ -61,7 +61,7 @@ impl Signer for &AnySigner {
         })
     }
 
-    fn derive_xpub(&self, path: &DerivationPath) -> Result<ExtendedPubKey, Self::Error> {
+    fn derive_xpub(&self, path: &DerivationPath) -> Result<Xpub, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.derive_xpub(path)?,
             AnySigner::Jade(s, _) => s.derive_xpub(path)?,

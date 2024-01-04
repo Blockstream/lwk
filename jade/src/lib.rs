@@ -8,7 +8,7 @@ use std::{
 };
 
 use connection::Connection;
-use elements::bitcoin::bip32::{DerivationPath, ExtendedPubKey, Fingerprint};
+use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
@@ -52,7 +52,7 @@ pub struct Jade {
     network: crate::Network,
 
     /// Cached master xpub
-    master_xpub: Option<ExtendedPubKey>,
+    master_xpub: Option<Xpub>,
 }
 
 impl Jade {
@@ -130,13 +130,13 @@ impl Jade {
         self.send_request("handshake_complete", Some(params))
     }
 
-    fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<ExtendedPubKey> {
+    fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         self.check_network(params.network)?;
         let params = Params::GetXpub(params);
         self.send_request("get_xpub", Some(params))
     }
 
-    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<ExtendedPubKey> {
+    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         if params.path.is_empty() {
             self.get_master_xpub()
         } else {
@@ -148,7 +148,7 @@ impl Jade {
         Ok(self.get_master_xpub()?.fingerprint())
     }
 
-    pub fn get_master_xpub(&mut self) -> Result<ExtendedPubKey> {
+    pub fn get_master_xpub(&mut self) -> Result<Xpub> {
         if self.master_xpub.is_none() {
             let master_xpub = self.inner_get_xpub(GetXpubParams {
                 network: self.network,

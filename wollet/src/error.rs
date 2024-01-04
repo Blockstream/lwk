@@ -43,7 +43,7 @@ pub enum Error {
     Secp256k1(#[from] crate::secp256k1::Error),
 
     #[error(transparent)]
-    HexBitcoinHashes(#[from] crate::hashes::hex::Error),
+    HexToArrayError(#[from] crate::hashes::hex::HexToArrayError),
 
     #[error(transparent)]
     SerdeCbor(#[from] serde_cbor::Error),

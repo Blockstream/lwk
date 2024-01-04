@@ -28,7 +28,7 @@ use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
-use wollet::bitcoin::hash_types::XpubIdentifier;
+use wollet::bitcoin::XKeyIdentifier;
 use wollet::elements::hex::{FromHex, ToHex};
 use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements::{AssetId, TxOutSecrets};
@@ -263,7 +263,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadJade => {
             let r: request::SignerLoadJade = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let id = XpubIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
+            let id = XKeyIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
             let signer = match r.emulator {
                 Some(socket) => {
                     // The emulator is meant to be used only in testing, we don't aim to handle connection/disconnection

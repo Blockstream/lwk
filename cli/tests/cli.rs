@@ -148,7 +148,9 @@ fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers:
         pset = get_str(&r, "pset").to_string();
     }
 
-    let r = sh(&format!("{cli} wallet broadcast --name {wallet} {pset}"));
+    let r = sh(&format!(
+        "{cli} wallet broadcast --name {wallet} --pset {pset}"
+    ));
     let txid = get_str(&r, "txid");
     wait_tx(cli, wallet, txid);
 }
@@ -506,7 +508,7 @@ fn test_broadcast() {
     assert_ne!(pset_signed, pset_unsigned);
 
     let result = sh(&format!(
-        r#"{cli} wallet broadcast --name w1 {pset_signed}"#
+        r#"{cli} wallet broadcast --name w1 --pset {pset_signed}"#
     ));
     assert!(result.get("txid").unwrap().as_str().is_some());
 
@@ -590,7 +592,9 @@ fn test_issue() {
 
     assert_ne!(pset_signed, pset_unsigned);
 
-    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset_signed}"));
+    let r = sh(&format!(
+        "{cli} wallet broadcast --name w1 --pset {pset_signed}"
+    ));
     assert!(r.get("txid").unwrap().as_str().is_some());
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -642,7 +646,7 @@ fn test_issue() {
     // TODO: add PSET introspection verifying there are asset metadata
     let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     let asset_balance_post = get_balance(&cli, "w1", asset);
     assert_eq!(asset_balance_pre, asset_balance_post + 1);
@@ -653,7 +657,7 @@ fn test_issue() {
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
@@ -662,7 +666,7 @@ fn test_issue() {
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
 
@@ -943,7 +947,9 @@ fn test_multisig() {
     ));
     let pset_s = r.get("pset").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} wallet broadcast --name multi {pset_s}"));
+    let r = sh(&format!(
+        "{cli} wallet broadcast --name multi --pset {pset_s}"
+    ));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
 
     sh(&format!("{cli} server stop"));

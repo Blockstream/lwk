@@ -523,6 +523,7 @@ pub enum WalletCommand {
         #[arg(long)]
         dry_run: bool,
 
+        #[arg(long)]
         pset: String,
     },
 

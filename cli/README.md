@@ -171,6 +171,6 @@ $ SIGNED_PSET=$(cli signer sign --name s1 --pset $UNSIGNED_PSET | jq -r .pset)
 Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)
 
 ```sh
-$ cli wallet broadcast --dry-run --name w1 $SIGNED_PSET)
+$ cli wallet broadcast --dry-run --name w1 --pset $SIGNED_PSET)
 
 ```

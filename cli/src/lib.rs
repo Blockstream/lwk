@@ -42,35 +42,29 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
     tracing::info!("CLI initialized with args: {:?}", args);
 
-    // start the app with default host/port
-    let datadir = args
-        .datadir
-        .unwrap_or_else(|| Config::default_home().unwrap_or(std::path::PathBuf::from(".")));
-    let mut config = match args.network {
-        Network::Mainnet => Config::default_mainnet(datadir),
-        Network::Testnet => Config::default_testnet(datadir),
-        Network::Regtest => Config::default_regtest(
-            &args
-                .electrum_url
-                .ok_or_else(|| anyhow!("on regtest you have to specify --electrum-url"))?,
-            datadir,
-        ),
+    // TODO: improve network types conversion or comparison
+    let network = match args.network {
+        Network::Mainnet => "liquid",
+        Network::Testnet => "liquid-testnet",
+        Network::Regtest => "liquid-regtest",
     };
-    config.addr = args.addr;
-    let network = config.network.as_str();
 
-    let mut app = app::App::new(config)?;
-    // get a client to make requests
-    let client = app.client()?;
+    // TODO: make addr an option
+    // if None, use a default derived from the network
+    let addr = args.addr;
+    let client = app::Client::new(addr)?;
 
     // verify the server is up if needed
     if args.command.requires_server_running() {
         if let Ok(r) = client.version() {
             if r.network != network {
-                return Err(anyhow!("Inconsistent networks (cli: {network}, server: {})", r.network));
+                return Err(anyhow!(
+                    "Inconsistent networks (cli: {network}, server: {})",
+                    r.network
+                ));
             }
         } else {
-            return Err(anyhow!("Is the server at {:?} running?", app.addr()));
+            return Err(anyhow!("Is the server at {:?} running?", addr));
         }
     }
 
@@ -82,6 +76,23 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     let set_handler_result = ctrlc::try_set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")
                     });
+
+                    // start the app with default host/port
+                    let datadir = args.datadir.unwrap_or_else(|| {
+                        Config::default_home().unwrap_or(std::path::PathBuf::from("."))
+                    });
+                    let mut config = match args.network {
+                        Network::Mainnet => Config::default_mainnet(datadir),
+                        Network::Testnet => Config::default_testnet(datadir),
+                        Network::Regtest => Config::default_regtest(
+                            &args.electrum_url.ok_or_else(|| {
+                                anyhow!("on regtest you have to specify --electrum-url")
+                            })?,
+                            datadir,
+                        ),
+                    };
+                    config.addr = addr;
+                    let mut app = app::App::new(config)?;
 
                     app.run().with_context(|| {
                         format!(

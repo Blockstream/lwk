@@ -142,7 +142,7 @@ impl App {
         Ok(())
     }
 
-    pub fn client(&self) -> Result<Client, Error> {
+    fn client(&self) -> Result<Client, Error> {
         Client::new(self.config.addr)
     }
 }

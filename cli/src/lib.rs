@@ -67,7 +67,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     if args.command.requires_server_running() {
         if let Ok(r) = client.version() {
             if r.network != network {
-                return Err(anyhow!("Inconsistent networks"));
+                return Err(anyhow!("Inconsistent networks (cli: {network}, server: {})", r.network));
             }
         } else {
             return Err(anyhow!("Is the server at {:?} running?", app.addr()));

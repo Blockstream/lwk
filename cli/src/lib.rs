@@ -88,7 +88,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         Network::Mainnet => Config::default_mainnet(datadir),
                         Network::Testnet => Config::default_testnet(datadir),
                         Network::Regtest => Config::default_regtest(
-                            &electrum_url.as_ref().ok_or_else(|| {
+                            electrum_url.as_ref().ok_or_else(|| {
                                 anyhow!("on regtest you have to specify --electrum-url")
                             })?,
                             datadir,

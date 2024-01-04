@@ -26,7 +26,7 @@ fn get_available_addr() -> anyhow::Result<SocketAddr> {
 }
 
 fn get_balance(cli: &str, wallet: &str, asset: &str) -> u64 {
-    let r = sh(&format!("{cli} wallet balance --name {wallet}"));
+    let r = sh(&format!("{cli} wallet balance --wallet {wallet}"));
     let b = r.get("balance").unwrap().as_object().unwrap();
     b.get(asset).unwrap().as_u64().unwrap()
 }
@@ -90,7 +90,7 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
         .join("");
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold {threshold}{xpubs}"));
     let d = get_str(&r, "descriptor");
-    sh(&format!("{cli} wallet load --name {name} -d {d}"));
+    sh(&format!("{cli} wallet load --wallet {name} -d {d}"));
     for signer in signers {
         sh(&format!(
             "{cli} signer register-multisig --signer {signer} --wallet {name}"
@@ -99,7 +99,7 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
 }
 
 fn txs(cli: &str, wallet: &str) -> Vec<Value> {
-    let r = sh(&format!("{cli} wallet txs --name {wallet}"));
+    let r = sh(&format!("{cli} wallet txs --wallet {wallet}"));
     r.get("txs").unwrap().as_array().unwrap().to_vec()
 }
 
@@ -126,7 +126,7 @@ fn wait_tx(cli: &str, wallet: &str, txid: &str) {
 }
 
 fn address(cli: &str, wallet: &str) -> String {
-    let r = sh(&format!("{cli} wallet address --name {wallet}"));
+    let r = sh(&format!("{cli} wallet address --wallet {wallet}"));
     get_str(&r, "address").to_string()
 }
 
@@ -140,7 +140,7 @@ fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
 
 fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers: &[&str]) {
     let recipient = format!(" --recipient {address}:{sats}:{asset}");
-    let r = sh(&format!("{cli} wallet send --name {wallet} {recipient}"));
+    let r = sh(&format!("{cli} wallet send --wallet {wallet} {recipient}"));
     let mut pset = get_str(&r, "pset").to_string();
 
     for signer in signers {
@@ -151,7 +151,7 @@ fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers:
     }
 
     let r = sh(&format!(
-        "{cli} wallet broadcast --name {wallet} --pset {pset}"
+        "{cli} wallet broadcast --wallet {wallet} --pset {pset}"
     ));
     let txid = get_str(&r, "txid");
     wait_tx(cli, wallet, txid);
@@ -184,9 +184,9 @@ fn test_start_stop_persist() {
     ));
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    sh(&format!("{cli} wallet load --name custody -d {desc}"));
-    sh(&format!(r#"{cli} wallet unload --name custody"#)); // Verify unloads are handled
-    sh(&format!("{cli} wallet load --name custody -d {desc}"));
+    sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
+    sh(&format!(r#"{cli} wallet unload --wallet custody"#)); // Verify unloads are handled
+    sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
 
     let contract = "{\"entity\":{\"domain\":\"tether.to\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Tether USD\",\"precision\":8,\"ticker\":\"USDt\",\"version\":0}";
     let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
@@ -320,9 +320,9 @@ fn test_signer_external() {
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let view_key = "c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963";
     let desc = format!("ct({view_key},elwpkh([{fingerprint}/0h/0h/0h]{xpub}/<0;1>/*))#w2d0h7gl");
-    sh(&format!("{cli} wallet load --name ss -d {desc}"));
+    sh(&format!("{cli} wallet load --wallet ss -d {desc}"));
 
-    let r = sh(&format!("{cli} wallet details --name ss"));
+    let r = sh(&format!("{cli} wallet details --wallet ss"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), name);
@@ -340,20 +340,22 @@ fn test_wallet_load_unload_list() {
     assert!(wallets.as_array().unwrap().is_empty());
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    let result = sh(&format!("{cli} wallet load --name custody -d {desc}"));
+    let result = sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --name custody -d {desc}"));
+    let result = sh_result(&format!("{cli} wallet load --wallet custody -d {desc}"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-    let result = sh_result(&format!("{cli} wallet load --name differentname -d {desc}"));
+    let result = sh_result(&format!(
+        "{cli} wallet load --wallet differentname -d {desc}"
+    ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
     let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(!wallets.as_array().unwrap().is_empty());
 
-    let result = sh(&format!("{cli} wallet unload --name custody"));
+    let result = sh(&format!("{cli} wallet unload --wallet custody"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
@@ -388,13 +390,13 @@ fn test_wallet_details() {
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name ss -d {desc_ss}"));
+    sh(&format!("{cli} wallet load --wallet ss -d {desc_ss}"));
 
     let r = sh(&format!(
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name sssh -d {desc_sssh}"));
+    sh(&format!("{cli} wallet load --wallet sssh -d {desc_sssh}"));
 
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
@@ -403,31 +405,31 @@ fn test_wallet_details() {
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name ms -d {desc_ms}"));
+    sh(&format!("{cli} wallet load --wallet ms -d {desc_ms}"));
 
     // Multi sig wallet, same signers
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
     let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!(
-        "{cli} wallet load --name ms_same_signers -d {desc_ms_same_signers}"
+        "{cli} wallet load --wallet ms_same_signers -d {desc_ms_same_signers}"
     ));
 
     // Details
-    let r = sh(&format!("{cli} wallet details --name ss"));
+    let r = sh(&format!("{cli} wallet details --wallet ss"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
 
-    let r = sh(&format!("{cli} wallet details --name sssh"));
+    let r = sh(&format!("{cli} wallet details --wallet sssh"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "sh_wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
 
-    let r = sh(&format!("{cli} wallet details --name ms"));
+    let r = sh(&format!("{cli} wallet details --wallet ms"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();
@@ -436,13 +438,13 @@ fn test_wallet_details() {
     assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s2");
 
     sh(&format!("{cli} signer unload --signer s2"));
-    let r = sh(&format!("{cli} wallet details --name ms"));
+    let r = sh(&format!("{cli} wallet details --wallet ms"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
     assert!(signers[1].get("name").is_none());
 
-    let r = sh(&format!("{cli} wallet details --name ms_same_signers"));
+    let r = sh(&format!("{cli} wallet details --wallet ms_same_signers"));
     assert_eq!(
         r.get("warnings").unwrap().as_str().unwrap(),
         "wallet has multiple signers with the same fingerprint"
@@ -475,14 +477,14 @@ fn test_broadcast() {
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"{cli} wallet load --name w1 -d {desc_generated}"#
+        r#"{cli} wallet load --wallet w1 -d {desc_generated}"#
     ));
     assert_eq!(
         result.get("descriptor").unwrap().as_str().unwrap(),
         desc_generated
     );
 
-    let result = sh(&format!(r#"{cli} wallet address --name w1"#));
+    let result = sh(&format!(r#"{cli} wallet address --wallet w1"#));
     let address = result.get("address").unwrap().as_str().unwrap();
     let address = Address::from_str(address).unwrap();
 
@@ -491,14 +493,14 @@ fn test_broadcast() {
     std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
 
     let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let result = sh(&format!("{cli} wallet balance --name w1"));
+    let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1_000_000);
 
     let node_address = server.node_getnewaddress();
     let result = sh(&format!(
-        r#"{cli} wallet send --name w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
+        r#"{cli} wallet send --wallet w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
     ));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
@@ -510,11 +512,11 @@ fn test_broadcast() {
     assert_ne!(pset_signed, pset_unsigned);
 
     let result = sh(&format!(
-        r#"{cli} wallet broadcast --name w1 --pset {pset_signed}"#
+        r#"{cli} wallet broadcast --wallet w1 --pset {pset_signed}"#
     ));
     assert!(result.get("txid").unwrap().as_str().is_some());
 
-    let result = sh(&format!("{cli} wallet balance --name w1"));
+    let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
     assert!(policy_obj.as_number().unwrap().as_u64().unwrap() < 1_000_000);
@@ -540,10 +542,10 @@ fn test_issue() {
     ));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} wallet load --name w1 -d {desc}"));
+    let r = sh(&format!("{cli} wallet load --wallet w1 -d {desc}"));
     assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let r = sh(&format!("{cli} wallet address --name w1"));
+    let r = sh(&format!("{cli} wallet address --wallet w1"));
     let address = r.get("address").unwrap().as_str().unwrap();
     let address = Address::from_str(address).unwrap();
 
@@ -554,12 +556,12 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
     let r = sh(&format!(
-        "{cli} wallet issue --name w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
+        "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let r = sh(&format!("{cli} wallet pset-details --name w1 -p {pset}"));
+    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
     assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
@@ -583,7 +585,7 @@ fn test_issue() {
     assert_eq!(balance.get(token).unwrap().as_i64().unwrap(), 1);
 
     let r = sh(&format!(
-        "{cli} wallet pset-details --name w1 -p {pset} --with-tickers"
+        "{cli} wallet pset-details --wallet w1 -p {pset} --with-tickers"
     ));
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert!(balance.get("L-BTC").unwrap().as_i64().unwrap() < 0);
@@ -595,16 +597,16 @@ fn test_issue() {
     assert_ne!(pset_signed, pset_unsigned);
 
     let r = sh(&format!(
-        "{cli} wallet broadcast --name w1 --pset {pset_signed}"
+        "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
     assert!(r.get("txid").unwrap().as_str().is_some());
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let r = sh(&format!("{cli} wallet balance --name w1"));
+    let r = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert_eq!(balance.get(asset).unwrap().as_u64().unwrap(), 1000);
 
-    let r = sh(&format!("{cli} wallet balance --name w1 --with-tickers"));
+    let r = sh(&format!("{cli} wallet balance --wallet w1 --with-tickers"));
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert!(balance.get("L-BTC").unwrap().as_u64().unwrap() > 0);
 
@@ -643,40 +645,40 @@ fn test_issue() {
     let asset_balance_pre = get_balance(&cli, "w1", asset);
     let node_address = server.node_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
-    let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
+    let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     // TODO: add PSET introspection verifying there are asset metadata
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     let asset_balance_post = get_balance(&cli, "w1", asset);
     assert_eq!(asset_balance_pre, asset_balance_post + 1);
 
     let r = sh(&format!(
-        "{cli} wallet reissue --name w1 --asset {asset} --satoshi-asset 1"
+        "{cli} wallet reissue --wallet w1 --asset {asset} --satoshi-asset 1"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
     let recipient = format!("--recipient burn:1:{asset}");
-    let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
+    let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
+    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
 
-    let r = sh(&format!("{cli} wallet utxos --name w1"));
+    let r = sh(&format!("{cli} wallet utxos --wallet w1"));
     let utxos = r.get("utxos").unwrap().as_array().unwrap();
     assert!(!utxos.is_empty());
 
-    let r = sh(&format!("{cli} wallet txs --name w1"));
+    let r = sh(&format!("{cli} wallet txs --wallet w1"));
     let txs = r.get("txs").unwrap().as_array().unwrap();
     assert!(!txs.is_empty());
 
@@ -698,7 +700,7 @@ fn test_issue() {
 
     server.generate(1);
 
-    let r = sh(&format!("{cli} wallet txs --name w1 --with-tickers"));
+    let r = sh(&format!("{cli} wallet txs --wallet w1 --with-tickers"));
     let txs = r.get("txs").unwrap().as_array().unwrap();
     assert!(!txs.is_empty());
 
@@ -754,10 +756,10 @@ fn test_commands() {
     assert!(result.get("mnemonic").is_some());
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    let result = sh(&format!("{cli} wallet load --name custody -d {desc}"));
+    let result = sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --name wrong -d wrong"));
+    let result = sh_result(&format!("{cli} wallet load --wallet wrong -d wrong"));
     assert!(
         format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
     );
@@ -767,29 +769,29 @@ fn test_commands() {
     server.generate(101);
     std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
 
-    let result = sh(&format!("{cli}  wallet balance --name custody"));
+    let result = sh(&format!("{cli}  wallet balance --wallet custody"));
     let balance_obj = result.get("balance").unwrap();
     dbg!(&balance_obj);
     let asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let policy_obj = balance_obj.get(asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1000000);
 
-    let result = sh_result(&format!("{cli}  wallet balance --name notexist"));
+    let result = sh_result(&format!("{cli}  wallet balance --wallet notexist"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
 
-    let result = sh(&format!("{cli} wallet address --name custody"));
+    let result = sh(&format!("{cli} wallet address --wallet custody"));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 1);
 
-    let result = sh(&format!("{cli} wallet address --name custody --index 0"));
+    let result = sh(&format!("{cli} wallet address --wallet custody --index 0"));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-    let result = sh(&format!("{cli} wallet send --name custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
+    let result = sh(&format!("{cli} wallet send --wallet custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let _: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let result = sh(&format!("{cli}  wallet unload --name custody"));
+    let result = sh(&format!("{cli}  wallet unload --wallet custody"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
@@ -805,13 +807,13 @@ fn test_commands() {
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "{cli} wallet load --name desc_generated -d {desc_generated}"
+        "{cli} wallet load --wallet desc_generated -d {desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, desc_generated);
 
     let result = sh(&format!(
-        "{cli} wallet address --name desc_generated --index 0"
+        "{cli} wallet address --wallet desc_generated --index 0"
     ));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
@@ -824,7 +826,7 @@ fn test_commands() {
     let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "{cli} wallet load --name multi_desc_generated -d {multisig_desc_generated}"
+        "{cli} wallet load --wallet multi_desc_generated -d {multisig_desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, multisig_desc_generated);
@@ -856,9 +858,9 @@ fn test_multisig() {
 
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name multi -d {desc}"));
+    sh(&format!("{cli} wallet load --wallet multi -d {desc}"));
 
-    let r = sh(&format!("{cli} wallet address --name multi"));
+    let r = sh(&format!("{cli} wallet address --wallet multi"));
     let address = r.get("address").unwrap().as_str().unwrap();
     let address = Address::from_str(address).unwrap();
 
@@ -871,7 +873,7 @@ fn test_multisig() {
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let recipient = format!("{node_address}:{satoshi}:{policy_asset}");
     let r = sh(&format!(
-        "{cli} wallet send --name multi --recipient {recipient}"
+        "{cli} wallet send --wallet multi --recipient {recipient}"
     ));
     let pset_u = r.get("pset").unwrap().as_str().unwrap();
 
@@ -886,7 +888,7 @@ fn test_multisig() {
     assert_ne!(pset_s1, pset_s2);
 
     let r = sh(&format!(
-        "{cli} wallet pset-details --name multi -p {pset_u}"
+        "{cli} wallet pset-details --wallet multi -p {pset_u}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
@@ -907,7 +909,7 @@ fn test_multisig() {
     assert!(sigs.contains("s2"));
 
     let r = sh(&format!(
-        "{cli} wallet pset-details --name multi -p {pset_s1}"
+        "{cli} wallet pset-details --wallet multi -p {pset_s1}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
@@ -926,7 +928,7 @@ fn test_multisig() {
     assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s2");
 
     let r = sh(&format!(
-        "{cli} wallet pset-details --name multi -p {pset_s2}"
+        "{cli} wallet pset-details --wallet multi -p {pset_s2}"
     ));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert!(!r.get("balance").unwrap().as_object().unwrap().is_empty());
@@ -945,12 +947,12 @@ fn test_multisig() {
     assert_eq!(missing_sigs[0].get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!(
-        "{cli} wallet combine --name multi -p {pset_s1} -p {pset_s2}"
+        "{cli} wallet combine --wallet multi -p {pset_s1} -p {pset_s2}"
     ));
     let pset_s = r.get("pset").unwrap().as_str().unwrap();
 
     let r = sh(&format!(
-        "{cli} wallet broadcast --name multi --pset {pset_s}"
+        "{cli} wallet broadcast --wallet multi --pset {pset_s}"
     ));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
 

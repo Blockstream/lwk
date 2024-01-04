@@ -382,7 +382,7 @@ pub enum WalletCommand {
     Load {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         #[arg(short, long)]
         descriptor: String,
@@ -392,7 +392,7 @@ pub enum WalletCommand {
     Unload {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
     },
 
     /// List existing loaded wallets
@@ -402,7 +402,7 @@ pub enum WalletCommand {
     Address {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         #[arg(long)]
         index: Option<u32>,
@@ -412,7 +412,7 @@ pub enum WalletCommand {
     Balance {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// Replace asset ids with tickers when possible
         #[arg(long, action)]
@@ -423,7 +423,7 @@ pub enum WalletCommand {
     Send {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// Specify a recipient in the form "address:satoshi:asset_id"
         ///
@@ -443,7 +443,7 @@ pub enum WalletCommand {
     Issue {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// The number of units of the newly issued asset
         #[arg(long)]
@@ -477,7 +477,7 @@ pub enum WalletCommand {
     Reissue {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// The asset to re-issue
         #[arg(long)]
@@ -517,7 +517,7 @@ pub enum WalletCommand {
     Broadcast {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// Do the finalization without the broadcast
         #[arg(long)]
@@ -531,14 +531,14 @@ pub enum WalletCommand {
     Details {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
     },
 
     /// Combine PSETs
     Combine {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// PSETs to combine
         ///
@@ -551,7 +551,7 @@ pub enum WalletCommand {
     PsetDetails {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// PSET
         #[arg(short, long, required = true)]
@@ -566,14 +566,14 @@ pub enum WalletCommand {
     Utxos {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
     },
 
     /// Get the wallet transactions
     Txs {
         /// Wallet name
         #[arg(short, long)]
-        name: String,
+        wallet: String,
 
         /// Replace asset ids with tickers when possible
         #[arg(long, action)]

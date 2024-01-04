@@ -178,20 +178,23 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             }
         },
         CliCommand::Wallet(a) => match a.command {
-            WalletCommand::Load { descriptor, name } => {
-                let r = client.load_wallet(descriptor, name)?;
+            WalletCommand::Load { descriptor, wallet } => {
+                let r = client.load_wallet(descriptor, wallet)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Unload { name } => {
-                let r = client.unload_wallet(name)?;
+            WalletCommand::Unload { wallet } => {
+                let r = client.unload_wallet(wallet)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Balance { name, with_tickers } => {
-                let r = client.balance(name, with_tickers)?;
+            WalletCommand::Balance {
+                wallet,
+                with_tickers,
+            } => {
+                let r = client.balance(wallet, with_tickers)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Send {
-                name,
+                wallet,
                 recipient,
                 fee_rate,
             } => {
@@ -203,16 +206,16 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     );
                 }
 
-                let r = client.send_many(name, addressees, fee_rate)?;
+                let r = client.send_many(wallet, addressees, fee_rate)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Address { index, name } => {
-                let r = client.address(name, index)?;
+            WalletCommand::Address { index, wallet } => {
+                let r = client.address(wallet, index)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::List => serde_json::to_value(client.list_wallets()?)?,
             WalletCommand::Issue {
-                name,
+                wallet,
                 satoshi_asset,
                 address_asset,
                 satoshi_token,
@@ -221,7 +224,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 fee_rate,
             } => {
                 let r = client.issue(
-                    name,
+                    wallet,
                     satoshi_asset,
                     address_asset,
                     satoshi_token,
@@ -232,13 +235,13 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             WalletCommand::Reissue {
-                name,
+                wallet,
                 asset,
                 satoshi_asset,
                 address_asset,
                 fee_rate,
             } => {
-                let r = client.reissue(name, asset, satoshi_asset, address_asset, fee_rate)?;
+                let r = client.reissue(wallet, asset, satoshi_asset, address_asset, fee_rate)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::MultisigDesc {
@@ -258,33 +261,36 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             WalletCommand::Broadcast {
                 dry_run,
                 pset,
-                name,
+                wallet,
             } => {
-                let r = client.broadcast(name, dry_run, pset)?;
+                let r = client.broadcast(wallet, dry_run, pset)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Details { name } => {
-                let r = client.wallet_details(name)?;
+            WalletCommand::Details { wallet } => {
+                let r = client.wallet_details(wallet)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Combine { name, pset } => {
-                let r = client.wallet_combine(name, pset)?;
+            WalletCommand::Combine { wallet, pset } => {
+                let r = client.wallet_combine(wallet, pset)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::PsetDetails {
-                name,
+                wallet,
                 pset,
                 with_tickers,
             } => {
-                let r = client.wallet_pset_details(name, pset, with_tickers)?;
+                let r = client.wallet_pset_details(wallet, pset, with_tickers)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Utxos { name } => {
-                let r = client.wallet_utxos(name)?;
+            WalletCommand::Utxos { wallet } => {
+                let r = client.wallet_utxos(wallet)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Txs { name, with_tickers } => {
-                let r = client.wallet_txs(name, with_tickers)?;
+            WalletCommand::Txs {
+                wallet,
+                with_tickers,
+            } => {
+                let r = client.wallet_txs(wallet, with_tickers)?;
                 serde_json::to_value(r)?
             }
         },

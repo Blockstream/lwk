@@ -23,10 +23,6 @@ pub struct Cli {
     #[structopt(short, long)]
     pub electrum_url: Option<String>,
 
-    /// The sub command
-    #[command(subcommand)]
-    pub command: CliCommand,
-
     /// Where the log file, server state, and other data goes.
     ///
     /// If not specified is `$HOME/.ks`.
@@ -37,6 +33,10 @@ pub struct Cli {
     /// If launching the server is where it listens, otherwise is where the client connects to.
     #[arg(long, default_value = "127.0.0.1:32111")]
     pub addr: SocketAddr,
+
+    /// The sub command
+    #[command(subcommand)]
+    pub command: CliCommand,
 }
 
 #[derive(Subcommand, Debug)]

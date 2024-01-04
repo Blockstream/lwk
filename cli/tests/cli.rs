@@ -961,6 +961,15 @@ fn test_multisig() {
 }
 
 #[test]
+fn test_inconsistent_network() {
+    let (_t, _tmp, cli, _server) = setup_cli();
+    let cli_addr = cli.split(" --datadir").next().unwrap();
+    let cli_inc = format!("{cli_addr} -n testnet");
+    let r = sh_result(&format!("{cli_inc} wallet list"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Inconsistent network"));
+}
+
+#[test]
 fn test_schema() {
     let (t, _tmp, cli, _server) = setup_cli();
 

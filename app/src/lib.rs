@@ -185,12 +185,16 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::Version => Response::result(
-            request.id,
-            serde_json::to_value(response::Version {
-                version: consts::APP_VERSION.into(),
-            })?,
-        ),
+        Method::Version => {
+            let network = state.lock()?.config.network.as_str().to_string();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Version {
+                    version: consts::APP_VERSION.into(),
+                    network,
+                })?,
+            )
+        }
         Method::LoadWallet => {
             let r: request::LoadWallet = serde_json::from_value(params)?;
             let mut s = state.lock()?;

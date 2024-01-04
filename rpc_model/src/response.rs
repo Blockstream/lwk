@@ -16,6 +16,9 @@ pub struct Empty {}
 pub struct Version {
     /// The server version
     pub version: String,
+
+    /// The server network
+    pub network: String,
 }
 
 /// Response for generate signer

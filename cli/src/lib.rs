@@ -57,14 +57,21 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         ),
     };
     config.addr = args.addr;
+    let network = config.network.as_str();
 
     let mut app = app::App::new(config)?;
     // get a client to make requests
     let client = app.client()?;
 
     // verify the server is up if needed
-    if args.command.requires_server_running() && client.version().is_err() {
-        return Err(anyhow!("Is the server at {:?} running?", app.addr()));
+    if args.command.requires_server_running() {
+        if let Ok(r) = client.version() {
+            if r.network != network {
+                return Err(anyhow!("Inconsistent networks"));
+            }
+        } else {
+            return Err(anyhow!("Is the server at {:?} running?", app.addr()));
+        }
     }
 
     Ok(match args.command {

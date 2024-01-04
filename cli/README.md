@@ -93,7 +93,7 @@ Load a wallet and request a balance ("stateful" request)
 
 
 ```sh
-$ cli wallet load --name custody "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
+$ cli wallet load --name custody -d "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
 $ cli wallet balance --name custody
 ```
 
@@ -138,7 +138,7 @@ cli --network testnet server start
 $ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
 $ cli signer load-software --mnemonic "$MNEMONIC" --name s1
 $ DESCRIPTOR=$(cli signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
-$ cli wallet load --name w1 "$DESCRIPTOR"
+$ cli wallet load --name w1 -d "$DESCRIPTOR"
 $ cli wallet address --name w1
 ```
 

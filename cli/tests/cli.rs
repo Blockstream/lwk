@@ -90,7 +90,7 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
         .join("");
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold {threshold}{xpubs}"));
     let d = get_str(&r, "descriptor");
-    sh(&format!("{cli} wallet load --name {name} {d}"));
+    sh(&format!("{cli} wallet load --name {name} -d {d}"));
     for signer in signers {
         sh(&format!(
             "{cli} signer register-multisig --name {signer} --wallet {name}"
@@ -180,9 +180,9 @@ fn test_start_stop_persist() {
     ));
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    sh(&format!("{cli} wallet load --name custody {desc}"));
+    sh(&format!("{cli} wallet load --name custody -d {desc}"));
     sh(&format!(r#"{cli} wallet unload --name custody"#)); // Verify unloads are handled
-    sh(&format!("{cli} wallet load --name custody {desc}"));
+    sh(&format!("{cli} wallet load --name custody -d {desc}"));
 
     let contract = "{\"entity\":{\"domain\":\"tether.to\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Tether USD\",\"precision\":8,\"ticker\":\"USDt\",\"version\":0}";
     let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
@@ -316,7 +316,7 @@ fn test_signer_external() {
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let view_key = "c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963";
     let desc = format!("ct({view_key},elwpkh([{fingerprint}/0h/0h/0h]{xpub}/<0;1>/*))#w2d0h7gl");
-    sh(&format!("{cli} wallet load --name ss {desc}"));
+    sh(&format!("{cli} wallet load --name ss -d {desc}"));
 
     let r = sh(&format!("{cli} wallet details --name ss"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
@@ -336,13 +336,13 @@ fn test_wallet_load_unload_list() {
     assert!(wallets.as_array().unwrap().is_empty());
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    let result = sh(&format!("{cli} wallet load --name custody {desc}"));
+    let result = sh(&format!("{cli} wallet load --name custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --name custody {desc}"));
+    let result = sh_result(&format!("{cli} wallet load --name custody -d {desc}"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-    let result = sh_result(&format!("{cli} wallet load --name differentname {desc}"));
+    let result = sh_result(&format!("{cli} wallet load --name differentname -d {desc}"));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
     let result = sh(&format!("{cli} wallet list"));
@@ -384,13 +384,13 @@ fn test_wallet_details() {
         "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name ss {desc_ss}"));
+    sh(&format!("{cli} wallet load --name ss -d {desc_ss}"));
 
     let r = sh(&format!(
         "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name sssh {desc_sssh}"));
+    sh(&format!("{cli} wallet load --name sssh -d {desc_sssh}"));
 
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
@@ -399,13 +399,13 @@ fn test_wallet_details() {
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name ms {desc_ms}"));
+    sh(&format!("{cli} wallet load --name ms -d {desc_ms}"));
 
     // Multi sig wallet, same signers
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
     let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!(
-        "{cli} wallet load --name ms_same_signers {desc_ms_same_signers}"
+        "{cli} wallet load --name ms_same_signers -d {desc_ms_same_signers}"
     ));
 
     // Details
@@ -470,7 +470,9 @@ fn test_broadcast() {
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
-    let result = sh(&format!(r#"{cli} wallet load --name w1 {desc_generated}"#));
+    let result = sh(&format!(
+        r#"{cli} wallet load --name w1 -d {desc_generated}"#
+    ));
     assert_eq!(
         result.get("descriptor").unwrap().as_str().unwrap(),
         desc_generated
@@ -534,7 +536,7 @@ fn test_issue() {
     ));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} wallet load --name w1 {desc}"));
+    let r = sh(&format!("{cli} wallet load --name w1 -d {desc}"));
     assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
 
     let r = sh(&format!("{cli} wallet address --name w1"));
@@ -746,10 +748,10 @@ fn test_commands() {
     assert!(result.get("mnemonic").is_some());
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
-    let result = sh(&format!("{cli} wallet load --name custody {desc}"));
+    let result = sh(&format!("{cli} wallet load --name custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --name wrong wrong"));
+    let result = sh_result(&format!("{cli} wallet load --name wrong -d wrong"));
     assert!(
         format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
     );
@@ -797,7 +799,7 @@ fn test_commands() {
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "{cli} wallet load --name desc_generated {desc_generated}"
+        "{cli} wallet load --name desc_generated -d {desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, desc_generated);
@@ -816,7 +818,7 @@ fn test_commands() {
     let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        "{cli} wallet load --name multi_desc_generated {multisig_desc_generated}"
+        "{cli} wallet load --name multi_desc_generated -d {multisig_desc_generated}"
     ));
     let result = result.get("descriptor").unwrap().as_str().unwrap();
     assert_eq!(result, multisig_desc_generated);
@@ -848,7 +850,7 @@ fn test_multisig() {
 
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
-    sh(&format!("{cli} wallet load --name multi {desc}"));
+    sh(&format!("{cli} wallet load --name multi -d {desc}"));
 
     let r = sh(&format!("{cli} wallet address --name multi"));
     let address = r.get("address").unwrap().as_str().unwrap();

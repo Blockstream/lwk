@@ -384,6 +384,7 @@ pub enum WalletCommand {
         #[arg(short, long)]
         name: String,
 
+        #[arg(short, long)]
         descriptor: String,
     },
 

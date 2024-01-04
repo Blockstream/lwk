@@ -144,7 +144,7 @@ fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers:
     let mut pset = get_str(&r, "pset").to_string();
 
     for signer in signers {
-        let r = sh(&format!("{cli} signer sign --name {signer} {pset}"));
+        let r = sh(&format!("{cli} signer sign --name {signer} --pset {pset}"));
         pset = get_str(&r, "pset").to_string();
     }
 
@@ -305,7 +305,7 @@ fn test_signer_external() {
     // Some actions are not possible with the external signer
     let r = sh_result(&format!("{cli} signer xpub --name {name} --kind bip84"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
-    let r = sh_result(&format!("{cli} signer sign --name {name} pset"));
+    let r = sh_result(&format!("{cli} signer sign --name {name} --pset pset"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
     let r = sh_result(&format!(
         "{cli} signer singlesig-desc --name {name} --descriptor-blinding-key slip77 --kind wpkh"
@@ -497,7 +497,7 @@ fn test_broadcast() {
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let result = sh(&format!(r#"{cli} signer sign --name s1 {pset}"#));
+    let result = sh(&format!(r#"{cli} signer sign --name s1 --pset {pset}"#));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
@@ -582,7 +582,7 @@ fn test_issue() {
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert!(balance.get("L-BTC").unwrap().as_i64().unwrap() < 0);
 
-    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
@@ -638,7 +638,7 @@ fn test_issue() {
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     // TODO: add PSET introspection verifying there are asset metadata
-    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -649,7 +649,7 @@ fn test_issue() {
         "{cli} wallet reissue --name w1 --asset {asset} --satoshi-asset 1"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -658,7 +658,7 @@ fn test_issue() {
     let recipient = format!("--recipient burn:1:{asset}");
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --name s1 {pset}"));
+    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -867,10 +867,10 @@ fn test_multisig() {
     ));
     let pset_u = r.get("pset").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} signer sign --name s1 {pset_u}"));
+    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset_u}"));
     let pset_s1 = r.get("pset").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} signer sign --name s2 {pset_u}"));
+    let r = sh(&format!("{cli} signer sign --name s2 --pset {pset_u}"));
     let pset_s2 = r.get("pset").unwrap().as_str().unwrap();
 
     assert_ne!(pset_u, pset_s1);

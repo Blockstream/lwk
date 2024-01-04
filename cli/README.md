@@ -165,7 +165,7 @@ Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3
 Sign the pset
 
 ```sh
-$ SIGNED_PSET=$(cli signer sign --name s1 $UNSIGNED_PSET | jq -r .pset)
+$ SIGNED_PSET=$(cli signer sign --name s1 --pset $UNSIGNED_PSET | jq -r .pset)
 ```
 
 Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)

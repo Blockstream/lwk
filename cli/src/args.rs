@@ -285,6 +285,7 @@ pub enum SignerCommand {
         #[arg(short, long)]
         name: String,
 
+        #[arg(long)]
         pset: String,
     },
 

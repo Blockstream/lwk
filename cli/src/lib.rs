@@ -128,45 +128,52 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.signer_jade_id(emulator)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::Sign { name, pset } => {
-                let r = client.sign(name, pset)?;
+            SignerCommand::Sign { signer, pset } => {
+                let r = client.sign(signer, pset)?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::LoadSoftware { name, mnemonic } => {
-                let j = client.signer_load_software(name, mnemonic)?;
+            SignerCommand::LoadSoftware { signer, mnemonic } => {
+                let j = client.signer_load_software(signer, mnemonic)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::LoadJade { name, id, emulator } => {
-                let j = client.signer_load_jade(name, id, emulator)?;
+            SignerCommand::LoadJade {
+                signer,
+                id,
+                emulator,
+            } => {
+                let j = client.signer_load_jade(signer, id, emulator)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::LoadExternal { name, fingerprint } => {
-                let j = client.signer_load_external(name, fingerprint)?;
+            SignerCommand::LoadExternal {
+                signer,
+                fingerprint,
+            } => {
+                let j = client.signer_load_external(signer, fingerprint)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::List => serde_json::to_value(client.list_signers()?)?,
-            SignerCommand::Unload { name } => {
-                let r = client.unload_signer(name)?;
+            SignerCommand::Unload { signer } => {
+                let r = client.unload_signer(signer)?;
                 serde_json::to_value(r)?
             }
             SignerCommand::SinglesigDesc {
-                name,
+                signer,
                 descriptor_blinding_key,
                 kind,
             } => {
                 let r = client.singlesig_descriptor(
-                    name,
+                    signer,
                     descriptor_blinding_key.to_string(),
                     kind.to_string(),
                 )?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::Xpub { name, kind } => {
-                let r = client.xpub(name, kind.to_string())?;
+            SignerCommand::Xpub { signer, kind } => {
+                let r = client.xpub(signer, kind.to_string())?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::RegisterMultisig { name, wallet } => {
-                let r = client.register_multisig(name, wallet)?;
+            SignerCommand::RegisterMultisig { signer, wallet } => {
+                let r = client.register_multisig(signer, wallet)?;
                 serde_json::to_value(r)?
             }
         },

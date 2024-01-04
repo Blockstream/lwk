@@ -242,7 +242,7 @@ pub enum SignerCommand {
     /// Load a software signer giving it a name
     LoadSoftware {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         #[arg(long)]
         mnemonic: String, // TODO is it right to have the mnemonic as arg?
@@ -251,7 +251,7 @@ pub enum SignerCommand {
     /// Load a Jade signer giving it a name
     LoadJade {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         /// Identifier of the jade (20 bytes as 40 hex chars)
         #[arg(long)]
@@ -265,7 +265,7 @@ pub enum SignerCommand {
     /// Load a signer (software, serial, external) giving it a name
     LoadExternal {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         #[arg(long)]
         fingerprint: String,
@@ -274,7 +274,7 @@ pub enum SignerCommand {
     /// Unload a software signer
     Unload {
         #[arg(short, long)]
-        name: String,
+        signer: String,
     },
 
     /// List loaded signers
@@ -283,7 +283,7 @@ pub enum SignerCommand {
     /// Sign a transaction
     Sign {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         #[arg(long)]
         pset: String,
@@ -292,7 +292,7 @@ pub enum SignerCommand {
     ///  Prints a singlesig descriptor using this signer key
     SinglesigDesc {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         #[arg(long)]
         descriptor_blinding_key: BlindingKeyKind,
@@ -304,7 +304,7 @@ pub enum SignerCommand {
     /// Get an extended public key from the signer
     Xpub {
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         #[arg(long)]
         kind: XpubKind,
@@ -317,7 +317,7 @@ pub enum SignerCommand {
     RegisterMultisig {
         /// Signer name
         #[arg(short, long)]
-        name: String,
+        signer: String,
 
         /// Wallet name
         #[arg(long)]

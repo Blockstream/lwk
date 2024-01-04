@@ -73,12 +73,12 @@ fn sw_signer(cli: &str, name: &str) {
     let r = sh(&format!("{cli} signer generate"));
     let mnemonic = get_str(&r, "mnemonic");
     sh(&format!(
-        "{cli} signer load-software --mnemonic \"{mnemonic}\" --name {name}"
+        "{cli} signer load-software --mnemonic \"{mnemonic}\" --signer {name}"
     ));
 }
 
 fn keyorigin(cli: &str, signer: &str) -> String {
-    let r = sh(&format!("{cli} signer xpub --name {signer} --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer {signer} --kind bip84"));
     get_str(&r, "keyorigin_xpub").to_string()
 }
 
@@ -93,7 +93,7 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
     sh(&format!("{cli} wallet load --name {name} -d {d}"));
     for signer in signers {
         sh(&format!(
-            "{cli} signer register-multisig --name {signer} --wallet {name}"
+            "{cli} signer register-multisig --signer {signer} --wallet {name}"
         ));
     }
 }
@@ -144,7 +144,9 @@ fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers:
     let mut pset = get_str(&r, "pset").to_string();
 
     for signer in signers {
-        let r = sh(&format!("{cli} signer sign --name {signer} --pset {pset}"));
+        let r = sh(&format!(
+            "{cli} signer sign --signer {signer} --pset {pset}"
+        ));
         pset = get_str(&r, "pset").to_string();
     }
 
@@ -165,20 +167,20 @@ fn test_start_stop_persist() {
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1"#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1"#
     ));
     let result = sh(&format!("{cli} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --name s2"#,
+        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --signer s2"#,
     ));
-    sh(&format!(r#"{cli} signer unload --name s2"#)); // Verify unloads are handled
+    sh(&format!(r#"{cli} signer unload --signer s2"#)); // Verify unloads are handled
 
     sh(&format!(
-        "{cli} signer load-external --fingerprint 11111111 --name s2"
+        "{cli} signer load-external --fingerprint 11111111 --signer s2"
     ));
     sh(&format!(
-        "{cli} signer load-jade --id 2111111111111111111111111111111111111112 --name s3"
+        "{cli} signer load-jade --id 2111111111111111111111111111111111111112 --signer s3"
     ));
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
@@ -261,19 +263,19 @@ fn test_signer_load_unload_list() {
 
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name ss "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
     let result = sh(&format!("{cli} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     let result = sh_result(&format!(
-        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --name ss"#,
+        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --signer ss"#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
     let result = sh_result(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name ss2 "#,
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss2 "#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
@@ -281,7 +283,7 @@ fn test_signer_load_unload_list() {
     let signers = result.get("signers").unwrap();
     assert!(!signers.as_array().unwrap().is_empty());
 
-    let result = sh(&format!("{cli} signer unload --name ss"));
+    let result = sh(&format!("{cli} signer unload --signer ss"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
 
@@ -300,17 +302,17 @@ fn test_signer_external() {
     let name = "ext";
     let fingerprint = "11111111";
     let r = sh(&format!(
-        "{cli} signer load-external --fingerprint {fingerprint} --name {name}"
+        "{cli} signer load-external --fingerprint {fingerprint} --signer {name}"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), name);
 
     // Some actions are not possible with the external signer
-    let r = sh_result(&format!("{cli} signer xpub --name {name} --kind bip84"));
+    let r = sh_result(&format!("{cli} signer xpub --signer {name} --kind bip84"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
-    let r = sh_result(&format!("{cli} signer sign --name {name} --pset pset"));
+    let r = sh_result(&format!("{cli} signer sign --signer {name} --pset pset"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
     let r = sh_result(&format!(
-        "{cli} signer singlesig-desc --name {name} --descriptor-blinding-key slip77 --kind wpkh"
+        "{cli} signer singlesig-desc --signer {name} --descriptor-blinding-key slip77 --kind wpkh"
     ));
     assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
 
@@ -370,34 +372,34 @@ fn test_wallet_details() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load-software --mnemonic \"{m1}\" --name s1"
+        "{cli} signer load-software --mnemonic \"{m1}\" --signer s1"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load-software --mnemonic \"{m2}\" --name s2"
+        "{cli} signer load-software --mnemonic \"{m2}\" --signer s2"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s2");
 
     // Single sig wallet
     let r = sh(&format!(
-        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"
+        "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name ss -d {desc_ss}"));
 
     let r = sh(&format!(
-        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind shwpkh"
+        "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --name sssh -d {desc_sssh}"));
 
     // Multi sig wallet
-    let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
     let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer xpub --name s2 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
@@ -433,7 +435,7 @@ fn test_wallet_details() {
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
     assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s2");
 
-    sh(&format!("{cli} signer unload --name s2"));
+    sh(&format!("{cli} signer unload --signer s2"));
     let r = sh(&format!("{cli} wallet details --name ms"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
@@ -463,12 +465,12 @@ fn test_broadcast() {
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1 "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
     let result = sh(&format!(
-        r#"{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"#
+        r#"{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"#
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
@@ -501,7 +503,7 @@ fn test_broadcast() {
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
-    let result = sh(&format!(r#"{cli} signer sign --name s1 --pset {pset}"#));
+    let result = sh(&format!(r#"{cli} signer sign --signer s1 --pset {pset}"#));
     let pset = result.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
@@ -529,12 +531,12 @@ fn test_issue() {
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
 
     let r = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1 "#
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!(
-        "{cli} signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh"
+        "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
 
@@ -586,7 +588,7 @@ fn test_issue() {
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert!(balance.get("L-BTC").unwrap().as_i64().unwrap() < 0);
 
-    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
@@ -644,7 +646,7 @@ fn test_issue() {
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     // TODO: add PSET introspection verifying there are asset metadata
-    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -655,7 +657,7 @@ fn test_issue() {
         "{cli} wallet reissue --name w1 --asset {asset} --satoshi-asset 1"
     ));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -664,7 +666,7 @@ fn test_issue() {
     let recipient = format!("--recipient burn:1:{asset}");
     let r = sh(&format!("{cli} wallet send --name w1 {recipient}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset}"));
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
     let pset = r.get("pset").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet broadcast --name w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
@@ -726,7 +728,7 @@ fn test_jade_emulator() {
     assert_eq!(identifier, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");
 
     let result = sh(&format!(
-        "{cli} signer load-jade --name emul --id {identifier}  --emulator {jade_addr}"
+        "{cli} signer load-jade --signer emul --id {identifier}  --emulator {jade_addr}"
     ));
     assert!(result.get("id").is_some());
 
@@ -793,12 +795,12 @@ fn test_commands() {
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --name ss "#
+        r#"{cli} signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --signer ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
     let result = sh(&format!(
-        "{cli} signer singlesig-desc --name ss --descriptor-blinding-key slip77 --kind wpkh"
+        "{cli} signer singlesig-desc --signer ss --descriptor-blinding-key slip77 --kind wpkh"
     ));
     let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
@@ -814,7 +816,7 @@ fn test_commands() {
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq");
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
-    let result = sh(&format!("{cli} signer xpub --name ss --kind bip84"));
+    let result = sh(&format!("{cli} signer xpub --signer ss --kind bip84"));
     let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
     assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
 
@@ -839,17 +841,17 @@ fn test_multisig() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{m1}" --name s1 "#
+        r#"{cli} signer load-software --mnemonic "{m1}" --signer s1 "#
     ));
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{m2}" --name s2 "#
+        r#"{cli} signer load-software --mnemonic "{m2}" --signer s2 "#
     ));
 
-    let r = sh(&format!("{cli} signer xpub --name s1 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
     let keyorigin_xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer xpub --name s2 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
     let keyorigin_xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
 
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
@@ -873,10 +875,10 @@ fn test_multisig() {
     ));
     let pset_u = r.get("pset").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} signer sign --name s1 --pset {pset_u}"));
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset_u}"));
     let pset_s1 = r.get("pset").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} signer sign --name s2 --pset {pset_u}"));
+    let r = sh(&format!("{cli} signer sign --signer s2 --pset {pset_u}"));
     let pset_s2 = r.get("pset").unwrap().as_str().unwrap();
 
     assert_ne!(pset_u, pset_s1);

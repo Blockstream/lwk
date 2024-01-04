@@ -75,7 +75,7 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 To see RPC data exchanged via the cli commands enable app log tracing eg:
 
 ```sh
-$ RUST_LOG=app=trace cargo run -- wallet balance --name ciao
+$ RUST_LOG=app=trace cargo run -- wallet balance --wallet ciao
 ...
 2023-11-28T09:36:18.696846Z TRACE app::client: ---> {"method":"balance","params":{"name":"ciao"},"id":2,"jsonrpc":"2.0"}
 2023-11-28T09:36:18.697675Z TRACE app::client: <--- {"result":null,"error":{"code":-32008,"message":"Wallet 'ciao' does not exist","data":{"name":"ciao"}},"id":2,"jsonrpc":"2.0"}
@@ -93,8 +93,8 @@ Load a wallet and request a balance ("stateful" request)
 
 
 ```sh
-$ cli wallet load --name custody -d "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
-$ cli wallet balance --name custody
+$ cli wallet load --wallet custody -d "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
+$ cli wallet balance --wallet custody
 ```
 
 is equivalent to:
@@ -108,8 +108,8 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 Request an address:
 
 ```sh
-$ cli wallet address --name custody
-$ cli wallet address --name custody --index 4
+$ cli wallet address --wallet custody
+$ cli wallet address --wallet custody --index 4
 ```
 
 An error test case:
@@ -136,16 +136,16 @@ cli --network testnet server start
 
 ```sh
 $ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
-$ cli signer load-software --mnemonic "$MNEMONIC" --name s1
-$ DESCRIPTOR=$(cli signer singlesig-desc --name s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
-$ cli wallet load --name w1 -d "$DESCRIPTOR"
-$ cli wallet address --name w1
+$ cli signer load-software --mnemonic "$MNEMONIC" --signer s1
+$ DESCRIPTOR=$(cli signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ cli wallet load --wallet w1 -d "$DESCRIPTOR"
+$ cli wallet address --wallet w1
 ```
 
 Send some lbtc to the address
 
 ```sh
-$ cli wallet balance --name w1
+$ cli wallet balance --wallet w1
 ```
 
 Should show a balance
@@ -156,7 +156,7 @@ You must have a loaded singlesig wallet `w1`, with the corresponding signer `w1`
 Must also have funds in the wallet.
 
 ```sh
-$ UNSIGNED_PSET=$(cli wallet send --name w1 --recipient tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg:1000:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 | jq -r .pset)
+$ UNSIGNED_PSET=$(cli wallet send --wallet w1 --recipient tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg:1000:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 | jq -r .pset)
 ```
 
 Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 is the policy asset in testnet) to the address tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg
@@ -165,12 +165,12 @@ Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3
 Sign the pset
 
 ```sh
-$ SIGNED_PSET=$(cli signer sign --name s1 --pset $UNSIGNED_PSET | jq -r .pset)
+$ SIGNED_PSET=$(cli signer sign --signer s1 --pset $UNSIGNED_PSET | jq -r .pset)
 ```
 
 Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)
 
 ```sh
-$ cli wallet broadcast --dry-run --name w1 --pset $SIGNED_PSET)
+$ cli wallet broadcast --dry-run --wallet w1 --pset $SIGNED_PSET)
 
 ```

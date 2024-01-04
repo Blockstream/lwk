@@ -241,7 +241,7 @@ pub enum SignerCommand {
 
     /// Load a software signer giving it a name
     LoadSoftware {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         #[arg(long)]
@@ -250,7 +250,7 @@ pub enum SignerCommand {
 
     /// Load a Jade signer giving it a name
     LoadJade {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         /// Identifier of the jade (20 bytes as 40 hex chars)
@@ -264,7 +264,7 @@ pub enum SignerCommand {
 
     /// Load a signer (software, serial, external) giving it a name
     LoadExternal {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         #[arg(long)]
@@ -273,7 +273,7 @@ pub enum SignerCommand {
 
     /// Unload a software signer
     Unload {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
     },
 
@@ -282,7 +282,7 @@ pub enum SignerCommand {
 
     /// Sign a transaction
     Sign {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         pset: String,
@@ -290,7 +290,7 @@ pub enum SignerCommand {
 
     ///  Prints a singlesig descriptor using this signer key
     SinglesigDesc {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         #[arg(long)]
@@ -302,7 +302,7 @@ pub enum SignerCommand {
 
     /// Get an extended public key from the signer
     Xpub {
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         #[arg(long)]
@@ -315,7 +315,7 @@ pub enum SignerCommand {
     /// For other signers this command does nothing.
     RegisterMultisig {
         /// Signer name
-        #[arg(long)]
+        #[arg(short, long)]
         name: String,
 
         /// Wallet name

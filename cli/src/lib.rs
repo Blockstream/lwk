@@ -19,7 +19,7 @@ mod schema;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let directive = if let CliCommand::Server(args::ServerArgs {
-        command: ServerCommand::Start,
+        command: ServerCommand::Start { .. },
     }) = args.command
     {
         LevelFilter::INFO.into()
@@ -71,21 +71,24 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     Ok(match args.command {
         CliCommand::Server(a) => {
             match a.command {
-                ServerCommand::Start => {
+                ServerCommand::Start {
+                    electrum_url,
+                    datadir,
+                } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let set_handler_result = ctrlc::try_set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")
                     });
 
                     // start the app with default host/port
-                    let datadir = args.datadir.unwrap_or_else(|| {
+                    let datadir = datadir.unwrap_or_else(|| {
                         Config::default_home().unwrap_or(std::path::PathBuf::from("."))
                     });
                     let mut config = match args.network {
                         Network::Mainnet => Config::default_mainnet(datadir),
                         Network::Testnet => Config::default_testnet(datadir),
                         Network::Regtest => Config::default_regtest(
-                            &args.electrum_url.ok_or_else(|| {
+                            &electrum_url.ok_or_else(|| {
                                 anyhow!("on regtest you have to specify --electrum-url")
                             })?,
                             datadir,

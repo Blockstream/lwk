@@ -19,17 +19,6 @@ pub struct Cli {
     #[structopt(short, long, default_value = "testnet")]
     pub network: Network,
 
-    /// Electrum URL, if not specified a reasonable default is specified according to the network
-    #[structopt(short, long)]
-    pub electrum_url: Option<String>,
-
-    /// Where the log file, server state, and other data goes.
-    ///
-    /// If not specified is `$HOME/.ks`.
-    /// If failing to determine the home directory the current dir `./.ks` is used
-    #[arg(long)]
-    pub datadir: Option<PathBuf>,
-
     /// If launching the server is where it listens, otherwise is where the client connects to.
     #[arg(long, default_value = "127.0.0.1:32111")]
     pub addr: SocketAddr,
@@ -84,7 +73,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start,
+                command: ServerCommand::Start { .. },
             }) | CliCommand::GenerateCompletion { .. }
         )
     }
@@ -94,7 +83,7 @@ impl CliCommand {
         !matches!(
             self,
             CliCommand::Server(crate::args::ServerArgs {
-                command: ServerCommand::Start,
+                command: ServerCommand::Start { .. },
             }) | CliCommand::GenerateCompletion { .. }
                 | CliCommand::Generate { .. }
         )
@@ -671,7 +660,18 @@ pub struct ServerArgs {
 #[derive(Debug, Subcommand)]
 pub enum ServerCommand {
     /// Start the server
-    Start,
+    Start {
+        /// Electrum URL, if not specified a reasonable default is specified according to the network
+        #[arg(short, long)]
+        electrum_url: Option<String>,
+
+        /// Where the log file, server state, and other data goes.
+        ///
+        /// If not specified is `$HOME/.ks`.
+        /// If failing to determine the home directory the current dir `./.ks` is used
+        #[arg(long)]
+        datadir: Option<PathBuf>,
+    },
 
     /// Stop the server, could be stopped also with SIGINT (ctrl-c)
     Stop,

@@ -1,4 +1,4 @@
-use crate::desc::SingleSigCTDesc;
+use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::tx::{Tx, TxIn, TxOut};
 use crate::types::{Hex, Txid};
@@ -29,7 +29,7 @@ impl Wollet {
     #[uniffi::constructor]
     pub fn new(
         network: ElementsNetwork,
-        descriptor: Arc<SingleSigCTDesc>,
+        descriptor: Arc<WolletDescriptor>,
         datadir: String,
     ) -> Result<Arc<Self>, Error> {
         let url = network.electrum_url().to_string();
@@ -39,7 +39,7 @@ impl Wollet {
             true,
             true,
             &datadir,
-            descriptor.as_str(),
+            &descriptor.to_string(),
         )?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),

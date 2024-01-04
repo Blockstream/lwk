@@ -10,13 +10,13 @@ uniffi::setup_scaffolding!();
 
 #[cfg(test)]
 mod tests {
-    use crate::{desc::SingleSigCTDesc, network::ElementsNetwork, wollet::Wollet};
+    use crate::{desc::singlesig_desc_from_mnemonic, network::ElementsNetwork, wollet::Wollet};
 
     #[test]
     fn test_ks_flow() {
         let datadir = "/tmp/.ks";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let singlesig_desc = SingleSigCTDesc::new(mnemonic.to_string()).unwrap();
+        let singlesig_desc = singlesig_desc_from_mnemonic(mnemonic.to_string()).unwrap();
         let wollet = Wollet::new(
             ElementsNetwork::LiquidTestnet,
             singlesig_desc.clone(),

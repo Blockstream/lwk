@@ -22,6 +22,12 @@ impl From<WalletTx> for Transaction {
     }
 }
 
+impl From<elements::Transaction> for Transaction {
+    fn from(inner: elements::Transaction) -> Self {
+        Self { inner }
+    }
+}
+
 impl Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner.serialize().to_hex())

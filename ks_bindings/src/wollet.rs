@@ -1,7 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
-use crate::transaction::Transaction;
 use crate::types::{Hex, Txid};
+use crate::wallet_tx::WalletTx;
 use crate::Error;
 use common::Signer;
 use elements::pset::serialize::Deserialize;
@@ -71,13 +71,13 @@ impl Wollet {
         Ok(m)
     }
 
-    pub fn transactions(&self) -> Result<Vec<Arc<Transaction>>, Error> {
+    pub fn transactions(&self) -> Result<Vec<Arc<WalletTx>>, Error> {
         Ok(self
             .inner
             .lock()?
             .transactions()?
             .into_iter()
-            .map(Into::into) // TODO: atm it is loosing wallet info
+            .map(Into::into)
             .map(Arc::new)
             .collect())
     }

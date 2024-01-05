@@ -10,6 +10,7 @@ uniffi = { version = "0.25.3" }
 wollet = { path = "../wollet" }
 common = { path = "../common" }
 signer = { path = "../signer" }
+serde_json = "1"
 
 [build-dependencies]
 uniffi = { version = "0.25.3", features = ["build"] }

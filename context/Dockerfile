@@ -23,3 +23,5 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 COPY env.sh /env.sh
+
+RUN cargo install just # move up when an upper layer is modified

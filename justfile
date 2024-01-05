@@ -9,3 +9,9 @@ test-bindings: build-bindings
 
 env-bindings: build-bindings
     PYTHONPATH=target/debug/bindings/ python3
+
+build-docker:
+    cd context && docker build . -t xenoky/ks-builder && cd -
+
+push-docker: build-docker
+    docker push xenoky/ks-builder # require credentials

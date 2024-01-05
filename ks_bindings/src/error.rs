@@ -1,5 +1,7 @@
 use std::sync::{MutexGuard, PoisonError};
 
+use elements::pset::ParseError;
+
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum Error {
     #[error("{msg}")]
@@ -7,12 +9,23 @@ pub enum Error {
 
     #[error("Poison error: {msg}")]
     PoisonError { msg: String },
+
+    #[error("PsetParseError: {msg}")]
+    PsetParseError { msg: String },
 }
 
 impl From<wollet::Error> for Error {
     fn from(value: wollet::Error) -> Self {
         Error::Generic {
-            msg: value.to_string(),
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
+impl From<ParseError> for Error {
+    fn from(value: ParseError) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
         }
     }
 }

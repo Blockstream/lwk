@@ -1,6 +1,7 @@
 mod desc;
 mod error;
 mod network;
+pub mod pset;
 pub mod tx;
 pub mod types;
 mod wollet;

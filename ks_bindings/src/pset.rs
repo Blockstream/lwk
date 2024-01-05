@@ -1,9 +1,5 @@
-use elements::{
-    hex::ToHex,
-    pset::{serialize::Serialize, PartiallySignedTransaction},
-};
-
-use crate::Error;
+use crate::{transaction::Transaction, Error};
+use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -27,9 +23,9 @@ impl Pset {
         Ok(Arc::new(Pset { inner }))
     }
 
-    // TODO return a Tx object
-    pub fn extract_tx(&self) -> Result<String, Error> {
-        Ok(self.inner.extract_tx()?.serialize().to_hex())
+    pub fn extract_tx(&self) -> Result<Arc<Transaction>, Error> {
+        let tx: Transaction = self.inner.extract_tx()?.into();
+        Ok(Arc::new(tx))
     }
 }
 
@@ -44,7 +40,7 @@ mod tests {
 
         let tx_expected =
             include_str!("../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
-        let tx_string = pset.extract_tx().unwrap();
+        let tx_string = pset.extract_tx().unwrap().to_string();
         assert_eq!(tx_expected, tx_string);
 
         assert_eq!(pset_string, pset.to_string());

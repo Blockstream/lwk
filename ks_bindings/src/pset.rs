@@ -1,4 +1,7 @@
-use elements::pset::PartiallySignedTransaction;
+use elements::{
+    hex::ToHex,
+    pset::{serialize::Serialize, PartiallySignedTransaction},
+};
 
 use crate::Error;
 use std::{fmt::Display, sync::Arc};
@@ -23,6 +26,11 @@ impl Pset {
         let inner: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(Arc::new(Pset { inner }))
     }
+
+    // TODO return a Tx object
+    pub fn extract_tx(&self) -> Result<String, Error> {
+        Ok(self.inner.extract_tx()?.serialize().to_hex())
+    }
 }
 
 #[cfg(test)]
@@ -33,6 +41,12 @@ mod tests {
     fn pset_roundtrip() {
         let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
         let pset = Pset::new(pset_string.clone()).unwrap();
+
+        let tx_expected =
+            include_str!("../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
+        let tx_string = pset.extract_tx().unwrap();
+        assert_eq!(tx_expected, tx_string);
+
         assert_eq!(pset_string, pset.to_string());
     }
 }

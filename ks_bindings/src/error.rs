@@ -9,9 +9,6 @@ pub enum Error {
 
     #[error("Poison error: {msg}")]
     PoisonError { msg: String },
-
-    #[error("PsetParseError: {msg}")]
-    PsetParseError { msg: String },
 }
 
 impl From<wollet::Error> for Error {
@@ -24,6 +21,14 @@ impl From<wollet::Error> for Error {
 
 impl From<ParseError> for Error {
     fn from(value: ParseError) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
+impl From<elements::pset::Error> for Error {
+    fn from(value: elements::pset::Error) -> Self {
         Error::Generic {
             msg: format!("{:?}", value),
         }

@@ -100,3 +100,8 @@ doc:
     RUSTDOCFLAGS: "-D warnings"
   script:
     - cargo doc --no-deps
+
+bindings:
+  extends: .base
+  script:
+    - just test-bindings

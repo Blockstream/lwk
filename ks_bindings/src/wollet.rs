@@ -1,16 +1,13 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
-use crate::tx::{Tx, TxIn, TxOut};
+use crate::transaction::Transaction;
 use crate::types::{Hex, Txid};
 use crate::Error;
 use common::Signer;
+use elements::pset::serialize::Deserialize;
 use elements::{
     hex::ToHex,
-    pset::{
-        serialize::{Deserialize, Serialize},
-        PartiallySignedTransaction,
-    },
-    Transaction,
+    pset::{serialize::Serialize, PartiallySignedTransaction},
 };
 use std::{
     collections::HashMap,
@@ -74,40 +71,14 @@ impl Wollet {
         Ok(m)
     }
 
-    pub fn transaction(&self, txid: Txid) -> Result<Option<Tx>, Error> {
-        Ok(self.transactions()?.into_iter().find(|e| e.txid == txid))
-    }
-
-    pub fn transactions(&self) -> Result<Vec<Tx>, Error> {
+    pub fn transactions(&self) -> Result<Vec<Arc<Transaction>>, Error> {
         Ok(self
             .inner
             .lock()?
             .transactions()?
-            .iter()
-            .map(|t| Tx {
-                txid: t.tx.txid().into(),
-                inputs: t
-                    .inputs
-                    .iter()
-                    .map(|i| {
-                        i.as_ref().map(|i| TxIn {
-                            value: i.unblinded.value,
-                            prevout_txid: i.outpoint.txid.into(),
-                            prevout_vout: i.outpoint.vout,
-                        })
-                    })
-                    .collect(),
-                outputs: t
-                    .outputs
-                    .iter()
-                    .map(|o| {
-                        o.as_ref().map(|o| TxOut {
-                            value: o.unblinded.value,
-                            script_pubkey: o.script_pubkey.as_bytes().into(),
-                        })
-                    })
-                    .collect(),
-            })
+            .into_iter()
+            .map(Into::into) // TODO: atm it is loosing wallet info
+            .map(Arc::new)
             .collect())
     }
 
@@ -141,7 +112,7 @@ impl Wollet {
     }
 
     pub fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
-        let tx = match Transaction::deserialize(tx_hex.as_ref()) {
+        let tx = match elements::Transaction::deserialize(tx_hex.as_ref()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };

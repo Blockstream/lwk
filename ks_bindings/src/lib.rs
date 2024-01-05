@@ -2,7 +2,7 @@ mod desc;
 mod error;
 mod network;
 pub mod pset;
-pub mod tx;
+pub mod transaction;
 pub mod types;
 mod wollet;
 
@@ -31,20 +31,20 @@ mod tests {
         let _ = wollet.sync();
         let balance = wollet.balance();
         println!("{:?}", balance);
-        let txs = wollet.transactions().unwrap();
-        for tx in txs {
-            for output in tx.outputs {
-                let script_pubkey = match output.as_ref() {
-                    Some(out) => out.script_pubkey.to_string(),
-                    None => "Not a spendable scriptpubkey".to_string(),
-                };
-                let value = match output.as_ref() {
-                    Some(out) => out.value,
-                    None => 0,
-                };
-                println!("script_pubkey: {:?}, value: {}", script_pubkey, value)
-            }
-        }
+        // let txs = wollet.transactions().unwrap();
+        // for tx in txs {
+        //     for output in tx.outputs {
+        //         let script_pubkey = match output.as_ref() {
+        //             Some(out) => out.script_pubkey.to_string(),
+        //             None => "Not a spendable scriptpubkey".to_string(),
+        //         };
+        //         let value = match output.as_ref() {
+        //             Some(out) => out.value,
+        //             None => 0,
+        //         };
+        //         println!("script_pubkey: {:?}, value: {}", script_pubkey, value)
+        //     }
+        // }
 
         let out_address = "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x";
         let satoshis = 900;

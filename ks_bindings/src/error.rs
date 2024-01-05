@@ -35,6 +35,14 @@ impl From<elements::pset::Error> for Error {
     }
 }
 
+impl From<elements::encode::Error> for Error {
+    fn from(value: elements::encode::Error) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

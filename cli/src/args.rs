@@ -20,8 +20,8 @@ pub struct Cli {
     pub network: Network,
 
     /// If launching the server is where it listens, otherwise is where the client connects to.
-    #[arg(long, default_value = "127.0.0.1:32111")]
-    pub addr: SocketAddr,
+    #[arg(long)]
+    pub addr: Option<SocketAddr>,
 
     /// The sub command
     #[command(subcommand)]

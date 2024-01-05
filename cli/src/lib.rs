@@ -1,7 +1,11 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
-use std::{sync::mpsc::RecvTimeoutError, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::mpsc::RecvTimeoutError,
+    time::Duration,
+};
 
 use anyhow::{anyhow, Context};
 use app::Config;
@@ -43,15 +47,15 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     tracing::info!("CLI initialized with args: {:?}", args);
 
     // TODO: improve network types conversion or comparison
-    let network = match args.network {
-        Network::Mainnet => "liquid",
-        Network::Testnet => "liquid-testnet",
-        Network::Regtest => "liquid-regtest",
+    let (network, default_port) = match args.network {
+        Network::Mainnet => ("liquid", 32110),
+        Network::Testnet => ("liquid-testnet", 32111),
+        Network::Regtest => ("liquid-regtest", 32112),
     };
 
-    // TODO: make addr an option
-    // if None, use a default derived from the network
-    let addr = args.addr;
+    let addr = args
+        .addr
+        .unwrap_or_else(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), default_port));
     let client = app::Client::new(addr)?;
 
     // verify the server is up if needed

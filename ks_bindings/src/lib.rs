@@ -7,7 +7,6 @@ use std::{
 
 use common::Signer;
 use elements::{
-    hashes::hex::FromHex,
     hex::ToHex,
     pset::{
         serialize::{Deserialize, Serialize},
@@ -15,40 +14,16 @@ use elements::{
     },
     Transaction,
 };
-// use wollet::elements_miniscript::descriptor;
+
+mod error;
+mod network;
+pub mod types;
+
+pub use error::Error;
+use network::ElementsNetwork;
+use types::{Hex, Txid};
 
 uniffi::setup_scaffolding!();
-
-#[derive(uniffi::Enum)]
-pub enum ElementsNetwork {
-    Liquid,
-    LiquidTestnet,
-    ElementsRegtest { policy_asset: String },
-}
-impl From<ElementsNetwork> for wollet::ElementsNetwork {
-    fn from(value: ElementsNetwork) -> Self {
-        match value {
-            ElementsNetwork::Liquid => wollet::ElementsNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => wollet::ElementsNetwork::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => todo!(),
-        }
-    }
-}
-
-#[derive(uniffi::Error, thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{msg}")]
-    Generic { msg: String },
-    // TODO change the lock().unwraps with lock()? by having a variant here
-}
-
-impl From<wollet::Error> for Error {
-    fn from(value: wollet::Error) -> Self {
-        Error::Generic {
-            msg: value.to_string(),
-        }
-    }
-}
 
 #[derive(uniffi::Record)]
 pub struct Tx {
@@ -68,59 +43,6 @@ pub struct TxIn {
 pub struct TxOut {
     script_pubkey: Hex,
     value: u64,
-}
-
-#[derive(PartialEq, Eq)]
-pub struct Txid {
-    val: String,
-}
-impl Txid {
-    pub fn txid(&self) -> elements::Txid {
-        elements::Txid::from_str(&self.val).expect("enforced by invariants")
-    }
-}
-uniffi::custom_type!(Txid, String);
-impl UniffiCustomTypeConverter for Txid {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
-        elements::Txid::from_str(&val)?;
-        Ok(Txid { val })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.val
-    }
-}
-impl From<elements::Txid> for Txid {
-    fn from(value: elements::Txid) -> Self {
-        Txid {
-            val: value.to_string(),
-        }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub struct Hex {
-    val: String,
-}
-impl Hex {
-    pub fn bytes(&self) -> Vec<u8> {
-        Vec::<u8>::from_hex(&self.val).expect("enforced by invariants")
-    }
-}
-uniffi::custom_type!(Hex, String);
-impl UniffiCustomTypeConverter for Hex {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
-        Vec::<u8>::from_hex(&val)?;
-        Ok(Hex { val })
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.val
-    }
 }
 
 #[derive(uniffi::Object)]
@@ -160,45 +82,40 @@ pub struct Wollet {
 #[uniffi::export]
 impl Wollet {
     #[uniffi::constructor]
-    fn new(
+    pub fn new(
         network: ElementsNetwork,
         descriptor: Arc<SingleSigCTDesc>,
         datadir: String,
     ) -> Result<Arc<Self>, Error> {
-        let url = match network {
-            ElementsNetwork::Liquid => "blockstream.info:995",
-            ElementsNetwork::LiquidTestnet => "blockstream.info:465",
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => todo!(),
-        };
+        let url = network.electrum_url().to_string();
         let inner =
-            wollet::Wollet::new(network.into(), url, true, true, &datadir, &descriptor.val)?;
+            wollet::Wollet::new(network.into(), &url, true, true, &datadir, &descriptor.val)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))
     }
 
-    fn descriptor(&self) -> Result<String, Error> {
-        Ok(self.inner.lock().unwrap().descriptor().to_string())
+    pub fn descriptor(&self) -> Result<String, Error> {
+        Ok(self.inner.lock()?.descriptor().to_string())
     }
 
-    fn address(&self, index: Option<u32>) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+    pub fn address(&self, index: Option<u32>) -> Result<String, Error> {
+        let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
         Ok(address.address().to_string())
     }
 
-    fn sync(&self) -> Result<(), Error> {
-        let mut wollet = self.inner.lock().unwrap();
+    pub fn sync(&self) -> Result<(), Error> {
+        let mut wollet = self.inner.lock()?;
         wollet.sync_tip()?;
         wollet.sync_txs()?;
         Ok(())
     }
 
-    fn balance(&self) -> Result<HashMap<String, u64>, Error> {
+    pub fn balance(&self) -> Result<HashMap<String, u64>, Error> {
         let m: HashMap<_, _> = self
             .inner
-            .lock()
-            .unwrap()
+            .lock()?
             .balance()?
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
@@ -206,21 +123,18 @@ impl Wollet {
         Ok(m)
     }
 
-    fn transaction(&self, txid: Txid) -> Result<Option<Tx>, Error> {
+    pub fn transaction(&self, txid: Txid) -> Result<Option<Tx>, Error> {
         Ok(self.transactions()?.into_iter().find(|e| e.txid == txid))
     }
 
-    fn transactions(&self) -> Result<Vec<Tx>, Error> {
+    pub fn transactions(&self) -> Result<Vec<Tx>, Error> {
         Ok(self
             .inner
-            .lock()
-            .unwrap()
+            .lock()?
             .transactions()?
             .iter()
             .map(|t| Tx {
-                txid: Txid {
-                    val: t.tx.txid().to_string(),
-                },
+                txid: t.tx.txid().into(),
                 inputs: t
                     .inputs
                     .iter()
@@ -238,9 +152,7 @@ impl Wollet {
                     .map(|o| {
                         o.as_ref().map(|o| TxOut {
                             value: o.unblinded.value,
-                            script_pubkey: Hex {
-                                val: o.script_pubkey.as_bytes().to_hex(),
-                            },
+                            script_pubkey: o.script_pubkey.as_bytes().into(),
                         })
                     })
                     .collect(),
@@ -248,19 +160,19 @@ impl Wollet {
             .collect())
     }
 
-    fn create_lbtc_tx(
+    pub fn create_lbtc_tx(
         &self,
         out_address: String,
         satoshis: u64,
         fee_rate: f32,
     ) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+        let wollet = self.inner.lock()?;
         let pset = wollet.send_lbtc(satoshis, &out_address, Some(fee_rate))?;
         Ok(pset.to_string())
     }
 
-    fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
-        let wollet = self.inner.lock().unwrap();
+    pub fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
+        let wollet = self.inner.lock()?;
         let mut pset = match PartiallySignedTransaction::from_str(&pset_string) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
@@ -277,14 +189,14 @@ impl Wollet {
         Ok(tx)
     }
 
-    fn broadcast(&self, tx_hex: String) -> Result<Txid, Error> {
-        let wollet = self.inner.lock().unwrap();
-        let tx = match Transaction::deserialize(&Hex { val: tx_hex }.bytes()) {
+    pub fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
+        let tx = match Transaction::deserialize(tx_hex.as_ref()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };
+        let wollet = self.inner.lock()?;
         match wollet.broadcast(&tx) {
-            Ok(txid) => Ok(Txid { val: txid.to_hex() }),
+            Ok(txid) => Ok(txid.into()),
             Err(e) => Err(Error::from(e)),
         }
     }
@@ -317,8 +229,8 @@ mod tests {
         for tx in txs {
             for output in tx.outputs {
                 let script_pubkey = match output.as_ref() {
-                    Some(out) => &out.script_pubkey.val,
-                    None => "Not a spendable scriptpubkey",
+                    Some(out) => out.script_pubkey.to_string(),
+                    None => "Not a spendable scriptpubkey".to_string(),
                 };
                 let value = match output.as_ref() {
                     Some(out) => out.value,
@@ -335,7 +247,7 @@ mod tests {
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();
         let signed_hex = wollet.sign_tx(mnemonic.to_string(), pset_string).unwrap();
-        let txid = wollet.broadcast(signed_hex).unwrap();
-        println!("BROADCASTED TX!\nTXID: {:?}", txid.val);
+        let txid = wollet.broadcast(signed_hex.parse().unwrap()).unwrap();
+        println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

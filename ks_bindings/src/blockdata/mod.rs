@@ -3,4 +3,5 @@
 //! This module defines structures contained in the Elements Blockchain
 //!
 
+pub mod script;
 pub mod transaction;

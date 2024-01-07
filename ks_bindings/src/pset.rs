@@ -1,4 +1,4 @@
-use crate::{transaction::Transaction, Error};
+use crate::{Error, Transaction};
 use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 

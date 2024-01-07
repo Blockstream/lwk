@@ -36,7 +36,7 @@ impl Display for Transaction {
 
 #[uniffi::export]
 impl Transaction {
-    /// Construct a Watch-Only wallet object
+    /// Construct a Transaction object
     #[uniffi::constructor]
     pub fn new(hex: Hex) -> Result<Arc<Self>, Error> {
         let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;

@@ -1,12 +1,13 @@
+pub mod blockdata;
 mod desc;
 mod error;
 mod network;
 pub mod pset;
-pub mod transaction;
 pub mod types;
 mod wallet_tx;
 mod wollet;
 
+pub use blockdata::transaction::Transaction;
 pub use error::Error;
 uniffi::setup_scaffolding!();
 

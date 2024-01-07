@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::transaction::Transaction;
+use crate::Transaction;
 
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]

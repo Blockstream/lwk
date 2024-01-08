@@ -35,6 +35,10 @@ impl WalletTx {
         self.inner.fee
     }
 
+    pub fn type_(&self) -> String {
+        self.inner.type_.clone()
+    }
+
     pub fn timestamp(&self) -> Option<u32> {
         self.inner.timestamp
     }
@@ -56,4 +60,60 @@ impl WalletTx {
     }
 }
 
-// TODO add basic test
+#[cfg(test)]
+mod tests {
+    use crate::WalletTx;
+    use elements::{hex::FromHex, pset::serialize::Deserialize};
+    use std::collections::HashMap;
+
+    #[test]
+    fn wallet_tx() {
+        let tx_out = wollet::WalletTxOut {
+            outpoint: elements::OutPoint::null(),
+            script_pubkey: elements::Script::new(),
+            height: Some(1),
+            unblinded: elements::TxOutSecrets::new(
+                elements::AssetId::default(),
+                elements::confidential::AssetBlindingFactor::zero(),
+                1000,
+                elements::confidential::ValueBlindingFactor::zero(),
+            ),
+            wildcard_index: 10,
+            ext_int: wollet::Chain::External,
+        };
+
+        let tx_hex =
+            include_str!("../../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
+        let tx_bytes = Vec::<u8>::from_hex(&tx_hex).unwrap();
+        let tx: elements::Transaction = elements::Transaction::deserialize(&tx_bytes).unwrap();
+
+        let el = wollet::WalletTx {
+            tx: tx.clone(),
+            height: Some(4),
+            balance: HashMap::new(),
+            fee: 23,
+            type_: "type".to_string(),
+            timestamp: Some(124),
+            inputs: vec![Some(tx_out.clone())],
+            outputs: vec![None, Some(tx_out.clone())],
+        };
+
+        let wallet_tx: WalletTx = el.clone().into();
+
+        assert_eq!(*wallet_tx.tx(), tx.into());
+
+        assert_eq!(wallet_tx.height(), Some(4));
+
+        assert_eq!(wallet_tx.balance(), HashMap::new());
+
+        assert_eq!(wallet_tx.fee(), 23);
+
+        assert_eq!(wallet_tx.type_(), "type");
+
+        assert_eq!(wallet_tx.timestamp(), Some(124));
+
+        assert_eq!(wallet_tx.inputs().len(), 1);
+
+        assert_eq!(wallet_tx.outputs().len(), 2);
+    }
+}

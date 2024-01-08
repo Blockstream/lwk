@@ -1,6 +1,6 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
-use crate::types::Hex;
+use crate::types::{AssetId, Hex};
 use crate::wallet_tx::WalletTx;
 use crate::{Error, Txid};
 use common::Signer;
@@ -60,13 +60,13 @@ impl Wollet {
         Ok(())
     }
 
-    pub fn balance(&self) -> Result<HashMap<String, u64>, Error> {
+    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
         let m: HashMap<_, _> = self
             .inner
             .lock()?
             .balance()?
             .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
+            .map(|(k, v)| (k.into(), v))
             .collect();
         Ok(m)
     }

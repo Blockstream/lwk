@@ -4,7 +4,7 @@ use elements::hex::ToHex;
 
 use crate::UniffiCustomTypeConverter;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash)]
 pub struct AssetId {
     inner: elements::AssetId,
 }

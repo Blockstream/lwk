@@ -1,0 +1,63 @@
+use crate::{types::Txid, Error};
+use std::{fmt::Display, sync::Arc};
+
+#[derive(uniffi::Object)]
+#[uniffi::export(Display)]
+pub struct OutPoint {
+    inner: elements::OutPoint,
+}
+
+impl From<elements::OutPoint> for OutPoint {
+    fn from(inner: elements::OutPoint) -> Self {
+        Self { inner }
+    }
+}
+
+impl Display for OutPoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner.to_string())
+    }
+}
+
+#[uniffi::export]
+impl OutPoint {
+    /// Construct an OutPoint object
+    #[uniffi::constructor]
+    pub fn new(s: String) -> Result<Arc<Self>, Error> {
+        let inner: elements::OutPoint = s.parse()?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    pub fn txid(&self) -> Txid {
+        self.inner.txid.into()
+    }
+
+    pub fn vout(&self) -> u32 {
+        self.inner.vout
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::OutPoint;
+    use std::str::FromStr;
+
+    #[test]
+    fn out_point() {
+        let expected_txid = "0000000000000000000000000000000000000000000000000000000000000001";
+        let expected_vout = 1;
+        let expected = format!("[elements]{expected_txid}:{expected_vout}");
+        let out_point_elements = elements::OutPoint::new(
+            elements::Txid::from_str(expected_txid).unwrap(),
+            expected_vout,
+        );
+
+        assert_eq!(expected, out_point_elements.to_string());
+        let out_point: OutPoint = out_point_elements.into();
+        assert_eq!(expected, out_point.to_string());
+
+        // assert_eq!(expected_txid, out_point.txid().to_string()); // TODO make Txid Object
+
+        assert_eq!(expected_vout, out_point.vout());
+    }
+}

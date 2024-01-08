@@ -76,9 +76,14 @@ impl Wollet {
         self.config.policy_asset()
     }
 
-    /// Get the wallet descriptor
+    /// Get a reference of the wallet descriptor
     pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
         self.descriptor.as_ref()
+    }
+
+    /// Get a copy of the wallet descriptor
+    pub fn wollet_descriptor(&self) -> WolletDescriptor {
+        self.descriptor.clone()
     }
 
     /// Sync the wallet transactions

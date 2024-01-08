@@ -9,6 +9,12 @@ pub struct WolletDescriptor {
     inner: wollet::WolletDescriptor,
 }
 
+impl From<wollet::WolletDescriptor> for WolletDescriptor {
+    fn from(inner: wollet::WolletDescriptor) -> Self {
+        Self { inner }
+    }
+}
+
 impl WolletDescriptor {
     #[uniffi::constructor]
     pub fn new(descriptor: String) -> Result<Arc<Self>, Error> {

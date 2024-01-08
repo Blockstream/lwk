@@ -43,8 +43,8 @@ impl Wollet {
         }))
     }
 
-    pub fn descriptor(&self) -> Result<String, Error> {
-        Ok(self.inner.lock()?.descriptor().to_string())
+    pub fn descriptor(&self) -> Result<Arc<WolletDescriptor>, Error> {
+        Ok(Arc::new(self.inner.lock()?.wollet_descriptor().into()))
     }
 
     pub fn address(&self, index: Option<u32>) -> Result<Arc<Address>, Error> {

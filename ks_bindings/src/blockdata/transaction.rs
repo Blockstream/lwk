@@ -43,4 +43,31 @@ impl Transaction {
     pub fn txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.txid().into())
     }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        elements::Transaction::serialize(&self.inner)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use elements::hex::ToHex;
+
+    use super::Transaction;
+
+    #[test]
+    fn transaction() {
+        let tx_expected =
+            include_str!("../../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
+        let tx = Transaction::new(tx_expected.parse().unwrap()).unwrap();
+
+        assert_eq!(tx_expected, tx.to_string());
+
+        assert_eq!(
+            tx.txid().to_string(),
+            "954f32449d00a9de3c42758dedee895c88ea417cb72999738b2631bcc00e13ad"
+        );
+
+        assert_eq!(tx.bytes().to_hex(), tx_expected);
+    }
 }

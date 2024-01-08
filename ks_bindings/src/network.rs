@@ -1,5 +1,6 @@
 use crate::types::AssetId;
 
+/// Possible valid networks
 #[derive(uniffi::Enum, Debug)]
 pub enum ElementsNetwork {
     Liquid,

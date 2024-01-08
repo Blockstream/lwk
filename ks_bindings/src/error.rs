@@ -2,6 +2,7 @@ use std::sync::{MutexGuard, PoisonError};
 
 use elements::pset::ParseError;
 
+/// Possible errors emitted
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum Error {
     #[error("{msg}")]

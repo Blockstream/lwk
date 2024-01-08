@@ -2,7 +2,7 @@ pub mod blockdata;
 mod desc;
 mod error;
 mod network;
-pub mod pset;
+mod pset;
 pub mod types;
 mod wallet_tx;
 mod wollet;
@@ -11,7 +11,13 @@ pub use blockdata::address::Address;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::Transaction;
+pub use blockdata::tx_out_secrets::TxOutSecrets;
 pub use blockdata::txid::Txid;
+
+pub use desc::WolletDescriptor;
+pub use network::ElementsNetwork;
+pub use pset::Pset;
+pub use wollet::Wollet;
 
 pub use error::Error;
 uniffi::setup_scaffolding!();

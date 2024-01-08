@@ -2,6 +2,7 @@ use std::{fmt, str::FromStr, sync::Arc};
 
 use crate::Error;
 
+/// The output descriptors
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct WolletDescriptor {

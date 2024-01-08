@@ -4,6 +4,9 @@ use elements::{hashes::hex::FromHex, hex::ToHex};
 
 use crate::UniffiCustomTypeConverter;
 
+/// A valid hex string.
+///
+/// Even number of characters and only numerical and from 'a' to 'e'
 #[derive(PartialEq, Eq)]
 pub struct Hex {
     inner: Vec<u8>,

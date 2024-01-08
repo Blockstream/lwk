@@ -15,6 +15,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+/// A Watch-Only wallet
 #[derive(uniffi::Object)]
 pub struct Wollet {
     inner: Mutex<wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex

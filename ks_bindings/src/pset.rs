@@ -2,6 +2,7 @@ use crate::{Error, Transaction};
 use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
+/// Partially Signed Elements Transaction
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Pset {

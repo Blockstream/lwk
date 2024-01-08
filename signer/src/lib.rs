@@ -5,6 +5,7 @@
 mod software;
 
 pub use crate::software::{NewError, SignError, SwSigner};
+pub use bip39;
 
 use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;

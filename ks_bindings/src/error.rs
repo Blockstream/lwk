@@ -68,6 +68,14 @@ impl From<elements::AddressError> for Error {
     }
 }
 
+impl From<signer::bip39::Error> for Error {
+    fn from(value: signer::bip39::Error) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

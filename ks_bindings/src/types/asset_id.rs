@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use elements::hex::ToHex;
 
@@ -7,6 +7,12 @@ use crate::UniffiCustomTypeConverter;
 #[derive(PartialEq, Eq, Debug, Hash)]
 pub struct AssetId {
     inner: elements::AssetId,
+}
+
+impl Display for AssetId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
 }
 
 impl From<elements::AssetId> for AssetId {

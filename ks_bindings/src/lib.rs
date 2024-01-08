@@ -15,6 +15,7 @@ pub use blockdata::transaction::Transaction;
 pub use blockdata::tx_out_secrets::TxOutSecrets;
 pub use blockdata::txid::Txid;
 
+pub use chain::Chain;
 pub use desc::WolletDescriptor;
 pub use network::ElementsNetwork;
 pub use pset::Pset;

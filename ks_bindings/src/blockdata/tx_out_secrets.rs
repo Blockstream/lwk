@@ -1,6 +1,6 @@
 use crate::types::{AssetId, Hex};
 
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, PartialEq, Eq, Debug)]
 pub struct TxOutSecrets {
     inner: elements::TxOutSecrets,
 }
@@ -49,9 +49,7 @@ mod tests {
             1000,
             elements::confidential::ValueBlindingFactor::zero(),
         );
-        let tx_out_secrets = super::TxOutSecrets {
-            inner: elements_tx_out_secrets,
-        };
+        let tx_out_secrets: crate::TxOutSecrets = elements_tx_out_secrets.into();
 
         assert_eq!(tx_out_secrets.value(), 1000);
         assert_eq!(

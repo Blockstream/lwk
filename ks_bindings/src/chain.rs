@@ -1,5 +1,5 @@
 /// Wallet chain
-#[derive(uniffi::Enum, Debug)]
+#[derive(uniffi::Enum, Debug, PartialEq, Eq)]
 pub enum Chain {
     /// External address, shown when asked for a payment.
     /// Wallet having a single descriptor are considered External

@@ -9,3 +9,4 @@ pub mod script;
 pub mod transaction;
 pub mod tx_out_secrets;
 pub mod txid;
+pub mod wallet_tx_out;

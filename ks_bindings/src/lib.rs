@@ -1,4 +1,5 @@
 pub mod blockdata;
+mod chain;
 mod desc;
 mod error;
 mod network;

@@ -20,7 +20,7 @@ mod util;
 mod wollet;
 
 pub use crate::config::ElementsNetwork;
-pub use crate::descriptor::WolletDescriptor;
+pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
 pub use crate::model::{
     AddressResult, IssuanceDetails, UnvalidatedAddressee, WalletTx, WalletTxOut,

@@ -59,6 +59,14 @@ impl From<elements::hashes::hex::Error> for Error {
     }
 }
 
+impl From<elements::AddressError> for Error {
+    fn from(value: elements::AddressError) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

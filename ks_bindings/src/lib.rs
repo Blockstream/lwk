@@ -7,6 +7,7 @@ pub mod types;
 mod wallet_tx;
 mod wollet;
 
+pub use blockdata::address::Address;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::Transaction;
@@ -33,7 +34,7 @@ mod tests {
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
-        assert_eq!(expected_address_0, address_0);
+        assert_eq!(expected_address_0, address_0.to_string());
         let _ = wollet.sync();
         let balance = wollet.balance();
         println!("{:?}", balance);

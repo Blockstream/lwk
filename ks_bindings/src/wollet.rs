@@ -2,7 +2,7 @@ use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::types::{AssetId, Hex};
 use crate::wallet_tx::WalletTx;
-use crate::{Error, Txid};
+use crate::{Address, Error, Txid};
 use common::Signer;
 use elements::pset::serialize::Deserialize;
 use elements::{
@@ -47,10 +47,11 @@ impl Wollet {
         Ok(self.inner.lock()?.descriptor().to_string())
     }
 
-    pub fn address(&self, index: Option<u32>) -> Result<String, Error> {
+    pub fn address(&self, index: Option<u32>) -> Result<Arc<Address>, Error> {
         let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
-        Ok(address.address().to_string())
+        // TODO return also index
+        Ok(Arc::new(address.address().clone().into()))
     }
 
     pub fn sync(&self) -> Result<(), Error> {

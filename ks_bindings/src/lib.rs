@@ -10,6 +10,7 @@ mod wollet;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::Transaction;
+pub use blockdata::txid::Txid;
 
 pub use error::Error;
 uniffi::setup_scaffolding!();

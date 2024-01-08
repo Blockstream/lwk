@@ -6,8 +6,6 @@
 
 mod asset_id;
 mod hex;
-mod txid;
 
 pub use asset_id::AssetId;
 pub use hex::Hex;
-pub use txid::Txid;

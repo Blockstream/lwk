@@ -6,3 +6,4 @@
 pub mod out_point;
 pub mod script;
 pub mod transaction;
+pub mod txid;

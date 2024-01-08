@@ -1,8 +1,8 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
-use crate::types::{Hex, Txid};
+use crate::types::Hex;
 use crate::wallet_tx::WalletTx;
-use crate::Error;
+use crate::{Error, Txid};
 use common::Signer;
 use elements::pset::serialize::Deserialize;
 use elements::{
@@ -111,14 +111,14 @@ impl Wollet {
         Ok(tx)
     }
 
-    pub fn broadcast(&self, tx_hex: Hex) -> Result<Txid, Error> {
+    pub fn broadcast(&self, tx_hex: Hex) -> Result<Arc<Txid>, Error> {
         let tx = match elements::Transaction::deserialize(tx_hex.as_ref()) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),
         };
         let wollet = self.inner.lock()?;
         match wollet.broadcast(&tx) {
-            Ok(txid) => Ok(txid.into()),
+            Ok(txid) => Ok(Arc::new(txid.into())),
             Err(e) => Err(Error::from(e)),
         }
     }

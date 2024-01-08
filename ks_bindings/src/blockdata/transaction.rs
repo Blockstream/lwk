@@ -4,10 +4,7 @@ use elements::{
 };
 use wollet::WalletTx;
 
-use crate::{
-    types::{Hex, Txid},
-    Error,
-};
+use crate::{types::Hex, Error, Txid};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -43,7 +40,7 @@ impl Transaction {
         Ok(Arc::new(Self { inner }))
     }
 
-    pub fn txid(&self) -> Txid {
-        self.inner.txid().into()
+    pub fn txid(&self) -> Arc<Txid> {
+        Arc::new(self.inner.txid().into())
     }
 }

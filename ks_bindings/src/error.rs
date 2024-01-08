@@ -51,6 +51,14 @@ impl From<elements::bitcoin::transaction::ParseOutPointError> for Error {
     }
 }
 
+impl From<elements::hashes::hex::Error> for Error {
+    fn from(value: elements::hashes::hex::Error) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

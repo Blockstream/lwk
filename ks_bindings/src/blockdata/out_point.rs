@@ -1,4 +1,4 @@
-use crate::{types::Txid, Error};
+use crate::{Error, Txid};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -15,7 +15,7 @@ impl From<elements::OutPoint> for OutPoint {
 
 impl Display for OutPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.to_string())
+        write!(f, "{}", self.inner)
     }
 }
 
@@ -28,8 +28,8 @@ impl OutPoint {
         Ok(Arc::new(Self { inner }))
     }
 
-    pub fn txid(&self) -> Txid {
-        self.inner.txid.into()
+    pub fn txid(&self) -> Arc<Txid> {
+        Arc::new(self.inner.txid.into())
     }
 
     pub fn vout(&self) -> u32 {
@@ -56,7 +56,7 @@ mod tests {
         let out_point: OutPoint = out_point_elements.into();
         assert_eq!(expected, out_point.to_string());
 
-        // assert_eq!(expected_txid, out_point.txid().to_string()); // TODO make Txid Object
+        assert_eq!(expected_txid, out_point.txid().to_string());
 
         assert_eq!(expected_vout, out_point.vout());
     }

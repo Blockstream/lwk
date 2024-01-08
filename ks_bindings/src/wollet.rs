@@ -1,8 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::types::{AssetId, Hex};
-use crate::wallet_tx::WalletTx;
-use crate::{Address, Error, Txid};
+use crate::{Address, Error, Txid, WalletTx};
 use common::Signer;
 use elements::pset::serialize::Deserialize;
 use elements::{

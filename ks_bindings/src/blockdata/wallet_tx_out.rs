@@ -77,7 +77,7 @@ mod tests {
 
         assert_eq!(wallet_tx_out.height(), el.height);
 
-        assert_eq!(*wallet_tx_out.unblinded(), el.unblinded.clone().into());
+        assert_eq!(*wallet_tx_out.unblinded(), el.unblinded.into());
 
         assert_eq!(wallet_tx_out.wildcard_index(), el.wildcard_index);
 

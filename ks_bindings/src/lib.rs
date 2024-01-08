@@ -5,7 +5,6 @@ mod error;
 mod network;
 mod pset;
 pub mod types;
-mod wallet_tx;
 mod wollet;
 
 pub use blockdata::address::Address;
@@ -14,6 +13,8 @@ pub use blockdata::script::Script;
 pub use blockdata::transaction::Transaction;
 pub use blockdata::tx_out_secrets::TxOutSecrets;
 pub use blockdata::txid::Txid;
+pub use blockdata::wallet_tx::WalletTx;
+pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
@@ -48,17 +49,13 @@ mod tests {
         println!("{:?}", balance);
         let txs = wollet.transactions().unwrap();
         for tx in txs {
-            // NOTE: accessing inner in destination binding language is not possible, must be done
-            // via mapping it to string which returns a json object.
-            let tx = &tx.inner;
-
-            for output in &tx.outputs {
+            for output in tx.outputs() {
                 let script_pubkey = match output.as_ref() {
-                    Some(out) => out.script_pubkey.to_string(),
+                    Some(out) => out.script_pubkey().to_string(),
                     None => "Not a spendable scriptpubkey".to_string(),
                 };
                 let value = match output.as_ref() {
-                    Some(out) => out.unblinded.value,
+                    Some(out) => out.unblinded().value(),
                     None => 0,
                 };
                 println!("script_pubkey: {:?}, value: {}", script_pubkey, value)

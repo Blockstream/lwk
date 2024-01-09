@@ -1,7 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::types::AssetId;
-use crate::{AddressResult, Error, Pset, Txid, WalletTx};
+use crate::{Address, AddressResult, Error, Pset, Txid, WalletTx};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -77,12 +77,12 @@ impl Wollet {
 
     pub fn create_lbtc_tx(
         &self,
-        out_address: String,
+        out_address: Arc<Address>,
         satoshis: u64,
         fee_rate: f32,
     ) -> Result<Arc<Pset>, Error> {
         let wollet = self.inner.lock()?;
-        let pset = wollet.send_lbtc(satoshis, &out_address, Some(fee_rate))?;
+        let pset = wollet.send_lbtc(satoshis, &out_address.to_string(), Some(fee_rate))?;
         Ok(Arc::new(pset.into()))
     }
 

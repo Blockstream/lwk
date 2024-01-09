@@ -32,7 +32,7 @@ uniffi::setup_scaffolding!();
 
 #[cfg(test)]
 mod tests {
-    use crate::{network::ElementsNetwork, wollet::Wollet, Mnemonic, Signer};
+    use crate::{network::ElementsNetwork, wollet::Wollet, Address, Mnemonic, Signer};
 
     #[test]
     fn test_ks_flow() {
@@ -69,11 +69,11 @@ mod tests {
             }
         }
 
-        let out_address = "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x";
+        let out_address = Address::new( "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x".to_string()).unwrap();
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
         let pset = wollet
-            .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
+            .create_lbtc_tx(out_address, satoshis, fee_rate)
             .unwrap();
         let signed_pset = signer.sign(pset).unwrap();
         let txid = wollet.broadcast(signed_pset).unwrap();

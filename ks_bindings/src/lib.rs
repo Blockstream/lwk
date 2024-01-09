@@ -32,7 +32,10 @@ uniffi::setup_scaffolding!();
 
 #[cfg(test)]
 mod tests {
-    use crate::{desc::singlesig_desc_from_mnemonic, network::ElementsNetwork, wollet::Wollet};
+    use crate::{
+        desc::singlesig_desc_from_mnemonic, network::ElementsNetwork, wollet::Wollet, Mnemonic,
+        Signer,
+    };
 
     #[test]
     fn test_ks_flow() {
@@ -45,6 +48,7 @@ mod tests {
             datadir.to_string(),
         )
         .unwrap();
+        let signer = Signer::new(Mnemonic::new(mnemonic.to_string()).unwrap()).unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
@@ -73,8 +77,8 @@ mod tests {
         let pset = wollet
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();
-        let signed_hex = wollet.sign_tx(mnemonic.to_string(), pset).unwrap();
-        let txid = wollet.broadcast(signed_hex.parse().unwrap()).unwrap();
+        let signed_pset = signer.sign(pset).unwrap();
+        let txid = wollet.broadcast(signed_pset).unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

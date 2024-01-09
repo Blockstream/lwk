@@ -1,13 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
-use crate::types::{AssetId, Hex};
+use crate::types::AssetId;
 use crate::{AddressResult, Error, Pset, Txid, WalletTx};
-use common::Signer;
-use elements::pset::serialize::Deserialize;
-use elements::{
-    hex::ToHex,
-    pset::{serialize::Serialize, PartiallySignedTransaction},
-};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -92,31 +86,12 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn sign_tx(&self, mnemonic: String, pset: Arc<Pset>) -> Result<String, Error> {
+    pub fn broadcast(&self, pset: Arc<Pset>) -> Result<Arc<Txid>, Error> {
+        let mut pset = pset.inner();
         let wollet = self.inner.lock()?;
-        let mut pset: PartiallySignedTransaction = pset.inner();
-
-        let signer = match signer::SwSigner::new(&mnemonic) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
-        let _ = signer.sign(&mut pset);
-        let tx = match wollet.finalize(&mut pset) {
-            Ok(tx) => tx.serialize().to_hex(),
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
-        Ok(tx)
-    }
-
-    pub fn broadcast(&self, tx_hex: Hex) -> Result<Arc<Txid>, Error> {
-        let tx = match elements::Transaction::deserialize(tx_hex.as_ref()) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
-        let wollet = self.inner.lock()?;
-        match wollet.broadcast(&tx) {
-            Ok(txid) => Ok(Arc::new(txid.into())),
-            Err(e) => Err(Error::from(e)),
-        }
+        wollet.finalize(&mut pset)?;
+        let tx = pset.extract_tx()?;
+        let txid = wollet.broadcast(&tx)?;
+        Ok(Arc::new(txid.into()))
     }
 }

@@ -36,6 +36,12 @@ impl Pset {
     }
 }
 
+impl Pset {
+    pub(crate) fn inner(&self) -> PartiallySignedTransaction {
+        self.inner.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Pset;

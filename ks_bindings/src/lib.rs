@@ -68,12 +68,10 @@ mod tests {
         let out_address = "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x";
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
-        let pset_string = wollet
+        let pset = wollet
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();
-        let signed_hex = wollet
-            .sign_tx(mnemonic.to_string(), pset_string.to_string())
-            .unwrap();
+        let signed_hex = wollet.sign_tx(mnemonic.to_string(), pset).unwrap();
         let txid = wollet.broadcast(signed_hex.parse().unwrap()).unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }

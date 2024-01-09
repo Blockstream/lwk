@@ -10,7 +10,6 @@ use elements::{
 };
 use std::{
     collections::HashMap,
-    str::FromStr,
     sync::{Arc, Mutex},
 };
 
@@ -93,12 +92,10 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {
+    pub fn sign_tx(&self, mnemonic: String, pset: Arc<Pset>) -> Result<String, Error> {
         let wollet = self.inner.lock()?;
-        let mut pset = match PartiallySignedTransaction::from_str(&pset_string) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Generic { msg: e.to_string() }),
-        };
+        let mut pset: PartiallySignedTransaction = pset.inner();
+
         let signer = match signer::SwSigner::new(&mnemonic) {
             Ok(result) => result,
             Err(e) => return Err(Error::Generic { msg: e.to_string() }),

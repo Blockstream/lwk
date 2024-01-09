@@ -38,12 +38,12 @@ mod tests {
     fn test_ks_flow() {
         let datadir = "/tmp/.ks";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = Signer::new(Mnemonic::new(mnemonic.to_string()).unwrap()).unwrap();
+        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap()).unwrap();
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
         let wollet = Wollet::new(
             ElementsNetwork::LiquidTestnet,
-            singlesig_desc.clone(),
+            &singlesig_desc,
             datadir.to_string(),
         )
         .unwrap();
@@ -73,10 +73,10 @@ mod tests {
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
         let pset = wollet
-            .create_lbtc_tx(out_address, satoshis, fee_rate)
+            .create_lbtc_tx(&out_address, satoshis, fee_rate)
             .unwrap();
-        let signed_pset = signer.sign(pset).unwrap();
-        let txid = wollet.broadcast(signed_pset).unwrap();
+        let signed_pset = signer.sign(&pset).unwrap();
+        let txid = wollet.broadcast(&signed_pset).unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

@@ -19,7 +19,7 @@ impl Wollet {
     #[uniffi::constructor]
     pub fn new(
         network: ElementsNetwork,
-        descriptor: Arc<WolletDescriptor>,
+        descriptor: &WolletDescriptor,
         datadir: String,
     ) -> Result<Arc<Self>, Error> {
         let url = network.electrum_url().to_string();
@@ -77,7 +77,7 @@ impl Wollet {
 
     pub fn create_lbtc_tx(
         &self,
-        out_address: Arc<Address>,
+        out_address: &Address,
         satoshis: u64,
         fee_rate: f32,
     ) -> Result<Arc<Pset>, Error> {
@@ -86,7 +86,7 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn broadcast(&self, pset: Arc<Pset>) -> Result<Arc<Txid>, Error> {
+    pub fn broadcast(&self, pset: &Pset) -> Result<Arc<Txid>, Error> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;
         wollet.finalize(&mut pset)?;

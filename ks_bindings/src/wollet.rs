@@ -1,7 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::types::{AssetId, Hex};
-use crate::{AddressResult, Error, Txid, WalletTx};
+use crate::{AddressResult, Error, Pset, Txid, WalletTx};
 use common::Signer;
 use elements::pset::serialize::Deserialize;
 use elements::{
@@ -87,10 +87,10 @@ impl Wollet {
         out_address: String,
         satoshis: u64,
         fee_rate: f32,
-    ) -> Result<String, Error> {
+    ) -> Result<Arc<Pset>, Error> {
         let wollet = self.inner.lock()?;
         let pset = wollet.send_lbtc(satoshis, &out_address, Some(fee_rate))?;
-        Ok(pset.to_string())
+        Ok(Arc::new(pset.into()))
     }
 
     pub fn sign_tx(&self, mnemonic: String, pset_string: String) -> Result<String, Error> {

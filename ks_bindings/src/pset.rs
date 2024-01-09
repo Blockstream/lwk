@@ -9,6 +9,12 @@ pub struct Pset {
     inner: PartiallySignedTransaction,
 }
 
+impl From<PartiallySignedTransaction> for Pset {
+    fn from(inner: PartiallySignedTransaction) -> Self {
+        Self { inner }
+    }
+}
+
 impl Display for Pset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

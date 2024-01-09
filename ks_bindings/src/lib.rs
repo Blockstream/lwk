@@ -71,7 +71,9 @@ mod tests {
         let pset_string = wollet
             .create_lbtc_tx(out_address.to_string(), satoshis, fee_rate)
             .unwrap();
-        let signed_hex = wollet.sign_tx(mnemonic.to_string(), pset_string).unwrap();
+        let signed_hex = wollet
+            .sign_tx(mnemonic.to_string(), pset_string.to_string())
+            .unwrap();
         let txid = wollet.broadcast(signed_hex.parse().unwrap()).unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }

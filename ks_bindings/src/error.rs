@@ -76,6 +76,22 @@ impl From<signer::bip39::Error> for Error {
     }
 }
 
+impl From<signer::NewError> for Error {
+    fn from(value: signer::NewError) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
+impl From<signer::SignError> for Error {
+    fn from(value: signer::SignError) -> Self {
+        Error::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

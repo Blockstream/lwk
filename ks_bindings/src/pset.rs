@@ -3,7 +3,7 @@ use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
 /// Partially Signed Elements Transaction
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, PartialEq, Debug)]
 #[uniffi::export(Display)]
 pub struct Pset {
     inner: PartiallySignedTransaction,

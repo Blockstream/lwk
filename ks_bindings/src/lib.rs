@@ -5,6 +5,7 @@ mod error;
 mod mnemonic;
 mod network;
 mod pset;
+mod signer;
 pub mod types;
 mod wollet;
 
@@ -23,6 +24,7 @@ pub use desc::WolletDescriptor;
 pub use mnemonic::Mnemonic;
 pub use network::ElementsNetwork;
 pub use pset::Pset;
+pub use signer::Signer;
 pub use wollet::Wollet;
 
 pub use error::Error;

@@ -1,4 +1,4 @@
-use crate::{types::AssetId, Transaction, WalletTxOut};
+use crate::{types::AssetId, Transaction, Txid, WalletTxOut};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -29,6 +29,10 @@ impl WalletTx {
             .iter()
             .map(|(k, v)| (AssetId::from(*k), *v))
             .collect()
+    }
+
+    pub fn txid(&self) -> Arc<Txid> {
+        Arc::new(self.inner.tx.txid().into())
     }
 
     pub fn fee(&self) -> u64 {

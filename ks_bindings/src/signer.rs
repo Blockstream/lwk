@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Error, Mnemonic, Pset};
+use crate::{Error, Mnemonic, Pset, WolletDescriptor};
 
 /// A Software signer
 #[derive(uniffi::Object)]
@@ -21,6 +21,14 @@ impl Signer {
         let mut pset = pset.inner();
         common::Signer::sign(&self.inner, &mut pset)?;
         Ok(Arc::new(pset.into()))
+    }
+
+    pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, Error> {
+        let script_variant = common::Singlesig::Wpkh;
+        let blinding_variant = common::DescriptorBlindingKey::Slip77;
+        let desc_str = common::singlesig_desc(&self.inner, script_variant, blinding_variant)?;
+
+        WolletDescriptor::new(desc_str)
     }
 }
 

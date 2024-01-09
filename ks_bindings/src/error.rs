@@ -92,6 +92,12 @@ impl From<signer::SignError> for Error {
     }
 }
 
+impl From<String> for Error {
+    fn from(msg: String) -> Self {
+        Error::Generic { msg }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for Error {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         Error::PoisonError { msg: e.to_string() }

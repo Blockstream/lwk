@@ -364,6 +364,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SinglesigDescriptor => {
             let r: request::SinglesigDescriptor = serde_json::from_value(params)?;
             let mut s = state.lock()?;
+            let is_mainnet = s.config.is_mainnet();
 
             let signer = s.signers.get_available(&r.name)?;
 
@@ -377,7 +378,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .parse()
                 .map_err(|e: InvalidBlindingKeyVariant| e.to_string())?;
 
-            let descriptor = singlesig_desc(signer, script_variant, blinding_variant)?;
+            let descriptor = singlesig_desc(signer, script_variant, blinding_variant, is_mainnet)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::SinglesigDescriptor { descriptor })?,
@@ -435,6 +436,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Xpub => {
             let r: request::Xpub = serde_json::from_value(params)?;
             let mut s = state.lock()?;
+            let is_mainnet = s.config.is_mainnet();
 
             let signer = s.signers.get_available(&r.name)?;
 
@@ -443,7 +445,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .parse()
                 .map_err(|e: InvalidBipVariant| e.to_string())?;
 
-            let keyorigin_xpub = signer.keyorigin_xpub(bip)?;
+            let keyorigin_xpub = signer.keyorigin_xpub(bip, is_mainnet)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::Xpub { keyorigin_xpub })?,

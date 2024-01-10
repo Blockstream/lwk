@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use elements::{
     bitcoin::{
+        self,
         bip32::{DerivationPath, ExtendedPubKey, Fingerprint},
         hash_types::XpubIdentifier,
     },
@@ -51,5 +52,9 @@ pub trait Signer {
             self.derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).expect("static"))?; // TODO avoid string use ChildNumber directly
         let keyorigin_xpub = format!("[{fingerprint}/{path}]{xpub}");
         Ok(keyorigin_xpub)
+    }
+
+    fn is_mainnet(&self) -> Result<bool, Self::Error> {
+        Ok(matches!(self.xpub()?.network, bitcoin::Network::Bitcoin))
     }
 }

@@ -43,6 +43,10 @@ impl ElementsNetwork {
             ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:50002",
         }
     }
+
+    pub fn is_mainnet(&self) -> bool {
+        matches!(self, ElementsNetwork::Liquid)
+    }
 }
 
 #[uniffi::export]

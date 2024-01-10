@@ -794,7 +794,7 @@ pub fn generate_xprv() -> ExtendedPrivKey {
 
 pub fn generate_signer() -> SwSigner {
     let mnemonic = generate_mnemonic();
-    SwSigner::new(&mnemonic).unwrap()
+    SwSigner::new(&mnemonic, false).unwrap()
 }
 
 pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {

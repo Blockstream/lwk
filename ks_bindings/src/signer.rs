@@ -13,7 +13,7 @@ impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
     pub fn new(mnemonic: &Mnemonic) -> Result<Arc<Self>, Error> {
-        let inner = signer::SwSigner::new(&mnemonic.to_string())?;
+        let inner = signer::SwSigner::new(&mnemonic.to_string(), false)?; // TODO take is_mainnet from parameter
         Ok(Arc::new(Self { inner }))
     }
 

@@ -1,7 +1,7 @@
 use bip39::Mnemonic;
 use common::Signer;
 use elements_miniscript::{
-    bitcoin::{bip32::DerivationPath, PrivateKey},
+    bitcoin::{self, bip32::DerivationPath, PrivateKey},
     elements::{
         bitcoin::{
             bip32::{self, ExtendedPrivKey, ExtendedPubKey, Fingerprint},
@@ -58,11 +58,22 @@ impl core::fmt::Debug for SwSigner {
 }
 
 impl SwSigner {
-    pub fn new(mnemonic: &str) -> Result<Self, NewError> {
+    /// Creates a new software signer from the given mnemonic.
+    ///
+    /// Takes also a flag if the network is mainnet so that generated extended keys are in the
+    /// correct form xpub/tpub (there is no need to discriminate between regtest and testnet)
+    pub fn new(mnemonic: &str, is_mainnet: bool) -> Result<Self, NewError> {
         let secp = Secp256k1::new();
         let mnemonic: Mnemonic = mnemonic.parse()?;
         let seed = mnemonic.to_seed("");
-        let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed)?;
+
+        let network = if is_mainnet {
+            bitcoin::Network::Bitcoin
+        } else {
+            bitcoin::Network::Testnet
+        };
+
+        let xprv = ExtendedPrivKey::new_master(network, &seed)?;
 
         Ok(Self {
             xprv,
@@ -71,9 +82,9 @@ impl SwSigner {
         })
     }
 
-    pub fn random() -> Result<(Self, Mnemonic), NewError> {
+    pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
-        Ok((SwSigner::new(&mnemonic.to_string())?, mnemonic))
+        Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
     }
 
     pub fn xpub(&self) -> ExtendedPubKey {
@@ -156,11 +167,11 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", false).unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
-            SwSigner::new("bad").expect_err("test").to_string()
+            SwSigner::new("bad", false).expect_err("test").to_string()
         );
         assert_eq!("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s", &signer.xpub().to_string())
     }

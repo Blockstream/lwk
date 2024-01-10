@@ -4,7 +4,7 @@ use signer::bip39;
 
 use crate::Error;
 
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, PartialEq, Eq, Debug)]
 #[uniffi::export(Display)]
 pub struct Mnemonic {
     inner: bip39::Mnemonic,
@@ -35,11 +35,16 @@ impl Mnemonic {
 #[cfg(test)]
 mod tests {
     use crate::Mnemonic;
+    use signer::bip39;
+    use std::str::FromStr;
 
     #[test]
     fn mnemonic() {
         let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let mnemonic_bip39 = bip39::Mnemonic::from_str(mnemonic_str).unwrap();
+        let from_bip39: Mnemonic = mnemonic_bip39.into();
         let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
         assert_eq!(mnemonic_str, mnemonic.to_string());
+        assert_eq!(from_bip39, *mnemonic);
     }
 }

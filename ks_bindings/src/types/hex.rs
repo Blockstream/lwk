@@ -7,7 +7,7 @@ use crate::UniffiCustomTypeConverter;
 /// A valid hex string.
 ///
 /// Even number of characters and only numerical and from 'a' to 'e'
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Hex {
     inner: Vec<u8>,
 }
@@ -57,5 +57,25 @@ impl UniffiCustomTypeConverter for Hex {
 
     fn from_custom(obj: Self) -> Self::Builtin {
         obj.inner.to_hex()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::Hex;
+    use crate::UniffiCustomTypeConverter;
+
+    #[test]
+    fn hex() {
+        let hex: Hex = Hex::from_str("aa").unwrap();
+        assert_eq!(
+            <Hex as UniffiCustomTypeConverter>::into_custom(
+                UniffiCustomTypeConverter::from_custom(hex.clone())
+            )
+            .unwrap(),
+            hex
+        );
     }
 }

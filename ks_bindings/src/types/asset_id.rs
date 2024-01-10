@@ -7,7 +7,7 @@ use crate::UniffiCustomTypeConverter;
 /// A valid asset identifier.
 ///
 /// 32 bytes encoded as hex string.
-#[derive(PartialEq, Eq, Debug, Hash)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone, Copy)]
 pub struct AssetId {
     inner: elements::AssetId,
 }
@@ -41,5 +41,24 @@ impl UniffiCustomTypeConverter for AssetId {
 
     fn from_custom(obj: Self) -> Self::Builtin {
         obj.inner.to_hex()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AssetId;
+    use crate::UniffiCustomTypeConverter;
+
+    #[test]
+    fn asset_id() {
+        let elements_asset_id = elements::AssetId::default();
+        let asset_id: AssetId = elements_asset_id.into();
+        assert_eq!(
+            <AssetId as UniffiCustomTypeConverter>::into_custom(
+                UniffiCustomTypeConverter::from_custom(asset_id)
+            )
+            .unwrap(),
+            asset_id
+        );
     }
 }

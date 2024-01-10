@@ -20,6 +20,7 @@ fn roundtrip(
             signers[0],
             variant.unwrap(),
             common::DescriptorBlindingKey::Slip77,
+            false,
         )
         .unwrap(),
         _ => {

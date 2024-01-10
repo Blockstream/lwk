@@ -88,4 +88,9 @@ impl Config {
         path.push("state.json");
         Ok(path)
     }
+
+    /// True if Liquid mainnet
+    pub fn is_mainnet(&self) -> bool {
+        matches!(self.network, ElementsNetwork::Liquid)
+    }
 }

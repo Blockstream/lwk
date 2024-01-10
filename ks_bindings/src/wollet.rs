@@ -21,13 +21,17 @@ impl Wollet {
         network: ElementsNetwork,
         descriptor: &WolletDescriptor,
         datadir: String,
+        tls: bool,
+        validate_domain: bool,
+        electrum_url: Option<String>,
     ) -> Result<Arc<Self>, Error> {
-        let url = network.electrum_url().to_string();
+        let url = electrum_url.unwrap_or(network.electrum_url().to_string());
+
         let inner = wollet::Wollet::new(
             network.into(),
             &url,
-            true,
-            true,
+            tls,
+            validate_domain,
             &datadir,
             &descriptor.to_string(),
         )?;
@@ -41,6 +45,7 @@ impl Wollet {
     }
 
     pub fn address(&self, index: Option<u32>) -> Result<Arc<AddressResult>, Error> {
+        // TODO test this method assert the first address with many different supported descriptor in different networks
         let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
         Ok(Arc::new(address.into()))
@@ -93,5 +98,20 @@ impl Wollet {
         let tx = pset.extract_tx()?;
         let txid = wollet.broadcast(&tx)?;
         Ok(Arc::new(txid.into()))
+    }
+}
+
+#[cfg(test)]
+impl Wollet {
+    pub fn wait_for_tx(&self, txid: Txid) {
+        for _ in 0..30 {
+            self.sync().unwrap();
+            let txs = self.transactions().unwrap();
+            if txs.iter().any(|t| *t.txid() == txid) {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+        panic!("I wait 30s but I didn't see {}", txid);
     }
 }

@@ -36,12 +36,10 @@ tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3.8.0"
-electrsd = { version = "0.25.0", features = ["legacy"] }
 signer = { path = "../signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
 minreq = { version = "2.9", features = ["https"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 test_util = { path = "../test_util" }
 
 [features]

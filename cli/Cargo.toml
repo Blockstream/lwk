@@ -22,7 +22,6 @@ uniffi = { version = "0.25.3", features = ["cli"], optional = true }
 [dev-dependencies]
 shellwords = "1.1.0"
 elements = "0.23.0"
-electrsd = { version = "0.25.0", features = ["legacy"] }
 tempfile = "3.8.0"
 bs_containers = { path = "../bs_containers" }
 test_util = { path = "../test_util" }

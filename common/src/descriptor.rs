@@ -14,7 +14,7 @@ pub fn singlesig_desc<S: Signer>(
 ) -> Result<String, String> {
     let coin_type = if is_mainnet { 1776 } else { 1 };
     let (prefix, path, suffix) = match script_variant {
-        Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}/0h"), ""),
+        Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
     };
 

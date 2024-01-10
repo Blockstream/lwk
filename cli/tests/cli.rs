@@ -12,9 +12,7 @@ use serde_json::Value;
 
 use cli::{inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum};
 use tempfile::TempDir;
-use test_session::{setup, TestElectrumServer};
-
-mod test_session;
+use test_util::{setup, TestElectrumServer};
 
 /// Returns a non-used local port if available.
 ///

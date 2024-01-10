@@ -12,6 +12,7 @@ members = [
     "bs_containers",
     "common",
     "rpc_model",
+    "test_util",
 ]
 resolver = "2"
 

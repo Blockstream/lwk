@@ -24,8 +24,10 @@ just env-bindings
 
 ```python
 import ks_bindings as ks
+
 mnemonic = ks.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
-signer = ks.Signer(mnemonic)
+
+signer = ks.Signer(mnemonic, False)
 desc = signer.wpkh_slip77_descriptor()
 
 print(desc) 

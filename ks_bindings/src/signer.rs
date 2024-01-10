@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
 use crate::{Error, Mnemonic, Pset, WolletDescriptor};
+use std::sync::Arc;
 
 /// A Software signer
 #[derive(uniffi::Object)]
@@ -12,8 +11,8 @@ pub struct Signer {
 impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
-    pub fn new(mnemonic: &Mnemonic) -> Result<Arc<Self>, Error> {
-        let inner = signer::SwSigner::new(&mnemonic.to_string(), false)?; // TODO take is_mainnet from parameter
+    pub fn new(mnemonic: &Mnemonic, is_mainnet: bool) -> Result<Arc<Self>, Error> {
+        let inner = signer::SwSigner::new(&mnemonic.to_string(), is_mainnet)?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -24,8 +23,9 @@ impl Signer {
     }
 
     pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, Error> {
-        // TODO: pass parameter
-        let is_mainnet = false;
+        // TODO: make script_variant and blinding_variant parameters
+
+        let is_mainnet = common::Signer::is_mainnet(&self.inner)?;
         let script_variant = common::Singlesig::Wpkh;
         let blinding_variant = common::DescriptorBlindingKey::Slip77;
         let desc_str =
@@ -43,7 +43,7 @@ mod tests {
     fn signer() {
         let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
-        let signer = Signer::new(&mnemonic).unwrap();
+        let signer = Signer::new(&mnemonic, false).unwrap();
 
         let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
         let pset = Pset::new(pset_string.clone()).unwrap();

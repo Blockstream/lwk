@@ -38,7 +38,7 @@ mod tests {
     fn test_ks_flow() {
         let datadir = "/tmp/.ks";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap()).unwrap();
+        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), false).unwrap();
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
         let wollet = Wollet::new(

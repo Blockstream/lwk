@@ -1,5 +1,4 @@
 mod test_jade;
-mod test_session;
 
 use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
@@ -7,7 +6,7 @@ use common::Signer;
 use elements::bitcoin::{bip32::DerivationPath, hash_types::XpubIdentifier};
 use signer::*;
 use std::{collections::HashSet, str::FromStr};
-use test_session::*;
+use test_util::*;
 use wollet::*;
 
 const TEST_MNEMONIC: &str =

@@ -4,12 +4,9 @@ use bs_containers::testcontainers::clients::Cli;
 use common::{singlesig_desc, Signer, Singlesig};
 use signer::AnySigner;
 
-use crate::{
-    test_jade::init::inner_jade_debug_initialization,
-    test_session::{
-        generate_signer, multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
-    },
-    TEST_MNEMONIC,
+use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};
+use test_util::{
+    generate_signer, multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
 };
 
 fn roundtrip(

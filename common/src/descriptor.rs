@@ -84,6 +84,7 @@ pub fn multisig_desc(
     ))
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Singlesig {
     /// as defined by bip84
     Wpkh,
@@ -108,6 +109,7 @@ impl FromStr for Singlesig {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum DescriptorBlindingKey {
     Slip77,
 }

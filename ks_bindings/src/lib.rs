@@ -32,7 +32,9 @@ uniffi::setup_scaffolding!();
 
 #[cfg(test)]
 mod tests {
-    use crate::{network::ElementsNetwork, wollet::Wollet, Address, Mnemonic, Signer};
+    use std::str::FromStr;
+
+    use crate::{wollet::Wollet, Address, Mnemonic, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
@@ -40,18 +42,35 @@ mod tests {
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), false).unwrap();
 
+        let server = test_util::setup();
+
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
+        println!("electrum url = {}", &server.electrs.electrum_url);
         let wollet = Wollet::new(
-            ElementsNetwork::LiquidTestnet,
+            test_util::network_regtest().into(),
             &singlesig_desc,
             datadir.to_string(),
+            false,
+            false,
+            Some(server.electrs.electrum_url.clone()),
         )
         .unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
-        let expected_address_0 = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+        let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
         assert_eq!(expected_address_0, address_0.address().to_string());
-        let _ = wollet.sync();
+
+        let txid = server.node_sendtoaddress(
+            &elements::Address::from_str(expected_address_0).unwrap(),
+            100000000,
+            None,
+        );
+        wollet.wait_for_tx(Txid::from_str(&txid).unwrap());
+
+        let address_1 = wollet.address(Some(1)).unwrap();
+        let expected_address_1 = "el1qqv8pmjjq942l6cjq69ygtt6gvmdmhesqmzazmwfsq7zwvan4kewdqmaqzegq50r2wdltkfsw9hw20zafydz4sqljz0eqe0vhc";
+        assert_eq!(expected_address_1, address_1.address().to_string());
+
         let balance = wollet.balance();
         println!("{:?}", balance);
         let txs = wollet.transactions().unwrap();
@@ -69,7 +88,7 @@ mod tests {
             }
         }
 
-        let out_address = Address::new( "tlq1qq0l36r57ys6nnz3xdp0eeunyuuh9dvq2fvyzj58aqaavqksenejj7plcd8mp7d9g6rxuctnj5q4cjxlu6h4tkqzv92w860z5x".to_string()).unwrap();
+        let out_address = Address::new(expected_address_1.to_string()).unwrap();
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
         let pset = wollet

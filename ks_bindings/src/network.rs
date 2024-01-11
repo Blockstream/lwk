@@ -69,7 +69,7 @@ mod tests {
             wollet::ElementsNetwork::LiquidTestnet,
             wollet::ElementsNetwork::ElementsRegtest { policy_asset },
         ] {
-            let n2: ElementsNetwork = n.clone().into();
+            let n2: ElementsNetwork = n.into();
             assert!(
                 ["Liquid", "LiquidTestnet", "ElementsRegtest { policy_asset: AssetId { inner: 0000000000000000000000000000000000000000000000000000000000000000 } }"]
                     .contains(&network_to_string(&n2).as_str())

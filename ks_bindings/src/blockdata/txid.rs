@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use elements::hashes::Hash;
 
@@ -13,6 +13,14 @@ pub struct Txid {
 impl From<elements::Txid> for Txid {
     fn from(inner: elements::Txid) -> Self {
         Txid { inner }
+    }
+}
+
+impl FromStr for Txid {
+    type Err = elements::hashes::hex::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(elements::Txid::from_str(s)?.into())
     }
 }
 

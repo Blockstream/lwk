@@ -200,7 +200,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
-                s.config.network.clone(),
+                s.config.network,
                 &s.config.electrum_url,
                 s.config.tls,
                 s.config.validate_domain,

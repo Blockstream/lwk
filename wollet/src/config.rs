@@ -27,7 +27,7 @@ impl ElectrumUrl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,

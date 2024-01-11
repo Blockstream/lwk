@@ -1,7 +1,7 @@
 use crate::{types::AssetId, Transaction, Txid, WalletTxOut};
 use std::{collections::HashMap, sync::Arc};
 
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Debug)]
 pub struct WalletTx {
     inner: wollet::WalletTx,
 }

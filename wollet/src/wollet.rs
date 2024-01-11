@@ -535,10 +535,12 @@ mod tests {
     use crate::elements::bitcoin::bip32::{ExtendedPrivKey, ExtendedPubKey};
     use crate::elements::bitcoin::network::constants::Network;
     use crate::elements::AddressParams;
+    use common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
+    use signer::SwSigner;
 
     #[test]
     fn test_desc() {
@@ -630,5 +632,41 @@ mod tests {
         assert_eq!(new_wollet(&desc_s_xpub).signers(), vec![fp_xpub]);
         assert_eq!(new_wollet(&desc_m_1single).signers(), vec![fp1, fp_single]);
         assert_eq!(new_wollet(&desc_m_12).signers(), vec![fp1, fp2]);
+    }
+
+    #[test]
+    fn fixed_addresses_test() {
+        let expected = [
+            "lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv", //  network: Liquid variant: Wpkh blinding_variant: Slip77
+            "VJLCQwwG8s7qUGhpJkQpkf7wLoK785TcK2cPqka8675FeJB7NEHLto5MUJyhJURGJCbFHA6sb6rgTwbh", // network: Liquid variant: ShWpkh blinding_variant: Slip77
+            "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn", // network: LiquidTestnet variant: Wpkh blinding_variant: Slip77
+            "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji", // network: LiquidTestnet variant: ShWpkh blinding_variant: Slip77
+            "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Slip77
+            "AzpmUtw4GMrEsfz6GKx5SKT1DV3qLS3xtSGdKG351rMjGxoUwS6Vsbu3zu2opBiPtjWs1GnE48uMFFnb", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: ShWpkh blinding_variant: Slip77
+            ];
+        let mut i = 0usize;
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+        for network in [
+            ElementsNetwork::Liquid,
+            ElementsNetwork::LiquidTestnet,
+            ElementsNetwork::ElementsRegtest {
+                policy_asset: AssetId::default(),
+            },
+        ] {
+            let is_mainnet = matches!(network, ElementsNetwork::Liquid);
+            let signer = SwSigner::new(mnemonic, is_mainnet).unwrap();
+            for script_variant in [Singlesig::Wpkh, Singlesig::ShWpkh] {
+                for blinding_variant in [DescriptorBlindingKey::Slip77] {
+                    let desc =
+                        singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
+                            .unwrap();
+                    let wollet = Wollet::new(network, "", false, false, "", &desc).unwrap();
+                    let first_address = wollet.address(Some(0)).unwrap();
+                    assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?}");
+                    i += 1;
+                }
+            }
+        }
     }
 }

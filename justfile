@@ -1,13 +1,13 @@
 default:
     just --list
 
-build-bindings:
-    LIBNAME=libks_bindings.so && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
+build-python-bindings:
+    LIBNAME=libks_bindings.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
 
-test-bindings: build-bindings
+test-python-bindings: build-python-bindings
     PYTHONPATH=target/debug/bindings/ python3 -c 'import ks_bindings'
 
-env-bindings: build-bindings
+env-python-bindings: build-python-bindings
     PYTHONPATH=target/debug/bindings/ python3
 
 build-docker:
@@ -15,3 +15,22 @@ build-docker:
 
 push-docker: build-docker
     docker push xenoky/ks-builder # require credentials
+
+kotlin-android: kotlin android
+
+kotlin:
+    LIBNAME=libks_bindings.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
+
+android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+aarch64-linux-android:
+	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings
+
+armv7-linux-androideabi:
+	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build --release -p ks-bindings
+
+i686-linux-android:
+	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings
+
+x86_64-linux-android:
+	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings

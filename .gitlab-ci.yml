@@ -103,5 +103,7 @@ doc:
 
 bindings:
   extends: .base
+  variables:
+    LIB_EXT: "so"
   script:
-    - just test-bindings
+    - just test-python-bindings

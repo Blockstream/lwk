@@ -20,6 +20,15 @@ pub struct MutexJade {
     network: Network,
 }
 
+// Taken from reference impl https://github.com/Blockstream/Jade/blob/f7fc4de8c3662b082c7d41e9354c4ff573f371ff/jadepy/jade_serial.py#L24
+#[cfg(feature = "serial")]
+const JADE_DEVICE_IDS: [(u16, u16); 4] = [
+    (0x10c4, 0xea60),
+    (0x1a86, 0x55d4),
+    (0x0403, 0x6001),
+    (0x1a86, 0x7523),
+];
+
 impl MutexJade {
     pub fn new(jade: Jade) -> Self {
         let network = jade.network;
@@ -42,13 +51,33 @@ impl MutexJade {
     /// Try to unlock a jade on any available serial port, returning all of the attempts
     pub fn from_any_serial(network: Network) -> Vec<Result<Self, Error>> {
         let mut result = vec![];
-        let ports = serialport::available_ports().unwrap_or_default();
-        tracing::debug!("available ports: {:?}", ports);
+        let ports = Self::available_ports_with_jade();
+        tracing::debug!("available serial ports possibly with jade: {}", ports.len());
         for port in ports {
             let jade_res = Self::from_serial(network, &port.port_name);
+            tracing::debug!("trying: {port:?} return {jade_res:?}");
+
+            // TODO green_qt calls also get_version_info
             result.push(jade_res);
         }
         result
+    }
+
+    #[cfg(feature = "serial")]
+    pub fn available_ports_with_jade() -> Vec<serialport::SerialPortInfo> {
+        let ports = serialport::available_ports().unwrap_or_default();
+        tracing::debug!("available serial ports: {}", ports.len());
+
+        ports
+            .into_iter()
+            .filter(|e| {
+                if let serialport::SerialPortType::UsbPort(val) = &e.port_type {
+                    JADE_DEVICE_IDS.contains(&(val.vid, val.pid))
+                } else {
+                    false
+                }
+            })
+            .collect()
     }
 
     #[cfg(feature = "serial")]

@@ -661,7 +661,7 @@ mod tests {
                     let desc =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
                             .unwrap();
-                    let wollet = Wollet::new(network, "", false, false, "", &desc).unwrap();
+                    let wollet = Wollet::new(network, "", false, false, "/tmp/.ks", &desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?}");
                     i += 1;

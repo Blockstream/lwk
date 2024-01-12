@@ -42,7 +42,9 @@ impl MutexJade {
     /// Try to unlock a jade on any available serial port, returning all of the attempts
     pub fn from_any_serial(network: Network) -> Vec<Result<Self, Error>> {
         let mut result = vec![];
-        for port in serialport::available_ports().unwrap_or_default() {
+        let ports = serialport::available_ports().unwrap_or_default();
+        tracing::debug!("available ports: {:?}", ports);
+        for port in ports {
             let jade_res = Self::from_serial(network, &port.port_name);
             result.push(jade_res);
         }

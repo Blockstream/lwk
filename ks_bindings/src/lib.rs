@@ -1,6 +1,7 @@
 pub mod blockdata;
 mod chain;
 mod desc;
+mod electrum_url;
 mod error;
 mod mnemonic;
 mod network;
@@ -21,6 +22,7 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
+pub use electrum_url::ElectrumUrl;
 pub use mnemonic::Mnemonic;
 pub use network::ElementsNetwork;
 pub use pset::Pset;
@@ -34,7 +36,7 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{wollet::Wollet, Address, ElementsNetwork, Mnemonic, Signer, Txid};
+    use crate::{wollet::Wollet, Address, ElectrumUrl, ElementsNetwork, Mnemonic, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
@@ -46,14 +48,15 @@ mod tests {
         let server = test_util::setup();
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
-        println!("electrum url = {}", &server.electrs.electrum_url);
+
+        let electrum_url = ElectrumUrl::new(server.electrs.electrum_url.to_string(), false, false);
+        println!("electrum url = {}", &electrum_url);
+
         let wollet = Wollet::new(
             &network,
             &singlesig_desc,
             datadir.to_string(),
-            false,
-            false,
-            Some(server.electrs.electrum_url.clone()),
+            &electrum_url,
         )
         .unwrap();
         let _latest_address = wollet.address(None); // lastUnused

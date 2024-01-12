@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::types::AssetId;
+use crate::{electrum_url::ElectrumUrl, types::AssetId};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -22,6 +22,25 @@ impl From<wollet::ElementsNetwork> for ElementsNetwork {
 impl From<ElementsNetwork> for wollet::ElementsNetwork {
     fn from(value: ElementsNetwork) -> Self {
         value.inner
+    }
+}
+
+#[uniffi::export]
+impl ElementsNetwork {
+    pub fn default_electrum_url(&self) -> Arc<ElectrumUrl> {
+        let (url, validate_domain, tls) = match &self.inner {
+            wollet::ElementsNetwork::Liquid => ("blockstream.info:995", true, true),
+            wollet::ElementsNetwork::LiquidTestnet => ("blockstream.info:465", true, true),
+            wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
+                ("127.0.0.1:50002", false, false)
+            }
+        };
+
+        Arc::new(ElectrumUrl {
+            url: url.to_string(),
+            tls,
+            validate_domain,
+        })
     }
 }
 
@@ -56,21 +75,5 @@ fn new_regtest_network(policy_asset: AssetId) -> Arc<ElementsNetwork> {
 fn new_default_regtest_network() -> Arc<ElementsNetwork> {
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-    Arc::new(
-        wollet::ElementsNetwork::ElementsRegtest {
-            policy_asset: policy_asset.into(),
-        }
-        .into(),
-    )
-}
-
-impl ElementsNetwork {
-    pub fn electrum_url(&self) -> &str {
-        // TODO should be impl on wollet::ElmentsNetwork?
-        match &self.inner {
-            wollet::ElementsNetwork::Liquid => "blockstream.info:995",
-            wollet::ElementsNetwork::LiquidTestnet => "blockstream.info:465",
-            wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:50002",
-        }
-    }
+    Arc::new(wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
 }

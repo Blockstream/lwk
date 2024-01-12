@@ -19,6 +19,7 @@ mod sync;
 mod util;
 mod wollet;
 
+pub use crate::config::ElectrumUrl;
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;

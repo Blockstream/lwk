@@ -1,7 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::ElementsNetwork;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, Error, Pset, Txid, WalletTx};
+use crate::{Address, AddressResult, ElectrumUrl, Error, Pset, Txid, WalletTx};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -21,17 +21,13 @@ impl Wollet {
         network: &ElementsNetwork,
         descriptor: &WolletDescriptor,
         datadir: String,
-        tls: bool,
-        validate_domain: bool,
-        electrum_url: Option<String>,
+        electrum_url: &ElectrumUrl,
     ) -> Result<Arc<Self>, Error> {
-        let url = electrum_url.unwrap_or(network.electrum_url().to_string());
-
         let inner = wollet::Wollet::new(
             (*network).into(),
-            &url,
-            tls,
-            validate_domain,
+            &electrum_url.url,
+            electrum_url.tls,
+            electrum_url.validate_domain,
             &datadir,
             &descriptor.to_string(),
         )?;

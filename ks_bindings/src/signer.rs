@@ -1,4 +1,4 @@
-use crate::{Error, Mnemonic, Pset, WolletDescriptor};
+use crate::{ElementsNetwork, Error, Mnemonic, Pset, WolletDescriptor};
 use std::sync::Arc;
 
 /// A Software signer
@@ -11,8 +11,8 @@ pub struct Signer {
 impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
-    pub fn new(mnemonic: &Mnemonic, is_mainnet: bool) -> Result<Arc<Self>, Error> {
-        let inner = signer::SwSigner::new(&mnemonic.to_string(), is_mainnet)?;
+    pub fn new(mnemonic: &Mnemonic, network: &ElementsNetwork) -> Result<Arc<Self>, Error> {
+        let inner = signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
         Ok(Arc::new(Self { inner }))
     }
 
@@ -43,7 +43,9 @@ mod tests {
     fn signer() {
         let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
-        let signer = Signer::new(&mnemonic, false).unwrap();
+        let network: crate::ElementsNetwork = test_util::network_regtest().into();
+
+        let signer = Signer::new(&mnemonic, &network).unwrap();
 
         let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
         let pset = Pset::new(pset_string.clone()).unwrap();

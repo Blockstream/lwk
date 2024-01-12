@@ -18,7 +18,7 @@ impl Wollet {
     /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
     pub fn new(
-        network: ElementsNetwork,
+        network: &ElementsNetwork,
         descriptor: &WolletDescriptor,
         datadir: String,
         tls: bool,
@@ -28,7 +28,7 @@ impl Wollet {
         let url = electrum_url.unwrap_or(network.electrum_url().to_string());
 
         let inner = wollet::Wollet::new(
-            network.into(),
+            (*network).into(),
             &url,
             tls,
             validate_domain,

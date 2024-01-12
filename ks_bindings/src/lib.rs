@@ -34,20 +34,21 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{wollet::Wollet, Address, Mnemonic, Signer, Txid};
+    use crate::{wollet::Wollet, Address, ElementsNetwork, Mnemonic, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
         let datadir = "/tmp/.ks";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), false).unwrap();
+        let network: ElementsNetwork = test_util::network_regtest().into();
+        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), &network).unwrap();
 
         let server = test_util::setup();
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
         println!("electrum url = {}", &server.electrs.electrum_url);
         let wollet = Wollet::new(
-            test_util::network_regtest().into(),
+            &network,
             &singlesig_desc,
             datadir.to_string(),
             false,

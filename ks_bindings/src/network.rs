@@ -1,88 +1,76 @@
+use std::{fmt::Display, sync::Arc};
+
 use crate::types::AssetId;
 
-/// Possible valid networks
-#[derive(uniffi::Enum, Debug)]
-pub enum ElementsNetwork {
-    Liquid,
-    LiquidTestnet,
-    ElementsRegtest { policy_asset: AssetId },
+#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
+#[uniffi::export(Display)]
+pub struct ElementsNetwork {
+    inner: wollet::ElementsNetwork,
 }
+
+impl Display for ElementsNetwork {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+impl From<wollet::ElementsNetwork> for ElementsNetwork {
+    fn from(inner: wollet::ElementsNetwork) -> Self {
+        Self { inner }
+    }
+}
+
 impl From<ElementsNetwork> for wollet::ElementsNetwork {
     fn from(value: ElementsNetwork) -> Self {
-        match value {
-            ElementsNetwork::Liquid => wollet::ElementsNetwork::Liquid,
-            ElementsNetwork::LiquidTestnet => wollet::ElementsNetwork::LiquidTestnet,
-            ElementsNetwork::ElementsRegtest { policy_asset } => {
-                wollet::ElementsNetwork::ElementsRegtest {
-                    policy_asset: policy_asset.into(),
-                }
-            }
-        }
-    }
-}
-
-impl From<wollet::ElementsNetwork> for ElementsNetwork {
-    fn from(value: wollet::ElementsNetwork) -> Self {
-        match value {
-            wollet::ElementsNetwork::Liquid => ElementsNetwork::Liquid,
-            wollet::ElementsNetwork::LiquidTestnet => ElementsNetwork::LiquidTestnet,
-            wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
-                ElementsNetwork::ElementsRegtest {
-                    policy_asset: policy_asset.into(),
-                }
-            }
-        }
-    }
-}
-
-impl ElementsNetwork {
-    pub fn electrum_url(&self) -> &str {
-        match self {
-            ElementsNetwork::Liquid => "blockstream.info:995",
-            ElementsNetwork::LiquidTestnet => "blockstream.info:465",
-            ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:50002",
-        }
-    }
-
-    pub fn is_mainnet(&self) -> bool {
-        matches!(self, ElementsNetwork::Liquid)
+        value.inner
     }
 }
 
 #[uniffi::export]
-fn network_to_string(network: &ElementsNetwork) -> String {
-    // it looks `#[uniffi::export(Display)]` works only on struct not on enum
-    format!("{:?}", network)
+impl ElementsNetwork {
+    pub fn is_mainnet(&self) -> bool {
+        matches!(&self.inner, &wollet::ElementsNetwork::Liquid)
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::network::network_to_string;
+#[uniffi::export]
+fn new_mainnet_network() -> Arc<ElementsNetwork> {
+    Arc::new(wollet::ElementsNetwork::Liquid.into())
+}
 
-    use super::ElementsNetwork;
+#[uniffi::export]
+fn new_testnet_network() -> Arc<ElementsNetwork> {
+    Arc::new(wollet::ElementsNetwork::LiquidTestnet.into())
+}
 
-    #[test]
-    fn network() {
-        let policy_asset = elements::AssetId::default();
-        for n in [
-            wollet::ElementsNetwork::Liquid,
-            wollet::ElementsNetwork::LiquidTestnet,
-            wollet::ElementsNetwork::ElementsRegtest { policy_asset },
-        ] {
-            let n2: ElementsNetwork = n.into();
-            assert!(
-                ["Liquid", "LiquidTestnet", "ElementsRegtest { policy_asset: AssetId { inner: 0000000000000000000000000000000000000000000000000000000000000000 } }"]
-                    .contains(&network_to_string(&n2).as_str())
-            );
-            assert!([
-                "blockstream.info:995",
-                "blockstream.info:465",
-                "127.0.0.1:50002"
-            ]
-            .contains(&n2.electrum_url()));
+#[uniffi::export]
+fn new_regtest_network(policy_asset: AssetId) -> Arc<ElementsNetwork> {
+    Arc::new(
+        wollet::ElementsNetwork::ElementsRegtest {
+            policy_asset: policy_asset.into(),
+        }
+        .into(),
+    )
+}
 
-            let n3: wollet::ElementsNetwork = n2.into();
-            assert_eq!(n, n3);
+#[uniffi::export]
+fn new_default_regtest_network() -> Arc<ElementsNetwork> {
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
+    Arc::new(
+        wollet::ElementsNetwork::ElementsRegtest {
+            policy_asset: policy_asset.into(),
+        }
+        .into(),
+    )
+}
+
+impl ElementsNetwork {
+    pub fn electrum_url(&self) -> &str {
+        // TODO should be impl on wollet::ElmentsNetwork?
+        match &self.inner {
+            wollet::ElementsNetwork::Liquid => "blockstream.info:995",
+            wollet::ElementsNetwork::LiquidTestnet => "blockstream.info:465",
+            wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:50002",
         }
     }
 }

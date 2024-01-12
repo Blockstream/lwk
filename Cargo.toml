@@ -20,3 +20,12 @@ resolver = "2"
 elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "add54c80ba1821a16b88af59de16009f28379853" }
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "353005c9e7cc1588033149a1c42d69245f13cb25" }
 electrsd = { git = "https://github.com/RCasatta/electrsd", rev = "bf0fd301590f45728c5217f84218719372f56262" }
+
+
+[profile.release-smaller]
+inherits = "release"
+opt-level = 'z'     # Optimize for size.
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = "abort"     # Abort on panic
+strip = "debuginfo" # Partially strip symbols from binary

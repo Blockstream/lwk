@@ -24,13 +24,13 @@ kotlin:
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings
+	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p ks-bindings --profile release-smaller
 
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build --release -p ks-bindings
+	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build -p ks-bindings --profile release-smaller
 
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings
+	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build -p ks-bindings --profile release-smaller
 
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build --release -p ks-bindings
+	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p ks-bindings --profile release-smaller

@@ -1,4 +1,4 @@
-use crate::{ElementsNetwork, Error, Mnemonic, Pset, WolletDescriptor};
+use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
 /// A Software signer
@@ -11,7 +11,7 @@ pub struct Signer {
 impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
-    pub fn new(mnemonic: &Mnemonic, network: &ElementsNetwork) -> Result<Arc<Self>, Error> {
+    pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Arc<Self>, Error> {
         let inner = signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
         Ok(Arc::new(Self { inner }))
     }
@@ -43,7 +43,7 @@ mod tests {
     fn signer() {
         let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
-        let network: crate::ElementsNetwork = test_util::network_regtest().into();
+        let network: crate::Network = test_util::network_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 

@@ -1,5 +1,5 @@
 use crate::desc::WolletDescriptor;
-use crate::network::ElementsNetwork;
+use crate::network::Network;
 use crate::types::AssetId;
 use crate::{Address, AddressResult, ElectrumUrl, Error, Pset, Txid, WalletTx};
 use std::{
@@ -18,7 +18,7 @@ impl Wollet {
     /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
     pub fn new(
-        network: &ElementsNetwork,
+        network: &Network,
         descriptor: &WolletDescriptor,
         datadir: String,
         electrum_url: &ElectrumUrl,

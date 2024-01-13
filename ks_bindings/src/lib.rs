@@ -24,7 +24,7 @@ pub use chain::Chain;
 pub use desc::WolletDescriptor;
 pub use electrum_url::ElectrumUrl;
 pub use mnemonic::Mnemonic;
-pub use network::ElementsNetwork;
+pub use network::Network;
 pub use pset::Pset;
 pub use signer::Signer;
 pub use wollet::Wollet;
@@ -36,13 +36,13 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{wollet::Wollet, Address, ElectrumUrl, ElementsNetwork, Mnemonic, Signer, Txid};
+    use crate::{wollet::Wollet, Address, ElectrumUrl, Mnemonic, Network, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
         let datadir = "/tmp/.ks";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let network: ElementsNetwork = test_util::network_regtest().into();
+        let network: Network = test_util::network_regtest().into();
         let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), &network).unwrap();
 
         let server = test_util::setup();

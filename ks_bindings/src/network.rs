@@ -4,29 +4,29 @@ use crate::{electrum_url::ElectrumUrl, types::AssetId};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
-pub struct ElementsNetwork {
+pub struct Network {
     inner: wollet::ElementsNetwork,
 }
 
-impl Display for ElementsNetwork {
+impl Display for Network {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.inner)
     }
 }
-impl From<wollet::ElementsNetwork> for ElementsNetwork {
+impl From<wollet::ElementsNetwork> for Network {
     fn from(inner: wollet::ElementsNetwork) -> Self {
         Self { inner }
     }
 }
 
-impl From<ElementsNetwork> for wollet::ElementsNetwork {
-    fn from(value: ElementsNetwork) -> Self {
+impl From<Network> for wollet::ElementsNetwork {
+    fn from(value: Network) -> Self {
         value.inner
     }
 }
 
 #[uniffi::export]
-impl ElementsNetwork {
+impl Network {
     pub fn default_electrum_url(&self) -> Arc<ElectrumUrl> {
         let (url, validate_domain, tls) = match &self.inner {
             wollet::ElementsNetwork::Liquid => ("blockstream.info:995", true, true),
@@ -45,24 +45,24 @@ impl ElementsNetwork {
 }
 
 #[uniffi::export]
-impl ElementsNetwork {
+impl Network {
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &wollet::ElementsNetwork::Liquid)
     }
 }
 
 #[uniffi::export]
-fn new_mainnet_network() -> Arc<ElementsNetwork> {
+fn new_mainnet_network() -> Arc<Network> {
     Arc::new(wollet::ElementsNetwork::Liquid.into())
 }
 
 #[uniffi::export]
-fn new_testnet_network() -> Arc<ElementsNetwork> {
+fn new_testnet_network() -> Arc<Network> {
     Arc::new(wollet::ElementsNetwork::LiquidTestnet.into())
 }
 
 #[uniffi::export]
-fn new_regtest_network(policy_asset: AssetId) -> Arc<ElementsNetwork> {
+fn new_regtest_network(policy_asset: AssetId) -> Arc<Network> {
     Arc::new(
         wollet::ElementsNetwork::ElementsRegtest {
             policy_asset: policy_asset.into(),
@@ -72,7 +72,7 @@ fn new_regtest_network(policy_asset: AssetId) -> Arc<ElementsNetwork> {
 }
 
 #[uniffi::export]
-fn new_default_regtest_network() -> Arc<ElementsNetwork> {
+fn new_default_regtest_network() -> Arc<Network> {
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
     Arc::new(wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())

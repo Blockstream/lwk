@@ -51,29 +51,36 @@ impl Network {
     }
 }
 
-#[uniffi::export]
-fn new_mainnet_network() -> Arc<Network> {
-    Arc::new(wollet::ElementsNetwork::Liquid.into())
-}
+#[derive(uniffi::Object)]
+pub struct NetworkBuilder {}
 
 #[uniffi::export]
-fn new_testnet_network() -> Arc<Network> {
-    Arc::new(wollet::ElementsNetwork::LiquidTestnet.into())
-}
+impl NetworkBuilder {
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {})
+    }
 
-#[uniffi::export]
-fn new_regtest_network(policy_asset: AssetId) -> Arc<Network> {
-    Arc::new(
-        wollet::ElementsNetwork::ElementsRegtest {
-            policy_asset: policy_asset.into(),
-        }
-        .into(),
-    )
-}
+    pub fn mainnet(&self) -> Arc<Network> {
+        Arc::new(wollet::ElementsNetwork::Liquid.into())
+    }
 
-#[uniffi::export]
-fn new_default_regtest_network() -> Arc<Network> {
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-    Arc::new(wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
+    pub fn testnet(&self) -> Arc<Network> {
+        Arc::new(wollet::ElementsNetwork::LiquidTestnet.into())
+    }
+
+    pub fn regtest(&self, policy_asset: AssetId) -> Arc<Network> {
+        Arc::new(
+            wollet::ElementsNetwork::ElementsRegtest {
+                policy_asset: policy_asset.into(),
+            }
+            .into(),
+        )
+    }
+
+    pub fn regtest_default(&self) -> Arc<Network> {
+        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
+        Arc::new(wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
+    }
 }

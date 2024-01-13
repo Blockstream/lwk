@@ -26,7 +26,7 @@ just env-bindings
 import ks_bindings as ks
 
 mnemonic = ks.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
-network = ks.new_testnet_network()
+network = ks.NetworkBuilder().testnet()
 
 signer = ks.Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()

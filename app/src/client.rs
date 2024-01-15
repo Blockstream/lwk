@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use jade::TIMEOUT;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::value::to_raw_value;
@@ -18,7 +19,12 @@ pub struct Client {
 impl Client {
     pub fn new(addr: SocketAddr) -> Result<Self, Error> {
         let url = addr.to_string();
-        let client = jsonrpc::Client::simple_http(&url, None, None)?; // todo: auth
+        let transport = jsonrpc::simple_http::Builder::new()
+            .timeout(TIMEOUT)
+            // todo: auth
+            .url(&url)?
+            .build();
+        let client = jsonrpc::Client::with_transport(transport);
         Ok(Self { client })
     }
 

@@ -788,6 +788,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let s = state.lock()?;
                 s.config.jade_network()
             };
+            tracing::debug!("jade network: {}", network);
 
             let jade = match r.emulator {
                 Some(emulator) => MutexJade::from_socket(emulator, network)?,

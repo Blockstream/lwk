@@ -251,21 +251,22 @@ impl TestWollet {
         )
         .unwrap();
 
-        wollet.sync_txs().unwrap();
+        wollet.full_scan().unwrap();
         let list = wollet.transactions().unwrap();
         assert_eq!(list.len(), 0);
         let mut i = 120;
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            wollet.sync_tip().unwrap();
-            let tip = wollet.tip().unwrap();
-            if tip.0 >= 101 {
-                break tip.0;
+            let height = wollet.ask_tip().unwrap();
+            if height >= 101 {
+                break height;
             } else {
                 thread::sleep(Duration::from_millis(500));
             }
         };
+        wollet.full_scan().unwrap();
+
         assert!(tip >= 101);
 
         Self {
@@ -279,8 +280,7 @@ impl TestWollet {
     }
 
     pub fn sync(&mut self) {
-        self.wollet.sync_txs().unwrap();
-        self.wollet.sync_tip().unwrap();
+        self.wollet.full_scan().unwrap();
     }
 
     pub fn address(&self) -> Address {
@@ -294,7 +294,7 @@ impl TestWollet {
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
         for _ in 0..120 {
-            self.wollet.sync_txs().unwrap();
+            self.wollet.full_scan().unwrap();
             let list = self.wollet.transactions().unwrap();
             if list.iter().any(|e| e.tx.txid().to_string() == txid) {
                 return;
@@ -306,7 +306,7 @@ impl TestWollet {
 
     /// asset balance in satoshi
     pub fn balance(&mut self, asset: &AssetId) -> u64 {
-        self.wollet.sync_txs().unwrap();
+        self.wollet.full_scan().unwrap();
         let balance = self.wollet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }
@@ -316,7 +316,7 @@ impl TestWollet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
-        self.wollet.sync_txs().unwrap();
+        self.wollet.full_scan().unwrap();
         let list = self.wollet.transactions().unwrap();
         for tx in list.iter() {
             if tx.height.is_some() {

@@ -49,8 +49,7 @@ impl Wollet {
 
     pub fn sync(&self) -> Result<(), Error> {
         let mut wollet = self.inner.lock()?;
-        wollet.sync_tip()?;
-        wollet.sync_txs()?;
+        wollet.full_scan()?;
         Ok(())
     }
 

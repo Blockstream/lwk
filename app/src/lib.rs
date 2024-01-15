@@ -317,7 +317,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Address = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?; // To update the last unused index
+            wollet.full_scan()?; // To update the last unused index
             let addr = wollet.address(r.index)?;
             Response::result(
                 request.id,
@@ -331,7 +331,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Balance = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let mut balance = wollet
                 .balance()?
                 .into_iter()
@@ -349,7 +349,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Send = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let mut tx = wollet.send_many(
                 r.addressees
                     .into_iter()
@@ -644,7 +644,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::WalletUtxos = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let utxos: Vec<response::Utxo> = wollet.utxos()?.iter().map(convert_utxo).collect();
             Response::result(
                 request.id,
@@ -656,7 +656,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let explorer_url = s.config.explorer_url.clone();
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let mut txs: Vec<response::Tx> = wollet
                 .transactions()?
                 .iter()
@@ -676,7 +676,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Issue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let tx = wollet.issue_asset(
                 r.satoshi_asset,
                 r.address_asset.as_deref().unwrap_or(""),
@@ -696,7 +696,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Reissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.sync_txs()?;
+            wollet.full_scan()?;
             let mut pset = wollet.reissue_asset(
                 &r.asset,
                 r.satoshi_asset,

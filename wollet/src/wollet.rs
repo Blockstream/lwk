@@ -12,7 +12,7 @@ use crate::elements::{AssetId, BlockHash, BlockHeader, OutPoint, Script, Transac
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
-use crate::store::{new_store, Store};
+use crate::store::{new_store, Height, Store};
 use crate::sync::sync;
 use crate::util::EC;
 use crate::WolletDescriptor;
@@ -86,33 +86,34 @@ impl Wollet {
         self.descriptor.clone()
     }
 
-    /// Sync the wallet transactions
-    pub fn sync_txs(&mut self) -> Result<(), Error> {
-        tracing::trace!("Start sync_txs");
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            let descriptor = self.descriptor.clone();
-            match sync(&client, &mut self.store, &descriptor) {
-                Ok(true) => tracing::info!("there are new transactions"),
-                Ok(false) => tracing::debug!("there aren't new transactions"),
-                Err(e) => tracing::warn!("Error during sync, {:?}", e),
-            }
+    pub fn full_scan(&mut self) -> Result<(), Error> {
+        let client = self.config.electrum_url().build_client()?;
+        let descriptor = self.descriptor.clone();
+        let header = client.block_headers_subscribe_raw()?;
+        let new_transactions = sync(&client, &mut self.store, &descriptor)?;
+        let height = header.height as u32;
+
+        let tip_height = self.store.cache.tip.0;
+        if height != tip_height {
+            let block_header: BlockHeader = elements_deserialize(&header.header)?;
+            let hash: BlockHash = block_header.block_hash();
+            self.store.cache.tip = (height, hash);
         }
+
+        tracing::info!("height({height}): are there new txs? {new_transactions}");
+
+        if let Ok(Some(_)) = client.block_headers_pop_raw() {
+            tracing::info!("new_header after syncing txs");
+        }
+
         Ok(())
     }
 
     /// Sync the blockchain tip
-    pub fn sync_tip(&mut self) -> Result<(), Error> {
-        if let Ok(client) = self.config.electrum_url().build_client() {
-            let header = client.block_headers_subscribe_raw()?;
-            let height = header.height as u32;
-            let tip_height = self.store.cache.tip.0;
-            if height != tip_height {
-                let block_header: BlockHeader = elements_deserialize(&header.header)?;
-                let hash: BlockHash = block_header.block_hash();
-                self.store.cache.tip = (height, hash);
-            }
-        }
-        Ok(())
+    pub fn ask_tip(&mut self) -> Result<Height, Error> {
+        let client = self.config.electrum_url().build_client()?;
+        let header = client.block_headers_subscribe_raw()?;
+        Ok(header.height as Height)
     }
 
     /// Get the blockchain tip

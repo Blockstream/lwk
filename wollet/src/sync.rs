@@ -22,8 +22,17 @@ struct DownloadTxResult {
 }
 
 pub fn sync(client: &Client, wollet: &mut Wollet) -> Result<bool, Error> {
+    let update = scan(client, wollet)?;
+    let result = update.is_some();
+    if let Some(update) = update {
+        apply_update(&mut wollet.store, update)?
+    }
+    Ok(result)
+}
+
+fn scan(client: &Client, wollet: &Wollet) -> Result<Option<Update>, Error> {
     let descriptor = wollet.wollet_descriptor();
-    let store = &mut wollet.store;
+    let store = &wollet.store;
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
 
@@ -112,10 +121,10 @@ pub fn sync(client: &Client, wollet: &mut Wollet) -> Result<bool, Error> {
             timestamps,
             scripts,
         };
-        apply_update(store, update)?;
+        Ok(Some(update))
+    } else {
+        Ok(None)
     }
-
-    Ok(changed)
 }
 
 struct Update {
@@ -188,7 +197,7 @@ fn download_txs(
     history_txs_id: &HashSet<Txid>,
     scripts: &HashMap<Script, (Chain, ChildNumber)>,
     client: &Client,
-    store: &mut Store,
+    store: &Store,
     descriptor: &WolletDescriptor,
 ) -> Result<DownloadTxResult, Error> {
     let mut txs = vec![];
@@ -258,7 +267,7 @@ fn download_txs(
 fn download_headers(
     history_txs_heights: &HashSet<Height>,
     client: &Client,
-    store: &mut Store,
+    store: &Store,
 ) -> Result<Vec<(Height, Timestamp)>, Error> {
     let mut result = vec![];
     let heights_in_db: HashSet<Height> =

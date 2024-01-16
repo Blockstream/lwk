@@ -49,7 +49,7 @@ impl ElectrumClient {
         Ok(self.tip.clone())
     }
 
-    pub fn scan(&self, wollet: &Wollet) -> Result<Option<Update>, Error> {
+    pub fn scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
         let store = &wollet.store;
         let mut txid_height = HashMap::new();
@@ -128,13 +128,16 @@ impl ElectrumClient {
             .last_unused_internal
             .load(atomic::Ordering::Relaxed);
 
+        let tip = self.tip()?;
+
         let last_unused_changed = store_last_unused_external != last_unused_external
             || store_last_unused_internal != last_unused_internal;
 
         let changed = !new_txs.txs.is_empty()
             || last_unused_changed
             || !scripts.is_empty()
-            || !timestamps.is_empty();
+            || !timestamps.is_empty()
+            || store.cache.tip != (tip.height, tip.block_hash());
 
         if changed {
             tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
@@ -144,6 +147,7 @@ impl ElectrumClient {
                 txid_height,
                 timestamps,
                 scripts,
+                tip,
             };
             Ok(Some(update))
         } else {

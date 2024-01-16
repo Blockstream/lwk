@@ -86,17 +86,7 @@ impl Wollet {
 
     pub fn full_scan(&mut self) -> Result<(), Error> {
         let mut electrum_client = ElectrumClient::new(&self.config.electrum_url())?;
-        let block_header = electrum_client.tip()?;
-        let height = block_header.height;
-        let new_transactions = sync(&electrum_client, self)?;
-
-        let tip_height = self.store.cache.tip.0;
-        if height != tip_height {
-            let hash: BlockHash = block_header.block_hash();
-            self.store.cache.tip = (height, hash);
-        }
-
-        tracing::info!("height({height}): are there new txs? {new_transactions}");
+        sync(&mut electrum_client, self)?;
 
         Ok(())
     }

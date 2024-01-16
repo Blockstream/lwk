@@ -5,6 +5,7 @@ use crate::store::{Height, Store, Timestamp};
 use crate::ElectrumClient;
 use crate::Wollet;
 use electrum_client::bitcoin::bip32::ChildNumber;
+use elements::BlockHeader;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
@@ -14,7 +15,7 @@ pub struct DownloadTxResult {
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
-pub fn sync(client: &ElectrumClient, wollet: &mut Wollet) -> Result<bool, Error> {
+pub fn sync(client: &mut ElectrumClient, wollet: &mut Wollet) -> Result<bool, Error> {
     let update = client.scan(wollet)?;
     let result = update.is_some();
     if let Some(update) = update {
@@ -28,6 +29,7 @@ pub struct Update {
     pub txid_height: HashMap<Txid, Option<Height>>,
     pub timestamps: Vec<(Height, Timestamp)>,
     pub scripts: HashMap<Script, (Chain, ChildNumber)>,
+    pub tip: BlockHeader,
 }
 
 fn apply_update(store: &mut Store, update: Update) -> Result<(), Error> {
@@ -36,7 +38,9 @@ fn apply_update(store: &mut Store, update: Update) -> Result<(), Error> {
         mut txid_height,
         timestamps,
         scripts,
+        tip,
     } = update;
+    store.cache.tip = (tip.height, tip.block_hash());
     store.cache.all_txs.extend(new_txs.txs);
     store.cache.unblinded.extend(new_txs.unblinds);
     let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();

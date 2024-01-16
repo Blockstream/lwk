@@ -106,19 +106,32 @@ pub fn sync(client: &Client, wollet: &mut Wollet) -> Result<bool, Error> {
     if changed {
         tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
-        apply_update(store, new_txs, txid_height, timestamps, scripts)?;
+        let update = Update {
+            new_txs,
+            txid_height,
+            timestamps,
+            scripts,
+        };
+        apply_update(store, update)?;
     }
 
     Ok(changed)
 }
 
-fn apply_update(
-    store: &mut Store,
+struct Update {
     new_txs: DownloadTxResult,
-    mut txid_height: HashMap<Txid, Option<u32>>,
+    txid_height: HashMap<Txid, Option<u32>>,
     timestamps: Vec<(u32, u32)>,
     scripts: HashMap<Script, (Chain, ChildNumber)>,
-) -> Result<(), Error> {
+}
+
+fn apply_update(store: &mut Store, update: Update) -> Result<(), Error> {
+    let Update {
+        new_txs,
+        mut txid_height,
+        timestamps,
+        scripts,
+    } = update;
     store.cache.all_txs.extend(new_txs.txs);
     store.cache.unblinded.extend(new_txs.unblinds);
     let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();

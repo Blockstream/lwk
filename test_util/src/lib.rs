@@ -251,6 +251,12 @@ impl TestWollet {
         )
         .unwrap();
 
+        let electrum_url = match tls {
+            true => ElectrumUrl::Tls(electrs_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrs_url.into()),
+        };
+
+        let mut client = ElectrumClient::new(&electrum_url).unwrap();
         wollet.full_scan().unwrap();
         let list = wollet.transactions().unwrap();
         assert_eq!(list.len(), 0);
@@ -258,7 +264,7 @@ impl TestWollet {
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            let height = wollet.ask_tip().unwrap();
+            let height = client.tip().unwrap().height;
             if height >= 101 {
                 break height;
             } else {

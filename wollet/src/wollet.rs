@@ -10,7 +10,7 @@ use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
-use crate::store::{new_store, Height, Store};
+use crate::store::{new_store, Store};
 use crate::util::EC;
 use crate::{ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
@@ -91,13 +91,6 @@ impl Wollet {
         }
 
         Ok(())
-    }
-
-    /// Sync the blockchain tip
-    pub fn ask_tip(&mut self) -> Result<Height, Error> {
-        let client = self.config.electrum_url().build_client()?;
-        let header = client.block_headers_subscribe_raw()?;
-        Ok(header.height as Height)
     }
 
     /// Get the blockchain tip

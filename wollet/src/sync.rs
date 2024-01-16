@@ -98,80 +98,77 @@ pub fn sync(client: &Client, wollet: &mut Wollet) -> Result<bool, Error> {
     let last_unused_changed = store_last_unused_external != last_unused_external
         || store_last_unused_internal != last_unused_internal;
 
-    let changed = if !new_txs.txs.is_empty()
+    let changed = !new_txs.txs.is_empty()
         || last_unused_changed
         || !scripts.is_empty()
-        || !timestamps.is_empty()
-    {
+        || !timestamps.is_empty();
+
+    if changed {
         tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
-        store.cache.all_txs.extend(new_txs.txs);
-        store.cache.unblinded.extend(new_txs.unblinds);
+        apply_update(store, new_txs, txid_height, timestamps, scripts)?;
+    }
 
-        // Prune transactions that do not contain any input or output that we have unblinded
-        let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
-        txid_height.retain(|txid, _| txids_unblinded.contains(txid));
+    Ok(changed)
+}
 
-        // height map is used for the live list of transactions, since due to reorg or rbf tx
-        // could disappear from the list, we clear the list and keep only the last values returned by the server
-        store.cache.heights.clear();
-        store.cache.heights.extend(&txid_height);
-
-        store.cache.timestamps.extend(timestamps);
-
-        store
-            .cache
-            .scripts
-            .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
-        store.cache.paths.extend(scripts);
-
-        // Find the last used index in an output that we can unblind
-        let mut last_used_internal = None;
-        let mut last_used_external = None;
-
-        for txid in txid_height.keys() {
-            if let Some(tx) = store.cache.all_txs.get(txid) {
-                for output in &tx.output {
-                    if let Some((ext_int, ChildNumber::Normal { index })) =
-                        store.cache.paths.get(&output.script_pubkey)
-                    {
-                        match ext_int {
-                            Chain::External => match last_used_external {
-                                None => last_used_external = Some(index),
-                                Some(last) if index > last => last_used_external = Some(index),
-                                _ => {}
-                            },
-                            Chain::Internal => match last_used_internal {
-                                None => last_used_internal = Some(index),
-                                Some(last) if index > last => last_used_internal = Some(index),
-                                _ => {}
-                            },
-                        }
+fn apply_update(
+    store: &mut Store,
+    new_txs: DownloadTxResult,
+    mut txid_height: HashMap<Txid, Option<u32>>,
+    timestamps: Vec<(u32, u32)>,
+    scripts: HashMap<Script, (Chain, ChildNumber)>,
+) -> Result<(), Error> {
+    store.cache.all_txs.extend(new_txs.txs);
+    store.cache.unblinded.extend(new_txs.unblinds);
+    let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
+    txid_height.retain(|txid, _| txids_unblinded.contains(txid));
+    store.cache.heights.clear();
+    store.cache.heights.extend(&txid_height);
+    store.cache.timestamps.extend(timestamps);
+    store
+        .cache
+        .scripts
+        .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
+    store.cache.paths.extend(scripts);
+    let mut last_used_internal = None;
+    let mut last_used_external = None;
+    for txid in txid_height.keys() {
+        if let Some(tx) = store.cache.all_txs.get(txid) {
+            for output in &tx.output {
+                if let Some((ext_int, ChildNumber::Normal { index })) =
+                    store.cache.paths.get(&output.script_pubkey)
+                {
+                    match ext_int {
+                        Chain::External => match last_used_external {
+                            None => last_used_external = Some(index),
+                            Some(last) if index > last => last_used_external = Some(index),
+                            _ => {}
+                        },
+                        Chain::Internal => match last_used_internal {
+                            None => last_used_internal = Some(index),
+                            Some(last) if index > last => last_used_internal = Some(index),
+                            _ => {}
+                        },
                     }
                 }
             }
         }
-
-        if let Some(last_used_external) = last_used_external {
-            store
-                .cache
-                .last_unused_external
-                .store(last_used_external + 1, atomic::Ordering::Relaxed);
-        }
-        if let Some(last_used_internal) = last_used_internal {
-            store
-                .cache
-                .last_unused_internal
-                .store(last_used_internal + 1, atomic::Ordering::Relaxed);
-        }
-
-        store.flush()?;
-        true
-    } else {
-        false
-    };
-
-    Ok(changed)
+    }
+    if let Some(last_used_external) = last_used_external {
+        store
+            .cache
+            .last_unused_external
+            .store(last_used_external + 1, atomic::Ordering::Relaxed);
+    }
+    if let Some(last_used_internal) = last_used_internal {
+        store
+            .cache
+            .last_unused_internal
+            .store(last_used_internal + 1, atomic::Ordering::Relaxed);
+    }
+    store.flush()?;
+    Ok(())
 }
 
 fn download_txs(

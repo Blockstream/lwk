@@ -16,7 +16,7 @@ mod model;
 mod pset_create;
 mod registry;
 mod store;
-mod sync;
+mod update;
 mod util;
 mod wollet;
 

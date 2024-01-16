@@ -11,7 +11,6 @@ use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::{new_store, Height, Store};
-use crate::sync::sync;
 use crate::util::EC;
 use crate::{ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
@@ -86,7 +85,10 @@ impl Wollet {
 
     pub fn full_scan(&mut self) -> Result<(), Error> {
         let mut electrum_client = ElectrumClient::new(&self.config.electrum_url())?;
-        sync(&mut electrum_client, self)?;
+        let update = electrum_client.full_scan(self)?;
+        if let Some(update) = update {
+            self.apply_update(update)?
+        }
 
         Ok(())
     }

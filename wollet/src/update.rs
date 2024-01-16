@@ -2,7 +2,6 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
-use crate::ElectrumClient;
 use crate::Wollet;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements::BlockHeader;
@@ -15,15 +14,6 @@ pub struct DownloadTxResult {
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
-pub fn sync(client: &mut ElectrumClient, wollet: &mut Wollet) -> Result<bool, Error> {
-    let update = client.scan(wollet)?;
-    let result = update.is_some();
-    if let Some(update) = update {
-        wollet.apply_update(update)?
-    }
-    Ok(result)
-}
-
 pub struct Update {
     pub new_txs: DownloadTxResult,
     pub txid_height: HashMap<Txid, Option<Height>>,
@@ -33,7 +23,7 @@ pub struct Update {
 }
 
 impl Wollet {
-    fn apply_update(&mut self, update: Update) -> Result<(), Error> {
+    pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
         let store = &mut self.store;
         let Update {
             new_txs,

@@ -14,7 +14,7 @@ use elements::{
 
 use crate::{
     store::{Height, Store, Timestamp, BATCH_SIZE},
-    sync::{DownloadTxResult, Update},
+    update::{DownloadTxResult, Update},
     Chain, ElectrumUrl, Error, Wollet, WolletDescriptor, EC,
 };
 use elements::bitcoin::Txid as BitcoinTxid;
@@ -49,7 +49,7 @@ impl ElectrumClient {
         Ok(self.tip.clone())
     }
 
-    pub fn scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
+    pub fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
         let store = &wollet.store;
         let mut txid_height = HashMap::new();

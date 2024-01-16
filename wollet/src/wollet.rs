@@ -88,9 +88,8 @@ impl Wollet {
 
     pub fn full_scan(&mut self) -> Result<(), Error> {
         let client = self.config.electrum_url().build_client()?;
-        let descriptor = self.descriptor.clone();
         let header = client.block_headers_subscribe_raw()?;
-        let new_transactions = sync(&client, &mut self.store, &descriptor)?;
+        let new_transactions = sync(&client, self)?;
         let height = header.height as u32;
 
         let tip_height = self.store.cache.tip.0;

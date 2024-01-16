@@ -6,7 +6,7 @@ use crate::elements::{OutPoint, Script, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Store, Timestamp, BATCH_SIZE};
 use crate::util::EC;
-use crate::WolletDescriptor;
+use crate::{Wollet, WolletDescriptor};
 use common::derive_blinding_key;
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
@@ -21,11 +21,9 @@ struct DownloadTxResult {
     unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
-pub fn sync(
-    client: &Client,
-    store: &mut Store,
-    descriptor: &WolletDescriptor,
-) -> Result<bool, Error> {
+pub fn sync(client: &Client, wollet: &mut Wollet) -> Result<bool, Error> {
+    let descriptor = wollet.wollet_descriptor();
+    let store = &mut wollet.store;
     let mut txid_height = HashMap::new();
     let mut scripts = HashMap::new();
 
@@ -84,7 +82,7 @@ pub fn sync(
     }
 
     let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-    let new_txs = download_txs(&history_txs_id, &scripts, client, store, descriptor)?;
+    let new_txs = download_txs(&history_txs_id, &scripts, client, store, &descriptor)?;
     let history_txs_heights: HashSet<Height> = txid_height.values().filter_map(|e| *e).collect();
     let timestamps = download_headers(&history_txs_heights, client, store)?;
 

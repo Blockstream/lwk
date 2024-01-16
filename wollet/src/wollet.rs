@@ -85,8 +85,8 @@ impl Wollet {
     }
 
     pub fn full_scan(&mut self) -> Result<(), Error> {
-        let electrum_client = ElectrumClient::new(self.config.electrum_url())?;
-        let block_header = electrum_client.ask_tip()?;
+        let mut electrum_client = ElectrumClient::new(&self.config.electrum_url())?;
+        let block_header = electrum_client.tip()?;
         let height = block_header.height;
         let new_transactions = sync(&electrum_client, self)?;
 

@@ -22,24 +22,31 @@ use elements::encode::deserialize as elements_deserialize;
 
 pub struct ElectrumClient {
     client: Client,
-    url: ElectrumUrl,
+
+    tip: BlockHeader,
 }
 
 impl ElectrumClient {
-    pub fn new(url: ElectrumUrl) -> Result<Self, Error> {
-        Ok(Self {
-            client: url.build_client()?,
-            url: url,
-        })
+    pub fn new(url: &ElectrumUrl) -> Result<Self, Error> {
+        let client = url.build_client()?;
+        let header = client.block_headers_subscribe_raw()?;
+        let tip: BlockHeader = elements_deserialize(&header.header)?;
+
+        Ok(Self { client, tip })
     }
 
-    pub fn ask_tip(&self) -> Result<BlockHeader, Error> {
-        // TODO creating new client, to have latest, instead keep tip and use pop_header()
-        let new_client = self.url.build_client()?;
-        let header = new_client.block_headers_subscribe_raw()?;
-        let block_header: BlockHeader = elements_deserialize(&header.header)?;
+    pub fn tip(&mut self) -> Result<BlockHeader, Error> {
+        let mut popped_header = None;
+        while let Some(header) = self.client.block_headers_pop_raw()? {
+            popped_header = Some(header)
+        }
 
-        Ok(block_header)
+        if let Some(popped_header) = popped_header {
+            let tip: BlockHeader = elements_deserialize(&popped_header.header)?;
+            self.tip = tip;
+        }
+
+        Ok(self.tip.clone())
     }
 
     pub fn scan(&self, wollet: &Wollet) -> Result<Option<Update>, Error> {

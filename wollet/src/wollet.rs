@@ -2,20 +2,18 @@ use crate::bitcoin::bip32::Fingerprint;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
-use crate::elements::encode::{
-    deserialize as elements_deserialize, serialize as elements_serialize,
-};
+use crate::elements::encode::serialize as elements_serialize;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
-use crate::elements::{AssetId, BlockHash, BlockHeader, OutPoint, Script, Transaction, Txid};
+use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::{new_store, Height, Store};
 use crate::sync::sync;
 use crate::util::EC;
-use crate::WolletDescriptor;
+use crate::{ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use electrum_client::ElectrumApi;
@@ -87,23 +85,18 @@ impl Wollet {
     }
 
     pub fn full_scan(&mut self) -> Result<(), Error> {
-        let client = self.config.electrum_url().build_client()?;
-        let header = client.block_headers_subscribe_raw()?;
-        let new_transactions = sync(&client, self)?;
-        let height = header.height as u32;
+        let electrum_client = ElectrumClient::new(self.config.electrum_url())?;
+        let block_header = electrum_client.ask_tip()?;
+        let height = block_header.height;
+        let new_transactions = sync(&electrum_client, self)?;
 
         let tip_height = self.store.cache.tip.0;
         if height != tip_height {
-            let block_header: BlockHeader = elements_deserialize(&header.header)?;
             let hash: BlockHash = block_header.block_hash();
             self.store.cache.tip = (height, hash);
         }
 
         tracing::info!("height({height}): are there new txs? {new_transactions}");
-
-        if let Ok(Some(_)) = client.block_headers_pop_raw() {
-            tracing::info!("new_header after syncing txs");
-        }
 
         Ok(())
     }

@@ -7,6 +7,7 @@
 //!
 //! For an entry point see [`Wollet::new()`]
 
+mod clients;
 mod config;
 mod descriptor;
 mod domain;
@@ -30,6 +31,7 @@ pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::util::EC;
 pub use crate::wollet::Wollet;
 
+pub use clients::electrum_client::ElectrumClient;
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

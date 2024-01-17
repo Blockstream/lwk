@@ -671,6 +671,10 @@ pub enum ServerCommand {
         /// If failing to determine the home directory the current dir `./.ks` is used
         #[arg(long)]
         datadir: Option<PathBuf>,
+
+        /// Timeout for rpc and hww requests in seconds
+        #[arg(long)]
+        timeout: Option<u64>,
     },
 
     /// Stop the server, could be stopped also with SIGINT (ctrl-c)

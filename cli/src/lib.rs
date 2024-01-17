@@ -78,6 +78,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 ServerCommand::Start {
                     electrum_url,
                     datadir,
+                    timeout,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let set_handler_result = ctrlc::try_set_handler(move || {
@@ -97,6 +98,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                             })?,
                             datadir,
                         ),
+                    };
+                    if let Some(timeout) = timeout {
+                        config.timeout = Duration::from_secs(timeout);
                     };
                     if let Some(url) = electrum_url {
                         config.electrum_url = url;

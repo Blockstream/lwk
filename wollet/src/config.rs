@@ -15,6 +15,12 @@ pub enum ElectrumUrl {
 }
 
 impl ElectrumUrl {
+    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
+        match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        }
+    }
     pub fn build_client(&self) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
@@ -71,10 +77,7 @@ impl Config {
         electrum_url: &str,
         data_root: &str,
     ) -> Result<Self, Error> {
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
-        };
+        let electrum_url = ElectrumUrl::new(electrum_url, tls, validate_domain);
         Ok(Config {
             network,
             electrum_url,

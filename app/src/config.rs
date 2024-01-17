@@ -3,8 +3,8 @@ use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
-use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
+use wollet::{elements::AssetId, ElectrumUrl};
 
 use crate::{consts, Error};
 
@@ -92,5 +92,9 @@ impl Config {
     /// True if Liquid mainnet
     pub fn is_mainnet(&self) -> bool {
         matches!(self.network, ElementsNetwork::Liquid)
+    }
+
+    pub(crate) fn electrum_url(&self) -> wollet::ElectrumUrl {
+        ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
     }
 }

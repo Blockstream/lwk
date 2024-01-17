@@ -34,7 +34,7 @@ use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements::{AssetId, TxOutSecrets};
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
-use wollet::Wollet;
+use wollet::{ElectrumClient, Wollet};
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
@@ -478,13 +478,16 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Broadcast => {
             let r: request::Broadcast = serde_json::from_value(params)?;
             let mut s = state.lock()?;
+            let electrum_url = s.config.electrum_url();
+
             let wollet = s.wollets.get_mut(&r.name)?;
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let tx = wollet.finalize(&mut pset)?;
+            let electrum_client = ElectrumClient::new(&electrum_url)?;
 
             if !r.dry_run {
-                wollet.broadcast(&tx)?;
+                electrum_client.broadcast(&tx)?;
             }
 
             Response::result(

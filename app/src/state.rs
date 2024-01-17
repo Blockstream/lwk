@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::str::FromStr;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use common::Signer;
 use jade::mutex_jade::MutexJade;
@@ -201,14 +201,18 @@ impl Signers {
     /// Get an available signer identified by name.
     ///
     /// In some cases, like with a jade not currently linked, it may try to connect to it first
-    pub fn get_available(&mut self, name: &str) -> Result<&AnySigner, Error> {
+    fn get_available(
+        &mut self,
+        name: &str,
+        timeout: Option<Duration>,
+    ) -> Result<&AnySigner, Error> {
         let app_signer = self.get(name)?;
         tracing::debug!("get_available({}) return {:?}", name, app_signer);
         let jade = match app_signer {
             AppSigner::JadeId(id, network) => {
                 // try to connect JadeId -> AvailableSigner(Jade)
                 // TODO possible errors should be kept
-                MutexJade::from_serial_matching_id(*network, id, None)
+                MutexJade::from_serial_matching_id(*network, id, timeout)
                     .map(|jade| AppSigner::AvailableSigner(AnySigner::Jade(jade, *id)))
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {
@@ -503,5 +507,13 @@ impl State {
         }
 
         Ok(requests)
+    }
+
+    /// Get an available signer identified by name.
+    ///
+    /// In some cases, like with a jade not currently linked, it may try to connect to it first
+    pub fn get_available_signer(&mut self, name: &str) -> Result<&AnySigner, Error> {
+        let timeout = Some(self.config.timeout);
+        self.signers.get_available(name, timeout)
     }
 }

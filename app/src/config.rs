@@ -1,8 +1,10 @@
 use jade::Network as JadeNetwork;
+use jade::TIMEOUT;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time::Duration;
 use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
 
@@ -18,6 +20,7 @@ pub struct Config {
     pub tls: bool,
     pub validate_domain: bool,
     pub explorer_url: String,
+    pub timeout: Duration,
 }
 
 impl Config {
@@ -30,6 +33,7 @@ impl Config {
             tls: true,
             validate_domain: true,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
+            timeout: TIMEOUT,
         }
     }
 
@@ -42,6 +46,7 @@ impl Config {
             tls: true,
             validate_domain: true,
             explorer_url: "https://blockstream.info/liquid/".into(),
+            timeout: TIMEOUT,
         }
     }
 
@@ -56,6 +61,7 @@ impl Config {
             tls: false,
             validate_domain: false,
             explorer_url: "".into(),
+            timeout: TIMEOUT,
         }
     }
 

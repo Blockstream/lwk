@@ -370,7 +370,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let is_mainnet = s.config.is_mainnet();
 
-            let signer = s.signers.get_available(&r.name)?;
+            let signer = s.get_available_signer(&r.name)?;
 
             let script_variant = r
                 .singlesig_kind
@@ -426,7 +426,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let network = s.config.jade_network();
             let descriptor: JadeDescriptor = s.wollets.get(&r.wallet)?.descriptor().try_into()?;
-            let signer = s.signers.get_available(&r.name)?;
+            let signer = s.get_available_signer(&r.name)?;
 
             if let AnySigner::Jade(jade, _id) = signer {
                 jade.register_multisig(RegisterMultisigParams {
@@ -442,7 +442,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let is_mainnet = s.config.is_mainnet();
 
-            let signer = s.signers.get_available(&r.name)?;
+            let signer = s.get_available_signer(&r.name)?;
 
             let bip = r
                 .xpub_kind
@@ -459,7 +459,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Sign = serde_json::from_value(params)?;
             let mut s = state.lock()?;
 
-            let signer = s.signers.get_available(&r.name)?;
+            let signer = s.get_available_signer(&r.name)?;
 
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
@@ -784,9 +784,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerJadeId => {
             let r: request::SignerJadeId = serde_json::from_value(params)?;
 
-            let network = {
+            let (network, timeout) = {
                 let s = state.lock()?;
-                s.config.jade_network()
+                (s.config.jade_network(), Some(s.config.timeout))
             };
             tracing::debug!("jade network: {}", network);
 
@@ -794,7 +794,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 Some(emulator) => MutexJade::from_socket(emulator, network)?,
                 None => {
                     // TODO instead of the first working, we should return all the available jades with the port currently connected on
-                    let mut jade = MutexJade::from_any_serial(network, None)
+                    let mut jade = MutexJade::from_any_serial(network, timeout)
                         .into_iter()
                         .filter_map(|e| e.ok())
                         .next();

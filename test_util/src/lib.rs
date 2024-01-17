@@ -208,6 +208,7 @@ impl TestElectrumServer {
 
 pub struct TestWollet {
     pub wollet: Wollet,
+    pub electrum_url: ElectrumUrl,
     _db_root_dir: TempDir,
 }
 
@@ -251,10 +252,7 @@ impl TestWollet {
         )
         .unwrap();
 
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrs_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrs_url.into()),
-        };
+        let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain);
 
         let mut client = ElectrumClient::new(&electrum_url).unwrap();
         wollet.full_scan().unwrap();
@@ -277,6 +275,7 @@ impl TestWollet {
 
         Self {
             wollet,
+            electrum_url,
             _db_root_dir,
         }
     }
@@ -727,7 +726,8 @@ impl TestWollet {
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let txid = self.wollet.broadcast(&tx).unwrap();
+        let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
+        let txid = electrum_client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());
         txid
     }

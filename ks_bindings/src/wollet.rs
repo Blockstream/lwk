@@ -93,15 +93,6 @@ impl Wollet {
         wollet.finalize(&mut pset)?;
         Ok(Arc::new(pset.into()))
     }
-
-    pub fn broadcast(&self, pset: &Pset) -> Result<Arc<Txid>, Error> {
-        let mut pset = pset.inner();
-        let wollet = self.inner.lock()?;
-        wollet.finalize(&mut pset)?;
-        let tx = pset.extract_tx()?;
-        let txid = wollet.broadcast(&tx)?;
-        Ok(Arc::new(txid.into()))
-    }
 }
 
 #[cfg(test)]

@@ -2,7 +2,6 @@ use crate::bitcoin::bip32::Fingerprint;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
-use crate::elements::encode::serialize as elements_serialize;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
@@ -15,7 +14,6 @@ use crate::util::EC;
 use crate::{ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
-use electrum_client::ElectrumApi;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
@@ -422,12 +420,6 @@ impl Wollet {
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         psbt::finalize(pset, &EC, BlockHash::all_zeros())?;
         Ok(pset.extract_tx()?)
-    }
-
-    pub fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
-        let client = self.config.electrum_url().build_client()?;
-        let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
-        Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
 }
 

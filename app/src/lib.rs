@@ -794,7 +794,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 Some(emulator) => MutexJade::from_socket(emulator, network)?,
                 None => {
                     // TODO instead of the first working, we should return all the available jades with the port currently connected on
-                    let mut jade = MutexJade::from_any_serial(network)
+                    let mut jade = MutexJade::from_any_serial(network, None)
                         .into_iter()
                         .filter_map(|e| e.ok())
                         .next();

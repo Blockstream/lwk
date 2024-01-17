@@ -208,7 +208,7 @@ impl Signers {
             AppSigner::JadeId(id, network) => {
                 // try to connect JadeId -> AvailableSigner(Jade)
                 // TODO possible errors should be kept
-                MutexJade::from_serial_matching_id(*network, id)
+                MutexJade::from_serial_matching_id(*network, id, None)
                     .map(|jade| AppSigner::AvailableSigner(AnySigner::Jade(jade, *id)))
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {

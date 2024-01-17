@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use std::sync::{Mutex, PoisonError};
+use std::time::Duration;
 
 use common::Signer;
 use elements::{bitcoin::bip32::ExtendedPubKey, pset::PartiallySignedTransaction};
@@ -39,22 +40,30 @@ impl MutexJade {
     }
 
     #[cfg(feature = "serial")]
-    pub fn from_serial(network: Network, port_name: &str) -> Result<Self, Error> {
+    pub fn from_serial(
+        network: Network,
+        port_name: &str,
+        timeout: Option<Duration>,
+    ) -> Result<Self, Error> {
         tracing::info!("serial port {port_name}");
+        let timeout = timeout.unwrap_or(TIMEOUT);
         let port = serialport::new(port_name, BAUD_RATE)
-            .timeout(TIMEOUT)
+            .timeout(timeout)
             .open()?;
         Ok(Self::new(Jade::new(port.into(), network)))
     }
 
     #[cfg(feature = "serial")]
     /// Try to unlock a jade on any available serial port, returning all of the attempts
-    pub fn from_any_serial(network: Network) -> Vec<Result<Self, Error>> {
+    pub fn from_any_serial(
+        network: Network,
+        timeout: Option<Duration>,
+    ) -> Vec<Result<Self, Error>> {
         let mut result = vec![];
         let ports = Self::available_ports_with_jade();
         tracing::debug!("available serial ports possibly with jade: {}", ports.len());
         for port in ports {
-            let jade_res = Self::from_serial(network, &port.port_name);
+            let jade_res = Self::from_serial(network, &port.port_name, timeout);
             tracing::debug!("trying: {port:?} return {jade_res:?}");
 
             // TODO green_qt calls also get_version_info
@@ -84,8 +93,9 @@ impl MutexJade {
     pub fn from_serial_matching_id(
         network: Network,
         id: &elements::bitcoin::hash_types::XpubIdentifier,
+        timeout: Option<Duration>,
     ) -> Option<Self> {
-        Self::from_any_serial(network)
+        Self::from_any_serial(network, timeout)
             .into_iter()
             .filter_map(|e| e.ok())
             .find(|e| {

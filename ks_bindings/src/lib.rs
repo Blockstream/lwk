@@ -1,7 +1,7 @@
 pub mod blockdata;
 mod chain;
 mod desc;
-mod electrum_url;
+mod electrum_client;
 mod error;
 mod mnemonic;
 mod network;
@@ -22,7 +22,7 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
-pub use electrum_url::ElectrumUrl;
+pub use electrum_client::ElectrumClient;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
@@ -36,7 +36,10 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{wollet::Wollet, Address, ElectrumUrl, Mnemonic, Network, Signer, Txid};
+    use crate::{
+        electrum_client::ElectrumUrl, wollet::Wollet, Address, ElectrumClient, Mnemonic, Network,
+        Signer, Txid,
+    };
 
     #[test]
     fn test_ks_flow() {
@@ -50,7 +53,10 @@ mod tests {
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 
         let electrum_url = ElectrumUrl::new(server.electrs.electrum_url.to_string(), false, false);
-        println!("electrum url = {}", &electrum_url);
+        let electrum_client =
+            ElectrumClient::new(server.electrs.electrum_url.to_string(), false, false).unwrap();
+
+        println!("electrum url = {:?}", &electrum_url);
 
         let wollet = Wollet::new(
             &network,
@@ -99,7 +105,10 @@ mod tests {
             .create_lbtc_tx(&out_address, satoshis, fee_rate)
             .unwrap();
         let signed_pset = signer.sign(&pset).unwrap();
-        let txid = wollet.broadcast(&signed_pset).unwrap();
+        let finalized_pset = wollet.finalize(&signed_pset).unwrap();
+        let txid = electrum_client
+            .broadcast(&finalized_pset.extract_tx().unwrap())
+            .unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
+    fmt::Debug,
     sync::atomic,
 };
 
@@ -25,6 +26,14 @@ pub struct ElectrumClient {
     client: Client,
 
     tip: BlockHeader,
+}
+
+impl Debug for ElectrumClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ElectrumClient")
+            .field("tip", &self.tip)
+            .finish()
+    }
 }
 
 impl ElectrumClient {

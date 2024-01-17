@@ -1,7 +1,8 @@
 use crate::desc::WolletDescriptor;
+use crate::electrum_client::ElectrumUrl;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, ElectrumUrl, Error, Pset, Txid, WalletTx};
+use crate::{Address, AddressResult, Error, Pset, Txid, WalletTx};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -83,6 +84,13 @@ impl Wollet {
     ) -> Result<Arc<Pset>, Error> {
         let wollet = self.inner.lock()?;
         let pset = wollet.send_lbtc(satoshis, &out_address.to_string(), Some(fee_rate))?;
+        Ok(Arc::new(pset.into()))
+    }
+
+    pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, Error> {
+        let mut pset = pset.inner();
+        let wollet = self.inner.lock()?;
+        wollet.finalize(&mut pset)?;
         Ok(Arc::new(pset.into()))
     }
 

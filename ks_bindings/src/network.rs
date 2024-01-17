@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::{electrum_url::ElectrumUrl, types::AssetId};
+use crate::{electrum_client::ElectrumUrl, types::AssetId};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]

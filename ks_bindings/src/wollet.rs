@@ -2,7 +2,7 @@ use crate::desc::WolletDescriptor;
 use crate::electrum_client::ElectrumUrl;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, Error, Pset, Txid, WalletTx};
+use crate::{Address, AddressResult, Error, Pset, WalletTx};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -97,7 +97,7 @@ impl Wollet {
 
 #[cfg(test)]
 impl Wollet {
-    pub fn wait_for_tx(&self, txid: Txid) {
+    pub fn wait_for_tx(&self, txid: crate::Txid) {
         for _ in 0..30 {
             self.sync().unwrap();
             let txs = self.transactions().unwrap();

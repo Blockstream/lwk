@@ -201,9 +201,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
                 s.config.network,
-                &s.config.electrum_url,
-                s.config.tls,
-                s.config.validate_domain,
                 &s.config.datadir.display().to_string(),
                 &r.descriptor,
             )?;

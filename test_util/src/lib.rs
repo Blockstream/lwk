@@ -220,14 +220,7 @@ pub fn network_regtest() -> ElementsNetwork {
 }
 
 pub fn new_unsupported_wallet(desc: &str, expected: Error) {
-    let r = Wollet::new(
-        network_regtest(),
-        "",
-        false,
-        false,
-        "/tmp",
-        &add_checksum(desc),
-    );
+    let r = Wollet::new(network_regtest(), "/tmp", &add_checksum(desc));
     match r {
         Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
@@ -242,15 +235,7 @@ impl TestWollet {
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let mut wollet = Wollet::new(
-            network_regtest(),
-            electrs_url,
-            tls,
-            validate_domain,
-            &db_root,
-            &add_checksum(desc),
-        )
-        .unwrap();
+        let mut wollet = Wollet::new(network_regtest(), &db_root, &add_checksum(desc)).unwrap();
 
         let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain);
 

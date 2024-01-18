@@ -1,7 +1,4 @@
-use std::{
-    fmt::Display,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use crate::{Error, Transaction, Txid, Update, Wollet};
 
@@ -30,33 +27,5 @@ impl ElectrumClient {
         let wollet = wollet.inner_wollet()?;
         let update: Option<wollet::Update> = self.inner.lock()?.full_scan(&wollet)?;
         Ok(update.map(Into::into).map(Arc::new))
-    }
-}
-
-// TODO to be removed
-#[derive(uniffi::Object, Debug, Clone)]
-#[uniffi::export(Display)]
-pub struct ElectrumUrl {
-    pub(crate) url: String,
-    pub(crate) tls: bool,
-    pub(crate) validate_domain: bool,
-}
-
-impl Display for ElectrumUrl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[uniffi::export]
-impl ElectrumUrl {
-    /// Construct a Script object
-    #[uniffi::constructor]
-    pub fn new(electrum_url: String, tls: bool, validate_domain: bool) -> Arc<Self> {
-        Arc::new(Self {
-            url: electrum_url,
-            tls,
-            validate_domain,
-        })
     }
 }

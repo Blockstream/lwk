@@ -34,15 +34,8 @@ pub struct Wollet {
 
 impl Wollet {
     /// Create a new  wallet
-    pub fn new(
-        network: ElementsNetwork,
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        desc: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new(network, tls, validate_domain, electrum_url, data_root)?;
+    pub fn new(network: ElementsNetwork, data_root: &str, desc: &str) -> Result<Self, Error> {
+        let config = Config::new(network, data_root)?;
         Self::inner_new(config, desc)
     }
 
@@ -566,15 +559,7 @@ mod tests {
 
     fn new_wollet(desc: &str) -> Wollet {
         let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
-        Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            "",
-            false,
-            false,
-            "/tmp/.ks",
-            desc,
-        )
-        .unwrap()
+        Wollet::new(ElementsNetwork::LiquidTestnet, "/tmp/.ks", desc).unwrap()
     }
 
     #[test]
@@ -633,7 +618,7 @@ mod tests {
                     let desc =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
                             .unwrap();
-                    let wollet = Wollet::new(network, "", false, false, "/tmp/.ks", &desc).unwrap();
+                    let wollet = Wollet::new(network, "/tmp/.ks", &desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?}");
                     i += 1;

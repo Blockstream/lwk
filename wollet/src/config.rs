@@ -65,22 +65,13 @@ impl ElementsNetwork {
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    electrum_url: ElectrumUrl,
     data_root: String,
 }
 
 impl Config {
-    pub fn new(
-        network: ElementsNetwork,
-        tls: bool,
-        validate_domain: bool,
-        electrum_url: &str,
-        data_root: &str,
-    ) -> Result<Self, Error> {
-        let electrum_url = ElectrumUrl::new(electrum_url, tls, validate_domain);
+    pub fn new(network: ElementsNetwork, data_root: &str) -> Result<Self, Error> {
         Ok(Config {
             network,
-            electrum_url,
             data_root: data_root.into(),
         })
     }
@@ -95,10 +86,6 @@ impl Config {
 
     pub fn policy_asset(&self) -> AssetId {
         self.network.policy_asset()
-    }
-
-    pub fn electrum_url(&self) -> ElectrumUrl {
-        self.electrum_url.clone()
     }
 
     pub fn data_root(&self) -> String {

@@ -1,5 +1,4 @@
 use crate::desc::WolletDescriptor;
-use crate::electrum_client::ElectrumUrl;
 use crate::network::Network;
 use crate::types::AssetId;
 use crate::{Address, AddressResult, Error, Pset, Update, WalletTx};
@@ -30,16 +29,8 @@ impl Wollet {
         network: &Network,
         descriptor: &WolletDescriptor,
         datadir: String,
-        electrum_url: &ElectrumUrl,
     ) -> Result<Arc<Self>, Error> {
-        let inner = wollet::Wollet::new(
-            (*network).into(),
-            &electrum_url.url,
-            electrum_url.tls,
-            electrum_url.validate_domain,
-            &datadir,
-            &descriptor.to_string(),
-        )?;
+        let inner = wollet::Wollet::new((*network).into(), &datadir, &descriptor.to_string())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))

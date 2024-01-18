@@ -38,10 +38,7 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{
-        electrum_client::ElectrumUrl, wollet::Wollet, Address, ElectrumClient, Mnemonic, Network,
-        Signer, Txid,
-    };
+    use crate::{wollet::Wollet, Address, ElectrumClient, Mnemonic, Network, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
@@ -54,19 +51,10 @@ mod tests {
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 
-        let electrum_url = ElectrumUrl::new(server.electrs.electrum_url.to_string(), false, false);
         let electrum_client =
             ElectrumClient::new(server.electrs.electrum_url.to_string(), false, false).unwrap();
 
-        println!("electrum url = {:?}", &electrum_url);
-
-        let wollet = Wollet::new(
-            &network,
-            &singlesig_desc,
-            datadir.to_string(),
-            &electrum_url,
-        )
-        .unwrap();
+        let wollet = Wollet::new(&network, &singlesig_desc, datadir.to_string()).unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";

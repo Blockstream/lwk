@@ -34,6 +34,7 @@ use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements::{AssetId, TxOutSecrets};
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
+use wollet::BlockchainBackend;
 use wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 
 use crate::method::Method;

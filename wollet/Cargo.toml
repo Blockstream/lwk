@@ -27,6 +27,8 @@ thiserror = "1.0.48"
 once_cell = "1.18.0"
 elements = { version = "0.23.0", features = ["base64"] }
 common = { path = "../common" }
+minreq = { version = "2.9", features = ["https"], optional = true }
+
 
 #registry
 idna = "0.4.0"
@@ -39,11 +41,13 @@ tempfile = "3.8.0"
 signer = { path = "../signer" }
 jade = { path = "../jade" }
 bs_containers = { path = "../bs_containers" }
-minreq = { version = "2.9", features = ["https"] }
+minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 test_util = { path = "../test_util" }
 
 [features]
+default = ["esplora"]
 serial = ["jade/serial"]
+esplora = ["minreq"]
 
 [[test]]
 name = "e2e"

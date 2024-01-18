@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex};
 
+use wollet::BlockchainBackend;
+
 use crate::{Error, Transaction, Txid, Update, Wollet};
 
 #[derive(uniffi::Object, Debug)]

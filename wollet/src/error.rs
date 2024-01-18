@@ -31,6 +31,9 @@ pub enum Error {
     ElementsEncode(#[from] crate::elements::encode::Error),
 
     #[error(transparent)]
+    Hashes(#[from] crate::elements::hashes::Error),
+
+    #[error(transparent)]
     ElementsPset(#[from] crate::elements::pset::Error),
 
     #[error(transparent)]
@@ -71,6 +74,10 @@ pub enum Error {
 
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
+
+    #[cfg(feature = "esplora")]
+    #[error(transparent)]
+    Minreq(#[from] minreq::Error),
 
     #[error("Address must be confidential")]
     NotConfidentialAddress,

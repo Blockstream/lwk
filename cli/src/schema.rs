@@ -1,10 +1,10 @@
-use app::method::Method;
+use app::{method::Method, Client};
 use rpc_model::request::Direction;
 use serde_json::Value;
 
 use crate::args::{self, AssetSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum};
 
-pub(crate) fn schema(a: args::SchemaArgs, client: app::Client) -> Result<Value, anyhow::Error> {
+pub(crate) fn schema(a: args::SchemaArgs, client: Client) -> Result<Value, anyhow::Error> {
     Ok(match a.command {
         args::DirectionCommand::Request(req) => match req.command {
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,

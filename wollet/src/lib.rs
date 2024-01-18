@@ -20,6 +20,7 @@ mod update;
 mod util;
 mod wollet;
 
+pub use crate::clients::BlockchainBackend;
 pub use crate::config::ElectrumUrl;
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};

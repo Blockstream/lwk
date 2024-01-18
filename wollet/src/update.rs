@@ -8,13 +8,13 @@ use elements::BlockHeader;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq, Eq, Debug)]
 pub struct DownloadTxResult {
     pub txs: Vec<(Txid, Transaction)>,
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
     pub new_txs: DownloadTxResult,
     pub txid_height: HashMap<Txid, Option<Height>>,

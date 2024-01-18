@@ -3,6 +3,7 @@ use crate::electrum_client::ElectrumUrl;
 use crate::network::Network;
 use crate::types::AssetId;
 use crate::{Address, AddressResult, Error, Pset, WalletTx};
+use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -12,6 +13,13 @@ use std::{
 #[derive(uniffi::Object)]
 pub struct Wollet {
     inner: Mutex<wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
+}
+impl Wollet {
+    pub fn inner_wollet(
+        &self,
+    ) -> Result<MutexGuard<'_, wollet::Wollet>, PoisonError<MutexGuard<'_, wollet::Wollet>>> {
+        self.inner.lock()
+    }
 }
 
 #[uniffi::export]

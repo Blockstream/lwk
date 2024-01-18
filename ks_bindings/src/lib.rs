@@ -8,6 +8,7 @@ mod network;
 mod pset;
 mod signer;
 pub mod types;
+mod update;
 mod wollet;
 
 pub use blockdata::address::Address;
@@ -27,6 +28,7 @@ pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
 pub use signer::Signer;
+pub use update::Update;
 pub use wollet::Wollet;
 
 pub use error::Error;

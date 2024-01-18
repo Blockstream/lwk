@@ -34,7 +34,7 @@ use wollet::elements::pset::PartiallySignedTransaction;
 use wollet::elements::{AssetId, TxOutSecrets};
 use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use wollet::elements_miniscript::miniscript::decode::Terminal;
-use wollet::{ElectrumClient, Wollet};
+use wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
@@ -316,8 +316,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Address => {
             let r: request::Address = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?; // To update the last unused index
+            let mut electrum_client = s.config.electrum_client()?;
+
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let addr = wollet.address(r.index)?;
             Response::result(
                 request.id,
@@ -330,8 +332,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Balance => {
             let r: request::Balance = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client = s.config.electrum_client()?;
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let mut balance = wollet
                 .balance()?
                 .into_iter()
@@ -348,8 +351,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SendMany => {
             let r: request::Send = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client = s.config.electrum_client()?;
+            let mut wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let mut tx = wollet.send_many(
                 r.addressees
                     .into_iter()
@@ -478,13 +482,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Broadcast => {
             let r: request::Broadcast = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let electrum_url = s.config.electrum_url();
 
             let wollet = s.wollets.get_mut(&r.name)?;
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let tx = wollet.finalize(&mut pset)?;
-            let electrum_client = ElectrumClient::new(&electrum_url)?;
+            let electrum_client = s.config.electrum_client()?;
 
             if !r.dry_run {
                 electrum_client.broadcast(&tx)?;
@@ -646,8 +649,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::WalletUtxos => {
             let r: request::WalletUtxos = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client = s.config.electrum_client()?;
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let utxos: Vec<response::Utxo> = wollet.utxos()?.iter().map(convert_utxo).collect();
             Response::result(
                 request.id,
@@ -658,8 +662,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::WalletTxs = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let explorer_url = s.config.explorer_url.clone();
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client = s.config.electrum_client()?;
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let mut txs: Vec<response::Tx> = wollet
                 .transactions()?
                 .iter()
@@ -678,8 +683,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Issue => {
             let r: request::Issue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client: ElectrumClient = s.config.electrum_client()?;
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
             let tx = wollet.issue_asset(
                 r.satoshi_asset,
                 r.address_asset.as_deref().unwrap_or(""),
@@ -698,8 +704,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Reissue => {
             let r: request::Reissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let wollet = s.wollets.get_mut(&r.name)?;
-            wollet.full_scan()?;
+            let mut electrum_client: ElectrumClient = s.config.electrum_client()?;
+            let mut wollet = s.wollets.get_mut(&r.name)?;
+            full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
+
             let mut pset = wollet.reissue_asset(
                 &r.asset,
                 r.satoshi_asset,

@@ -81,16 +81,6 @@ impl Wollet {
         self.descriptor.clone()
     }
 
-    pub fn full_scan(&mut self) -> Result<(), Error> {
-        let mut electrum_client = ElectrumClient::new(&self.config.electrum_url())?;
-        let update = electrum_client.full_scan(self)?;
-        if let Some(update) = update {
-            self.apply_update(update)?
-        }
-
-        Ok(())
-    }
-
     /// Get the blockchain tip
     pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
         Ok(self.store.cache.tip)
@@ -437,6 +427,18 @@ fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMa
         }
     }
     balance
+}
+
+pub fn full_scan_with_electrum_client(
+    wollet: &mut Wollet,
+    electrum_client: &mut ElectrumClient,
+) -> Result<(), Error> {
+    let update = electrum_client.full_scan(wollet)?;
+    if let Some(update) = update {
+        wollet.apply_update(update)?
+    }
+
+    Ok(())
 }
 
 fn tx_fee(tx: &Transaction) -> u64 {

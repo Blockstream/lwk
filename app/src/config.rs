@@ -3,8 +3,8 @@ use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use wollet::elements::AssetId;
 use wollet::ElementsNetwork;
-use wollet::{elements::AssetId, ElectrumUrl};
 
 use crate::{consts, Error};
 
@@ -94,7 +94,12 @@ impl Config {
         matches!(self.network, ElementsNetwork::Liquid)
     }
 
-    pub(crate) fn electrum_url(&self) -> wollet::ElectrumUrl {
-        ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
+    fn electrum_url(&self) -> wollet::ElectrumUrl {
+        wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
+    }
+
+    pub fn electrum_client(&self) -> Result<wollet::ElectrumClient, Error> {
+        // TODO cache it instead of recreating every time
+        Ok(wollet::ElectrumClient::new(&self.electrum_url())?)
     }
 }

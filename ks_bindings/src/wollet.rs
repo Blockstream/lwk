@@ -2,7 +2,7 @@ use crate::desc::WolletDescriptor;
 use crate::electrum_client::ElectrumUrl;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, Error, Pset, WalletTx};
+use crate::{Address, AddressResult, Error, Pset, Update, WalletTx};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -56,9 +56,9 @@ impl Wollet {
         Ok(Arc::new(address.into()))
     }
 
-    pub fn sync(&self) -> Result<(), Error> {
+    pub fn apply_update(&self, update: &Update) -> Result<(), Error> {
         let mut wollet = self.inner.lock()?;
-        wollet.full_scan()?;
+        wollet.apply_update(update.clone().into())?;
         Ok(())
     }
 
@@ -105,12 +105,15 @@ impl Wollet {
 
 #[cfg(test)]
 impl Wollet {
-    pub fn wait_for_tx(&self, txid: crate::Txid) {
+    pub fn wait_for_tx(&self, txid: crate::Txid, client: &crate::ElectrumClient) {
         for _ in 0..30 {
-            self.sync().unwrap();
-            let txs = self.transactions().unwrap();
-            if txs.iter().any(|t| *t.txid() == txid) {
-                return;
+            let update = client.full_scan(self).unwrap();
+            if let Some(update) = update {
+                self.apply_update(&update).unwrap();
+                let txs = self.transactions().unwrap();
+                if txs.iter().any(|t| *t.txid() == txid) {
+                    return;
+                }
             }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }

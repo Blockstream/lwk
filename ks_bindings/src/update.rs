@@ -1,4 +1,4 @@
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Clone)]
 pub struct Update {
     inner: wollet::Update,
 }

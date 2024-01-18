@@ -15,6 +15,12 @@ pub enum ElectrumUrl {
 }
 
 impl ElectrumUrl {
+    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
+        match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        }
+    }
     pub fn build_client(&self) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
@@ -59,25 +65,13 @@ impl ElementsNetwork {
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    electrum_url: ElectrumUrl,
     data_root: String,
 }
 
 impl Config {
-    pub fn new(
-        network: ElementsNetwork,
-        tls: bool,
-        validate_domain: bool,
-        electrum_url: &str,
-        data_root: &str,
-    ) -> Result<Self, Error> {
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
-        };
+    pub fn new(network: ElementsNetwork, data_root: &str) -> Result<Self, Error> {
         Ok(Config {
             network,
-            electrum_url,
             data_root: data_root.into(),
         })
     }
@@ -92,10 +86,6 @@ impl Config {
 
     pub fn policy_asset(&self) -> AssetId {
         self.network.policy_asset()
-    }
-
-    pub fn electrum_url(&self) -> ElectrumUrl {
-        self.electrum_url.clone()
     }
 
     pub fn data_root(&self) -> String {

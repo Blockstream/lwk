@@ -1,13 +1,14 @@
 pub mod blockdata;
 mod chain;
 mod desc;
-mod electrum_url;
+mod electrum_client;
 mod error;
 mod mnemonic;
 mod network;
 mod pset;
 mod signer;
 pub mod types;
+mod update;
 mod wollet;
 
 pub use blockdata::address::Address;
@@ -22,11 +23,12 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
-pub use electrum_url::ElectrumUrl;
+pub use electrum_client::ElectrumClient;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
 pub use signer::Signer;
+pub use update::Update;
 pub use wollet::Wollet;
 
 pub use error::Error;
@@ -36,7 +38,7 @@ uniffi::setup_scaffolding!();
 mod tests {
     use std::str::FromStr;
 
-    use crate::{wollet::Wollet, Address, ElectrumUrl, Mnemonic, Network, Signer, Txid};
+    use crate::{wollet::Wollet, Address, ElectrumClient, Mnemonic, Network, Signer, Txid};
 
     #[test]
     fn test_ks_flow() {
@@ -49,16 +51,10 @@ mod tests {
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 
-        let electrum_url = ElectrumUrl::new(server.electrs.electrum_url.to_string(), false, false);
-        println!("electrum url = {}", &electrum_url);
+        let electrum_client =
+            ElectrumClient::new(server.electrs.electrum_url.to_string(), false, false).unwrap();
 
-        let wollet = Wollet::new(
-            &network,
-            &singlesig_desc,
-            datadir.to_string(),
-            &electrum_url,
-        )
-        .unwrap();
+        let wollet = Wollet::new(&network, &singlesig_desc, datadir.to_string()).unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
@@ -69,7 +65,7 @@ mod tests {
             100000000,
             None,
         );
-        wollet.wait_for_tx(Txid::from_str(&txid).unwrap());
+        wollet.wait_for_tx(Txid::from_str(&txid).unwrap(), &electrum_client);
 
         let address_1 = wollet.address(Some(1)).unwrap();
         let expected_address_1 = "el1qqv8pmjjq942l6cjq69ygtt6gvmdmhesqmzazmwfsq7zwvan4kewdqmaqzegq50r2wdltkfsw9hw20zafydz4sqljz0eqe0vhc";
@@ -99,7 +95,10 @@ mod tests {
             .create_lbtc_tx(&out_address, satoshis, fee_rate)
             .unwrap();
         let signed_pset = signer.sign(&pset).unwrap();
-        let txid = wollet.broadcast(&signed_pset).unwrap();
+        let finalized_pset = wollet.finalize(&signed_pset).unwrap();
+        let txid = electrum_client
+            .broadcast(&finalized_pset.extract_tx().unwrap())
+            .unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

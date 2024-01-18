@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
+    fmt::Debug,
     sync::atomic,
 };
 
@@ -19,11 +20,20 @@ use crate::{
 };
 use elements::bitcoin::Txid as BitcoinTxid;
 use elements::encode::deserialize as elements_deserialize;
+use elements::encode::serialize as elements_serialize;
 
 pub struct ElectrumClient {
     client: Client,
 
     tip: BlockHeader,
+}
+
+impl Debug for ElectrumClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ElectrumClient")
+            .field("tip", &self.tip)
+            .finish()
+    }
 }
 
 impl ElectrumClient {
@@ -153,6 +163,13 @@ impl ElectrumClient {
         } else {
             Ok(None)
         }
+    }
+
+    pub fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
+        let txid = self
+            .client
+            .transaction_broadcast_raw(&elements_serialize(tx))?;
+        Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
 }
 

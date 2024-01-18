@@ -1,7 +1,8 @@
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, ElectrumUrl, Error, Pset, Txid, WalletTx};
+use crate::{Address, AddressResult, Error, Pset, Update, WalletTx};
+use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -12,6 +13,13 @@ use std::{
 pub struct Wollet {
     inner: Mutex<wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
 }
+impl Wollet {
+    pub fn inner_wollet(
+        &self,
+    ) -> Result<MutexGuard<'_, wollet::Wollet>, PoisonError<MutexGuard<'_, wollet::Wollet>>> {
+        self.inner.lock()
+    }
+}
 
 #[uniffi::export]
 impl Wollet {
@@ -21,16 +29,8 @@ impl Wollet {
         network: &Network,
         descriptor: &WolletDescriptor,
         datadir: String,
-        electrum_url: &ElectrumUrl,
     ) -> Result<Arc<Self>, Error> {
-        let inner = wollet::Wollet::new(
-            (*network).into(),
-            &electrum_url.url,
-            electrum_url.tls,
-            electrum_url.validate_domain,
-            &datadir,
-            &descriptor.to_string(),
-        )?;
+        let inner = wollet::Wollet::new((*network).into(), &datadir, &descriptor.to_string())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))
@@ -47,9 +47,9 @@ impl Wollet {
         Ok(Arc::new(address.into()))
     }
 
-    pub fn sync(&self) -> Result<(), Error> {
+    pub fn apply_update(&self, update: &Update) -> Result<(), Error> {
         let mut wollet = self.inner.lock()?;
-        wollet.full_scan()?;
+        wollet.apply_update(update.clone().into())?;
         Ok(())
     }
 
@@ -86,24 +86,25 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn broadcast(&self, pset: &Pset) -> Result<Arc<Txid>, Error> {
+    pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, Error> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;
         wollet.finalize(&mut pset)?;
-        let tx = pset.extract_tx()?;
-        let txid = wollet.broadcast(&tx)?;
-        Ok(Arc::new(txid.into()))
+        Ok(Arc::new(pset.into()))
     }
 }
 
 #[cfg(test)]
 impl Wollet {
-    pub fn wait_for_tx(&self, txid: Txid) {
+    pub fn wait_for_tx(&self, txid: crate::Txid, client: &crate::ElectrumClient) {
         for _ in 0..30 {
-            self.sync().unwrap();
-            let txs = self.transactions().unwrap();
-            if txs.iter().any(|t| *t.txid() == txid) {
-                return;
+            let update = client.full_scan(self).unwrap();
+            if let Some(update) = update {
+                self.apply_update(&update).unwrap();
+                let txs = self.transactions().unwrap();
+                if txs.iter().any(|t| *t.txid() == txid) {
+                    return;
+                }
             }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }

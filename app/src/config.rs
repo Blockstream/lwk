@@ -99,4 +99,13 @@ impl Config {
     pub fn is_mainnet(&self) -> bool {
         matches!(self.network, ElementsNetwork::Liquid)
     }
+
+    fn electrum_url(&self) -> wollet::ElectrumUrl {
+        wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
+    }
+
+    pub fn electrum_client(&self) -> Result<wollet::ElectrumClient, Error> {
+        // TODO cache it instead of recreating every time
+        Ok(wollet::ElectrumClient::new(&self.electrum_url())?)
+    }
 }

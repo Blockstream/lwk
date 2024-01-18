@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::{electrum_url::ElectrumUrl, types::AssetId};
+use crate::{types::AssetId, ElectrumClient, Error};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -27,7 +27,7 @@ impl From<Network> for wollet::ElementsNetwork {
 
 #[uniffi::export]
 impl Network {
-    pub fn default_electrum_url(&self) -> Arc<ElectrumUrl> {
+    pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, Error> {
         let (url, validate_domain, tls) = match &self.inner {
             wollet::ElementsNetwork::Liquid => ("blockstream.info:995", true, true),
             wollet::ElementsNetwork::LiquidTestnet => ("blockstream.info:465", true, true),
@@ -36,11 +36,7 @@ impl Network {
             }
         };
 
-        Arc::new(ElectrumUrl {
-            url: url.to_string(),
-            tls,
-            validate_domain,
-        })
+        ElectrumClient::new(url.to_string(), tls, validate_domain)
     }
 }
 

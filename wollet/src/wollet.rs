@@ -2,7 +2,6 @@ use crate::bitcoin::bip32::Fingerprint;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::confidential::Value;
-use crate::elements::encode::serialize as elements_serialize;
 use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
@@ -15,7 +14,6 @@ use crate::util::EC;
 use crate::{ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
-use electrum_client::ElectrumApi;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
@@ -36,15 +34,8 @@ pub struct Wollet {
 
 impl Wollet {
     /// Create a new  wallet
-    pub fn new(
-        network: ElementsNetwork,
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-        data_root: &str,
-        desc: &str,
-    ) -> Result<Self, Error> {
-        let config = Config::new(network, tls, validate_domain, electrum_url, data_root)?;
+    pub fn new(network: ElementsNetwork, data_root: &str, desc: &str) -> Result<Self, Error> {
+        let config = Config::new(network, data_root)?;
         Self::inner_new(config, desc)
     }
 
@@ -81,16 +72,6 @@ impl Wollet {
     /// Get a copy of the wallet descriptor
     pub fn wollet_descriptor(&self) -> WolletDescriptor {
         self.descriptor.clone()
-    }
-
-    pub fn full_scan(&mut self) -> Result<(), Error> {
-        let mut electrum_client = ElectrumClient::new(&self.config.electrum_url())?;
-        let update = electrum_client.full_scan(self)?;
-        if let Some(update) = update {
-            self.apply_update(update)?
-        }
-
-        Ok(())
     }
 
     /// Get the blockchain tip
@@ -423,12 +404,6 @@ impl Wollet {
         psbt::finalize(pset, &EC, BlockHash::all_zeros())?;
         Ok(pset.extract_tx()?)
     }
-
-    pub fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
-        let client = self.config.electrum_url().build_client()?;
-        let txid = client.transaction_broadcast_raw(&elements_serialize(tx))?;
-        Ok(Txid::from_raw_hash(txid.to_raw_hash()))
-    }
 }
 
 fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {
@@ -445,6 +420,18 @@ fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMa
         }
     }
     balance
+}
+
+pub fn full_scan_with_electrum_client(
+    wollet: &mut Wollet,
+    electrum_client: &mut ElectrumClient,
+) -> Result<(), Error> {
+    let update = electrum_client.full_scan(wollet)?;
+    if let Some(update) = update {
+        wollet.apply_update(update)?
+    }
+
+    Ok(())
 }
 
 fn tx_fee(tx: &Transaction) -> u64 {
@@ -572,15 +559,7 @@ mod tests {
 
     fn new_wollet(desc: &str) -> Wollet {
         let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
-        Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            "",
-            false,
-            false,
-            "/tmp/.ks",
-            desc,
-        )
-        .unwrap()
+        Wollet::new(ElementsNetwork::LiquidTestnet, "/tmp/.ks", desc).unwrap()
     }
 
     #[test]
@@ -639,7 +618,7 @@ mod tests {
                     let desc =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
                             .unwrap();
-                    let wollet = Wollet::new(network, "", false, false, "/tmp/.ks", &desc).unwrap();
+                    let wollet = Wollet::new(network, "/tmp/.ks", &desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?}");
                     i += 1;

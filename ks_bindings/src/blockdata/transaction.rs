@@ -7,7 +7,7 @@ use wollet::WalletTx;
 use crate::{types::Hex, Error, Txid};
 use std::{fmt::Display, sync::Arc};
 
-#[derive(uniffi::Object, PartialEq, Eq, Debug)]
+#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
 #[uniffi::export(Display)]
 pub struct Transaction {
     inner: elements::Transaction,
@@ -34,6 +34,12 @@ impl From<Transaction> for elements::Transaction {
 impl Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner.serialize().to_hex())
+    }
+}
+
+impl AsRef<elements::Transaction> for Transaction {
+    fn as_ref(&self) -> &elements::Transaction {
+        &self.inner
     }
 }
 

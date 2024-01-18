@@ -8,12 +8,13 @@ use elements::BlockHeader;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DownloadTxResult {
     pub txs: Vec<(Txid, Transaction)>,
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
+#[derive(Clone)]
 pub struct Update {
     pub new_txs: DownloadTxResult,
     pub txid_height: HashMap<Txid, Option<Height>>,
@@ -24,6 +25,7 @@ pub struct Update {
 
 impl Wollet {
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
+        // TODO should accept &Update
         let store = &mut self.store;
         let Update {
             new_txs,

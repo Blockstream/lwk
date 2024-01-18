@@ -208,6 +208,7 @@ impl TestElectrumServer {
 
 pub struct TestWollet {
     pub wollet: Wollet,
+    pub electrum_url: ElectrumUrl,
     _db_root_dir: TempDir,
 }
 
@@ -219,14 +220,7 @@ pub fn network_regtest() -> ElementsNetwork {
 }
 
 pub fn new_unsupported_wallet(desc: &str, expected: Error) {
-    let r = Wollet::new(
-        network_regtest(),
-        "",
-        false,
-        false,
-        "/tmp",
-        &add_checksum(desc),
-    );
+    let r = Wollet::new(network_regtest(), "/tmp", &add_checksum(desc));
     match r {
         Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
@@ -241,42 +235,33 @@ impl TestWollet {
 
         let db_root = format!("{}", _db_root_dir.path().display());
 
-        let mut wollet = Wollet::new(
-            network_regtest(),
-            electrs_url,
-            tls,
-            validate_domain,
-            &db_root,
-            &add_checksum(desc),
-        )
-        .unwrap();
+        let mut wollet = Wollet::new(network_regtest(), &db_root, &add_checksum(desc)).unwrap();
 
-        let electrum_url = match tls {
-            true => ElectrumUrl::Tls(electrs_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrs_url.into()),
-        };
+        let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain);
 
-        let mut client = ElectrumClient::new(&electrum_url).unwrap();
-        wollet.full_scan().unwrap();
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&electrum_url).unwrap();
+        full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();
+
         let list = wollet.transactions().unwrap();
         assert_eq!(list.len(), 0);
         let mut i = 120;
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            let height = client.tip().unwrap().height;
+            let height = electrum_client.tip().unwrap().height;
             if height >= 101 {
                 break height;
             } else {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        wollet.full_scan().unwrap();
+        full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();
 
         assert!(tip >= 101);
 
         Self {
             wollet,
+            electrum_url,
             _db_root_dir,
         }
     }
@@ -286,7 +271,8 @@ impl TestWollet {
     }
 
     pub fn sync(&mut self) {
-        self.wollet.full_scan().unwrap();
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
     }
 
     pub fn address(&self) -> Address {
@@ -299,8 +285,9 @@ impl TestWollet {
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &str) {
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
         for _ in 0..120 {
-            self.wollet.full_scan().unwrap();
+            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
             let list = self.wollet.transactions().unwrap();
             if list.iter().any(|e| e.tx.txid().to_string() == txid) {
                 return;
@@ -312,7 +299,8 @@ impl TestWollet {
 
     /// asset balance in satoshi
     pub fn balance(&mut self, asset: &AssetId) -> u64 {
-        self.wollet.full_scan().unwrap();
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
         let balance = self.wollet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }
@@ -322,7 +310,8 @@ impl TestWollet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
-        self.wollet.full_scan().unwrap();
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
         let list = self.wollet.transactions().unwrap();
         for tx in list.iter() {
             if tx.height.is_some() {
@@ -727,7 +716,8 @@ impl TestWollet {
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let txid = self.wollet.broadcast(&tx).unwrap();
+        let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
+        let txid = electrum_client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());
         txid
     }

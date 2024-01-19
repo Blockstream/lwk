@@ -427,10 +427,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
 
             let network = s.config.jade_network();
-            let descriptor: JadeDescriptor = s.wollets.get(&r.wallet)?.descriptor().try_into()?;
+            let descriptor = s.wollets.get(&r.wallet)?.descriptor().clone();
             let signer = s.get_available_signer(&r.name)?;
 
             if let AnySigner::Jade(jade, _id) = signer {
+                let descriptor: JadeDescriptor = (&descriptor).try_into()?;
                 jade.register_multisig(RegisterMultisigParams {
                     network,
                     multisig_name: r.wallet,

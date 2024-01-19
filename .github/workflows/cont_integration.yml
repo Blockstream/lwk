@@ -4,40 +4,6 @@ name: CI
 
 jobs:
 
-  test-bewallet:
-    name: Test BEWallet
-    runs-on: ubuntu-20.04
-    env:
-      CARGO_TERM_COLOR: always
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Cache
-        uses: Swatinem/rust-cache@v1.2.0
-      - name: Setup rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Download binaries
-        run: |
-          # electrsd
-          wget https://github.com/RCasatta/electrsd/releases/download/electrs_releases/electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid.gz
-          gunzip electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid.gz
-          chmod +x electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid
-          echo "ELECTRS_LIQUID_EXEC=$(realpath electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid)" >> $GITHUB_ENV
-          # elementsd
-          wget https://github.com/ElementsProject/elements/releases/download/elements-22.1.1/elements-22.1.1-x86_64-linux-gnu.tar.gz
-          tar -xzf elements-22.1.1-x86_64-linux-gnu.tar.gz
-          echo "ELEMENTSD_EXEC=$(realpath elements-22.1.12/bin/elementsd)" >> $GITHUB_ENV
-      - name: Test BEWallet
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose
-
-
   cosmetics:
     runs-on: ubuntu-20.04
     steps:

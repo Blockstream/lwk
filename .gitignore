@@ -6,3 +6,4 @@ bin/
 .vscode
 debug.log
 lwk_bindings.kt
+.idea

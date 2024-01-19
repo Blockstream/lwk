@@ -45,7 +45,7 @@ fn liquid_issue_software_signer() {
 }
 
 fn liquid_send(signers: &[&AnySigner]) {
-    let server = setup();
+    let server = setup(false);
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
         "ct(slip77({}),elwpkh({}/*))",
@@ -74,7 +74,7 @@ fn liquid_send(signers: &[&AnySigner]) {
 }
 
 fn liquid_issue(signers: &[&AnySigner]) {
-    let server = setup();
+    let server = setup(false);
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
         "ct(slip77({}),elwpkh({}/*))",
@@ -92,7 +92,7 @@ fn liquid_issue(signers: &[&AnySigner]) {
 
 #[test]
 fn view() {
-    let server = setup();
+    let server = setup(false);
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let descriptor_blinding_key =
@@ -113,7 +113,7 @@ fn view() {
 
 #[test]
 fn origin() {
-    let server = setup();
+    let server = setup(false);
     let signer = generate_signer();
     let fingerprint = signer.fingerprint();
     let path = "84h/1776h/0h";
@@ -135,7 +135,7 @@ fn origin() {
 
 #[test]
 fn roundtrip() {
-    let server = setup();
+    let server = setup(false);
 
     let signer1 = generate_signer();
     let slip77_key = generate_slip77();
@@ -264,7 +264,7 @@ fn unsupported_descriptor() {
 
 #[test]
 fn address() {
-    let server = setup();
+    let server = setup(false);
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -307,7 +307,7 @@ fn address() {
 #[test]
 fn different_blinding_keys() {
     // Two wallet with same "bitcoin" descriptor but different blinding keys
-    let server = setup();
+    let server = setup(false);
 
     let signer = generate_signer();
     let view_key1 = generate_view_key();
@@ -333,7 +333,7 @@ fn fee_rate() {
     // Use a fee rate different from the default one
     let fee_rate = Some(200.0);
 
-    let server = setup();
+    let server = setup(false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -364,7 +364,7 @@ fn contract() {
     // Issue an asset with a contract
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
-    let server = setup();
+    let server = setup(false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -403,7 +403,7 @@ fn contract() {
 fn multiple_descriptors() {
     // Use a different descriptors for the asset and the reissuance token
 
-    let server = setup();
+    let server = setup(false);
     // Asset descriptor and signers
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
@@ -478,7 +478,7 @@ fn multiple_descriptors() {
 
 #[test]
 fn create_pset_error() {
-    let server = setup();
+    let server = setup(false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -597,7 +597,7 @@ fn create_pset_error() {
 #[test]
 fn multisig_flow() {
     // Simulate a multisig workflow
-    let server = setup();
+    let server = setup(false);
 
     // * Multisig Setup: Start
     // We have 2 signers
@@ -663,7 +663,7 @@ fn multisig_flow() {
 }
 #[test]
 fn jade_sign_wollet_pset() {
-    let server = setup();
+    let server = setup(false);
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let signer = SwSigner::new(mnemonic, false).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
@@ -699,7 +699,7 @@ fn jade_sign_wollet_pset() {
 
 #[test]
 fn jade_single_sig() {
-    let server = setup();
+    let server = setup(false);
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());

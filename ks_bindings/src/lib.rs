@@ -47,7 +47,7 @@ mod tests {
         let network: Network = test_util::network_regtest().into();
         let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), &network).unwrap();
 
-        let server = test_util::setup();
+        let server = test_util::setup(false);
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 

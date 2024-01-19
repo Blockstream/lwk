@@ -44,7 +44,7 @@ pub fn sh(command: &str) -> Value {
 }
 
 fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) {
-    let server = setup();
+    let server = setup(false);
     let electrum_url = &server.electrs.electrum_url;
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();

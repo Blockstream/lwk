@@ -55,7 +55,7 @@ fn roundtrip(
 }
 
 fn emul_roundtrip_singlesig(variant: Singlesig) {
-    let server = setup();
+    let server = setup(false);
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let xpub_identifier = jade_init.jade.identifier().unwrap();
@@ -64,7 +64,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 }
 
 fn emul_roundtrip_multisig(threshold: usize) {
-    let server = setup();
+    let server = setup(false);
     let docker = Cli::default();
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
     let sw_signer = generate_signer();
@@ -99,7 +99,7 @@ mod serial {
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
-        let server = setup();
+        let server = setup(false);
         let jade = serial::unlock();
         let id = jade.identifier().unwrap();
         let jade_signer = AnySigner::Jade(jade, id);

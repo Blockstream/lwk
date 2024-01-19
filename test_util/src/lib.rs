@@ -81,7 +81,7 @@ pub struct TestElectrumServer {
 }
 
 impl TestElectrumServer {
-    pub fn new(electrs_exec: String, node_exec: String) -> Self {
+    pub fn new(electrs_exec: String, node_exec: String, enable_esplora_http: bool) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
             .unwrap_or(LevelFilter::OFF);
 
@@ -127,7 +127,7 @@ impl TestElectrumServer {
         let mut conf = electrsd::Conf::default();
         conf.args = args;
         conf.view_stderr = view_stdout;
-        conf.http_enabled = false;
+        conf.http_enabled = enable_esplora_http;
         conf.network = network;
         let electrs = electrsd::ElectrsD::with_conf(electrs_exec, &node, &conf).unwrap();
 
@@ -723,10 +723,10 @@ impl TestWollet {
     }
 }
 
-pub fn setup() -> TestElectrumServer {
+pub fn setup(enable_esplora_http: bool) -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
-    TestElectrumServer::new(electrs_exec, node_exec)
+    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http)
 }
 
 fn init_logging() {

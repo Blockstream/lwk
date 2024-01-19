@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-elements = "0.23.0"
+elements = "0.24.0"
 elements-miniscript = "0.2"
 thiserror = "1.0.48"
 # avoid deps to the workspace

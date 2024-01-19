@@ -16,8 +16,10 @@ impl From<elements::Txid> for Txid {
     }
 }
 
+//use elements::bitcoin::hex::HexToArrayError;
+
 impl FromStr for Txid {
-    type Err = elements::hashes::hex::Error;
+    type Err = LwkError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(elements::Txid::from_str(s)?.into())

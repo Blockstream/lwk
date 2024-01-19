@@ -17,8 +17,7 @@ members = [
 resolver = "2"
 
 [patch.crates-io]
-elements = { git = "https://github.com/ElementsProject/rust-elements.git", rev = "7fe86e544de8e3ce585aaa1337fde0cc8af0039c" }
-elements-miniscript = { git = "https://github.com/RCasatta/elements-miniscript.git", rev = "2cf91f25871967ac7c125b37d1fb51a4e5636440" }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript.git", rev = "31fbf2748e6649790a0cf1e4d0f972b3ff1db171" }
 electrsd = { git = "https://github.com/RCasatta/electrsd", rev = "bf0fd301590f45728c5217f84218719372f56262" }
 
 

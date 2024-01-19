@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-elements = "0.23.0"
+elements = "0.24.0"
 thiserror = "1.0.50"
 uniffi = { version = "0.25.3" }
 wollet = { path = "../wollet" }

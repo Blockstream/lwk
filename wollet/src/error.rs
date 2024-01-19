@@ -31,7 +31,7 @@ pub enum Error {
     ElementsEncode(#[from] crate::elements::encode::Error),
 
     #[error(transparent)]
-    Hashes(#[from] crate::elements::hashes::Error),
+    Hashes(#[from] crate::elements::hashes::FromSliceError),
 
     #[error(transparent)]
     ElementsPset(#[from] crate::elements::pset::Error),
@@ -41,6 +41,9 @@ pub enum Error {
 
     #[error(transparent)]
     Secp256k1(#[from] crate::secp256k1::Error),
+
+    #[error(transparent)]
+    HexToBytesError(#[from] crate::hashes::hex::HexToBytesError),
 
     #[error(transparent)]
     HexToArrayError(#[from] crate::hashes::hex::HexToArrayError),

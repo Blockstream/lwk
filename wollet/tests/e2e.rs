@@ -165,6 +165,9 @@ fn roundtrip() {
     let xpub6: bitcoin::bip32::Xpub = signer6.xpub();
     let desc6 = format!("ct(slip77({slip77_key}),elwpkh({xpub6}/<0;1>/*))");
 
+    let signer7 = generate_signer();
+    let desc7 = format!("ct(elip151,elwpkh({}/*))", signer7.xpub());
+
     let signers1 = [&AnySigner::Software(signer1)];
     let signers2 = [&AnySigner::Software(signer2)];
     let signers3 = [&AnySigner::Software(signer3)];
@@ -174,6 +177,7 @@ fn roundtrip() {
         &AnySigner::Software(signer52),
     ];
     let signers6 = [&AnySigner::Software(signer6)];
+    let signers7 = [&AnySigner::Software(signer7)];
 
     std::thread::scope(|s| {
         for (signers, desc) in [
@@ -183,6 +187,7 @@ fn roundtrip() {
             (&signers4[..], desc4),
             (&signers5[..], desc5),
             (&signers6[..], desc6),
+            (&signers7[..], desc7),
         ] {
             let server = &server;
             let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);

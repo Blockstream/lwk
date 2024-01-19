@@ -1,6 +1,6 @@
-# BEWallet
+# Liquid Wallet Kit
 
-BEWallet is a collection of Rust crates for the Liquid Wallet Kit project.
+Liquid Wallet Kit is a collection of Rust crates for Liquid Wallets.
 
 The Liquid Wallet Kit project aims to provide an easy solution to use
 multisig and HWW on the Elements/Liquid network, including the

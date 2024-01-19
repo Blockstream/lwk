@@ -11,7 +11,7 @@ use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::{new_store, Store};
 use crate::util::EC;
-use crate::{ElectrumClient, WolletDescriptor};
+use crate::{BlockchainBackend, ElectrumClient, WolletDescriptor};
 use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
@@ -426,7 +426,6 @@ pub fn full_scan_with_electrum_client(
     wollet: &mut Wollet,
     electrum_client: &mut ElectrumClient,
 ) -> Result<(), Error> {
-    use crate::clients::BlockchainBackend;
     let update = electrum_client.full_scan(wollet)?;
     if let Some(update) = update {
         wollet.apply_update(update)?

@@ -276,10 +276,12 @@ mod tests {
         let start = Instant::now();
         let a = electrum_client.full_scan(&wollet1).unwrap();
         wollet1.apply_update(a.unwrap()).unwrap();
-        println!("{}", start.elapsed().as_secs());
+        println!("electrum client: {}ms", start.elapsed().as_millis());
 
+        let start = Instant::now();
         let b = esplora_client.full_scan(&wollet2).unwrap();
         wollet2.apply_update(b.unwrap()).unwrap();
+        println!("esplora client: {}ms", start.elapsed().as_millis());
 
         assert_eq!(wollet1.balance().unwrap(), wollet2.balance().unwrap());
     }

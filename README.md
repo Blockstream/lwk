@@ -1,8 +1,8 @@
 # BEWallet
 
-BEWallet is a collection of Rust crates for the keystone project.
+BEWallet is a collection of Rust crates for the Liquid Wallet Kit project.
 
-The keystone project aims to provide an easy solution to use
+The Liquid Wallet Kit project aims to provide an easy solution to use
 multisig and HWW on the Elements/Liquid network, including the
 ability to create and sign issuance, reissuance and burn
 transactions.
@@ -16,7 +16,7 @@ prototypes and experiments.
 BEWallet was based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
 Essentially some GDK Rust pieces were moved to this project.
 
-This was used as the starting point for the keystone project,
+This was used as the starting point for the Liquid Wallet Kit project,
 initially the parts that were not necessary have been dropped,
 things have been polished and new features have been addded.
 

@@ -36,6 +36,7 @@ pub fn singlesig_desc<S: Signer>(
                 .slip77_master_blinding_key()
                 .map_err(|e| format!("{:?}", e))?
         ),
+        DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 
     // m / purpose' / coin_type' / account' / change / address_index
@@ -70,6 +71,7 @@ pub fn multisig_desc(
             "slip77({})",
             "1111111111111111111111111111111111111111111111111111111111111111"
         ), // TODO: make the slip77key random, but where do we generate it?
+        DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 
     let xpubs = xpubs
@@ -112,10 +114,11 @@ impl FromStr for Singlesig {
 #[derive(Debug, Clone, Copy)]
 pub enum DescriptorBlindingKey {
     Slip77,
+    Elip151,
 }
 
 #[derive(Error, Debug)]
-#[error("Invalid blinding key variant '{0}' supported variant are: 'slip77'")]
+#[error("Invalid blinding key variant '{0}' supported variant are: 'slip77', 'elip151'")]
 pub struct InvalidBlindingKeyVariant(String);
 
 impl FromStr for DescriptorBlindingKey {
@@ -124,6 +127,7 @@ impl FromStr for DescriptorBlindingKey {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "slip77" => DescriptorBlindingKey::Slip77,
+            "elip151" => DescriptorBlindingKey::Elip151,
             v => return Err(InvalidBlindingKeyVariant(v.to_string())),
         })
     }

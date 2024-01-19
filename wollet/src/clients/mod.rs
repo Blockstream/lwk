@@ -15,7 +15,7 @@ use elements::{
 };
 use std::collections::{HashMap, HashSet};
 
-#[cfg(test)]
+#[cfg(feature = "esplora")]
 pub(crate) mod esplora_client;
 
 pub trait BlockchainBackend {

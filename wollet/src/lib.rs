@@ -35,6 +35,7 @@ pub use crate::wollet::full_scan_with_electrum_client;
 pub use crate::wollet::Wollet;
 
 pub use clients::electrum_client::ElectrumClient;
+pub use clients::esplora_client::EsploraClient;
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

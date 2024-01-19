@@ -12,6 +12,8 @@ use serde::Deserialize;
 
 use crate::{BlockchainBackend, Error};
 
+/// A blockchain backend implementation based on the
+/// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 pub struct EsploraClient {
     base_url: String,
     tip_hash_url: String,
@@ -28,8 +30,8 @@ impl EsploraClient {
     }
 
     fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
-        let tip_hash = minreq::get(&self.tip_hash_url).send()?;
-        Ok(BlockHash::from_str(tip_hash.as_str()?)?)
+        let response = minreq::get(&self.tip_hash_url).send()?;
+        Ok(BlockHash::from_str(response.as_str()?)?)
     }
 }
 
@@ -93,6 +95,9 @@ impl BlockchainBackend for EsploraClient {
         Ok(result)
     }
 
+    // examples:
+    // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
+    // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
     fn get_scripts_history<'s, I>(
         &self,
         scripts: I,
@@ -108,7 +113,7 @@ impl BlockchainBackend for EsploraClient {
             let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
-            // TODO must handle paging
+            // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
             let response = minreq::get(url).send()?;
             let json: Vec<EsploraTx> = response.json()?;
 
@@ -140,41 +145,43 @@ struct Status {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use elements::{BlockHash, Txid};
-
-    use crate::BlockchainBackend;
-
     use super::EsploraClient;
+    use crate::BlockchainBackend;
+    use elements::{encode::Decodable, BlockHash};
+
+    fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
+        let url = format!("{}/block/{}/raw", base_url, hash);
+        let response = minreq::get(url).send().unwrap();
+        let block = elements::Block::consensus_decode(response.as_bytes()).unwrap();
+        block
+    }
 
     #[test]
-    #[ignore]
-    fn esplora() {
-        // TODO it's ignored until we have a local process to test against
-        let mut client = EsploraClient::new("https://blockstream.info/liquidtestnet/api");
-        let header = client.tip().unwrap();
-        println!("{header:?}");
+    fn esplora_local() {
+        let server = test_util::setup(true);
 
-        let txid =
-            Txid::from_str("2ff1893242d1bfcd999ef5d531768e5f8a26f36f04d0c06c7e24b6dae548f4a4")
-                .unwrap();
+        let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+        println!("{}", esplora_url);
+
+        let mut client = EsploraClient::new(&esplora_url);
+        let header = client.tip().unwrap();
+        assert_eq!(header.height, 101);
+
+        let headers = client.get_headers(vec![0]).unwrap();
+        let genesis_header = &headers[0];
+        assert_eq!(genesis_header.height, 0);
+
+        let genesis_block = get_block(&esplora_url, genesis_header.block_hash());
+        let genesis_tx = &genesis_block.txdata[0];
+
+        let txid = genesis_tx.txid();
         let txs = client.get_transactions(vec![txid]).unwrap();
+
         assert_eq!(txs[0].txid(), txid);
 
-        let block_hash =
-            BlockHash::from_str("1baa345a15b9d7e1d873129c81c49c4a206204b4e5f04f59068ecea123c2de73")
-                .unwrap();
-        let headers = client.get_headers(vec![100_000]).unwrap();
-        assert_eq!(headers[0].block_hash(), block_hash);
+        let existing_script = &genesis_tx.output[0].script_pubkey;
 
-        // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
-        // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-        let script = elements::Address::from_str("tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj")
-            .unwrap()
-            .script_pubkey();
-
-        let histories = client.get_scripts_history(vec![&script]).unwrap();
+        let histories = client.get_scripts_history(vec![existing_script]).unwrap();
         assert!(!histories.is_empty())
     }
 }

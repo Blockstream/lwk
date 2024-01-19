@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, str::FromStr};
+use std::{borrow::Borrow, collections::HashMap, str::FromStr};
 
 use elements::{
     encode::Decodable,
@@ -9,7 +9,7 @@ use elements::{
 };
 use serde::Deserialize;
 
-use crate::{BlockchainBackend, Error};
+use crate::{store::Height, BlockchainBackend, Error};
 
 use super::History;
 
@@ -73,7 +73,11 @@ impl BlockchainBackend for EsploraClient {
         Ok(result)
     }
 
-    fn get_headers<I>(&self, heights: I) -> Result<Vec<elements::BlockHeader>, Error>
+    fn get_headers<I>(
+        &self,
+        heights: I,
+        height_blockhash: &HashMap<Height, BlockHash>,
+    ) -> Result<Vec<elements::BlockHeader>, Error>
     where
         I: IntoIterator + Clone,
         I::Item: Borrow<u32>,
@@ -81,9 +85,15 @@ impl BlockchainBackend for EsploraClient {
         // TODO make parallel requests
         let mut result = vec![];
         for height in heights.into_iter() {
-            let block_height = format!("{}/block-height/{}", self.base_url, height.borrow());
-            let response = minreq::get(block_height).send()?;
-            let block_hash = BlockHash::from_str(response.as_str()?)?;
+            let block_hash = match height_blockhash.get(height.borrow()) {
+                Some(block_hash) => *block_hash,
+                None => {
+                    let block_height =
+                        format!("{}/block-height/{}", self.base_url, height.borrow());
+                    let response = minreq::get(block_height).send()?;
+                    BlockHash::from_str(response.as_str()?)?
+                }
+            };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
             let response = minreq::get(block_header).send()?;
@@ -148,6 +158,8 @@ struct Status {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::EsploraClient;
     use crate::BlockchainBackend;
     use elements::{encode::Decodable, BlockHash};
@@ -170,7 +182,7 @@ mod tests {
         let header = client.tip().unwrap();
         assert_eq!(header.height, 101);
 
-        let headers = client.get_headers(vec![0]).unwrap();
+        let headers = client.get_headers(vec![0], &HashMap::new()).unwrap();
         let genesis_header = &headers[0];
         assert_eq!(genesis_header.height, 0);
 

@@ -1,8 +1,10 @@
+use crate::store::Height;
 use crate::{ElectrumUrl, Error};
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
-use elements::{bitcoin, BlockHeader, Transaction, Txid};
+use elements::{bitcoin, BlockHash, BlockHeader, Transaction, Txid};
+use std::collections::HashMap;
 use std::{borrow::Borrow, fmt::Debug};
 
 use super::History;
@@ -70,7 +72,11 @@ impl super::BlockchainBackend for ElectrumClient {
         Ok(result)
     }
 
-    fn get_headers<I>(&self, heights: I) -> Result<Vec<BlockHeader>, Error>
+    fn get_headers<I>(
+        &self,
+        heights: I,
+        _: &HashMap<Height, BlockHash>,
+    ) -> Result<Vec<BlockHeader>, Error>
     where
         I: IntoIterator + Clone,
         I::Item: Borrow<u32>,

@@ -26,10 +26,14 @@ pub trait BlockchainBackend {
         I: IntoIterator + Clone,
         I::Item: Borrow<Txid>;
 
-    fn get_headers<I>(&self, heights: I) -> Result<Vec<BlockHeader>, Error>
+    fn get_headers<I>(
+        &self,
+        heights: I,
+        height_blockhash: &HashMap<Height, BlockHash>,
+    ) -> Result<Vec<BlockHeader>, Error>
     where
         I: IntoIterator + Clone,
-        I::Item: Borrow<u32>;
+        I::Item: Borrow<Height>;
 
     fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
     where
@@ -44,6 +48,7 @@ pub trait BlockchainBackend {
 
         let mut last_unused_external = 0;
         let mut last_unused_internal = 0;
+        let mut height_blockhash = HashMap::new();
 
         for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
             let mut batch_count = 0;
@@ -89,6 +94,9 @@ pub trait BlockchainBackend {
                         txid_height.insert(txid, None);
                     } else {
                         txid_height.insert(txid, Some(height as u32));
+                        if let Some(block_hash) = el.block_hash {
+                            height_blockhash.insert(height as u32, block_hash);
+                        }
                     }
                 }
 
@@ -100,7 +108,7 @@ pub trait BlockchainBackend {
         let new_txs = self.download_txs(&history_txs_id, &scripts, store, &descriptor)?;
         let history_txs_heights: HashSet<Height> =
             txid_height.values().filter_map(|e| *e).collect();
-        let timestamps = self.download_headers(&history_txs_heights, store)?;
+        let timestamps = self.download_headers(&history_txs_heights, &height_blockhash, store)?;
 
         let store_last_unused_external = store
             .cache
@@ -197,6 +205,7 @@ pub trait BlockchainBackend {
     fn download_headers(
         &self,
         history_txs_heights: &HashSet<Height>,
+        height_blockhash: &HashMap<Height, BlockHash>,
         store: &Store,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
@@ -207,7 +216,7 @@ pub trait BlockchainBackend {
             .cloned()
             .collect();
         if !heights_to_download.is_empty() {
-            for h in self.get_headers(&heights_to_download)? {
+            for h in self.get_headers(&heights_to_download, height_blockhash)? {
                 result.push((h.height, h.time))
             }
 

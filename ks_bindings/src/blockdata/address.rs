@@ -1,4 +1,4 @@
-use crate::{Error, Script};
+use crate::{LwkError, Script};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -23,7 +23,7 @@ impl Display for Address {
 impl Address {
     /// Construct an Address object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, Error> {
+    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Address = s.parse()?;
         Ok(Arc::new(Self { inner }))
     }

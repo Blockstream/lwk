@@ -1,4 +1,4 @@
-use crate::{Error, Txid};
+use crate::{LwkError, Txid};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -23,7 +23,7 @@ impl Display for OutPoint {
 impl OutPoint {
     /// Construct an OutPoint object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, Error> {
+    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
         let inner: elements::OutPoint = s.parse()?;
         Ok(Arc::new(Self { inner }))
     }

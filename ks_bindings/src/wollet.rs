@@ -1,7 +1,7 @@
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, Error, Pset, Update, WalletTx};
+use crate::{Address, AddressResult, LwkError, Pset, Update, WalletTx};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -29,31 +29,31 @@ impl Wollet {
         network: &Network,
         descriptor: &WolletDescriptor,
         datadir: String,
-    ) -> Result<Arc<Self>, Error> {
+    ) -> Result<Arc<Self>, LwkError> {
         let inner = wollet::Wollet::new((*network).into(), &datadir, &descriptor.to_string())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))
     }
 
-    pub fn descriptor(&self) -> Result<Arc<WolletDescriptor>, Error> {
+    pub fn descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.wollet_descriptor().into()))
     }
 
-    pub fn address(&self, index: Option<u32>) -> Result<Arc<AddressResult>, Error> {
+    pub fn address(&self, index: Option<u32>) -> Result<Arc<AddressResult>, LwkError> {
         // TODO test this method assert the first address with many different supported descriptor in different networks
         let wollet = self.inner.lock()?;
         let address = wollet.address(index)?;
         Ok(Arc::new(address.into()))
     }
 
-    pub fn apply_update(&self, update: &Update) -> Result<(), Error> {
+    pub fn apply_update(&self, update: &Update) -> Result<(), LwkError> {
         let mut wollet = self.inner.lock()?;
         wollet.apply_update(update.clone().into())?;
         Ok(())
     }
 
-    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
+    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, LwkError> {
         let m: HashMap<_, _> = self
             .inner
             .lock()?
@@ -64,7 +64,7 @@ impl Wollet {
         Ok(m)
     }
 
-    pub fn transactions(&self) -> Result<Vec<Arc<WalletTx>>, Error> {
+    pub fn transactions(&self) -> Result<Vec<Arc<WalletTx>>, LwkError> {
         Ok(self
             .inner
             .lock()?
@@ -80,13 +80,13 @@ impl Wollet {
         out_address: &Address,
         satoshis: u64,
         fee_rate: f32,
-    ) -> Result<Arc<Pset>, Error> {
+    ) -> Result<Arc<Pset>, LwkError> {
         let wollet = self.inner.lock()?;
         let pset = wollet.send_lbtc(satoshis, &out_address.to_string(), Some(fee_rate))?;
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, Error> {
+    pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;
         wollet.finalize(&mut pset)?;

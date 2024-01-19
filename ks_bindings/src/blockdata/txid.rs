@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use elements::hashes::Hash;
 
-use crate::{types::Hex, Error};
+use crate::{types::Hex, LwkError};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
 #[uniffi::export(Display)]
@@ -34,7 +34,7 @@ impl Display for Txid {
 impl Txid {
     /// Construct a Txid object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, Error> {
+    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Txid = hex.to_string().parse()?;
         Ok(Arc::new(Self { inner }))
     }

@@ -1,4 +1,4 @@
-use crate::{Error, Transaction};
+use crate::{LwkError, Transaction};
 use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
@@ -25,12 +25,12 @@ impl Display for Pset {
 impl Pset {
     /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
-    pub fn new(base64: String) -> Result<Arc<Self>, Error> {
+    pub fn new(base64: String) -> Result<Arc<Self>, LwkError> {
         let inner: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(Arc::new(Pset { inner }))
     }
 
-    pub fn extract_tx(&self) -> Result<Arc<Transaction>, Error> {
+    pub fn extract_tx(&self) -> Result<Arc<Transaction>, LwkError> {
         let tx: Transaction = self.inner.extract_tx()?.into();
         Ok(Arc::new(tx))
     }

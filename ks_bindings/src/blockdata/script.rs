@@ -3,7 +3,7 @@ use elements::{
     pset::serialize::{Deserialize, Serialize},
 };
 
-use crate::{types::Hex, Error};
+use crate::{types::Hex, LwkError};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object)]
@@ -28,7 +28,7 @@ impl Display for Script {
 impl Script {
     /// Construct a Script object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, Error> {
+    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
         let inner = elements::Script::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }

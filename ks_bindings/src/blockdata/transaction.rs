@@ -4,7 +4,7 @@ use elements::{
 };
 use wollet::WalletTx;
 
-use crate::{types::Hex, Error, Txid};
+use crate::{types::Hex, LwkError, Txid};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
@@ -47,7 +47,7 @@ impl AsRef<elements::Transaction> for Transaction {
 impl Transaction {
     /// Construct a Transaction object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, Error> {
+    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }

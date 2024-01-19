@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr, sync::Arc};
 
-use crate::Error;
+use crate::LwkError;
 
 /// The output descriptors
 #[derive(uniffi::Object)]
@@ -17,7 +17,7 @@ impl From<wollet::WolletDescriptor> for WolletDescriptor {
 
 impl WolletDescriptor {
     #[uniffi::constructor]
-    pub fn new(descriptor: String) -> Result<Arc<Self>, Error> {
+    pub fn new(descriptor: String) -> Result<Arc<Self>, LwkError> {
         let inner = wollet::WolletDescriptor::from_str(&descriptor)?;
         Ok(Arc::new(WolletDescriptor { inner }))
     }

@@ -31,7 +31,7 @@ pub use signer::Signer;
 pub use update::Update;
 pub use wollet::Wollet;
 
-pub use error::Error;
+pub use error::LwkError;
 uniffi::setup_scaffolding!();
 
 #[cfg(test)]

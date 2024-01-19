@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use signer::bip39;
 
-use crate::Error;
+use crate::LwkError;
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
 #[uniffi::export(Display)]
@@ -26,7 +26,7 @@ impl Display for Mnemonic {
 impl Mnemonic {
     /// Construct a Script object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, Error> {
+    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
         let inner = bip39::Mnemonic::from_str(&s)?;
         Ok(Arc::new(Self { inner }))
     }

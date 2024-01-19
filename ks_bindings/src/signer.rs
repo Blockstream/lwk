@@ -1,4 +1,4 @@
-use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor};
+use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
 /// A Software signer
@@ -11,18 +11,18 @@ pub struct Signer {
 impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
-    pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Arc<Self>, Error> {
+    pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Arc<Self>, LwkError> {
         let inner = signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
         Ok(Arc::new(Self { inner }))
     }
 
-    pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, Error> {
+    pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         common::Signer::sign(&self.inner, &mut pset)?;
         Ok(Arc::new(pset.into()))
     }
 
-    pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, Error> {
+    pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         // TODO: make script_variant and blinding_variant parameters
 
         let is_mainnet = common::Signer::is_mainnet(&self.inner)?;

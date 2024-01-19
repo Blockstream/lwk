@@ -81,13 +81,13 @@ fn keyorigin(cli: &str, signer: &str) -> String {
     get_str(&r, "keyorigin_xpub").to_string()
 }
 
-fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str]) {
+fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str], dbk: &str) {
     let xpubs = signers
         .iter()
         .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s)))
         .collect::<Vec<_>>()
         .join("");
-    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold {threshold}{xpubs}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key {dbk} --kind wsh --threshold {threshold}{xpubs}"));
     let d = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --wallet {name} -d {d}"));
     for signer in signers {
@@ -738,7 +738,7 @@ fn test_jade_emulator() {
     // Use jade in a multisig wallet
     sw_signer(&cli, "sw");
     let signers = &["sw", "emul"];
-    multisig_wallet(&cli, "multi", 2, signers);
+    multisig_wallet(&cli, "multi", 2, signers, "slip77");
     fund(&server, &cli, "multi", 10_000);
     let addr = address(&cli, "multi");
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -1002,6 +1002,60 @@ fn test_schema() {
         let result = sh(&format!("{cli} schema response asset {cmd}"));
         assert!(result.get("$schema").is_some(), "failed for {}", cmd);
     }
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_elip151() {
+    let (t, _tmp, cli, _params, _server) = setup_cli();
+
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
+
+    let r = sh(&format!(
+        "{cli} signer singlesig-desc -s s1 --descriptor-blinding-key elip151 --kind wpkh"
+    ));
+    let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load --wallet ss -d {desc_ss}"));
+
+    let signers = &["s1", "s2"];
+    multisig_wallet(&cli, "multi", 2, signers, "elip151");
+
+    // Load a jade
+    let docker = clients::Cli::default();
+    let container = docker.run(JadeEmulator);
+    let port = container.get_host_port_ipv4(EMULATOR_PORT);
+    let addr = format!("127.0.0.1:{}", port);
+    let r = sh(&format!("{cli} signer jade-id --emulator {addr}"));
+    let id = r.get("identifier").unwrap().as_str().unwrap();
+    assert_eq!(id, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");
+    sh(&format!(
+        "{cli} signer load-jade --signer emul --id {id}  --emulator {addr}"
+    ));
+
+    // Create a elip151 multisig wallet with jade (mj)
+    let xpubs = format!(
+        "--keyorigin-xpub {} --keyorigin-xpub {}",
+        keyorigin(&cli, "s1"),
+        keyorigin(&cli, "emul")
+    );
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key elip151 --kind wsh --threshold 2 {xpubs}"));
+    let d = get_str(&r, "descriptor");
+    sh(&format!("{cli} wallet load --wallet mj -d {d}"));
+
+    // Registering the sw wallet works (no-op)
+    sh(&format!("{cli} signer register-multisig -s s1 --wallet mj"));
+    // Jade fails though because it does not support elip151 keys
+    let r = sh_result(&format!(
+        "{cli} signer register-multisig -s emul --wallet mj"
+    ));
+    assert!(format!("{:?}", r.unwrap_err())
+        .contains("Jade Error: Only slip77 master blinding key are supported"));
+
+    // Jade does not support elip151 for singlesig too,
+    // but since it assumes that the key is slip77 we can do nothing about it.
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

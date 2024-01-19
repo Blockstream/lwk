@@ -317,6 +317,7 @@ pub enum SignerCommand {
 #[derive(ValueEnum, Clone, Debug)]
 pub enum BlindingKeyKind {
     Slip77,
+    Elip151,
     View,
     Bare,
 }
@@ -325,6 +326,7 @@ impl Display for BlindingKeyKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BlindingKeyKind::Slip77 => write!(f, "slip77"),
+            BlindingKeyKind::Elip151 => write!(f, "elip151"),
             BlindingKeyKind::View => write!(f, "view"),
             BlindingKeyKind::Bare => write!(f, "bare"),
         }

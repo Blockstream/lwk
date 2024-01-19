@@ -1,6 +1,5 @@
 use std::{borrow::Borrow, str::FromStr};
 
-use electrum_client::GetHistoryRes;
 use elements::{
     encode::Decodable,
     hashes::{hex::FromHex, sha256, Hash},
@@ -11,6 +10,8 @@ use elements::{
 use serde::Deserialize;
 
 use crate::{BlockchainBackend, Error};
+
+use super::History;
 
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
@@ -98,10 +99,7 @@ impl BlockchainBackend for EsploraClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-    fn get_scripts_history<'s, I>(
-        &self,
-        scripts: I,
-    ) -> Result<Vec<Vec<electrum_client::GetHistoryRes>>, Error>
+    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
     where
         I: IntoIterator + Clone,
         I::Item: Borrow<&'s elements::Script>,
@@ -117,30 +115,35 @@ impl BlockchainBackend for EsploraClient {
             let response = minreq::get(url).send()?;
             let json: Vec<EsploraTx> = response.json()?;
 
-            let history: Vec<GetHistoryRes> = json
-                .iter()
-                .map(|t| GetHistoryRes {
-                    height: t.status.block_height,
-                    tx_hash: t.txid,
-                    fee: Some(t.fee),
-                })
-                .collect();
+            let history: Vec<History> = json.into_iter().map(Into::into).collect();
             result.push(history)
         }
         Ok(result)
     }
 }
 
+impl From<EsploraTx> for History {
+    fn from(value: EsploraTx) -> Self {
+        History {
+            txid: value.txid,
+            height: value.status.block_height,
+            block_hash: Some(value.status.block_hash),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct EsploraTx {
-    txid: elements::bitcoin::Txid,
-    fee: u64,
+    txid: elements::Txid,
     status: Status,
 }
+
+// TODO some of this fields may be Option in unconfirmed
 
 #[derive(Deserialize)]
 struct Status {
     block_height: i32,
+    block_hash: BlockHash,
 }
 
 #[cfg(test)]

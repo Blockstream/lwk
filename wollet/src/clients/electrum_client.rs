@@ -5,6 +5,8 @@ use elements::encode::serialize as elements_serialize;
 use elements::{bitcoin, BlockHeader, Transaction, Txid};
 use std::{borrow::Borrow, fmt::Debug};
 
+use super::History;
+
 pub struct ElectrumClient {
     client: Client,
 
@@ -81,7 +83,7 @@ impl super::BlockchainBackend for ElectrumClient {
         Ok(result)
     }
 
-    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<GetHistoryRes>>, Error>
+    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
     where
         I: IntoIterator + Clone,
         I::Item: Borrow<&'s elements::Script>,
@@ -91,6 +93,21 @@ impl super::BlockchainBackend for ElectrumClient {
             .map(|t| bitcoin::Script::from_bytes(t.borrow().as_bytes()))
             .collect();
 
-        Ok(self.client.batch_script_get_history(&scripts)?)
+        Ok(self
+            .client
+            .batch_script_get_history(&scripts)?
+            .into_iter()
+            .map(|e| e.into_iter().map(Into::into).collect())
+            .collect())
+    }
+}
+
+impl From<GetHistoryRes> for History {
+    fn from(value: GetHistoryRes) -> Self {
+        History {
+            txid: Txid::from_raw_hash(value.tx_hash.to_raw_hash()),
+            height: value.height,
+            block_hash: None,
+        }
     }
 }

@@ -1,5 +1,4 @@
-use ::electrum_client::GetHistoryRes;
-use elements::{BlockHeader, Transaction, Txid};
+use elements::{BlockHash, BlockHeader, Transaction, Txid};
 use std::{borrow::Borrow, convert::TryInto, sync::atomic};
 pub(crate) mod electrum_client;
 use crate::{
@@ -32,7 +31,7 @@ pub trait BlockchainBackend {
         I: IntoIterator + Clone,
         I::Item: Borrow<u32>;
 
-    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<GetHistoryRes>>, Error>
+    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
     where
         I: IntoIterator + Clone,
         I::Item: Borrow<&'s Script>;
@@ -52,7 +51,7 @@ pub trait BlockchainBackend {
             loop {
                 let batch = store.get_script_batch(batch_count, &descriptor)?;
 
-                let result: Vec<Vec<GetHistoryRes>> =
+                let result: Vec<Vec<History>> =
                     self.get_scripts_history(batch.value.iter().map(|e| &e.0))?;
                 if !batch.cached {
                     scripts.extend(batch.value);
@@ -74,7 +73,7 @@ pub trait BlockchainBackend {
                     }
                 };
 
-                let flattened: Vec<GetHistoryRes> = result.into_iter().flatten().collect();
+                let flattened: Vec<History> = result.into_iter().flatten().collect();
 
                 if flattened.is_empty() {
                     break;
@@ -85,7 +84,7 @@ pub trait BlockchainBackend {
                     // el.height =  0 means unconfirmed with confirmed parents
                     // but we threat those tx the same
                     let height = el.height.max(0);
-                    let txid = Txid::from_raw_hash(el.tx_hash.to_raw_hash());
+                    let txid = el.txid;
                     if height == 0 {
                         txid_height.insert(txid, None);
                     } else {
@@ -217,6 +216,12 @@ pub trait BlockchainBackend {
 
         Ok(result)
     }
+}
+
+pub struct History {
+    txid: Txid,
+    height: i32,
+    block_hash: Option<BlockHash>,
 }
 
 pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {

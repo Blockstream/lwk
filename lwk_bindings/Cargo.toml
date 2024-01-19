@@ -1,5 +1,5 @@
 [package]
-name = "ks-bindings"
+name = "lwk-bindings"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,7 +17,7 @@ uniffi = { version = "0.25.3", features = ["build"] }
 
 [lib]
 crate-type = ["cdylib"]
-name = "ks_bindings"
+name = "lwk_bindings"
 
 [dev-dependencies]
 test_util = { path = "../test_util" }

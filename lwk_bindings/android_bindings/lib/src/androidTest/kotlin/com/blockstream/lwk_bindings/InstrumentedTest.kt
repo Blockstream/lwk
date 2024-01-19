@@ -1,11 +1,11 @@
-package com.blockstream.ks_bindings
+package com.blockstream.lwk_bindings
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import ks_bindings.Mnemonic
-import ks_bindings.NetworkBuilder
-import ks_bindings.Signer
-import ks_bindings.Wollet
+import lwk_bindings.Mnemonic
+import lwk_bindings.NetworkBuilder
+import lwk_bindings.Signer
+import lwk_bindings.Wollet
 
 import org.junit.Test
 import org.junit.runner.RunWith

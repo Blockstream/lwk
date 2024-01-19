@@ -23,6 +23,6 @@
 # for JNA
 -dontwarn java.awt.*
 -keep class com.sun.jna.* { *; }
--keep class ks_bindings.** { *; }
--keepclassmembers class * extends ks_bindings.** { public *; }
+-keep class lwk_bindings.** { *; }
+-keepclassmembers class * extends lwk_bindings.** { public *; }
 -keepclassmembers class * extends com.sun.jna.* { public *; }

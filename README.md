@@ -196,4 +196,4 @@ cargo doc --no-deps --open
 
 ### Bindings
 
-See `ks_bindings/README.md`
+See `lwk_bindings/README.md`

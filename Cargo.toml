@@ -2,7 +2,7 @@
 
 members = [
     "app",
-    "ks_bindings",
+    "lwk_bindings",
     "cli",
     "hwi",
     "jade",

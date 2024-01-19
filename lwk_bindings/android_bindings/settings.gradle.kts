@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ks_bindings"
+rootProject.name = "lwk_bindings"
 include(":lib")

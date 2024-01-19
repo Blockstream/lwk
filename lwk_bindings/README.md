@@ -32,19 +32,19 @@ just env-python-bindings
 ```
 
 ```python
-import ks_bindings as ks
+import lwk_bindings as lwk
 
-mnemonic = ks.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
-network = ks.NetworkBuilder().testnet()
+mnemonic = lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+network = lwk.NetworkBuilder().testnet()
 client = network.default_electrum_client()
 
-signer = ks.Signer(mnemonic, network)
+signer = lwk.Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()
 
 print(desc) 
 # ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d
 
-w = ks.Wollet(network, desc, "/tmp/ks")
+w = lwk.Wollet(network, desc, "/tmp/lwk")
 update = client.full_scan(w)
 w.apply_update(update)
 

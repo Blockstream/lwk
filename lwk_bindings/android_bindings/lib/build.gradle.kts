@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.blockstream.ks_bindings"
+    namespace = "com.blockstream.lwk_bindings"
     compileSdk = 34
 
     defaultConfig {

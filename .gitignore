@@ -5,4 +5,4 @@ bak*
 bin/
 .vscode
 debug.log
-ks_bindings.kt
+lwk_bindings.kt

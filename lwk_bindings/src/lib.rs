@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn test_ks_flow() {
-        let datadir = "/tmp/.ks";
+        let datadir = "/tmp/.lwk";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let network: Network = test_util::network_regtest().into();
         let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), &network).unwrap();

@@ -667,8 +667,8 @@ pub enum ServerCommand {
 
         /// Where the log file, server state, and other data goes.
         ///
-        /// If not specified is `$HOME/.ks`.
-        /// If failing to determine the home directory the current dir `./.ks` is used
+        /// If not specified is `$HOME/.lwk`.
+        /// If failing to determine the home directory the current dir `./.lwk` is used
         #[arg(long)]
         datadir: Option<PathBuf>,
 

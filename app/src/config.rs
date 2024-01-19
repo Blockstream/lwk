@@ -75,7 +75,7 @@ impl Config {
 
     pub fn default_home() -> Result<PathBuf, Error> {
         let mut path = home::home_dir().ok_or(Error::Generic("Cannot get home dir".into()))?;
-        path.push(".ks");
+        path.push(".lwk");
         fs::create_dir_all(&path)?;
         Ok(path)
     }

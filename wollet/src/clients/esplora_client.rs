@@ -176,11 +176,22 @@ mod tests {
         let server = test_util::setup(true);
 
         let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+        test_esplora_url(&esplora_url);
+    }
+
+    #[ignore]
+    #[test]
+    fn esplora_testnet() {
+        test_esplora_url("https://blockstream.info/liquidtestnet/api");
+        test_esplora_url("https://liquid.network/liquidtestnet/api");
+    }
+
+    fn test_esplora_url(esplora_url: &str) {
         println!("{}", esplora_url);
 
         let mut client = EsploraClient::new(&esplora_url);
         let header = client.tip().unwrap();
-        assert_eq!(header.height, 101);
+        assert!(header.height > 100);
 
         let headers = client.get_headers(vec![0], &HashMap::new()).unwrap();
         let genesis_header = &headers[0];

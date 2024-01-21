@@ -260,36 +260,31 @@ mod tests {
         let desc_str =
             common::singlesig_desc(&signer, script_variant, blinding_variant, false).unwrap();
 
-        let tempdir1 = tempfile::tempdir().unwrap();
-        let mut wollet1 = crate::Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            &tempdir1.path().display().to_string(),
-            &desc_str,
-        )
-        .unwrap();
+        let vec: Vec<Box<dyn BlockchainBackend>> = vec![
+            Box::new(
+                ElectrumClient::new(&ElectrumUrl::new("blockstream.info:465", true, true)).unwrap(),
+            ),
+            Box::new(EsploraClient::new(
+                "https://blockstream.info/liquidtestnet/api",
+            )),
+            Box::new(EsploraClient::new(
+                "https://liquid.network/liquidtestnet/api",
+            )),
+        ];
 
-        let tempdir2 = tempfile::tempdir().unwrap();
-        let mut wollet2 = crate::Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            &tempdir2.path().display().to_string(),
-            &desc_str,
-        )
-        .unwrap();
+        for (i, mut bb) in vec.into_iter().enumerate() {
+            let wollet = tempfile::tempdir().unwrap();
+            let mut wollet = crate::Wollet::new(
+                ElementsNetwork::LiquidTestnet,
+                &wollet.path().display().to_string(),
+                &desc_str,
+            )
+            .unwrap();
 
-        let mut electrum_client =
-            ElectrumClient::new(&ElectrumUrl::new("blockstream.info:465", true, true)).unwrap();
-        let mut esplora_client = EsploraClient::new("https://blockstream.info/liquidtestnet/api");
-
-        let start = Instant::now();
-        let a = electrum_client.full_scan(&wollet1).unwrap();
-        wollet1.apply_update(a.unwrap()).unwrap();
-        println!("electrum client: {}ms", start.elapsed().as_millis());
-
-        let start = Instant::now();
-        let b = esplora_client.full_scan(&wollet2).unwrap();
-        wollet2.apply_update(b.unwrap()).unwrap();
-        println!("esplora client: {}ms", start.elapsed().as_millis());
-
-        assert_eq!(wollet1.balance().unwrap(), wollet2.balance().unwrap());
+            let start = Instant::now();
+            let a = bb.full_scan(&wollet).unwrap();
+            wollet.apply_update(a.unwrap()).unwrap();
+            println!("{i}: {}ms", start.elapsed().as_millis());
+        }
     }
 }

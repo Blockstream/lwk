@@ -1,5 +1,5 @@
 use elements::{BlockHash, BlockHeader, Transaction, Txid};
-use std::{borrow::Borrow, convert::TryInto, sync::atomic};
+use std::{convert::TryInto, sync::atomic};
 pub(crate) mod electrum_client;
 use crate::{
     store::{Height, Store, Timestamp, BATCH_SIZE},
@@ -21,24 +21,15 @@ pub trait BlockchainBackend {
     fn tip(&mut self) -> Result<BlockHeader, Error>;
     fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error>;
 
-    fn get_transactions<I>(&self, txids: I) -> Result<Vec<Transaction>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<Txid>;
+    fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error>;
 
-    fn get_headers<I>(
+    fn get_headers(
         &self,
-        heights: I,
+        heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
-    ) -> Result<Vec<BlockHeader>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<Height>;
+    ) -> Result<Vec<BlockHeader>, Error>;
 
-    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<&'s Script>;
+    fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error>;
 
     fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
@@ -56,8 +47,8 @@ pub trait BlockchainBackend {
             loop {
                 let batch = store.get_script_batch(batch_count, &descriptor)?;
 
-                let result: Vec<Vec<History>> =
-                    self.get_scripts_history(batch.value.iter().map(|e| &e.0))?;
+                let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
+                let result: Vec<Vec<History>> = self.get_scripts_history(&s)?;
                 if !batch.cached {
                     scripts.extend(batch.value);
                 }
@@ -157,9 +148,9 @@ pub trait BlockchainBackend {
         let mut unblinds = vec![];
 
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
-        let txs_to_download: Vec<&Txid> = history_txs_id.difference(&txs_in_db).collect();
+        let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
         if !txs_to_download.is_empty() {
-            let txs_downloaded = self.get_transactions(txs_to_download)?;
+            let txs_downloaded = self.get_transactions(&txs_to_download)?;
 
             let previous_txs_to_download = HashSet::new();
             for tx in txs_downloaded.into_iter() {
@@ -189,10 +180,12 @@ pub trait BlockchainBackend {
                 txs.push((txid, tx));
             }
 
-            let txs_to_download: Vec<&Txid> =
-                previous_txs_to_download.difference(&txs_in_db).collect();
+            let txs_to_download: Vec<Txid> = previous_txs_to_download
+                .difference(&txs_in_db)
+                .cloned()
+                .collect();
             if !txs_to_download.is_empty() {
-                for tx in self.get_transactions(txs_to_download)? {
+                for tx in self.get_transactions(&txs_to_download)? {
                     txs.push((tx.txid(), tx));
                 }
             }

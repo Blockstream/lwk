@@ -3,9 +3,9 @@ use crate::{ElectrumUrl, Error};
 use electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
-use elements::{bitcoin, BlockHash, BlockHeader, Transaction, Txid};
+use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
 use std::collections::HashMap;
-use std::{borrow::Borrow, fmt::Debug};
+use std::fmt::Debug;
 
 use super::History;
 
@@ -54,14 +54,10 @@ impl super::BlockchainBackend for ElectrumClient {
         Ok(Txid::from_raw_hash(txid.to_raw_hash()))
     }
 
-    fn get_transactions<I>(&self, txids: I) -> Result<Vec<Transaction>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<elements::Txid>,
-    {
+    fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error> {
         let txids: Vec<bitcoin::Txid> = txids
             .into_iter()
-            .map(|t| bitcoin::Txid::from_raw_hash(t.borrow().to_raw_hash()))
+            .map(|t| bitcoin::Txid::from_raw_hash(t.to_raw_hash()))
             .collect();
 
         let mut result = vec![];
@@ -72,15 +68,11 @@ impl super::BlockchainBackend for ElectrumClient {
         Ok(result)
     }
 
-    fn get_headers<I>(
+    fn get_headers(
         &self,
-        heights: I,
+        heights: &[Height],
         _: &HashMap<Height, BlockHash>,
-    ) -> Result<Vec<BlockHeader>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<u32>,
-    {
+    ) -> Result<Vec<BlockHeader>, Error> {
         let mut result = vec![];
         for header in self.client.batch_block_header_raw(heights)? {
             let header: BlockHeader = elements::encode::deserialize(&header)?;
@@ -89,14 +81,10 @@ impl super::BlockchainBackend for ElectrumClient {
         Ok(result)
     }
 
-    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<&'s elements::Script>,
-    {
+    fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         let scripts: Vec<&bitcoin::Script> = scripts
             .into_iter()
-            .map(|t| bitcoin::Script::from_bytes(t.borrow().as_bytes()))
+            .map(|t| bitcoin::Script::from_bytes(t.as_bytes()))
             .collect();
 
         Ok(self

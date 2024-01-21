@@ -1,11 +1,11 @@
-use std::{borrow::Borrow, collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 
 use elements::{
     encode::Decodable,
     hashes::{hex::FromHex, sha256, Hash},
     hex::ToHex,
     pset::serialize::Serialize,
-    BlockHash,
+    BlockHash, Script, Txid,
 };
 use serde::Deserialize;
 
@@ -57,15 +57,11 @@ impl BlockchainBackend for EsploraClient {
         Ok(txid)
     }
 
-    fn get_transactions<I>(&self, txids: I) -> Result<Vec<elements::Transaction>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<elements::Txid>,
-    {
+    fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
         // TODO make parallel requests
         let mut result = vec![];
         for txid in txids.into_iter() {
-            let tx_url = format!("{}/tx/{}/raw", self.base_url, txid.borrow());
+            let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
             let response = minreq::get(tx_url).send()?;
             let tx = elements::Transaction::consensus_decode(response.as_bytes())?;
             result.push(tx);
@@ -73,23 +69,18 @@ impl BlockchainBackend for EsploraClient {
         Ok(result)
     }
 
-    fn get_headers<I>(
+    fn get_headers(
         &self,
-        heights: I,
+        heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
-    ) -> Result<Vec<elements::BlockHeader>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<u32>,
-    {
+    ) -> Result<Vec<elements::BlockHeader>, Error> {
         // TODO make parallel requests
         let mut result = vec![];
         for height in heights.into_iter() {
-            let block_hash = match height_blockhash.get(height.borrow()) {
+            let block_hash = match height_blockhash.get(height) {
                 Some(block_hash) => *block_hash,
                 None => {
-                    let block_height =
-                        format!("{}/block-height/{}", self.base_url, height.borrow());
+                    let block_height = format!("{}/block-height/{}", self.base_url, height);
                     let response = minreq::get(block_height).send()?;
                     BlockHash::from_str(response.as_str()?)?
                 }
@@ -109,15 +100,10 @@ impl BlockchainBackend for EsploraClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-    fn get_scripts_history<'s, I>(&self, scripts: I) -> Result<Vec<Vec<History>>, Error>
-    where
-        I: IntoIterator + Clone,
-        I::Item: Borrow<&'s elements::Script>,
-    {
+    fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         // TODO make parallel requests
         let mut result: Vec<_> = vec![];
         for script in scripts.into_iter() {
-            let script = script.borrow();
             let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
@@ -193,7 +179,7 @@ mod tests {
         let header = client.tip().unwrap();
         assert!(header.height > 100);
 
-        let headers = client.get_headers(vec![0], &HashMap::new()).unwrap();
+        let headers = client.get_headers(&vec![0], &HashMap::new()).unwrap();
         let genesis_header = &headers[0];
         assert_eq!(genesis_header.height, 0);
 
@@ -201,13 +187,13 @@ mod tests {
         let genesis_tx = &genesis_block.txdata[0];
 
         let txid = genesis_tx.txid();
-        let txs = client.get_transactions(vec![txid]).unwrap();
+        let txs = client.get_transactions(&vec![txid]).unwrap();
 
         assert_eq!(txs[0].txid(), txid);
 
         let existing_script = &genesis_tx.output[0].script_pubkey;
 
-        let histories = client.get_scripts_history(vec![existing_script]).unwrap();
+        let histories = client.get_scripts_history(&vec![existing_script]).unwrap();
         assert!(!histories.is_empty())
     }
 }

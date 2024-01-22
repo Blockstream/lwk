@@ -260,16 +260,16 @@ mod tests {
         let desc_str =
             common::singlesig_desc(&signer, script_variant, blinding_variant, false).unwrap();
 
+        let urls = [
+            "blockstream.info:465",
+            "https://blockstream.info/liquidtestnet/api",
+            "https://liquid.network/liquidtestnet/api",
+        ];
+
         let vec: Vec<Box<dyn BlockchainBackend>> = vec![
-            Box::new(
-                ElectrumClient::new(&ElectrumUrl::new("blockstream.info:465", true, true)).unwrap(),
-            ),
-            Box::new(EsploraClient::new(
-                "https://blockstream.info/liquidtestnet/api",
-            )),
-            Box::new(EsploraClient::new(
-                "https://liquid.network/liquidtestnet/api",
-            )),
+            Box::new(ElectrumClient::new(&ElectrumUrl::new(urls[0], true, true)).unwrap()),
+            Box::new(EsploraClient::new(urls[1])),
+            Box::new(EsploraClient::new(urls[2])),
         ];
 
         for (i, mut bb) in vec.into_iter().enumerate() {
@@ -284,7 +284,11 @@ mod tests {
             let start = Instant::now();
             let a = bb.full_scan(&wollet).unwrap();
             wollet.apply_update(a.unwrap()).unwrap();
-            println!("{i}: {}ms", start.elapsed().as_millis());
+            tracing::info!("first run: {}: {}s", urls[i], start.elapsed().as_secs());
+
+            let start = Instant::now();
+            let _ = bb.full_scan(&wollet).unwrap();
+            tracing::info!("second run: {}: {}s", urls[i], start.elapsed().as_secs());
         }
     }
 }

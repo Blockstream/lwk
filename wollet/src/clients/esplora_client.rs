@@ -7,6 +7,7 @@ use elements::{
     pset::serialize::Serialize,
     BlockHash, Script, Txid,
 };
+use minreq::Response;
 use serde::Deserialize;
 
 use crate::{store::Height, BlockchainBackend, Error};
@@ -31,7 +32,7 @@ impl EsploraClient {
     }
 
     fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
-        let response = minreq::get(&self.tip_hash_url).send()?;
+        let response = get_with_retry(&self.tip_hash_url, 0)?;
         Ok(BlockHash::from_str(response.as_str()?)?)
     }
 }
@@ -41,7 +42,7 @@ impl BlockchainBackend for EsploraClient {
         let last_block_hash = self.last_block_hash()?;
 
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
-        let response = minreq::get(header_url).send()?;
+        let response = get_with_retry(&header_url, 0)?;
         let header_bytes = Vec::<u8>::from_hex(response.as_str()?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -58,11 +59,10 @@ impl BlockchainBackend for EsploraClient {
     }
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
-        // TODO make parallel requests
         let mut result = vec![];
         for txid in txids.into_iter() {
             let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-            let response = minreq::get(tx_url).send()?;
+            let response = get_with_retry(&tx_url, 0)?;
             let tx = elements::Transaction::consensus_decode(response.as_bytes())?;
             result.push(tx);
         }
@@ -74,23 +74,21 @@ impl BlockchainBackend for EsploraClient {
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<elements::BlockHeader>, Error> {
-        // TODO make parallel requests
         let mut result = vec![];
         for height in heights.into_iter() {
             let block_hash = match height_blockhash.get(height) {
                 Some(block_hash) => *block_hash,
                 None => {
                     let block_height = format!("{}/block-height/{}", self.base_url, height);
-                    let response = minreq::get(block_height).send()?;
+                    let response = get_with_retry(&block_height, 0)?;
                     BlockHash::from_str(response.as_str()?)?
                 }
             };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-            let response = minreq::get(block_header).send()?;
-            let header_bytes = Vec::<u8>::from_hex(response.as_str()?)?;
+            let response = get_with_retry(&block_header, 0)?;
 
-            let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
+            let header = elements::BlockHeader::consensus_decode(response.as_bytes())?;
 
             result.push(header);
         }
@@ -101,20 +99,42 @@ impl BlockchainBackend for EsploraClient {
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
     fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
-        // TODO make parallel requests
         let mut result: Vec<_> = vec![];
         for script in scripts.into_iter() {
             let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = minreq::get(url).send()?;
+            let response = get_with_retry(&url, 0)?;
             let json: Vec<EsploraTx> = response.json()?;
 
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
             result.push(history)
         }
         Ok(result)
+    }
+}
+
+fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
+    let response = minreq::get(url).send()?;
+    tracing::debug!(
+        "{} status_code:{} body bytes:{}",
+        &response.url,
+        response.status_code,
+        response.as_bytes().len()
+    );
+
+    if response.status_code == 429 {
+        if attempt > 6 {
+            return Err(Error::Generic("Too many retry".to_string()));
+        }
+        let secs = 1 << attempt;
+
+        tracing::debug!("waiting {secs}");
+        std::thread::sleep(std::time::Duration::from_secs(secs));
+        get_with_retry(url, attempt + 1)
+    } else {
+        Ok(response)
     }
 }
 

@@ -255,6 +255,7 @@ mod tests {
     fn esplora_electrum_compare() {
         test_util::init_logging();
 
+        // TODO use a watch-only descriptor preloaded with tens of transactions, compare results at the end
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let signer = signer::SwSigner::new(mnemonic, false).unwrap();
         let script_variant = common::Singlesig::Wpkh;

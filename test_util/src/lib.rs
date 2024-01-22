@@ -729,7 +729,7 @@ pub fn setup(enable_esplora_http: bool) -> TestElectrumServer {
     TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http)
 }
 
-fn init_logging() {
+pub fn init_logging() {
     use tracing_subscriber::prelude::*;
 
     TRACING_INIT.call_once(|| {

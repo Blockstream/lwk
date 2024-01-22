@@ -253,6 +253,8 @@ mod tests {
     #[test]
     #[ignore]
     fn esplora_electrum_compare() {
+        test_util::init_logging();
+
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let signer = signer::SwSigner::new(mnemonic, false).unwrap();
         let script_variant = common::Singlesig::Wpkh;

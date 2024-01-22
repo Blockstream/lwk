@@ -34,6 +34,7 @@ pub enum Params {
     DebugSetMnemonic(DebugSetMnemonicParams),
     TxInput(TxInputParams),
     RegisterMultisig(RegisterMultisigParams),
+    GetMasterBlindingKey(GetMasterBlindingKeyParams),
 }
 
 #[derive(Debug, Serialize)]
@@ -259,4 +260,9 @@ impl Debug for UpdatePinserverParams {
             .field("certificate", &self.certificate)
             .finish()
     }
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct GetMasterBlindingKeyParams {
+    pub only_if_silent: bool,
 }

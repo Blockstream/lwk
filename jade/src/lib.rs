@@ -12,9 +12,9 @@ use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetSignatureParams, GetXpubParams, HandshakeData, HandshakeInitParams, IsAuthResult, Params,
-    RegisteredMultisig, Request, Response, SignMessageParams, UpdatePinserverParams,
-    VersionInfoResult,
+    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
+    HandshakeInitParams, IsAuthResult, Params, RegisteredMultisig, Request, Response,
+    SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::RegisterMultisigParams;
@@ -163,6 +163,14 @@ impl Jade {
         self.check_network(params.network)?;
         let params = Params::GetReceiveAddress(params);
         self.send_request("get_receive_address", Some(params))
+    }
+
+    pub fn get_master_blinding_key(
+        &mut self,
+        params: GetMasterBlindingKeyParams,
+    ) -> Result<ByteBuf> {
+        let params = Params::GetMasterBlindingKey(params);
+        self.send_request("get_master_blinding_key", Some(params))
     }
 
     pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {

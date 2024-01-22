@@ -19,7 +19,7 @@ use elements_miniscript::{
 };
 use jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
-    protocol::{IsAuthResult, JadeState, VersionInfoResult},
+    protocol::{GetMasterBlindingKeyParams, IsAuthResult, JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
     Network,
 };
@@ -328,6 +328,24 @@ fn jade_sign_liquid_tx() {
     assert_eq!(pset.outputs().len(), 3);
 
     initialized_jade.jade.sign(&mut pset).unwrap();
+}
+
+#[test]
+fn jade_get_master_blinding_key() {
+    let docker = clients::Cli::default();
+
+    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let params = GetMasterBlindingKeyParams {
+        only_if_silent: false,
+    };
+    let result = initialized_jade
+        .jade
+        .get_master_blinding_key(params)
+        .unwrap();
+    assert_eq!(
+        hex::encode(result),
+        "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023"
+    );
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

@@ -1,9 +1,7 @@
 use jade::{protocol::JadeState, Jade, BAUD_RATE, TIMEOUT};
 
-use crate::init_logging;
-
 fn serial_test_setup() -> Jade {
-    init_logging();
+    test_util::init_logging();
     let ports = serialport::available_ports().unwrap();
     let path = &ports[0].port_name;
     let port = serialport::new(path, BAUD_RATE)

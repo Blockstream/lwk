@@ -345,7 +345,7 @@ struct NotInitializedJade<'a> {
 }
 
 fn inner_jade_create(docker: &Cli, network: Network) -> NotInitializedJade {
-    crate::init_logging();
+    test_util::init_logging();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();

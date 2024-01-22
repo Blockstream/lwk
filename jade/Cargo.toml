@@ -40,3 +40,4 @@ bs_containers = { path = "../bs_containers" }
 base64 = "0.21.4"
 serde_json = "1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+test_util = { path = "../test_util" }

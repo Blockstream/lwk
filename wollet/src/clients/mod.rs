@@ -213,7 +213,7 @@ pub trait BlockchainBackend {
                 result.push((h.height, h.time))
             }
 
-            tracing::info!("{} headers_downloaded", heights_to_download.len());
+            tracing::debug!("{} headers_downloaded", heights_to_download.len());
         }
 
         Ok(result)
@@ -251,17 +251,12 @@ mod tests {
     };
 
     #[test]
-    #[ignore]
+    #[ignore = "test with prod servers"]
     fn esplora_electrum_compare() {
         test_util::init_logging();
 
-        // TODO use a watch-only descriptor preloaded with tens of transactions, compare results at the end
-        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let signer = signer::SwSigner::new(mnemonic, false).unwrap();
-        let script_variant = common::Singlesig::Wpkh;
-        let blinding_variant = common::DescriptorBlindingKey::Slip77;
-        let desc_str =
-            common::singlesig_desc(&signer, script_variant, blinding_variant, false).unwrap();
+        // TODO move in test_util
+        let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 
         let urls = [
             "blockstream.info:465",
@@ -275,23 +270,49 @@ mod tests {
             Box::new(EsploraClient::new(urls[2])),
         ];
 
+        let mut prec = None;
+
         for (i, mut bb) in vec.into_iter().enumerate() {
             let wollet = tempfile::tempdir().unwrap();
             let mut wollet = crate::Wollet::new(
                 ElementsNetwork::LiquidTestnet,
                 &wollet.path().display().to_string(),
-                &desc_str,
+                desc_str,
             )
             .unwrap();
 
             let start = Instant::now();
-            let a = bb.full_scan(&wollet).unwrap();
-            wollet.apply_update(a.unwrap()).unwrap();
-            tracing::info!("first run: {}: {}s", urls[i], start.elapsed().as_secs());
+            let first_update = bb.full_scan(&wollet).unwrap().unwrap();
+            wollet.apply_update(first_update.clone()).unwrap();
+
+            let balance = wollet.balance().unwrap();
+
+            if let Some(prec) = prec.as_ref() {
+                assert_eq!(&balance, prec);
+            }
+            prec = Some(balance);
+
+            tracing::info!(
+                "first run: {}: {:.2}s",
+                urls[i],
+                start.elapsed().as_secs_f64()
+            );
 
             let start = Instant::now();
-            let _ = bb.full_scan(&wollet).unwrap();
-            tracing::info!("second run: {}: {}s", urls[i], start.elapsed().as_secs());
+            let second_update = bb.full_scan(&wollet).unwrap();
+            if let Some(update) = second_update {
+                // the tip could have been updated, checking no new tx have been found
+                assert!(update.new_txs.unblinds.is_empty());
+                assert!(update.scripts.is_empty());
+                assert!(update.timestamps.is_empty());
+                // assert!(update.txid_height.is_empty()); // TODO Fix how the update is handled making this a delta of transaction inserted and deleted
+                assert_ne!(update.tip, first_update.tip);
+            }
+            tracing::info!(
+                "second run: {}: {:.2}s",
+                urls[i],
+                start.elapsed().as_secs_f64()
+            );
         }
     }
 }

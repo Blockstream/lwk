@@ -4,12 +4,11 @@ use std::time::Duration;
 
 use common::Signer;
 use elements::{bitcoin::bip32::Xpub, pset::PartiallySignedTransaction};
-use elements_miniscript::slip77::MasterBlindingKey;
-use rand::{thread_rng, Rng};
+use elements_miniscript::slip77::{self, MasterBlindingKey};
 
 use crate::connection::Connection;
 use crate::network::Network;
-use crate::protocol::GetXpubParams;
+use crate::protocol::{GetMasterBlindingKeyParams, GetXpubParams};
 use crate::{derivation_path_to_vec, Error, Jade};
 
 #[cfg(feature = "serial")]
@@ -162,13 +161,12 @@ impl Signer for &MutexJade {
         self.inner.lock()?.get_xpub(params)
     }
 
-    fn slip77_master_blinding_key(
-        &self,
-    ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
-        // TODO ask jade instead of doing it randomly
-        let mut bytes = [0u8; 32];
-        thread_rng().fill(&mut bytes);
-        Ok(MasterBlindingKey::from_seed(&bytes[..]))
+    fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {
+        let params = GetMasterBlindingKeyParams {
+            only_if_silent: false,
+        };
+        let bytes = self.inner.lock()?.get_master_blinding_key(params)?;
+        Ok(slip77::MasterBlindingKey::from_seed(bytes.as_slice()))
     }
 }
 

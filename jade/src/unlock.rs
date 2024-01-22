@@ -20,7 +20,7 @@ impl Jade {
                 }
             }
             IsAuthResult::AuthResult(result) => {
-                let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
+                let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
                 let resp = minreq::post(url).send()?;
                 if resp.status_code != 200 {
                     return Err(Error::HttpStatus(url.to_string(), resp.status_code));
@@ -28,7 +28,7 @@ impl Jade {
 
                 let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes())?;
                 let result = self.handshake_init(params)?;
-                let url = result.urls().get(0).ok_or(Error::MissingUrlA)?.as_str();
+                let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
                 let data = serde_json::to_vec(result.data())?;
                 let resp = minreq::post(url).with_body(data).send()?;
                 if resp.status_code != 200 {

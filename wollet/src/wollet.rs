@@ -392,7 +392,7 @@ impl Wollet {
         &self,
         psets: &[PartiallySignedTransaction],
     ) -> Result<PartiallySignedTransaction, Error> {
-        let mut res = psets.get(0).ok_or_else(|| Error::MissingPset)?.clone();
+        let mut res = psets.first().ok_or_else(|| Error::MissingPset)?.clone();
         for pset in psets.iter().skip(1) {
             res.merge(pset.clone())?;
         }

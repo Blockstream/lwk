@@ -60,7 +60,7 @@ impl BlockchainBackend for EsploraClient {
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
         let mut result = vec![];
-        for txid in txids.into_iter() {
+        for txid in txids.iter() {
             let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
             let response = get_with_retry(&tx_url, 0)?;
             let tx = elements::Transaction::consensus_decode(response.as_bytes())?;
@@ -75,7 +75,7 @@ impl BlockchainBackend for EsploraClient {
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<elements::BlockHeader>, Error> {
         let mut result = vec![];
-        for height in heights.into_iter() {
+        for height in heights.iter() {
             let block_hash = match height_blockhash.get(height) {
                 Some(block_hash) => *block_hash,
                 None => {
@@ -101,7 +101,7 @@ impl BlockchainBackend for EsploraClient {
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
     fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         let mut result: Vec<_> = vec![];
-        for script in scripts.into_iter() {
+        for script in scripts.iter() {
             let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
@@ -196,25 +196,25 @@ mod tests {
     fn test_esplora_url(esplora_url: &str) {
         println!("{}", esplora_url);
 
-        let mut client = EsploraClient::new(&esplora_url);
+        let mut client = EsploraClient::new(esplora_url);
         let header = client.tip().unwrap();
         assert!(header.height > 100);
 
-        let headers = client.get_headers(&vec![0], &HashMap::new()).unwrap();
+        let headers = client.get_headers(&[0], &HashMap::new()).unwrap();
         let genesis_header = &headers[0];
         assert_eq!(genesis_header.height, 0);
 
-        let genesis_block = get_block(&esplora_url, genesis_header.block_hash());
+        let genesis_block = get_block(esplora_url, genesis_header.block_hash());
         let genesis_tx = &genesis_block.txdata[0];
 
         let txid = genesis_tx.txid();
-        let txs = client.get_transactions(&vec![txid]).unwrap();
+        let txs = client.get_transactions(&[txid]).unwrap();
 
         assert_eq!(txs[0].txid(), txid);
 
         let existing_script = &genesis_tx.output[0].script_pubkey;
 
-        let histories = client.get_scripts_history(&vec![existing_script]).unwrap();
+        let histories = client.get_scripts_history(&[existing_script]).unwrap();
         assert!(!histories.is_empty())
     }
 }

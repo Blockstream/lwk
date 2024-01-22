@@ -56,7 +56,7 @@ impl super::BlockchainBackend for ElectrumClient {
 
     fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error> {
         let txids: Vec<bitcoin::Txid> = txids
-            .into_iter()
+            .iter()
             .map(|t| bitcoin::Txid::from_raw_hash(t.to_raw_hash()))
             .collect();
 
@@ -83,7 +83,7 @@ impl super::BlockchainBackend for ElectrumClient {
 
     fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         let scripts: Vec<&bitcoin::Script> = scripts
-            .into_iter()
+            .iter()
             .map(|t| bitcoin::Script::from_bytes(t.as_bytes()))
             .collect();
 

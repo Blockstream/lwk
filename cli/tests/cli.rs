@@ -164,7 +164,7 @@ fn test_start_stop_persist() {
     let signers = result.get("signers").unwrap();
     assert_eq!(signers.as_array().unwrap().len(), 0);
 
-    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let mnemonic = test_util::TEST_MNEMONIC;
     sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1"#
     ));
@@ -262,7 +262,7 @@ fn test_signer_load_unload_list() {
     let signers = result.get("signers").unwrap();
     assert!(signers.as_array().unwrap().is_empty());
 
-    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let mnemonic = test_util::TEST_MNEMONIC;
     let result = sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
     ));
@@ -797,8 +797,9 @@ fn test_commands() {
     assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
+    let mnemonic = test_util::TEST_MNEMONIC;
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --signer ss "#
+        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 

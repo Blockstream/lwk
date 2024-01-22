@@ -35,9 +35,6 @@ use tempfile::{tempdir, TempDir};
 
 use crate::pin_server::verify;
 
-pub const TEST_MNEMONIC: &str =
-    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
@@ -438,7 +435,7 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
     } = inner_jade_create(docker, Network::LocaltestLiquid);
 
     let params = DebugSetMnemonicParams {
-        mnemonic: TEST_MNEMONIC.to_string(),
+        mnemonic: test_util::TEST_MNEMONIC.to_string(),
         passphrase: None,
         temporary_wallet: false,
     };

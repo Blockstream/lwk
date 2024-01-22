@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn signer() {
-        let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let mnemonic_str = test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
         let network: crate::Network = test_util::network_regtest().into();
 

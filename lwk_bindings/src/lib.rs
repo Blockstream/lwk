@@ -41,7 +41,7 @@ mod tests {
     use crate::{wollet::Wollet, Address, ElectrumClient, Mnemonic, Network, Signer, Txid};
 
     #[test]
-    fn test_ks_flow() {
+    fn test_lwk_flow() {
         let datadir = "/tmp/.lwk";
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let network: Network = test_util::network_regtest().into();

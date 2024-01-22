@@ -342,10 +342,7 @@ fn jade_get_master_blinding_key() {
         .jade
         .get_master_blinding_key(params)
         .unwrap();
-    assert_eq!(
-        hex::encode(result),
-        "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023"
-    );
+    assert_eq!(hex::encode(result), test_util::TEST_MNEMONIC_SLIP77);
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not

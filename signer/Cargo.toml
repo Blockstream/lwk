@@ -13,3 +13,6 @@ base64 = "0.13.0"
 
 common = { path = "../common" }
 jade = { path = "../jade" }
+
+[dev-dependencies]
+test_util = { path = "../test_util" }

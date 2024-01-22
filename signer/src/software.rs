@@ -163,16 +163,21 @@ impl Signer for SwSigner {
 
 #[cfg(test)]
 mod tests {
+    use elements_miniscript::elements::hex::ToHex;
+
     use super::*;
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", false).unwrap();
+        let signer = SwSigner::new(test_util::TEST_MNEMONIC, false).unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
             SwSigner::new("bad", false).expect_err("test").to_string()
         );
-        assert_eq!("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s", &signer.xpub().to_string())
+        assert_eq!(test_util::TEST_MNEMONIC_XPUB, &signer.xpub().to_string());
+
+        let slip77 = signer.slip77_master_blinding_key().unwrap();
+        assert_eq!(slip77.as_bytes().to_hex(), test_util::TEST_MNEMONIC_SLIP77);
     }
 }

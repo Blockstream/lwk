@@ -87,8 +87,9 @@ impl BlockchainBackend for EsploraClient {
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
             let response = get_with_retry(&block_header, 0)?;
+            let header_bytes = Vec::<u8>::from_hex(response.as_str()?)?;
 
-            let header = elements::BlockHeader::consensus_decode(response.as_bytes())?;
+            let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
 
             result.push(header);
         }

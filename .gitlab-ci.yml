@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/ks-builder@sha256:3838885b5aae62facf1264a1dc9e046dfa0aca71eb417975fa52325e7db42402
+  image: xenoky/lwk-builder@sha256:511fa00c37fd3cb8aec7c250f6a3b94ed89f3baf1372b4951bb9568704a45e23
   tags:
     - cloud
   retry:
@@ -107,3 +107,8 @@ bindings:
     LIB_EXT: "so"
   script:
     - just test-python-bindings
+
+check_rust_170:
+  extends: .base
+  script:
+    - cargo +1.70.0 check

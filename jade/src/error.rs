@@ -113,6 +113,9 @@ pub enum Error {
 
     #[error("Unsupported descriptor variant, only multi or sortedmulti are supported")]
     UnsupportedDescriptorVariant,
+
+    #[error("Slip 77 master blinding keys must be 32 bytes")]
+    Slip77MasterBlindingKeyInvalidSize,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

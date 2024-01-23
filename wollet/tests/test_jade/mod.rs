@@ -6,7 +6,8 @@ use signer::AnySigner;
 
 use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};
 use test_util::{
-    generate_signer, multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
+    generate_signer, init_logging, multisig_desc, register_multisig, setup, TestElectrumServer,
+    TestWollet,
 };
 
 fn roundtrip(
@@ -89,6 +90,20 @@ fn emul_roundtrip_shwpkh() {
 #[test]
 fn emul_roundtrip_2of2() {
     emul_roundtrip_multisig(2);
+}
+
+#[test]
+fn jade_slip77() {
+    init_logging();
+    let docker = Cli::default();
+
+    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+
+    let script_variant = common::Singlesig::Wpkh;
+    let blinding_variant = common::DescriptorBlindingKey::Slip77;
+    let desc_str =
+        common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant, false).unwrap();
+    assert!(desc_str.contains(test_util::TEST_MNEMONIC_SLIP77))
 }
 
 #[cfg(feature = "serial")]

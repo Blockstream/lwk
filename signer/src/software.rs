@@ -178,6 +178,7 @@ mod tests {
         assert_eq!(test_util::TEST_MNEMONIC_XPUB, &signer.xpub().to_string());
 
         let slip77 = signer.slip77_master_blinding_key().unwrap();
+        assert_eq!(slip77.as_bytes().to_hex(), format!("{}", slip77));
         assert_eq!(slip77.as_bytes().to_hex(), test_util::TEST_MNEMONIC_SLIP77);
     }
 }

@@ -166,7 +166,11 @@ impl Signer for &MutexJade {
             only_if_silent: false,
         };
         let bytes = self.inner.lock()?.get_master_blinding_key(params)?;
-        Ok(slip77::MasterBlindingKey::from_seed(bytes.as_slice()))
+        let array: [u8; 32] = bytes
+            .to_vec()
+            .try_into()
+            .map_err(|_| Self::Error::Slip77MasterBlindingKeyInvalidSize)?;
+        Ok(slip77::MasterBlindingKey::from(array))
     }
 }
 

@@ -14,8 +14,8 @@ pub struct DownloadTxResult {
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
-/// Passing a wallet to [`crate::BlockchainBackend::full_scan()`] returns this structure wich
-/// contains the delta of informations to be applied to the wallet to reach the latest status.
+/// Passing a wallet to [`crate::BlockchainBackend::full_scan()`] returns this structure which
+/// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
     pub new_txs: DownloadTxResult,

@@ -14,10 +14,13 @@ pub struct DownloadTxResult {
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
+/// Passing a wallet to [`crate::BlockchainBackend::full_scan()`] returns this structure wich
+/// contains the delta of informations to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
     pub new_txs: DownloadTxResult,
-    pub txid_height: HashMap<Txid, Option<Height>>,
+    pub txid_height_new: Vec<(Txid, Option<Height>)>,
+    pub txid_height_delete: Vec<Txid>,
     pub timestamps: Vec<(Height, Timestamp)>,
     pub scripts: HashMap<Script, (Chain, ChildNumber)>,
     pub tip: BlockHeader,
@@ -29,7 +32,8 @@ impl Wollet {
         let store = &mut self.store;
         let Update {
             new_txs,
-            mut txid_height,
+            txid_height_new,
+            txid_height_delete,
             timestamps,
             scripts,
             tip,
@@ -38,9 +42,16 @@ impl Wollet {
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
         let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
-        txid_height.retain(|txid, _| txids_unblinded.contains(txid));
-        store.cache.heights.clear();
-        store.cache.heights.extend(&txid_height);
+        let txid_height: Vec<_> = txid_height_new
+            .iter()
+            .filter(|(txid, _)| txids_unblinded.contains(txid))
+            .cloned()
+            .collect();
+        store
+            .cache
+            .heights
+            .retain(|k, _| !txid_height_delete.contains(k));
+        store.cache.heights.extend(txid_height.clone());
         store.cache.timestamps.extend(timestamps);
         store
             .cache
@@ -49,8 +60,8 @@ impl Wollet {
         store.cache.paths.extend(scripts);
         let mut last_used_internal = None;
         let mut last_used_external = None;
-        for txid in txid_height.keys() {
-            if let Some(tx) = store.cache.all_txs.get(txid) {
+        for (txid, _) in txid_height {
+            if let Some(tx) = store.cache.all_txs.get(&txid) {
                 for output in &tx.output {
                     if let Some((ext_int, ChildNumber::Normal { index })) =
                         store.cache.paths.get(&output.script_pubkey)

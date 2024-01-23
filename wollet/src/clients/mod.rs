@@ -124,9 +124,26 @@ pub trait BlockchainBackend {
         if changed {
             tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
+            let txid_height_new: Vec<_> = txid_height
+                .iter()
+                .filter(|(k, v)| match store.cache.heights.get(*k) {
+                    Some(e) => e != *v,
+                    None => true,
+                })
+                .map(|(k, v)| (*k, *v))
+                .collect();
+            let txid_height_delete: Vec<_> = store
+                .cache
+                .heights
+                .keys()
+                .filter(|k| txid_height.get(*k).is_none())
+                .cloned()
+                .collect();
+
             let update = Update {
                 new_txs,
-                txid_height,
+                txid_height_new,
+                txid_height_delete,
                 timestamps,
                 scripts,
                 tip,
@@ -305,7 +322,8 @@ mod tests {
                 assert!(update.new_txs.unblinds.is_empty());
                 assert!(update.scripts.is_empty());
                 assert!(update.timestamps.is_empty());
-                // assert!(update.txid_height.is_empty()); // TODO Fix how the update is handled making this a delta of transaction inserted and deleted
+                assert!(update.txid_height_new.is_empty());
+                assert!(update.txid_height_delete.is_empty());
                 assert_ne!(update.tip, first_update.tip);
             }
             tracing::info!(

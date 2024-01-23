@@ -21,15 +21,15 @@ pub use blockdata::txid::Txid;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::WalletTxOut;
 
+pub use crate::signer::Signer;
+pub use crate::wollet::Wollet;
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
 pub use electrum_client::ElectrumClient;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
-pub use signer::Signer;
 pub use update::Update;
-pub use wollet::Wollet;
 
 pub use error::LwkError;
 uniffi::setup_scaffolding!();

@@ -8,8 +8,8 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use app::Config;
 use clap::CommandFactory;
+use lwk_app::Config;
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
@@ -56,7 +56,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     let addr = args
         .addr
         .unwrap_or_else(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), default_port));
-    let client = app::Client::new(addr)?;
+    let client = lwk_app::Client::new(addr)?;
 
     // verify the server is up if needed
     if args.command.requires_server_running() {
@@ -106,7 +106,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         config.electrum_url = url;
                     };
                     config.addr = addr;
-                    let mut app = app::App::new(config)?;
+                    let mut app = lwk_app::App::new(config)?;
 
                     app.run().with_context(|| {
                         format!(

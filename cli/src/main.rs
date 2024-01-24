@@ -11,7 +11,7 @@ fn main() -> anyhow::Result<()> {
         Ok(value) => value,
         Err(e) => match e.downcast() {
             Ok(e) => match e {
-                app::Error::RpcError(e) => serde_json::to_value(&e)?,
+                lwk_app::Error::RpcError(e) => serde_json::to_value(&e)?,
                 e => return Err(e.into()),
             },
             Err(e) => return Err(e),

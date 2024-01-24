@@ -1,5 +1,7 @@
 # Liquid Wallet Kit
 
+**WARNING: early stage software, use it at your own risk.**
+
 Liquid Wallet Kit is a collection of Rust crates for Liquid Wallets.
 
 The Liquid Wallet Kit project aims to provide an easy solution to use

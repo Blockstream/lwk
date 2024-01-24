@@ -17,7 +17,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ctrlc = { version = "3.4.1", features = ["termination"] }
 serde_json = "1"
 clap_complete = "4.4.4"
-uniffi = { version = "0.25.3", features = ["cli"], optional = true }
+uniffi = { version = "0.26.0", features = ["cli"], optional = true }
 
 [dev-dependencies]
 shellwords = "1.1.0"

@@ -18,18 +18,18 @@ impl Signer {
 
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
-        common::Signer::sign(&self.inner, &mut pset)?;
+        lwk_common::Signer::sign(&self.inner, &mut pset)?;
         Ok(Arc::new(pset.into()))
     }
 
     pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         // TODO: make script_variant and blinding_variant parameters
 
-        let is_mainnet = common::Signer::is_mainnet(&self.inner)?;
-        let script_variant = common::Singlesig::Wpkh;
-        let blinding_variant = common::DescriptorBlindingKey::Slip77;
+        let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
+        let script_variant = lwk_common::Singlesig::Wpkh;
+        let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
         let desc_str =
-            common::singlesig_desc(&self.inner, script_variant, blinding_variant, is_mainnet)?;
+            lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant, is_mainnet)?;
 
         WolletDescriptor::new(&desc_str)
     }

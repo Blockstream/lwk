@@ -1,7 +1,7 @@
 pub mod init;
 
 use bs_containers::testcontainers::clients::Cli;
-use common::{singlesig_desc, Signer, Singlesig};
+use lwk_common::{singlesig_desc, Signer, Singlesig};
 use signer::AnySigner;
 
 use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};
@@ -13,14 +13,14 @@ use test_util::{
 fn roundtrip(
     server: &TestElectrumServer,
     signers: &[&AnySigner],
-    variant: Option<common::Singlesig>,
+    variant: Option<lwk_common::Singlesig>,
     threshold: Option<usize>,
 ) {
     let desc_str = match signers.len() {
         1 => singlesig_desc(
             signers[0],
             variant.unwrap(),
-            common::DescriptorBlindingKey::Slip77,
+            lwk_common::DescriptorBlindingKey::Slip77,
             false,
         )
         .unwrap(),
@@ -99,10 +99,11 @@ fn jade_slip77() {
 
     let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
 
-    let script_variant = common::Singlesig::Wpkh;
-    let blinding_variant = common::DescriptorBlindingKey::Slip77;
+    let script_variant = lwk_common::Singlesig::Wpkh;
+    let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
     let desc_str =
-        common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant, false).unwrap();
+        lwk_common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant, false)
+            .unwrap();
     assert!(desc_str.contains(test_util::TEST_MNEMONIC_SLIP77))
 }
 

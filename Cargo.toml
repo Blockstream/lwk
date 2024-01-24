@@ -10,7 +10,7 @@ members = [
     "tiny_jrpc",
     "wollet",
     "bs_containers",
-    "common",
+    "lwk_common",
     "rpc_model",
     "test_util",
 ]

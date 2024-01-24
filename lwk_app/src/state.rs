@@ -4,9 +4,9 @@ use std::io::Write;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use common::Signer;
 use jade::mutex_jade::MutexJade;
 use jade::Network;
+use lwk_common::Signer;
 use rpc_model::request;
 use serde::Serialize;
 use signer::AnySigner;

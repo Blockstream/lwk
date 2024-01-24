@@ -6,12 +6,12 @@ use crate::{
     update::{DownloadTxResult, Update},
     Chain, Error, Wollet, WolletDescriptor, EC,
 };
-use common::derive_blinding_key;
 use elements::{
     bitcoin::bip32::ChildNumber,
     confidential::{Asset, Nonce, Value},
     OutPoint, Script, TxOut, TxOutSecrets,
 };
+use lwk_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "esplora")]

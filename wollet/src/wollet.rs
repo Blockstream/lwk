@@ -12,13 +12,13 @@ use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::{new_store, Store};
 use crate::util::EC;
 use crate::{BlockchainBackend, ElectrumClient, WolletDescriptor};
-use common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
+use lwk_common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -500,11 +500,11 @@ mod tests {
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
-    use common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
+    use lwk_common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use signer::SwSigner;
 
     #[test]

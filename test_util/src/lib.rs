@@ -8,12 +8,12 @@ use crate::elements::hex::ToHex;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Txid};
 use bip39::Mnemonic;
-use common::Signer;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
+use lwk_common::Signer;
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use signer::*;
@@ -834,11 +834,11 @@ pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     }
 }
 
-fn n_issuances(details: &common::PsetDetails) -> usize {
+fn n_issuances(details: &lwk_common::PsetDetails) -> usize {
     details.issuances.iter().filter(|e| e.is_issuance()).count()
 }
 
-fn n_reissuances(details: &common::PsetDetails) -> usize {
+fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
     details
         .issuances
         .iter()

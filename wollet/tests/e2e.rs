@@ -2,8 +2,8 @@ mod test_jade;
 
 use crate::test_jade::init::inner_jade_debug_initialization;
 use bs_containers::testcontainers::clients::Cli;
-use common::Signer;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
+use lwk_common::Signer;
 use signer::*;
 use std::{collections::HashSet, str::FromStr};
 use test_util::*;

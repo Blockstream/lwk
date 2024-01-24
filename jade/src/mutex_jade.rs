@@ -2,9 +2,9 @@ use std::net::SocketAddr;
 use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
-use common::Signer;
 use elements::{bitcoin::bip32::Xpub, pset::PartiallySignedTransaction};
 use elements_miniscript::slip77::{self, MasterBlindingKey};
+use lwk_common::Signer;
 
 use crate::connection::Connection;
 use crate::network::Network;

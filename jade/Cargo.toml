@@ -22,7 +22,7 @@ tracing = "0.1"
 minreq = { version = "2.9", features = ["https"] }
 elements-miniscript = "0.2"
 
-common = { path = "../common" }
+lwk_common = { path = "../lwk_common" }
 
 # tokio = { version = "1.32.0", features = ["rt", "macros"] }
 

@@ -7,13 +7,13 @@ mod software;
 pub use crate::software::{NewError, SignError, SwSigner};
 pub use bip39;
 
-use common::Signer;
 use elements_miniscript::bitcoin::bip32::DerivationPath;
 use elements_miniscript::bitcoin::XKeyIdentifier;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use jade::mutex_jade::MutexJade;
+use lwk_common::Signer;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignerError {

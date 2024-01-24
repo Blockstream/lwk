@@ -67,7 +67,7 @@ pub enum Error {
     AddressError(#[from] crate::elements::AddressError),
 
     #[error(transparent)]
-    PsetDetailsError(#[from] common::Error),
+    PsetDetailsError(#[from] lwk_common::Error),
 
     #[error(transparent)]
     UtxoUpdateError(#[from] elements_miniscript::psbt::UtxoUpdateError),

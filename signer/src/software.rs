@@ -1,5 +1,4 @@
 use bip39::Mnemonic;
-use common::Signer;
 use elements_miniscript::{
     bitcoin::{self, bip32::DerivationPath, PrivateKey},
     elements::{
@@ -16,6 +15,7 @@ use elements_miniscript::{
     psbt::PsbtExt,
     slip77::MasterBlindingKey,
 };
+use lwk_common::Signer;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {

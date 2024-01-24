@@ -11,7 +11,7 @@ elements = "0.24.0"
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-common = { path = "../common" }
+lwk_common = { path = "../lwk_common" }
 signer = { path = "../signer" }
 wollet = { path = "../wollet" }
 electrum-client = "0.15.0"

@@ -41,7 +41,7 @@ The wallet can generate new addresses, get transactions/utxos/balance,
 create PSETs and other actions.
 
 Used by:
-* `app`
+* `lwk_app`
 
 This module might be used by:
 * Exchanges who need a watch-only wallet to process incoming payments.
@@ -57,8 +57,8 @@ Currently supported signers:
 * Jade
 
 Used by:
-* `app`
-* `wollet` (tests)
+* `lwk_app`
+* `lwk_wollet` (tests)
 
 This module might be used by:
 * AMP2
@@ -70,8 +70,8 @@ Library to interact with Jade.
 Unlock Jade, register multisig wallets, sign PSETs.
 
 Used by:
-* `signer`
-* `wollet` (tests)
+* `lwk_signer`
+* `lwk_wollet` (tests)
 
 This module might be used by:
 * (Mobile) apps that needs to interact with Jade
@@ -81,7 +81,7 @@ This module might be used by:
 Placeholder crate, currently unused.
 
 Once we will have support for multiple HWW vendors,
-we can make `jade` a dependency of this crate.
+we can make `lwk_jade` a dependency of this crate.
 
 ### Common
 
@@ -95,9 +95,9 @@ A crate containing common code used in multiple other crate in the workspace, su
 To avoid circular dependencies this crate must not depend on other crate of the workspace
 
 Used by:
-* `wollet`
-* `signer`
-* `jade`
+* `lwk_wollet`
+* `lwk_signer`
+* `lwk_jade`
 
 ### Bs cointainers
 
@@ -109,23 +109,23 @@ This module might be used by:
 * Projects using the above Blockstream projects
 
 Used by:
-* `wollet` (tests)
-* `jade` (tests)
+* `lwk_wollet` (tests)
+* `lwk_jade` (tests)
 
 ### Tiny jrpc
 
 Tiny json rpc server.
 
 Used by:
-* `app`
+* `lwk_app`
 
 ### App
 
 Handle the jrpc server and serves requests coming from clients
-such as `cli`.
+such as `lwk_cli`.
 
 Used by:
-* `cli`
+* `lwk_cli`
 
 ### Cli
 
@@ -182,8 +182,8 @@ apt install -y libudev-dev
 
 Test cannot be executed in parallel so we need the `--test-threads 1` flag.
 ```
-cargo test -p jade --features serial -- serial --include-ignored --test-threads 1
-cargo test -p wollet --features serial -- serial --include-ignored --test-threads 1
+cargo test -p lwk_jade --features serial -- serial --include-ignored --test-threads 1
+cargo test -p lwk_wollet --features serial -- serial --include-ignored --test-threads 1
 ```
 
 ### Docs

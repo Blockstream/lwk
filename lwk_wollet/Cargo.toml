@@ -43,7 +43,7 @@ tracing = "0.1"
 tempfile = "3.8.0"
 lwk_signer = { path = "../lwk_signer" }
 lwk_jade = { path = "../lwk_jade" }
-bs_containers = { path = "../bs_containers" }
+lwk_containers = { path = "../lwk_containers" }
 minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 lwk_test_util = { path = "../lwk_test_util" }
 

@@ -1,10 +1,10 @@
-use bs_containers::testcontainers::clients::Cli;
-use bs_containers::{PinServer, PIN_SERVER_PORT};
 use elements::bitcoin::{
     hashes::{hex::FromHex, sha256, Hash},
     secp256k1::{ecdsa::Signature, Message, Secp256k1},
     PublicKey,
 };
+use lwk_containers::testcontainers::clients::Cli;
+use lwk_containers::{PinServer, PIN_SERVER_PORT};
 use lwk_jade::protocol::HandshakeInitParams;
 
 #[test]

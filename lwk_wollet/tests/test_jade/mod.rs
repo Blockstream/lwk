@@ -1,7 +1,7 @@
 pub mod init;
 
-use bs_containers::testcontainers::clients::Cli;
 use lwk_common::{singlesig_desc, Signer, Singlesig};
+use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::AnySigner;
 
 use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};

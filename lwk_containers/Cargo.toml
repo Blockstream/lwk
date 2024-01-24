@@ -1,5 +1,5 @@
 [package]
-name = "bs_containers"
+name = "lwk_containers"
 version = "0.1.0"
 edition = "2021"
 

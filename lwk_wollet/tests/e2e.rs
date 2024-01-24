@@ -1,9 +1,9 @@
 mod test_jade;
 
 use crate::test_jade::init::inner_jade_debug_initialization;
-use bs_containers::testcontainers::clients::Cli;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use lwk_common::Signer;
+use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;

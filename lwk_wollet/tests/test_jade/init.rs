@@ -1,6 +1,6 @@
 // TODO duplicated code existing also in jade crate under test
 
-use bs_containers::{
+use lwk_containers::{
     testcontainers::{clients::Cli, Container},
     {JadeEmulator, EMULATOR_PORT},
 };

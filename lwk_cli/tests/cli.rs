@@ -5,9 +5,9 @@ use std::{
     thread::JoinHandle,
 };
 
-use bs_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use clap::{Parser, ValueEnum};
 use elements::{pset::PartiallySignedTransaction, Address};
+use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use serde_json::Value;
 
 use lwk_cli::{

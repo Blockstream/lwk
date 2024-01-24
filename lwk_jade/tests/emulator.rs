@@ -1,9 +1,4 @@
 use base64::Engine;
-use bs_containers::testcontainers::{
-    clients::{self, Cli},
-    Container,
-};
-use bs_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use elements::{
     bitcoin::{self, bip32::Fingerprint},
     pset::PartiallySignedTransaction,
@@ -17,6 +12,11 @@ use elements::{
 use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
+use lwk_containers::testcontainers::{
+    clients::{self, Cli},
+    Container,
+};
+use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{GetMasterBlindingKeyParams, IsAuthResult, JadeState, VersionInfoResult},

@@ -3,7 +3,7 @@
 members = [
     "lwk_app",
     "lwk_bindings",
-    "cli",
+    "lwk_cli",
     "hwi",
     "jade",
     "signer",

@@ -1,6 +1,5 @@
 use clap::Parser;
-use cli::inner_main;
-use cli::Cli;
+use lwk_cli::{inner_main, Cli};
 
 mod args;
 

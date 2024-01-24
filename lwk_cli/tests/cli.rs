@@ -10,7 +10,9 @@ use clap::{Parser, ValueEnum};
 use elements::{pset::PartiallySignedTransaction, Address};
 use serde_json::Value;
 
-use cli::{inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum};
+use lwk_cli::{
+    inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum,
+};
 use tempfile::TempDir;
 use test_util::{setup, TestElectrumServer};
 

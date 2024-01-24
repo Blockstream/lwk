@@ -23,7 +23,7 @@ impl Display for OutPoint {
 impl OutPoint {
     /// Construct an OutPoint object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
+    pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner: elements::OutPoint = s.parse()?;
         Ok(Arc::new(Self { inner }))
     }
@@ -53,6 +53,9 @@ mod tests {
         );
 
         assert_eq!(expected, out_point_elements.to_string());
+        let out_point_bindings = OutPoint::new(&expected).unwrap();
+        assert_eq!(expected, out_point_bindings.to_string());
+
         let out_point: OutPoint = out_point_elements.into();
         assert_eq!(expected, out_point.to_string());
 

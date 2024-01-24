@@ -36,7 +36,7 @@ impl Display for Txid {
 impl Txid {
     /// Construct a Txid object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
+    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Txid = hex.to_string().parse()?;
         Ok(Arc::new(Self { inner }))
     }
@@ -54,7 +54,7 @@ mod tests {
     fn txid() {
         let expected_txid = "0000000000000000000000000000000000000000000000000000000000000001";
 
-        let txid = Txid::new(expected_txid.parse().unwrap()).unwrap();
+        let txid = Txid::new(&expected_txid.parse().unwrap()).unwrap();
         assert_eq!(txid.to_string(), expected_txid);
         assert_eq!(txid.bytes()[0], 1);
     }

@@ -28,7 +28,7 @@ impl Display for Script {
 impl Script {
     /// Construct a Script object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
+    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner = elements::Script::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }
@@ -52,7 +52,7 @@ mod tests {
     fn script() {
         let script_str = "0020d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde";
 
-        let script = Script::new(script_str.parse().unwrap()).unwrap();
+        let script = Script::new(&script_str.parse().unwrap()).unwrap();
         assert_eq!(script.to_string(), script_str);
 
         let script_bytes = Vec::<u8>::from_hex(script_str).unwrap();

@@ -17,8 +17,8 @@ impl From<wollet::WolletDescriptor> for WolletDescriptor {
 
 impl WolletDescriptor {
     #[uniffi::constructor]
-    pub fn new(descriptor: String) -> Result<Arc<Self>, LwkError> {
-        let inner = wollet::WolletDescriptor::from_str(&descriptor)?;
+    pub fn new(descriptor: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = wollet::WolletDescriptor::from_str(descriptor)?;
         Ok(Arc::new(WolletDescriptor { inner }))
     }
 }
@@ -37,7 +37,7 @@ mod tests {
     #[test]
     fn wpkh_slip77_descriptor() {
         let mnemonic_str = test_util::TEST_MNEMONIC;
-        let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
         let network: crate::Network = test_util::network_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();

@@ -45,16 +45,16 @@ mod tests {
         let datadir = "/tmp/.lwk";
         let mnemonic = test_util::TEST_MNEMONIC;
         let network: Network = test_util::network_regtest().into();
-        let signer = Signer::new(&Mnemonic::new(mnemonic.to_string()).unwrap(), &network).unwrap();
+        let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
 
         let server = test_util::setup(false);
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 
         let electrum_client =
-            ElectrumClient::new(server.electrs.electrum_url.to_string(), false, false).unwrap();
+            ElectrumClient::new(&server.electrs.electrum_url, false, false).unwrap();
 
-        let wollet = Wollet::new(&network, &singlesig_desc, datadir.to_string()).unwrap();
+        let wollet = Wollet::new(&network, &singlesig_desc, datadir).unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
@@ -88,7 +88,7 @@ mod tests {
             }
         }
 
-        let out_address = Address::new(expected_address_1.to_string()).unwrap();
+        let out_address = Address::new(expected_address_1).unwrap();
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
         let pset = wollet

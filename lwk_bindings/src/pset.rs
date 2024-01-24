@@ -25,7 +25,7 @@ impl Display for Pset {
 impl Pset {
     /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
-    pub fn new(base64: String) -> Result<Arc<Self>, LwkError> {
+    pub fn new(base64: &str) -> Result<Arc<Self>, LwkError> {
         let inner: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(Arc::new(Pset { inner }))
     }
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn pset_roundtrip() {
         let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
-        let pset = Pset::new(pset_string.clone()).unwrap();
+        let pset = Pset::new(&pset_string).unwrap();
 
         let tx_expected =
             include_str!("../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();

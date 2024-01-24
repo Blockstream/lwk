@@ -47,7 +47,7 @@ impl AsRef<elements::Transaction> for Transaction {
 impl Transaction {
     /// Construct a Transaction object
     #[uniffi::constructor]
-    pub fn new(hex: Hex) -> Result<Arc<Self>, LwkError> {
+    pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }
@@ -71,7 +71,7 @@ mod tests {
     fn transaction() {
         let tx_expected =
             include_str!("../../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
-        let tx = Transaction::new(tx_expected.parse().unwrap()).unwrap();
+        let tx = Transaction::new(&tx_expected.parse().unwrap()).unwrap();
 
         assert_eq!(tx_expected, tx.to_string());
 

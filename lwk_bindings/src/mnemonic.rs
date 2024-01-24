@@ -26,8 +26,8 @@ impl Display for Mnemonic {
 impl Mnemonic {
     /// Construct a Script object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
-        let inner = bip39::Mnemonic::from_str(&s)?;
+    pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = bip39::Mnemonic::from_str(s)?;
         Ok(Arc::new(Self { inner }))
     }
 }
@@ -43,7 +43,7 @@ mod tests {
         let mnemonic_str = test_util::TEST_MNEMONIC;
         let mnemonic_bip39 = bip39::Mnemonic::from_str(mnemonic_str).unwrap();
         let from_bip39: Mnemonic = mnemonic_bip39.into();
-        let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
         assert_eq!(mnemonic_str, mnemonic.to_string());
         assert_eq!(from_bip39, *mnemonic);
     }

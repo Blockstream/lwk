@@ -31,7 +31,7 @@ impl Signer {
         let desc_str =
             common::singlesig_desc(&self.inner, script_variant, blinding_variant, is_mainnet)?;
 
-        WolletDescriptor::new(desc_str)
+        WolletDescriptor::new(&desc_str)
     }
 }
 
@@ -42,13 +42,13 @@ mod tests {
     #[test]
     fn signer() {
         let mnemonic_str = test_util::TEST_MNEMONIC;
-        let mnemonic = Mnemonic::new(mnemonic_str.to_string()).unwrap();
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
         let network: crate::Network = test_util::network_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 
         let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
-        let pset = Pset::new(pset_string.clone()).unwrap();
+        let pset = Pset::new(&pset_string).unwrap();
 
         let signed_pset = signer.sign(&pset).unwrap();
 

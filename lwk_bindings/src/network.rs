@@ -36,7 +36,7 @@ impl Network {
             }
         };
 
-        ElectrumClient::new(url.to_string(), tls, validate_domain)
+        ElectrumClient::new(url, tls, validate_domain)
     }
 }
 
@@ -50,6 +50,7 @@ impl Network {
 #[derive(uniffi::Object)]
 pub struct NetworkBuilder {}
 
+// TODO remove NetworkBuilder, while you can't have associated function you can have more than one constructor!
 #[uniffi::export]
 impl NetworkBuilder {
     #[uniffi::constructor]

@@ -14,11 +14,11 @@ impl ElectrumClient {
     /// Construct a Script object
     #[uniffi::constructor]
     pub fn new(
-        electrum_url: String,
+        electrum_url: &str,
         tls: bool,
         validate_domain: bool,
     ) -> Result<Arc<Self>, LwkError> {
-        let url = wollet::ElectrumUrl::new(&electrum_url, tls, validate_domain);
+        let url = wollet::ElectrumUrl::new(electrum_url, tls, validate_domain);
         let client = wollet::ElectrumClient::new(&url)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),

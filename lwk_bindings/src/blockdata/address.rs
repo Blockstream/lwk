@@ -23,7 +23,7 @@ impl Display for Address {
 impl Address {
     /// Construct an Address object
     #[uniffi::constructor]
-    pub fn new(s: String) -> Result<Arc<Self>, LwkError> {
+    pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Address = s.parse()?;
         Ok(Arc::new(Self { inner }))
     }
@@ -50,7 +50,7 @@ mod tests {
     fn address() {
         let address_str = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
 
-        let address = Address::new(address_str.to_string()).unwrap();
+        let address = Address::new(address_str).unwrap();
         assert_eq!(address.to_string(), address_str);
 
         assert_eq!(

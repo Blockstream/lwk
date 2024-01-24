@@ -7,7 +7,7 @@ members = [
     "lwk_hwi",
     "lwk_jade",
     "lwk_signer",
-    "tiny_jrpc",
+    "lwk_tiny_jrpc",
     "wollet",
     "bs_containers",
     "lwk_common",

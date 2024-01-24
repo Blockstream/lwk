@@ -1,7 +1,7 @@
 use std::sync::{MutexGuard, PoisonError};
 
+use lwk_tiny_jrpc::error::ImplementationDefinedCode;
 use serde_json::json;
-use tiny_jrpc::error::ImplementationDefinedCode;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -96,7 +96,7 @@ impl Error {
                 ImplementationDefinedCode::new(-32_011).expect("static")
             }
 
-            _ => tiny_jrpc::error::GENERIC,
+            _ => lwk_tiny_jrpc::error::GENERIC,
         }
     }
 
@@ -121,11 +121,11 @@ impl From<wollet::elements::hex::Error> for Error {
     }
 }
 
-impl From<Error> for tiny_jrpc::error::Error {
+impl From<Error> for lwk_tiny_jrpc::error::Error {
     fn from(value: Error) -> Self {
         match value {
-            Error::Stop => tiny_jrpc::error::Error::Stop,
-            e => tiny_jrpc::error::Error::new_implementation_defined(
+            Error::Stop => lwk_tiny_jrpc::error::Error::Stop,
+            e => lwk_tiny_jrpc::error::Error::new_implementation_defined(
                 &e,
                 e.as_impl_defined_code(),
                 e.as_error_value(),

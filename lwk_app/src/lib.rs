@@ -24,9 +24,9 @@ use lwk_common::{
 use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::{AnySigner, SwSigner};
+use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use serde_json::Value;
 use state::id_to_fingerprint;
-use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
 use wollet::bitcoin::XKeyIdentifier;
 use wollet::elements::hex::{FromHex, ToHex};
@@ -44,7 +44,7 @@ use lwk_rpc_model::{request, response};
 pub use client::Client;
 pub use config::Config;
 pub use error::Error;
-pub use tiny_jrpc::RpcError;
+pub use lwk_tiny_jrpc::RpcError;
 
 mod client;
 mod config;
@@ -82,11 +82,11 @@ impl App {
 
         // TODO, for some reasons, using the default number of threads (4) cause a request to be
         // replied after 15 seconds, using 1 instead seems to not have that issue.
-        let config = tiny_jrpc::Config::builder()
+        let config = lwk_tiny_jrpc::Config::builder()
             .with_num_threads(NonZeroU8::new(1).expect("static"))
             .build();
 
-        let rpc = tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
+        let rpc = lwk_tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
 
         let path = self.config.state_path()?;
         match std::fs::read_to_string(&path) {
@@ -151,7 +151,7 @@ impl App {
 fn method_handler(
     request: Request,
     state: Arc<Mutex<State>>,
-) -> Result<Response, tiny_jrpc::Error> {
+) -> Result<Response, lwk_tiny_jrpc::Error> {
     Ok(inner_method_handler(request, state)?)
 }
 

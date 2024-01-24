@@ -4,7 +4,7 @@ members = [
     "lwk_app",
     "lwk_bindings",
     "lwk_cli",
-    "hwi",
+    "lwk_hwi",
     "lwk_jade",
     "signer",
     "tiny_jrpc",

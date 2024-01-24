@@ -1,5 +1,5 @@
 [package]
-name = "lwk-bindings"
+name = "lwk_bindings"
 version = "0.1.0"
 edition = "2021"
 

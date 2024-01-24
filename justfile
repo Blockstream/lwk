@@ -26,13 +26,13 @@ android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64
     cp -a target/release/kotlin/lwk_bindings lwk_bindings/android_bindings/lib/src/main/kotlin
 
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p lwk-bindings
+	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
 
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build -p lwk-bindings
+	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build -p lwk_bindings
 
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build -p lwk-bindings
+	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
 
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p lwk-bindings
+	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings

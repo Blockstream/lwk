@@ -1,12 +1,12 @@
 use std::net::SocketAddr;
 
 use lwk_jade::TIMEOUT;
+use lwk_wollet::UnvalidatedAddressee;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::value::to_raw_value;
 use serde_json::value::RawValue;
 use serde_json::Value;
-use wollet::UnvalidatedAddressee;
 
 use crate::error::Error;
 use crate::method::Method;
@@ -353,7 +353,7 @@ impl Client {
     }
 }
 
-fn unvalidate_addressee(a: wollet::UnvalidatedAddressee) -> request::UnvalidatedAddressee {
+fn unvalidate_addressee(a: lwk_wollet::UnvalidatedAddressee) -> request::UnvalidatedAddressee {
     request::UnvalidatedAddressee {
         satoshi: a.satoshi,
         address: a.address,

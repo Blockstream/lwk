@@ -12,8 +12,8 @@ pub enum LwkError {
     PoisonError { msg: String },
 }
 
-impl From<wollet::Error> for LwkError {
-    fn from(value: wollet::Error) -> Self {
+impl From<lwk_wollet::Error> for LwkError {
+    fn from(value: lwk_wollet::Error) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
         }

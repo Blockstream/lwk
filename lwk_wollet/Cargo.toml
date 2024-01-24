@@ -1,5 +1,5 @@
 [package]
-name = "wollet"
+name = "lwk_wollet"
 version = "0.1.0"
 authors = [
     "Riccardo Casatta <riccardo@casatta.it>",

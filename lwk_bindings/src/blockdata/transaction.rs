@@ -2,7 +2,7 @@ use elements::{
     hex::ToHex,
     pset::serialize::{Deserialize, Serialize},
 };
-use wollet::WalletTx;
+use lwk_wollet::WalletTx;
 
 use crate::{types::Hex, LwkError, Txid};
 use std::{fmt::Display, sync::Arc};

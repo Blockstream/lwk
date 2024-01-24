@@ -21,10 +21,10 @@ pub enum Error {
     Jade(#[from] lwk_jade::Error),
 
     #[error("Wollet Error: {0}")]
-    Wollet(#[from] wollet::Error),
+    Wollet(#[from] lwk_wollet::Error),
 
     #[error("Hex Error: {0}")]
-    Hex(wollet::elements::hex::Error),
+    Hex(lwk_wollet::elements::hex::Error),
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
@@ -115,8 +115,8 @@ impl From<String> for Error {
         Error::Generic(message)
     }
 }
-impl From<wollet::elements::hex::Error> for Error {
-    fn from(value: wollet::elements::hex::Error) -> Self {
+impl From<lwk_wollet::elements::hex::Error> for Error {
+    fn from(value: lwk_wollet::elements::hex::Error) -> Self {
         Error::Hex(value)
     }
 }

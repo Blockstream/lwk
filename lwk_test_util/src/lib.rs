@@ -1,4 +1,4 @@
-extern crate wollet;
+extern crate lwk_wollet;
 
 use crate::bitcoin::amount::Denomination;
 use crate::bitcoin::bip32::{DerivationPath, Xpriv};
@@ -15,6 +15,7 @@ use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::*;
+use lwk_wollet::*;
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use std::convert::TryInto;
@@ -25,7 +26,6 @@ use std::thread;
 use std::time::Duration;
 use tempfile::TempDir;
 use tracing::metadata::LevelFilter;
-use wollet::*;
 
 const DEFAULT_FEE_RATE: f32 = 100.0;
 

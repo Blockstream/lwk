@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use wollet::BlockchainBackend;
+use lwk_wollet::BlockchainBackend;
 
 use crate::{LwkError, Transaction, Txid, Update, Wollet};
 
 #[derive(uniffi::Object, Debug)]
 pub struct ElectrumClient {
-    inner: Mutex<wollet::ElectrumClient>,
+    inner: Mutex<lwk_wollet::ElectrumClient>,
 }
 
 #[uniffi::export]
@@ -18,8 +18,8 @@ impl ElectrumClient {
         tls: bool,
         validate_domain: bool,
     ) -> Result<Arc<Self>, LwkError> {
-        let url = wollet::ElectrumUrl::new(electrum_url, tls, validate_domain);
-        let client = wollet::ElectrumClient::new(&url)?;
+        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain);
+        let client = lwk_wollet::ElectrumClient::new(&url)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
         }))
@@ -31,7 +31,7 @@ impl ElectrumClient {
 
     pub fn full_scan(&self, wollet: &Wollet) -> Result<Option<Arc<Update>>, LwkError> {
         let wollet = wollet.inner_wollet()?;
-        let update: Option<wollet::Update> = self.inner.lock()?.full_scan(&wollet)?;
+        let update: Option<lwk_wollet::Update> = self.inner.lock()?.full_scan(&wollet)?;
         Ok(update.map(Into::into).map(Arc::new))
     }
 }

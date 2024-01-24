@@ -3,11 +3,11 @@ use std::{collections::HashMap, sync::Arc};
 
 #[derive(uniffi::Object, Debug)]
 pub struct WalletTx {
-    inner: wollet::WalletTx,
+    inner: lwk_wollet::WalletTx,
 }
 
-impl From<wollet::WalletTx> for WalletTx {
-    fn from(inner: wollet::WalletTx) -> Self {
+impl From<lwk_wollet::WalletTx> for WalletTx {
+    fn from(inner: lwk_wollet::WalletTx) -> Self {
         Self { inner }
     }
 }
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn wallet_tx() {
-        let tx_out = wollet::WalletTxOut {
+        let tx_out = lwk_wollet::WalletTxOut {
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),
             height: Some(1),
@@ -83,7 +83,7 @@ mod tests {
                 elements::confidential::ValueBlindingFactor::zero(),
             ),
             wildcard_index: 10,
-            ext_int: wollet::Chain::External,
+            ext_int: lwk_wollet::Chain::External,
         };
 
         let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
@@ -91,7 +91,7 @@ mod tests {
         let tx_bytes = Vec::<u8>::from_hex(&tx_hex).unwrap();
         let tx: elements::Transaction = elements::Transaction::deserialize(&tx_bytes).unwrap();
 
-        let el = wollet::WalletTx {
+        let el = lwk_wollet::WalletTx {
             tx: tx.clone(),
             height: Some(4),
             balance: HashMap::new(),

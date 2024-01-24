@@ -25,17 +25,17 @@ use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use lwk_wollet::bitcoin::bip32::Fingerprint;
+use lwk_wollet::bitcoin::XKeyIdentifier;
+use lwk_wollet::elements::hex::{FromHex, ToHex};
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_wollet::elements::{AssetId, TxOutSecrets};
+use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
+use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
+use lwk_wollet::BlockchainBackend;
+use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 use serde_json::Value;
 use state::id_to_fingerprint;
-use wollet::bitcoin::bip32::Fingerprint;
-use wollet::bitcoin::XKeyIdentifier;
-use wollet::elements::hex::{FromHex, ToHex};
-use wollet::elements::pset::PartiallySignedTransaction;
-use wollet::elements::{AssetId, TxOutSecrets};
-use wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
-use wollet::elements_miniscript::miniscript::decode::Terminal;
-use wollet::BlockchainBackend;
-use wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
@@ -723,8 +723,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         }
         Method::Contract => {
             let r: request::Contract = serde_json::from_value(params)?;
-            let c = wollet::Contract {
-                entity: wollet::Entity::Domain(r.domain),
+            let c = lwk_wollet::Contract {
+                entity: lwk_wollet::Entity::Domain(r.domain),
                 issuer_pubkey: Vec::<u8>::from_hex(&r.issuer_pubkey)?,
                 name: r.name,
                 precision: r.precision,
@@ -738,7 +738,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetDetails => {
             let r: request::AssetDetails = serde_json::from_value(params)?;
             let s = state.lock()?;
-            let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             let asset = s.get_asset(&asset_id)?;
             Response::result(
@@ -766,12 +766,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetInsert => {
             let r: request::AssetInsert = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
-            let prev_txid = wollet::elements::Txid::from_str(&r.prev_txid)
+            let prev_txid = lwk_wollet::elements::Txid::from_str(&r.prev_txid)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             let contract = serde_json::Value::from_str(&r.contract)?;
-            let contract = wollet::Contract::from_value(&contract)?;
+            let contract = lwk_wollet::Contract::from_value(&contract)?;
             s.insert_asset(
                 asset_id,
                 prev_txid,
@@ -785,7 +785,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::AssetRemove => {
             let r: request::AssetRemove = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let asset_id = wollet::elements::AssetId::from_str(&r.asset_id)
+            let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             s.remove_asset(&asset_id)?;
             s.persist_all()?;
@@ -826,8 +826,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
     Ok(response)
 }
 
-fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> wollet::UnvalidatedAddressee {
-    wollet::UnvalidatedAddressee {
+fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::UnvalidatedAddressee {
+    lwk_wollet::UnvalidatedAddressee {
         satoshi: a.satoshi,
         address: a.address,
         asset: a.asset,
@@ -874,7 +874,7 @@ fn add_contracts<'a>(
     }
 }
 
-fn convert_utxo(u: &wollet::WalletTxOut) -> response::Utxo {
+fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
     response::Utxo {
         txid: u.outpoint.txid.to_string(),
         vout: u.outpoint.vout,
@@ -889,7 +889,7 @@ fn fmt_txoutsecrets(s: &TxOutSecrets) -> String {
     format!("{},{},{},{}", s.value, s.asset, s.value_bf, s.asset_bf)
 }
 
-fn fmt_wallet_txouts(txouts: &[Option<wollet::WalletTxOut>]) -> Vec<String> {
+fn fmt_wallet_txouts(txouts: &[Option<lwk_wollet::WalletTxOut>]) -> Vec<String> {
     txouts
         .iter()
         .filter_map(|f| f.as_ref())
@@ -897,7 +897,7 @@ fn fmt_wallet_txouts(txouts: &[Option<wollet::WalletTxOut>]) -> Vec<String> {
         .collect()
 }
 
-fn convert_tx(tx: &wollet::WalletTx, explorer_url: &str) -> response::Tx {
+fn convert_tx(tx: &lwk_wollet::WalletTx, explorer_url: &str) -> response::Tx {
     let txid = tx.tx.txid().to_string();
     let mut blinded = fmt_wallet_txouts(&tx.inputs);
     blinded.extend(fmt_wallet_txouts(&tx.outputs));

@@ -9,11 +9,11 @@ pub enum Chain {
     Internal,
 }
 
-impl From<wollet::Chain> for Chain {
-    fn from(value: wollet::Chain) -> Self {
+impl From<lwk_wollet::Chain> for Chain {
+    fn from(value: lwk_wollet::Chain) -> Self {
         match value {
-            wollet::Chain::External => Chain::External,
-            wollet::Chain::Internal => Chain::Internal,
+            lwk_wollet::Chain::External => Chain::External,
+            lwk_wollet::Chain::Internal => Chain::Internal,
         }
     }
 }

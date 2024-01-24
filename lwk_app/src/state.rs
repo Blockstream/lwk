@@ -10,13 +10,13 @@ use lwk_jade::Network;
 use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
 use lwk_tiny_jrpc::Request;
+use lwk_wollet::bitcoin::bip32::Fingerprint;
+use lwk_wollet::bitcoin::XKeyIdentifier;
+use lwk_wollet::elements::pset::elip100::AssetMetadata;
+use lwk_wollet::elements::{AssetId, OutPoint, Txid};
+use lwk_wollet::Contract;
+use lwk_wollet::Wollet;
 use serde::Serialize;
-use wollet::bitcoin::bip32::Fingerprint;
-use wollet::bitcoin::XKeyIdentifier;
-use wollet::elements::pset::elip100::AssetMetadata;
-use wollet::elements::{AssetId, OutPoint, Txid};
-use wollet::Contract;
-use wollet::Wollet;
 
 use crate::config::Config;
 use crate::method::Method;
@@ -339,7 +339,7 @@ impl State {
         let previous_output = OutPoint::new(prev_txid, prev_vout);
         let is_confidential = is_confidential.unwrap_or(false);
         let (asset_id_c, token_id) =
-            wollet::issuance_ids(&contract, previous_output, is_confidential)?;
+            lwk_wollet::issuance_ids(&contract, previous_output, is_confidential)?;
         if asset_id != asset_id_c {
             return Err(Error::InvalidContractForAsset(asset_id.to_string()));
         }

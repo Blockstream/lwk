@@ -13,7 +13,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 lwk_common = { path = "../lwk_common" }
 lwk_signer = { path = "../lwk_signer" }
-wollet = { path = "../wollet" }
+lwk_wollet = { path = "../lwk_wollet" }
 electrum-client = "0.15.0"
 lwk_jade = { path = "../lwk_jade", features = ["serial"] }
 rand = "0.8.5"

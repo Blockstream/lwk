@@ -1,15 +1,15 @@
 #[derive(uniffi::Object, Clone)]
 pub struct Update {
-    inner: wollet::Update,
+    inner: lwk_wollet::Update,
 }
 
-impl From<wollet::Update> for Update {
-    fn from(inner: wollet::Update) -> Self {
+impl From<lwk_wollet::Update> for Update {
+    fn from(inner: lwk_wollet::Update) -> Self {
         Self { inner }
     }
 }
 
-impl From<Update> for wollet::Update {
+impl From<Update> for lwk_wollet::Update {
     fn from(value: Update) -> Self {
         value.inner
     }

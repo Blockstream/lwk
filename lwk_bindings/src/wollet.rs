@@ -11,12 +11,13 @@ use std::{
 /// A Watch-Only wallet
 #[derive(uniffi::Object)]
 pub struct Wollet {
-    inner: Mutex<wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
+    inner: Mutex<lwk_wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
 }
 impl Wollet {
     pub fn inner_wollet(
         &self,
-    ) -> Result<MutexGuard<'_, wollet::Wollet>, PoisonError<MutexGuard<'_, wollet::Wollet>>> {
+    ) -> Result<MutexGuard<'_, lwk_wollet::Wollet>, PoisonError<MutexGuard<'_, lwk_wollet::Wollet>>>
+    {
         self.inner.lock()
     }
 }
@@ -30,7 +31,7 @@ impl Wollet {
         descriptor: &WolletDescriptor,
         datadir: &str,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = wollet::Wollet::new((*network).into(), datadir, &descriptor.to_string())?;
+        let inner = lwk_wollet::Wollet::new((*network).into(), datadir, &descriptor.to_string())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))

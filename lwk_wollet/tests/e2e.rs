@@ -6,8 +6,8 @@ use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use lwk_common::Signer;
 use lwk_signer::*;
 use lwk_test_util::*;
+use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
-use wollet::*;
 
 #[test]
 fn liquid_send_jade_signer() {

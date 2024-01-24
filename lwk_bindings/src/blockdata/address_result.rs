@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 #[derive(uniffi::Object)]
 pub struct AddressResult {
-    inner: wollet::AddressResult,
+    inner: lwk_wollet::AddressResult,
 }
 
-impl From<wollet::AddressResult> for AddressResult {
-    fn from(inner: wollet::AddressResult) -> Self {
+impl From<lwk_wollet::AddressResult> for AddressResult {
+    fn from(inner: lwk_wollet::AddressResult) -> Self {
         Self { inner }
     }
 }
@@ -34,8 +34,10 @@ mod tests {
     fn address_result() {
         let address_str = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
         let index = 0;
-        let wollet_address_result =
-            wollet::AddressResult::new(elements::Address::from_str(address_str).unwrap(), index);
+        let wollet_address_result = lwk_wollet::AddressResult::new(
+            elements::Address::from_str(address_str).unwrap(),
+            index,
+        );
 
         let address_result: AddressResult = wollet_address_result.into();
 

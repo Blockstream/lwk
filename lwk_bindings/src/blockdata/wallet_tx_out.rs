@@ -4,11 +4,11 @@ use crate::{Chain, OutPoint, Script, TxOutSecrets};
 
 #[derive(uniffi::Object)]
 pub struct WalletTxOut {
-    inner: wollet::WalletTxOut,
+    inner: lwk_wollet::WalletTxOut,
 }
 
-impl From<wollet::WalletTxOut> for WalletTxOut {
-    fn from(inner: wollet::WalletTxOut) -> Self {
+impl From<lwk_wollet::WalletTxOut> for WalletTxOut {
+    fn from(inner: lwk_wollet::WalletTxOut) -> Self {
         Self { inner }
     }
 }
@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn wallet_tx_out() {
-        let el = wollet::WalletTxOut {
+        let el = lwk_wollet::WalletTxOut {
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),
             height: Some(1),
@@ -60,7 +60,7 @@ mod tests {
                 elements::confidential::ValueBlindingFactor::zero(),
             ),
             wildcard_index: 10,
-            ext_int: wollet::Chain::External,
+            ext_int: lwk_wollet::Chain::External,
         };
 
         let wallet_tx_out: WalletTxOut = el.clone().into();

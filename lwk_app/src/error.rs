@@ -18,7 +18,7 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
 
     #[error("Jade Error: {0}")]
-    Jade(#[from] jade::Error),
+    Jade(#[from] lwk_jade::Error),
 
     #[error("Wollet Error: {0}")]
     Wollet(#[from] wollet::Error),

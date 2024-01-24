@@ -4,7 +4,7 @@ use bs_containers::{
     testcontainers::{clients::Cli, Container},
     {JadeEmulator, EMULATOR_PORT},
 };
-use jade::{mutex_jade::MutexJade, protocol::DebugSetMnemonicParams, Jade};
+use lwk_jade::{mutex_jade::MutexJade, protocol::DebugSetMnemonicParams, Jade};
 
 #[derive(Debug)]
 pub struct InitializedJade<'a> {
@@ -16,7 +16,7 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let mut jade_api = Jade::new(stream.into(), jade::Network::LocaltestLiquid);
+    let mut jade_api = Jade::new(stream.into(), lwk_jade::Network::LocaltestLiquid);
     let params = DebugSetMnemonicParams {
         mnemonic,
         passphrase: None,
@@ -33,11 +33,11 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
 
 #[cfg(feature = "serial")]
 pub mod serial {
-    use jade::{mutex_jade::MutexJade, serialport, Jade};
+    use lwk_jade::{mutex_jade::MutexJade, serialport, Jade};
     use std::time::Duration;
 
     pub fn unlock() -> MutexJade {
-        let network = jade::Network::LocaltestLiquid;
+        let network = lwk_jade::Network::LocaltestLiquid;
 
         let ports = serialport::available_ports().unwrap();
         assert!(!ports.is_empty());

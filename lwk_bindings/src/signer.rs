@@ -47,7 +47,8 @@ mod tests {
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 
-        let pset_string = include_str!("../../jade/test_data/pset_to_be_signed.base64").to_string();
+        let pset_string =
+            include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64").to_string();
         let pset = Pset::new(&pset_string).unwrap();
 
         let signed_pset = signer.sign(&pset).unwrap();

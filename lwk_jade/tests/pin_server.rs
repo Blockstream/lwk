@@ -5,7 +5,7 @@ use elements::bitcoin::{
     secp256k1::{ecdsa::Signature, Message, Secp256k1},
     PublicKey,
 };
-use jade::protocol::HandshakeInitParams;
+use lwk_jade::protocol::HandshakeInitParams;
 
 #[test]
 fn pin_server() {

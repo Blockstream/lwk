@@ -70,7 +70,8 @@ mod tests {
     #[test]
     fn transaction() {
         let tx_expected =
-            include_str!("../../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
+            include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
+                .to_string();
         let tx = Transaction::new(&tx_expected.parse().unwrap()).unwrap();
 
         assert_eq!(tx_expected, tx.to_string());

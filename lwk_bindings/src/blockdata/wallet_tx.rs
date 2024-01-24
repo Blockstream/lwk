@@ -86,8 +86,8 @@ mod tests {
             ext_int: wollet::Chain::External,
         };
 
-        let tx_hex =
-            include_str!("../../../jade/test_data/pset_to_be_signed_transaction.hex").to_string();
+        let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
+            .to_string();
         let tx_bytes = Vec::<u8>::from_hex(&tx_hex).unwrap();
         let tx: elements::Transaction = elements::Transaction::deserialize(&tx_bytes).unwrap();
 

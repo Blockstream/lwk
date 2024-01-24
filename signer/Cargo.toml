@@ -12,7 +12,7 @@ thiserror = "1.0.48"
 base64 = "0.13.0"
 
 lwk_common = { path = "../lwk_common" }
-jade = { path = "../jade" }
+lwk_jade = { path = "../lwk_jade" }
 
 [dev-dependencies]
 test_util = { path = "../test_util" }

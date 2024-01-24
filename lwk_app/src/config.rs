@@ -1,5 +1,5 @@
-use jade::Network as JadeNetwork;
-use jade::TIMEOUT;
+use lwk_jade::Network as JadeNetwork;
+use lwk_jade::TIMEOUT;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;

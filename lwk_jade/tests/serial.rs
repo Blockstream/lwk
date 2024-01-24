@@ -1,4 +1,4 @@
-use jade::{protocol::JadeState, Jade, BAUD_RATE, TIMEOUT};
+use lwk_jade::{protocol::JadeState, Jade, BAUD_RATE, TIMEOUT};
 
 fn serial_test_setup() -> Jade {
     test_util::init_logging();
@@ -9,7 +9,7 @@ fn serial_test_setup() -> Jade {
         .open()
         .unwrap();
 
-    Jade::new(port.into(), jade::Network::TestnetLiquid)
+    Jade::new(port.into(), lwk_jade::Network::TestnetLiquid)
 }
 
 #[test]

@@ -15,6 +15,6 @@ lwk_common = { path = "../lwk_common" }
 signer = { path = "../signer" }
 wollet = { path = "../wollet" }
 electrum-client = "0.15.0"
-jade = { path = "../jade", features = ["serial"] }
+lwk_jade = { path = "../lwk_jade", features = ["serial"] }
 rand = "0.8.5"
 tempfile = "3.8.0"

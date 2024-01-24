@@ -12,8 +12,8 @@ use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_common::Signer;
+use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use signer::*;
@@ -822,7 +822,7 @@ pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     let desc: WolletDescriptor = desc.parse().unwrap();
     let desc: JadeDescriptor = desc.as_ref().try_into().unwrap();
     let params = RegisterMultisigParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         multisig_name: name.into(),
         descriptor: desc,
     };

@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use jade::TIMEOUT;
+use lwk_jade::TIMEOUT;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::value::to_raw_value;

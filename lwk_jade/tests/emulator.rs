@@ -17,13 +17,13 @@ use elements::{
 use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
-use jade::{
+use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::{GetMasterBlindingKeyParams, IsAuthResult, JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
     Network,
 };
-use jade::{
+use lwk_jade::{
     protocol::{
         DebugSetMnemonicParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
         HandshakeInitParams, SignMessageParams, UpdatePinserverParams,
@@ -38,7 +38,7 @@ use crate::pin_server::verify;
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
 
     let result = jade.jade.add_entropy(&[1, 2, 3, 4]).unwrap();
     assert!(result);
@@ -57,7 +57,7 @@ fn debug_set_mnemonic() {
 #[test]
 fn epoch() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -70,7 +70,7 @@ fn epoch() {
 #[test]
 fn ping() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
 
     let result = jade.jade.ping().unwrap();
     assert_eq!(result, 0);
@@ -79,7 +79,7 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
 
     let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
@@ -90,7 +90,7 @@ fn version() {
 #[test]
 fn update_pinserver() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, jade::Network::LocaltestLiquid);
+    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
 
     let tempdir = tempdir().unwrap();
     let pin_server = PinServer::new(&tempdir).unwrap();
@@ -143,7 +143,7 @@ fn jade_xpub() {
     assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
 
     let params = GetXpubParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0],
     };
     let xpub = jade.get_xpub(params).unwrap();
@@ -158,7 +158,7 @@ fn jade_receive_address() {
 
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let params = GetReceiveAddressParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         address: SingleOrMulti::Single {
             variant: Variant::ShWpkh,
             path: vec![2147483697, 2147483648, 2147483648, 0, 143],
@@ -180,7 +180,7 @@ fn jade_register_multisig() {
     let jade_master_xpub = jade.get_master_xpub().unwrap();
 
     let params = GetXpubParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
     let jade_xpub = jade.get_xpub(params).unwrap();
@@ -201,7 +201,7 @@ fn jade_register_multisig() {
     ];
 
     let params = RegisterMultisigParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         multisig_name: "finney-satoshi".to_string(),
         descriptor: JadeDescriptor {
             variant: "wsh(multi(k))".to_string(),
@@ -222,7 +222,7 @@ fn jade_register_multisig() {
 fn jade_register_multisig_check_address() {
     let docker = clients::Cli::default();
 
-    let network = jade::Network::LocaltestLiquid;
+    let network = lwk_jade::Network::LocaltestLiquid;
     let mut initialized_jade = inner_jade_debug_initialization(&docker);
     let jade = &mut initialized_jade.jade;
 
@@ -301,7 +301,7 @@ fn jade_sign_message() {
         .unwrap();
 
     let params = GetXpubParams {
-        network: jade::Network::LocaltestLiquid,
+        network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0],
     };
     let xpub = initialized_jade.jade.get_xpub(params).unwrap();

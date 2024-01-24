@@ -17,12 +17,12 @@ use std::num::NonZeroU8;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use jade::mutex_jade::MutexJade;
-use jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
+use lwk_jade::mutex_jade::MutexJade;
+use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use serde_json::Value;
 use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;

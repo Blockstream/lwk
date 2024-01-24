@@ -12,8 +12,8 @@ use elements_miniscript::bitcoin::XKeyIdentifier;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use jade::mutex_jade::MutexJade;
 use lwk_common::Signer;
+use lwk_jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignerError {
@@ -21,7 +21,7 @@ pub enum SignerError {
     Software(#[from] SignError),
 
     #[error(transparent)]
-    JadeError(#[from] jade::error::Error),
+    JadeError(#[from] lwk_jade::error::Error),
 
     #[error(transparent)]
     Bip32Error(#[from] elements::bitcoin::bip32::Error),

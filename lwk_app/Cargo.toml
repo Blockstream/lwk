@@ -16,7 +16,7 @@ tiny_jrpc = { path = "../tiny_jrpc" }
 thiserror = "1"
 tracing = "0.1"
 lwk_common = { path = "../lwk_common" }
-rpc_model = { path = "../rpc_model" }
+lwk_rpc_model = { path = "../lwk_rpc_model" }
 wollet = { path = "../wollet" }
 rand = "0.8.5"
 schemars = "0.8.16"

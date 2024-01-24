@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use rpc_model::{
+use lwk_rpc_model::{
     request::{self, Direction},
     response,
 };

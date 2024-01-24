@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use lwk_common::Signer;
 use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::Network;
-use rpc_model::request;
+use lwk_rpc_model::request;
 use serde::Serialize;
 use signer::AnySigner;
 use tiny_jrpc::Request;

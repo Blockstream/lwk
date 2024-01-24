@@ -1,5 +1,5 @@
 use lwk_app::{method::Method, Client};
-use rpc_model::request::Direction;
+use lwk_rpc_model::request::Direction;
 use serde_json::Value;
 
 use crate::args::{self, AssetSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum};

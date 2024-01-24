@@ -11,7 +11,7 @@ members = [
     "wollet",
     "bs_containers",
     "lwk_common",
-    "rpc_model",
+    "lwk_rpc_model",
     "test_util",
 ]
 resolver = "2"

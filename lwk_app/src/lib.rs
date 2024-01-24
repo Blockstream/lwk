@@ -39,7 +39,7 @@ use wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
-use rpc_model::{request, response};
+use lwk_rpc_model::{request, response};
 
 pub use client::Client;
 pub use config::Config;

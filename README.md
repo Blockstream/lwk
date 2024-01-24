@@ -7,22 +7,6 @@ multisig and HWW on the Elements/Liquid network, including the
 ability to create and sign issuance, reissuance and burn
 transactions.
 
-## History
-
-BEWallet was [originally](https://github.com/LeoComandini/BEWallet/)
-a Elements/Liquid wallet library written in Rust to develop
-prototypes and experiments.
-
-BEWallet was based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
-Essentially some GDK Rust pieces were moved to this project.
-
-This was used as the starting point for the Liquid Wallet Kit project,
-initially the parts that were not necessary have been dropped,
-things have been polished and new features have been addded.
-
-The code base has been entirely re-written, and now it has
-almost no similarity with the original code.
-
 ## Structure
 
 Instead of going for a monolithic approach, we opted to split
@@ -197,3 +181,19 @@ cargo doc --no-deps --open
 ### Bindings
 
 See `lwk_bindings/README.md`
+
+## History
+
+BEWallet was [originally](https://github.com/LeoComandini/BEWallet/)
+a Elements/Liquid wallet library written in Rust to develop
+prototypes and experiments.
+
+BEWallet was based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
+Essentially some GDK Rust pieces were moved to this project.
+
+This was used as the starting point for the Liquid Wallet Kit project,
+initially the parts that were not necessary have been dropped,
+things have been polished and new features have been addded.
+
+The code base has been entirely re-written, and now it has
+almost no similarity with the original code.

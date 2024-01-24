@@ -29,26 +29,26 @@ test_wollet:
   script:
     - docker pull xenoky/local-jade-emulator:1.0.23
     - cd / && . ./env.sh && cd -
-    - cargo test -p wollet -p signer
+    - cargo test -p lwk_wollet -p lwk_signer
 
 test_jade:
   extends: .base
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.3
     - docker pull xenoky/local-jade-emulator:1.0.23
-    - cargo test -p jade
+    - cargo test -p lwk_jade
 
 # run tests for minor crates all together
 test_minor:
   extends: .base
   script:
-    - cargo test -p tiny_jrpc -p app -p bs_containers -p common -p hwi -p rpc_model -p signer
+    - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
 
 test_cli:
   extends: .base
   script:
     - cd / && . ./env.sh && cd -
-    - cargo test -p cli
+    - cargo test -p lwk_cli
 
 test_coverage:
   extends: .base
@@ -81,10 +81,10 @@ build_cli:
   only:
     - ks@leocomandini/BEWallet
   script:
-    - cargo build --release -p cli
+    - cargo build --release -p lwk_cli
   artifacts:
     paths:
-      - target/release/cli
+      - target/release/lwk_cli
     when: always
     expire_in: 14 days
 

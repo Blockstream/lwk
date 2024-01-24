@@ -76,24 +76,24 @@ impl From<elements::AddressError> for LwkError {
     }
 }
 
-impl From<signer::bip39::Error> for LwkError {
-    fn from(value: signer::bip39::Error) -> Self {
+impl From<lwk_signer::bip39::Error> for LwkError {
+    fn from(value: lwk_signer::bip39::Error) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
         }
     }
 }
 
-impl From<signer::NewError> for LwkError {
-    fn from(value: signer::NewError) -> Self {
+impl From<lwk_signer::NewError> for LwkError {
+    fn from(value: lwk_signer::NewError) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
         }
     }
 }
 
-impl From<signer::SignError> for LwkError {
-    fn from(value: signer::SignError) -> Self {
+impl From<lwk_signer::SignError> for LwkError {
+    fn from(value: lwk_signer::SignError) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
         }

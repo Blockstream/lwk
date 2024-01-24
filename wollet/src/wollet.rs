@@ -505,7 +505,7 @@ mod tests {
     use elements_miniscript::descriptor::checksum::desc_checksum;
     use elements_miniscript::descriptor::DescriptorSecretKey;
     use lwk_common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
-    use signer::SwSigner;
+    use lwk_signer::SwSigner;
 
     #[test]
     fn test_desc() {

@@ -42,10 +42,10 @@ pub enum Error {
     RpcError(jsonrpc::error::RpcError),
 
     #[error("Signer New Error: {0}")]
-    SignerNew(#[from] signer::NewError),
+    SignerNew(#[from] lwk_signer::NewError),
 
     #[error("Signer Error: {0}")]
-    Signer(#[from] signer::SignerError),
+    Signer(#[from] lwk_signer::SignerError),
 
     #[error("Wallet '{0}' does not exist")]
     WalletNotExist(String),

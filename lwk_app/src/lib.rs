@@ -23,8 +23,8 @@ use lwk_common::{
 };
 use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
+use lwk_signer::{AnySigner, SwSigner};
 use serde_json::Value;
-use signer::{AnySigner, SwSigner};
 use state::id_to_fingerprint;
 use tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use wollet::bitcoin::bip32::Fingerprint;
@@ -837,7 +837,7 @@ fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> wollet::Unvalidate
 fn signer_response_from(
     name: &str,
     signer: &AppSigner,
-) -> Result<response::Signer, signer::SignerError> {
+) -> Result<response::Signer, lwk_signer::SignerError> {
     let (fingerprint, id, xpub) = match signer {
         AppSigner::AvailableSigner(signer) => (
             signer.fingerprint()?,

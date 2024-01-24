@@ -41,7 +41,7 @@ tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3.8.0"
-signer = { path = "../signer" }
+lwk_signer = { path = "../lwk_signer" }
 lwk_jade = { path = "../lwk_jade" }
 bs_containers = { path = "../bs_containers" }
 minreq = { version = "2.9", features = ["https", "json-using-serde"] }

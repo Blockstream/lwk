@@ -4,7 +4,7 @@ use std::sync::Arc;
 /// A Software signer
 #[derive(uniffi::Object)]
 pub struct Signer {
-    inner: signer::SwSigner,
+    inner: lwk_signer::SwSigner,
 }
 
 #[uniffi::export]
@@ -12,7 +12,7 @@ impl Signer {
     /// Construct a software signer
     #[uniffi::constructor]
     pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let inner = signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
+        let inner = lwk_signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
         Ok(Arc::new(Self { inner }))
     }
 

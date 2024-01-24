@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
-use signer::bip39;
+use lwk_signer::bip39;
 
 use crate::LwkError;
 
@@ -35,7 +35,7 @@ impl Mnemonic {
 #[cfg(test)]
 mod tests {
     use crate::Mnemonic;
-    use signer::bip39;
+    use lwk_signer::bip39;
     use std::str::FromStr;
 
     #[test]

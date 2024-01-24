@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn mnemonic() {
-        let mnemonic_str = test_util::TEST_MNEMONIC;
+        let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic_bip39 = bip39::Mnemonic::from_str(mnemonic_str).unwrap();
         let from_bip39: Mnemonic = mnemonic_bip39.into();
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();

@@ -339,7 +339,7 @@ fn jade_get_master_blinding_key() {
         .jade
         .get_master_blinding_key(params)
         .unwrap();
-    assert_eq!(hex::encode(result), test_util::TEST_MNEMONIC_SLIP77);
+    assert_eq!(hex::encode(result), lwk_test_util::TEST_MNEMONIC_SLIP77);
 }
 
 /// Note underscore prefixed var must be there even if they are not read so that they are not
@@ -357,7 +357,7 @@ struct NotInitializedJade<'a> {
 }
 
 fn inner_jade_create(docker: &Cli, network: Network) -> NotInitializedJade {
-    test_util::init_logging();
+    lwk_test_util::init_logging();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
     let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
@@ -435,7 +435,7 @@ fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
     } = inner_jade_create(docker, Network::LocaltestLiquid);
 
     let params = DebugSetMnemonicParams {
-        mnemonic: test_util::TEST_MNEMONIC.to_string(),
+        mnemonic: lwk_test_util::TEST_MNEMONIC.to_string(),
         passphrase: None,
         temporary_wallet: false,
     };

@@ -36,9 +36,9 @@ mod tests {
 
     #[test]
     fn wpkh_slip77_descriptor() {
-        let mnemonic_str = test_util::TEST_MNEMONIC;
+        let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
-        let network: crate::Network = test_util::network_regtest().into();
+        let network: crate::Network = lwk_test_util::network_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
         let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";

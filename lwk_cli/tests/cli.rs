@@ -13,8 +13,8 @@ use serde_json::Value;
 use lwk_cli::{
     inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum,
 };
+use lwk_test_util::{setup, TestElectrumServer};
 use tempfile::TempDir;
-use test_util::{setup, TestElectrumServer};
 
 /// Returns a non-used local port if available.
 ///
@@ -166,7 +166,7 @@ fn test_start_stop_persist() {
     let signers = result.get("signers").unwrap();
     assert_eq!(signers.as_array().unwrap().len(), 0);
 
-    let mnemonic = test_util::TEST_MNEMONIC;
+    let mnemonic = lwk_test_util::TEST_MNEMONIC;
     sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1"#
     ));
@@ -264,7 +264,7 @@ fn test_signer_load_unload_list() {
     let signers = result.get("signers").unwrap();
     assert!(signers.as_array().unwrap().is_empty());
 
-    let mnemonic = test_util::TEST_MNEMONIC;
+    let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let result = sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
     ));
@@ -799,7 +799,7 @@ fn test_commands() {
     assert_eq!(unloaded.get("descriptor").unwrap().as_str().unwrap(), desc);
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
-    let mnemonic = test_util::TEST_MNEMONIC;
+    let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let result = sh(&format!(
         r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
     ));

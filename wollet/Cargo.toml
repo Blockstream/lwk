@@ -45,7 +45,7 @@ lwk_signer = { path = "../lwk_signer" }
 lwk_jade = { path = "../lwk_jade" }
 bs_containers = { path = "../bs_containers" }
 minreq = { version = "2.9", features = ["https", "json-using-serde"] }
-test_util = { path = "../test_util" }
+lwk_test_util = { path = "../lwk_test_util" }
 
 [features]
 default = ["esplora"]

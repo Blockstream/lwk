@@ -43,11 +43,11 @@ mod tests {
     #[test]
     fn test_lwk_flow() {
         let datadir = "/tmp/.lwk";
-        let mnemonic = test_util::TEST_MNEMONIC;
-        let network: Network = test_util::network_regtest().into();
+        let mnemonic = lwk_test_util::TEST_MNEMONIC;
+        let network: Network = lwk_test_util::network_regtest().into();
         let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
 
-        let server = test_util::setup(false);
+        let server = lwk_test_util::setup(false);
 
         let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 

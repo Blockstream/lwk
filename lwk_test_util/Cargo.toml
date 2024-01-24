@@ -1,5 +1,5 @@
 [package]
-name = "test_util"
+name = "lwk_test_util"
 version = "0.1.0"
 edition = "2021"
 

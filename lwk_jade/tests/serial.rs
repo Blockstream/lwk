@@ -1,7 +1,7 @@
 use lwk_jade::{protocol::JadeState, Jade, BAUD_RATE, TIMEOUT};
 
 fn serial_test_setup() -> Jade {
-    test_util::init_logging();
+    lwk_test_util::init_logging();
     let ports = serialport::available_ports().unwrap();
     let path = &ports[0].port_name;
     let port = serialport::new(path, BAUD_RATE)

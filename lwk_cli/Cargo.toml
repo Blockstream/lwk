@@ -24,7 +24,7 @@ shellwords = "1.1.0"
 elements = "0.24.0"
 tempfile = "3.8.0"
 bs_containers = { path = "../bs_containers" }
-test_util = { path = "../test_util" }
+lwk_test_util = { path = "../lwk_test_util" }
 
 
 [features]

@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn esplora_local() {
-        let server = test_util::setup(true);
+        let server = lwk_test_util::setup(true);
 
         let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
         test_esplora_url(&esplora_url);

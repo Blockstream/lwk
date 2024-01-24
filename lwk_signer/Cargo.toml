@@ -15,4 +15,4 @@ lwk_common = { path = "../lwk_common" }
 lwk_jade = { path = "../lwk_jade" }
 
 [dev-dependencies]
-test_util = { path = "../test_util" }
+lwk_test_util = { path = "../lwk_test_util" }

@@ -41,9 +41,9 @@ mod tests {
 
     #[test]
     fn signer() {
-        let mnemonic_str = test_util::TEST_MNEMONIC;
+        let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
-        let network: crate::Network = test_util::network_regtest().into();
+        let network: crate::Network = lwk_test_util::network_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 

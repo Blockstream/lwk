@@ -5,7 +5,7 @@ use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_signer::AnySigner;
 
 use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};
-use test_util::{
+use lwk_test_util::{
     generate_signer, init_logging, multisig_desc, register_multisig, setup, TestElectrumServer,
     TestWollet,
 };
@@ -104,7 +104,7 @@ fn jade_slip77() {
     let desc_str =
         lwk_common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant, false)
             .unwrap();
-    assert!(desc_str.contains(test_util::TEST_MNEMONIC_SLIP77))
+    assert!(desc_str.contains(lwk_test_util::TEST_MNEMONIC_SLIP77))
 }
 
 #[cfg(feature = "serial")]

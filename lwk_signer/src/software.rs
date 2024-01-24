@@ -169,16 +169,22 @@ mod tests {
 
     #[test]
     fn new_signer() {
-        let signer = SwSigner::new(test_util::TEST_MNEMONIC, false).unwrap();
+        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
         assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
             SwSigner::new("bad", false).expect_err("test").to_string()
         );
-        assert_eq!(test_util::TEST_MNEMONIC_XPUB, &signer.xpub().to_string());
+        assert_eq!(
+            lwk_test_util::TEST_MNEMONIC_XPUB,
+            &signer.xpub().to_string()
+        );
 
         let slip77 = signer.slip77_master_blinding_key().unwrap();
         assert_eq!(slip77.as_bytes().to_hex(), format!("{}", slip77));
-        assert_eq!(slip77.as_bytes().to_hex(), test_util::TEST_MNEMONIC_SLIP77);
+        assert_eq!(
+            slip77.as_bytes().to_hex(),
+            lwk_test_util::TEST_MNEMONIC_SLIP77
+        );
     }
 }

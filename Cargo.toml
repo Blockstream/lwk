@@ -12,7 +12,7 @@ members = [
     "bs_containers",
     "lwk_common",
     "lwk_rpc_model",
-    "test_util",
+    "lwk_test_util",
 ]
 resolver = "2"
 

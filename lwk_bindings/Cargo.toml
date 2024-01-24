@@ -20,4 +20,4 @@ crate-type = ["cdylib"]
 name = "lwk_bindings"
 
 [dev-dependencies]
-test_util = { path = "../test_util" }
+lwk_test_util = { path = "../lwk_test_util" }

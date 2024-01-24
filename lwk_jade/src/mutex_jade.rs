@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 use std::sync::{Mutex, PoisonError};
-use std::time::Duration;
 
 use elements::{bitcoin::bip32::Xpub, pset::PartiallySignedTransaction};
 use elements_miniscript::slip77::{self, MasterBlindingKey};
@@ -42,7 +41,7 @@ impl MutexJade {
     pub fn from_serial(
         network: Network,
         port_name: &str,
-        timeout: Option<Duration>,
+        timeout: Option<std::time::Duration>,
     ) -> Result<Self, Error> {
         tracing::info!("serial port {port_name}");
         let timeout = timeout.unwrap_or(TIMEOUT);
@@ -56,7 +55,7 @@ impl MutexJade {
     /// Try to unlock a jade on any available serial port, returning all of the attempts
     pub fn from_any_serial(
         network: Network,
-        timeout: Option<Duration>,
+        timeout: Option<std::time::Duration>,
     ) -> Vec<Result<Self, Error>> {
         let mut result = vec![];
         let ports = Self::available_ports_with_jade();
@@ -92,7 +91,7 @@ impl MutexJade {
     pub fn from_serial_matching_id(
         network: Network,
         id: &elements::bitcoin::XKeyIdentifier,
-        timeout: Option<Duration>,
+        timeout: Option<std::time::Duration>,
     ) -> Option<Self> {
         Self::from_any_serial(network, timeout)
             .into_iter()

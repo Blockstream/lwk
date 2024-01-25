@@ -5,24 +5,19 @@ use lwk_wollet::BlockchainBackend;
 use crate::{LwkError, Transaction, Txid, Update, Wollet};
 
 #[derive(uniffi::Object, Debug)]
-pub struct ElectrumClient {
-    inner: Mutex<lwk_wollet::ElectrumClient>,
+pub struct EsploraClient {
+    inner: Mutex<lwk_wollet::EsploraClient>,
 }
 
 #[uniffi::export]
-impl ElectrumClient {
-    /// Construct an Electrum client
+impl EsploraClient {
+    /// Construct an Esplora Client
     #[uniffi::constructor]
-    pub fn new(
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
-    ) -> Result<Arc<Self>, LwkError> {
-        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain);
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
-        Ok(Arc::new(Self {
+    pub fn new(url: &str) -> Arc<Self> {
+        let client = lwk_wollet::EsploraClient::new(url);
+        Arc::new(Self {
             inner: Mutex::new(client),
-        }))
+        })
     }
 
     pub fn broadcast(&self, tx: &Transaction) -> Result<Arc<Txid>, LwkError> {

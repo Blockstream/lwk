@@ -14,6 +14,7 @@ use crate::{store::Height, BlockchainBackend, Error};
 
 use super::History;
 
+#[derive(Debug)]
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 pub struct EsploraClient {

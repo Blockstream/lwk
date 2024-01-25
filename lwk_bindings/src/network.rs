@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::{types::AssetId, ElectrumClient, LwkError};
+use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -27,6 +27,33 @@ impl From<Network> for lwk_wollet::ElementsNetwork {
 
 #[uniffi::export]
 impl Network {
+    #[uniffi::constructor]
+    pub fn mainnet() -> Arc<Network> {
+        Arc::new(lwk_wollet::ElementsNetwork::Liquid.into())
+    }
+
+    #[uniffi::constructor]
+    pub fn testnet() -> Arc<Network> {
+        Arc::new(lwk_wollet::ElementsNetwork::LiquidTestnet.into())
+    }
+
+    #[uniffi::constructor]
+    pub fn regtest(policy_asset: AssetId) -> Arc<Network> {
+        Arc::new(
+            lwk_wollet::ElementsNetwork::ElementsRegtest {
+                policy_asset: policy_asset.into(),
+            }
+            .into(),
+        )
+    }
+
+    #[uniffi::constructor]
+    pub fn regtest_default() -> Arc<Network> {
+        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
+        Arc::new(lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
+    }
+
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => ("blockstream.info:995", true, true),
@@ -38,46 +65,20 @@ impl Network {
 
         ElectrumClient::new(url, tls, validate_domain)
     }
-}
 
-#[uniffi::export]
-impl Network {
+    pub fn default_esplora_client(&self) -> Arc<EsploraClient> {
+        let url = match &self.inner {
+            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/api",
+            lwk_wollet::ElementsNetwork::LiquidTestnet => {
+                "https://blockstream.info/liquidtestnet/api"
+            }
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+        };
+
+        EsploraClient::new(url)
+    }
+
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
-    }
-}
-
-#[derive(uniffi::Object)]
-pub struct NetworkBuilder {}
-
-// TODO remove NetworkBuilder, while you can't have associated function you can have more than one constructor!
-#[uniffi::export]
-impl NetworkBuilder {
-    #[uniffi::constructor]
-    pub fn new() -> Arc<Self> {
-        Arc::new(Self {})
-    }
-
-    pub fn mainnet(&self) -> Arc<Network> {
-        Arc::new(lwk_wollet::ElementsNetwork::Liquid.into())
-    }
-
-    pub fn testnet(&self) -> Arc<Network> {
-        Arc::new(lwk_wollet::ElementsNetwork::LiquidTestnet.into())
-    }
-
-    pub fn regtest(&self, policy_asset: AssetId) -> Arc<Network> {
-        Arc::new(
-            lwk_wollet::ElementsNetwork::ElementsRegtest {
-                policy_asset: policy_asset.into(),
-            }
-            .into(),
-        )
-    }
-
-    pub fn regtest_default(&self) -> Arc<Network> {
-        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
-        Arc::new(lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
     }
 }

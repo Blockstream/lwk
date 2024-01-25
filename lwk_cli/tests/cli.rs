@@ -1069,6 +1069,15 @@ fn test_elip151() {
 
     // Jade does not support elip151 for singlesig too,
     // but since it assumes that the key is slip77 we can do nothing about it.
+    let r = sh(&format!(
+        "{cli} signer singlesig-desc -s emul --descriptor-blinding-key elip151 --kind wpkh"
+    ));
+    let desc_ssj = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load -w ssj -d {desc_ssj}"));
+    let r = sh_result(&format!("{cli} wallet address -w ssj -s emul"));
+    assert!(
+        format!("{:?}", r.unwrap_err()).contains("Mismatching addresses between wallet and jade")
+    );
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

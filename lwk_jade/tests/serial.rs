@@ -1,4 +1,9 @@
-use lwk_jade::{protocol::JadeState, Jade, BAUD_RATE, TIMEOUT};
+use lwk_jade::{
+    get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
+    protocol::JadeState,
+    Jade, BAUD_RATE, TIMEOUT,
+};
+use std::str::FromStr;
 
 fn serial_test_setup() -> Jade {
     lwk_test_util::init_logging();
@@ -55,4 +60,24 @@ fn version_info() {
 
     let result = jade_api.version_info().unwrap();
     assert_eq!(result.jade_networks, "TEST".to_string());
+}
+
+#[test]
+#[ignore = "requires hardware jade connected via usb/serial"]
+fn receive_address() {
+    let mut jade_api = serial_test_setup();
+
+    jade_api.unlock().unwrap();
+
+    let params = GetReceiveAddressParams {
+        network: lwk_jade::Network::TestnetLiquid,
+        address: SingleOrMulti::Single {
+            variant: Variant::ShWpkh,
+            path: vec![2147483697, 2147483648, 2147483648, 0, 143],
+        },
+    };
+    let result = jade_api.get_receive_address(params).unwrap();
+    let address = elements::Address::from_str(&result).unwrap();
+    assert!(address.blinding_pubkey.is_some());
+    assert_eq!(address.params, &elements::AddressParams::LIQUID_TESTNET);
 }

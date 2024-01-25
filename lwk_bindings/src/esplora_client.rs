@@ -13,11 +13,11 @@ pub struct EsploraClient {
 impl EsploraClient {
     /// Construct an Esplora Client
     #[uniffi::constructor]
-    pub fn new(url: &str) -> Result<Arc<Self>, LwkError> {
-        let client = lwk_wollet::EsploraClient::new(&url);
-        Ok(Arc::new(Self {
+    pub fn new(url: &str) -> Arc<Self> {
+        let client = lwk_wollet::EsploraClient::new(url);
+        Arc::new(Self {
             inner: Mutex::new(client),
-        }))
+        })
     }
 
     pub fn broadcast(&self, tx: &Transaction) -> Result<Arc<Txid>, LwkError> {

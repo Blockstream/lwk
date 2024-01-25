@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::{types::AssetId, ElectrumClient, LwkError};
+use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -64,6 +64,18 @@ impl Network {
         };
 
         ElectrumClient::new(url, tls, validate_domain)
+    }
+
+    pub fn default_esplora_client(&self) -> Arc<EsploraClient> {
+        let url = match &self.inner {
+            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/api",
+            lwk_wollet::ElementsNetwork::LiquidTestnet => {
+                "https://blockstream.info/liquidtestnet/api"
+            }
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+        };
+
+        EsploraClient::new(url)
     }
 
     pub fn is_mainnet(&self) -> bool {

@@ -2,8 +2,9 @@
 name = "lwk_test_util"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Liquid Wallet Kit - Test utilities"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_test_util"
 
 [dependencies]
 electrsd = { version = "0.25.0", features = ["legacy"] }

@@ -3,6 +3,9 @@ name = "lwk_jade"
 version = "0.1.0"
 edition = "2021"
 autotests = false
+description = "Liquid Wallet Kit - Interact with the Blockstream Jade Hardware Wallet"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_jade"
 
 [dependencies]
 # anyhow = "1"

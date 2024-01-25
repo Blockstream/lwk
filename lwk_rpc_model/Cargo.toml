@@ -2,6 +2,9 @@
 name = "lwk_rpc_model"
 version = "0.1.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Model of data used with the RPC server"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_rpc_model"
 
 [dependencies]
 schemars = "0.8.16"

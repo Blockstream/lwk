@@ -2,6 +2,9 @@
 name = "lwk_bindings"
 version = "0.1.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Bindings for other languages"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_bindings"
 
 [dependencies]
 elements = "0.24.0"

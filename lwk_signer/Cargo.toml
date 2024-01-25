@@ -2,8 +2,9 @@
 name = "lwk_signer"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Liquid Wallet Kit - Signers for PSETs (Partially Signed Elements Transactions)"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_signer"
 
 [dependencies]
 bip39 = { version = "2.0.0", features = ["rand"] }

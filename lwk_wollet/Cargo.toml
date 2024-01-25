@@ -1,15 +1,11 @@
 [package]
 name = "lwk_wollet"
 version = "0.1.0"
-authors = [
-    "Riccardo Casatta <riccardo@casatta.it>",
-    "Nadav Ivgi <nadav@shesek.info>",
-    "William Casarin <jb55@jb55.com>",
-    "Leonardo Comandini <leo@leocomandini.org>",
-]
-license = "(MIT)"
-edition = "2018"
+edition = "2021"
 autotests = false
+description = "Liquid Wallet Kit - Watch-only wallet based on CT Descriptors"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_wollet"
 
 [lib]
 crate-type = ["lib"]

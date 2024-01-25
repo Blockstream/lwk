@@ -2,6 +2,9 @@
 name = "lwk_common"
 version = "0.1.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Common utilities"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_common"
 
 [dependencies]
 elements = "0.24.0"

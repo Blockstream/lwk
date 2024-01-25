@@ -3,7 +3,9 @@ name = "lwk_cli"
 version = "0.1.0"
 edition = "2021"
 autotests = false
-
+description = "Liquid Wallet Kit - Command line interface to interact with the RPC server"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_cli"
 
 [dependencies]
 anyhow = "1.0.75"

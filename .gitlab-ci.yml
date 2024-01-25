@@ -79,7 +79,7 @@ test_coverage:
 build_cli:
   extends: .base
   only:
-    - ks@leocomandini/BEWallet
+    - master@liquid/lwk
   script:
     - cargo build --release -p lwk_cli
   artifacts:

@@ -35,7 +35,7 @@ just env-python-bindings
 import lwk_bindings as lwk
 
 mnemonic = lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
-network = lwk.NetworkBuilder().testnet()
+network = lwk.Network.testnet()
 client = network.default_electrum_client()
 
 signer = lwk.Signer(mnemonic, network)

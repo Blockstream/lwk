@@ -767,6 +767,11 @@ fn test_jade_emulator() {
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     send(&cli, "multi", &addr, policy_asset, 1_000, signers);
 
+    // Confirm the address on jade
+    sh(&format!("{cli} wallet address -w ss-wpkh -s emul"));
+    sh(&format!("{cli} wallet address -w ss-shwpkh -s emul"));
+    sh(&format!("{cli} wallet address -w multi -s emul"));
+
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
     t.join().unwrap();

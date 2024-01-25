@@ -9,7 +9,7 @@ use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Txid};
 use bip39::Mnemonic;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
-use electrum_client::ElectrumApi;
+use electrsd::electrum_client::ElectrumApi;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;

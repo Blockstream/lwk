@@ -116,8 +116,17 @@ impl Client {
         self.make_request(Method::Balance, Some(req))
     }
 
-    pub fn address(&self, name: String, index: Option<u32>) -> Result<response::Address, Error> {
-        let req = request::Address { name, index };
+    pub fn address(
+        &self,
+        name: String,
+        index: Option<u32>,
+        signer: Option<String>,
+    ) -> Result<response::Address, Error> {
+        let req = request::Address {
+            name,
+            index,
+            signer,
+        };
         self.make_request(Method::Address, Some(req))
     }
 

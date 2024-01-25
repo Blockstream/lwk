@@ -98,6 +98,9 @@ pub struct Address {
 
     /// The derivation index for the wildcard, if missing the first unused index is used
     pub index: Option<u32>,
+
+    /// The signer name
+    pub signer: Option<String>,
 }
 
 /// The balance of a wallet

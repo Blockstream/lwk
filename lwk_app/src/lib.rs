@@ -21,6 +21,8 @@ use lwk_common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
     InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
 };
+use lwk_jade::derivation_path_to_vec;
+use lwk_jade::get_receive_address::Variant;
 use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::{AnySigner, SwSigner};
@@ -32,6 +34,7 @@ use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{AssetId, TxOutSecrets};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
+use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_wollet::BlockchainBackend;
 use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
 use serde_json::Value;
@@ -319,6 +322,65 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let wollet = s.wollets.get_mut(&r.name)?;
             full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let addr = wollet.address(r.index)?;
+            let definite_desc = wollet
+                .wollet_descriptor()
+                .definite_descriptor(lwk_wollet::Chain::External, addr.index())?;
+
+            if let Some(signer) = r.signer {
+                let signer = s.get_available_signer(&signer)?;
+                if let AnySigner::Jade(jade, _id) = signer {
+                    let fingerprint = signer.fingerprint()?;
+
+                    // Get the derivation paths for all signers
+                    let mut paths: Vec<Vec<u32>> = vec![];
+                    // Get the full path for the signer
+                    let mut full_path: Vec<u32> = vec![];
+                    definite_desc.for_each_key(|k| {
+                        if k.master_fingerprint() == fingerprint {
+                            if let Some(path) = k.full_derivation_path() {
+                                full_path = derivation_path_to_vec(&path);
+                            }
+                        }
+                        if let DescriptorPublicKey::XPub(x) = k.as_descriptor_public_key() {
+                            paths.push(derivation_path_to_vec(&x.derivation_path));
+                        }
+                        true
+                    });
+
+                    if full_path.is_empty() {
+                        return Err(Error::Generic("Signer is not in wallet".into()));
+                    }
+                    let jade_addr = match paths.len() {
+                        0 => return Err(Error::Generic("Unsupported signer or descriptor".into())),
+                        1 => {
+                            // Single sig
+                            match definite_desc.desc_type() {
+                                DescriptorType::Wpkh => {
+                                    jade.get_receive_address_single(Variant::Wpkh, full_path)?
+                                }
+                                DescriptorType::ShWpkh => {
+                                    jade.get_receive_address_single(Variant::ShWpkh, full_path)?
+                                }
+                                _ => {
+                                    return Err(Error::Generic(
+                                        "Unsupported signer or descriptor".into(),
+                                    ))
+                                }
+                            }
+                        }
+                        _ => {
+                            // Multi sig
+                            jade.get_receive_address_multi(&r.name, paths)?
+                        }
+                    };
+                    if jade_addr != addr.address().to_string() {
+                        return Err(Error::Generic(
+                            "Mismatching addresses between wallet and jade".into(),
+                        ));
+                    }
+                }
+            };
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::Address {

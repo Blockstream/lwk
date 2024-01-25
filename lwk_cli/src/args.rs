@@ -395,6 +395,12 @@ pub enum WalletCommand {
 
         #[arg(long)]
         index: Option<u32>,
+
+        /// Signer name
+        ///
+        /// Display the address on hardware signers.
+        #[arg(short, long)]
+        signer: Option<String>,
     },
 
     /// Get the balance of the given wallet name

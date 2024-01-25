@@ -18,7 +18,7 @@ variables:
     - docker:20.10.12-dind
 
 
-fmt:
+fmt_clippy:
   extends: .base
   script:
     - cargo fmt --check

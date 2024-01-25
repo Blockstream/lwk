@@ -10,10 +10,12 @@ RUN apt install -y libudev-dev libxml2-utils
 RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
+RUN rustup toolchain install 1.70.0
 
 RUN cargo install cargo-audit
 RUN cargo install cargo-nextest
 RUN cargo install grcov
+RUN cargo install just
 
 COPY download_bins.sh /download_bins.sh
 RUN ./download_bins.sh
@@ -23,6 +25,3 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 COPY env.sh /env.sh
-
-RUN cargo install just # move up when an upper layer is modified
-RUN rustup toolchain install 1.70.0

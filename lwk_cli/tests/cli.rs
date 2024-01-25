@@ -99,6 +99,14 @@ fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str], dbk:
     }
 }
 
+fn singlesig_wallet(cli: &str, wallet: &str, signer: &str, dbk: &str, kind: &str) {
+    let r = sh(&format!(
+        "{cli} signer singlesig-desc -s {signer} --descriptor-blinding-key {dbk} --kind {kind}"
+    ));
+    let desc = r.get("descriptor").unwrap().as_str().unwrap();
+    sh(&format!("{cli} wallet load -w {wallet} -d {desc}"));
+}
+
 fn txs(cli: &str, wallet: &str) -> Vec<Value> {
     let r = sh(&format!("{cli} wallet txs --wallet {wallet}"));
     r.get("txs").unwrap().as_array().unwrap().to_vec()
@@ -746,6 +754,9 @@ fn test_jade_emulator() {
         "{cli} signer load-jade --signer emul --id {identifier}  --emulator {jade_addr}"
     ));
     assert!(result.get("id").is_some());
+    // Load singlesig wallets
+    singlesig_wallet(&cli, "ss-wpkh", "emul", "slip77", "wpkh");
+    singlesig_wallet(&cli, "ss-shwpkh", "emul", "slip77", "shwpkh");
 
     // Use jade in a multisig wallet
     sw_signer(&cli, "sw");

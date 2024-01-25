@@ -176,7 +176,8 @@ impl WolletDescriptor {
             .address(&crate::EC, params)?)
     }
 
-    pub(crate) fn definite_descriptor(
+    /// Get a definite descriptor
+    pub fn definite_descriptor(
         &self,
         ext_int: Chain,
         index: u32,

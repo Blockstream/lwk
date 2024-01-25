@@ -6,6 +6,7 @@ use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::Signer;
 
 use crate::connection::Connection;
+use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::network::Network;
 use crate::protocol::{GetMasterBlindingKeyParams, GetXpubParams};
 use crate::{derivation_path_to_vec, Error, Jade};
@@ -135,6 +136,33 @@ impl MutexJade {
 
     pub fn network(&self) -> Network {
         self.network
+    }
+
+    pub fn get_receive_address_single(
+        &self,
+        variant: Variant,
+        path: Vec<u32>,
+    ) -> Result<String, Error> {
+        let params = GetReceiveAddressParams {
+            network: self.network(),
+            address: SingleOrMulti::Single { variant, path },
+        };
+        self.inner.lock()?.get_receive_address(params)
+    }
+
+    pub fn get_receive_address_multi(
+        &self,
+        name: &str,
+        paths: Vec<Vec<u32>>,
+    ) -> Result<String, Error> {
+        let params = GetReceiveAddressParams {
+            network: self.network(),
+            address: SingleOrMulti::Multi {
+                multisig_name: name.to_string(),
+                paths,
+            },
+        };
+        self.inner.lock()?.get_receive_address(params)
     }
 }
 

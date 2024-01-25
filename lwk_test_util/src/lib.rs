@@ -16,6 +16,7 @@ use lwk_common::Signer;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::*;
 use lwk_wollet::*;
+use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use std::convert::TryInto;
@@ -72,6 +73,38 @@ fn node_generate(client: &Client, block_num: u32) {
     client
         .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
         .unwrap();
+}
+
+pub fn parse_code_from_markdown(markdown_input: &str, code_kind: &str) -> Vec<String> {
+    let parser = pulldown_cmark::Parser::new(markdown_input);
+    let mut result = vec![];
+    let mut str = String::new();
+    let mut active = false;
+
+    for el in parser {
+        match el {
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(current)))
+                if code_kind == current.as_ref() =>
+            {
+                active = true
+            }
+            Event::Text(t) => {
+                if active {
+                    str.push_str(t.as_ref())
+                }
+            }
+            Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(current)))
+                if code_kind == current.as_ref() =>
+            {
+                result.push(str.clone());
+                str.clear();
+                active = false;
+            }
+            _ => (),
+        }
+    }
+
+    result
 }
 
 /// Serialize and deserialize a PSET
@@ -844,4 +877,39 @@ fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
         .iter()
         .filter(|e| e.is_reissuance())
         .count()
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::parse_code_from_markdown;
+
+    #[test]
+    fn test_parse_code_from_markdown() {
+        let mkdown = r#"
+```python
+python
+code
+```
+```rust
+rust
+code
+```
+
+```python
+some more
+python code
+"#;
+        let res = parse_code_from_markdown(mkdown, "python");
+        assert_eq!(
+            res,
+            vec![
+                "python\ncode\n".to_string(),
+                "some more\npython code\n".to_string()
+            ]
+        );
+
+        let res = parse_code_from_markdown(mkdown, "rust");
+        assert_eq!(res, vec!["rust\ncode\n".to_string()])
+    }
 }

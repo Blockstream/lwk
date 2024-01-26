@@ -9,7 +9,7 @@ documentation = "https://docs.rs/lwk_bindings"
 [dependencies]
 elements = "0.24.0"
 thiserror = "1.0.50"
-uniffi = { version = "0.26.1" }
+uniffi = { version = "0.26.1", features = ["bindgen-tests"] }
 lwk_wollet = { path = "../lwk_wollet" }
 lwk_common = { path = "../lwk_common" }
 lwk_signer = { path = "../lwk_signer" }
@@ -24,3 +24,6 @@ name = "lwk_bindings"
 
 [dev-dependencies]
 lwk_test_util = { path = "../lwk_test_util" }
+
+[features]
+foreign_bindings = []

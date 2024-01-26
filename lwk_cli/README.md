@@ -6,7 +6,7 @@ Building the needed executable requires [rust](https://www.rust-lang.org/tools/i
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk
 $ cargo build --release
-$ alias cli="$(pwd)/target/release/cli"
+$ alias cli="$(pwd)/target/release/lwk_cli"
 ```
 
 Help shows available commands:

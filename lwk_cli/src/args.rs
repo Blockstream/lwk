@@ -318,8 +318,6 @@ pub enum SignerCommand {
 pub enum BlindingKeyKind {
     Slip77,
     Elip151,
-    View,
-    Bare,
 }
 
 impl Display for BlindingKeyKind {
@@ -327,8 +325,6 @@ impl Display for BlindingKeyKind {
         match self {
             BlindingKeyKind::Slip77 => write!(f, "slip77"),
             BlindingKeyKind::Elip151 => write!(f, "elip151"),
-            BlindingKeyKind::View => write!(f, "view"),
-            BlindingKeyKind::Bare => write!(f, "bare"),
         }
     }
 }

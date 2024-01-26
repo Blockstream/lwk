@@ -4,122 +4,97 @@
 
 Liquid Wallet Kit is a collection of Rust crates for Liquid Wallets.
 
-The Liquid Wallet Kit project aims to provide an easy solution to use
-multisig and HWW on the Elements/Liquid network, including the
-ability to create and sign issuance, reissuance and burn
-transactions.
+## Main Features
+
+* **Watch-Only**: using Liquid descriptors, better known as
+  [CT descriptors](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki).
+* **PSET** based: transaction are shared and processed using the
+  [Partially Signed Elements Transaction](https://github.com/ElementsProject/elements/blob/1fcf0cf2323b7feaff5d1fc4c506fff5ec09132e/doc/pset.mediawiki) format.
+* **Electrum** and **Esplora** [backend](https://github.com/Blockstream/electrs):
+  no need to run and sync a full
+  node or rely on closed source servers.
+* **Issuance**, **reissuance** and **burn** support: manage the lifecycle
+  of your Issued Assets with a lightweight client.
+* **Generic multisig**: create a wallet controlled by
+  different (software and hardware) signers with a user
+  specified quorum.
+* [**Jade**](https://blockstream.com/jade/) support:
+  receive, issue, reissue and burn L-BTC and
+  Issued Assets with your Jade, using singlesig or multisig
+  wallets.
+
+## Example
+
+First you need [rust](https://www.rust-lang.org/tools/install),
+then you can build from source:
+```sh
+$ git clone git@github.com:Blockstream/lwk.git
+$ cd lwk
+$ cargo build --release
+$ alias cli="$(pwd)/target/release/lwk_cli"
+```
+
+Start the rpc server (default in Liquid Testnet)
+and put it in background
+```sh
+$ cli server start &
+```
+
+Create a *signer* named `sw`
+```sh
+$ cli signer load-software -s sw --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+```
+
+Create a p2wph *wallet* named `ss` (install `jq` or extract the descriptor manually)
+```sh
+$ DESC=$(cli signer singlesig-desc -s sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ cli wallet load -w ss -d $DESC
+```
+
+Get the balance
+```sh
+$ cli wallet balance -w ss
+```
+
+When you're done, stop the rpc server.
+```sh
+$ cli server stop
+```
+
+### Jade
+
+If you have a Jade, you can plug it in and use it to create a
+wallet and sign its transactions.
 
 ## Structure
 
 Instead of going for a monolithic approach, we opted to split
 the projects in different components that might be useful
-independently.
+independently:
 
-### Wollet
+* [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
+* [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;
+  specify a CT descriptor, generate new addresses, get balance,
+  create PSETs and other actions.
+* [`lwk_signer`](./lwk_signer): interact with Liquid signers
+  to get your PSETs signed.
+* [`lwk_jade`](./lwk_jade): unlock Jade, get xpubs,
+  register multisig wallets, sign PSETs and more.
+* [`lwk_bindings`](./lwk_bindings): use LWK from other languages.
+* and more:
+  common or ancillary components ([`lwk_common`](./lwk_common),
+  [`lwk_rpc_model`](./lwk_rpc_model), [`lwk_tiny_rpc`](./lwk_tiny_rpc),
+  [`lwk_app`](./lwk_app)),
+  future improvements ([`lwk_hwi`](./lwk_hwi)),
+  testing infrastructure ([`lwk_test_util`](./lwk_test_util),
+  [`lwk_containers`](./lwk_containers))
 
-A library for Elements/Liquid watch only wallets.
-
-The caller specifies a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
-and the library will use a Elements/Liquid Electrum server to fetch
-blockchain data.
-
-The wallet can generate new addresses, get transactions/utxos/balance,
-create PSETs and other actions.
-
-Used by:
-* `lwk_app`
-
-This module might be used by:
-* Exchanges who need a watch-only wallet to process incoming payments.
-
-### Signer
-
-Library to interact with Elements/Liquid signers.
-
-Signer are capable of inspecting and signing PSETs.
-
-Currently supported signers:
-* Software
-* Jade
-
-Used by:
-* `lwk_app`
-* `lwk_wollet` (tests)
-
-This module might be used by:
-* AMP2
-
-### Jade
-
-Library to interact with Jade.
-
-Unlock Jade, register multisig wallets, sign PSETs.
-
-Used by:
-* `lwk_signer`
-* `lwk_wollet` (tests)
-
-This module might be used by:
-* (Mobile) apps that needs to interact with Jade
-
-### Hwi
-
-Placeholder crate, currently unused.
-
-Once we will have support for multiple HWW vendors,
-we can make `lwk_jade` a dependency of this crate.
-
-### Common
-
-A crate containing common code used in multiple other crate in the workspace, such as:
-
- * Utils to inspect a PSET: get the net effect of a PSET on a given wallet, or get how many
- signatures are missing, and which signers should provide them.
- * Signer trait: contains the methods to be implemented by a signer such as signing a pset or
- returning an xpub
-
-To avoid circular dependencies this crate must not depend on other crate of the workspace
-
-Used by:
-* `lwk_wollet`
-* `lwk_signer`
-* `lwk_jade`
-
-### Bs cointainers
-
-Collections of docker containers wrappers to setup test cases using Blockstream projects:
-* Jade emulator
-* Pin server
-
-This module might be used by:
-* Projects using the above Blockstream projects
-
-Used by:
-* `lwk_wollet` (tests)
-* `lwk_jade` (tests)
-
-### Tiny jrpc
-
-Tiny json rpc server.
-
-Used by:
-* `lwk_app`
-
-### App
-
-Handle the jrpc server and serves requests coming from clients
-such as `lwk_cli`.
-
-Used by:
-* `lwk_cli`
-
-### Cli
-
-CLI to interact with the json rpc server.
+For instance, mobile app devs might be interested mainly in
+`lwk_bindings`, `lwk_wollet` and `lwk_signer`.
+While backend developers might want to directly use `lwk_cli`
+in their systems.
 
 ## Tests
-
-Run tests:
 
 Run unit tests:
 ```
@@ -172,17 +147,13 @@ cargo test -p lwk_jade --features serial -- serial --include-ignored --test-thre
 cargo test -p lwk_wollet --features serial -- serial --include-ignored --test-threads 1
 ```
 
-### Docs
+## Docs
 
 To generate documentation you can use
 
 ```
 cargo doc --no-deps --open
 ```
-
-### Bindings
-
-See `lwk_bindings/README.md`
 
 ## History
 

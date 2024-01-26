@@ -378,6 +378,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                             "Mismatching addresses between wallet and jade".into(),
                         ));
                     }
+                } else {
+                    return Err(Error::Generic(
+                        "Cannot display address with software signer".into(),
+                    ));
                 }
             };
 

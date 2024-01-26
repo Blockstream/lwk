@@ -776,6 +776,9 @@ fn test_jade_emulator() {
     let r = sh_result(&format!("{cli} wallet address -w ss-sw -s emul"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Signer is not in wallet"));
 
+    let r = sh_result(&format!("{cli} wallet address -w ss-sw -s sw"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Cannot display address with software signer"));
+
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
     t.join().unwrap();

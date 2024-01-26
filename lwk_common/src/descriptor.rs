@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use elements::bitcoin::bip32::{DerivationPath, KeySource, Xpub};
+use elements::hex::ToHex;
+use rand::{thread_rng, Rng};
 use thiserror::Error;
 
 use crate::Signer;
@@ -75,10 +77,11 @@ pub fn multisig_desc(
                 "Deterministic slip77 key not supported in multisig descriptor generation".into(),
             )
         }
-        DescriptorBlindingKey::Slip77Rand => format!(
-            "slip77({})",
-            "1111111111111111111111111111111111111111111111111111111111111111"
-        ), // TODO: make this actually random
+        DescriptorBlindingKey::Slip77Rand => {
+            let mut bytes = [0u8; 32];
+            thread_rng().fill(&mut bytes);
+            format!("slip77({})", bytes.to_hex())
+        }
         DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 

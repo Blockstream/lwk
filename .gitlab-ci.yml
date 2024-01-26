@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:511fa00c37fd3cb8aec7c250f6a3b94ed89f3baf1372b4951bb9568704a45e23
+  image: xenoky/lwk-builder@sha256:22cd3fa14dce572d33ab9b98bc4bb784381d41fa73bf25e0f885fc41fc75202f
   tags:
     - cloud
   retry:
@@ -103,10 +103,9 @@ doc:
 
 bindings:
   extends: .base
-  variables:
-    LIB_EXT: "so"
   script:
-    - just test-python-bindings
+    - cd / && . ./env.sh && cd -
+    - cargo test -p lwk_bindings --features foreign_bindings
 
 check_rust_170:
   extends: .base

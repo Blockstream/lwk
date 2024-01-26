@@ -772,6 +772,10 @@ fn test_jade_emulator() {
     sh(&format!("{cli} wallet address -w ss-shwpkh -s emul"));
     sh(&format!("{cli} wallet address -w multi -s emul"));
 
+    singlesig_wallet(&cli, "ss-sw", "sw", "slip77", "wpkh");
+    let r = sh_result(&format!("{cli} wallet address -w ss-sw -s emul"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Signer is not in wallet"));
+
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
     t.join().unwrap();

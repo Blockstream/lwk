@@ -401,17 +401,27 @@ fn test_wallet_details() {
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet sssh -d {desc_sssh}"));
 
+    let r = sh_result(&format!(
+        "{cli} signer singlesig-desc -s s1 --descriptor-blinding-key slip77-rand --kind wpkh"
+    ));
+    let err = "Random slip77 key not supported in singlesig descriptor generation";
+    assert!(format!("{:?}", r.unwrap_err()).contains(err));
+
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
     let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet ms -d {desc_ms}"));
 
+    let r = sh_result(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
+    let err = "Deterministic slip77 key not supported in multisig descriptor generation";
+    assert!(format!("{:?}", r.unwrap_err()).contains(err));
+
     // Multi sig wallet, same signers
-    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
     let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!(
         "{cli} wallet load --wallet ms_same_signers -d {desc_ms_same_signers}"
@@ -740,7 +750,7 @@ fn test_jade_emulator() {
     // Use jade in a multisig wallet
     sw_signer(&cli, "sw");
     let signers = &["sw", "emul"];
-    multisig_wallet(&cli, "multi", 2, signers, "slip77");
+    multisig_wallet(&cli, "multi", 2, signers, "slip77-rand");
     fund(&server, &cli, "multi", 10_000);
     let addr = address(&cli, "multi");
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -826,7 +836,7 @@ fn test_commands() {
     let keyorigin_xpub = result.get("keyorigin_xpub").unwrap().as_str().unwrap();
     assert_eq!(keyorigin_xpub, "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M");
 
-    let result = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
+    let result = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 1 --keyorigin-xpub {keyorigin_xpub}"));
     let multisig_desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
@@ -860,7 +870,7 @@ fn test_multisig() {
     let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
     let keyorigin_xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
 
-    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
+    let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet multi -d {desc}"));
 

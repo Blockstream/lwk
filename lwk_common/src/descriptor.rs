@@ -36,6 +36,9 @@ pub fn singlesig_desc<S: Signer>(
                 .slip77_master_blinding_key()
                 .map_err(|e| format!("{:?}", e))?
         ),
+        DescriptorBlindingKey::Slip77Rand => {
+            return Err("Random slip77 key not supported in singlesig descriptor generation".into())
+        }
         DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 
@@ -67,10 +70,15 @@ pub fn multisig_desc(
     };
 
     let blinding_key = match blinding_variant {
-        DescriptorBlindingKey::Slip77 => format!(
+        DescriptorBlindingKey::Slip77 => {
+            return Err(
+                "Deterministic slip77 key not supported in multisig descriptor generation".into(),
+            )
+        }
+        DescriptorBlindingKey::Slip77Rand => format!(
             "slip77({})",
             "1111111111111111111111111111111111111111111111111111111111111111"
-        ), // TODO: make the slip77key random, but where do we generate it?
+        ), // TODO: make this actually random
         DescriptorBlindingKey::Elip151 => "elip151".to_string(),
     };
 
@@ -114,6 +122,7 @@ impl FromStr for Singlesig {
 #[derive(Debug, Clone, Copy)]
 pub enum DescriptorBlindingKey {
     Slip77,
+    Slip77Rand,
     Elip151,
 }
 
@@ -127,6 +136,7 @@ impl FromStr for DescriptorBlindingKey {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "slip77" => DescriptorBlindingKey::Slip77,
+            "slip77-rand" => DescriptorBlindingKey::Slip77Rand,
             "elip151" => DescriptorBlindingKey::Elip151,
             v => return Err(InvalidBlindingKeyVariant(v.to_string())),
         })

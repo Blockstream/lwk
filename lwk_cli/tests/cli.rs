@@ -505,13 +505,7 @@ fn test_broadcast() {
         desc_generated
     );
 
-    let result = sh(&format!(r#"{cli} wallet address --wallet w1"#));
-    let address = result.get("address").unwrap().as_str().unwrap();
-    let address = Address::from_str(address).unwrap();
-
-    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
-    server.generate(101);
-    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
+    fund(&server, &cli, "w1", 1_000_000);
 
     let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let result = sh(&format!("{cli} wallet balance --wallet w1"));
@@ -566,13 +560,7 @@ fn test_issue() {
     let r = sh(&format!("{cli} wallet load --wallet w1 -d {desc}"));
     assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let r = sh(&format!("{cli} wallet address --wallet w1"));
-    let address = r.get("address").unwrap().as_str().unwrap();
-    let address = Address::from_str(address).unwrap();
-
-    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
-    server.generate(101);
-    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
+    fund(&server, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -800,14 +788,10 @@ fn test_commands() {
         format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
     );
 
-    let expected = Address::from_str("el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry").unwrap();
-    let _txid = server.node_sendtoaddress(&expected, 1_000_000, None);
-    server.generate(101);
-    std::thread::sleep(std::time::Duration::from_millis(5000)); // TODO poll instead of sleep?
+    fund(&server, &cli, "custody", 1_000_000);
 
     let result = sh(&format!("{cli}  wallet balance --wallet custody"));
     let balance_obj = result.get("balance").unwrap();
-    dbg!(&balance_obj);
     let asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let policy_obj = balance_obj.get(asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1000000);
@@ -897,13 +881,7 @@ fn test_multisig() {
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet multi -d {desc}"));
 
-    let r = sh(&format!("{cli} wallet address --wallet multi"));
-    let address = r.get("address").unwrap().as_str().unwrap();
-    let address = Address::from_str(address).unwrap();
-
-    let _txid = server.node_sendtoaddress(&address, 1_000_000, None);
-    server.generate(101);
-    std::thread::sleep(std::time::Duration::from_millis(5000));
+    fund(&server, &cli, "multi", 1_000_000);
 
     let node_address = server.node_getnewaddress();
     let satoshi = 1000;

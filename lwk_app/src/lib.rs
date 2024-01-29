@@ -205,7 +205,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             // TODO recognize different name same descriptor?
             let wollet = Wollet::new(
                 s.config.network,
-                &s.config.datadir.display().to_string(),
+                Some(&s.config.datadir.display().to_string()),
                 &r.descriptor,
             )?;
             s.wollets.insert(&r.name, wollet)?;

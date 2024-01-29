@@ -293,7 +293,7 @@ mod tests {
             let wollet = tempfile::tempdir().unwrap();
             let mut wollet = crate::Wollet::new(
                 ElementsNetwork::LiquidTestnet,
-                &wollet.path().display().to_string(),
+                Some(&wollet.path().display().to_string()),
                 desc_str,
             )
             .unwrap();

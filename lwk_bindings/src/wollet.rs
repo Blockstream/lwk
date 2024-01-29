@@ -29,9 +29,13 @@ impl Wollet {
     pub fn new(
         network: &Network,
         descriptor: &WolletDescriptor,
-        datadir: &str,
+        datadir: Option<String>,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_wollet::Wollet::new((*network).into(), datadir, &descriptor.to_string())?;
+        let inner = lwk_wollet::Wollet::new(
+            (*network).into(),
+            datadir.as_deref(),
+            &descriptor.to_string(),
+        )?;
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
         }))

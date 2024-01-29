@@ -44,7 +44,6 @@ mod tests {
 
     #[test]
     fn test_lwk_flow() {
-        let datadir = "/tmp/.lwk";
         let mnemonic = lwk_test_util::TEST_MNEMONIC;
         let network: Network = lwk_test_util::network_regtest().into();
         let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
@@ -56,7 +55,7 @@ mod tests {
         let electrum_client =
             ElectrumClient::new(&server.electrs.electrum_url, false, false).unwrap();
 
-        let wollet = Wollet::new(&network, &singlesig_desc, datadir).unwrap();
+        let wollet = Wollet::new(&network, &singlesig_desc, None).unwrap();
         let _latest_address = wollet.address(None); // lastUnused
         let address_0 = wollet.address(Some(0)).unwrap();
         let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";

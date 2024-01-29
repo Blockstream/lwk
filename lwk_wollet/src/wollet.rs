@@ -34,23 +34,34 @@ pub struct Wollet {
 
 impl Wollet {
     /// Create a new  wallet
-    pub fn new(network: ElementsNetwork, data_root: &str, desc: &str) -> Result<Self, Error> {
-        let config = Config::new(network, Some(data_root))?;
+    pub fn new(
+        network: ElementsNetwork,
+        data_root: Option<&str>,
+        desc: &str,
+    ) -> Result<Self, Error> {
+        let config = Config::new(network, data_root)?;
         Self::inner_new(config, desc)
     }
 
     fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
         let descriptor = WolletDescriptor::from_str(desc)?;
 
-        let wallet_desc = format!("{}{:?}", desc, config);
-        let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
+        let path = config
+            .data_root()
+            .map(|path| {
+                let wallet_desc = format!("{}{:?}", desc, config);
+                let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let mut path: PathBuf = config.data_root().unwrap().into(); // TODO unwrap fixed in next commit
-        if !path.exists() {
-            std::fs::create_dir_all(&path)?;
-        }
-        path.push(wallet_id);
-        let store = Store::new(Some(&path), &descriptor)?;
+                let mut path: PathBuf = path.into();
+                if !path.exists() {
+                    std::fs::create_dir_all(&path)?;
+                }
+                path.push(wallet_id);
+                Ok::<PathBuf, Error>(path)
+            })
+            .transpose()?;
+
+        let store = Store::new(path, &descriptor)?;
 
         Ok(Wollet {
             store,
@@ -559,7 +570,7 @@ mod tests {
 
     fn new_wollet(desc: &str) -> Wollet {
         let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
-        Wollet::new(ElementsNetwork::LiquidTestnet, "/tmp/.lwk", desc).unwrap()
+        Wollet::new(ElementsNetwork::LiquidTestnet, None, desc).unwrap()
     }
 
     #[test]
@@ -627,7 +638,7 @@ mod tests {
                     let desc =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
                             .unwrap();
-                    let wollet = Wollet::new(network, "/tmp/.lwk", &desc).unwrap();
+                    let wollet = Wollet::new(network, None, &desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?} i:{i}");
                     i += 1;

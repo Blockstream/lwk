@@ -74,7 +74,7 @@ impl Default for RawCache {
 
 pub struct Store {
     pub cache: RawCache,
-    persister: Persister,
+    persister: Option<Persister>,
 }
 pub struct Persister {
     pub path: PathBuf,
@@ -155,28 +155,28 @@ impl Store {
 
         Ok(Store {
             cache,
-            persister: Persister { path, cipher },
+            persister: Some(Persister { path, cipher }),
         })
     }
 
     fn flush_serializable<T: serde::Serialize>(&self, name: &str, value: &T) -> Result<(), Error> {
-        let mut nonce_bytes = [0u8; 12];
-        thread_rng().fill(&mut nonce_bytes);
-        let nonce = GenericArray::from_slice(&nonce_bytes);
-        let mut plaintext = serde_cbor::to_vec(value)?;
+        if let Some(Persister { cipher, path }) = self.persister.as_ref() {
+            let mut nonce_bytes = [0u8; 12];
+            thread_rng().fill(&mut nonce_bytes);
+            let nonce = GenericArray::from_slice(&nonce_bytes);
+            let mut plaintext = serde_cbor::to_vec(value)?;
 
-        self.persister
-            .cipher
-            .encrypt_in_place(nonce, b"", &mut plaintext)?;
-        let ciphertext = plaintext;
+            cipher.encrypt_in_place(nonce, b"", &mut plaintext)?;
+            let ciphertext = plaintext;
 
-        let mut store_path = self.persister.path.clone();
-        store_path.push(name);
-        //TODO should avoid rewriting if not changed? it involves saving plaintext (or struct hash)
-        // in the front of the file
-        let mut file = File::create(&store_path)?;
-        file.write_all(&nonce_bytes)?;
-        file.write_all(&ciphertext)?;
+            let mut store_path = path.clone();
+            store_path.push(name);
+            //TODO should avoid rewriting if not changed? it involves saving plaintext (or struct hash)
+            // in the front of the file
+            let mut file = File::create(&store_path)?;
+            file.write_all(&nonce_bytes)?;
+            file.write_all(&ciphertext)?;
+        }
         Ok(())
     }
 

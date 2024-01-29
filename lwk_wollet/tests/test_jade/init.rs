@@ -30,26 +30,3 @@ pub fn inner_jade_debug_initialization(docker: &Cli, mnemonic: String) -> Initia
         jade: MutexJade::new(jade_api),
     }
 }
-
-#[cfg(feature = "serial")]
-pub mod serial {
-    use lwk_jade::{mutex_jade::MutexJade, serialport, Jade};
-    use std::time::Duration;
-
-    pub fn unlock() -> MutexJade {
-        let network = lwk_jade::Network::LocaltestLiquid;
-
-        let ports = serialport::available_ports().unwrap();
-        assert!(!ports.is_empty());
-        let path = &ports[0].port_name;
-        let port = serialport::new(path, 115_200)
-            .timeout(Duration::from_secs(60))
-            .open()
-            .unwrap();
-
-        let jade = Jade::new(port.into(), network);
-        let jade = MutexJade::new(jade);
-        jade.unlock().unwrap();
-        jade
-    }
-}

@@ -21,7 +21,7 @@ pub type Height = u32;
 pub type Timestamp = u32;
 
 pub fn new_store<P: AsRef<Path>>(path: P, desc: &WolletDescriptor) -> Result<Store, Error> {
-    Store::new(&path, desc)
+    Store::new(Some(&path), desc)
 }
 
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
@@ -134,29 +134,40 @@ fn load_decrypt<P: AsRef<Path>>(
 }
 
 impl Store {
-    pub fn new<P: AsRef<Path>>(path: P, descriptor: &WolletDescriptor) -> Result<Store, Error> {
+    pub fn new<P: AsRef<Path>>(
+        path: Option<P>,
+        descriptor: &WolletDescriptor,
+    ) -> Result<Store, Error> {
         /*
         let mut enc_key_data = vec![];
         enc_key_data.extend(&xpub.public_key.serialize());
         enc_key_data.extend(&xpub.chain_code.to_bytes());
         enc_key_data.extend(&xpub.network.magic().to_bytes());
         let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
-         * */
+        */
 
-        // TODO same hash for descriptor on regtest/testnet
-        let key_bytes = sha256::Hash::hash(descriptor.to_string().as_bytes()).to_byte_array();
-        let key = GenericArray::from_slice(&key_bytes);
-        let cipher = Aes256GcmSiv::new(key);
-        let cache = RawCache::new(path.as_ref(), &cipher);
-        let path = path.as_ref().to_path_buf();
-        if !path.exists() {
-            std::fs::create_dir_all(&path)?;
+        match path.as_ref() {
+            Some(path) => {
+                let key_bytes =
+                    sha256::Hash::hash(descriptor.to_string().as_bytes()).to_byte_array();
+                let key = GenericArray::from_slice(&key_bytes);
+                let cipher = Aes256GcmSiv::new(key);
+                let cache = RawCache::new(path, &cipher);
+                let path = path.as_ref().to_path_buf();
+                if !path.exists() {
+                    std::fs::create_dir_all(&path)?;
+                }
+
+                Ok(Store {
+                    cache,
+                    persister: Some(Persister { path, cipher }),
+                })
+            }
+            None => Ok(Store {
+                cache: RawCache::default(),
+                persister: None,
+            }),
         }
-
-        Ok(Store {
-            cache,
-            persister: Some(Persister { path, cipher }),
-        })
     }
 
     fn flush_serializable<T: serde::Serialize>(&self, name: &str, value: &T) -> Result<(), Error> {
@@ -250,11 +261,11 @@ mod tests {
             Txid::from_str("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16")
                 .unwrap();
 
-        let mut store = Store::new(&dir, &desc.clone().try_into().unwrap()).unwrap();
+        let mut store = Store::new(Some(&dir), &desc.clone().try_into().unwrap()).unwrap();
         store.cache.heights.insert(txid, Some(1));
         drop(store);
 
-        let store = Store::new(&dir, &desc.try_into().unwrap()).unwrap();
+        let store = Store::new(Some(&dir), &desc.try_into().unwrap()).unwrap();
         assert_eq!(store.cache.heights.get(&txid), Some(&Some(1)));
     }
 
@@ -274,7 +285,7 @@ mod tests {
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
         let desc: WolletDescriptor = desc.try_into().unwrap();
 
-        let store = Store::new(&dir, &desc).unwrap();
+        let store = Store::new(Some(&dir), &desc).unwrap();
 
         let x = store
             .get_script_batch(0, &desc.as_ref().descriptor)

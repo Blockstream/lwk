@@ -14,6 +14,12 @@ pub struct DownloadTxResult {
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 
+impl DownloadTxResult {
+    fn is_empty(&self) -> bool {
+        self.txs.is_empty() && self.unblinds.is_empty()
+    }
+}
+
 /// Passing a wallet to [`crate::BlockchainBackend::full_scan()`] returns this structure which
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -24,6 +30,16 @@ pub struct Update {
     pub timestamps: Vec<(Height, Timestamp)>,
     pub scripts: HashMap<Script, (Chain, ChildNumber)>,
     pub tip: BlockHeader,
+}
+
+impl Update {
+    pub fn only_tip(&self) -> bool {
+        self.new_txs.is_empty()
+            && self.txid_height_new.is_empty()
+            && self.txid_height_delete.is_empty()
+            && self.timestamps.is_empty()
+            && self.scripts.is_empty()
+    }
 }
 
 impl Wollet {
@@ -96,5 +112,27 @@ impl Wollet {
         }
         store.flush()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::Update;
+
+    #[test]
+    fn test_empty_update() {
+        let tip = lwk_test_util::liquid_block_1().header;
+        let mut update = Update {
+            new_txs: super::DownloadTxResult::default(),
+            txid_height_new: Default::default(),
+            txid_height_delete: Default::default(),
+            timestamps: Default::default(),
+            scripts: Default::default(),
+            tip,
+        };
+        assert!(update.only_tip());
+        update.timestamps.push((0, 0));
+        assert!(!update.only_tip());
     }
 }

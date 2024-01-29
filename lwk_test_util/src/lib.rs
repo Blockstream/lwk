@@ -10,6 +10,8 @@ use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Tx
 use bip39::Mnemonic;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
+use elements::encode::Decodable;
+use elements::Block;
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
@@ -38,6 +40,13 @@ pub const TEST_MNEMONIC_XPUB: &str =
 "tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s";
 pub const TEST_MNEMONIC_SLIP77: &str =
     "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+
+pub fn liquid_block_1() -> Block {
+    let raw = include_bytes!(
+        "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"
+    );
+    Block::consensus_decode(&raw[..]).unwrap()
+}
 
 fn add_checksum(desc: &str) -> String {
     if desc.find('#').is_some() {

@@ -35,7 +35,7 @@ pub struct Wollet {
 impl Wollet {
     /// Create a new  wallet
     pub fn new(network: ElementsNetwork, data_root: &str, desc: &str) -> Result<Self, Error> {
-        let config = Config::new(network, data_root)?;
+        let config = Config::new(network, Some(data_root))?;
         Self::inner_new(config, desc)
     }
 
@@ -45,7 +45,7 @@ impl Wollet {
         let wallet_desc = format!("{}{:?}", desc, config);
         let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
 
-        let mut path: PathBuf = config.data_root().into();
+        let mut path: PathBuf = config.data_root().unwrap().into(); // TODO unwrap fixed in next commit
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
         }

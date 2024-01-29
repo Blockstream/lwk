@@ -65,14 +65,14 @@ impl ElementsNetwork {
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    data_root: String,
+    data_root: Option<String>,
 }
 
 impl Config {
-    pub fn new(network: ElementsNetwork, data_root: &str) -> Result<Self, Error> {
+    pub fn new(network: ElementsNetwork, data_root: Option<&str>) -> Result<Self, Error> {
         Ok(Config {
             network,
-            data_root: data_root.into(),
+            data_root: data_root.map(Into::into),
         })
     }
 
@@ -88,7 +88,7 @@ impl Config {
         self.network.policy_asset()
     }
 
-    pub fn data_root(&self) -> String {
-        self.data_root.clone()
+    pub fn data_root(&self) -> Option<&str> {
+        self.data_root.as_deref()
     }
 }

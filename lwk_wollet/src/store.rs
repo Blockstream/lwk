@@ -74,8 +74,11 @@ impl Default for RawCache {
 
 pub struct Store {
     pub cache: RawCache,
-    path: PathBuf,
-    cipher: Aes256GcmSiv,
+    persister: Persister,
+}
+pub struct Persister {
+    pub path: PathBuf,
+    pub cipher: Aes256GcmSiv,
 }
 
 impl Drop for Store {
@@ -140,6 +143,7 @@ impl Store {
         let key_bytes = sha256::Hash::hash(&enc_key_data).to_byte_array();
          * */
 
+        // TODO same hash for descriptor on regtest/testnet
         let key_bytes = sha256::Hash::hash(descriptor.to_string().as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(key);
@@ -151,8 +155,7 @@ impl Store {
 
         Ok(Store {
             cache,
-            cipher,
-            path,
+            persister: Persister { path, cipher },
         })
     }
 
@@ -162,10 +165,12 @@ impl Store {
         let nonce = GenericArray::from_slice(&nonce_bytes);
         let mut plaintext = serde_cbor::to_vec(value)?;
 
-        self.cipher.encrypt_in_place(nonce, b"", &mut plaintext)?;
+        self.persister
+            .cipher
+            .encrypt_in_place(nonce, b"", &mut plaintext)?;
         let ciphertext = plaintext;
 
-        let mut store_path = self.path.clone();
+        let mut store_path = self.persister.path.clone();
         store_path.push(name);
         //TODO should avoid rewriting if not changed? it involves saving plaintext (or struct hash)
         // in the front of the file

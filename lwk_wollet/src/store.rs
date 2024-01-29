@@ -20,10 +20,6 @@ pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
-pub fn new_store<P: AsRef<Path>>(path: P, desc: &WolletDescriptor) -> Result<Store, Error> {
-    Store::new(Some(&path), desc)
-}
-
 /// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
 /// It is fully reconstructable from xpub and data from electrum server (plus master blinding for elements)
 #[derive(Serialize, Deserialize)]

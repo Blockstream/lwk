@@ -9,7 +9,7 @@ use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::{sha256, Hash};
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
-use crate::store::{new_store, Store};
+use crate::store::Store;
 use crate::util::EC;
 use crate::{BlockchainBackend, ElectrumClient, WolletDescriptor};
 use electrum_client::bitcoin::bip32::ChildNumber;
@@ -50,7 +50,7 @@ impl Wollet {
             std::fs::create_dir_all(&path)?;
         }
         path.push(wallet_id);
-        let store = new_store(&path, &descriptor)?;
+        let store = Store::new(Some(&path), &descriptor)?;
 
         Ok(Wollet {
             store,

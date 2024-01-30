@@ -42,6 +42,14 @@ impl Update {
             && self.timestamps.is_empty()
             && self.scripts.is_empty()
     }
+    pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
+        let mut vec = vec![];
+        self.consensus_encode(&mut vec)?;
+        Ok(vec)
+    }
+    pub fn deserialize(bytes: &[u8]) -> Result<Update, elements::encode::Error> {
+        Update::consensus_decode(&bytes[..])
+    }
 }
 
 impl Wollet {

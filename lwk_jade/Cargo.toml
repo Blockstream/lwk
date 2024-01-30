@@ -23,7 +23,7 @@ thiserror = "1"
 tracing = "0.1"
 
 minreq = { version = "2.9", features = ["https"] }
-elements-miniscript = "0.2"
+elements-miniscript = "0.3"
 
 lwk_common = { path = "../lwk_common" }
 

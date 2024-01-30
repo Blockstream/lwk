@@ -8,7 +8,7 @@ documentation = "https://docs.rs/lwk_signer"
 
 [dependencies]
 bip39 = { version = "2.0.0", features = ["rand"] }
-elements-miniscript = "0.2"
+elements-miniscript = "0.3"
 thiserror = "1.0.48"
 base64 = "0.13.0"
 

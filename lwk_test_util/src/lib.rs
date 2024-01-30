@@ -907,6 +907,10 @@ pub fn value_blinding_factor_test_vector() -> ValueBlindingFactor {
     .unwrap()
 }
 
+pub fn txid_test_vector() -> Txid {
+    Txid::from_str("0000000000000000000000000000000000000000000000000000000000000003").unwrap()
+}
+
 pub fn tx_out_secrets_test_vector() -> TxOutSecrets {
     elements::TxOutSecrets::new(
         regtest_policy_asset(),
@@ -918,6 +922,10 @@ pub fn tx_out_secrets_test_vector() -> TxOutSecrets {
 
 pub fn tx_out_secrets_test_vector_bytes() -> Vec<u8> {
     Vec::<u8>::from_hex(include_str!("../test_data/tx_out_secrets_test_vector.hex")).unwrap()
+}
+
+pub fn update_test_vector_bytes() -> Vec<u8> {
+    Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector.hex")).unwrap()
 }
 
 #[cfg(test)]

@@ -359,6 +359,19 @@ mod test {
 
     use super::EncodableTxOutSecrets;
 
+    pub fn download_tx_result_test_vector() -> DownloadTxResult {
+        // there are issue in moving this in test_util
+        let tx_out_secret = lwk_test_util::tx_out_secrets_test_vector();
+        let mut txs = vec![];
+        let mut unblinds = vec![];
+        let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();
+        unblinds.push((tx.input[0].previous_output, tx_out_secret));
+
+        txs.push((tx.txid(), tx));
+
+        DownloadTxResult { txs, unblinds }
+    }
+
     #[test]
     fn test_empty_update() {
         let tip = lwk_test_util::liquid_block_1().header;
@@ -393,16 +406,7 @@ mod test {
 
     #[test]
     fn test_download_tx_result_roundtrip() {
-        let tx_out_secret = lwk_test_util::tx_out_secrets_test_vector();
-        let mut txs = vec![];
-        let mut unblinds = vec![];
-        let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();
-        unblinds.push((tx.input[0].previous_output, tx_out_secret));
-
-        txs.push((tx.txid(), tx));
-
-        let result = DownloadTxResult { txs, unblinds };
-
+        let result = download_tx_result_test_vector();
         let mut vec = vec![];
         let len = result.consensus_encode(&mut vec).unwrap();
         assert_eq!(len, 1325);
@@ -414,16 +418,8 @@ mod test {
 
     #[test]
     fn test_update_roundtrip() {
-        let tx_out_secret = lwk_test_util::tx_out_secrets_test_vector();
-        let mut txs = vec![];
-        let mut unblinds = vec![];
-        let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();
-        let txid = tx.txid();
-        unblinds.push((tx.input[0].previous_output, tx_out_secret));
-
-        txs.push((tx.txid(), tx));
-
-        let new_txs = DownloadTxResult { txs, unblinds };
+        let txid = lwk_test_util::txid_test_vector();
+        let new_txs = download_tx_result_test_vector();
         let mut scripts = HashMap::new();
         scripts.insert(Script::default(), (Chain::External, 0u32.into()));
         scripts.insert(Script::default(), (Chain::Internal, 3u32.into()));
@@ -440,6 +436,7 @@ mod test {
 
         let mut vec = vec![];
         let len = update.consensus_encode(&mut vec).unwrap();
+        assert_eq!(vec, lwk_test_util::update_test_vector_bytes());
         assert_eq!(len, 2842);
         assert_eq!(vec.len(), len);
 

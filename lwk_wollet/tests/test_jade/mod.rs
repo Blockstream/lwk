@@ -4,10 +4,10 @@ use lwk_signer::AnySigner;
 use lwk_test_util::{
     generate_signer, init_logging,
     jade::{TestJadeEmulator, TestMutexJadeEmulator},
-    multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
+    multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet, TEST_MNEMONIC,
 };
 
-pub fn jade_setup(docker: &Cli, mnemonic: Option<String>) -> TestMutexJadeEmulator {
+pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestMutexJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
     test_jade_emul.set_debug_mnemonic(mnemonic);
     TestMutexJadeEmulator::new(test_jade_emul)
@@ -61,7 +61,7 @@ fn roundtrip(
 fn emul_roundtrip_singlesig(variant: Singlesig) {
     let server = setup(false);
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     roundtrip(&server, signers, Some(variant), None);
@@ -70,7 +70,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 fn emul_roundtrip_multisig(threshold: usize) {
     let server = setup(false);
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let sw_signer = generate_signer();
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[
@@ -99,7 +99,7 @@ fn emul_roundtrip_2of2() {
 fn jade_slip77() {
     init_logging();
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
 
     let script_variant = lwk_common::Singlesig::Wpkh;
     let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;

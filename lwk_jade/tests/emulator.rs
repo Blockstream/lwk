@@ -21,7 +21,7 @@ use lwk_jade::{
     },
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
 };
-use lwk_test_util::jade::TestJadeEmulator;
+use lwk_test_util::{jade::TestJadeEmulator, TEST_MNEMONIC};
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
 
 #[test]
@@ -37,7 +37,7 @@ fn entropy() {
 fn debug_set_mnemonic() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let result = jade.jade.version_info().unwrap();
     assert_eq!(result, mock_version_info());
@@ -124,7 +124,7 @@ fn jade_init_logout_unlock() {
 fn jade_xpub() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let xpub_master = jade.jade.get_master_xpub().unwrap();
     assert_eq!(xpub_master.depth, 0);
@@ -147,7 +147,7 @@ fn jade_xpub() {
 fn jade_receive_address() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let params = GetReceiveAddressParams {
         network: lwk_jade::Network::LocaltestLiquid,
@@ -166,7 +166,7 @@ fn jade_receive_address() {
 fn jade_register_multisig() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let jade_master_xpub = jade.jade.get_master_xpub().unwrap();
 
@@ -213,7 +213,7 @@ fn jade_register_multisig() {
 fn jade_register_multisig_check_address() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let multisig_name = "you_and_me".to_string();
     let jade_master_xpub = jade.jade.get_master_xpub().unwrap();
@@ -270,7 +270,7 @@ fn jade_register_multisig_check_address() {
 fn jade_sign_message() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     // TODO create anti exfil commitments
     // The following are taken from jade tests, even though they may be random if we are not verifying.
@@ -314,7 +314,7 @@ fn jade_sign_message() {
 fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
     let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
@@ -327,7 +327,7 @@ fn jade_sign_liquid_tx() {
 fn jade_get_master_blinding_key() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
-    jade.set_debug_mnemonic(None);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let params = GetMasterBlindingKeyParams {
         only_if_silent: false,

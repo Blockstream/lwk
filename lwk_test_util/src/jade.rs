@@ -1,4 +1,4 @@
-use crate::{init_logging, TEST_MNEMONIC};
+use crate::init_logging;
 use elements::{
     bitcoin::PublicKey,
     hashes::{hex::FromHex, sha256, Hash},
@@ -58,10 +58,9 @@ impl<'a> TestJadeEmulator<'a> {
     }
 
     /// Set a mnemonic
-    pub fn set_debug_mnemonic(&mut self, mnemonic: Option<String>) {
-        let mnemonic = mnemonic.unwrap_or_else(|| TEST_MNEMONIC.to_string());
+    pub fn set_debug_mnemonic(&mut self, mnemonic: &str) {
         let params = DebugSetMnemonicParams {
-            mnemonic,
+            mnemonic: mnemonic.to_string(),
             passphrase: None,
             temporary_wallet: false,
         };

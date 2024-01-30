@@ -12,7 +12,7 @@ use std::{collections::HashSet, str::FromStr};
 #[test]
 fn liquid_send_jade_signer() {
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_send(&signers);
@@ -28,7 +28,7 @@ fn liquid_send_software_signer() {
 #[test]
 fn liquid_issue_jade_signer() {
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_issue(&signers);
@@ -608,7 +608,7 @@ fn multisig_flow() {
     let signer1 = generate_signer();
 
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, None);
+    let jade_init = jade_setup(&docker, TEST_MNEMONIC);
 
     let signer2 = &jade_init.jade;
     let signer2_xpub = signer2.xpub().unwrap();
@@ -668,7 +668,7 @@ fn multisig_flow() {
 #[test]
 fn jade_sign_wollet_pset() {
     let server = setup(false);
-    let mnemonic = lwk_test_util::TEST_MNEMONIC;
+    let mnemonic = TEST_MNEMONIC;
     let signer = SwSigner::new(mnemonic, false).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
@@ -684,7 +684,7 @@ fn jade_sign_wollet_pset() {
         .unwrap();
 
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, Some(mnemonic.to_string()));
+    let jade_init = jade_setup(&docker, mnemonic);
 
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, xpub_identifier);
@@ -704,9 +704,9 @@ fn jade_sign_wollet_pset() {
 #[test]
 fn jade_single_sig() {
     let server = setup(false);
-    let mnemonic = lwk_test_util::TEST_MNEMONIC;
+    let mnemonic = TEST_MNEMONIC;
     let docker = Cli::default();
-    let jade_init = jade_setup(&docker, Some(mnemonic.to_string()));
+    let jade_init = jade_setup(&docker, mnemonic);
     let signer = AnySigner::Jade(
         jade_init.jade,
         XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),

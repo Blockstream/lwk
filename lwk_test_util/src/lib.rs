@@ -916,6 +916,10 @@ pub fn tx_out_secrets_test_vector() -> TxOutSecrets {
     )
 }
 
+pub fn tx_out_secrets_test_vector_bytes() -> Vec<u8> {
+    Vec::<u8>::from_hex(include_str!("../test_data/tx_out_secrets_test_vector.hex")).unwrap()
+}
+
 #[cfg(test)]
 mod test {
 

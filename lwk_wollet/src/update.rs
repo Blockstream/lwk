@@ -383,6 +383,7 @@ mod test {
 
         let mut vec = vec![];
         let len = secret.consensus_encode(&mut vec).unwrap();
+        assert_eq!(lwk_test_util::tx_out_secrets_test_vector_bytes(), vec);
         assert_eq!(len, 104);
         assert_eq!(vec.len(), len);
 

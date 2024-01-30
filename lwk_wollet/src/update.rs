@@ -4,6 +4,8 @@ use crate::error::Error;
 use crate::store::{Height, Timestamp};
 use crate::Wollet;
 use electrum_client::bitcoin::bip32::ChildNumber;
+use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+use elements::encode::{Decodable, Encodable};
 use elements::BlockHeader;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
@@ -115,10 +117,67 @@ impl Wollet {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct EncodableTxOutSecrets {
+    inner: TxOutSecrets,
+}
+impl Encodable for EncodableTxOutSecrets {
+    fn consensus_encode<W: std::io::Write>(
+        &self,
+        mut w: W,
+    ) -> Result<usize, elements::encode::Error> {
+        let mut bytes_written = 0;
+        bytes_written += self.inner.asset.consensus_encode(&mut w)?;
+
+        bytes_written += self
+            .inner
+            .asset_bf
+            .clone()
+            .into_inner()
+            .as_ref()
+            .consensus_encode(&mut w)?;
+
+        bytes_written += self.inner.value.consensus_encode(&mut w)?;
+
+        bytes_written += self
+            .inner
+            .value_bf
+            .clone()
+            .into_inner()
+            .as_ref()
+            .consensus_encode(&mut w)?;
+
+        Ok(bytes_written)
+    }
+}
+
+impl Decodable for EncodableTxOutSecrets {
+    fn consensus_decode<D: std::io::Read>(mut d: D) -> Result<Self, elements::encode::Error> {
+        Ok(Self {
+            inner: TxOutSecrets {
+                asset: Decodable::consensus_decode(&mut d)?,
+                asset_bf: {
+                    let bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
+                    AssetBlindingFactor::from_slice(&bytes[..]).expect("bytes length is 32")
+                },
+                value: Decodable::consensus_decode(&mut d)?,
+                value_bf: {
+                    let bytes: [u8; 32] = Decodable::consensus_decode(&mut d)?;
+                    ValueBlindingFactor::from_slice(&bytes[..]).expect("bytes length is 32")
+                },
+            },
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
 
+    use elements::encode::{Decodable, Encodable};
+
     use crate::Update;
+
+    use super::EncodableTxOutSecrets;
 
     #[test]
     fn test_empty_update() {
@@ -134,5 +193,24 @@ mod test {
         assert!(update.only_tip());
         update.timestamps.push((0, 0));
         assert!(!update.only_tip());
+    }
+
+    #[test]
+    fn test_tx_out_secrets_roundtrip() {
+        let secret = EncodableTxOutSecrets {
+            inner: elements::TxOutSecrets::new(
+                elements::AssetId::default(),
+                elements::confidential::AssetBlindingFactor::zero(),
+                1000,
+                elements::confidential::ValueBlindingFactor::zero(),
+            ),
+        };
+
+        let mut vec = vec![];
+        let len = secret.consensus_encode(&mut vec).unwrap();
+        assert_eq!(len, 104);
+
+        let back = EncodableTxOutSecrets::consensus_decode(&vec[..]).unwrap();
+        assert_eq!(secret, back)
     }
 }

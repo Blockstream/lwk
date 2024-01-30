@@ -1,6 +1,6 @@
 mod test_jade;
 
-use crate::test_jade::init::inner_jade_debug_initialization;
+use crate::test_jade::jade_setup;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -12,7 +12,7 @@ use std::{collections::HashSet, str::FromStr};
 #[test]
 fn liquid_send_jade_signer() {
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_send(&signers);
@@ -28,7 +28,7 @@ fn liquid_send_software_signer() {
 #[test]
 fn liquid_issue_jade_signer() {
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = [&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     liquid_issue(&signers);
@@ -608,7 +608,7 @@ fn multisig_flow() {
     let signer1 = generate_signer();
 
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
 
     let signer2 = &jade_init.jade;
     let signer2_xpub = signer2.xpub().unwrap();
@@ -684,7 +684,7 @@ fn jade_sign_wollet_pset() {
         .unwrap();
 
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let jade_init = jade_setup(&docker, Some(mnemonic.to_string()));
 
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let jade_signer = AnySigner::Jade(jade_init.jade, xpub_identifier);
@@ -706,7 +706,7 @@ fn jade_single_sig() {
     let server = setup(false);
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, mnemonic.to_string());
+    let jade_init = jade_setup(&docker, Some(mnemonic.to_string()));
     let signer = AnySigner::Jade(
         jade_init.jade,
         XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),

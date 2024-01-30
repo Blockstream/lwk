@@ -1,14 +1,17 @@
-pub mod init;
-
 use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::AnySigner;
-
-use crate::{test_jade::init::inner_jade_debug_initialization, TEST_MNEMONIC};
 use lwk_test_util::{
-    generate_signer, init_logging, multisig_desc, register_multisig, setup, TestElectrumServer,
-    TestWollet,
+    generate_signer, init_logging,
+    jade::{TestJadeEmulator, TestMutexJadeEmulator},
+    multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet,
 };
+
+pub fn jade_setup(docker: &Cli, mnemonic: Option<String>) -> TestMutexJadeEmulator {
+    let mut test_jade_emul = TestJadeEmulator::new(docker);
+    test_jade_emul.set_debug_mnemonic(mnemonic);
+    TestMutexJadeEmulator::new(test_jade_emul)
+}
 
 fn roundtrip(
     server: &TestElectrumServer,
@@ -58,7 +61,7 @@ fn roundtrip(
 fn emul_roundtrip_singlesig(variant: Singlesig) {
     let server = setup(false);
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[&AnySigner::Jade(jade_init.jade, xpub_identifier)];
     roundtrip(&server, signers, Some(variant), None);
@@ -67,7 +70,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 fn emul_roundtrip_multisig(threshold: usize) {
     let server = setup(false);
     let docker = Cli::default();
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
     let sw_signer = generate_signer();
     let xpub_identifier = jade_init.jade.identifier().unwrap();
     let signers = &[
@@ -96,8 +99,7 @@ fn emul_roundtrip_2of2() {
 fn jade_slip77() {
     init_logging();
     let docker = Cli::default();
-
-    let jade_init = inner_jade_debug_initialization(&docker, TEST_MNEMONIC.to_string());
+    let jade_init = jade_setup(&docker, None);
 
     let script_variant = lwk_common::Singlesig::Wpkh;
     let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;

@@ -16,6 +16,8 @@ lwk_common = { path = "../lwk_common" }
 lwk_signer = { path = "../lwk_signer" }
 lwk_wollet = { path = "../lwk_wollet" }
 lwk_jade = { path = "../lwk_jade", features = ["serial"] }
+lwk_containers = { path = "../lwk_containers" }
 rand = "0.8.5"
 tempfile = "3.8.0"
 pulldown-cmark = "0.9.3"
+minreq = "2.9"

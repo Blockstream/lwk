@@ -12,33 +12,24 @@ use elements::{
 use elements_miniscript::{
     confidential::Key, ConfidentialDescriptor, DefiniteDescriptorKey, DescriptorPublicKey,
 };
-use lwk_containers::testcontainers::{
-    clients::{self, Cli},
-    Container,
+use lwk_containers::testcontainers::clients::{self};
+use lwk_containers::{PinServer, PIN_SERVER_PORT};
+use lwk_jade::protocol::{
+    GetSignatureParams, GetXpubParams, SignMessageParams, UpdatePinserverParams,
 };
-use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
-    protocol::{GetMasterBlindingKeyParams, IsAuthResult, JadeState, VersionInfoResult},
+    protocol::{GetMasterBlindingKeyParams, JadeState, VersionInfoResult},
     register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
-    Network,
 };
-use lwk_jade::{
-    protocol::{
-        DebugSetMnemonicParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
-        HandshakeInitParams, SignMessageParams, UpdatePinserverParams,
-    },
-    Jade,
-};
+use lwk_test_util::jade::TestJadeEmulator;
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
-use tempfile::{tempdir, TempDir};
-
-use crate::pin_server::verify;
+use tempfile::tempdir;
 
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
+    let mut jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.add_entropy(&[1, 2, 3, 4]).unwrap();
     assert!(result);
@@ -48,7 +39,8 @@ fn entropy() {
 fn debug_set_mnemonic() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
 
     let result = initialized_jade.jade.version_info().unwrap();
     assert_eq!(result, mock_version_info());
@@ -57,7 +49,7 @@ fn debug_set_mnemonic() {
 #[test]
 fn epoch() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
+    let mut jade = TestJadeEmulator::new(&docker);
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -70,7 +62,7 @@ fn epoch() {
 #[test]
 fn ping() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
+    let mut jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.ping().unwrap();
     assert_eq!(result, 0);
@@ -79,7 +71,7 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
+    let mut jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
@@ -90,7 +82,7 @@ fn version() {
 #[test]
 fn update_pinserver() {
     let docker = clients::Cli::default();
-    let mut jade = inner_jade_create(&docker, lwk_jade::Network::LocaltestLiquid);
+    let mut jade = TestJadeEmulator::new(&docker);
 
     let tempdir = tempdir().unwrap();
     let pin_server = PinServer::new(&tempdir).unwrap();
@@ -115,7 +107,7 @@ fn update_pinserver() {
 fn jade_initialization_with_pin_server() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new_with_pin(&docker);
     let result = initialized_jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
     expected.jade_has_pin = true;
@@ -126,7 +118,7 @@ fn jade_initialization_with_pin_server() {
 fn jade_init_logout_unlock() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new_with_pin(&docker);
     let jade = &mut initialized_jade.jade;
     assert!(jade.logout().unwrap());
     jade.unlock().unwrap();
@@ -136,7 +128,8 @@ fn jade_init_logout_unlock() {
 fn jade_xpub() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let jade = &mut initialized_jade.jade;
     let xpub_master = jade.get_master_xpub().unwrap();
     assert_eq!(xpub_master.depth, 0);
@@ -156,7 +149,8 @@ fn jade_xpub() {
 fn jade_receive_address() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let params = GetReceiveAddressParams {
         network: lwk_jade::Network::LocaltestLiquid,
         address: SingleOrMulti::Single {
@@ -174,7 +168,8 @@ fn jade_receive_address() {
 fn jade_register_multisig() {
     let docker = clients::Cli::default();
 
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let jade = &mut initialized_jade.jade;
 
     let jade_master_xpub = jade.get_master_xpub().unwrap();
@@ -223,7 +218,8 @@ fn jade_register_multisig_check_address() {
     let docker = clients::Cli::default();
 
     let network = lwk_jade::Network::LocaltestLiquid;
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let jade = &mut initialized_jade.jade;
 
     let multisig_name = "you_and_me".to_string();
@@ -286,7 +282,8 @@ fn jade_sign_message() {
         hex::decode("3f5540b9336af9bdd50a5b7f69fc2045a12e3b3e0740f7461902d882bf8a8820").unwrap();
     let docker = clients::Cli::default();
     let message = "Hello world!";
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let params = SignMessageParams {
         message: message.to_string(),
         path: vec![0],
@@ -319,7 +316,8 @@ fn jade_sign_message() {
 #[test]
 fn jade_sign_liquid_tx() {
     let docker = clients::Cli::default();
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
     let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
     assert_eq!(pset.outputs().len(), 3);
@@ -330,8 +328,8 @@ fn jade_sign_liquid_tx() {
 #[test]
 fn jade_get_master_blinding_key() {
     let docker = clients::Cli::default();
-
-    let mut initialized_jade = inner_jade_debug_initialization(&docker);
+    let mut initialized_jade = TestJadeEmulator::new(&docker);
+    initialized_jade.set_debug_mnemonic(None);
     let params = GetMasterBlindingKeyParams {
         only_if_silent: false,
     };
@@ -340,114 +338,6 @@ fn jade_get_master_blinding_key() {
         .get_master_blinding_key(params)
         .unwrap();
     assert_eq!(hex::encode(result), lwk_test_util::TEST_MNEMONIC_SLIP77);
-}
-
-/// Note underscore prefixed var must be there even if they are not read so that they are not
-/// dropped
-struct InitializedJade<'a> {
-    _pin_server: Option<Container<'a, PinServer>>,
-    _jade_emul: Container<'a, JadeEmulator>,
-    _tempdir: Option<TempDir>,
-    jade: Jade,
-}
-
-struct NotInitializedJade<'a> {
-    _jade_emul: Container<'a, JadeEmulator>,
-    jade: Jade,
-}
-
-fn inner_jade_create(docker: &Cli, network: Network) -> NotInitializedJade {
-    lwk_test_util::init_logging();
-    let container = docker.run(JadeEmulator);
-    let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-    let jade = Jade::new(stream.into(), network);
-    NotInitializedJade {
-        jade,
-        _jade_emul: container,
-    }
-}
-
-fn inner_jade_initialization(docker: &Cli) -> InitializedJade {
-    let NotInitializedJade {
-        _jade_emul: jade_container,
-        jade: mut jade_api,
-    } = inner_jade_create(docker, Network::LocaltestLiquid);
-
-    let tempdir = PinServer::tempdir().unwrap();
-    let pin_server = PinServer::new(&tempdir).unwrap();
-    let pin_server_pub_key = *pin_server.pub_key();
-    assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
-    let pin_container = docker.run(pin_server);
-    let port = pin_container.get_host_port_ipv4(PIN_SERVER_PORT);
-    let pin_server_url = format!("http://127.0.0.1:{}", port);
-
-    let params = UpdatePinserverParams {
-        reset_details: false,
-        reset_certificate: false,
-        url_a: pin_server_url.clone(),
-        url_b: "".to_string(),
-        pubkey: pin_server_pub_key.to_bytes(),
-        certificate: "".into(),
-    };
-
-    let result = jade_api.update_pinserver(params).unwrap();
-    assert!(result);
-
-    let result = jade_api.auth_user().unwrap();
-    if let IsAuthResult::AuthResult(result) = result {
-        // Unlock the jade
-        let start_handshake_url = &result.urls()[0];
-        assert_eq!(
-            start_handshake_url,
-            &format!("{pin_server_url}/start_handshake")
-        );
-
-        let resp = minreq::post(start_handshake_url).send().unwrap();
-        let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
-        verify(&params, &pin_server_pub_key);
-
-        let result = jade_api.handshake_init(params).unwrap();
-        let handshake_data = result.data();
-        let next_url = &result.urls()[0];
-        assert_eq!(next_url, &format!("{pin_server_url}/set_pin"));
-        let data = serde_json::to_vec(&handshake_data).unwrap();
-        let resp = minreq::post(next_url).with_body(data).send().unwrap();
-        assert_eq!(resp.status_code, 200);
-        let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes()).unwrap();
-
-        let result = jade_api.handshake_complete(params).unwrap();
-        assert!(result);
-    }
-
-    InitializedJade {
-        _pin_server: Some(pin_container),
-        _jade_emul: jade_container,
-        _tempdir: Some(tempdir),
-        jade: jade_api,
-    }
-}
-
-fn inner_jade_debug_initialization(docker: &Cli) -> InitializedJade {
-    let NotInitializedJade {
-        _jade_emul,
-        mut jade,
-    } = inner_jade_create(docker, Network::LocaltestLiquid);
-
-    let params = DebugSetMnemonicParams {
-        mnemonic: lwk_test_util::TEST_MNEMONIC.to_string(),
-        passphrase: None,
-        temporary_wallet: false,
-    };
-    let result = jade.debug_set_mnemonic(params).unwrap();
-    assert!(result);
-
-    InitializedJade {
-        _pin_server: None,
-        _jade_emul,
-        _tempdir: None,
-        jade,
-    }
 }
 
 fn mock_version_info() -> VersionInfoResult {

@@ -10,8 +10,10 @@ use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Tx
 use bip39::Mnemonic;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
+use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
-use elements::Block;
+use elements::hex::FromHex;
+use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
@@ -261,10 +263,12 @@ pub struct TestWollet {
     _db_root_dir: TempDir,
 }
 
+pub fn regtest_policy_asset() -> AssetId {
+    AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
+}
+
 pub fn network_regtest() -> ElementsNetwork {
-    let policy_asset =
-        AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
-            .unwrap();
+    let policy_asset = regtest_policy_asset();
     ElementsNetwork::ElementsRegtest { policy_asset }
 }
 
@@ -887,6 +891,29 @@ fn n_reissuances(details: &lwk_common::PsetDetails) -> usize {
         .iter()
         .filter(|e| e.is_reissuance())
         .count()
+}
+
+pub fn asset_blinding_factor_test_vector() -> AssetBlindingFactor {
+    AssetBlindingFactor::from_hex(
+        "0000000000000000000000000000000000000000000000000000000000000001",
+    )
+    .unwrap()
+}
+
+pub fn value_blinding_factor_test_vector() -> ValueBlindingFactor {
+    ValueBlindingFactor::from_hex(
+        "0000000000000000000000000000000000000000000000000000000000000002",
+    )
+    .unwrap()
+}
+
+pub fn tx_out_secrets_test_vector() -> TxOutSecrets {
+    elements::TxOutSecrets::new(
+        regtest_policy_asset(),
+        asset_blinding_factor_test_vector(),
+        1000,
+        value_blinding_factor_test_vector(),
+    )
 }
 
 #[cfg(test)]

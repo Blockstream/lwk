@@ -378,12 +378,7 @@ mod test {
     #[test]
     fn test_tx_out_secrets_roundtrip() {
         let secret = EncodableTxOutSecrets {
-            inner: elements::TxOutSecrets::new(
-                elements::AssetId::default(),
-                elements::confidential::AssetBlindingFactor::zero(),
-                1000,
-                elements::confidential::ValueBlindingFactor::zero(),
-            ),
+            inner: lwk_test_util::tx_out_secrets_test_vector(),
         };
 
         let mut vec = vec![];
@@ -397,12 +392,7 @@ mod test {
 
     #[test]
     fn test_download_tx_result_roundtrip() {
-        let tx_out_secret = elements::TxOutSecrets::new(
-            elements::AssetId::default(),
-            elements::confidential::AssetBlindingFactor::zero(),
-            1000,
-            elements::confidential::ValueBlindingFactor::zero(),
-        );
+        let tx_out_secret = lwk_test_util::tx_out_secrets_test_vector();
         let mut txs = vec![];
         let mut unblinds = vec![];
         let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();
@@ -423,12 +413,7 @@ mod test {
 
     #[test]
     fn test_update_roundtrip() {
-        let tx_out_secret = elements::TxOutSecrets::new(
-            elements::AssetId::default(),
-            elements::confidential::AssetBlindingFactor::zero(),
-            1000,
-            elements::confidential::ValueBlindingFactor::zero(),
-        );
+        let tx_out_secret = lwk_test_util::tx_out_secrets_test_vector();
         let mut txs = vec![];
         let mut unblinds = vec![];
         let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();

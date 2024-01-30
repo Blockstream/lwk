@@ -117,6 +117,57 @@ impl Wollet {
     }
 }
 
+impl Encodable for DownloadTxResult {
+    fn consensus_encode<W: std::io::Write>(
+        &self,
+        mut w: W,
+    ) -> Result<usize, elements::encode::Error> {
+        let mut bytes_written = 0;
+
+        let txs_len = self.txs.len();
+        bytes_written += elements::VarInt(txs_len as u64).consensus_encode(&mut w)?;
+        for (_txid, tx) in self.txs.iter() {
+            // Avoid serializing Txid since are re-computable from the tx
+            bytes_written += tx.consensus_encode(&mut w)?;
+        }
+
+        let unblinds_len = self.unblinds.len();
+        bytes_written += elements::VarInt(unblinds_len as u64).consensus_encode(&mut w)?;
+        for (out_point, tx_out_secrets) in self.unblinds.iter() {
+            bytes_written += out_point.consensus_encode(&mut w)?;
+
+            // TODO make TxOutSecrets encodable upstream
+            let encodable_tx_out_secrets = EncodableTxOutSecrets {
+                inner: tx_out_secrets.clone(),
+            };
+            bytes_written += encodable_tx_out_secrets.consensus_encode(&mut w)?;
+        }
+
+        Ok(bytes_written)
+    }
+}
+
+impl Decodable for DownloadTxResult {
+    fn consensus_decode<D: std::io::Read>(mut d: D) -> Result<Self, elements::encode::Error> {
+        let mut txs = vec![];
+        let txs_len = elements::VarInt::consensus_decode(&mut d)?.0;
+        for _ in 0..txs_len {
+            let tx = Transaction::consensus_decode(&mut d)?;
+            txs.push((tx.txid(), tx));
+        }
+
+        let mut unblinds = vec![];
+        let unblinds_len = elements::VarInt::consensus_decode(&mut d)?.0;
+        for _ in 0..unblinds_len {
+            let out_point = OutPoint::consensus_decode(&mut d)?;
+            let encodable_tx_out_secrets = EncodableTxOutSecrets::consensus_decode(&mut d)?;
+            unblinds.push((out_point, encodable_tx_out_secrets.inner))
+        }
+
+        Ok(DownloadTxResult { txs, unblinds })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct EncodableTxOutSecrets {
     inner: TxOutSecrets,
@@ -175,7 +226,7 @@ mod test {
 
     use elements::encode::{Decodable, Encodable};
 
-    use crate::Update;
+    use crate::{update::DownloadTxResult, Update};
 
     use super::EncodableTxOutSecrets;
 
@@ -212,5 +263,30 @@ mod test {
 
         let back = EncodableTxOutSecrets::consensus_decode(&vec[..]).unwrap();
         assert_eq!(secret, back)
+    }
+
+    #[test]
+    fn test_download_tx_result_roundtrip() {
+        let tx_out_secret = elements::TxOutSecrets::new(
+            elements::AssetId::default(),
+            elements::confidential::AssetBlindingFactor::zero(),
+            1000,
+            elements::confidential::ValueBlindingFactor::zero(),
+        );
+        let mut txs = vec![];
+        let mut unblinds = vec![];
+        let tx = lwk_test_util::liquid_block_1().txdata.pop().unwrap();
+        unblinds.push((tx.input[0].previous_output, tx_out_secret));
+
+        txs.push((tx.txid(), tx));
+
+        let result = DownloadTxResult { txs, unblinds };
+
+        let mut vec = vec![];
+        let len = result.consensus_encode(&mut vec).unwrap();
+        assert_eq!(len, 1325);
+
+        let back = DownloadTxResult::consensus_decode(&vec[..]).unwrap();
+        assert_eq!(result, back)
     }
 }

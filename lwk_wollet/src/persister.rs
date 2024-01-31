@@ -14,8 +14,7 @@ trait Persister {
 
     /// Push and persist an update.
     ///
-    /// Implementors could decide to override previous element if both previous element and current
-    /// has `update.only_tip() == true`
+    /// Implementors are encouraged to coalesce consequent updates with `update.only_tip() == true`
     fn push(&mut self, update: Update);
 }
 
@@ -74,7 +73,7 @@ impl FsPersister {
     }
 
     /// Write at next position without incrementing the next counter
-    /// returns the number of writes written
+    /// returns the number of bytes written
     fn write(&mut self, update: Update) -> Result<usize, Error> {
         let path = self.path(&self.next);
         let bytes = update.serialize()?;
@@ -125,19 +124,22 @@ impl Persister for FsPersister {
     }
 }
 
+const PERSISTED_FILE_NAME_LENGTH: usize = 12;
+
+/// Encapsulate an usize so that its to/from string representation are coherent
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default, Clone)]
 struct Counter(usize);
 
 impl Display for Counter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:0>12}", self.0)
+        write!(f, "{:0>width$}", self.0, width = PERSISTED_FILE_NAME_LENGTH)
     }
 }
 impl FromStr for Counter {
     type Err = crate::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 12 {
+        if s.len() != PERSISTED_FILE_NAME_LENGTH {
             return Err(Error::Generic("Not 12 chars".to_string()));
         }
         let c: usize = s.parse()?;
@@ -189,7 +191,7 @@ mod test {
         }
     }
 
-    pub fn inner_test_persister<P: Persister>(mut persister: P, first_time: bool) {
+    fn inner_test_persister<P: Persister>(mut persister: P, first_time: bool) {
         if first_time {
             assert_eq!(persister.iter().len(), 0);
         }

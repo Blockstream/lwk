@@ -10,22 +10,24 @@ use crate::{Error, Update};
 
 trait Persister {
     /// Return the elements in the same order as they have been inserted
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_>; // TODO return impl ExactSizeIterator<Item = Update> once MSRV reach 1.75
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_>; // TODO return impl ExactSizeIterator<Item = Update> once MSRV reach 1.75
 
-    /// Push and persist an update.
+    /// Push and persist an update. Returns the number of updates persisted
     ///
     /// Implementors are encouraged to coalesce consequent updates with `update.only_tip() == true`
-    fn push(&mut self, update: Update);
+    fn push(&mut self, update: Update) -> Result<usize, Error>;
 }
 
 pub struct NoPersist {}
 
 impl Persister for NoPersist {
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update>> {
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>>> {
         Box::new([].into_iter())
     }
 
-    fn push(&mut self, _update: Update) {}
+    fn push(&mut self, _update: Update) -> Result<usize, Error> {
+        Ok(0)
+    }
 }
 
 pub struct FsPersister {
@@ -87,17 +89,19 @@ struct FsPersisterIter<'a> {
     persister: &'a FsPersister,
 }
 impl<'a> Iterator for FsPersisterIter<'a> {
-    type Item = Update;
+    type Item = Result<Update, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = usize::from(&self.persister.next);
         if self.current < next {
-            let update = self
-                .persister
-                .read(self.current)
-                .expect("checker current<next");
-            self.current += 1;
-            Some(update)
+            let update = self.persister.read(self.current);
+            match update {
+                Ok(update) => {
+                    self.current += 1;
+                    Some(Ok(update))
+                }
+                Err(e) => Some(Err(e)),
+            }
         } else {
             None
         }
@@ -111,16 +115,17 @@ impl<'a> Iterator for FsPersisterIter<'a> {
 impl<'a> ExactSizeIterator for FsPersisterIter<'a> {}
 
 impl Persister for FsPersister {
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_> {
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
         Box::new(FsPersisterIter {
             current: 0,
             persister: self,
         })
     }
 
-    fn push(&mut self, update: Update) {
-        let _ = self.write(update).expect("remove"); // TODO method should return result
+    fn push(&mut self, update: Update) -> Result<usize, Error> {
+        let _ = self.write(update)?;
         self.next = self.next.clone() + 1;
+        Ok((&self.next).into())
     }
 }
 
@@ -171,7 +176,7 @@ impl Add<usize> for Counter {
 
 #[cfg(test)]
 mod test {
-    use crate::Update;
+    use crate::{Error, Update};
 
     use super::{Counter, FsPersister, NoPersist, Persister};
 
@@ -182,12 +187,13 @@ mod test {
         }
     }
     impl Persister for MemoryPersister {
-        fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_> {
-            Box::new(self.0.iter().cloned())
+        fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
+            Box::new(self.0.iter().map(|e| Ok(e.clone())))
         }
 
-        fn push(&mut self, update: crate::Update) {
-            self.0.push(update)
+        fn push(&mut self, update: crate::Update) -> Result<usize, Error> {
+            self.0.push(update);
+            Ok(self.0.len())
         }
     }
 
@@ -205,18 +211,20 @@ mod test {
         assert_ne!(&update1, &update2);
 
         if first_time {
-            persister.push(update1.clone());
+            persister.push(update1.clone()).unwrap();
             let mut iter = persister.iter();
             assert_eq!(iter.len(), 1);
-            assert_eq!(iter.next(), Some(update1.clone()));
+            assert_eq!(iter.next().unwrap().unwrap(), update1.clone());
+            assert!(iter.next().is_none());
             drop(iter);
 
-            persister.push(update2.clone());
+            persister.push(update2.clone()).unwrap();
         }
         let mut iter = persister.iter();
         assert_eq!(iter.len(), 2);
-        assert_eq!(iter.next(), Some(update1));
-        assert_eq!(iter.next(), Some(update2));
+        assert_eq!(iter.next().unwrap().unwrap(), update1);
+        assert_eq!(iter.next().unwrap().unwrap(), update2);
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -230,7 +238,7 @@ mod test {
         let mut persister = NoPersist {};
         assert_eq!(persister.iter().len(), 0);
         let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
-        persister.push(update);
+        persister.push(update).unwrap();
         assert_eq!(persister.iter().len(), 0);
     }
 

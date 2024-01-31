@@ -13,6 +13,7 @@ mod descriptor;
 mod domain;
 mod error;
 mod model;
+mod persister;
 mod pset_create;
 mod registry;
 mod store;

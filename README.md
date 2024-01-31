@@ -1,29 +1,28 @@
 # Liquid Wallet Kit
 
-**WARNING: early stage software, use it at your own risk.**
+**WARNING: LWK is still early stage software, use it at your own risk.**
 
-Liquid Wallet Kit is a collection of Rust crates for Liquid Wallets.
+**Liquid Wallet Kit** is a collection of Rust crates for [Liquid](https://liquid.net) Wallets.
 
 ## Main Features
 
-* **Watch-Only**: using Liquid descriptors, better known as
+* **Watch-Only** wallet support: using Liquid descriptors, better known as
   [CT descriptors](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki).
-* **PSET** based: transaction are shared and processed using the
+* **PSET** based: transactions are shared and processed using the
   [Partially Signed Elements Transaction](https://github.com/ElementsProject/elements/blob/1fcf0cf2323b7feaff5d1fc4c506fff5ec09132e/doc/pset.mediawiki) format.
-* **Electrum** and **Esplora** [backend](https://github.com/Blockstream/electrs):
-  no need to run and sync a full
-  node or rely on closed source servers.
-* **Issuance**, **reissuance** and **burn** support: manage the lifecycle
+* **Electrum** and **Esplora** [backends](https://github.com/Blockstream/electrs):
+  no need to run and sync a full Liquid node or rely on closed source servers.
+* **Asset issuance**, **reissuance** and **burn** support: manage the lifecycle
   of your Issued Assets with a lightweight client.
-* **Generic multisig**: create a wallet controlled by
-  different (software and hardware) signers with a user
+* **Generic multisig** wallets: create a wallet controlled by
+  any combination of hardware or software signers, with a user
   specified quorum.
-* [**Jade**](https://blockstream.com/jade/) support:
-  receive, issue, reissue and burn L-BTC and
-  Issued Assets with your Jade, using singlesig or multisig
-  wallets.
+* **Hardware signer** support: receive, issue, reissue and burn L-BTC and
+  Issued Assets with your hardware signer, using singlesig or multisig
+  wallets (currently [**Jade**](https://blockstream.com/jade/) only, with more coming soon).
+* **JSON-RPC Server** support: all functions are exposed via JSON-RPC Server, making it easier to build your own frontend, GUI, or integration.
 
-## Example
+## Building from source
 
 First you need [rust](https://www.rust-lang.org/tools/install),
 then you can build from source:
@@ -34,24 +33,26 @@ $ cargo build --release
 $ alias cli="$(pwd)/target/release/lwk_cli"
 ```
 
+## CLI Usage
+
 Start the rpc server (default in Liquid Testnet)
 and put it in background
 ```sh
 $ cli server start &
 ```
 
-Create a *signer* named `sw`
+Create a software *signer* named `sw` from a given BIP39 mnemonic
 ```sh
 $ cli signer load-software -s sw --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 ```
 
-Create a p2wph *wallet* named `ss` (install `jq` or extract the descriptor manually)
+Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)
 ```sh
 $ DESC=$(cli signer singlesig-desc -s sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
 $ cli wallet load -w ss -d $DESC
 ```
 
-Get the balance
+Get the wallet balance
 ```sh
 $ cli wallet balance -w ss
 ```
@@ -101,7 +102,7 @@ Run unit tests:
 cargo test --lib
 ```
 
-End to end tests needs local servers:
+End-to-end tests need some local servers:
 
 ```
 ./context/download_bins.sh # needed once unless server binaries changes
@@ -115,13 +116,13 @@ docker pull xenoky/local-jade-emulator:1.0.23
 docker pull tulipan81/blind_pin_server:v0.0.3
 ```
 
-Unclean test execution leave dockers image running, to stop all docker in the machine:
+Note: Failed test executions can leave docker containers running. To stop all running containers run:
 
 ```
 docker stop $(docker ps -a -q)
 ```
 
-To run end to end tests:
+To run end-to-end tests:
 
 ```
 cargo test
@@ -134,14 +135,14 @@ RUST_LOG=info cargo test -- test_name
 RUST_LOG=jade=debug cargo test -- test_name  # filter only on specific module
 ```
 
-### Test with physical Jade
+### Test with a physical Jade
 
-Tests using the serial need an additional dependency:
+Tests using Jade over serial (via USB cable) need an additional dependency:
 ```
 apt install -y libudev-dev
 ```
 
-Test cannot be executed in parallel so we need the `--test-threads 1` flag.
+These serial tests cannot be executed in parallel, so we need the `--test-threads 1` flag.
 ```
 cargo test -p lwk_jade --features serial -- serial --include-ignored --test-threads 1
 cargo test -p lwk_wollet --features serial -- serial --include-ignored --test-threads 1
@@ -158,15 +159,15 @@ cargo doc --no-deps --open
 ## History
 
 BEWallet was [originally](https://github.com/LeoComandini/BEWallet/)
-a Elements/Liquid wallet library written in Rust to develop
+an Elements/Liquid wallet library written in Rust to develop
 prototypes and experiments.
 
 BEWallet was based on [Blockstream's GDK](https://github.com/Blockstream/gdk).
 Essentially some GDK Rust pieces were moved to this project.
 
-This was used as the starting point for the Liquid Wallet Kit project,
-initially the parts that were not necessary have been dropped,
-things have been polished and new features have been addded.
+This was used as the starting point for the Liquid Wallet Kit project.
+Parts that were not necessary have been dropped,
+many things have been polished, and new features have been added.
 
-The code base has been entirely re-written, and now it has
+The codebase has been entirely re-written, and now it has
 almost no similarity with the original code.

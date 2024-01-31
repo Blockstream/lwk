@@ -65,15 +65,11 @@ impl ElementsNetwork {
 #[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
-    data_root: Option<String>,
 }
 
 impl Config {
-    pub fn new(network: ElementsNetwork, data_root: Option<&str>) -> Result<Self, Error> {
-        Ok(Config {
-            network,
-            data_root: data_root.map(Into::into),
-        })
+    pub fn new(network: ElementsNetwork) -> Result<Self, Error> {
+        Ok(Config { network })
     }
 
     pub fn address_params(&self) -> &'static AddressParams {
@@ -86,9 +82,5 @@ impl Config {
 
     pub fn policy_asset(&self) -> AssetId {
         self.network.policy_asset()
-    }
-
-    pub fn data_root(&self) -> Option<&str> {
-        self.data_root.as_deref()
     }
 }

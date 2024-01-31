@@ -63,7 +63,7 @@ impl Wollet {
             timestamps,
             scripts,
             tip,
-        } = update;
+        } = update.clone();
         store.cache.tip = (tip.height, tip.block_hash());
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
@@ -120,7 +120,8 @@ impl Wollet {
                 .last_unused_internal
                 .store(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
-        store.flush()?;
+
+        self.persister.push(update)?;
         Ok(())
     }
 }

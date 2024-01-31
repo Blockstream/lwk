@@ -8,7 +8,7 @@ use std::{
 
 use crate::{Error, Update};
 
-trait Persister {
+pub trait Persister {
     /// Return the elements in the same order as they have been inserted
     fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_>; // TODO return impl ExactSizeIterator<Item = Update> once MSRV reach 1.75
 
@@ -19,6 +19,12 @@ trait Persister {
 }
 
 pub struct NoPersist {}
+
+impl NoPersist {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {})
+    }
+}
 
 impl Persister for NoPersist {
     fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>>> {
@@ -38,7 +44,7 @@ pub struct FsPersister {
     next: Counter,
 }
 impl FsPersister {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Box<Self>, Error> {
         let path = path.as_ref().to_path_buf();
         if path.is_file() {
             return Err(Error::Generic("given path is a file".to_string()));
@@ -59,7 +65,7 @@ impl FsPersister {
             }
         }
 
-        Ok(Self { path, next })
+        Ok(Box::new(Self { path, next }))
     }
 
     fn path(&self, counter: &Counter) -> PathBuf {
@@ -182,8 +188,8 @@ mod test {
 
     struct MemoryPersister(Vec<Update>);
     impl MemoryPersister {
-        pub fn new() -> Self {
-            Self(vec![])
+        pub fn new() -> Box<Self> {
+            Box::new(Self(vec![]))
         }
     }
     impl Persister for MemoryPersister {
@@ -197,7 +203,7 @@ mod test {
         }
     }
 
-    fn inner_test_persister<P: Persister>(mut persister: P, first_time: bool) {
+    fn inner_test_persister(mut persister: Box<dyn Persister>, first_time: bool) {
         if first_time {
             assert_eq!(persister.iter().len(), 0);
         }

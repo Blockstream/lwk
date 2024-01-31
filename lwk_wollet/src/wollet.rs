@@ -7,11 +7,11 @@ use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
-use crate::hashes::{sha256, Hash};
+use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::Store;
 use crate::util::EC;
-use crate::{BlockchainBackend, ElectrumClient, WolletDescriptor};
+use crate::{BlockchainBackend, ElectrumClient, Persister, WolletDescriptor};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
@@ -21,7 +21,6 @@ use elements_miniscript::{
 use lwk_common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic;
 
@@ -29,6 +28,7 @@ use std::sync::atomic;
 pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,
+    pub(crate) persister: Box<dyn Persister + Send>,
     descriptor: WolletDescriptor,
 }
 
@@ -36,38 +36,35 @@ impl Wollet {
     /// Create a new  wallet
     pub fn new(
         network: ElementsNetwork,
-        data_root: Option<&str>,
+        persister: Box<dyn Persister + Send>,
         desc: &str,
     ) -> Result<Self, Error> {
-        let config = Config::new(network, data_root)?;
-        Self::inner_new(config, desc)
+        let config = Config::new(network)?;
+        Self::inner_new(config, persister, desc)
     }
 
-    fn inner_new(config: Config, desc: &str) -> Result<Self, Error> {
+    fn inner_new(
+        config: Config,
+        persister: Box<dyn Persister + Send>,
+        desc: &str,
+    ) -> Result<Self, Error> {
         let descriptor = WolletDescriptor::from_str(desc)?;
 
-        let path = config
-            .data_root()
-            .map(|path| {
-                let wallet_desc = format!("{}{:?}", desc, config);
-                let wallet_id = format!("{}", sha256::Hash::hash(wallet_desc.as_bytes()));
-
-                let mut path: PathBuf = path.into();
-                if !path.exists() {
-                    std::fs::create_dir_all(&path)?;
-                }
-                path.push(wallet_id);
-                Ok::<PathBuf, Error>(path)
-            })
-            .transpose()?;
-
-        let store = Store::new(path, &descriptor)?;
-
-        Ok(Wollet {
+        let store = Store::default();
+        let mut wollet = Wollet {
             store,
             config,
             descriptor,
-        })
+            persister,
+        };
+
+        let updates: Vec<_> = wollet.persister.iter().collect();
+
+        for update in updates {
+            wollet.apply_update(update?)?;
+        }
+
+        Ok(wollet)
     }
 
     /// Get the network policy asset
@@ -511,6 +508,7 @@ mod tests {
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
+    use crate::NoPersist;
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -570,7 +568,7 @@ mod tests {
 
     fn new_wollet(desc: &str) -> Wollet {
         let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
-        Wollet::new(ElementsNetwork::LiquidTestnet, None, desc).unwrap()
+        Wollet::new(ElementsNetwork::LiquidTestnet, NoPersist::new(), desc).unwrap()
     }
 
     #[test]
@@ -638,7 +636,7 @@ mod tests {
                     let desc =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
                             .unwrap();
-                    let wollet = Wollet::new(network, None, &desc).unwrap();
+                    let wollet = Wollet::new(network, NoPersist::new(), &desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?} i:{i}");
                     i += 1;

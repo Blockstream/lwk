@@ -48,7 +48,7 @@ impl Update {
         Ok(vec)
     }
     pub fn deserialize(bytes: &[u8]) -> Result<Update, elements::encode::Error> {
-        Update::consensus_decode(&bytes[..])
+        Update::consensus_decode(bytes)
     }
 }
 

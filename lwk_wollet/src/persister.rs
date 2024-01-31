@@ -19,6 +19,16 @@ trait Persister {
     fn push(&mut self, update: Update);
 }
 
+pub struct NoPersist {}
+
+impl Persister for NoPersist {
+    fn iter(&self) -> impl ExactSizeIterator<Item = Update> {
+        [].into_iter()
+    }
+
+    fn push(&mut self, _update: Update) {}
+}
+
 pub struct FsPersister {
     /// Directory where the data files will be written
     path: PathBuf,
@@ -161,7 +171,7 @@ impl Add<usize> for Counter {
 mod test {
     use crate::Update;
 
-    use super::{Counter, FsPersister, Persister};
+    use super::{Counter, FsPersister, NoPersist, Persister};
 
     struct MemoryPersister(Vec<Update>);
     impl MemoryPersister {
@@ -211,6 +221,15 @@ mod test {
     fn test_memory_persister() {
         let persister = MemoryPersister::new();
         inner_test_persister(persister, true);
+    }
+
+    #[test]
+    fn test_no_persist() {
+        let mut persister = NoPersist {};
+        assert_eq!(persister.iter().len(), 0);
+        let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
+        persister.push(update);
+        assert_eq!(persister.iter().len(), 0);
     }
 
     #[test]

@@ -10,7 +10,7 @@ use crate::{Error, Update};
 
 trait Persister {
     /// Return the elements in the same order as they have been inserted
-    fn iter(&self) -> impl ExactSizeIterator<Item = Update>;
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_>; // TODO return impl ExactSizeIterator<Item = Update> once MSRV reach 1.75
 
     /// Push and persist an update.
     ///
@@ -21,8 +21,8 @@ trait Persister {
 pub struct NoPersist {}
 
 impl Persister for NoPersist {
-    fn iter(&self) -> impl ExactSizeIterator<Item = Update> {
-        [].into_iter()
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update>> {
+        Box::new([].into_iter())
     }
 
     fn push(&mut self, _update: Update) {}
@@ -111,11 +111,11 @@ impl<'a> Iterator for FsPersisterIter<'a> {
 impl<'a> ExactSizeIterator for FsPersisterIter<'a> {}
 
 impl Persister for FsPersister {
-    fn iter(&self) -> impl ExactSizeIterator<Item = Update> {
-        FsPersisterIter {
+    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_> {
+        Box::new(FsPersisterIter {
             current: 0,
             persister: self,
-        }
+        })
     }
 
     fn push(&mut self, update: Update) {
@@ -182,8 +182,8 @@ mod test {
         }
     }
     impl Persister for MemoryPersister {
-        fn iter(&self) -> impl ExactSizeIterator<Item = Update> {
-            self.0.iter().cloned()
+        fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Update> + '_> {
+            Box::new(self.0.iter().cloned())
         }
 
         fn push(&mut self, update: crate::Update) {

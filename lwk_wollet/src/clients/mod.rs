@@ -290,10 +290,10 @@ mod tests {
         let mut prec = None;
 
         for (i, mut bb) in vec.into_iter().enumerate() {
-            let wollet = tempfile::tempdir().unwrap();
+            let tempdir = tempfile::tempdir().unwrap();
             let mut wollet = crate::Wollet::new(
                 ElementsNetwork::LiquidTestnet,
-                FsPersister::new(&wollet.path().display().to_string()).unwrap(),
+                FsPersister::new(&tempdir).unwrap(),
                 desc_str,
             )
             .unwrap();

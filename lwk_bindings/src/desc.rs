@@ -9,6 +9,12 @@ pub struct WolletDescriptor {
     inner: lwk_wollet::WolletDescriptor,
 }
 
+impl AsRef<lwk_wollet::WolletDescriptor> for WolletDescriptor {
+    fn as_ref(&self) -> &lwk_wollet::WolletDescriptor {
+        &self.inner
+    }
+}
+
 impl From<lwk_wollet::WolletDescriptor> for WolletDescriptor {
     fn from(inner: lwk_wollet::WolletDescriptor) -> Self {
         Self { inner }

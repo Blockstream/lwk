@@ -203,9 +203,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::LoadWallet = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             // TODO recognize different name same descriptor?
+
             let wollet = Wollet::new(
                 s.config.network,
-                FsPersister::new(&s.config.datadir)?,
+                FsPersister::new_with_desc(
+                    &s.config.datadir,
+                    s.config.network,
+                    &r.descriptor.parse()?,
+                )?,
                 &r.descriptor,
             )?;
             s.wollets.insert(&r.name, wollet)?;

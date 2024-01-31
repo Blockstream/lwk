@@ -288,11 +288,9 @@ impl TestWollet {
         let validate_domain = false;
         let _db_root_dir = TempDir::new().unwrap();
 
-        let db_root = format!("{}", _db_root_dir.path().display());
-
         let mut wollet = Wollet::new(
             network_regtest(),
-            FsPersister::new(db_root).unwrap(),
+            FsPersister::new(&_db_root_dir).unwrap(),
             &add_checksum(desc),
         )
         .unwrap();

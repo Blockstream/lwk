@@ -6,7 +6,9 @@ use std::{
     str::FromStr,
 };
 
-use crate::{Error, Update};
+use elements::bitcoin::hashes::{sha256, Hash};
+
+use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 
 pub trait Persister {
     /// Return the elements in the same order as they have been inserted
@@ -44,6 +46,7 @@ pub struct FsPersister {
     next: Counter,
 }
 impl FsPersister {
+    /// Creates a persister of updates, writing files in `path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Box<Self>, Error> {
         let path = path.as_ref().to_path_buf();
         if path.is_file() {
@@ -66,6 +69,18 @@ impl FsPersister {
         }
 
         Ok(Box::new(Self { path, next }))
+    }
+    /// Creates a persister of updates, from the given path create a network subdirectory with
+    /// another subdirectory which name is one-way derived from the descriptor
+    pub fn new_with_desc<P: AsRef<Path>>(
+        path: P,
+        network: ElementsNetwork,
+        desc: &WolletDescriptor,
+    ) -> Result<Box<Self>, Error> {
+        let mut persister_path = path.as_ref().to_path_buf();
+        persister_path.push(network.as_str());
+        persister_path.push(sha256::Hash::hash(desc.to_string().as_bytes()).to_string());
+        Self::new(persister_path)
     }
 
     fn path(&self, counter: &Counter) -> PathBuf {

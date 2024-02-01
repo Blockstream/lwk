@@ -15,7 +15,9 @@ use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::num::NonZeroU8;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 
 use lwk_common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
@@ -59,13 +61,20 @@ mod state;
 pub struct App {
     rpc: Option<JsonRpcServer>,
     config: Config,
+    is_scanning: Arc<AtomicBool>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl App {
     pub fn new(config: Config) -> Result<App, Error> {
         tracing::info!("Creating new app with config: {:?}", config);
 
-        Ok(App { rpc: None, config })
+        Ok(App {
+            rpc: None,
+            config,
+            handle: None,
+            is_scanning: Arc::new(AtomicBool::new(false)),
+        })
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
@@ -113,6 +122,28 @@ impl App {
         state.lock().map_err(|e| e.to_string())?.do_persist = true;
 
         self.rpc = Some(rpc);
+
+        // Wallets scanning thread
+        self.is_scanning.store(true, Ordering::Relaxed);
+        let is_scanning = self.is_scanning.clone();
+        let state_scanning = state.clone();
+        let handle = std::thread::spawn(move || loop {
+            if !is_scanning.load(Ordering::Relaxed) {
+                break;
+            }
+            if let Ok(mut s) = state_scanning.lock() {
+                if let Ok(mut electrum_client) = s.config.electrum_client() {
+                    for (_name, wollet) in s.wollets.iter_mut() {
+                        // TODO: release lock when doing network calls
+                        let _ = full_scan_with_electrum_client(wollet, &mut electrum_client);
+                    }
+                }
+            }
+            // TODO: make scanning interval configurable
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        });
+        self.handle = Some(handle);
+
         Ok(())
     }
 
@@ -138,10 +169,14 @@ impl App {
     }
 
     pub fn join_threads(&mut self) -> Result<(), Error> {
+        self.is_scanning.store(false, Ordering::Relaxed);
         self.rpc
             .take()
             .ok_or(error::Error::NotStarted)?
             .join_threads();
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
         Ok(())
     }
 

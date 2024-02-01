@@ -35,8 +35,8 @@ use lwk_wollet::elements::{AssetId, TxOutSecrets};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
-use lwk_wollet::{BlockchainBackend, FsPersister};
+use lwk_wollet::BlockchainBackend;
+use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, EncryptedFsPersister, Wollet};
 use serde_json::Value;
 use state::id_to_fingerprint;
 
@@ -206,7 +206,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let wollet = Wollet::new(
                 s.config.network,
-                FsPersister::new_with_desc(
+                EncryptedFsPersister::new(
                     &s.config.datadir,
                     s.config.network,
                     &r.descriptor.parse()?,

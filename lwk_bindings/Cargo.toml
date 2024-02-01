@@ -12,7 +12,7 @@ thiserror = "1.0.50"
 uniffi = { version = "0.26.1", features = ["bindgen-tests"] }
 lwk_wollet = { path = "../lwk_wollet" }
 lwk_common = { version = "0.2.0" }
-lwk_signer = { path = "../lwk_signer" }
+lwk_signer = { version = "0.2.0" }
 serde_json = "1"
 
 [build-dependencies]

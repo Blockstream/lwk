@@ -25,3 +25,9 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 COPY env.sh /env.sh
+
+# move following layers up once upper layers needs modification
+
+# needed for WASM
+RUN apt install -y clang
+RUN rustup target add wasm32-unknown-unknown

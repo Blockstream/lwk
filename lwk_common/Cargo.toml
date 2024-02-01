@@ -12,3 +12,6 @@ elements-miniscript = "0.3"
 rand = "0.8"
 thiserror = "1.0.48"
 # avoid deps to the workspace
+
+[target.wasm32-unknown-unknown.dependencies]
+getrandom = { version = "0.2", features = ["js"] }

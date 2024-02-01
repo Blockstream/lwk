@@ -79,6 +79,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     electrum_url,
                     datadir,
                     timeout,
+                    scanning_interval,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let set_handler_result = ctrlc::try_set_handler(move || {
@@ -101,6 +102,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     };
                     if let Some(timeout) = timeout {
                         config.timeout = Duration::from_secs(timeout);
+                    };
+                    if let Some(scanning_interval) = scanning_interval {
+                        config.scanning_interval = Duration::from_secs(scanning_interval);
                     };
                     if let Some(url) = electrum_url {
                         config.electrum_url = url;

@@ -128,6 +128,7 @@ impl App {
         self.is_scanning.store(true, Ordering::Relaxed);
         let is_scanning = self.is_scanning.clone();
         let state_scanning = state.clone();
+        let scanning_interval = self.config.scanning_interval;
         let handle = std::thread::spawn(move || loop {
             if !is_scanning.load(Ordering::Relaxed) {
                 break;
@@ -141,8 +142,7 @@ impl App {
                 }
                 s.increment_scan_loops();
             }
-            // TODO: make scanning interval configurable
-            std::thread::sleep(std::time::Duration::from_secs(3));
+            std::thread::sleep(scanning_interval);
         });
         self.handle = Some(handle);
 

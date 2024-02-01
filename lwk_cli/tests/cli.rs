@@ -58,7 +58,9 @@ fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) 
         let cli = cli.clone();
         let params = params.clone();
         std::thread::spawn(move || {
-            sh(&format!("{cli} server start {params}"));
+            sh(&format!(
+                "{cli} server start --scanning-interval 1 {params}"
+            ));
         })
     };
     std::thread::sleep(std::time::Duration::from_millis(100));

@@ -681,6 +681,10 @@ pub enum ServerCommand {
         /// Timeout for rpc and hww requests in seconds
         #[arg(long)]
         timeout: Option<u64>,
+
+        /// Scanning interval
+        #[arg(long)]
+        scanning_interval: Option<u64>,
     },
 
     /// Wait until an entire blockchain scan has been completed

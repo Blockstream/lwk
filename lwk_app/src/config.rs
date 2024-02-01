@@ -21,6 +21,7 @@ pub struct Config {
     pub validate_domain: bool,
     pub explorer_url: String,
     pub timeout: Duration,
+    pub scanning_interval: Duration,
 }
 
 impl Config {
@@ -34,6 +35,7 @@ impl Config {
             validate_domain: true,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             timeout: TIMEOUT,
+            scanning_interval: consts::SCANNING_INTERVAL,
         }
     }
 
@@ -47,6 +49,7 @@ impl Config {
             validate_domain: true,
             explorer_url: "https://blockstream.info/liquid/".into(),
             timeout: TIMEOUT,
+            scanning_interval: consts::SCANNING_INTERVAL,
         }
     }
 
@@ -62,6 +65,7 @@ impl Config {
             validate_domain: false,
             explorer_url: "".into(),
             timeout: TIMEOUT,
+            scanning_interval: consts::SCANNING_INTERVAL,
         }
     }
 

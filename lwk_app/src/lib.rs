@@ -37,7 +37,7 @@ use lwk_wollet::elements::{AssetId, TxOutSecrets};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
+use lwk_wollet::{full_scan_with_electrum_client, Wollet};
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 use state::id_to_fingerprint;
@@ -351,10 +351,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Address => {
             let r: request::Address = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client = s.config.electrum_client()?;
 
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let addr = wollet.address(r.index)?;
             let definite_desc = wollet
                 .wollet_descriptor()
@@ -430,9 +428,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Balance => {
             let r: request::Balance = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client = s.config.electrum_client()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let mut balance = wollet
                 .balance()?
                 .into_iter()
@@ -449,9 +445,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SendMany => {
             let r: request::Send = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client = s.config.electrum_client()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let mut tx = wollet.send_many(
                 r.addressees
                     .into_iter()
@@ -748,9 +742,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::WalletUtxos => {
             let r: request::WalletUtxos = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client = s.config.electrum_client()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let utxos: Vec<response::Utxo> = wollet.utxos()?.iter().map(convert_utxo).collect();
             Response::result(
                 request.id,
@@ -761,9 +753,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::WalletTxs = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let explorer_url = s.config.explorer_url.clone();
-            let mut electrum_client = s.config.electrum_client()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let mut txs: Vec<response::Tx> = wollet
                 .transactions()?
                 .iter()
@@ -782,9 +772,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Issue => {
             let r: request::Issue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client: ElectrumClient = s.config.electrum_client()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
             let tx = wollet.issue_asset(
                 r.satoshi_asset,
                 r.address_asset.as_deref().unwrap_or(""),
@@ -803,9 +791,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Reissue => {
             let r: request::Reissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mut electrum_client: ElectrumClient = s.config.electrum_client()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            full_scan_with_electrum_client(wollet, &mut electrum_client)?;
 
             let mut pset = wollet.reissue_asset(
                 &r.asset,

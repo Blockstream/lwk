@@ -26,6 +26,7 @@ fn get_available_addr() -> anyhow::Result<SocketAddr> {
 }
 
 fn get_balance(cli: &str, wallet: &str, asset: &str) -> u64 {
+    sh(&format!("{cli} server scan"));
     let r = sh(&format!("{cli} wallet balance --wallet {wallet}"));
     let b = r.get("balance").unwrap().as_object().unwrap();
     b.get(asset).unwrap().as_u64().unwrap()
@@ -125,6 +126,7 @@ fn wait_ms(ms: u64) {
 }
 
 fn wait_tx(cli: &str, wallet: &str, txid: &str) {
+    sh(&format!("{cli} server scan"));
     let ms = 500;
     let times = 20;
     for _ in 0..times {
@@ -147,7 +149,6 @@ fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     let txid = server.node_sendtoaddress(&addr, sats, None);
     // Only 2 blocks are necessary to make coinbase spendable
     server.generate(2);
-    sh(&format!("{cli} server scan"));
     wait_tx(cli, wallet, &txid);
 }
 
@@ -512,6 +513,7 @@ fn test_broadcast() {
     fund(&server, &cli, "w1", 1_000_000);
 
     let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    sh(&format!("{cli} server scan"));
     let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
@@ -535,6 +537,7 @@ fn test_broadcast() {
     ));
     assert!(result.get("txid").unwrap().as_str().is_some());
 
+    sh(&format!("{cli} server scan"));
     let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance_obj = result.get("balance").unwrap();
     let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
@@ -613,6 +616,7 @@ fn test_issue() {
         "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
     assert!(r.get("txid").unwrap().as_str().is_some());
+    sh(&format!("{cli} server scan"));
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let r = sh(&format!("{cli} wallet balance --wallet w1"));
@@ -712,6 +716,7 @@ fn test_issue() {
     }
 
     server.generate(1);
+    sh(&format!("{cli} server scan"));
 
     let r = sh(&format!("{cli} wallet txs --wallet w1 --with-tickers"));
     let txs = r.get("txs").unwrap().as_array().unwrap();

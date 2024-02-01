@@ -399,14 +399,16 @@ mod test {
         assert_ne!(&update1, &update2);
 
         if first_time {
-            persister.push(update1.clone()).unwrap();
+            let el = persister.push(update1.clone()).unwrap();
+            assert_eq!(el, 1);
             let mut iter = persister.iter();
             assert_eq!(iter.len(), 1);
             assert_eq!(iter.next().unwrap().unwrap(), update1.clone());
             assert!(iter.next().is_none());
             drop(iter);
 
-            persister.push(update2.clone()).unwrap();
+            let el = persister.push(update2.clone()).unwrap();
+            assert_eq!(el, 2);
         }
         let mut iter = persister.iter();
         assert_eq!(iter.len(), 2);

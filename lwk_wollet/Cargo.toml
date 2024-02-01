@@ -38,7 +38,7 @@ tracing = "0.1"
 [dev-dependencies]
 tempfile = "3.8.0"
 lwk_signer = { path = "../lwk_signer" }
-lwk_jade = { path = "../lwk_jade" }
+lwk_jade = { version = "0.2.0" }
 lwk_containers = { path = "../lwk_containers" }
 minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 lwk_test_util = { path = "../lwk_test_util" }

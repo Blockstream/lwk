@@ -13,7 +13,7 @@ thiserror = "1.0.48"
 base64 = "0.13.0"
 
 lwk_common = { version = "0.2.0" }
-lwk_jade = { path = "../lwk_jade" }
+lwk_jade = { version = "0.2.0" }
 
 [dev-dependencies]
 lwk_test_util = { path = "../lwk_test_util" }

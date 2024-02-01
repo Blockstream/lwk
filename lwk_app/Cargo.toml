@@ -18,7 +18,7 @@ thiserror = "1"
 tracing = "0.1"
 lwk_common = { version = "0.2.0" }
 lwk_rpc_model = { path = "../lwk_rpc_model" }
-lwk_wollet = { path = "../lwk_wollet" }
+lwk_wollet = { version = "0.2.0" }
 rand = "0.8.5"
 schemars = "0.8.16"
 home = "0.5.5"

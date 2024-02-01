@@ -10,10 +10,7 @@ use aes_gcm_siv::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256GcmSiv,
 };
-use elements::{
-    bitcoin::hashes::{sha256, Hash},
-    hashes::sha256t_hash_newtype,
-};
+use elements::{bitcoin::hashes::Hash, hashes::sha256t_hash_newtype};
 use rand::{thread_rng, Rng};
 
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
@@ -105,6 +102,7 @@ impl FsPersister {
     ) -> Result<Box<Self>, Error> {
         let mut persister_path = path.as_ref().to_path_buf();
         persister_path.push(network.as_str());
+        persister_path.push("cache");
         persister_path.push(DirectoryIdHash::hash(desc.to_string().as_bytes()).to_string());
         Self::new(persister_path)
     }
@@ -201,6 +199,7 @@ impl EncryptedFsPersister {
     ) -> Result<Box<Self>, Error> {
         let mut path = path.as_ref().to_path_buf();
         path.push(network.as_str());
+        path.push("enc_cache");
         path.push(DirectoryIdHash::hash(desc.to_string().as_bytes()).to_string());
         if path.is_file() {
             return Err(Error::Generic("given path is a file".to_string()));

@@ -27,7 +27,7 @@ pub trait Persister {
 
 sha256t_hash_newtype! {
     /// The tag of the hash
-    pub struct EncryptionKeyTag = hash_str("EncryptionKeyTag");
+    pub struct EncryptionKeyTag = hash_str("LWK-FS-Encryption-Key/1.0");
 
     /// A tagged hash to generate the key for encryption in the encrypted file system persister
     #[hash_newtype(forward)]
@@ -36,7 +36,7 @@ sha256t_hash_newtype! {
 
 sha256t_hash_newtype! {
     /// The tag of the hash
-    pub struct DirectoryIdTag = hash_str("DirectoryIdTag");
+    pub struct DirectoryIdTag = hash_str("LWK-FS-Directory-Id/1.0");
 
     /// A tagged hash to generate the name of the subdirectory to store cache content
     #[hash_newtype(forward)]

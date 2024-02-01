@@ -355,6 +355,10 @@ impl Client {
         self.make_request(Method::SignerJadeId, Some(req))
     }
 
+    pub fn scan(&self) -> Result<Value, Error> {
+        self.make_request(Method::Scan, None::<Box<RawValue>>)
+    }
+
     pub fn stop(&self) -> Result<Value, Error> {
         // TODO discriminate only stop error
         let _: Result<Value, Error> = self.make_request(Method::Stop, None::<Box<RawValue>>);

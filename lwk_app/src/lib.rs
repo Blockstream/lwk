@@ -87,6 +87,7 @@ impl App {
             signers: Default::default(),
             assets: Default::default(),
             do_persist: false,
+            scan_loops: 0,
         };
         state.insert_policy_asset();
         let state = Arc::new(Mutex::new(state));
@@ -138,6 +139,7 @@ impl App {
                         let _ = full_scan_with_electrum_client(wollet, &mut electrum_client);
                     }
                 }
+                s.increment_scan_loops();
             }
             // TODO: make scanning interval configurable
             std::thread::sleep(std::time::Duration::from_secs(3));
@@ -917,11 +919,29 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::JadeId { identifier })?,
             )
         }
+        Method::Scan => {
+            scan(&state)?;
+            Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
         Method::Stop => {
             return Err(Error::Stop);
         }
     };
     Ok(response)
+}
+
+fn scan(state: &Arc<Mutex<State>>) -> Result<(), Error> {
+    let initial_scan_loops = state.lock()?.scan_loops;
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        let current_scan_loops = state.lock()?.scan_loops;
+        // We want to wait for an _entire_ scan loop to be completed
+        if current_scan_loops > initial_scan_loops + 1 {
+            break;
+        }
+        // TODO: fail if waited too much
+    }
+    Ok(())
 }
 
 fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::UnvalidatedAddressee {

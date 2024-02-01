@@ -131,6 +131,7 @@ pub struct State {
     pub signers: Signers,
     pub assets: Assets,
     pub do_persist: bool,
+    pub scan_loops: u32,
 }
 
 impl Wollets {
@@ -519,5 +520,9 @@ impl State {
     pub fn get_available_signer(&mut self, name: &str) -> Result<&AnySigner, Error> {
         let timeout = Some(self.config.timeout);
         self.signers.get_available(name, timeout)
+    }
+
+    pub fn increment_scan_loops(&mut self) {
+        self.scan_loops += 1;
     }
 }

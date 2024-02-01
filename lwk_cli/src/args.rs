@@ -683,6 +683,9 @@ pub enum ServerCommand {
         timeout: Option<u64>,
     },
 
+    /// Wait until an entire blockchain scan has been completed
+    Scan,
+
     /// Stop the server, could be stopped also with SIGINT (ctrl-c)
     Stop,
 }

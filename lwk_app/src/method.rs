@@ -48,6 +48,7 @@ pub enum Method {
     ListAssets,
     AssetInsert,
     AssetRemove,
+    Scan,
     Stop,
     SignerJadeId,
 }
@@ -87,6 +88,7 @@ impl Method {
                 Method::ListAssets => schema_for!(request::Empty),
                 Method::AssetInsert => schema_for!(request::AssetInsert),
                 Method::AssetRemove => schema_for!(request::AssetRemove),
+                Method::Scan => schema_for!(request::Empty),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(request::Empty),
             },
@@ -123,6 +125,7 @@ impl Method {
                 Method::ListAssets => schema_for!(response::ListAssets),
                 Method::AssetInsert => schema_for!(response::Empty),
                 Method::AssetRemove => schema_for!(request::Empty),
+                Method::Scan => schema_for!(response::Empty),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(response::JadeId),
             },
@@ -168,6 +171,7 @@ impl FromStr for Method {
             "asset_insert" => Method::AssetInsert,
             "asset_remove" => Method::AssetRemove,
             "signer_jade_id" => Method::SignerJadeId,
+            "scan" => Method::Scan,
             "stop" => Method::Stop,
             _ => {
                 return Err(MethodNotExist {
@@ -213,6 +217,7 @@ impl std::fmt::Display for Method {
             Method::ListAssets => "list_assets",
             Method::AssetInsert => "asset_insert",
             Method::AssetRemove => "asset_remove",
+            Method::Scan => "scan",
             Method::Stop => "stop",
             Method::SignerJadeId => "signer_jade_id",
         };

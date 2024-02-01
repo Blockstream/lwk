@@ -144,6 +144,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     app.join_threads()?;
                     tracing::info!("Threads ended");
                 }
+                ServerCommand::Scan => {
+                    client.scan()?;
+                }
                 ServerCommand::Stop => {
                     client.stop()?;
                 }

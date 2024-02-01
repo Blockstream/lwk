@@ -37,6 +37,15 @@ sha256t_hash_newtype! {
     pub struct EncryptionKeyHash(_);
 }
 
+sha256t_hash_newtype! {
+    /// The tag of the hash
+    pub struct DirectoryIdTag = hash_str("DirectoryIdTag");
+
+    /// A tagged hash to generate the name of the subdirectory to store cache content
+    #[hash_newtype(forward)]
+    pub struct DirectoryIdHash(_);
+}
+
 pub struct NoPersist {}
 
 impl NoPersist {
@@ -96,7 +105,7 @@ impl FsPersister {
     ) -> Result<Box<Self>, Error> {
         let mut persister_path = path.as_ref().to_path_buf();
         persister_path.push(network.as_str());
-        persister_path.push(sha256::Hash::hash(desc.to_string().as_bytes()).to_string());
+        persister_path.push(DirectoryIdHash::hash(desc.to_string().as_bytes()).to_string());
         Self::new(persister_path)
     }
 
@@ -192,7 +201,7 @@ impl EncryptedFsPersister {
     ) -> Result<Box<Self>, Error> {
         let mut path = path.as_ref().to_path_buf();
         path.push(network.as_str());
-        path.push(sha256::Hash::hash(desc.to_string().as_bytes()).to_string());
+        path.push(DirectoryIdHash::hash(desc.to_string().as_bytes()).to_string());
         if path.is_file() {
             return Err(Error::Generic("given path is a file".to_string()));
         }

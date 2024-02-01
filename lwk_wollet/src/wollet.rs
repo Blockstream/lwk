@@ -40,14 +40,6 @@ impl Wollet {
         desc: &str,
     ) -> Result<Self, Error> {
         let config = Config::new(network)?;
-        Self::inner_new(config, persister, desc)
-    }
-
-    fn inner_new(
-        config: Config,
-        persister: Box<dyn Persister + Send>,
-        desc: &str,
-    ) -> Result<Self, Error> {
         let descriptor = WolletDescriptor::from_str(desc)?;
 
         let store = Store::default();

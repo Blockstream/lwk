@@ -262,7 +262,7 @@ impl TestElectrumServer {
 pub struct TestWollet {
     pub wollet: Wollet,
     pub electrum_url: ElectrumUrl,
-    _db_root_dir: TempDir,
+    db_root_dir: TempDir,
 }
 
 pub fn regtest_policy_asset() -> AssetId {
@@ -284,14 +284,22 @@ pub fn new_unsupported_wallet(desc: &str, expected: Error) {
 
 impl TestWollet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
+        let db_root_dir = TempDir::new().unwrap();
+        Self::with_temp_dir(electrs_url, desc, db_root_dir)
+    }
+
+    pub fn with_temp_dir(electrs_url: &str, desc: &str, db_root_dir: TempDir) -> Self {
         let tls = false;
         let validate_domain = false;
-        let _db_root_dir = TempDir::new().unwrap();
 
+        let network = network_regtest();
+        let descriptor = add_checksum(desc);
+
+        // TODO test also non encrypted persister
         let mut wollet = Wollet::new(
-            network_regtest(),
-            FsPersister::new(&_db_root_dir).unwrap(),
-            &add_checksum(desc),
+            network,
+            EncryptedFsPersister::new(&db_root_dir, network, &descriptor.parse().unwrap()).unwrap(),
+            &descriptor,
         )
         .unwrap();
 
@@ -300,8 +308,6 @@ impl TestWollet {
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&electrum_url).unwrap();
         full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();
 
-        let list = wollet.transactions().unwrap();
-        assert_eq!(list.len(), 0);
         let mut i = 120;
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
@@ -320,8 +326,12 @@ impl TestWollet {
         Self {
             wollet,
             electrum_url,
-            _db_root_dir,
+            db_root_dir,
         }
+    }
+
+    pub fn db_root_dir(self) -> TempDir {
+        self.db_root_dir
     }
 
     pub fn policy_asset(&self) -> AssetId {
@@ -778,6 +788,17 @@ impl TestWollet {
         let txid = electrum_client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid.to_string());
         txid
+    }
+
+    pub fn check_persistence(wollet: TestWollet) {
+        let electrum_url = wollet.electrum_url.to_string();
+        let descriptor = wollet.wollet.descriptor().to_string();
+        let expected = wollet.wollet.balance().unwrap();
+        let db_root_dir = wollet.db_root_dir();
+        let copy = TestWollet::with_temp_dir(&electrum_url, &descriptor, db_root_dir);
+        let balance = copy.wollet.balance().unwrap();
+
+        assert_eq!(expected, balance);
     }
 }
 

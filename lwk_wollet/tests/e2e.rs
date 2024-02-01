@@ -68,6 +68,8 @@ fn liquid_send(signers: &[&AnySigner]) {
         &wallet.policy_asset(),
         None,
     );
+
+    TestWollet::check_persistence(wallet);
 }
 
 fn liquid_issue(signers: &[&AnySigner]) {

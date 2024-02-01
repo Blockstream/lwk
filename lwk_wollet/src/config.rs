@@ -1,6 +1,7 @@
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
 use electrum_client::{Client, ConfigBuilder};
+use std::fmt::Display;
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -12,6 +13,15 @@ const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
 pub enum ElectrumUrl {
     Tls(String, bool), // the bool value indicates if the domain name should be validated
     Plaintext(String),
+}
+
+impl Display for ElectrumUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ElectrumUrl::Tls(s, _) => write!(f, "{}", s),
+            ElectrumUrl::Plaintext(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 impl ElectrumUrl {

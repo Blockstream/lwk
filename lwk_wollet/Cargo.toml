@@ -1,6 +1,6 @@
 [package]
 name = "lwk_wollet"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Watch-only wallet based on CT Descriptors"

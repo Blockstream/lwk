@@ -16,7 +16,7 @@ lwk_signer = { path = "../lwk_signer" }
 lwk_tiny_jrpc = { path = "../lwk_tiny_jrpc" }
 thiserror = "1"
 tracing = "0.1"
-lwk_common = { path = "../lwk_common" }
+lwk_common = { version = "0.2.0" }
 lwk_rpc_model = { path = "../lwk_rpc_model" }
 lwk_wollet = { path = "../lwk_wollet" }
 rand = "0.8.5"

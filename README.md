@@ -69,6 +69,28 @@ wallet and sign its transactions.
 
 ## Structure
 
+```mermaid
+  graph TD;
+      cli-->app;
+      cli-->rpc_model;
+
+      app-->common;
+      app-->wollet;
+      app-->signer;
+      app-->tiny_jrpc;
+      app-->rpc_model;
+
+      jade-->common;
+
+      signer-->common;
+      signer-->jade;
+
+      wollet-->common;
+      
+      bindings-->signer;
+      bindings-->wollet;
+```
+
 Instead of going for a monolithic approach, we opted to split
 the projects in different components that might be useful
 independently:

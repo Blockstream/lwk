@@ -17,5 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libudev-dev
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
 

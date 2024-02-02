@@ -1,4 +1,5 @@
 use clap::Parser;
+use lwk_app::Error;
 use lwk_cli::{inner_main, Cli};
 
 mod args;
@@ -8,13 +9,13 @@ fn main() -> anyhow::Result<()> {
 
     let value = match inner_main(args) {
         Ok(value) => value,
-        Err(e) => match e.downcast() {
-            Ok(e) => match e {
-                lwk_app::Error::RpcError(e) => serde_json::to_value(&e)?,
-                e => return Err(e.into()),
-            },
-            Err(e) => return Err(e),
-        },
+        Err(e) => {
+            if let Some(Error::RpcError(e)) = e.downcast_ref::<Error>() {
+                serde_json::to_value(e)?
+            } else {
+                return Err(e);
+            }
+        }
     };
     println!("{:#}", value);
     Ok(())

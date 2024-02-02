@@ -67,11 +67,33 @@ $ cli server stop
 If you have a Jade, you can plug it in and use it to create a
 wallet and sign its transactions.
 
-## Structure
+## Workspace Structure
 
-Instead of going for a monolithic approach, we opted to split
-the projects in different components that might be useful
-independently:
+The projects are split into different component crates that might be useful independently.
+
+Internal crate dependencies are shown in this diagram, where an arrow indicates "depends on":
+
+```mermaid
+  graph TD;
+      cli-->app;
+      cli-->rpc_model;
+
+      app-->common;
+      app-->wollet;
+      app-->signer;
+      app-->tiny_jrpc;
+      app-->rpc_model;
+
+      jade-->common;
+
+      signer-->common;
+      signer-->jade;
+
+      wollet-->common;
+      
+      bindings-->signer;
+      bindings-->wollet;
+```
 
 * [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
 * [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;

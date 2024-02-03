@@ -1,23 +1,23 @@
-on: [pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
 
 name: CI
 
 jobs:
 
-  cosmetics:
-    runs-on: ubuntu-20.04
+  build:
+    strategy:
+      matrix:
+        os: ["macos-12", "ubuntu-22.04"]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Cache
-        uses: Swatinem/rust-cache@v1.2.0
-      - name: Setup rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          profile: minimal
-          components: rustfmt
-      - name: Format
-        run: cargo fmt -- --check
+        uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libudev-dev
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+      - run: cargo build
 

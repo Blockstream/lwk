@@ -90,7 +90,6 @@ impl App {
             .build();
 
         let rpc = lwk_tiny_jrpc::JsonRpcServer::new(server, config, state.clone(), method_handler);
-
         let path = self.config.state_path()?;
         match std::fs::read_to_string(&path) {
             Ok(string) => {

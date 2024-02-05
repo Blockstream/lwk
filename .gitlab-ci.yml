@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:22cd3fa14dce572d33ab9b98bc4bb784381d41fa73bf25e0f885fc41fc75202f
+  image: xenoky/lwk-builder@sha256:6ecf70a08f6de925c6628d5dc899251986b686682fa91e3ead2c2d10d713f77d
   tags:
     - cloud
   retry: 2
@@ -111,3 +111,8 @@ check_rust_170:
   extends: .base
   script:
     - cargo +1.70.0 check
+
+wasm_partial:
+  extends: .base
+  script:
+    - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi

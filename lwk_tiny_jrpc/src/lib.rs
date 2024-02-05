@@ -268,11 +268,17 @@ fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Req
     let content_header = http_request
         .headers()
         .iter()
-        .find(|h| h.field.as_str().as_str() == "Content-Type")
+        .find(|h| h.field.as_str().as_str().to_ascii_lowercase() == "content-type")
         .ok_or(InnerError::NoContentType)?;
 
     // check content-type is application/json
-    if content_header.value.as_str() != "application/json" {
+    if !content_header
+        .value
+        .as_str()
+        .trim()
+        .to_ascii_lowercase()
+        .contains("application/json")
+    {
         return Err(InnerError::WrongContentType);
     }
 

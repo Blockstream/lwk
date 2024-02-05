@@ -144,6 +144,15 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                                 },
                             }
                         }
+                    } else {
+                        loop {
+                            std::thread::sleep(Duration::from_millis(100));
+                            if app.is_running().unwrap_or(false) {
+                                continue;
+                            } else {
+                                break;
+                            }
+                        }
                     }
                     app.join_threads()?;
                     tracing::info!("Threads ended");

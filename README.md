@@ -20,6 +20,7 @@
 * **Hardware signer** support: receive, issue, reissue and burn L-BTC and
   Issued Assets with your hardware signer, using singlesig or multisig
   wallets (currently [**Jade**](https://blockstream.com/jade/) only, with more coming soon).
+* **Native bindings** [PoC support](./lwk_bindings#readme) for Python and Kotlin, with many other language available soon using [uniffi](https://mozilla.github.io/uniffi-rs/)
 * **JSON-RPC Server** support: all functions are exposed via JSON-RPC Server, making it easier to build your own frontend, GUI, or integration.
 
 ## Building from source

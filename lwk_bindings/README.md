@@ -38,6 +38,12 @@ just env-python-bindings
 
 ## Kotlin
 
+
+### Example
+
+* [List transactions](./tests/bindings/list_transactions.kts) of a wpkh/slip77 wallet
+
+
 ### Build
 
 This will build the bindings library in debug mode and generate the kotlin file

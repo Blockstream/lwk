@@ -264,7 +264,7 @@ mod tests {
 
     use crate::{
         clients::esplora_client::EsploraClient, BlockchainBackend, ElectrumClient, ElectrumUrl,
-        ElementsNetwork, EncryptedFsPersister,
+        ElementsNetwork, FsPersister,
     };
 
     #[test]
@@ -293,7 +293,7 @@ mod tests {
             let tempdir = tempfile::tempdir().unwrap();
             let mut wollet = crate::Wollet::new(
                 ElementsNetwork::LiquidTestnet,
-                EncryptedFsPersister::new(
+                FsPersister::new(
                     &tempdir,
                     ElementsNetwork::LiquidTestnet,
                     &desc_str.parse().unwrap(),

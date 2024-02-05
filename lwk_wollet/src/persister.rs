@@ -61,7 +61,8 @@ impl Persister for NoPersist {
     }
 }
 
-pub struct EncryptedFsPersister {
+/// A file system persister that writes encrypted incremental updates
+pub struct FsPersister {
     /// Directory where the data files will be written
     path: PathBuf,
 
@@ -71,7 +72,7 @@ pub struct EncryptedFsPersister {
     /// Cipher used to encrypt data
     cipher: Aes256GcmSiv,
 }
-impl EncryptedFsPersister {
+impl FsPersister {
     /// Creates a persister of updates. While being written they are encrypted using a key derived
     /// from the given descriptor.
     /// From the given path create a network subdirectory with
@@ -155,7 +156,7 @@ impl EncryptedFsPersister {
 
 struct EncryptedFsPersisterIter<'a> {
     current: usize,
-    persister: &'a EncryptedFsPersister,
+    persister: &'a FsPersister,
 }
 impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
     type Item = Result<Update, Error>;
@@ -183,7 +184,7 @@ impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
 }
 impl<'a> ExactSizeIterator for EncryptedFsPersisterIter<'a> {}
 
-impl Persister for EncryptedFsPersister {
+impl Persister for FsPersister {
     fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
         Box::new(EncryptedFsPersisterIter {
             current: 0,
@@ -247,7 +248,7 @@ impl Add<usize> for Counter {
 mod test {
     use std::str::FromStr;
 
-    use crate::{ElementsNetwork, EncryptedFsPersister, Error, Update, WolletDescriptor};
+    use crate::{ElementsNetwork, Error, FsPersister, Update, WolletDescriptor};
 
     use super::{Counter, NoPersist, Persister};
 
@@ -325,9 +326,9 @@ mod test {
         let tempdir = tempfile::tempdir().unwrap();
         let desc = wollet_descriptor_test_vector();
         let n = ElementsNetwork::LiquidTestnet;
-        let persister = EncryptedFsPersister::new(&tempdir, n, &desc).unwrap();
+        let persister = FsPersister::new(&tempdir, n, &desc).unwrap();
         inner_test_persister(persister, true);
-        let persister = EncryptedFsPersister::new(&tempdir, n, &desc).unwrap();
+        let persister = FsPersister::new(&tempdir, n, &desc).unwrap();
         inner_test_persister(persister, false);
     }
 

@@ -298,7 +298,7 @@ impl TestWollet {
         // TODO test also non encrypted persister
         let mut wollet = Wollet::new(
             network,
-            EncryptedFsPersister::new(&db_root_dir, network, &descriptor.parse().unwrap()).unwrap(),
+            FsPersister::new(&db_root_dir, network, &descriptor.parse().unwrap()).unwrap(),
             &descriptor,
         )
         .unwrap();

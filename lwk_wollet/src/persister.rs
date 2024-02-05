@@ -16,8 +16,8 @@ use rand::{thread_rng, Rng};
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 
 pub trait Persister {
-    /// Return the elements in the same order as they have been inserted
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_>; // TODO return impl ExactSizeIterator<Item = Update> once MSRV reach 1.75
+    /// Return ith elements inserted
+    fn get(&self, index: usize) -> Result<Option<Update>, Error>;
 
     /// Push and persist an update. Returns the number of updates persisted
     ///
@@ -52,8 +52,8 @@ impl NoPersist {
 }
 
 impl Persister for NoPersist {
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>>> {
-        Box::new([].into_iter())
+    fn get(&self, _index: usize) -> Result<Option<Update>, Error> {
+        Ok(None)
     }
 
     fn push(&mut self, _update: Update) -> Result<usize, Error> {
@@ -185,11 +185,12 @@ impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
 impl<'a> ExactSizeIterator for EncryptedFsPersisterIter<'a> {}
 
 impl Persister for FsPersister {
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
-        Box::new(EncryptedFsPersisterIter {
-            current: 0,
-            persister: self,
-        })
+    fn get(&self, index: usize) -> Result<Option<Update>, Error> {
+        if index < self.next.0 {
+            self.read(index).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 
     fn push(&mut self, update: Update) -> Result<usize, Error> {
@@ -260,8 +261,8 @@ mod test {
         }
     }
     impl Persister for MemoryPersister {
-        fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
-            Box::new(self.0.iter().map(|e| Ok(e.clone())))
+        fn get(&self, index: usize) -> Result<Option<Update>, Error> {
+            Ok(self.0.get(index).cloned())
         }
 
         fn push(&mut self, update: crate::Update) -> Result<usize, Error> {
@@ -272,7 +273,7 @@ mod test {
 
     fn inner_test_persister(mut persister: Box<dyn Persister>, first_time: bool) {
         if first_time {
-            assert_eq!(persister.iter().len(), 0);
+            assert_eq!(persister.get(0).unwrap(), None);
         }
 
         let update1 = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
@@ -286,20 +287,15 @@ mod test {
         if first_time {
             let el = persister.push(update1.clone()).unwrap();
             assert_eq!(el, 1);
-            let mut iter = persister.iter();
-            assert_eq!(iter.len(), 1);
-            assert_eq!(iter.next().unwrap().unwrap(), update1.clone());
-            assert!(iter.next().is_none());
-            drop(iter);
+            assert_eq!(persister.get(0).unwrap().unwrap(), update1.clone());
+            assert!(persister.get(1).unwrap().is_none());
 
             let el = persister.push(update2.clone()).unwrap();
             assert_eq!(el, 2);
         }
-        let mut iter = persister.iter();
-        assert_eq!(iter.len(), 2);
-        assert_eq!(iter.next().unwrap().unwrap(), update1);
-        assert_eq!(iter.next().unwrap().unwrap(), update2);
-        assert!(iter.next().is_none());
+        assert_eq!(persister.get(0).unwrap().unwrap(), update1);
+        assert_eq!(persister.get(1).unwrap().unwrap(), update2);
+        assert!(persister.get(2).unwrap().is_none());
     }
 
     pub fn wollet_descriptor_test_vector() -> WolletDescriptor {
@@ -316,10 +312,10 @@ mod test {
     #[test]
     fn test_no_persist() {
         let mut persister = NoPersist {};
-        assert_eq!(persister.iter().len(), 0);
+        assert_eq!(persister.get(0).unwrap(), None);
         let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
         persister.push(update).unwrap();
-        assert_eq!(persister.iter().len(), 0);
+        assert_eq!(persister.get(0).unwrap(), None);
     }
 
     #[test]

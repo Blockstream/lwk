@@ -49,10 +49,11 @@ impl Wollet {
             persister,
         };
 
-        let updates: Vec<_> = wollet.persister.iter().collect();
-
-        for update in updates {
-            wollet.apply_update_no_persist(update?)?;
+        for i in 0.. {
+            match wollet.persister.get(i)? {
+                Some(update) => wollet.apply_update_no_persist(update)?,
+                None => break,
+            }
         }
 
         Ok(wollet)

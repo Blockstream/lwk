@@ -57,8 +57,8 @@ pub enum Error {
     #[error("The handshake complete call to the pin server failed")]
     HandshakeFailed,
 
-    #[error("Unexpected \"false\" result")]
-    UnexpectedFalse,
+    #[error("Jade not initialized")]
+    NotInitialized,
 
     #[error(transparent)]
     Pset(#[from] elements::pset::Error),

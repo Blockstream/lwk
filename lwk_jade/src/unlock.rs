@@ -15,8 +15,8 @@ impl Jade {
                 if result {
                     Ok(())
                 } else {
-                    // This should never happen
-                    Err(Error::UnexpectedFalse)
+                    // Jade is not setup, and the user declined to do it on Jade screen
+                    Err(Error::NotInitialized)
                 }
             }
             IsAuthResult::AuthResult(result) => {

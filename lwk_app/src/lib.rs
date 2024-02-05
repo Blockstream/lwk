@@ -35,8 +35,8 @@ use lwk_wollet::elements::{AssetId, TxOutSecrets};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::BlockchainBackend;
-use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, FsPersister, Wollet};
+use lwk_wollet::{full_scan_with_electrum_client, ElectrumClient, Wollet};
+use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 use state::id_to_fingerprint;
 
@@ -203,11 +203,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             // TODO recognize different name same descriptor?
 
-            let wollet = Wollet::new(
-                s.config.network,
-                FsPersister::new(&s.config.datadir, s.config.network, &r.descriptor.parse()?)?,
-                &r.descriptor,
-            )?;
+            let desc: WolletDescriptor = r.descriptor.parse()?;
+            let wollet = Wollet::with_fs_persist(s.config.network, desc, &s.config.datadir)?;
             s.wollets.insert(&r.name, wollet)?;
 
             s.persist(&request)?;

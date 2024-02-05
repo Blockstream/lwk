@@ -264,7 +264,7 @@ mod tests {
 
     use crate::{
         clients::esplora_client::EsploraClient, BlockchainBackend, ElectrumClient, ElectrumUrl,
-        ElementsNetwork, FsPersister,
+        ElementsNetwork,
     };
 
     #[test]
@@ -291,17 +291,10 @@ mod tests {
 
         for (i, mut bb) in vec.into_iter().enumerate() {
             let tempdir = tempfile::tempdir().unwrap();
-            let mut wollet = crate::Wollet::new(
-                ElementsNetwork::LiquidTestnet,
-                FsPersister::new(
-                    &tempdir,
-                    ElementsNetwork::LiquidTestnet,
-                    &desc_str.parse().unwrap(),
-                )
-                .unwrap(),
-                desc_str,
-            )
-            .unwrap();
+            let desc = desc_str.parse().unwrap();
+            let mut wollet =
+                crate::Wollet::with_fs_persist(ElementsNetwork::LiquidTestnet, desc, &tempdir)
+                    .unwrap();
 
             let start = Instant::now();
             let first_update = bb.full_scan(&wollet).unwrap().unwrap();

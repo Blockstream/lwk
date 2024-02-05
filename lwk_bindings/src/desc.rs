@@ -21,6 +21,12 @@ impl From<lwk_wollet::WolletDescriptor> for WolletDescriptor {
     }
 }
 
+impl From<&WolletDescriptor> for lwk_wollet::WolletDescriptor {
+    fn from(desc: &WolletDescriptor) -> Self {
+        desc.inner.clone()
+    }
+}
+
 impl WolletDescriptor {
     #[uniffi::constructor]
     pub fn new(descriptor: &str) -> Result<Arc<Self>, LwkError> {

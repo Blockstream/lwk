@@ -1,4 +1,4 @@
-use lwk_wollet::{FsPersister, NoPersist};
+use lwk_wollet::NoPersist;
 
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
@@ -34,16 +34,12 @@ impl Wollet {
         datadir: Option<String>,
     ) -> Result<Arc<Self>, LwkError> {
         let inner = match datadir {
-            Some(path) => lwk_wollet::Wollet::new(
-                (*network).into(),
-                FsPersister::new(path, (*network).into(), descriptor.as_ref())?,
-                &descriptor.to_string(),
-            )?,
-            None => lwk_wollet::Wollet::new(
-                (*network).into(),
-                NoPersist::new(),
-                &descriptor.to_string(),
-            )?,
+            Some(path) => {
+                lwk_wollet::Wollet::with_fs_persist((*network).into(), descriptor.into(), path)?
+            }
+            None => {
+                lwk_wollet::Wollet::new((*network).into(), NoPersist::new(), descriptor.into())?
+            }
         };
 
         Ok(Arc::new(Self {

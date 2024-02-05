@@ -11,7 +11,7 @@ use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::store::Store;
 use crate::util::EC;
-use crate::{BlockchainBackend, ElectrumClient, Persister, WolletDescriptor};
+use crate::{BlockchainBackend, ElectrumClient, FsPersister, Persister, WolletDescriptor};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
@@ -21,7 +21,7 @@ use elements_miniscript::{
 use lwk_common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
+use std::path::Path;
 use std::sync::atomic;
 
 /// A watch-only wallet defined by a CT descriptor.
@@ -37,10 +37,9 @@ impl Wollet {
     pub fn new(
         network: ElementsNetwork,
         persister: Box<dyn Persister + Send>,
-        desc: &str,
+        descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
         let config = Config::new(network)?;
-        let descriptor = WolletDescriptor::from_str(desc)?;
 
         let store = Store::default();
         let mut wollet = Wollet {
@@ -57,6 +56,19 @@ impl Wollet {
         }
 
         Ok(wollet)
+    }
+
+    /// Create a new  wallet persisting on file system
+    pub fn with_fs_persist<P: AsRef<Path>>(
+        network: ElementsNetwork,
+        descriptor: WolletDescriptor,
+        datadir: P,
+    ) -> Result<Self, Error> {
+        Self::new(
+            network,
+            FsPersister::new(datadir, network, &descriptor)?,
+            descriptor,
+        )
     }
 
     /// Get the network policy asset
@@ -496,6 +508,8 @@ fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Op
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
@@ -559,7 +573,9 @@ mod tests {
     }
 
     fn new_wollet(desc: &str) -> Wollet {
-        let desc = &format!("{}#{}", desc, desc_checksum(desc).unwrap());
+        let desc: WolletDescriptor = format!("{}#{}", desc, desc_checksum(desc).unwrap())
+            .parse()
+            .unwrap();
         Wollet::new(ElementsNetwork::LiquidTestnet, NoPersist::new(), desc).unwrap()
     }
 
@@ -625,10 +641,13 @@ mod tests {
                     DescriptorBlindingKey::Slip77,
                     DescriptorBlindingKey::Elip151,
                 ] {
-                    let desc =
+                    let desc: WolletDescriptor =
                         singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
+                            .unwrap()
+                            .parse()
                             .unwrap();
-                    let wollet = Wollet::new(network, NoPersist::new(), &desc).unwrap();
+
+                    let wollet = Wollet::new(network, NoPersist::new(), desc).unwrap();
                     let first_address = wollet.address(Some(0)).unwrap();
                     assert_eq!(first_address.address().to_string(), expected[i], "network: {network:?} variant: {script_variant:?} blinding_variant: {blinding_variant:?} i:{i}");
                     i += 1;

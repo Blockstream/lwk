@@ -275,7 +275,8 @@ pub fn network_regtest() -> ElementsNetwork {
 }
 
 pub fn new_unsupported_wallet(desc: &str, expected: Error) {
-    let r = Wollet::new(network_regtest(), NoPersist::new(), &add_checksum(desc));
+    let r: Result<WolletDescriptor, _> = add_checksum(desc).parse();
+
     match r {
         Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
@@ -295,13 +296,8 @@ impl TestWollet {
         let network = network_regtest();
         let descriptor = add_checksum(desc);
 
-        // TODO test also non encrypted persister
-        let mut wollet = Wollet::new(
-            network,
-            FsPersister::new(&db_root_dir, network, &descriptor.parse().unwrap()).unwrap(),
-            &descriptor,
-        )
-        .unwrap();
+        let desc: WolletDescriptor = descriptor.parse().unwrap();
+        let mut wollet = Wollet::with_fs_persist(network, desc, &db_root_dir).unwrap();
 
         let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain);
 

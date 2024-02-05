@@ -27,6 +27,7 @@ impl From<&WolletDescriptor> for lwk_wollet::WolletDescriptor {
     }
 }
 
+#[uniffi::export]
 impl WolletDescriptor {
     #[uniffi::constructor]
     pub fn new(descriptor: &str) -> Result<Arc<Self>, LwkError> {

@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 pub mod blockdata;
 mod chain;
 mod desc;
@@ -6,6 +8,7 @@ mod error;
 mod esplora_client;
 mod mnemonic;
 mod network;
+mod persister;
 mod pset;
 mod signer;
 pub mod types;
@@ -27,13 +30,14 @@ pub use crate::wollet::Wollet;
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
 pub use electrum_client::ElectrumClient;
+pub use error::LwkError;
 pub use esplora_client::EsploraClient;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
+pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use pset::Pset;
 pub use update::Update;
 
-pub use error::LwkError;
 uniffi::setup_scaffolding!();
 
 #[cfg(test)]

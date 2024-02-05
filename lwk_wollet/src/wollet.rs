@@ -9,9 +9,10 @@ use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
+use crate::persister::PersistError;
 use crate::store::Store;
 use crate::util::EC;
-use crate::{BlockchainBackend, ElectrumClient, FsPersister, Persister, WolletDescriptor};
+use crate::{BlockchainBackend, ElectrumClient, FsPersister, Persister, Update, WolletDescriptor};
 use electrum_client::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
@@ -22,13 +23,13 @@ use lwk_common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::atomic;
+use std::sync::{atomic, Arc};
 
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,
-    pub(crate) persister: Box<dyn Persister + Send>,
+    pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     descriptor: WolletDescriptor,
 }
 
@@ -36,7 +37,7 @@ impl Wollet {
     /// Create a new  wallet
     pub fn new(
         network: ElementsNetwork,
-        persister: Box<dyn Persister + Send>,
+        persister: Arc<dyn Persister + Send + Sync>,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
         let config = Config::new(network)?;
@@ -418,8 +419,14 @@ impl Wollet {
         Ok(pset.extract_tx()?)
     }
 
-    pub fn num_updates(&self) -> usize {
-        self.persister.iter().len()
+    pub fn updates(&self) -> Result<Vec<Update>, PersistError> {
+        let mut updates = vec![];
+        let mut i = 0;
+        while let Some(update) = self.persister.get(i)? {
+            updates.push(update);
+            i += 1;
+        }
+        Ok(updates)
     }
 }
 

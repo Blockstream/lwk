@@ -29,7 +29,7 @@ pub use crate::error::Error;
 pub use crate::model::{
     AddressResult, IssuanceDetails, UnvalidatedAddressee, WalletTx, WalletTxOut,
 };
-pub use crate::persister::{FsPersister, NoPersist, Persister};
+pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::update::Update;
 pub use crate::util::EC;

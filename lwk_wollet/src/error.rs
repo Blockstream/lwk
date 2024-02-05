@@ -82,6 +82,9 @@ pub enum Error {
     #[error(transparent)]
     Minreq(#[from] minreq::Error),
 
+    #[error(transparent)]
+    PersistError(#[from] crate::persister::PersistError),
+
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 

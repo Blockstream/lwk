@@ -17,6 +17,18 @@ impl From<Update> for lwk_wollet::Update {
     }
 }
 
+impl From<&Update> for lwk_wollet::Update {
+    fn from(value: &Update) -> Self {
+        value.inner.clone()
+    }
+}
+
+impl AsRef<lwk_wollet::Update> for Update {
+    fn as_ref(&self) -> &lwk_wollet::Update {
+        &self.inner
+    }
+}
+
 #[uniffi::export]
 impl Update {
     #[uniffi::constructor]

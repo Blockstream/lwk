@@ -3,7 +3,7 @@ use lwk_wollet::NoPersist;
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, LwkError, Pset, Update, WalletTx};
+use crate::{Address, AddressResult, ForeignPersisterLink, LwkError, Pset, Update, WalletTx};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -26,6 +26,20 @@ impl Wollet {
 
 #[uniffi::export]
 impl Wollet {
+    /// Construct a Watch-Only wallet object with a caller provided persister
+    #[uniffi::constructor]
+    pub fn with_custom_persister(
+        network: &Network,
+        descriptor: &WolletDescriptor,
+        persister: Arc<ForeignPersisterLink>,
+    ) -> Result<Arc<Self>, LwkError> {
+        let inner = lwk_wollet::Wollet::new((*network).into(), persister, descriptor.into())?;
+
+        Ok(Arc::new(Self {
+            inner: Mutex::new(inner),
+        }))
+    }
+
     /// Construct a Watch-Only wallet object
     #[uniffi::constructor]
     pub fn new(

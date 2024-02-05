@@ -272,8 +272,7 @@ mod tests {
     fn esplora_electrum_compare() {
         lwk_test_util::init_logging();
 
-        // TODO move in test_util
-        let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+        let desc_str = lwk_test_util::TEST_DESCRIPTOR;
 
         let urls = [
             "blockstream.info:465",

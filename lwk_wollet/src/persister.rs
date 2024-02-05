@@ -1,9 +1,10 @@
 use std::{
     fmt::Display,
-    fs::{self},
+    fs,
     ops::Add,
     path::{Path, PathBuf},
     str::FromStr,
+    sync::{Arc, Mutex},
 };
 
 use aes_gcm_siv::{
@@ -15,14 +16,26 @@ use rand::{thread_rng, Rng};
 
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 
+#[derive(thiserror::Error, Debug)]
+pub enum PersistError {
+    #[error(transparent)]
+    Encoding(#[from] elements::encode::Error),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error("{0}")]
+    Other(String),
+}
+
 pub trait Persister {
     /// Return ith elements inserted
-    fn get(&self, index: usize) -> Result<Option<Update>, Error>;
+    fn get(&self, index: usize) -> Result<Option<Update>, PersistError>;
 
-    /// Push and persist an update. Returns the number of updates persisted
+    /// Push and persist an update.
     ///
     /// Implementors are encouraged to coalesce consequent updates with `update.only_tip() == true`
-    fn push(&mut self, update: Update) -> Result<usize, Error>;
+    fn push(&self, update: Update) -> Result<(), PersistError>;
 }
 
 sha256t_hash_newtype! {
@@ -46,23 +59,22 @@ sha256t_hash_newtype! {
 pub struct NoPersist {}
 
 impl NoPersist {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {})
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {})
     }
 }
 
 impl Persister for NoPersist {
-    fn get(&self, _index: usize) -> Result<Option<Update>, Error> {
+    fn get(&self, _index: usize) -> Result<Option<Update>, PersistError> {
         Ok(None)
     }
 
-    fn push(&mut self, _update: Update) -> Result<usize, Error> {
-        Ok(0)
+    fn push(&self, _update: Update) -> Result<(), PersistError> {
+        Ok(())
     }
 }
 
-/// A file system persister that writes encrypted incremental updates
-pub struct FsPersister {
+struct FsPersisterInner {
     /// Directory where the data files will be written
     path: PathBuf,
 
@@ -72,6 +84,12 @@ pub struct FsPersister {
     /// Cipher used to encrypt data
     cipher: Aes256GcmSiv,
 }
+
+/// A file system persister that writes encrypted incremental updates
+pub struct FsPersister {
+    inner: Mutex<FsPersisterInner>,
+}
+
 impl FsPersister {
     /// Creates a persister of updates. While being written they are encrypted using a key derived
     /// from the given descriptor.
@@ -81,7 +99,7 @@ impl FsPersister {
         path: P,
         network: ElementsNetwork,
         desc: &WolletDescriptor,
-    ) -> Result<Box<Self>, Error> {
+    ) -> Result<Arc<Self>, Error> {
         let mut path = path.as_ref().to_path_buf();
         path.push(network.as_str());
         path.push("enc_cache");
@@ -108,41 +126,62 @@ impl FsPersister {
         let key = GenericArray::from_slice(&key_bytes);
         let cipher = Aes256GcmSiv::new(key);
 
-        Ok(Box::new(Self { path, next, cipher }))
+        Ok(Arc::new(Self {
+            inner: Mutex::new(FsPersisterInner { path, next, cipher }),
+        }))
     }
+}
 
+impl FsPersisterInner {
     fn path(&self, counter: &Counter) -> PathBuf {
         let mut path = self.path.clone();
         path.push(counter.to_string());
         path
     }
+}
 
-    fn read(&self, current: usize) -> Result<Update, Error> {
-        let path = self.path(&Counter::from(current));
-        let bytes = fs::read(path)?;
+fn to_other<D: std::fmt::Debug>(d: D) -> PersistError {
+    PersistError::Other(format!("{d:?}"))
+}
 
-        let nonce_bytes = &bytes[..12];
-        let mut ciphertext = bytes[12..].to_vec();
+impl Persister for FsPersister {
+    fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
+        let inner = self.inner.lock().map_err(to_other)?;
+        let next = inner.next.0;
+        if index < next {
+            let path = inner.path(&Counter::from(index));
+            let bytes = fs::read(path)?;
 
-        let nonce = GenericArray::from_slice(nonce_bytes);
+            let nonce_bytes = &bytes[..12];
+            let mut ciphertext = bytes[12..].to_vec();
 
-        self.cipher.decrypt_in_place(nonce, b"", &mut ciphertext)?;
-        let plaintext = ciphertext;
+            let nonce = GenericArray::from_slice(nonce_bytes);
 
-        Ok(Update::deserialize(&plaintext)?)
+            inner
+                .cipher
+                .decrypt_in_place(nonce, b"", &mut ciphertext)
+                .map_err(to_other)?;
+            let plaintext = ciphertext;
+
+            Ok(Some(Update::deserialize(&plaintext)?))
+        } else {
+            Ok(None)
+        }
     }
 
-    /// Write at next position without incrementing the next counter
-    /// returns the number of bytes written
-    fn write(&mut self, update: Update) -> Result<usize, Error> {
-        let path = self.path(&self.next);
+    fn push(&self, update: Update) -> Result<(), PersistError> {
+        let mut inner = self.inner.lock().map_err(to_other)?;
+        let path = inner.path(&inner.next);
         let mut plaintext = update.serialize()?;
 
         let mut nonce_bytes = [0u8; 12];
         thread_rng().fill(&mut nonce_bytes);
         let nonce = GenericArray::from_slice(&nonce_bytes);
 
-        self.cipher.encrypt_in_place(nonce, b"", &mut plaintext)?;
+        inner
+            .cipher
+            .encrypt_in_place(nonce, b"", &mut plaintext)
+            .map_err(to_other)?;
         let ciphertext = plaintext;
 
         let mut file_content = vec![];
@@ -150,54 +189,8 @@ impl FsPersister {
         file_content.extend(ciphertext);
 
         fs::write(path, &file_content)?;
-        Ok(file_content.len())
-    }
-}
-
-struct EncryptedFsPersisterIter<'a> {
-    current: usize,
-    persister: &'a FsPersister,
-}
-impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
-    type Item = Result<Update, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = usize::from(&self.persister.next);
-        if self.current < next {
-            let update = self.persister.read(self.current);
-            match update {
-                Ok(update) => {
-                    self.current += 1;
-                    Some(Ok(update))
-                }
-                Err(e) => Some(Err(e)),
-            }
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let l = usize::from(&self.persister.next);
-        (l, Some(l))
-    }
-}
-impl<'a> ExactSizeIterator for EncryptedFsPersisterIter<'a> {}
-
-impl Persister for FsPersister {
-    fn get(&self, index: usize) -> Result<Option<Update>, Error> {
-        if index < self.next.0 {
-            self.read(index).map(Some)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn push(&mut self, update: Update) -> Result<usize, Error> {
-        tracing::debug!("FsPersister is pushing data, next is {:?}", self.next);
-        let _ = self.write(update)?;
-        self.next = self.next.clone() + 1;
-        Ok((&self.next).into())
+        inner.next = inner.next.clone() + 1;
+        Ok(())
     }
 }
 
@@ -248,30 +241,33 @@ impl Add<usize> for Counter {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+    use std::{
+        str::FromStr,
+        sync::{Arc, Mutex},
+    };
 
-    use crate::{ElementsNetwork, Error, FsPersister, Update, WolletDescriptor};
+    use crate::{ElementsNetwork, FsPersister, PersistError, Update, WolletDescriptor};
 
     use super::{Counter, NoPersist, Persister};
 
-    struct MemoryPersister(Vec<Update>);
+    struct MemoryPersister(Mutex<Vec<Update>>);
     impl MemoryPersister {
-        pub fn new() -> Box<Self> {
-            Box::new(Self(vec![]))
+        pub fn new() -> Arc<Self> {
+            Arc::new(Self(Mutex::new(vec![])))
         }
     }
     impl Persister for MemoryPersister {
-        fn get(&self, index: usize) -> Result<Option<Update>, Error> {
-            Ok(self.0.get(index).cloned())
+        fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
+            Ok(self.0.lock().unwrap().get(index).cloned())
         }
 
-        fn push(&mut self, update: crate::Update) -> Result<usize, Error> {
-            self.0.push(update);
-            Ok(self.0.len())
+        fn push(&self, update: crate::Update) -> Result<(), PersistError> {
+            self.0.lock().unwrap().push(update);
+            Ok(())
         }
     }
 
-    fn inner_test_persister(mut persister: Box<dyn Persister>, first_time: bool) {
+    fn inner_test_persister(persister: Arc<dyn Persister>, first_time: bool) {
         if first_time {
             assert_eq!(persister.get(0).unwrap(), None);
         }
@@ -285,13 +281,11 @@ mod test {
         assert_ne!(&update1, &update2);
 
         if first_time {
-            let el = persister.push(update1.clone()).unwrap();
-            assert_eq!(el, 1);
+            persister.push(update1.clone()).unwrap();
             assert_eq!(persister.get(0).unwrap().unwrap(), update1.clone());
             assert!(persister.get(1).unwrap().is_none());
 
-            let el = persister.push(update2.clone()).unwrap();
-            assert_eq!(el, 2);
+            persister.push(update2.clone()).unwrap();
         }
         assert_eq!(persister.get(0).unwrap().unwrap(), update1);
         assert_eq!(persister.get(1).unwrap().unwrap(), update2);
@@ -311,7 +305,7 @@ mod test {
 
     #[test]
     fn test_no_persist() {
-        let mut persister = NoPersist {};
+        let persister = NoPersist {};
         assert_eq!(persister.get(0).unwrap(), None);
         let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
         persister.push(update).unwrap();

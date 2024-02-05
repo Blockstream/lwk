@@ -45,6 +45,9 @@ pub const TEST_MNEMONIC_XPUB: &str =
 pub const TEST_MNEMONIC_SLIP77: &str =
     "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
 
+/// Descriptor with 11 txs on testnet
+pub const TEST_DESCRIPTOR: &str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+
 pub fn liquid_block_1() -> Block {
     let raw = include_bytes!(
         "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"
@@ -781,7 +784,7 @@ impl TestWollet {
 
     pub fn check_persistence(wollet: TestWollet) {
         let descriptor = wollet.wollet.descriptor().to_string();
-        let expected_num_updates = wollet.wollet.num_updates();
+        let expected_num_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.db_root_dir();
         let network = network_regtest();
@@ -794,7 +797,7 @@ impl TestWollet {
             let balance = wollet.balance().unwrap();
             dbg!(&balance);
             assert_eq!(expected, balance);
-            assert_eq!(expected_num_updates, wollet.num_updates());
+            assert_eq!(expected_num_updates, wollet.updates().unwrap());
         }
     }
 }

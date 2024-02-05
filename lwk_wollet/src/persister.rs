@@ -61,123 +61,8 @@ impl Persister for NoPersist {
     }
 }
 
+/// A file system persister that writes encrypted incremental updates
 pub struct FsPersister {
-    /// Directory where the data files will be written
-    path: PathBuf,
-
-    /// Next free position to write an update
-    next: Counter,
-}
-impl FsPersister {
-    /// Creates a persister of updates, writing files in `path`.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Box<Self>, Error> {
-        let path = path.as_ref().to_path_buf();
-        if path.is_file() {
-            return Err(Error::Generic("given path is a file".to_string()));
-        }
-        if !path.exists() {
-            fs::create_dir_all(&path)?;
-        }
-        let mut next = Counter::default();
-        for el in path.read_dir()? {
-            let entry = &el?;
-            if entry.path().is_file() {
-                let file_name = entry.file_name();
-                let name = file_name.to_str();
-                if let Some(name) = name {
-                    let counter: Counter = name.parse()?;
-                    next = next.max(counter + 1);
-                }
-            }
-        }
-
-        Ok(Box::new(Self { path, next }))
-    }
-    /// Creates a persister of updates, from the given path create a network subdirectory with
-    /// another subdirectory which name is one-way derived from the descriptor
-    pub fn new_with_desc<P: AsRef<Path>>(
-        path: P,
-        network: ElementsNetwork,
-        desc: &WolletDescriptor,
-    ) -> Result<Box<Self>, Error> {
-        let mut persister_path = path.as_ref().to_path_buf();
-        persister_path.push(network.as_str());
-        persister_path.push("cache");
-        persister_path.push(DirectoryIdHash::hash(desc.to_string().as_bytes()).to_string());
-        Self::new(persister_path)
-    }
-
-    fn path(&self, counter: &Counter) -> PathBuf {
-        let mut path = self.path.clone();
-        path.push(counter.to_string());
-        path
-    }
-
-    fn read(&self, current: usize) -> Result<Update, Error> {
-        let path = self.path(&Counter::from(current));
-        let bytes = fs::read(path)?;
-        Ok(Update::deserialize(&bytes)?)
-    }
-
-    /// Write at next position without incrementing the next counter
-    /// returns the number of bytes written
-    fn write(&mut self, update: Update) -> Result<usize, Error> {
-        let path = self.path(&self.next);
-        let bytes = update.serialize()?;
-        fs::write(path, &bytes)?;
-        Ok(bytes.len())
-    }
-}
-
-struct FsPersisterIter<'a> {
-    current: usize,
-    persister: &'a FsPersister,
-}
-impl<'a> Iterator for FsPersisterIter<'a> {
-    type Item = Result<Update, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = usize::from(&self.persister.next);
-        if self.current < next {
-            let update = self.persister.read(self.current);
-            match update {
-                Ok(update) => {
-                    self.current += 1;
-                    Some(Ok(update))
-                }
-                Err(e) => Some(Err(e)),
-            }
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let l = usize::from(&self.persister.next);
-        (l, Some(l))
-    }
-}
-impl<'a> ExactSizeIterator for FsPersisterIter<'a> {}
-
-impl Persister for FsPersister {
-    fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
-        Box::new(FsPersisterIter {
-            current: 0,
-            persister: self,
-        })
-    }
-
-    fn push(&mut self, update: Update) -> Result<usize, Error> {
-        let _ = self.write(update)?;
-        self.next = self.next.clone() + 1;
-        Ok((&self.next).into())
-    }
-}
-
-// TODO EncryptedFsPersister and FsPersister share much and may both use something like a
-// Read/Write persister
-
-pub struct EncryptedFsPersister {
     /// Directory where the data files will be written
     path: PathBuf,
 
@@ -187,7 +72,7 @@ pub struct EncryptedFsPersister {
     /// Cipher used to encrypt data
     cipher: Aes256GcmSiv,
 }
-impl EncryptedFsPersister {
+impl FsPersister {
     /// Creates a persister of updates. While being written they are encrypted using a key derived
     /// from the given descriptor.
     /// From the given path create a network subdirectory with
@@ -271,7 +156,7 @@ impl EncryptedFsPersister {
 
 struct EncryptedFsPersisterIter<'a> {
     current: usize,
-    persister: &'a EncryptedFsPersister,
+    persister: &'a FsPersister,
 }
 impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
     type Item = Result<Update, Error>;
@@ -299,7 +184,7 @@ impl<'a> Iterator for EncryptedFsPersisterIter<'a> {
 }
 impl<'a> ExactSizeIterator for EncryptedFsPersisterIter<'a> {}
 
-impl Persister for EncryptedFsPersister {
+impl Persister for FsPersister {
     fn iter(&self) -> Box<dyn ExactSizeIterator<Item = Result<Update, Error>> + '_> {
         Box::new(EncryptedFsPersisterIter {
             current: 0,
@@ -363,9 +248,9 @@ impl Add<usize> for Counter {
 mod test {
     use std::str::FromStr;
 
-    use crate::{ElementsNetwork, EncryptedFsPersister, Error, Update, WolletDescriptor};
+    use crate::{ElementsNetwork, Error, FsPersister, Update, WolletDescriptor};
 
-    use super::{Counter, FsPersister, NoPersist, Persister};
+    use super::{Counter, NoPersist, Persister};
 
     struct MemoryPersister(Vec<Update>);
     impl MemoryPersister {
@@ -437,22 +322,13 @@ mod test {
     }
 
     #[test]
-    fn test_fs_persister() {
-        let tempdir = tempfile::tempdir().unwrap();
-        let persister = FsPersister::new(&tempdir).unwrap();
-        inner_test_persister(persister, true);
-        let persister = FsPersister::new(&tempdir).unwrap();
-        inner_test_persister(persister, false);
-    }
-
-    #[test]
     fn test_encrypted_fs_persister() {
         let tempdir = tempfile::tempdir().unwrap();
         let desc = wollet_descriptor_test_vector();
         let n = ElementsNetwork::LiquidTestnet;
-        let persister = EncryptedFsPersister::new(&tempdir, n, &desc).unwrap();
+        let persister = FsPersister::new(&tempdir, n, &desc).unwrap();
         inner_test_persister(persister, true);
-        let persister = EncryptedFsPersister::new(&tempdir, n, &desc).unwrap();
+        let persister = FsPersister::new(&tempdir, n, &desc).unwrap();
         inner_test_persister(persister, false);
     }
 

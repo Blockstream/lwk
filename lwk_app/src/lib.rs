@@ -61,8 +61,12 @@ mod state;
 pub struct App {
     rpc: Option<JsonRpcServer>,
     config: Config,
+
+    /// Set to false to stop the background scanning thread
     is_scanning: Arc<AtomicBool>,
-    handle: Option<JoinHandle<()>>,
+
+    /// Handle of the scanning thread
+    scanning_handle: Option<JoinHandle<()>>,
 }
 
 impl App {
@@ -72,7 +76,7 @@ impl App {
         Ok(App {
             rpc: None,
             config,
-            handle: None,
+            scanning_handle: None,
             is_scanning: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -129,7 +133,7 @@ impl App {
         let is_scanning = self.is_scanning.clone();
         let state_scanning = state.clone();
         let scanning_interval = self.config.scanning_interval;
-        let handle = std::thread::spawn(move || loop {
+        let scanning_handle = std::thread::spawn(move || loop {
             if !is_scanning.load(Ordering::Relaxed) {
                 break;
             }
@@ -144,7 +148,7 @@ impl App {
             }
             std::thread::sleep(scanning_interval);
         });
-        self.handle = Some(handle);
+        self.scanning_handle = Some(scanning_handle);
 
         Ok(())
     }
@@ -176,8 +180,8 @@ impl App {
             .take()
             .ok_or(error::Error::NotStarted)?
             .join_threads();
-        if let Some(handle) = self.handle.take() {
-            let _ = handle.join();
+        if let Some(scanning_handle) = self.scanning_handle.take() {
+            let _ = scanning_handle.join();
         }
         Ok(())
     }
@@ -921,7 +925,10 @@ fn scan(state: &Arc<Mutex<State>>) -> Result<(), Error> {
     loop {
         std::thread::sleep(std::time::Duration::from_millis(100));
         let current_scan_loops = state.lock()?.scan_loops;
-        // We want to wait for an _entire_ scan loop to be completed
+        // We want to wait for an _entire_ scan loop to be completed.
+        // This is currently sub-optimal, if we check for the scan loops while the scanning
+        // thread is sleeping, we will wait for 2 scan loops.
+        // TODO: optimize the waiting time.
         if current_scan_loops > initial_scan_loops + 1 {
             break;
         }

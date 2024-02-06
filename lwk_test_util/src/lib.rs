@@ -363,8 +363,6 @@ impl TestWollet {
 
     /// asset balance in satoshi
     pub fn balance(&mut self, asset: &AssetId) -> u64 {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
-        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
         let balance = self.wollet.balance().unwrap();
         *balance.get(asset).unwrap_or(&0u64)
     }

@@ -451,6 +451,7 @@ fn multiple_descriptors() {
     );
     wallet_a.sign(&signer_a, &mut pset);
     wallet_a.send(&mut pset);
+    wallet_t.sync();
     assert_eq!(wallet_a.balance(asset), satoshi_a);
     assert_eq!(wallet_t.balance(token), satoshi_t);
 
@@ -476,6 +477,7 @@ fn multiple_descriptors() {
     wallet_t.sign(&signer_t2, &mut pset_t2);
     let mut pset = wallet_t.wollet.combine(&vec![pset_t1, pset_t2]).unwrap();
     wallet_t.send(&mut pset);
+    wallet_a.sync();
     assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
     assert_eq!(wallet_t.balance(token), satoshi_t);
 }

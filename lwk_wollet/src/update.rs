@@ -54,6 +54,14 @@ impl Update {
 
 impl Wollet {
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
+        self.apply_update_inner(update, true)
+    }
+
+    pub fn apply_update_no_persist(&mut self, update: Update) -> Result<(), Error> {
+        self.apply_update_inner(update, false)
+    }
+
+    fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
         let store = &mut self.store;
         let Update {
@@ -121,7 +129,10 @@ impl Wollet {
                 .store(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
-        self.persister.push(update)?;
+        if do_persist {
+            self.persister.push(update)?;
+        }
+
         Ok(())
     }
 }

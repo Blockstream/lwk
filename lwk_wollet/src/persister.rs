@@ -193,6 +193,7 @@ impl Persister for FsPersister {
     }
 
     fn push(&mut self, update: Update) -> Result<usize, Error> {
+        tracing::debug!("FsPersister is pushing data, next is {:?}", self.next);
         let _ = self.write(update)?;
         self.next = self.next.clone() + 1;
         Ok((&self.next).into())

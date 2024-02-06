@@ -52,7 +52,7 @@ impl Wollet {
         let updates: Vec<_> = wollet.persister.iter().collect();
 
         for update in updates {
-            wollet.apply_update(update?)?;
+            wollet.apply_update_no_persist(update?)?;
         }
 
         Ok(wollet)

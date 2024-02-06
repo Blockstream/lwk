@@ -374,8 +374,6 @@ impl TestWollet {
     }
 
     fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
-        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
         let list = self.wollet.transactions().unwrap();
         for tx in list.iter() {
             if tx.height.is_some() {
@@ -632,7 +630,6 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-
         let tx = self.get_tx_from_list(&txid.to_string());
         assert_eq!(&tx.type_, "issuance");
 
@@ -710,7 +707,6 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-
         let tx = self.get_tx_from_list(&txid.to_string());
         assert_eq!(&tx.type_, "reissuance");
 
@@ -763,7 +759,6 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-
         let tx = self.get_tx_from_list(&txid.to_string());
         assert_eq!(&tx.type_, "burn");
 

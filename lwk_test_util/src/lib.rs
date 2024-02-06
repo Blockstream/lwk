@@ -785,12 +785,15 @@ impl TestWollet {
         let db_root_dir = wollet.db_root_dir();
         let network = network_regtest();
 
-        let wollet =
-            Wollet::with_fs_persist(network, descriptor.parse().unwrap(), &db_root_dir).unwrap();
+        for _ in 0..2 {
+            let wollet =
+                Wollet::with_fs_persist(network, descriptor.parse().unwrap(), &db_root_dir)
+                    .unwrap();
 
-        let balance = wollet.balance().unwrap();
-        dbg!(&balance);
-        assert_eq!(expected, balance);
+            let balance = wollet.balance().unwrap();
+            dbg!(&balance);
+            assert_eq!(expected, balance);
+        }
     }
 }
 

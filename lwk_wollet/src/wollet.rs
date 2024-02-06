@@ -71,6 +71,10 @@ impl Wollet {
         )
     }
 
+    pub fn num_updates(&self) -> usize {
+        self.persister.iter().len()
+    }
+
     /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
         self.config.policy_asset()

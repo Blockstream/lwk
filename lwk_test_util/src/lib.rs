@@ -780,14 +780,17 @@ impl TestWollet {
     }
 
     pub fn check_persistence(wollet: TestWollet) {
+        let wollet_updates = wollet.wollet.num_updates();
         let electrum_url = wollet.electrum_url.to_string();
         let descriptor = wollet.wollet.descriptor().to_string();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.db_root_dir();
         let copy = TestWollet::with_temp_dir(&electrum_url, &descriptor, db_root_dir);
         let balance = copy.wollet.balance().unwrap();
+        let copy_updates = copy.wollet.num_updates();
 
         assert_eq!(expected, balance);
+        assert_eq!(wollet_updates, copy_updates);
     }
 }
 

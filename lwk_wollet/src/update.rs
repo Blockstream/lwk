@@ -76,7 +76,7 @@ impl Wollet {
 
         if tip.height + 1 < store.cache.tip.0 {
             // Checking we are not applying an old update while giving enough space for a single block reorg
-            return Err(Error::ApplyingOldUpdate {
+            return Err(Error::UpdateHeightTooOld {
                 update_tip_height: tip.height,
                 store_tip_height: store.cache.tip.0,
             });

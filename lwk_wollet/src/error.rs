@@ -147,8 +147,8 @@ pub enum Error {
     #[error("Contract does not commit to asset id")]
     ContractDoesNotCommitToAssetId,
 
-    #[error("Trying to apply an update of height {update_tip_height} to an internal tip height {store_tip_height}")]
-    ApplyingOldUpdate {
+    #[error("Update height {update_tip_height} too old (internal height {store_tip_height})")]
+    UpdateHeightTooOld {
         update_tip_height: u32,
         store_tip_height: u32,
     },

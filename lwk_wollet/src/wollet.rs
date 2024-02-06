@@ -630,7 +630,7 @@ mod tests {
         let err = wollet.apply_update(update_1).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Trying to apply an update of height 1 to an internal tip height 3"
+            "Update height 1 too old (internal height 3)"
         );
     }
 

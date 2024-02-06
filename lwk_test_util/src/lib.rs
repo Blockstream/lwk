@@ -210,7 +210,7 @@ impl TestElectrumServer {
         address: &Address,
         satoshi: u64,
         asset: Option<AssetId>,
-    ) -> String {
+    ) -> Txid {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);
         let r = match asset {
@@ -239,7 +239,7 @@ impl TestElectrumServer {
                 .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
                 .unwrap(),
         };
-        r.as_str().unwrap().to_string()
+        Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 
     pub fn node_issueasset(&self, satoshi: u64) -> AssetId {
@@ -348,12 +348,12 @@ impl TestWollet {
     }
 
     /// Wait until tx appears in tx list (max 1 min)
-    fn wait_for_tx(&mut self, txid: &str) {
+    fn wait_for_tx(&mut self, txid: &Txid) {
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
         for _ in 0..120 {
             full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
             let list = self.wollet.transactions().unwrap();
-            if list.iter().any(|e| e.tx.txid().to_string() == txid) {
+            if list.iter().any(|e| &e.tx.txid() == txid) {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -373,7 +373,7 @@ impl TestWollet {
         self.balance(&self.wollet.policy_asset())
     }
 
-    fn get_tx_from_list(&mut self, txid: &str) -> WalletTx {
+    fn get_tx_from_list(&mut self, txid: &Txid) -> WalletTx {
         let list = self.wollet.transactions().unwrap();
         for tx in list.iter() {
             if tx.height.is_some() {
@@ -382,7 +382,7 @@ impl TestWollet {
         }
         let filtered_list: Vec<_> = list
             .iter()
-            .filter(|e| e.tx.txid().to_string() == txid)
+            .filter(|e| &e.tx.txid() == txid)
             .cloned()
             .collect();
         assert!(
@@ -410,7 +410,7 @@ impl TestWollet {
         // We only received, all balances are positive
         assert!(tx.balance.values().all(|v| *v > 0));
         assert_eq!(&tx.type_, "incoming");
-        let wallet_txid = tx.tx.txid().to_string();
+        let wallet_txid = tx.tx.txid();
         assert_eq!(txid, wallet_txid);
         assert_eq!(tx.inputs.iter().filter(|o| o.is_some()).count(), 0);
         assert_eq!(tx.outputs.iter().filter(|o| o.is_some()).count(), 1);
@@ -470,7 +470,7 @@ impl TestWollet {
             self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
-        let txid = self.send(&mut pset).to_string();
+        let txid = self.send(&mut pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
         let tx = self.get_tx_from_list(&txid);
@@ -630,7 +630,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid.to_string());
+        let tx = self.get_tx_from_list(&txid);
         assert_eq!(&tx.type_, "issuance");
 
         assert_eq!(self.balance(&asset), satoshi_asset);
@@ -707,7 +707,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid.to_string());
+        let tx = self.get_tx_from_list(&txid);
         assert_eq!(&tx.type_, "reissuance");
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
@@ -759,7 +759,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid.to_string());
+        let tx = self.get_tx_from_list(&txid);
         assert_eq!(&tx.type_, "burn");
 
         assert_eq!(self.balance(asset), balance_asset_before - satoshi_asset);
@@ -777,7 +777,7 @@ impl TestWollet {
         let tx = self.wollet.finalize(pset).unwrap();
         let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
         let txid = electrum_client.broadcast(&tx).unwrap();
-        self.wait_for_tx(&txid.to_string());
+        self.wait_for_tx(&txid);
         txid
     }
 

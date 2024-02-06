@@ -66,7 +66,7 @@ mod tests {
             100000000,
             None,
         );
-        wollet.wait_for_tx(Txid::from_str(&txid).unwrap(), &electrum_client);
+        wollet.wait_for_tx(Txid::from_str(&txid.to_string()).unwrap(), &electrum_client);
 
         let address_1 = wollet.address(Some(1)).unwrap();
         let expected_address_1 = "el1qqv8pmjjq942l6cjq69ygtt6gvmdmhesqmzazmwfsq7zwvan4kewdqmaqzegq50r2wdltkfsw9hw20zafydz4sqljz0eqe0vhc";

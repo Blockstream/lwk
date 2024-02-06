@@ -146,7 +146,7 @@ fn address(cli: &str, wallet: &str) -> String {
 fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
-    let txid = server.node_sendtoaddress(&addr, sats, None);
+    let txid = server.node_sendtoaddress(&addr, sats, None).to_string();
     // Only 2 blocks are necessary to make coinbase spendable
     server.generate(2);
     wait_tx(cli, wallet, &txid);

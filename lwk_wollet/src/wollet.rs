@@ -613,6 +613,28 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_old_update() {
+        let bytes = lwk_test_util::update_test_vector_bytes();
+
+        let update_1 = crate::Update::deserialize(&bytes[..]).unwrap();
+        assert_eq!(update_1.tip.height, 1);
+        let mut update_3 = update_1.clone();
+        update_3.tip.height = 3;
+        let mut update_4 = update_1.clone();
+        update_4.tip.height = 4;
+
+        let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))";
+        let mut wollet = new_wollet(exp);
+        wollet.apply_update(update_4).unwrap();
+        wollet.apply_update(update_3).unwrap(); // 1 block behing it's ok, maximum possible reorg on liquid
+        let err = wollet.apply_update(update_1).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Trying to apply an update of height 1 to an internal tip height 3"
+        );
+    }
+
+    #[test]
     fn fixed_addresses_test() {
         let expected = [
             "lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv", //  network: Liquid variant: Wpkh blinding_variant: Slip77

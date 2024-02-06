@@ -416,6 +416,10 @@ impl Wollet {
         psbt::finalize(pset, &EC, BlockHash::all_zeros())?;
         Ok(pset.extract_tx()?)
     }
+
+    pub fn num_updates(&self) -> usize {
+        self.persister.iter().len()
+    }
 }
 
 fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {

@@ -65,7 +65,8 @@ impl Config {
             validate_domain: false,
             explorer_url: "".into(),
             timeout: TIMEOUT,
-            scanning_interval: consts::SCANNING_INTERVAL,
+            // Scan more frequently while testing
+            scanning_interval: Duration::from_secs(1),
         }
     }
 

@@ -63,6 +63,7 @@ impl Wollet {
 
     fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
+
         let store = &mut self.store;
         let Update {
             new_txs,
@@ -72,6 +73,15 @@ impl Wollet {
             scripts,
             tip,
         } = update.clone();
+
+        if tip.height + 1 < store.cache.tip.0 {
+            // Checking we are not applying an old update while giving enough space for a single block reorg
+            return Err(Error::ApplyingOldUpdate {
+                update_tip_height: tip.height,
+                store_tip_height: store.cache.tip.0,
+            });
+        }
+
         store.cache.tip = (tip.height, tip.block_hash());
         store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);

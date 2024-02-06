@@ -87,6 +87,8 @@ fn liquid_issue(signers: &[&AnySigner]) {
     let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 5, &asset, None);
+
+    TestWollet::check_persistence(wallet);
 }
 
 #[test]

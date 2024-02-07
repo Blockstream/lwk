@@ -102,7 +102,7 @@ pub enum Singlesig {
     /// as defined by bip84
     Wpkh,
 
-    // as defined by bip49
+    /// as defined by bip49
     ShWpkh,
 }
 

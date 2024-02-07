@@ -45,6 +45,7 @@ pub trait Signer {
         let coin_type = if is_mainnet { 1776 } else { 1 };
         let path = match bip {
             Bip::Bip84 => format!("84h/{coin_type}h/0h"),
+            Bip::Bip49 => format!("49h/{coin_type}h/0h"),
         };
 
         let fingerprint = self.fingerprint()?;

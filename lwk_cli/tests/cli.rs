@@ -407,12 +407,14 @@ fn test_wallet_details() {
     ));
     let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet ss -d {desc_ss}"));
+    assert!(desc_ss.contains(&keyorigin(&cli, "s1", "bip84")));
 
     let r = sh(&format!(
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
     let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet sssh -d {desc_sssh}"));
+    assert!(desc_sssh.contains(&keyorigin(&cli, "s1", "bip49")));
 
     let r = sh_result(&format!(
         "{cli} signer singlesig-desc -s s1 --descriptor-blinding-key slip77-rand --kind wpkh"

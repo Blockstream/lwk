@@ -206,12 +206,14 @@ impl std::fmt::Display for SignerKind {
 #[derive(ValueEnum, Clone, Debug)]
 pub enum XpubKind {
     Bip84,
+    Bip49,
 }
 
 impl std::fmt::Display for XpubKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             XpubKind::Bip84 => write!(f, "bip84"),
+            XpubKind::Bip49 => write!(f, "bip49"),
         }
     }
 }

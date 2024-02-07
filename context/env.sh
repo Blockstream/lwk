@@ -8,4 +8,4 @@ export PIN_SERVER_IMAGE_VERSION=v0.0.3
 export ANDROID_NDK_HOME="$PWD/bin/android-ndk"
 export LIB_EXT=$([ $(uname) == "Darwin" ] && echo "dylib" || echo "so")
 export CLASSPATH="$CLASSPATH:$PWD/bin/jna-5.13.0.jar"
-export PATH="$PATH:$PWD/bin/kotlinc/bin:$PWD/bin/openlogic-openjdk-11.0.21+9-linux-x64/bin"
+export PATH="$PATH:$PWD/bin/kotlinc/bin:$PWD/bin/openlogic-openjdk-11.0.21+9-linux-x64/bin:$PWD/bin/swift-5.5-RELEASE-ubuntu18.04/usr/bin"

@@ -5,17 +5,23 @@ RUN apt upgrade --no-install-recommends -yqq
 
 # libxml2-utils for xmllint
 # libudev-dev for jade serial
-RUN apt install -y libudev-dev libxml2-utils
+# clang for wasm
+# libtinfo5 libncurses5 for swift
+RUN apt install -y libudev-dev libxml2-utils clang libtinfo5 libncurses5
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
+RUN rustup target add wasm32-unknown-unknown
 RUN rustup toolchain install 1.70.0
 
 RUN cargo install cargo-audit
 RUN cargo install cargo-nextest
 RUN cargo install grcov
 RUN cargo install just
+
+# we don't need this, but it downloads and cache most of our dependency tree
+RUN cargo install lwk_cli
 
 COPY download_bins.sh /download_bins.sh
 RUN ./download_bins.sh
@@ -27,7 +33,3 @@ RUN sh ./get-docker.sh
 COPY env.sh /env.sh
 
 # move following layers up once upper layers needs modification
-
-# needed for WASM
-RUN apt install -y clang
-RUN rustup target add wasm32-unknown-unknown

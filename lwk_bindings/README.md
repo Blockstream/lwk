@@ -36,7 +36,7 @@ Live environment
 just env-python-bindings
 ```
 
-## Kotlin for Android
+## Kotlin
 
 ### Build
 
@@ -51,3 +51,9 @@ Create android bindings library libs, 4 architectures in release mode
 ```shell
 just android
 ```
+
+## Swift
+
+### Example
+
+* [List transactions](./tests/bindings/list_transactions.swift) of a wpkh/slip77 wallet

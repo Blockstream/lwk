@@ -21,3 +21,6 @@ FNAME=kotlin-compiler-1.8.20.zip && wget https://github.com/JetBrains/kotlin/rel
 unzip ${FNAME} && rm $FNAME
 
 curl -Ls https://builds.openlogic.com/downloadJDK/openlogic-openjdk/11.0.21+9/openlogic-openjdk-11.0.21+9-linux-x64.tar.gz | tar -xz
+
+# swift
+curl -Ls https://download.swift.org/swift-5.5-release/ubuntu1804/swift-5.5-RELEASE/swift-5.5-RELEASE-ubuntu18.04.tar.gz | tar -xz

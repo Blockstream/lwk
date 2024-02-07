@@ -149,6 +149,7 @@ impl FromStr for DescriptorBlindingKey {
 pub enum Bip {
     Bip84,
     Bip49,
+    Bip87,
 }
 
 #[derive(Error, Debug)]
@@ -162,6 +163,7 @@ impl FromStr for Bip {
         Ok(match s {
             "bip84" => Bip::Bip84,
             "bip49" => Bip::Bip49,
+            "bip87" => Bip::Bip87,
             v => return Err(InvalidBipVariant(v.to_string())),
         })
     }

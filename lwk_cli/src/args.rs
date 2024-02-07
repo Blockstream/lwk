@@ -207,6 +207,7 @@ impl std::fmt::Display for SignerKind {
 pub enum XpubKind {
     Bip84,
     Bip49,
+    Bip87,
 }
 
 impl std::fmt::Display for XpubKind {
@@ -214,6 +215,7 @@ impl std::fmt::Display for XpubKind {
         match self {
             XpubKind::Bip84 => write!(f, "bip84"),
             XpubKind::Bip49 => write!(f, "bip49"),
+            XpubKind::Bip87 => write!(f, "bip87"),
         }
     }
 }

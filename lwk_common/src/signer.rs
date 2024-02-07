@@ -46,6 +46,7 @@ pub trait Signer {
         let path = match bip {
             Bip::Bip84 => format!("84h/{coin_type}h/0h"),
             Bip::Bip49 => format!("49h/{coin_type}h/0h"),
+            Bip::Bip87 => format!("87h/{coin_type}h/0h"),
         };
 
         let fingerprint = self.fingerprint()?;

@@ -89,7 +89,7 @@ fn keyorigin(cli: &str, signer: &str, bip: &str) -> String {
 fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str], dbk: &str) {
     let xpubs = signers
         .iter()
-        .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s, "bip84")))
+        .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s, "bip87")))
         .collect::<Vec<_>>()
         .join("");
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key {dbk} --kind wsh --threshold {threshold}{xpubs}"));
@@ -423,9 +423,9 @@ fn test_wallet_details() {
     assert!(format!("{:?}", r.unwrap_err()).contains(err));
 
     // Multi sig wallet
-    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));
     let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip87"));
     let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
     let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
@@ -883,9 +883,9 @@ fn test_multisig() {
         r#"{cli} signer load-software --mnemonic "{m2}" --signer s2 "#
     ));
 
-    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));
     let keyorigin_xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip84"));
+    let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip87"));
     let keyorigin_xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
 
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {keyorigin_xpub1} --keyorigin-xpub {keyorigin_xpub2}"));
@@ -1063,8 +1063,8 @@ fn test_elip151() {
     // Create a elip151 multisig wallet with jade (mj)
     let xpubs = format!(
         "--keyorigin-xpub {} --keyorigin-xpub {}",
-        keyorigin(&cli, "s1", "bip84"),
-        keyorigin(&cli, "emul", "bip84")
+        keyorigin(&cli, "s1", "bip87"),
+        keyorigin(&cli, "emul", "bip87")
     );
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key elip151 --kind wsh --threshold 2 {xpubs}"));
     let d = get_str(&r, "descriptor");

@@ -81,15 +81,15 @@ fn sw_signer(cli: &str, name: &str) {
     ));
 }
 
-fn keyorigin(cli: &str, signer: &str) -> String {
-    let r = sh(&format!("{cli} signer xpub --signer {signer} --kind bip84"));
+fn keyorigin(cli: &str, signer: &str, bip: &str) -> String {
+    let r = sh(&format!("{cli} signer xpub --signer {signer} --kind {bip}"));
     get_str(&r, "keyorigin_xpub").to_string()
 }
 
 fn multisig_wallet(cli: &str, name: &str, threshold: u32, signers: &[&str], dbk: &str) {
     let xpubs = signers
         .iter()
-        .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s)))
+        .map(|s| format!(" --keyorigin-xpub {}", keyorigin(cli, s, "bip84")))
         .collect::<Vec<_>>()
         .join("");
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key {dbk} --kind wsh --threshold {threshold}{xpubs}"));
@@ -1061,8 +1061,8 @@ fn test_elip151() {
     // Create a elip151 multisig wallet with jade (mj)
     let xpubs = format!(
         "--keyorigin-xpub {} --keyorigin-xpub {}",
-        keyorigin(&cli, "s1"),
-        keyorigin(&cli, "emul")
+        keyorigin(&cli, "s1", "bip84"),
+        keyorigin(&cli, "emul", "bip84")
     );
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key elip151 --kind wsh --threshold 2 {xpubs}"));
     let d = get_str(&r, "descriptor");

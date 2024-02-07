@@ -784,7 +784,7 @@ impl TestWollet {
 
     pub fn check_persistence(wollet: TestWollet) {
         let descriptor = wollet.wollet.descriptor().to_string();
-        let expected_num_updates = wollet.wollet.updates().unwrap();
+        let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.db_root_dir();
         let network = network_regtest();
@@ -797,7 +797,7 @@ impl TestWollet {
             let balance = wollet.balance().unwrap();
             dbg!(&balance);
             assert_eq!(expected, balance);
-            assert_eq!(expected_num_updates, wollet.updates().unwrap());
+            assert_eq!(expected_updates, wollet.updates().unwrap());
         }
     }
 }

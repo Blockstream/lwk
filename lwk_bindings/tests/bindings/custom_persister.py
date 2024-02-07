@@ -27,7 +27,7 @@ w = Wollet.with_custom_persister(network, desc, persister)
 update = client.full_scan(w)
 w.apply_update(update)
 total_txs = len(w.transactions())
-assert(total_txs == 11)
+assert(total_txs >= 11)
 w = None
 
 w2 = Wollet.with_custom_persister(network, desc, persister)

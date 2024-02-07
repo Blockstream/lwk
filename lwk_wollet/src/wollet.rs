@@ -421,10 +421,11 @@ impl Wollet {
 
     pub fn updates(&self) -> Result<Vec<Update>, PersistError> {
         let mut updates = vec![];
-        let mut i = 0;
-        while let Some(update) = self.persister.get(i)? {
-            updates.push(update);
-            i += 1;
+        for i in 0.. {
+            match self.persister.get(i)? {
+                Some(update) => updates.push(update),
+                None => break,
+            }
         }
         Ok(updates)
     }

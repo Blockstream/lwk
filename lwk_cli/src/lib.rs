@@ -3,7 +3,6 @@
 
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::mpsc::RecvTimeoutError,
     time::Duration,
 };
 
@@ -82,7 +81,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     scanning_interval,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
-                    let set_handler_result = ctrlc::try_set_handler(move || {
+                    let _ = ctrlc::try_set_handler(move || {
                         tx.send(()).expect("Could not send signal on channel.")
                     });
 
@@ -123,37 +122,23 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     let version = client.version()?.version;
                     tracing::info!("App running version {}", version);
 
-                    if set_handler_result.is_ok() {
-                        loop {
-                            match rx.recv_timeout(Duration::from_millis(100)) {
-                                Ok(_) => {
-                                    tracing::debug!("Stopping");
-                                    app.stop()?;
-                                }
-                                Err(e) => match e {
-                                    RecvTimeoutError::Timeout => {
-                                        if app.is_running().unwrap_or(false) {
-                                            continue;
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                    RecvTimeoutError::Disconnected => {
-                                        return Err(anyhow!("RecvTimeoutError::Disconnected"))
-                                    }
-                                },
-                            }
-                        }
-                    } else {
-                        loop {
-                            std::thread::sleep(Duration::from_millis(100));
-                            if app.is_running().unwrap_or(false) {
-                                continue;
-                            } else {
+                    loop {
+                        match rx.recv_timeout(Duration::from_millis(100)) {
+                            Ok(_) => {
+                                tracing::debug!("Received ctrl-c signal");
                                 break;
+                            }
+                            Err(_) => {
+                                if app.is_running().unwrap_or(false) {
+                                    continue;
+                                } else {
+                                    tracing::debug!("Received stop signal");
+                                    break;
+                                }
                             }
                         }
                     }
+                    app.stop()?;
                     app.join_threads()?;
                     tracing::info!("Threads ended");
                 }

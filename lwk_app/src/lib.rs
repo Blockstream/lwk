@@ -154,6 +154,7 @@ impl App {
     }
 
     pub fn stop(&self) -> Result<(), Error> {
+        self.is_scanning.store(false, Ordering::Relaxed);
         match self.rpc.as_ref() {
             Some(rpc) => {
                 rpc.stop();
@@ -175,7 +176,6 @@ impl App {
     }
 
     pub fn join_threads(&mut self) -> Result<(), Error> {
-        self.is_scanning.store(false, Ordering::Relaxed);
         self.rpc
             .take()
             .ok_or(error::Error::NotStarted)?

@@ -131,8 +131,14 @@ pub struct State {
     pub signers: Signers,
     pub assets: Assets,
     pub do_persist: bool,
+
+    /// Number of scan loops started
     pub scan_loops_started: u32,
+
+    /// Number of scan loops completed
     pub scan_loops_completed: u32,
+
+    /// Signal the scanning thread that we don't want to wait anymore
     pub interrupt_wait: bool,
 }
 

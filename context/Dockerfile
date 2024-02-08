@@ -30,6 +30,4 @@ RUN ./download_bins.sh
 COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
-COPY env.sh /env.sh
-
 # move following layers up once upper layers needs modification

@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:ac13ca45e97e4fe260d734556301e5b8d6361f3195675698967700749169edca
+  image: xenoky/lwk-builder@sha256:99d184d19354e60203b5cbee3fa945d0cec168bbf595f15398b9556ae90b5be1
   tags:
     - cloud
   retry:
@@ -28,7 +28,7 @@ test_wollet:
   extends: .base
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
-    - cd / && . ./env.sh && cd -
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_wollet -p lwk_signer
 
 test_jade:
@@ -52,7 +52,7 @@ test_minor:
 test_cli:
   extends: .base
   script:
-    - cd / && . ./env.sh && cd -
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
 
 test_coverage:
@@ -64,7 +64,7 @@ test_coverage:
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.3
     - docker pull xenoky/local-jade-emulator:1.0.27
-    - cd / && . ./env.sh && cd -
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo nextest run --profile ci
     - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
     - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
@@ -109,7 +109,7 @@ doc:
 bindings:
   extends: .base
   script:
-    - cd / && . ./env.sh && cd -
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
 
 check_rust_170:

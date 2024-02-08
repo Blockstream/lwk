@@ -8,7 +8,12 @@ variables:
   image: xenoky/lwk-builder@sha256:ac13ca45e97e4fe260d734556301e5b8d6361f3195675698967700749169edca
   tags:
     - cloud
-  retry: 2
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - unknown_failure
+      - stuck_or_timeout_failure  
   services:
     - docker:20.10.12-dind
 

@@ -18,6 +18,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 use lwk_common::{
     keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
@@ -133,10 +134,22 @@ impl App {
         let is_scanning = self.is_scanning.clone();
         let state_scanning = state.clone();
         let scanning_interval = self.config.scanning_interval;
-        let scanning_handle = std::thread::spawn(move || loop {
-            if !is_scanning.load(Ordering::Relaxed) {
-                break;
+        let stop_interval = Duration::from_millis(100);
+        let mut interval = Duration::ZERO; // Do not wait in the first scan loop
+        let scanning_handle = std::thread::spawn(move || 'scan: loop {
+            // Sleep for scanning_interval, but check stop signal every stop_interval
+            'stop: loop {
+                if !is_scanning.load(Ordering::Relaxed) {
+                    break 'scan;
+                }
+                if interval == Duration::ZERO {
+                    interval = scanning_interval; // Reset wait interval
+                    break 'stop;
+                }
+                std::thread::sleep(stop_interval);
+                interval = interval.saturating_sub(stop_interval);
             }
+
             if let Ok(mut s) = state_scanning.lock() {
                 if let Ok(mut electrum_client) = s.config.electrum_client() {
                     for (_name, wollet) in s.wollets.iter_mut() {
@@ -146,7 +159,6 @@ impl App {
                 }
                 s.increment_scan_loops();
             }
-            std::thread::sleep(scanning_interval);
         });
         self.scanning_handle = Some(scanning_handle);
 

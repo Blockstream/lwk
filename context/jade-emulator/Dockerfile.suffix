@@ -1,0 +1,11 @@
+
+RUN apt-get update && apt-get install -y tini
+
+COPY flash_image.bin /
+COPY qemu_efuse.bin /
+COPY start.sh /
+
+EXPOSE 30121
+
+CMD ["/start.sh"]
+

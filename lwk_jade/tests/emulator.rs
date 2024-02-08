@@ -343,7 +343,7 @@ fn mock_version_info() -> VersionInfoResult {
         jade_config: "NORADIO".to_string(),
         board_type: "DEV".to_string(),
         jade_features: "DEV".to_string(),
-        idf_version: "v5.0.2".to_string(),
+        idf_version: "v5.1.2".to_string(),
         chip_features: "32000000".to_string(),
         efusemac: "000000000000".to_string(),
         battery_status: 0,

@@ -135,7 +135,7 @@ End-to-end tests need some local servers:
 And also the following docker images:
 
 ```
-docker pull xenoky/local-jade-emulator:1.0.23
+docker pull xenoky/local-jade-emulator:1.0.27
 docker pull tulipan81/blind_pin_server:v0.0.3
 ```
 

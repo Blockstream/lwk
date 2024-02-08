@@ -22,7 +22,7 @@ fmt_clippy:
 test_wollet:
   extends: .base
   script:
-    - docker pull xenoky/local-jade-emulator:1.0.23
+    - docker pull xenoky/local-jade-emulator:1.0.27
     - cd / && . ./env.sh && cd -
     - cargo test -p lwk_wollet -p lwk_signer
 
@@ -30,7 +30,7 @@ test_jade:
   extends: .base
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.3
-    - docker pull xenoky/local-jade-emulator:1.0.23
+    - docker pull xenoky/local-jade-emulator:1.0.27
     - cargo test -p lwk_jade
 
 test_serial:
@@ -58,7 +58,7 @@ test_coverage:
 
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.3
-    - docker pull xenoky/local-jade-emulator:1.0.23
+    - docker pull xenoky/local-jade-emulator:1.0.27
     - cd / && . ./env.sh && cd -
     - cargo nextest run --profile ci
     - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)

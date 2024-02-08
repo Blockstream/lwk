@@ -92,7 +92,9 @@ impl App {
             signers: Default::default(),
             assets: Default::default(),
             do_persist: false,
-            scan_loops: 0,
+            scan_loops_started: 0,
+            scan_loops_completed: 0,
+            interrupt_wait: false,
         };
         state.insert_policy_asset();
         let state = Arc::new(Mutex::new(state));
@@ -142,7 +144,12 @@ impl App {
                 if !is_scanning.load(Ordering::Relaxed) {
                     break 'scan;
                 }
-                if interval == Duration::ZERO {
+                if interval == Duration::ZERO
+                    || state_scanning
+                        .lock()
+                        .map(|s| s.interrupt_wait)
+                        .unwrap_or(false)
+                {
                     interval = scanning_interval; // Reset wait interval
                     break 'stop;
                 }
@@ -151,13 +158,15 @@ impl App {
             }
 
             if let Ok(mut s) = state_scanning.lock() {
+                s.interrupt_wait = false;
+                s.scan_loops_started += 1;
                 if let Ok(mut electrum_client) = s.config.electrum_client() {
                     for (_name, wollet) in s.wollets.iter_mut() {
                         // TODO: release lock when doing network calls
                         let _ = full_scan_with_electrum_client(wollet, &mut electrum_client);
                     }
                 }
-                s.increment_scan_loops();
+                s.scan_loops_completed += 1;
             }
         });
         self.scanning_handle = Some(scanning_handle);
@@ -933,15 +942,18 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 }
 
 fn scan(state: &Arc<Mutex<State>>) -> Result<(), Error> {
-    let initial_scan_loops = state.lock()?.scan_loops;
+    let required_scan_loops = {
+        let mut s = state.lock()?;
+        s.interrupt_wait = true;
+        // We want to wait for an _entire_ scan loop to be completed.
+        // So if we are scanning, wait for an additional scan loop.
+        let is_scanning = s.scan_loops_completed != s.scan_loops_started;
+        s.scan_loops_completed + is_scanning as u32
+    };
     loop {
         std::thread::sleep(std::time::Duration::from_millis(100));
-        let current_scan_loops = state.lock()?.scan_loops;
-        // We want to wait for an _entire_ scan loop to be completed.
-        // This is currently sub-optimal, if we check for the scan loops while the scanning
-        // thread is sleeping, we will wait for 2 scan loops.
-        // TODO: optimize the waiting time.
-        if current_scan_loops > initial_scan_loops + 1 {
+        let current_scan_loops = state.lock()?.scan_loops_completed;
+        if current_scan_loops > required_scan_loops {
             break;
         }
         // TODO: fail if waited too much

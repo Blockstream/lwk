@@ -105,5 +105,22 @@ mod tests {
             .broadcast(&finalized_pset.extract_tx().unwrap())
             .unwrap();
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
+
+        let asset = server.node_issueasset(10000000);
+        let txid = server.node_sendtoaddress(
+            &expected_address_1.parse().unwrap(),
+            100000,
+            Some(asset.clone()),
+        );
+        wollet.wait_for_tx(Txid::from_str(&txid.to_string()).unwrap(), &electrum_client);
+        let pset = wollet
+            .send_asset(100, &out_address, &asset.into(), fee_rate)
+            .unwrap();
+        let signed_pset = signer.sign(&pset).unwrap();
+        let finalized_pset = wollet.finalize(&signed_pset).unwrap();
+        let txid = electrum_client
+            .broadcast(&finalized_pset.extract_tx().unwrap())
+            .unwrap();
+        println!("BROADCASTED TX!\nTXID: {:?}", txid);
     }
 }

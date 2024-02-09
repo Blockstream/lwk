@@ -112,6 +112,23 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
+    pub fn send_asset(
+        &self,
+        satoshis: u64,
+        out_address: &Address,
+        asset: &AssetId,
+        fee_rate: f32,
+    ) -> Result<Arc<Pset>, LwkError> {
+        let wollet = self.inner.lock()?;
+        let pset = wollet.send_asset(
+            satoshis,
+            &out_address.to_string(),
+            &asset.to_string(),
+            Some(fee_rate),
+        )?;
+        Ok(Arc::new(pset.into()))
+    }
+
     pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;

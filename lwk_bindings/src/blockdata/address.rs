@@ -13,6 +13,12 @@ impl From<elements::Address> for Address {
     }
 }
 
+impl AsRef<elements::Address> for Address {
+    fn as_ref(&self) -> &elements::Address {
+        &self.inner
+    }
+}
+
 impl Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

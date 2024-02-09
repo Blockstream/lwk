@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use crate::{types::AssetId, Address, Txid};
+
 #[derive(uniffi::Object)]
 pub struct TestEnv {
     inner: lwk_test_util::TestElectrumServer,
@@ -19,5 +23,15 @@ impl TestEnv {
 
     pub fn height(&self) -> u64 {
         self.inner.node_height()
+    }
+
+    pub fn sendtoaddress(&self, address: &Address, satoshi: u64, asset: Option<AssetId>) -> Txid {
+        self.inner
+            .node_sendtoaddress(address.as_ref(), satoshi, asset.map(Into::into))
+            .into()
+    }
+
+    pub fn getnewaddress(&self) -> Arc<Address> {
+        Arc::new(self.inner.node_getnewaddress().into())
     }
 }

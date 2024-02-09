@@ -25,7 +25,7 @@ impl TestEnv {
         self.inner.node_height()
     }
 
-    pub fn sendtoaddress(&self, address: &Address, satoshi: u64, asset: Option<AssetId>) -> Txid {
+    pub fn send_to_address(&self, address: &Address, satoshi: u64, asset: Option<AssetId>) -> Txid {
         self.inner
             .node_sendtoaddress(address.as_ref(), satoshi, asset.map(Into::into))
             .into()
@@ -35,7 +35,7 @@ impl TestEnv {
         self.inner.node_issueasset(satoshi).into()
     }
 
-    pub fn getnewaddress(&self) -> Arc<Address> {
+    pub fn get_new_address(&self) -> Arc<Address> {
         Arc::new(self.inner.node_getnewaddress().into())
     }
 

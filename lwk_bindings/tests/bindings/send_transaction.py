@@ -19,12 +19,12 @@ assert(wollet_address.index() == 0)
 assert(str(wollet_address.address()) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq")
 
 funded_satoshi = 100000
-txid = node.sendtoaddress(wollet_address.address(), funded_satoshi, asset=None)
+txid = node.send_to_address(wollet_address.address(), funded_satoshi, asset=None)
 wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[policy_asset] == funded_satoshi)
 
-node_address = node.getnewaddress()
+node_address = node.get_new_address()
 sent_satoshi = 1000
 unsigned_pset = wollet.send_lbtc(sent_satoshi, node_address, 100.0 )
 signed_pset = signer.sign(unsigned_pset)

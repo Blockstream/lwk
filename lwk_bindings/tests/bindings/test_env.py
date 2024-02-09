@@ -8,6 +8,6 @@ t.generate(10)
 
 assert(t.height() == 111)
 
-node_address = t.getnewaddress()
+node_address = t.get_new_address()
 
-t.sendtoaddress(node_address, 10000, None)
+t.send_to_address(node_address, 10000, None)

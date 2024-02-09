@@ -22,8 +22,8 @@ For android build you need the NDK greater than r23 in `${PROJECT_DIR}/bin/andro
 ### Example
 
 * [List transactions](./tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
+* [Send transaction](./tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
 * [Custom persister](./tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
-
 
 
 ### Test

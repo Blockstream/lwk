@@ -11,6 +11,7 @@ mod network;
 mod persister;
 mod pset;
 mod signer;
+mod test_env;
 pub mod types;
 mod update;
 mod wollet;
@@ -36,6 +37,7 @@ pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use pset::Pset;
+pub use test_env::TestEnv;
 pub use update::Update;
 
 uniffi::setup_scaffolding!();

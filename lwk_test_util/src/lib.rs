@@ -260,6 +260,11 @@ impl TestElectrumServer {
     pub fn node_getnewaddress(&self) -> Address {
         node_getnewaddress(&self.node.client, None)
     }
+
+    pub fn node_height(&self) -> u64 {
+        let raw: serde_json::Value = self.node.client.call("getblockchaininfo", &[]).unwrap();
+        raw.get("blocks").unwrap().as_u64().unwrap()
+    }
 }
 
 pub struct TestWollet {

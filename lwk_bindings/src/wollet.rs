@@ -146,12 +146,13 @@ impl Wollet {
             let update = client.full_scan(self)?;
             if let Some(update) = update {
                 self.apply_update(&update)?;
-                let mut txs = self.transactions()?;
-                txs.retain(|t| *t.txid() == *txid);
-                if let Some(tx) = txs.pop() {
-                    return Ok(tx);
-                }
             }
+            let mut txs = self.transactions()?;
+            txs.retain(|t| *t.txid() == *txid);
+            if let Some(tx) = txs.pop() {
+                return Ok(tx);
+            }
+
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
         panic!("I wait 30s but I didn't see {}", txid);

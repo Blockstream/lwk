@@ -2,7 +2,6 @@ from lwk_bindings import *
 
 node = TestEnv() # launch electrs and elementsd
 
-
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
@@ -17,21 +16,26 @@ wollet = Wollet(network, desc, datadir=None)
 wollet_address = wollet.address(0)
 assert(wollet_address.index() == 0)
 assert(str(wollet_address.address()) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq")
+wollet_address2 = wollet.address(1)
+assert(wollet_address2.index() == 1)
+assert(str(wollet_address2.address()) == "el1qqv8pmjjq942l6cjq69ygtt6gvmdmhesqmzazmwfsq7zwvan4kewdqmaqzegq50r2wdltkfsw9hw20zafydz4sqljz0eqe0vhc")
 
-funded_satoshi = 100000
-txid = node.send_to_address(wollet_address.address(), funded_satoshi, asset=None)
+issue_asset = 100000
+asset = node.issue_asset(issue_asset)
+txid = node.send_to_address(wollet_address.address(), issue_asset, asset)
+txid2 = node.send_to_address(wollet_address.address(), 10000, asset=None) # to pay the fee in the returning tx
+
 wollet.wait_for_tx(txid, client)
+wollet.wait_for_tx(txid2, client)
 
-assert(wollet.balance()[policy_asset] == funded_satoshi)
+assert(wollet.balance()[asset] == issue_asset)
 
 node_address = node.get_new_address()
-sent_satoshi = 1000
-unsigned_pset = wollet.send_lbtc(sent_satoshi, node_address, fee_rate=100.0 )
+unsigned_pset = wollet.send_asset(issue_asset-1, node_address, asset, fee_rate=100.0 )
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)
 
 wollet.wait_for_tx(txid, client)
-expected_balance = funded_satoshi- sent_satoshi - tx.fee(policy_asset)
-assert(wollet.balance()[policy_asset] == expected_balance)
+assert(wollet.balance()[asset] == 1)

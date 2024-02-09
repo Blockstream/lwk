@@ -81,4 +81,8 @@ impl Network {
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
     }
+
+    pub fn policy_asset(&self) -> AssetId {
+        self.inner.policy_asset().into()
+    }
 }

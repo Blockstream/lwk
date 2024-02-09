@@ -34,4 +34,8 @@ impl TestEnv {
     pub fn getnewaddress(&self) -> Arc<Address> {
         Arc::new(self.inner.node_getnewaddress().into())
     }
+
+    pub fn electrum_url(&self) -> String {
+        self.inner.electrs.electrum_url.clone()
+    }
 }

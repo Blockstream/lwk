@@ -3,7 +3,7 @@ use lwk_wollet::NoPersist;
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, ForeignPersisterLink, LwkError, Pset, Update, WalletTx};
+use crate::{Address, AddressResult, ForeignPersisterLink, LwkError, Pset, Txid, Update, WalletTx};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -103,7 +103,6 @@ impl Wollet {
     pub fn send_lbtc(
         &self,
         satoshis: u64,
-
         out_address: &Address,
         fee_rate: f32,
     ) -> Result<Arc<Pset>, LwkError> {
@@ -135,18 +134,22 @@ impl Wollet {
         wollet.finalize(&mut pset)?;
         Ok(Arc::new(pset.into()))
     }
-}
 
-#[cfg(test)]
-impl Wollet {
-    pub fn wait_for_tx(&self, txid: crate::Txid, client: &crate::ElectrumClient) {
+    /// Note this a test method but we are not feature gating in test because we need it in
+    /// destination language examples
+    pub fn wait_for_tx(
+        &self,
+        txid: &Txid,
+        client: &crate::ElectrumClient,
+    ) -> Result<Arc<WalletTx>, LwkError> {
         for _ in 0..30 {
-            let update = client.full_scan(self).unwrap();
+            let update = client.full_scan(self)?;
             if let Some(update) = update {
-                self.apply_update(&update).unwrap();
-                let txs = self.transactions().unwrap();
-                if txs.iter().any(|t| *t.txid() == txid) {
-                    return;
+                self.apply_update(&update)?;
+                let mut txs = self.transactions()?;
+                txs.retain(|t| *t.txid() == *txid);
+                if let Some(tx) = txs.pop() {
+                    return Ok(tx);
                 }
             }
             std::thread::sleep(std::time::Duration::from_secs(1));

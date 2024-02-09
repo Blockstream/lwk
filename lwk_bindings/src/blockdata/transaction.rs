@@ -4,7 +4,10 @@ use elements::{
 };
 use lwk_wollet::WalletTx;
 
-use crate::{types::Hex, LwkError, Txid};
+use crate::{
+    types::{AssetId, Hex},
+    LwkError, Txid,
+};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
@@ -58,6 +61,10 @@ impl Transaction {
 
     pub fn bytes(&self) -> Vec<u8> {
         elements::Transaction::serialize(&self.inner)
+    }
+
+    pub fn fee(&self, policy_asset: &AssetId) -> u64 {
+        self.inner.fee_in((*policy_asset).into())
     }
 }
 

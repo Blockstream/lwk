@@ -72,7 +72,8 @@ mod tests {
             100000000,
             None,
         );
-        wollet.wait_for_tx(Txid::from_str(&txid.to_string()).unwrap(), &electrum_client);
+        let txid = Txid::from_str(&txid.to_string()).unwrap();
+        let _tx = wollet.wait_for_tx(&txid, &electrum_client).unwrap();
 
         let address_1 = wollet.address(Some(1)).unwrap();
         let expected_address_1 = "el1qqv8pmjjq942l6cjq69ygtt6gvmdmhesqmzazmwfsq7zwvan4kewdqmaqzegq50r2wdltkfsw9hw20zafydz4sqljz0eqe0vhc";
@@ -107,12 +108,10 @@ mod tests {
         println!("BROADCASTED TX!\nTXID: {:?}", txid);
 
         let asset = server.node_issueasset(10000000);
-        let txid = server.node_sendtoaddress(
-            &expected_address_1.parse().unwrap(),
-            100000,
-            Some(asset.clone()),
-        );
-        wollet.wait_for_tx(Txid::from_str(&txid.to_string()).unwrap(), &electrum_client);
+        let txid =
+            server.node_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
+        let txid = Txid::from_str(&txid.to_string()).unwrap();
+        let _tx = wollet.wait_for_tx(&txid, &electrum_client).unwrap();
         let pset = wollet
             .send_asset(100, &out_address, &asset.into(), fee_rate)
             .unwrap();

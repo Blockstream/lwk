@@ -31,6 +31,10 @@ impl TestEnv {
             .into()
     }
 
+    pub fn issue_asset(&self, satoshi: u64) -> AssetId {
+        self.inner.node_issueasset(satoshi).into()
+    }
+
     pub fn getnewaddress(&self) -> Arc<Address> {
         Arc::new(self.inner.node_getnewaddress().into())
     }

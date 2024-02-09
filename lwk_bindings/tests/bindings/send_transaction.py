@@ -15,7 +15,7 @@ assert(str(desc) == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c
 
 wollet = Wollet(network, desc, None)
 wollet_address = wollet.address(0)
-assert(wollet_address.index(), 0)
+assert(wollet_address.index() == 0)
 assert(str(wollet_address.address()) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq")
 
 funded_satoshi = 100000

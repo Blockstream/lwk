@@ -4,7 +4,7 @@ export ELEMENTSD_EXEC="$PWD/bin/elements-22.1.1/bin/elementsd"
 export JADE_EMULATOR_IMAGE_NAME=xenoky/local-jade-emulator
 export JADE_EMULATOR_IMAGE_VERSION="1.0.27"
 export PIN_SERVER_IMAGE_NAME=tulipan81/blind_pin_server
-export PIN_SERVER_IMAGE_VERSION=v0.0.3
+export PIN_SERVER_IMAGE_VERSION=v0.0.5
 export ANDROID_NDK_HOME="$PWD/bin/android-ndk"
 export LIB_EXT=$([ $(uname) == "Darwin" ] && echo "dylib" || echo "so")
 export CLASSPATH="$CLASSPATH:$PWD/bin/jna-5.13.0.jar"

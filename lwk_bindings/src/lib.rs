@@ -98,9 +98,7 @@ mod tests {
         let out_address = Address::new(expected_address_1).unwrap();
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
-        let pset = wollet
-            .create_lbtc_tx(&out_address, satoshis, fee_rate)
-            .unwrap();
+        let pset = wollet.send_lbtc(satoshis, &out_address, fee_rate).unwrap();
         let signed_pset = signer.sign(&pset).unwrap();
         let finalized_pset = wollet.finalize(&signed_pset).unwrap();
         let txid = electrum_client

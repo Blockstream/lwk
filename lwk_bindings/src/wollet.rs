@@ -100,10 +100,11 @@ impl Wollet {
             .collect())
     }
 
-    pub fn create_lbtc_tx(
+    pub fn send_lbtc(
         &self,
-        out_address: &Address,
         satoshis: u64,
+
+        out_address: &Address,
         fee_rate: f32,
     ) -> Result<Arc<Pset>, LwkError> {
         let wollet = self.inner.lock()?;

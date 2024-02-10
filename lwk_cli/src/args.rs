@@ -16,11 +16,11 @@ pub enum Network {
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// Network
-    #[structopt(short, long, default_value = "testnet")]
+    #[structopt(short, long, default_value = "testnet", env)]
     pub network: Network,
 
     /// If launching the server is where it listens, otherwise is where the client connects to.
-    #[arg(long)]
+    #[arg(long, env)]
     pub addr: Option<SocketAddr>,
 
     /// The sub command

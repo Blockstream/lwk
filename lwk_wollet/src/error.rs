@@ -79,10 +79,6 @@ pub enum Error {
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
 
-    #[cfg(feature = "esplora")]
-    #[error(transparent)]
-    Minreq(#[from] minreq::Error),
-
     #[error(transparent)]
     PersistError(#[from] crate::persister::PersistError),
 

@@ -123,4 +123,4 @@ wasm_partial:
   extends: .base
   script:
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features # will need esplora feature once ready
+    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora

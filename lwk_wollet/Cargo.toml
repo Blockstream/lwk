@@ -23,10 +23,7 @@ thiserror = "1.0.48"
 once_cell = "1.18.0"
 elements = { version = "0.24.0", features = ["base64"] }
 lwk_common = { version = "0.2.0" }
-minreq = { version = "2.9", features = [
-    "https",
-    "json-using-serde",
-], optional = true }
+ehttp = { version = "*", optional = true }
 
 
 #registry
@@ -44,9 +41,9 @@ minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 lwk_test_util = { path = "../lwk_test_util" }
 
 [features]
-default = ["esplora", "electrum"]
+default = ["electrum"]
 serial = ["lwk_jade/serial"]
-esplora = ["minreq"]
+esplora = ["ehttp"]
 electrum = ["electrum-client"]
 
 [[test]]

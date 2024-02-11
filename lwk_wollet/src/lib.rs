@@ -22,7 +22,6 @@ mod util;
 mod wollet;
 
 pub use crate::clients::BlockchainBackend;
-pub use crate::config::ElectrumUrl;
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
@@ -33,11 +32,16 @@ pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::update::Update;
 pub use crate::util::EC;
-pub use crate::wollet::full_scan_with_electrum_client;
 pub use crate::wollet::Wollet;
 
-pub use clients::electrum_client::ElectrumClient;
+#[cfg(feature = "electrum")]
+pub use crate::wollet::full_scan_with_electrum_client;
+#[cfg(feature = "electrum")]
+pub use clients::electrum_client::{ElectrumClient, ElectrumUrl};
+
+#[cfg(feature = "esplora")]
 pub use clients::esplora_client::EsploraClient;
+
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

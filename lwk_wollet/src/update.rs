@@ -3,7 +3,7 @@ use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
 use crate::Wollet;
-use electrum_client::bitcoin::bip32::ChildNumber;
+use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
 use elements::BlockHeader;

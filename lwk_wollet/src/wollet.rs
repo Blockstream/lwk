@@ -12,8 +12,8 @@ use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
 use crate::store::Store;
 use crate::util::EC;
-use crate::{BlockchainBackend, ElectrumClient, FsPersister, Persister, Update, WolletDescriptor};
-use electrum_client::bitcoin::bip32::ChildNumber;
+use crate::{FsPersister, Persister, Update, WolletDescriptor};
+use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
@@ -447,10 +447,13 @@ fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMa
     balance
 }
 
+#[cfg(feature = "electrum")]
 pub fn full_scan_with_electrum_client(
     wollet: &mut Wollet,
-    electrum_client: &mut ElectrumClient,
+    electrum_client: &mut crate::ElectrumClient,
 ) -> Result<(), Error> {
+    use crate::BlockchainBackend;
+
     let update = electrum_client.full_scan(wollet)?;
     if let Some(update) = update {
         wollet.apply_update(update)?

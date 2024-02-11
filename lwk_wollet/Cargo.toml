@@ -16,7 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_cbor = "0.11.2"
 aes-gcm-siv = "0.10.0"
-electrum-client = "0.19.0"
+electrum-client = { version = "0.19.0", optional = true }
 bip39 = "2.0.0"
 elements-miniscript = { version = "0.3", features = ["serde"] }
 thiserror = "1.0.48"
@@ -44,9 +44,10 @@ minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 lwk_test_util = { path = "../lwk_test_util" }
 
 [features]
-default = ["esplora"]
+default = ["esplora", "electrum"]
 serial = ["lwk_jade/serial"]
 esplora = ["minreq"]
+electrum = ["electrum-client"]
 
 [[test]]
 name = "e2e"

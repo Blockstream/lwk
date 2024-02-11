@@ -1,47 +1,11 @@
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
-use electrum_client::{Client, ConfigBuilder};
-use std::fmt::Display;
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
 const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
     "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
-
-#[derive(Debug, Clone)]
-pub enum ElectrumUrl {
-    Tls(String, bool), // the bool value indicates if the domain name should be validated
-    Plaintext(String),
-}
-
-impl Display for ElectrumUrl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ElectrumUrl::Tls(s, _) => write!(f, "{}", s),
-            ElectrumUrl::Plaintext(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-impl ElectrumUrl {
-    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
-        match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
-        }
-    }
-    pub fn build_client(&self) -> Result<Client, Error> {
-        let builder = ConfigBuilder::new();
-        let (url, builder) = match self {
-            ElectrumUrl::Tls(url, validate) => {
-                (format!("ssl://{}", url), builder.validate_domain(*validate))
-            }
-            ElectrumUrl::Plaintext(url) => (format!("tcp://{}", url), builder),
-        };
-        Ok(Client::from_config(&url, builder.build())?)
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ElementsNetwork {

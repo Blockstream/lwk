@@ -19,6 +19,7 @@ use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_signer::*;
+use lwk_wollet::ElectrumClient;
 use lwk_wollet::*;
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};

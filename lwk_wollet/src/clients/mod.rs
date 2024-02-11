@@ -1,6 +1,3 @@
-use elements::{BlockHash, BlockHeader, Transaction, Txid};
-use std::{convert::TryInto, sync::atomic};
-pub(crate) mod electrum_client;
 use crate::{
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::{DownloadTxResult, Update},
@@ -11,11 +8,16 @@ use elements::{
     confidential::{Asset, Nonce, Value},
     OutPoint, Script, TxOut, TxOutSecrets,
 };
+use elements::{BlockHash, BlockHeader, Transaction, Txid};
 use lwk_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
+use std::{convert::TryInto, sync::atomic};
 
 #[cfg(feature = "esplora")]
 pub(crate) mod esplora_client;
+
+#[cfg(feature = "electrum")]
+pub(crate) mod electrum_client;
 
 pub trait BlockchainBackend {
     fn tip(&mut self) -> Result<BlockHeader, Error>;

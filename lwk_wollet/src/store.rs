@@ -2,7 +2,7 @@ use crate::descriptor::Chain;
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::Hash;
 use crate::Error;
-use electrum_client::bitcoin::bip32::ChildNumber;
+use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::{Descriptor, DescriptorPublicKey};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

@@ -2,6 +2,7 @@
 uniffi::build_foreign_language_testcases!(
     "tests/bindings/custom_persister.py",
     "tests/bindings/list_transactions.py",
+    "tests/bindings/issue_asset.py",
     "tests/bindings/send_asset.py",
     "tests/bindings/send_transaction.py",
     "tests/bindings/test_env.py",

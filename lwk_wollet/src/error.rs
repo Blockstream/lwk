@@ -24,6 +24,7 @@ pub enum Error {
     #[error(transparent)]
     StdIOError(#[from] std::io::Error),
 
+    #[cfg(feature = "electrum")]
     #[error(transparent)]
     ClientError(#[from] electrum_client::Error),
 

@@ -1,6 +1,6 @@
 use crate::store::Height;
-use crate::{ElectrumUrl, Error};
-use electrum_client::{Client, ElectrumApi, GetHistoryRes};
+use crate::Error;
+use electrum_client::{Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
 use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
@@ -13,6 +13,40 @@ pub struct ElectrumClient {
     client: Client,
 
     tip: BlockHeader,
+}
+
+#[derive(Debug, Clone)]
+pub enum ElectrumUrl {
+    Tls(String, bool), // the bool value indicates if the domain name should be validated
+    Plaintext(String),
+}
+
+impl std::fmt::Display for ElectrumUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ElectrumUrl::Tls(s, _) => write!(f, "{}", s),
+            ElectrumUrl::Plaintext(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl ElectrumUrl {
+    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
+        match tls {
+            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
+            false => ElectrumUrl::Plaintext(electrum_url.into()),
+        }
+    }
+    pub fn build_client(&self) -> Result<Client, Error> {
+        let builder = ConfigBuilder::new();
+        let (url, builder) = match self {
+            ElectrumUrl::Tls(url, validate) => {
+                (format!("ssl://{}", url), builder.validate_domain(*validate))
+            }
+            ElectrumUrl::Plaintext(url) => (format!("tcp://{}", url), builder),
+        };
+        Ok(Client::from_config(&url, builder.build())?)
+    }
 }
 
 impl Debug for ElectrumClient {

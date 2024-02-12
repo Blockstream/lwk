@@ -2,6 +2,7 @@
 
 pub mod blockdata;
 mod chain;
+mod contract;
 mod desc;
 mod electrum_client;
 mod error;

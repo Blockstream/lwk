@@ -7,9 +7,11 @@
 //!
 
 mod jade;
+mod ledger;
 mod pin_server;
 
 pub use jade::{JadeEmulator, EMULATOR_PORT};
+pub use ledger::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 pub use pin_server::{PinServer, PIN_SERVER_PORT};
 
 pub use testcontainers;

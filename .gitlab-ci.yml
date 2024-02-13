@@ -67,7 +67,7 @@ test_coverage:
     - docker pull tulipan81/blind_pin_server:v0.0.5
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo nextest run --profile ci
+    - cargo nextest run --features foreign_bindings --profile ci
     - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
     - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
     - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage/ -p $(pwd)

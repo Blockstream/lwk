@@ -27,6 +27,7 @@ pub use blockdata::txid::Txid;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::WalletTxOut;
 
+pub use crate::contract::Contract;
 pub use crate::signer::Signer;
 pub use crate::wollet::Wollet;
 pub use chain::Chain;

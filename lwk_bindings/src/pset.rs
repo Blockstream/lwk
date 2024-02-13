@@ -1,4 +1,4 @@
-use crate::{LwkError, Transaction};
+use crate::{types::AssetId, LwkError, Transaction};
 use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
@@ -34,9 +34,22 @@ impl Pset {
         let tx: Transaction = self.inner.extract_tx()?.into();
         Ok(Arc::new(tx))
     }
+
+    pub fn issuance_asset(&self, index: u32) -> Option<AssetId> {
+        self.issuances_ids(index).map(|e| e.0)
+    }
+
+    pub fn issuance_token(&self, index: u32) -> Option<AssetId> {
+        self.issuances_ids(index).map(|e| e.1)
+    }
 }
 
 impl Pset {
+    fn issuances_ids(&self, index: u32) -> Option<(AssetId, AssetId)> {
+        let issuance_ids = self.inner.inputs().get(index as usize)?.issuance_ids();
+        Some((issuance_ids.0.into(), issuance_ids.1.into()))
+    }
+
     pub(crate) fn inner(&self) -> PartiallySignedTransaction {
         self.inner.clone()
     }

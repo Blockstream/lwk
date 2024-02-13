@@ -3,7 +3,9 @@ use lwk_wollet::NoPersist;
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{Address, AddressResult, ForeignPersisterLink, LwkError, Pset, Txid, Update, WalletTx};
+use crate::{
+    Address, AddressResult, Contract, ForeignPersisterLink, LwkError, Pset, Txid, Update, WalletTx,
+};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -123,6 +125,27 @@ impl Wollet {
             satoshis,
             &out_address.to_string(),
             &asset.to_string(),
+            Some(fee_rate),
+        )?;
+        Ok(Arc::new(pset.into()))
+    }
+
+    pub fn issue_asset(
+        &self,
+        satoshi_asset: u64,
+        address_asset: &Address,
+        satoshi_token: u64,
+        address_token: &Address,
+        contract: &Contract,
+        fee_rate: f32,
+    ) -> Result<Arc<Pset>, LwkError> {
+        let wollet = self.inner.lock()?;
+        let pset = wollet.issue_asset(
+            satoshi_asset,
+            &address_asset.to_string(),
+            satoshi_token,
+            &address_token.to_string(),
+            &contract.to_string(),
             Some(fee_rate),
         )?;
         Ok(Arc::new(pset.into()))

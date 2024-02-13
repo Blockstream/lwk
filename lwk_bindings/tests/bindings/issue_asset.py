@@ -14,15 +14,32 @@ desc = signer.wpkh_slip77_descriptor()
 assert(str(desc) == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d")
 
 wollet = Wollet(network, desc, datadir=None)
-wollet_address = wollet.address(0)
-assert(wollet_address.index() == 0)
-assert(str(wollet_address.address()) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq")
+wollet_address_result = wollet.address(0)
+assert(wollet_address_result.index() == 0)
+wollet_adddress = wollet_address_result.address()
+assert(str(wollet_adddress) == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq")
 
 funded_satoshi = 100000
-txid = node.send_to_address(wollet_address.address(), funded_satoshi, asset=None)
+txid = node.send_to_address(wollet_address_result.address(), funded_satoshi, asset=None)
 wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[policy_asset] == funded_satoshi)
 
 contract = Contract(domain = "ciao.it", issuer_pubkey = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904", name = "name", precision = 8, ticker = "TTT", version = 0)
 assert(str(contract) == '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904","name":"name","precision":8,"ticker":"TTT","version":0}')
+
+issued_asset = 10000
+reissuance_tokens = 1
+unsigned_pset = wollet.issue_asset(issued_asset, wollet_adddress, reissuance_tokens, wollet_adddress, contract, 100.0)
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+
+asset_id = signed_pset.issuance_asset(0)
+token_id = signed_pset.issuance_token(0)
+
+wollet.wait_for_tx(txid, client)
+
+assert(wollet.balance()[asset_id] == issued_asset)
+assert(wollet.balance()[token_id] == reissuance_tokens)

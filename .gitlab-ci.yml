@@ -40,6 +40,11 @@ test_jade:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cargo test -p lwk_jade
 
+test_ledger:
+  extends: .base
+  script:
+    - cargo test -p lwk_ledger
+
 test_serial:
   extends: .base
   script:

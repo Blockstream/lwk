@@ -1,0 +1,15 @@
+[package]
+name = "lwk_ledger"
+version = "0.2.0"
+edition = "2021"
+autotests = false
+description = "Liquid Wallet Kit - Interact with Ledger Hardware Wallet"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_jade"
+
+[dependencies]
+ledger_bitcoin_client = "*"
+ledger-apdu = "0.10"
+
+[dev-dependencies]
+lwk_containers = { path = "../lwk_containers" }

@@ -6,6 +6,7 @@ members = [
     "lwk_cli",
     "lwk_hwi",
     "lwk_jade",
+    "lwk_ledger",
     "lwk_signer",
     "lwk_tiny_jrpc",
     "lwk_wollet",

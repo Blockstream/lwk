@@ -68,7 +68,7 @@ impl Network {
 
     pub fn default_esplora_client(&self) -> Arc<EsploraClient> {
         let url = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/api",
+            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
             lwk_wollet::ElementsNetwork::LiquidTestnet => {
                 "https://blockstream.info/liquidtestnet/api"
             }

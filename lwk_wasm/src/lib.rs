@@ -19,7 +19,7 @@ pub async fn balance(desc: &str) -> Result<JsValue, String> {
     let balance = wollet.balance().map_err(to_debug)?;
     wasm_bindgen_test::console_log!("balance {:?}", balance);
 
-    Ok(serde_wasm_bindgen::to_value(&balance).map_err(to_debug)?)
+    serde_wasm_bindgen::to_value(&balance).map_err(to_debug)
 }
 
 fn to_debug<D: Debug>(d: D) -> String {

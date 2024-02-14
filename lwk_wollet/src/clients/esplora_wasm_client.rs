@@ -402,9 +402,7 @@ mod tests {
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{}/block/{}/raw", base_url, hash);
         let response = super::get_with_retry(&url).await.unwrap();
-        let block =
-            elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap();
-        block
+        elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
 
     #[tokio::test]

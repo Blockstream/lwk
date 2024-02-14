@@ -3,8 +3,8 @@ use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub async fn balance() -> Result<JsValue, String> {
-    let descriptor = WolletDescriptor::from_str("ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp").map_err(to_debug)?;
+pub async fn balance(desc: &str) -> Result<JsValue, String> {
+    let descriptor = WolletDescriptor::from_str(desc).map_err(to_debug)?;
     wasm_bindgen_test::console_log!("going to sync {}", descriptor);
 
     let network = ElementsNetwork::LiquidTestnet;
@@ -36,13 +36,14 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn balance_test() {
-        let balance = crate::balance().await.unwrap();
+        let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#utnwh7dr";
+        let balance = crate::balance(desc).await.unwrap();
         let balance: HashMap<AssetId, u64> = serde_wasm_bindgen::from_value(balance).unwrap();
         let mut expected = HashMap::new();
         expected.insert(
             AssetId::from_str("144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49")
                 .unwrap(),
-            84020,
+            100000,
         );
         assert_eq!(expected, balance);
     }

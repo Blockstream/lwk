@@ -59,6 +59,13 @@ mod tests {
         balance_test(desc, ElementsNetwork::LiquidTestnet, 100000).await;
     }
 
+    #[wasm_bindgen_test]
+    async fn balance_err() {
+        let err = crate::balance("").await.unwrap_err();
+        let expected = "ElementsMiniscript(BadDescriptor(\"Not a CT Descriptor\"))";
+        assert_eq!(err, expected);
+    }
+
     async fn balance_test(desc: &str, network: ElementsNetwork, expected_sat: u64) {
         let balance = crate::balance(desc).await.unwrap();
         let balance: HashMap<AssetId, u64> = serde_wasm_bindgen::from_value(balance).unwrap();

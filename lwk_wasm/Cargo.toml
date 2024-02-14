@@ -1,0 +1,32 @@
+[package]
+name = "lwk_wasm"
+version = "0.1.0"
+edition = "2021"
+description = "Liquid Wallet Kit - WASM"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_wasm"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+wasm-bindgen = "0.2.84"
+lwk_wollet = { version = "0.2.0", default-features = false, features = [
+    "esplora_wasm",
+] }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.7", optional = true }
+reqwest = "0.11.24"
+wasm-bindgen-futures = "0.4.41"
+wasm-bindgen-test = "0.3.34"
+serde-wasm-bindgen = "0.6.3"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.34"

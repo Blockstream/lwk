@@ -13,7 +13,7 @@ members = [
     "lwk_containers",
     "lwk_common",
     "lwk_rpc_model",
-    "lwk_test_util",
+    "lwk_test_util", "lwk_wasm",
 ]
 resolver = "2"
 

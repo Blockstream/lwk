@@ -20,20 +20,20 @@ pub(crate) mod esplora_client;
 pub(crate) mod electrum_client;
 
 pub trait BlockchainBackend {
-    fn tip(&mut self) -> Result<BlockHeader, Error>;
-    fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error>;
+    async fn tip(&mut self) -> Result<BlockHeader, Error>;
+    async fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error>;
 
-    fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error>;
+    async fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Transaction>, Error>;
 
-    fn get_headers(
+    async fn get_headers(
         &self,
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<BlockHeader>, Error>;
 
-    fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error>;
+    async fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error>;
 
-    fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
+    async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
         let store = &wollet.store;
         let mut txid_height = HashMap::new();
@@ -50,7 +50,7 @@ pub trait BlockchainBackend {
                 let batch = store.get_script_batch(batch_count, &descriptor)?;
 
                 let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
-                let result: Vec<Vec<History>> = self.get_scripts_history(&s)?;
+                let result: Vec<Vec<History>> = self.get_scripts_history(&s).await?;
                 if !batch.cached {
                     scripts.extend(batch.value);
                 }
@@ -98,10 +98,14 @@ pub trait BlockchainBackend {
         }
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self.download_txs(&history_txs_id, &scripts, store, &descriptor)?;
+        let new_txs = self
+            .download_txs(&history_txs_id, &scripts, store, &descriptor)
+            .await?;
         let history_txs_heights: HashSet<Height> =
             txid_height.values().filter_map(|e| *e).collect();
-        let timestamps = self.download_headers(&history_txs_heights, &height_blockhash, store)?;
+        let timestamps = self
+            .download_headers(&history_txs_heights, &height_blockhash, store)
+            .await?;
 
         let store_last_unused_external = store
             .cache
@@ -112,7 +116,7 @@ pub trait BlockchainBackend {
             .last_unused_internal
             .load(atomic::Ordering::Relaxed);
 
-        let tip = self.tip()?;
+        let tip = self.tip().await?;
 
         let last_unused_changed = store_last_unused_external != last_unused_external
             || store_last_unused_internal != last_unused_internal;
@@ -156,7 +160,7 @@ pub trait BlockchainBackend {
         }
     }
 
-    fn download_txs(
+    async fn download_txs(
         &self,
         history_txs_id: &HashSet<Txid>,
         scripts: &HashMap<Script, (Chain, ChildNumber)>,
@@ -169,7 +173,7 @@ pub trait BlockchainBackend {
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
         if !txs_to_download.is_empty() {
-            let txs_downloaded = self.get_transactions(&txs_to_download)?;
+            let txs_downloaded = self.get_transactions(&txs_to_download).await?;
 
             let previous_txs_to_download = HashSet::new();
             for tx in txs_downloaded.into_iter() {
@@ -204,7 +208,7 @@ pub trait BlockchainBackend {
                 .cloned()
                 .collect();
             if !txs_to_download.is_empty() {
-                for tx in self.get_transactions(&txs_to_download)? {
+                for tx in self.get_transactions(&txs_to_download).await? {
                     txs.push((tx.txid(), tx));
                 }
             }
@@ -214,7 +218,7 @@ pub trait BlockchainBackend {
         }
     }
 
-    fn download_headers(
+    async fn download_headers(
         &self,
         history_txs_heights: &HashSet<Height>,
         height_blockhash: &HashMap<Height, BlockHash>,
@@ -228,7 +232,10 @@ pub trait BlockchainBackend {
             .cloned()
             .collect();
         if !heights_to_download.is_empty() {
-            for h in self.get_headers(&heights_to_download, height_blockhash)? {
+            for h in self
+                .get_headers(&heights_to_download, height_blockhash)
+                .await?
+            {
                 result.push((h.height, h.time))
             }
 

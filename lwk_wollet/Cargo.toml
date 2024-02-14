@@ -23,7 +23,11 @@ thiserror = "1.0.48"
 once_cell = "1.18.0"
 elements = { version = "0.24.0", features = ["base64"] }
 lwk_common = { version = "0.2.0" }
-ehttp = { version = "*", optional = true }
+reqwest = { version = "*", optional = true }
+tokio = { version = "*", optional = true, default-features = false, features = [
+    "rt",
+    "io-util",
+] }
 
 
 #registry
@@ -43,7 +47,7 @@ lwk_test_util = { path = "../lwk_test_util" }
 [features]
 default = ["electrum"]
 serial = ["lwk_jade/serial"]
-esplora = ["ehttp"]
+esplora = ["reqwest", "tokio"]
 electrum = ["electrum-client"]
 
 [[test]]

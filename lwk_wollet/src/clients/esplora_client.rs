@@ -1,6 +1,5 @@
-use std::{collections::HashMap, str::FromStr, sync::mpsc::channel};
+use std::{collections::HashMap, str::FromStr};
 
-use ehttp::{Request, Response};
 use elements::{
     encode::Decodable,
     hashes::{hex::FromHex, sha256, Hash},
@@ -9,6 +8,7 @@ use elements::{
     BlockHash, Script, Txid,
 };
 use serde::Deserialize;
+use tokio::runtime::{self, Runtime};
 
 use crate::{store::Height, BlockchainBackend, Error};
 
@@ -32,49 +32,46 @@ impl EsploraClient {
         }
     }
 
-    fn last_block_hash(&mut self) -> Result<elements::BlockHash, Error> {
-        let response = get_with_retry(&self.tip_hash_url, 0)?;
-        Ok(BlockHash::from_str(response.text().ok_or_else(utf8_err)?)?)
+    async fn last_block_hash(&mut self) -> Result<elements::BlockHash, Error> {
+        let response = get_text(&self.tip_hash_url).await;
+        Ok(BlockHash::from_str(&response)?)
     }
 }
 
-fn utf8_err() -> Error {
-    Error::Generic("cannot convert to utf8".to_string())
-}
-
 impl BlockchainBackend for EsploraClient {
-    fn tip(&mut self) -> Result<elements::BlockHeader, Error> {
-        let last_block_hash = self.last_block_hash()?;
+    async fn tip(&mut self) -> Result<elements::BlockHeader, Error> {
+        let last_block_hash = self.last_block_hash().await?;
 
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
-        let response = get_with_retry(&header_url, 0)?;
-        let header_bytes = Vec::<u8>::from_hex(response.text().ok_or_else(utf8_err)?)?;
+        let response = get_text(&header_url).await;
+        let header_bytes = Vec::<u8>::from_hex(&response)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
         Ok(header)
     }
 
-    fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, Error> {
-        let tx_bytes = tx.serialize();
-        let request = Request::post(&self.broadcast_url, tx_bytes);
-        let response = fetch(request)?;
+    async fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, Error> {
+        // let tx_bytes = tx.serialize();
+        // let request = Request::post(&self.broadcast_url, tx_bytes);
+        // let response = fetch(request)?;
 
-        let txid = elements::Txid::from_str(response.text().ok_or_else(utf8_err)?)?;
-        Ok(txid)
+        // let txid = elements::Txid::from_str(response.text().ok_or_else(utf8_err)?)?;
+        // Ok(txid)
+        todo!()
     }
 
-    fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
+    async fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
         let mut result = vec![];
         for txid in txids.iter() {
             let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-            let response = get_with_retry(&tx_url, 0)?;
-            let tx = elements::Transaction::consensus_decode(&response.bytes[..])?;
+            let response = get_bytes(&tx_url).await;
+            let tx = elements::Transaction::consensus_decode(&response[..])?;
             result.push(tx);
         }
         Ok(result)
     }
 
-    fn get_headers(
+    async fn get_headers(
         &self,
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
@@ -85,14 +82,14 @@ impl BlockchainBackend for EsploraClient {
                 Some(block_hash) => *block_hash,
                 None => {
                     let block_height = format!("{}/block-height/{}", self.base_url, height);
-                    let response = get_with_retry(&block_height, 0)?;
-                    BlockHash::from_str(response.text().ok_or_else(utf8_err)?)?
+                    let response = get_text(&block_height).await;
+                    BlockHash::from_str(&response)?
                 }
             };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-            let response = get_with_retry(&block_header, 0)?;
-            let header_bytes = Vec::<u8>::from_hex(response.text().ok_or_else(utf8_err)?)?;
+            let response = get_text(&block_header).await;
+            let header_bytes = Vec::<u8>::from_hex(&response)?;
 
             let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
 
@@ -104,15 +101,15 @@ impl BlockchainBackend for EsploraClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-    fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
+    async fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         let mut result: Vec<_> = vec![];
         for script in scripts.iter() {
             let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = get_with_retry(&url, 0)?;
-            let json: Vec<EsploraTx> = serde_json::from_reader(&response.bytes[..])?;
+            let response = get_bytes(&url).await;
+            let json: Vec<EsploraTx> = serde_json::from_reader(&response[..])?;
 
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
             result.push(history)
@@ -121,40 +118,30 @@ impl BlockchainBackend for EsploraClient {
     }
 }
 
-fn fetch(request: ehttp::Request) -> Result<Response, Error> {
-    let (tx, rx) = channel();
-    ehttp::fetch(request, move |result: ehttp::Result<Response>| {
-        let _ = tx.send(result);
-    });
-    let response = rx
-        .recv()
-        .map_err(|e| Error::Generic(format!("{e:?}")))?
-        .map_err(Error::Generic)?;
-    Ok(response)
-}
+async fn get_text(url: &str) -> String {
+    let response = reqwest::get(url).await.unwrap();
 
-fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
-    let request = Request::get(url);
-    let response = fetch(request)?;
     tracing::debug!(
-        "{} status_code:{} body bytes:{}",
-        &response.url,
-        response.status,
-        response.bytes.len()
+        "{} status_code:{} body bytes:{:?}",
+        &url,
+        response.status(),
+        response.content_length()
     );
 
-    if response.status == 429 {
-        if attempt > 6 {
-            return Err(Error::Generic("Too many retry".to_string()));
-        }
-        let secs = 1 << attempt;
+    response.text().await.unwrap()
+}
 
-        tracing::debug!("waiting {secs}");
-        std::thread::sleep(std::time::Duration::from_secs(secs));
-        get_with_retry(url, attempt + 1)
-    } else {
-        Ok(response)
-    }
+async fn get_bytes(url: &str) -> Vec<u8> {
+    let response = reqwest::get(url).await.unwrap();
+
+    tracing::debug!(
+        "{} status_code:{} body bytes:{:?}",
+        &url,
+        response.status(),
+        response.content_length()
+    );
+
+    response.bytes().await.unwrap().to_vec()
 }
 
 impl From<EsploraTx> for History {

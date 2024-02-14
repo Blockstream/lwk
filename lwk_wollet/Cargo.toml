@@ -28,6 +28,9 @@ minreq = { version = "2.9", features = [
     "json-using-serde",
 ], optional = true }
 
+# wasm
+reqwest = { version = "0.11.24", optional = true }
+tokio = { version = "1.36.0", features = ["time"], optional = true }
 
 #registry
 idna = "0.4.0"
@@ -42,12 +45,14 @@ lwk_jade = { version = "0.2.0" }
 lwk_containers = { path = "../lwk_containers" }
 minreq = { version = "2.9", features = ["https", "json-using-serde"] }
 lwk_test_util = { path = "../lwk_test_util" }
+tokio = { version = "1.36.0", features = ["rt", "macros"] }
 
 [features]
 default = ["esplora", "electrum"]
 serial = ["lwk_jade/serial"]
 esplora = ["minreq"]
 electrum = ["electrum-client"]
+esplora_wasm = ["reqwest", "tokio"]
 
 [[test]]
 name = "e2e"

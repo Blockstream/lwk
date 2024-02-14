@@ -42,6 +42,9 @@ pub use clients::electrum_client::{ElectrumClient, ElectrumUrl};
 #[cfg(feature = "esplora")]
 pub use clients::esplora_client::EsploraClient;
 
+#[cfg(feature = "esplora_wasm")]
+pub use clients::esplora_wasm_client::EsploraWasmClient;
+
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

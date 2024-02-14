@@ -19,6 +19,9 @@ pub(crate) mod esplora_client;
 #[cfg(feature = "electrum")]
 pub(crate) mod electrum_client;
 
+#[cfg(feature = "esplora_wasm")]
+pub(crate) mod esplora_wasm_client;
+
 pub trait BlockchainBackend {
     fn tip(&mut self) -> Result<BlockHeader, Error>;
     fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error>;

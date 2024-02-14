@@ -83,6 +83,10 @@ pub enum Error {
     #[error(transparent)]
     Minreq(#[from] minreq::Error),
 
+    #[cfg(feature = "esplora_wasm")]
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+
     #[error(transparent)]
     PersistError(#[from] crate::persister::PersistError),
 

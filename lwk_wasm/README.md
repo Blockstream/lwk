@@ -34,3 +34,9 @@ run specific test (note the double `--`)
 ```
 wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
+
+## Build
+
+```
+CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build
+```

@@ -45,6 +45,9 @@ mod tests {
                 .unwrap(),
             100000,
         );
-        assert_eq!(expected, balance);
+        assert_eq!(
+            expected, balance,
+            "balance isn't as expected, it could be some coin has been received or spent"
+        );
     }
 }

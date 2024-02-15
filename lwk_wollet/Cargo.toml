@@ -57,3 +57,6 @@ esplora_wasm = ["reqwest", "tokio"]
 [[test]]
 name = "e2e"
 path = "tests/e2e.rs"
+
+[[example]]
+name = "list_transactions"

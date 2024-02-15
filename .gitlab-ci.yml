@@ -113,6 +113,11 @@ doc:
   script:
     - cargo doc --no-deps
 
+examples:
+  extends: .base
+  script:
+    - cargo run --example list_transactions
+
 bindings:
   extends: .base
   script:

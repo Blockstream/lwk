@@ -58,6 +58,8 @@
   <script type="text/javascript">
     function scan() {
       document.getElementById("balance").innerText = "Loading... Open the browser dev tools to see network calls..."
+      document.getElementById("scan_button").disabled = true;
+
       let desc = document.getElementById("descriptor").value
       balance(desc)
         .then((val) => {
@@ -65,8 +67,13 @@
             .replace("6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d", "L-BTC")
             .replace("144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "tL-BTC")
           document.getElementById("balance").innerText = balance_string
+          document.getElementById("scan_button").disabled = false;
+
         })
-        .catch((val) => document.getElementById("balance").innerText = val)
+        .catch((val) => {
+          document.getElementById("balance").innerText = val
+          document.getElementById("scan_button").disabled = false;
+        })
 
     }
   </script>

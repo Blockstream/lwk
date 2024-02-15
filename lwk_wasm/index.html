@@ -61,8 +61,10 @@
       let desc = document.getElementById("descriptor").value
       balance(desc)
         .then((val) => {
-          console.log(val)
-          document.getElementById("balance").innerText = JSON.stringify(Object.fromEntries(val))
+          let balance_string = JSON.stringify(Object.fromEntries(val), null, 1)
+            .replace("6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d", "L-BTC")
+            .replace("144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "tL-BTC")
+          document.getElementById("balance").innerText = balance_string
         })
         .catch((val) => document.getElementById("balance").innerText = val)
 

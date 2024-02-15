@@ -32,11 +32,16 @@ $ WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --firefox --headless
 run specific test (note the double `--`)
 
 ```
-wasm-pack test --firefox --headless -- -- balance_test_testnet
+$ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
 
-## Build
+## Build & publish
 
 ```
-CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build
+$ git checkout gh-pages
+$ cd lwk_wasm
+$ CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target web
+$ cp index.html ../docs/
+$ cp -r pkg ../docs/
+$ git push github gh-pages
 ```

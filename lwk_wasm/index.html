@@ -1,0 +1,111 @@
+<html>
+
+<head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+</head>
+
+<body>
+  <!-- Note the usage of `type=module` here as this is an ES6 module -->
+  <script type="module">
+    // Use ES module import syntax to import functionality from the module
+    // that we have compiled.
+    //
+    // Note that the `default` import is an initialization function which
+    // will "boot" the module and make it ready to use. Currently browsers
+    // don't support natively imported WebAssembly as an ES module, but
+    // eventually the manual initialization won't be required!
+    import init, { balance } from './pkg/lwk_wasm.js';
+
+    async function run() {
+      // First up we need to actually load the wasm file, so we use the
+      // default export to inform it where the wasm file is located on the
+      // server, and then we wait on the returned promise to wait for the
+      // wasm to be loaded.
+      //
+      // It may look like this: `await init('./pkg/without_a_bundler_bg.wasm');`,
+      // but there is also a handy default inside `init` function, which uses
+      // `import.meta` to locate the wasm file relatively to js file.
+      //
+      // Note that instead of a string you can also pass in any of the
+      // following things:
+      //
+      // * `WebAssembly.Module`
+      //
+      // * `ArrayBuffer`
+      //
+      // * `Response`
+      //
+      // * `Promise` which returns any of the above, e.g. `fetch("./path/to/wasm")`
+      //
+      // This gives you complete control over how the module is loaded
+      // and compiled.
+      //
+      // Also note that the promise, when resolved, yields the wasm module's
+      // exports which is the same as importing the `*_bg` module in other
+      // modes
+      await init();
+
+      // And afterwards we can use all the functionality defined in wasm.
+      // balance();
+      window.balance = balance
+    }
+
+    run();
+  </script>
+
+  <script type="text/javascript">
+    function scan() {
+      document.getElementById("balance").innerText = "Loading... Open the browser dev tools to see network calls..."
+      let desc = document.getElementById("descriptor").value
+      balance(desc)
+        .then((val) => {
+          console.log(val)
+          document.getElementById("balance").innerText = JSON.stringify(Object.fromEntries(val))
+        })
+        .catch((val) => document.getElementById("balance").innerText = val)
+
+    }
+  </script>
+
+  <p>
+    This is a proof of concept of <a href="https://github.com/blockstream/lwk">LWK</a> (Liquid Wallet Kit) running in
+    the browser
+    via WASM.
+  </p>
+  <p>
+    Scan a confidential transaction descriptor
+    <a href="https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki">[ELIP150]</a> and prints the
+    balance.
+  </p>
+
+  <p>
+    Works on Liquid Mainnet and Liquid Testnet.
+  </p>
+
+  <div>
+    <textarea id="descriptor" name="descriptor" rows="4"
+      cols="80">ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#utnwh7dr</textarea>
+  </div>
+
+  <button onclick="scan()">Scan</button>
+
+  <p>
+    Balance:
+
+  <div id="balance"></div>
+  </p>
+
+  <br /><br /><br />
+  <p>
+    Known issues:
+  <ul>
+    <li>WASM file size is huge</li>
+    <li>The scan takes time, network calls to <a href="https://github.com/Blockstream/esplora">esplora</a> are
+      sequential but
+      concurrent requests would hit rate limiting</li>
+    <li>Some more calls than the needed gap limit size (20) are made</li>
+  </ul>
+  </p>
+</body>
+
+</html>

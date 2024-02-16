@@ -360,7 +360,8 @@ async fn get_with_retry(url: &str) -> Result<Response, Error> {
             let secs = 1 << attempt;
 
             tracing::debug!("waiting {secs}");
-            tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+
+            async_std::task::sleep(std::time::Duration::from_secs(secs)).await;
             attempt += 1;
         } else {
             return Ok(response);

@@ -46,9 +46,11 @@ $ CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target web
 $ mkdir /tmp/docs
 $ cp index.html /tmp/docs/
 $ cp -r pkg /tmp/docs/
+$ rm /tmp/docs/pkg/.gitignore
 $ cd ..
 $ git checkout gh-pages
 $ git reset --hard HEAD~1
+$ git rebase master
 $ cp -r /tmp/docs .
 $ git add docs
 $ git commit -m "gh-pages: update site"

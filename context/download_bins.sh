@@ -24,3 +24,6 @@ curl -Ls https://builds.openlogic.com/downloadJDK/openlogic-openjdk/11.0.21+9/op
 
 # swift
 curl -Ls https://download.swift.org/swift-5.5-release/ubuntu1804/swift-5.5-RELEASE/swift-5.5-RELEASE-ubuntu18.04.tar.gz | tar -xz
+
+# wasm
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh

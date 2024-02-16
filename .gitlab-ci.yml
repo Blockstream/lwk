@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:99d184d19354e60203b5cbee3fa945d0cec168bbf595f15398b9556ae90b5be1
+  image: xenoky/lwk-builder@sha256:bed4b76fc94e0ec824c33fa153313212906f23069525ce15b199330ef548c9cc
   tags:
     - cloud
   retry:
@@ -133,4 +133,5 @@ wasm_partial:
   extends: .base
   script:
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features # will need esplora feature once ready
+    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm
+    - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless

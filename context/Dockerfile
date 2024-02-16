@@ -7,7 +7,8 @@ RUN apt upgrade --no-install-recommends -yqq
 # libudev-dev for jade serial
 # clang for wasm
 # libtinfo5 libncurses5 for swift
-RUN apt install -y libudev-dev libxml2-utils clang libtinfo5 libncurses5
+# chromium-driver for wasm tests
+RUN apt install -y libudev-dev libxml2-utils clang libtinfo5 libncurses5 chromium-driver
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy

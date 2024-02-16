@@ -64,16 +64,20 @@ mod tests {
         let err = crate::balance("").await.unwrap_err();
         let expected = "ElementsMiniscript(BadDescriptor(\"Not a CT Descriptor\"))";
         assert_eq!(err, expected);
+
+        let desc_no_checksum = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#";
+        let err = crate::balance(desc_no_checksum).await.unwrap_err();
+        let expected =
+            "ElementsMiniscript(BadDescriptor(\"Invalid checksum '', expected 'utnwh7dr'\"))";
+        assert_eq!(err, expected);
     }
 
-    async fn balance_test(desc: &str, network: ElementsNetwork, expected_sat: u64) {
+    async fn balance_test(desc: &str, network: ElementsNetwork, expected_at_least: u64) {
         let balance = crate::balance(desc).await.unwrap();
         let balance: HashMap<AssetId, u64> = serde_wasm_bindgen::from_value(balance).unwrap();
-        let mut expected = HashMap::new();
-        expected.insert(network.policy_asset(), expected_sat);
-        assert_eq!(
-            expected, balance,
-            "balance isn't as expected, it could be some coin has been received or spent"
-        );
+        assert!(
+            *balance.get(&network.policy_asset()).unwrap() >= expected_at_least,
+            "balance isn't as expected, it could be some coin has been spent"
+        )
     }
 }

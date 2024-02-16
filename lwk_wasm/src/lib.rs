@@ -47,14 +47,12 @@ mod tests {
 
     wasm_bindgen_test_configure!(run_in_browser);
 
-    #[ignore = "Has issues in CI because the 429 can be hit and the async sleep don't work there"]
     #[wasm_bindgen_test]
     async fn balance_test_mainnet() {
         let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
         balance_test(desc, ElementsNetwork::Liquid, 5000).await;
     }
 
-    #[ignore = "Has issues in CI because the 429 can be hit and the async sleep don't work there"]
     #[wasm_bindgen_test]
     async fn balance_test_testnet() {
         let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#utnwh7dr";

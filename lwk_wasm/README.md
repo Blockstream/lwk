@@ -4,6 +4,8 @@
 This is only a proof of concept at the moment but we want to show our commitment to have the 
 Liquid Wallet Kit working in the WASM environment.
 
+Example is [live](https://blockstream.github.io/lwk/)
+
 ## Test
 
 At the moment tests are manual and not enforced in CI.

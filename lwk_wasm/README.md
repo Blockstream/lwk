@@ -38,10 +38,17 @@ $ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ## Build & publish
 
 ```
-$ git checkout gh-pages
+$ git checkout master
 $ cd lwk_wasm
 $ CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target web
-$ cp index.html ../docs/
-$ cp -r pkg ../docs/
+$ mkdir /tmp/docs
+$ cp index.html /tmp/docs/
+$ cp -r pkg /tmp/docs/
+$ cd ..
+$ git checkout gh-pages
+$ git reset --hard HEAD~1
+$ cp -r /tmp/docs .
+$ git add docs
+$ git commit -m "gh-pages: update site"
 $ git push github gh-pages
 ```

@@ -1,21 +1,23 @@
-use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist, WolletDescriptor};
+use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist};
 use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
 mod asset_id;
 mod error;
 mod network;
+mod descriptor;
 
 pub use asset_id::AssetId;
 pub(crate) use error::Error;
 pub use network::Network;
+pub use descriptor::WolletDescriptor;
 
 /// Calculate the balance of the given descriptor
 ///
 /// if the descriptor contains "xpub" will be checked liquid mainnet, otherwise liquid testnet.
 #[wasm_bindgen]
 pub async fn balance(desc: &str) -> Result<JsValue, String> {
-    let descriptor = WolletDescriptor::from_str(desc).map_err(to_debug)?;
+    let descriptor = lwk_wollet::WolletDescriptor::from_str(desc).map_err(to_debug)?;
     wasm_bindgen_test::console_log!("going to sync {}", descriptor);
 
     let network = if desc.contains("xpub") {

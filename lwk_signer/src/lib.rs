@@ -8,18 +8,17 @@ pub use crate::software::{NewError, SignError, SwSigner};
 pub use bip39;
 
 use elements_miniscript::bitcoin::bip32::DerivationPath;
-use elements_miniscript::bitcoin::XKeyIdentifier;
 use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use lwk_common::Signer;
-use lwk_jade::mutex_jade::MutexJade;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignerError {
     #[error(transparent)]
     Software(#[from] SignError),
 
+    #[cfg(feature = "jade")]
     #[error(transparent)]
     JadeError(#[from] lwk_jade::error::Error),
 
@@ -30,7 +29,12 @@ pub enum SignerError {
 #[derive(Debug)]
 pub enum AnySigner {
     Software(SwSigner),
-    Jade(MutexJade, XKeyIdentifier),
+
+    #[cfg(feature = "jade")]
+    Jade(
+        lwk_jade::mutex_jade::MutexJade,
+        elements_miniscript::bitcoin::XKeyIdentifier,
+    ),
 }
 
 impl Signer for AnySigner {
@@ -57,6 +61,8 @@ impl Signer for &AnySigner {
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
         Ok(match self {
             AnySigner::Software(signer) => signer.sign(pset)?,
+
+            #[cfg(feature = "jade")]
             AnySigner::Jade(signer, _) => signer.sign(pset)?,
         })
     }
@@ -64,6 +70,8 @@ impl Signer for &AnySigner {
     fn derive_xpub(&self, path: &DerivationPath) -> Result<Xpub, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.derive_xpub(path)?,
+
+            #[cfg(feature = "jade")]
             AnySigner::Jade(s, _) => s.derive_xpub(path)?,
         })
     }
@@ -73,6 +81,8 @@ impl Signer for &AnySigner {
     ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Ok(match self {
             AnySigner::Software(s) => s.slip77_master_blinding_key()?,
+
+            #[cfg(feature = "jade")]
             AnySigner::Jade(s, _) => s.slip77_master_blinding_key()?,
         })
     }

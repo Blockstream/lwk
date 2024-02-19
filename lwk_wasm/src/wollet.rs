@@ -6,6 +6,18 @@ pub struct Wollet {
     inner: lwk_wollet::Wollet,
 }
 
+impl AsRef<lwk_wollet::Wollet> for Wollet {
+    fn as_ref(&self) -> &lwk_wollet::Wollet {
+        &self.inner
+    }
+}
+
+impl AsMut<lwk_wollet::Wollet> for Wollet {
+    fn as_mut(&mut self) -> &mut lwk_wollet::Wollet {
+        &mut self.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Wollet {
     /// Create a new  wallet

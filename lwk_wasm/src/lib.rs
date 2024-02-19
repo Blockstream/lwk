@@ -2,8 +2,12 @@ use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist, WolletDescriptor
 use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
+mod asset_id;
+mod error;
 mod network;
 
+pub use asset_id::AssetId;
+pub(crate) use error::Error;
 pub use network::Network;
 
 /// Calculate the balance of the given descriptor

@@ -1,6 +1,10 @@
-use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist, Wollet, WolletDescriptor};
+use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist, WolletDescriptor};
 use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
+
+mod network;
+
+pub use network::Network;
 
 /// Calculate the balance of the given descriptor
 ///
@@ -16,7 +20,8 @@ pub async fn balance(desc: &str) -> Result<JsValue, String> {
         ElementsNetwork::LiquidTestnet
     };
 
-    let mut wollet = Wollet::new(network, Arc::new(NoPersist {}), descriptor).map_err(to_debug)?;
+    let mut wollet =
+        lwk_wollet::Wollet::new(network, Arc::new(NoPersist {}), descriptor).map_err(to_debug)?;
 
     let url = match network {
         ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",

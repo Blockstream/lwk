@@ -1,7 +1,7 @@
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
-use crate::AssetId;
+use crate::{AssetId, EsploraClient};
 
 #[wasm_bindgen]
 pub struct Network {
@@ -47,6 +47,18 @@ impl Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
         lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into()
+    }
+
+    pub fn default_esplora_client(&self) -> EsploraClient {
+        let url = match &self.inner {
+            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
+            lwk_wollet::ElementsNetwork::LiquidTestnet => {
+                "https://blockstream.info/liquidtestnet/api"
+            }
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+        };
+
+        EsploraClient::new(url)
     }
 
     pub fn is_mainnet(&self) -> bool {

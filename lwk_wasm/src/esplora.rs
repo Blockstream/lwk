@@ -1,9 +1,12 @@
 use crate::{Error, Update, Wollet};
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
 pub struct EsploraClient {
     inner: lwk_wollet::EsploraWasmClient,
 }
 
+#[wasm_bindgen]
 impl EsploraClient {
     /// Construct an Esplora Client
     pub fn new(url: &str) -> Self {

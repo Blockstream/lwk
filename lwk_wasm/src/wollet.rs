@@ -48,15 +48,27 @@ mod tests {
     use crate::{Network, Wollet, WolletDescriptor};
     wasm_bindgen_test_configure!(run_in_browser);
 
+    const DESCRIPTOR: &str = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
+
     #[wasm_bindgen_test]
-    async fn test_wollet_address() {
-        let descriptor = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
-        let descriptor = WolletDescriptor::new(descriptor).unwrap();
+    fn test_wollet_address() {
+        let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
         let network = Network::mainnet();
         let wollet = Wollet::new(network, descriptor).unwrap();
         assert_eq!(
             wollet.address(Some(0)).unwrap(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
         );
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_apply_update() {
+        let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
+        let network = Network::mainnet();
+        let mut client = network.default_esplora_client();
+
+        let mut wollet = Wollet::new(network, descriptor).unwrap();
+        let update = client.full_scan(&wollet).await.unwrap().unwrap();
+        wollet.apply_update(update).unwrap();
     }
 }

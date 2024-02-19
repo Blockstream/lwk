@@ -25,6 +25,12 @@ impl From<&WolletDescriptor> for lwk_wollet::WolletDescriptor {
     }
 }
 
+impl From<WolletDescriptor> for lwk_wollet::WolletDescriptor {
+    fn from(desc: WolletDescriptor) -> Self {
+        desc.inner
+    }
+}
+
 #[wasm_bindgen]
 impl WolletDescriptor {
     pub fn new(descriptor: &str) -> Result<WolletDescriptor, Error> {
@@ -49,7 +55,6 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_descriptor() {
         let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
-
         assert_eq!(desc, WolletDescriptor::new(desc).unwrap().to_string());
     }
 }

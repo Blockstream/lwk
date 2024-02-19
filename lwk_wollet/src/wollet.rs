@@ -12,7 +12,7 @@ use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
 use crate::store::Store;
 use crate::util::EC;
-use crate::{FsPersister, Persister, Update, WolletDescriptor};
+use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{psbt, ForEachKey};
@@ -60,7 +60,7 @@ impl Wollet {
         Ok(wollet)
     }
 
-    /// Create a new  wallet persisting on file system
+    /// Create a new wallet persisting on file system
     pub fn with_fs_persist<P: AsRef<Path>>(
         network: ElementsNetwork,
         descriptor: WolletDescriptor,
@@ -71,6 +71,14 @@ impl Wollet {
             FsPersister::new(datadir, network, &descriptor)?,
             descriptor,
         )
+    }
+
+    /// Create a new wallet which not persist anything
+    pub fn without_persist(
+        network: ElementsNetwork,
+        descriptor: WolletDescriptor,
+    ) -> Result<Self, Error> {
+        Self::new(network, Arc::new(NoPersist {}), descriptor)
     }
 
     /// Get the network policy asset

@@ -3,14 +3,16 @@ use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
 mod asset_id;
+mod descriptor;
 mod error;
 mod network;
-mod descriptor;
+mod wollet;
 
 pub use asset_id::AssetId;
+pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use network::Network;
-pub use descriptor::WolletDescriptor;
+pub use wollet::Wollet;
 
 /// Calculate the balance of the given descriptor
 ///

@@ -1,4 +1,4 @@
-use crate::{Error, Network, WolletDescriptor};
+use crate::{Error, Network, Update, WolletDescriptor};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -35,6 +35,10 @@ impl Wollet {
         let address = self.inner.address(index)?;
         Ok(address.address().to_string())
     }
+
+    pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
+        Ok(self.inner.apply_update(update.into())?)
+    }
 }
 
 mod tests {
@@ -46,10 +50,10 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_wollet_address() {
-        let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
-        let desc = WolletDescriptor::new(desc).unwrap();
+        let descriptor = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
+        let descriptor = WolletDescriptor::new(descriptor).unwrap();
         let network = Network::mainnet();
-        let wollet = Wollet::new(network, desc).unwrap();
+        let wollet = Wollet::new(network, descriptor).unwrap();
         assert_eq!(
             wollet.address(Some(0)).unwrap(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"

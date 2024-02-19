@@ -1,4 +1,7 @@
+use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
+
+use crate::AssetId;
 
 #[wasm_bindgen]
 pub struct Network {
@@ -33,6 +36,19 @@ impl Network {
         lwk_wollet::ElementsNetwork::LiquidTestnet.into()
     }
 
+    pub fn regtest(policy_asset: AssetId) -> Network {
+        lwk_wollet::ElementsNetwork::ElementsRegtest {
+            policy_asset: policy_asset.into(),
+        }
+        .into()
+    }
+
+    pub fn regtest_default() -> Network {
+        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        let policy_asset: elements::AssetId = policy_asset.parse().expect("static");
+        lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into()
+    }
+
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
     }
@@ -50,5 +66,6 @@ mod tests {
     async fn test_network() {
         assert_eq!(Network::mainnet().to_string(), "Liquid");
         assert_eq!(Network::testnet().to_string(), "LiquidTestnet");
+        assert_eq!(Network::regtest_default().to_string(), "ElementsRegtest { policy_asset: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225 }");
     }
 }

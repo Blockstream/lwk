@@ -9,8 +9,8 @@ pub enum Error {
     Wollet(#[from] lwk_wollet::Error),
 }
 
-impl Into<JsValue> for Error {
-    fn into(self) -> JsValue {
-        format!("{self:?}").into()
+impl From<Error> for JsValue {
+    fn from(val: Error) -> JsValue {
+        format!("{val:?}").into()
     }
 }

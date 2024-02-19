@@ -404,7 +404,6 @@ impl State {
             let path = self.config.state_path()?;
             let mut file = OpenOptions::new()
                 .create_new(!path.exists())
-                .write(true)
                 .append(true)
                 .open(path)?;
             writeln!(file, "{}", data)?;

@@ -34,7 +34,7 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_wollet_address() {
         let desc = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
-        let desc = WolletDescriptor::new(&desc).unwrap();
+        let desc = WolletDescriptor::new(desc).unwrap();
         let network = Network::mainnet();
         let wollet = Wollet::new(network, desc).unwrap();
         assert_eq!(

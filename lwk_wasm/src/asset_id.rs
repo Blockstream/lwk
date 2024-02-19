@@ -34,7 +34,7 @@ impl From<AssetId> for elements::AssetId {
 #[wasm_bindgen]
 impl AssetId {
     pub fn new(asset_id: &str) -> Result<AssetId, Error> {
-        Ok(elements::AssetId::from_str(&asset_id)?.into())
+        Ok(elements::AssetId::from_str(asset_id)?.into())
     }
 }
 

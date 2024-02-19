@@ -129,9 +129,10 @@ check_rust_170:
   script:
     - cargo +1.70.0 check
 
-wasm_partial:
+wasm:
   extends: .base
   script:
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
     - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm
+    - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless

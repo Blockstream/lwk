@@ -6,12 +6,14 @@ mod asset_id;
 mod descriptor;
 mod error;
 mod network;
+mod update;
 mod wollet;
 
 pub use asset_id::AssetId;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use network::Network;
+pub use update::Update;
 pub use wollet::Wollet;
 
 /// Calculate the balance of the given descriptor

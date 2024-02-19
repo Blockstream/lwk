@@ -7,6 +7,9 @@ pub enum Error {
 
     #[error(transparent)]
     Wollet(#[from] lwk_wollet::Error),
+
+    #[error(transparent)]
+    Encode(#[from] lwk_wollet::elements::encode::Error),
 }
 
 impl From<Error> for JsValue {

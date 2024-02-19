@@ -67,6 +67,7 @@ test_coverage:
   variables:
     RUSTFLAGS: "-C instrument-coverage"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+    TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
 
   script:
     - docker pull tulipan81/blind_pin_server:v0.0.5

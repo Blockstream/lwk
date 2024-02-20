@@ -9,6 +9,7 @@ mod esplora;
 mod network;
 mod update;
 mod wollet;
+mod blockdata;
 
 pub use asset_id::AssetId;
 pub use descriptor::WolletDescriptor;
@@ -17,6 +18,7 @@ pub use esplora::EsploraClient;
 pub use network::Network;
 pub use update::Update;
 pub use wollet::Wollet;
+pub use blockdata::address::Address;
 
 /// Calculate the balance of the given descriptor
 ///

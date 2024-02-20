@@ -48,9 +48,10 @@ impl Wollet {
 
 mod tests {
 
+    use crate::{Network, Wollet, WolletDescriptor};
+    use std::collections::HashMap;
     use wasm_bindgen_test::*;
 
-    use crate::{Network, Wollet, WolletDescriptor};
     wasm_bindgen_test_configure!(run_in_browser);
 
     const DESCRIPTOR: &str = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
@@ -76,6 +77,9 @@ mod tests {
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
         let balance = wollet.balance().unwrap();
-        println!("{:?}", balance);
+        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
+            serde_wasm_bindgen::from_value(balance).unwrap();
+        let lbtc = lwk_wollet::ElementsNetwork::Liquid.policy_asset();
+        assert!(*balance.get(&lbtc).unwrap() >= 5000);
     }
 }

@@ -1,5 +1,5 @@
-use lwk_wollet::elements;
 use crate::Error;
+use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -13,10 +13,11 @@ impl From<elements::Address> for Address {
     }
 }
 
-
 impl From<&elements::Address> for Address {
     fn from(inner: &elements::Address) -> Self {
-        Self { inner: inner.clone() }
+        Self {
+            inner: inner.clone(),
+        }
     }
 }
 
@@ -48,7 +49,6 @@ impl Address {
         self.inner.to_unconfidential().into()
     }
 }
-
 
 #[wasm_bindgen]
 pub struct AddressResult {

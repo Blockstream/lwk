@@ -3,22 +3,22 @@ use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
 mod asset_id;
+mod blockdata;
 mod descriptor;
 mod error;
 mod esplora;
 mod network;
 mod update;
 mod wollet;
-mod blockdata;
 
 pub use asset_id::AssetId;
+pub use blockdata::address::{Address, AddressResult};
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
 pub use network::Network;
 pub use update::Update;
 pub use wollet::Wollet;
-pub use blockdata::address::{Address, AddressResult};
 
 /// Calculate the balance of the given descriptor
 ///

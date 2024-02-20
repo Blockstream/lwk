@@ -15,7 +15,7 @@ pub enum Error {
     SerdeJs(#[from] serde_wasm_bindgen::Error),
 
     #[error(transparent)]
-    Address(#[from] lwk_wollet::elements::AddressError),   
+    Address(#[from] lwk_wollet::elements::AddressError),
 }
 
 impl From<Error> for JsValue {

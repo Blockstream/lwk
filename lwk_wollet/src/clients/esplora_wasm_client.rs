@@ -361,7 +361,7 @@ async fn get_with_retry(url: &str) -> Result<Response, Error> {
 
             tracing::debug!("waiting {secs}");
 
-            sleep(secs * 1000).await;
+            async_sleep(secs * 1000).await;
             attempt += 1;
         } else {
             return Ok(response);
@@ -369,8 +369,10 @@ async fn get_with_retry(url: &str) -> Result<Response, Error> {
     }
 }
 
+// based on https://users.rust-lang.org/t/rust-wasm-async-sleeping-for-100-milli-seconds-goes-up-to-1-minute/81177
+// TODO remove/handle/justify unwraps
 #[cfg(target_arch = "wasm32")]
-pub async fn sleep(millis: i32) {
+pub async fn async_sleep(millis: i32) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
         web_sys::window()
             .unwrap()
@@ -381,7 +383,7 @@ pub async fn sleep(millis: i32) {
     wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn sleep(millis: i32) {
+pub async fn async_sleep(millis: i32) {
     tokio::time::sleep(tokio::time::Duration::from_millis(millis as u64)).await;
 }
 
@@ -432,7 +434,7 @@ mod tests {
 
     #[tokio::test]
     async fn sleep_test() {
-        super::sleep(1).await;
+        super::async_sleep(1).await;
     }
 
     #[ignore]

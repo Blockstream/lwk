@@ -46,7 +46,7 @@ pub use clients::esplora_client::EsploraClient;
 pub use clients::esplora_wasm_client::EsploraWasmClient;
 
 #[cfg(feature = "esplora_wasm")]
-pub use clients::esplora_wasm_client::sleep;
+pub use clients::esplora_wasm_client::async_sleep;
 
 pub use elements_miniscript;
 pub use elements_miniscript::elements;

@@ -29,6 +29,6 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_sleep() {
-        lwk_wollet::sleep(1).await;
+        lwk_wollet::async_sleep(1).await;
     }
 }

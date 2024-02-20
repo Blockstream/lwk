@@ -19,3 +19,15 @@ impl EsploraClient {
         Ok(update.map(Into::into))
     }
 }
+
+mod tests {
+
+    use wasm_bindgen_test::*;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    async fn test_sleep() {
+        lwk_wollet::sleep(1).await;
+    }
+}

@@ -13,6 +13,13 @@ impl From<elements::Address> for Address {
     }
 }
 
+
+impl From<&elements::Address> for Address {
+    fn from(inner: &elements::Address) -> Self {
+        Self { inner: inner.clone() }
+    }
+}
+
 impl AsRef<elements::Address> for Address {
     fn as_ref(&self) -> &elements::Address {
         &self.inner
@@ -39,6 +46,29 @@ impl Address {
 
     pub fn to_unconfidential(&self) -> Address {
         self.inner.to_unconfidential().into()
+    }
+}
+
+
+#[wasm_bindgen]
+pub struct AddressResult {
+    inner: lwk_wollet::AddressResult,
+}
+
+impl From<lwk_wollet::AddressResult> for AddressResult {
+    fn from(inner: lwk_wollet::AddressResult) -> Self {
+        Self { inner }
+    }
+}
+
+#[wasm_bindgen]
+impl AddressResult {
+    pub fn address(&self) -> Address {
+        self.inner.address().into()
+    }
+
+    pub fn index(&self) -> u32 {
+        self.inner.index()
     }
 }
 

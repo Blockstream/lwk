@@ -18,7 +18,7 @@ pub use esplora::EsploraClient;
 pub use network::Network;
 pub use update::Update;
 pub use wollet::Wollet;
-pub use blockdata::address::Address;
+pub use blockdata::address::{Address, AddressResult};
 
 /// Calculate the balance of the given descriptor
 ///

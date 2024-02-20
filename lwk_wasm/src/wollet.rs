@@ -1,4 +1,4 @@
-use crate::{Error, Network, Update, WolletDescriptor};
+use crate::{AddressResult, Error, Network, Update, WolletDescriptor};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -26,14 +26,14 @@ impl Wollet {
         Ok(Self { inner })
     }
 
-    /// Get a wallet address
+    /// Get a wallet address with the correspondong derivation index
     ///
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
-    pub fn address(&self, index: Option<u32>) -> Result<String, Error> {
+    pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
         // TODO return AddressResult
-        let address = self.inner.address(index)?;
-        Ok(address.address().to_string())
+        let address_result = self.inner.address(index)?;
+        Ok(address_result.into())
     }
 
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
@@ -46,6 +46,7 @@ impl Wollet {
     }
 }
 
+#[cfg(test)]
 mod tests {
 
     use crate::{Network, Wollet, WolletDescriptor};
@@ -62,7 +63,7 @@ mod tests {
         let network = Network::mainnet();
         let wollet = Wollet::new(network, descriptor).unwrap();
         assert_eq!(
-            wollet.address(Some(0)).unwrap(),
+            wollet.address(Some(0)).unwrap().address().to_string(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
         );
     }

@@ -45,6 +45,7 @@ impl std::fmt::Display for WolletDescriptor {
     }
 }
 
+#[cfg(test)]
 mod tests {
 
     use wasm_bindgen_test::*;

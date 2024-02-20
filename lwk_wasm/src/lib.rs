@@ -58,6 +58,7 @@ fn to_debug<D: Debug>(d: D) -> String {
     format!("{d:?}")
 }
 
+#[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 

@@ -95,6 +95,9 @@ Internal crate dependencies are shown in this diagram, where an arrow indicates 
       
       bindings-->signer;
       bindings-->wollet;
+
+      wasm-->signer;
+      wasm-->wollet;
 ```
 
 * [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.

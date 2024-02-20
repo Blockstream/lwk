@@ -10,6 +10,9 @@ pub enum Error {
 
     #[error(transparent)]
     Encode(#[from] lwk_wollet::elements::encode::Error),
+
+    #[error(transparent)]
+    SerdeJs(#[from] serde_wasm_bindgen::Error),
 }
 
 impl From<Error> for JsValue {

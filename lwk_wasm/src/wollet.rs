@@ -39,6 +39,11 @@ impl Wollet {
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
         Ok(self.inner.apply_update(update.into())?)
     }
+
+    pub fn balance(&self) -> Result<JsValue, Error> {
+        let balance = self.inner.balance()?;
+        Ok(serde_wasm_bindgen::to_value(&balance)?)
+    }
 }
 
 mod tests {
@@ -62,7 +67,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    async fn test_apply_update() {
+    async fn test_balance() {
         let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
         let network = Network::mainnet();
         let mut client = network.default_esplora_client();
@@ -70,5 +75,7 @@ mod tests {
         let mut wollet = Wollet::new(network, descriptor).unwrap();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
+        let balance = wollet.balance().unwrap();
+        println!("{:?}", balance);
     }
 }

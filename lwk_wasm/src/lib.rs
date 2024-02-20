@@ -2,7 +2,6 @@ use lwk_wollet::{ElementsNetwork, EsploraWasmClient, NoPersist};
 use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
-mod asset_id;
 mod blockdata;
 mod descriptor;
 mod error;
@@ -11,8 +10,8 @@ mod network;
 mod update;
 mod wollet;
 
-pub use asset_id::AssetId;
 pub use blockdata::address::{Address, AddressResult};
+pub use blockdata::asset_id::AssetId;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;

@@ -37,6 +37,11 @@ impl WolletDescriptor {
         let desc = lwk_wollet::WolletDescriptor::from_str(descriptor)?;
         Ok(desc.into())
     }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 impl std::fmt::Display for WolletDescriptor {

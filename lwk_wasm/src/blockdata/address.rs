@@ -48,6 +48,11 @@ impl Address {
     pub fn to_unconfidential(&self) -> Address {
         self.inner.to_unconfidential().into()
     }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 #[wasm_bindgen]

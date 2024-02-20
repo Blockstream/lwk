@@ -36,6 +36,11 @@ impl AssetId {
     pub fn new(asset_id: &str) -> Result<AssetId, Error> {
         Ok(elements::AssetId::from_str(asset_id)?.into())
     }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 #[cfg(test)]

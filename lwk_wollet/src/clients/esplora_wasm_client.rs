@@ -361,12 +361,28 @@ async fn get_with_retry(url: &str) -> Result<Response, Error> {
 
             tracing::debug!("waiting {secs}");
 
-            async_std::task::sleep(std::time::Duration::from_secs(secs)).await;
+            sleep(secs * 1000).await;
             attempt += 1;
         } else {
             return Ok(response);
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn sleep(millis: i32) {
+    let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
+        web_sys::window()
+            .unwrap()
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, millis)
+            .unwrap();
+    };
+    let p = js_sys::Promise::new(&mut cb);
+    wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sleep(millis: i32) {
+    tokio::time::sleep(tokio::time::Duration::from_millis(millis as u64)).await;
 }
 
 impl From<EsploraTx> for History {
@@ -412,6 +428,11 @@ mod tests {
 
         let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
         test_esplora_url(&esplora_url).await;
+    }
+
+    #[tokio::test]
+    async fn sleep_test() {
+        super::sleep(1).await;
     }
 
     #[ignore]

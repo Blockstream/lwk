@@ -12,7 +12,7 @@ mod wollet;
 
 pub use blockdata::address::{Address, AddressResult};
 pub use blockdata::asset_id::AssetId;
-pub use blockdata::transaction::Txid;
+pub use blockdata::transaction::{Txid, Transaction};
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;

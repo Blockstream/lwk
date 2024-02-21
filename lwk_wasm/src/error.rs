@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Hex(#[from] lwk_wollet::bitcoin::hashes::hex::HexToArrayError),
+    HexToArray(#[from] lwk_wollet::bitcoin::hashes::hex::HexToArrayError),
 
     #[error(transparent)]
     Wollet(#[from] lwk_wollet::Error),
@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error(transparent)]
     Address(#[from] lwk_wollet::elements::AddressError),
+
+    #[error(transparent)]
+    HexToBytes(#[from] lwk_wollet::bitcoin::hashes::hex::HexToBytesError),
 }
 
 impl From<Error> for JsValue {

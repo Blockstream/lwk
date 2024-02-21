@@ -55,11 +55,11 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_asset_id() {
-        let expected = "Hex(InvalidLength(64, 2))";
+        let expected = "HexToArray(InvalidLength(64, 2))";
         let hex = "xx";
         assert_eq!(expected, format!("{:?}", AssetId::new(hex).unwrap_err()));
 
-        let expected = "Hex(Conversion(InvalidChar(120)))";
+        let expected = "HexToArray(Conversion(InvalidChar(120)))";
         let hex = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
         assert_eq!(expected, format!("{:?}", AssetId::new(hex).unwrap_err()));
 

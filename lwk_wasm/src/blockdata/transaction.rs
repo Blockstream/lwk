@@ -1,8 +1,14 @@
-use crate::Error;
-use lwk_wollet::{elements::{self, hex::ToHex, pset::serialize::{Deserialize, Serialize}}, hashes::hex::FromHex};
+use crate::{AssetId, Error};
+use lwk_wollet::{
+    elements::{
+        self,
+        hex::ToHex,
+        pset::serialize::{Deserialize, Serialize},
+    },
+    hashes::hex::FromHex,
+};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
-
 
 /// A Liquid transaction
 #[wasm_bindgen]
@@ -36,6 +42,18 @@ impl Transaction {
         let bytes = Vec::<u8>::from_hex(tx_hex)?;
         let tx: elements::Transaction = elements::Transaction::deserialize(&bytes)?;
         Ok(tx.into())
+    }
+
+    pub fn txid(&self) -> Txid {
+        self.inner.txid().into()
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        elements::Transaction::serialize(&self.inner)
+    }
+
+    pub fn fee(&self, policy_asset: AssetId) -> u64 {
+        self.inner.fee_in((policy_asset).into())
     }
 
     #[wasm_bindgen(js_name = toString)]
@@ -86,10 +104,8 @@ impl Txid {
 
 #[cfg(test)]
 mod tests {
-
+    use crate::{AssetId, Transaction, Txid};
     use wasm_bindgen_test::*;
-
-    use crate::{Transaction, Txid};
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -111,11 +127,28 @@ mod tests {
     async fn test_transaction() {
         let expected = "HexToBytes(InvalidChar(120))";
         let hex = "xx";
-        assert_eq!(expected, format!("{:?}", Transaction::new(hex).unwrap_err()));
+        assert_eq!(
+            expected,
+            format!("{:?}", Transaction::new(hex).unwrap_err())
+        );
 
         let expected =
             include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")
                 .to_string();
-        assert_eq!(expected, Transaction::new(&expected).unwrap().to_string());
+        let tx = Transaction::new(&expected).unwrap();
+        assert_eq!(expected, tx.to_string());
+
+        assert_eq!(
+            "954f32449d00a9de3c42758dedee895c88ea417cb72999738b2631bcc00e13ad",
+            tx.txid().to_string()
+        );
+
+        assert_eq!(
+            tx.fee(
+                AssetId::new("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
+                    .unwrap()
+            ),
+            250
+        );
     }
 }

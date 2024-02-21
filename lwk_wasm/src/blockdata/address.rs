@@ -36,6 +36,7 @@ impl std::fmt::Display for Address {
 #[wasm_bindgen]
 impl Address {
     /// Construct an Address object
+    #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;
         Ok(inner.into())

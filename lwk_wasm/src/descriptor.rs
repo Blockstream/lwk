@@ -33,6 +33,7 @@ impl From<WolletDescriptor> for lwk_wollet::WolletDescriptor {
 
 #[wasm_bindgen]
 impl WolletDescriptor {
+    #[wasm_bindgen(constructor)]
     pub fn new(descriptor: &str) -> Result<WolletDescriptor, Error> {
         let desc = lwk_wollet::WolletDescriptor::from_str(descriptor)?;
         Ok(desc.into())

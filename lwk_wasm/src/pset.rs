@@ -3,7 +3,6 @@ use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
-
 /// Partially Signed Elements Transaction
 #[wasm_bindgen]
 pub struct Pset {

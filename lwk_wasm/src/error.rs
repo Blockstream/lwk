@@ -25,6 +25,9 @@ pub enum Error {
 
     #[error(transparent)]
     PsetParse(#[from] lwk_wollet::elements::pset::ParseError),
+
+    #[error(transparent)]
+    ParseOutPoint(#[from] lwk_wollet::elements::bitcoin::transaction::ParseOutPointError),
 }
 
 impl From<Error> for JsValue {

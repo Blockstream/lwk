@@ -672,22 +672,21 @@ pub struct ServerArgs {
 pub enum ServerCommand {
     /// Start the server
     Start {
-        /// Electrum URL, if not specified a reasonable default is specified according to the network
+        /// Electrum URL, if not specified a reasonable default is used according to the network
         #[arg(short, long)]
         electrum_url: Option<String>,
 
-        /// Where the log file, server state, and other data goes.
+        /// Location for logs, server state, and other LWK data
         ///
-        /// If not specified is `$HOME/.lwk`.
-        /// If failing to determine the home directory the current dir `./.lwk` is used
+        /// Default is `$HOME/.lwk`, or `./.lwk` if unable to determine the home dir
         #[arg(long)]
         datadir: Option<PathBuf>,
 
-        /// Timeout for rpc and hww requests in seconds
+        /// Timeout for RPC and HWW requests (seconds)
         #[arg(long)]
         timeout: Option<u64>,
 
-        /// Scanning interval
+        /// Interval between blockchain scans (seconds)
         #[arg(long)]
         scanning_interval: Option<u64>,
     },

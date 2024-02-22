@@ -108,6 +108,7 @@ Internal crate dependencies are shown in this diagram, where an arrow indicates 
 * [`lwk_jade`](./lwk_jade): unlock Jade, get xpubs,
   register multisig wallets, sign PSETs and more.
 * [`lwk_bindings`](./lwk_bindings): use LWK from other languages.
+* [`lwk_wasm`](./lwk_wasm): use LWK from WebAssembly.
 * and more:
   common or ancillary components ([`lwk_common`](./lwk_common),
   [`lwk_rpc_model`](./lwk_rpc_model), [`lwk_tiny_rpc`](./lwk_tiny_rpc),

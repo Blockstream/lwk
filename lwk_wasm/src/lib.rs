@@ -17,6 +17,7 @@ pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::{Transaction, Txid};
 pub use blockdata::tx_out_secrets::TxOutSecrets;
+pub use blockdata::wallet_tx_out::WalletTxOut;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;

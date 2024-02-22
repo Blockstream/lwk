@@ -16,8 +16,6 @@ $ python3 -m http.server 8080
 
 ## Test
 
-At the moment tests are manual and not enforced in CI.
-
 Other than rust the [`wasm-pack` tool](https://rustwasm.github.io/wasm-pack/installer/) is needed.
 
 ```shell

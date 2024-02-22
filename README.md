@@ -31,8 +31,7 @@ then you can build from source:
 ```sh
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk
-$ cargo build --release
-$ alias lwk_cli="$(pwd)/target/release/lwk_cli"
+$ cargo install --path ./lwk_cli/ 
 ```
 
 ## CLI Usage

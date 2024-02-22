@@ -1,7 +1,4 @@
-use elements::{
-    hex::ToHex,
-    pset::serialize::{Deserialize, Serialize},
-};
+use elements::{hex::ToHex, pset::serialize::Deserialize};
 
 use crate::{types::Hex, LwkError};
 use std::{fmt::Display, sync::Arc};
@@ -20,7 +17,7 @@ impl From<elements::Script> for Script {
 
 impl Display for Script {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner.serialize().to_hex())
+        write!(f, "{}", self.inner.to_hex())
     }
 }
 

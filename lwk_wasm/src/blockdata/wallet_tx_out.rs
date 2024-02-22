@@ -2,6 +2,7 @@ use crate::{OutPoint, Script, TxOutSecrets};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+#[derive(Debug, Clone)]
 pub struct WalletTxOut {
     inner: lwk_wollet::WalletTxOut,
 }
@@ -38,6 +39,28 @@ impl WalletTxOut {
     // pub fn ext_int(&self) -> Chain {
     //     self.inner.ext_int.into()
     // }
+}
+
+/// An optional wallet transaction output. Could be None when it's not possible to unblind.
+/// It seems required by wasm_bindgen because we can't return `Vec<Option<WalletTxOut>>`
+#[wasm_bindgen]
+pub struct OptionWalletTxOut {
+    inner: Option<WalletTxOut>,
+}
+
+impl From<Option<lwk_wollet::WalletTxOut>> for OptionWalletTxOut {
+    fn from(inner: Option<lwk_wollet::WalletTxOut>) -> Self {
+        Self {
+            inner: inner.map(Into::into),
+        }
+    }
+}
+
+#[wasm_bindgen]
+impl OptionWalletTxOut {
+    pub fn get(&self) -> Option<WalletTxOut> {
+        self.inner.clone()
+    }
 }
 
 #[cfg(test)]

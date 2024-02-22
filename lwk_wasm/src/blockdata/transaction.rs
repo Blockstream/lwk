@@ -138,17 +138,10 @@ mod tests {
         let tx = Transaction::new(&expected).unwrap();
         assert_eq!(expected, tx.to_string());
 
-        assert_eq!(
-            "954f32449d00a9de3c42758dedee895c88ea417cb72999738b2631bcc00e13ad",
-            tx.txid().to_string()
-        );
+        let expected = "954f32449d00a9de3c42758dedee895c88ea417cb72999738b2631bcc00e13ad";
+        assert_eq!(expected, tx.txid().to_string());
 
-        assert_eq!(
-            tx.fee(
-                AssetId::new("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
-                    .unwrap()
-            ),
-            250
-        );
+        let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+        assert_eq!(tx.fee(AssetId::new(policy_asset).unwrap()), 250);
     }
 }

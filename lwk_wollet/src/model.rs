@@ -134,26 +134,25 @@ impl<'a> std::fmt::Display for DisplayTxOutSecrets<'a> {
 pub(crate) struct DisplayWalletTxInputOutputs<'a>(&'a WalletTx);
 impl<'a> std::fmt::Display for DisplayWalletTxInputOutputs<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let mut inputs = self.0.inputs.iter().peekable();
-        let mut outputs = self.0.outputs.iter().peekable();
+        let mut first = true;
 
-        while let Some(input) = inputs.next() {
+        for input in self.0.inputs.iter() {
             if let Some(input) = input.as_ref() {
-                write!(f, "{}", DisplayTxOutSecrets(&input.unblinded))?;
-                if let Some(Some(_)) = inputs.peek() {
-                    write!(f, ",")?;
-                } else if let Some(Some(_)) = outputs.peek() {
+                if !first {
                     write!(f, ",")?;
                 }
+                write!(f, "{}", DisplayTxOutSecrets(&input.unblinded))?;
+                first = false;
             }
         }
 
-        while let Some(output) = outputs.next() {
+        for output in self.0.outputs.iter() {
             if let Some(output) = output.as_ref() {
-                write!(f, "{}", DisplayTxOutSecrets(&output.unblinded))?;
-                if let Some(Some(_)) = outputs.peek() {
+                if !first {
                     write!(f, ",")?;
                 }
+                write!(f, "{}", DisplayTxOutSecrets(&output.unblinded))?;
+                first = false;
             }
         }
         Ok(())

@@ -7,6 +7,7 @@ mod descriptor;
 mod error;
 mod esplora;
 mod network;
+mod pset;
 mod update;
 mod wollet;
 
@@ -18,6 +19,7 @@ pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
 pub use network::Network;
+pub use pset::Pset;
 pub use update::Update;
 pub use wollet::Wollet;
 

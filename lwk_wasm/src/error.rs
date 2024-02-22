@@ -19,6 +19,12 @@ pub enum Error {
 
     #[error(transparent)]
     HexToBytes(#[from] lwk_wollet::bitcoin::hashes::hex::HexToBytesError),
+
+    #[error(transparent)]
+    Pset(#[from] lwk_wollet::elements::pset::Error),
+
+    #[error(transparent)]
+    PsetParse(#[from] lwk_wollet::elements::pset::ParseError),
 }
 
 impl From<Error> for JsValue {

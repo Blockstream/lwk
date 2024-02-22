@@ -1,4 +1,4 @@
-use crate::{AddressResult, Error, Network, Update, WolletDescriptor};
+use crate::{AddressResult, Error, Network, Update, WalletTx, WolletDescriptor};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -45,12 +45,22 @@ impl Wollet {
         let balance = self.inner.balance()?;
         Ok(serde_wasm_bindgen::to_value(&balance)?)
     }
+
+    pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
+        Ok(self
+            .inner
+            .transactions()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
     use crate::{Network, Wollet, WolletDescriptor};
+    use lwk_wollet::elements::hex::FromHex;
     use std::collections::HashMap;
     use wasm_bindgen_test::*;
 
@@ -69,19 +79,44 @@ mod tests {
         );
     }
 
+    #[ignore = "requires internet connection and takes a while"]
     #[wasm_bindgen_test]
-    async fn test_balance() {
+    async fn test_balance_and_transactions() {
+        inner_test_balance_and_transactions(true).await;
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_balance_and_transactions_no_internet() {
+        inner_test_balance_and_transactions(false).await;
+    }
+
+    async fn inner_test_balance_and_transactions(with_internet: bool) {
         let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
         let network = Network::mainnet();
-        let mut client = network.default_esplora_client();
-
         let mut wollet = Wollet::new(network, descriptor).unwrap();
-        let update = client.full_scan(&wollet).await.unwrap().unwrap();
+
+        let update = if with_internet {
+            let mut client = network.default_esplora_client();
+            client.full_scan(&wollet).await.unwrap().unwrap()
+        } else {
+            let bytes = Vec::<u8>::from_hex(include_str!(
+                "../test_data/update_test_balance_and_transactions.hex"
+            ))
+            .unwrap();
+            crate::Update::new(&bytes).unwrap()
+        };
+
         wollet.apply_update(update).unwrap();
         let balance = wollet.balance().unwrap();
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
             serde_wasm_bindgen::from_value(balance).unwrap();
         let lbtc = lwk_wollet::ElementsNetwork::Liquid.policy_asset();
         assert!(*balance.get(&lbtc).unwrap() >= 5000);
+
+        let txs = wollet.transactions().unwrap();
+        assert!(!txs.is_empty());
+        let expected = "b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0";
+        assert_eq!(txs[0].txid().to_string(), expected);
+        assert_eq!(txs[0].outputs()[0].get().unwrap().unblinded().value(), 5000)
     }
 }

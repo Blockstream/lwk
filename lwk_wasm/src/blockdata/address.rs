@@ -36,6 +36,7 @@ impl std::fmt::Display for Address {
 #[wasm_bindgen]
 impl Address {
     /// Construct an Address object
+    #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;
         Ok(inner.into())
@@ -47,6 +48,11 @@ impl Address {
 
     pub fn to_unconfidential(&self) -> Address {
         self.inner.to_unconfidential().into()
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
     }
 }
 

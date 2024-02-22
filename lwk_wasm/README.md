@@ -6,6 +6,14 @@ Liquid Wallet Kit working in the WASM environment.
 
 Example is [live](https://blockstream.github.io/lwk/)
 
+## Run demo locally
+
+```shell
+$ cd lwk_wasm
+$ wasm-pack build --dev --target web
+$ python3 -m http.server 8080
+```
+
 ## Test
 
 At the moment tests are manual and not enforced in CI.

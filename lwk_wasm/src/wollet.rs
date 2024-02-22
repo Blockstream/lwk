@@ -21,6 +21,7 @@ impl AsMut<lwk_wollet::Wollet> for Wollet {
 #[wasm_bindgen]
 impl Wollet {
     /// Create a new  wallet
+    #[wasm_bindgen(constructor)]
     pub fn new(network: Network, descriptor: WolletDescriptor) -> Result<Wollet, Error> {
         let inner = lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?;
         Ok(Self { inner })

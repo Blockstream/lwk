@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, Script};
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
@@ -40,6 +40,10 @@ impl Address {
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;
         Ok(inner.into())
+    }
+
+    pub fn script_pubkey(&self) -> Script {
+        self.inner.script_pubkey().into()
     }
 
     pub fn is_blinded(&self) -> bool {
@@ -98,6 +102,11 @@ mod tests {
         assert_eq!(
             address.to_unconfidential().to_string(),
             "tex1q6rz28mcfaxtmd6v789l9rrlrusdprr9p634wu8"
+        );
+
+        assert_eq!(
+            address.script_pubkey().to_string(),
+            "0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1"
         );
     }
 }

@@ -695,6 +695,8 @@ pub enum ServerCommand {
     /// Wait until an entire blockchain scan has been completed
     Scan,
 
-    /// Stop the server, could be stopped also with SIGINT (ctrl-c)
+    /// Stop the server
+    ///
+    /// Alternatively the server can be stopped also with SIGINT (ctrl-c)
     Stop,
 }

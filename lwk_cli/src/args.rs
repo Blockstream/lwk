@@ -19,7 +19,7 @@ pub struct Cli {
     #[structopt(short, long, default_value = "testnet", env)]
     pub network: Network,
 
-    /// If launching the server is where it listens, otherwise is where the client connects to.
+    /// Server socket address
     #[arg(long, env)]
     pub addr: Option<SocketAddr>,
 
@@ -30,21 +30,22 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
-    /// To start and stop the server
+    /// Server commands
     Server(ServerArgs),
 
-    /// Signer related commands (generate, load, list, sign...)
+    /// Signer commands
     Signer(SignerArgs),
 
-    /// Wallet related commands (load, list, balance, address, tx...)
+    /// Wallet commands
     Wallet(WalletArgs),
 
-    /// Asset related commands
+    /// Asset commands
     Asset(AssetArgs),
 
-    /// Returns JSON schema of a RPC request/response for a given command.
+    /// Print JSON schema of RPC requests and responses
     ///
-    /// For example if you want a description of the fields returned by `wallet list` use `schema response wallet list`
+    /// E.g. `lwk_cli schema response wallet details` returns the response parameters for
+    /// `lwk_cli wallet details`
     Schema(SchemaArgs),
 
     #[clap(hide = true)]

@@ -119,6 +119,57 @@ pub struct IssuanceDetails {
     // token_blinder
 }
 
+pub(crate) struct DisplayTxOutSecrets<'a>(&'a TxOutSecrets);
+impl<'a> std::fmt::Display for DisplayTxOutSecrets<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{},{},{},{}",
+            self.0.value, self.0.asset, self.0.value_bf, self.0.asset_bf
+        )
+    }
+}
+
+pub(crate) struct DisplayWalletTxInputOutputs<'a>(&'a WalletTx);
+impl<'a> std::fmt::Display for DisplayWalletTxInputOutputs<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let mut inputs = self.0.inputs.iter().peekable();
+        let mut outputs = self.0.outputs.iter().peekable();
+
+        while let Some(input) = inputs.next() {
+            if let Some(input) = input.as_ref() {
+                write!(f, "{}", DisplayTxOutSecrets(&input.unblinded))?;
+                if let Some(Some(_)) = inputs.peek() {
+                    write!(f, ",")?;
+                } else if let Some(Some(_)) = outputs.peek() {
+                    write!(f, ",")?;
+                }
+            }
+        }
+
+        while let Some(output) = outputs.next() {
+            if let Some(output) = output.as_ref() {
+                write!(f, "{}", DisplayTxOutSecrets(&output.unblinded))?;
+                if let Some(Some(_)) = outputs.peek() {
+                    write!(f, ",")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl WalletTx {
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        format!(
+            "{}tx/{}#blinded={}",
+            explorer_url,
+            &self.tx.txid(),
+            DisplayWalletTxInputOutputs(&self)
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

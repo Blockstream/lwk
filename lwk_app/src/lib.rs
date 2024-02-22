@@ -34,7 +34,7 @@ use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
-use lwk_wollet::elements::{AssetId, TxOutSecrets};
+use lwk_wollet::elements::AssetId;
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
@@ -1020,26 +1020,10 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
     }
 }
 
-fn fmt_txoutsecrets(s: &TxOutSecrets) -> String {
-    format!("{},{},{},{}", s.value, s.asset, s.value_bf, s.asset_bf)
-}
-
-fn fmt_wallet_txouts(txouts: &[Option<lwk_wollet::WalletTxOut>]) -> Vec<String> {
-    txouts
-        .iter()
-        .filter_map(|f| f.as_ref())
-        .map(|e| fmt_txoutsecrets(&e.unblinded))
-        .collect()
-}
-
 fn convert_tx(tx: &lwk_wollet::WalletTx, explorer_url: &str) -> response::Tx {
-    let txid = tx.tx.txid().to_string();
-    let mut blinded = fmt_wallet_txouts(&tx.inputs);
-    blinded.extend(fmt_wallet_txouts(&tx.outputs));
-    let blinded = blinded.join(",");
-    let unblinded_url = format!("{explorer_url}tx/{txid}#blinded={blinded}");
+    let unblinded_url = tx.unblinded_url(explorer_url);
     response::Tx {
-        txid,
+        txid: tx.tx.txid().to_string(),
         height: tx.height,
         balance: tx
             .balance

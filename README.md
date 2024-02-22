@@ -32,7 +32,7 @@ then you can build from source:
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk
 $ cargo build --release
-$ alias cli="$(pwd)/target/release/lwk_cli"
+$ alias lwk_cli="$(pwd)/target/release/lwk_cli"
 ```
 
 ## CLI Usage
@@ -40,28 +40,28 @@ $ alias cli="$(pwd)/target/release/lwk_cli"
 Start the rpc server (default in Liquid Testnet)
 and put it in background
 ```sh
-$ cli server start &
+$ lwk_cli server start &
 ```
 
 Create a software *signer* named `sw` from a given BIP39 mnemonic
 ```sh
-$ cli signer load-software -s sw --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+$ lwk_cli signer load-software -s sw --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 ```
 
 Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)
 ```sh
-$ DESC=$(cli signer singlesig-desc -s sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
-$ cli wallet load -w ss -d $DESC
+$ DESC=$(lwk_cli signer singlesig-desc -s sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ lwk_cli wallet load -w ss -d $DESC
 ```
 
 Get the wallet balance
 ```sh
-$ cli wallet balance -w ss
+$ lwk_cli wallet balance -w ss
 ```
 
 When you're done, stop the rpc server.
 ```sh
-$ cli server stop
+$ lwk_cli server stop
 ```
 
 ### Jade

@@ -21,6 +21,7 @@ pub struct WalletTxOut {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WalletTx {
     pub tx: Transaction,
+    pub txid: Txid,
     pub height: Option<u32>,
     pub balance: HashMap<AssetId, i64>,
     pub fee: u64,
@@ -165,7 +166,7 @@ impl WalletTx {
             "{}tx/{}#blinded={}",
             explorer_url,
             &self.tx.txid(),
-            DisplayWalletTxInputOutputs(&self)
+            DisplayWalletTxInputOutputs(self)
         )
     }
 }

@@ -362,7 +362,7 @@ impl TestWollet {
         for _ in 0..120 {
             full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
             let list = self.wollet.transactions().unwrap();
-            if list.iter().any(|e| &e.tx.txid() == txid) {
+            if list.iter().any(|e| &e.txid == txid) {
                 return;
             }
             thread::sleep(Duration::from_millis(500));
@@ -387,11 +387,7 @@ impl TestWollet {
                 assert!(tx.timestamp.is_some());
             }
         }
-        let filtered_list: Vec<_> = list
-            .iter()
-            .filter(|e| &e.tx.txid() == txid)
-            .cloned()
-            .collect();
+        let filtered_list: Vec<_> = list.iter().filter(|e| &e.txid == txid).cloned().collect();
         assert!(
             !filtered_list.is_empty(),
             "just made tx {} is not in tx list",

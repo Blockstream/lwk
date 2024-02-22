@@ -242,13 +242,13 @@ impl Wollet {
         });
 
         let txos = self.txos()?;
-        for (tx_id, height) in my_txids.iter() {
+        for (txid, height) in my_txids.iter() {
             let tx = self
                 .store
                 .cache
                 .all_txs
-                .get(*tx_id)
-                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", tx_id)))?;
+                .get(*txid)
+                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", txid)))?;
 
             let balance = tx_balance(tx, &txos);
             let fee = tx_fee(tx);
@@ -259,6 +259,7 @@ impl Wollet {
             let outputs = tx_outputs(tx, &txos);
             txs.push(WalletTx {
                 tx: tx.clone(),
+                txid: **txid,
                 height: **height,
                 balance,
                 fee,

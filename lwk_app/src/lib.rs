@@ -1023,7 +1023,7 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
 fn convert_tx(tx: &lwk_wollet::WalletTx, explorer_url: &str) -> response::Tx {
     let unblinded_url = tx.unblinded_url(explorer_url);
     response::Tx {
-        txid: tx.tx.txid().to_string(),
+        txid: tx.txid.to_string(),
         height: tx.height,
         balance: tx
             .balance

@@ -32,7 +32,7 @@ impl WalletTx {
     }
 
     pub fn txid(&self) -> Arc<Txid> {
-        Arc::new(self.inner.tx.txid().into())
+        Arc::new(self.inner.txid.into())
     }
 
     pub fn fee(&self) -> u64 {
@@ -93,6 +93,7 @@ mod tests {
 
         let el = lwk_wollet::WalletTx {
             tx: tx.clone(),
+            txid: tx.txid(),
             height: Some(4),
             balance: HashMap::new(),
             fee: 23,

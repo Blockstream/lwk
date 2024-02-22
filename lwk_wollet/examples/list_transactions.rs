@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Print a summary of the wallet transactions
     for tx in wollet.transactions()?.into_iter().rev() {
-        println!("TXID: {}", tx.tx.txid());
+        println!("TXID: {}", tx.txid);
         for (asset, amount) in tx.balance {
             if amount > 0 {
                 println!(" * received: {} of asset {}", amount, asset);

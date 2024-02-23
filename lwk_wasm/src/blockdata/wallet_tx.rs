@@ -69,6 +69,10 @@ impl WalletTx {
             .map(Into::into)
             .collect()
     }
+
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        self.inner.unblinded_url(explorer_url)
+    }
 }
 
 #[cfg(test)]
@@ -101,6 +105,7 @@ mod tests {
 
         let a = elements::AssetId::default();
         let el = lwk_wollet::WalletTx {
+            txid: tx.txid(),
             tx: tx.clone(),
             height: Some(4),
             balance: vec![(a, 10)].into_iter().collect(),

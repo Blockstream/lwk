@@ -115,8 +115,10 @@ mod tests {
 
         let txs = wollet.transactions().unwrap();
         assert!(!txs.is_empty());
+        let tx = &txs[0];
         let expected = "b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0";
-        assert_eq!(txs[0].txid().to_string(), expected);
-        assert_eq!(txs[0].outputs()[0].get().unwrap().unblinded().value(), 5000)
+        assert_eq!(tx.txid().to_string(), expected);
+        assert_eq!(tx.outputs()[0].get().unwrap().unblinded().value(), 5000);
+        assert_eq!(tx.unblinded_url("https://blockstream.info/liquid/"), "https://blockstream.info/liquid/tx/b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0#blinded=5000,6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d,996317a530241d05658cd5e7cecbaf89a3a23962c944c3459b21964410d08176,1eccf2fd5e8160343f2c69e2e9d261fec783a6f0f942387c0e78b25471672462");
     }
 }

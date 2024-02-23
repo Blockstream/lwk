@@ -121,10 +121,24 @@ pub struct MainCommandArgs {
 #[derive(Debug, Subcommand)]
 #[clap(disable_help_flag = true, disable_help_subcommand = true)]
 pub enum MainCommand {
+    Server(ServerSubCommands),
     Wallet(WalletSubCommands),
     Signer(SignerSubCommands),
     Asset(AssetSubCommands),
     Schema,
+}
+
+#[derive(Debug, Args)]
+pub struct ServerSubCommands {
+    #[command(subcommand)]
+    pub command: ServerSubCommandsEnum,
+}
+
+#[derive(Debug, Subcommand, ValueEnum, Clone)]
+pub enum ServerSubCommandsEnum {
+    // Start is a special command
+    Scan,
+    Stop,
 }
 
 #[derive(Debug, Args)]

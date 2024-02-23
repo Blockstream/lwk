@@ -2,23 +2,36 @@ use lwk_app::{method::Method, Client};
 use lwk_rpc_model::request::Direction;
 use serde_json::Value;
 
-use crate::args::{self, AssetSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum};
+use crate::args::{
+    self, AssetSubCommandsEnum, ServerSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum,
+};
 
 pub(crate) fn schema(a: args::SchemaArgs, client: Client) -> Result<Value, anyhow::Error> {
     Ok(match a.command {
         args::DirectionCommand::Request(req) => match req.command {
+            args::MainCommand::Server(w) => client.schema(w.command.into(), Direction::Request)?,
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
             args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
             args::MainCommand::Schema => client.schema(Method::Schema, Direction::Request)?,
         },
         args::DirectionCommand::Response(res) => match res.command {
+            args::MainCommand::Server(w) => client.schema(w.command.into(), Direction::Response)?,
             args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
             args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
             args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
             args::MainCommand::Schema => client.schema(Method::Schema, Direction::Response)?,
         },
     })
+}
+
+impl From<ServerSubCommandsEnum> for Method {
+    fn from(value: ServerSubCommandsEnum) -> Self {
+        match value {
+            ServerSubCommandsEnum::Scan => Method::Scan,
+            ServerSubCommandsEnum::Stop => Method::Stop,
+        }
+    }
 }
 
 impl From<WalletSubCommandsEnum> for Method {

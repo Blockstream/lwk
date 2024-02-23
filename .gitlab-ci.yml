@@ -74,9 +74,9 @@ test_coverage:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo nextest run --features foreign_bindings --profile ci
-    - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
+    - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" --ignore lwk_wasm -o ./target/coverage.xml -p $(pwd)
     - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
-    - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage/ -p $(pwd)
+    - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" --ignore lwk_wasm -o ./target/coverage/ -p $(pwd)
   coverage: '/Coverage: \d+(?:\.\d+)?/'
   artifacts:
     paths:

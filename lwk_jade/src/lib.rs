@@ -17,7 +17,9 @@ use protocol::{
     SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
-use register_multisig::RegisterMultisigParams;
+use register_multisig::{
+    GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisigDetails,
+};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
@@ -212,6 +214,14 @@ impl Jade {
 
     pub fn get_registered_multisigs(&mut self) -> Result<HashMap<String, RegisteredMultisig>> {
         self.send_request("get_registered_multisigs", None)
+    }
+
+    pub fn get_registered_multisig(
+        &mut self,
+        params: GetRegisteredMultisigParams,
+    ) -> Result<RegisteredMultisigDetails> {
+        let params = Params::GetRegisteredMultisig(params);
+        self.send_request("get_registered_multisig", Some(params))
     }
 
     fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>

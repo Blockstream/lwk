@@ -19,7 +19,9 @@ use lwk_jade::{
         GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, JadeState,
         SignMessageParams, UpdatePinserverParams, VersionInfoResult,
     },
-    register_multisig::{JadeDescriptor, MultisigSigner, RegisterMultisigParams},
+    register_multisig::{
+        GetRegisteredMultisigParams, JadeDescriptor, MultisigSigner, RegisterMultisigParams,
+    },
 };
 use lwk_test_util::{jade::TestJadeEmulator, TEST_MNEMONIC};
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
@@ -230,7 +232,7 @@ fn jade_register_multisig_check_address() {
         .register_multisig(RegisterMultisigParams {
             network,
             multisig_name: multisig_name.clone(),
-            descriptor: jade_desc,
+            descriptor: jade_desc.clone(),
         })
         .unwrap();
 
@@ -243,7 +245,7 @@ fn jade_register_multisig_check_address() {
         .get_receive_address(GetReceiveAddressParams {
             network,
             address: SingleOrMulti::Multi {
-                multisig_name,
+                multisig_name: multisig_name.clone(),
                 paths: vec![vec![0], vec![0]],
             },
         })
@@ -264,6 +266,15 @@ fn jade_register_multisig_check_address() {
         .unwrap();
 
     assert_eq!(address_desc, address_jade);
+
+    let result = jade
+        .jade
+        .get_registered_multisig(GetRegisteredMultisigParams {
+            multisig_name: multisig_name.clone(),
+        })
+        .unwrap();
+    assert_eq!(result.multisig_name, multisig_name);
+    assert_eq!(result.descriptor, jade_desc);
 }
 
 #[test]

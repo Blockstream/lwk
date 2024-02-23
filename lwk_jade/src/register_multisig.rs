@@ -11,6 +11,11 @@ use serde::{Deserialize, Serialize};
 use crate::{derivation_path_to_vec, Error, Network};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GetRegisteredMultisigParams {
+    pub multisig_name: String, // max 16 chars
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RegisterMultisigParams {
     pub network: Network,
     pub multisig_name: String, // max 16 chars
@@ -121,6 +126,12 @@ pub struct MultisigSigner {
 
     /// From the xpub to the signer
     pub path: Vec<u32>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+pub struct RegisteredMultisigDetails {
+    pub multisig_name: String,
+    pub descriptor: JadeDescriptor,
 }
 
 #[cfg(test)]

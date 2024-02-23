@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::ErrorDetails,
     get_receive_address::GetReceiveAddressParams,
-    register_multisig::RegisterMultisigParams,
+    register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
 };
 
@@ -34,6 +34,7 @@ pub enum Params {
     DebugSetMnemonic(DebugSetMnemonicParams),
     TxInput(TxInputParams),
     RegisterMultisig(RegisterMultisigParams),
+    GetRegisteredMultisig(GetRegisteredMultisigParams),
     GetMasterBlindingKey(GetMasterBlindingKeyParams),
 }
 

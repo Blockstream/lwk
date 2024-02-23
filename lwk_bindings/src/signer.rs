@@ -16,6 +16,10 @@ impl Signer {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Sign the given `pset`
+    ///
+    /// Note from an API perspective it would be better to consume the `pset` parameter so it would
+    /// be clear the signed PSET is the returned one, but it's not possible with uniffi bindings
     pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         lwk_common::Signer::sign(&self.inner, &mut pset)?;

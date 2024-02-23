@@ -6,8 +6,10 @@ mod blockdata;
 mod descriptor;
 mod error;
 mod esplora;
+mod mnemonic;
 mod network;
 mod pset;
+mod signer;
 mod update;
 mod wollet;
 
@@ -22,8 +24,10 @@ pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
+pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
+pub use signer::Signer;
 pub use update::Update;
 pub use wollet::Wollet;
 

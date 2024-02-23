@@ -13,6 +13,27 @@ impl From<lwk_wollet::WalletTxOut> for WalletTxOut {
     }
 }
 
+/// Wallet chain
+#[derive(Debug, PartialEq, Eq)]
+#[wasm_bindgen]
+pub enum Chain {
+    /// External address, shown when asked for a payment.
+    /// Wallet having a single descriptor are considered External
+    External,
+
+    /// Internal address, used for the change
+    Internal,
+}
+
+impl From<lwk_wollet::Chain> for Chain {
+    fn from(value: lwk_wollet::Chain) -> Self {
+        match value {
+            lwk_wollet::Chain::External => Chain::External,
+            lwk_wollet::Chain::Internal => Chain::Internal,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl WalletTxOut {
     pub fn outpoint(&self) -> OutPoint {
@@ -35,10 +56,9 @@ impl WalletTxOut {
         self.inner.wildcard_index
     }
 
-    // TODO Chain type
-    // pub fn ext_int(&self) -> Chain {
-    //     self.inner.ext_int.into()
-    // }
+    pub fn ext_int(&self) -> Chain {
+        self.inner.ext_int.into()
+    }
 }
 
 /// An optional wallet transaction output. Could be None when it's not possible to unblind.

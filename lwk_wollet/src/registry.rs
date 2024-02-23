@@ -4,7 +4,7 @@ use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use once_cell::sync::Lazy;
-use regex::Regex;
+use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

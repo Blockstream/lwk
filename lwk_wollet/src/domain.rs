@@ -1,17 +1,14 @@
 use crate::error::Error;
 use once_cell::sync::Lazy;
-use regex::RegexSet;
+use regex_lite::Regex;
 
 // Domain name validation code extracted from https://github.com/rushmorem/publicsuffix/blob/master/src/lib.rs,
 // MIT, Copyright (c) 2016 Rushmore Mushambi
 
-static DOMAIN_LABEL: Lazy<RegexSet> = Lazy::new(|| {
-    RegexSet::new(vec![
-        r"^[[:alnum:]]+$",
-        r"^[[:alnum:]]+[[:alnum:]-]*[[:alnum:]]+$",
-    ])
-    .expect("static")
-});
+static DOMAIN_LABEL1: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:alnum:]]+$").expect("static"));
+
+static DOMAIN_LABEL2: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[[:alnum:]]+[[:alnum:]-]*[[:alnum:]]+$").expect("static"));
 
 pub fn verify_domain_name(domain: &str) -> Result<(), Error> {
     if domain.starts_with('.')
@@ -38,7 +35,7 @@ pub fn verify_domain_name(domain: &str) -> Result<(), Error> {
             // the tld must not be a number
             return Err(Error::InvalidDomain);
         }
-        if !DOMAIN_LABEL.is_match(label) {
+        if !DOMAIN_LABEL1.is_match(label) && !DOMAIN_LABEL2.is_match(label) {
             return Err(Error::InvalidDomain);
         }
     }

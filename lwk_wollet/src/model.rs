@@ -21,6 +21,7 @@ pub struct WalletTxOut {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WalletTx {
     pub tx: Transaction,
+    pub txid: Txid,
     pub height: Option<u32>,
     pub balance: HashMap<AssetId, i64>,
     pub fee: u64,
@@ -117,6 +118,56 @@ pub struct IssuanceDetails {
     pub is_reissuance: bool,
     // asset_blinder
     // token_blinder
+}
+
+pub(crate) struct DisplayTxOutSecrets<'a>(&'a TxOutSecrets);
+impl<'a> std::fmt::Display for DisplayTxOutSecrets<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{},{},{},{}",
+            self.0.value, self.0.asset, self.0.value_bf, self.0.asset_bf
+        )
+    }
+}
+
+pub(crate) struct DisplayWalletTxInputOutputs<'a>(&'a WalletTx);
+impl<'a> std::fmt::Display for DisplayWalletTxInputOutputs<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let mut first = true;
+
+        for input in self.0.inputs.iter() {
+            if let Some(input) = input.as_ref() {
+                if !first {
+                    write!(f, ",")?;
+                }
+                write!(f, "{}", DisplayTxOutSecrets(&input.unblinded))?;
+                first = false;
+            }
+        }
+
+        for output in self.0.outputs.iter() {
+            if let Some(output) = output.as_ref() {
+                if !first {
+                    write!(f, ",")?;
+                }
+                write!(f, "{}", DisplayTxOutSecrets(&output.unblinded))?;
+                first = false;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl WalletTx {
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        format!(
+            "{}tx/{}#blinded={}",
+            explorer_url,
+            &self.tx.txid(),
+            DisplayWalletTxInputOutputs(self)
+        )
+    }
 }
 
 #[cfg(test)]

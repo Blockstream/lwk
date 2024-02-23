@@ -1,4 +1,4 @@
-use crate::{AddressResult, Error, Network, Update, WalletTx, WolletDescriptor};
+use crate::{Address, AddressResult, Error, Network, Pset, Update, WalletTx, WolletDescriptor};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -53,6 +53,18 @@ impl Wollet {
             .into_iter()
             .map(Into::into)
             .collect())
+    }
+
+    pub fn send_lbtc(
+        &self,
+        satoshis: u64,
+        out_address: &Address,
+        fee_rate: f32,
+    ) -> Result<Pset, Error> {
+        let pset = self
+            .inner
+            .send_lbtc(satoshis, &out_address.to_string(), Some(fee_rate))?;
+        Ok(pset.into())
     }
 }
 

@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 
 /// Partially Signed Elements Transaction
 #[wasm_bindgen]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Pset {
     inner: PartiallySignedTransaction,
 }
@@ -12,6 +13,12 @@ pub struct Pset {
 impl From<PartiallySignedTransaction> for Pset {
     fn from(inner: PartiallySignedTransaction) -> Self {
         Self { inner }
+    }
+}
+
+impl From<Pset> for PartiallySignedTransaction {
+    fn from(pset: Pset) -> Self {
+        pset.inner
     }
 }
 

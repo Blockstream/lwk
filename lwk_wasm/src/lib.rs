@@ -3,6 +3,7 @@ use std::{fmt::Debug, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 
 mod blockdata;
+mod contract;
 mod descriptor;
 mod error;
 mod esplora;
@@ -21,6 +22,7 @@ pub use blockdata::transaction::{Transaction, Txid};
 pub use blockdata::tx_out_secrets::TxOutSecrets;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
+pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;

@@ -62,6 +62,10 @@ impl WalletTx {
             .map(|e| e.as_ref().cloned().map(Into::into).map(Arc::new))
             .collect()
     }
+
+    pub fn unblinded_url(&self, explorer_url: &str) -> String {
+        self.inner.unblinded_url(explorer_url)
+    }
 }
 
 #[cfg(test)]

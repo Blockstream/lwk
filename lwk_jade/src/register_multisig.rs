@@ -12,13 +12,20 @@ use crate::{derivation_path_to_vec, Error, Network};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GetRegisteredMultisigParams {
-    pub multisig_name: String, // max 16 chars
+    /// Name of the multisig wallet
+    ///
+    /// Max 16 chars
+    pub multisig_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RegisterMultisigParams {
     pub network: Network,
-    pub multisig_name: String, // max 16 chars
+
+    /// Name of the multisig wallet
+    ///
+    /// Max 16 chars
+    pub multisig_name: String,
     pub descriptor: JadeDescriptor,
 }
 

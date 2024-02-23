@@ -3,24 +3,25 @@ use lwk_rpc_model::request::Direction;
 use serde_json::Value;
 
 use crate::args::{
-    self, AssetSubCommandsEnum, ServerSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum,
+    AssetSubCommandsEnum, DirectionCommand, MainCommand, SchemaArgs, ServerSubCommandsEnum,
+    SignerSubCommandsEnum, WalletSubCommandsEnum,
 };
 
-pub(crate) fn schema(a: args::SchemaArgs, client: Client) -> Result<Value, anyhow::Error> {
+pub(crate) fn schema(a: SchemaArgs, client: Client) -> Result<Value, anyhow::Error> {
     Ok(match a.command {
-        args::DirectionCommand::Request(req) => match req.command {
-            args::MainCommand::Server(w) => client.schema(w.command.into(), Direction::Request)?,
-            args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
-            args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
-            args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
-            args::MainCommand::Schema => client.schema(Method::Schema, Direction::Request)?,
+        DirectionCommand::Request(req) => match req.command {
+            MainCommand::Server(w) => client.schema(w.command.into(), Direction::Request)?,
+            MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
+            MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
+            MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
+            MainCommand::Schema => client.schema(Method::Schema, Direction::Request)?,
         },
-        args::DirectionCommand::Response(res) => match res.command {
-            args::MainCommand::Server(w) => client.schema(w.command.into(), Direction::Response)?,
-            args::MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
-            args::MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
-            args::MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
-            args::MainCommand::Schema => client.schema(Method::Schema, Direction::Response)?,
+        DirectionCommand::Response(res) => match res.command {
+            MainCommand::Server(w) => client.schema(w.command.into(), Direction::Response)?,
+            MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
+            MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
+            MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
+            MainCommand::Schema => client.schema(Method::Schema, Direction::Response)?,
         },
     })
 }

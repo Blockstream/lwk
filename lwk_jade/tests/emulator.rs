@@ -207,8 +207,68 @@ fn jade_register_multisig() {
             signers,
         },
     };
-    let result = jade.jade.register_multisig(params).unwrap();
+    let result = jade.jade.register_multisig(params.clone()).unwrap();
     assert!(result)
+}
+
+#[test]
+#[ignore = "this test is a bit slow"]
+fn jade_max_multisigs() {
+    let docker = clients::Cli::default();
+    let mut jade = TestJadeEmulator::new(&docker);
+    jade.set_debug_mnemonic(TEST_MNEMONIC);
+
+    let xpub_params = GetXpubParams {
+        network: lwk_jade::Network::LocaltestLiquid,
+        path: vec![0, 1],
+    };
+    let jade_signer = MultisigSigner {
+        fingerprint: jade.jade.fingerprint().unwrap(),
+        derivation: vec![0, 1],
+        xpub: jade.jade.get_xpub(xpub_params).unwrap(),
+        path: vec![],
+    };
+
+    fn _params(jade_signer: &MultisigSigner, index: u32) -> RegisterMultisigParams {
+        let s = (0..32)
+            .map(|_| format!("{:02}", index))
+            .collect::<Vec<_>>()
+            .join("");
+        RegisterMultisigParams {
+            network: lwk_jade::Network::LocaltestLiquid,
+            multisig_name: index.to_string(),
+            descriptor: JadeDescriptor {
+                variant: "wsh(multi(k))".to_string(),
+                sorted: false,
+                threshold: 2,
+                master_blinding_key: hex::decode(s).unwrap(),
+                signers: vec![
+                    MultisigSigner {
+                        fingerprint: Fingerprint::from([2u8; 4]),
+                        derivation: vec![],
+                        xpub: "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG".parse().unwrap(),
+                        path: vec![],
+                    },
+                    jade_signer.clone(),
+                ],
+            },
+        }
+    }
+
+    // Register 16 multisig wallets
+    for index in 0..16 {
+        assert!(jade
+            .jade
+            .register_multisig(_params(&jade_signer, index))
+            .unwrap());
+    }
+    assert_eq!(jade.jade.get_registered_multisigs().unwrap().len(), 16);
+
+    let err = jade
+        .jade
+        .register_multisig(_params(&jade_signer, 16))
+        .unwrap_err();
+    assert!(format!("{:?}", err).contains("Already have maximum number of multisig wallets"));
 }
 
 #[test]

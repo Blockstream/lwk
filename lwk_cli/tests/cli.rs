@@ -11,7 +11,8 @@ use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use serde_json::Value;
 
 use lwk_cli::{
-    inner_main, AssetSubCommandsEnum, Cli, SignerSubCommandsEnum, WalletSubCommandsEnum,
+    inner_main, AssetSubCommandsEnum, Cli, ServerSubCommandsEnum, SignerSubCommandsEnum,
+    WalletSubCommandsEnum,
 };
 use lwk_test_util::{setup, TestElectrumServer};
 use tempfile::TempDir;
@@ -997,6 +998,16 @@ fn test_inconsistent_network() {
 #[test]
 fn test_schema() {
     let (t, _tmp, cli, _params, _server) = setup_cli();
+
+    for a in ServerSubCommandsEnum::value_variants() {
+        let a = a.to_possible_value();
+        let cmd = a.map(|e| e.get_name().to_string()).unwrap();
+        let result = sh(&format!("{cli} schema request server {cmd}"));
+        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+
+        let result = sh(&format!("{cli} schema response server {cmd}"));
+        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+    }
 
     for a in WalletSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();

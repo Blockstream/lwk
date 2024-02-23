@@ -19,6 +19,7 @@ lwk_wollet = { version = "0.2.0", default-features = false, features = [
 ] }
 lwk_signer = { version = "0.2.0", default-features = false }
 lwk_common = "0.2.0"
+serde_json = "1"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

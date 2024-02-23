@@ -128,6 +128,29 @@ pub struct MultisigSigner {
     pub path: Vec<u32>,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct RegisteredMultisig {
+    variant: String,
+    sorted: bool,
+    threshold: u32,
+    pub num_signers: u32,
+
+    #[serde(with = "serde_bytes")]
+    master_blinding_key: Vec<u8>,
+}
+
+impl std::fmt::Debug for RegisteredMultisig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RegisteredMultisig")
+            .field("variant", &self.variant)
+            .field("sorted", &self.sorted)
+            .field("threshold", &self.threshold)
+            .field("num_signers", &self.num_signers)
+            .field("master_blinding_key", &self.master_blinding_key.to_hex())
+            .finish()
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct RegisteredMultisigDetails {
     pub multisig_name: String,

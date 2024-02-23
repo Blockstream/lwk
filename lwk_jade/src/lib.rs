@@ -13,12 +13,13 @@ use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
     GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeInitParams, IsAuthResult, Params, RegisteredMultisig, Request, Response,
-    SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    HandshakeInitParams, IsAuthResult, Params, Request, Response, SignMessageParams,
+    UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::{
-    GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisigDetails,
+    GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
+    RegisteredMultisigDetails,
 };
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;

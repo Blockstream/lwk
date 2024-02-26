@@ -26,8 +26,8 @@ impl AsMut<lwk_wollet::Wollet> for Wollet {
 impl Wollet {
     /// Create a new  wallet
     #[wasm_bindgen(constructor)]
-    pub fn new(network: Network, descriptor: WolletDescriptor) -> Result<Wollet, Error> {
-        let inner = lwk_wollet::Wollet::without_persist(network.into(), descriptor.into())?;
+    pub fn new(network: &Network, descriptor: &WolletDescriptor) -> Result<Wollet, Error> {
+        let inner = lwk_wollet::Wollet::without_persist((*network).into(), descriptor.into())?;
         Ok(Self { inner })
     }
 
@@ -41,7 +41,7 @@ impl Wollet {
         Ok(address_result.into())
     }
 
-    pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
+    pub fn apply_update(&mut self, update: &Update) -> Result<(), Error> {
         Ok(self.inner.apply_update(update.into())?)
     }
 
@@ -75,7 +75,7 @@ impl Wollet {
         &self,
         satoshis: u64,
         out_address: &Address,
-        asset: AssetId,
+        asset: &AssetId,
         fee_rate: f32,
     ) -> Result<Pset, Error> {
         let pset = self.inner.send_asset(
@@ -107,6 +107,7 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    /// Finalize and consume the given PSET, returning the finalized one
     pub fn finalize(&self, pset: Pset) -> Result<Pset, Error> {
         let mut pset: PartiallySignedTransaction = pset.into();
         self.inner.finalize(&mut pset)?;
@@ -130,7 +131,7 @@ mod tests {
     fn test_wollet_address() {
         let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
         let network = Network::mainnet();
-        let wollet = Wollet::new(network, descriptor).unwrap();
+        let wollet = Wollet::new(&network, &descriptor).unwrap();
         assert_eq!(
             wollet.address(Some(0)).unwrap().address().to_string(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
@@ -151,7 +152,7 @@ mod tests {
     async fn inner_test_balance_and_transactions(with_internet: bool) {
         let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
         let network = Network::mainnet();
-        let mut wollet = Wollet::new(network, descriptor).unwrap();
+        let mut wollet = Wollet::new(&network, &descriptor).unwrap();
 
         let update = if with_internet {
             let mut client = network.default_esplora_client();
@@ -164,7 +165,7 @@ mod tests {
             crate::Update::new(&bytes).unwrap()
         };
 
-        wollet.apply_update(update).unwrap();
+        wollet.apply_update(&update).unwrap();
         let balance = wollet.balance().unwrap();
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
             serde_wasm_bindgen::from_value(balance).unwrap();

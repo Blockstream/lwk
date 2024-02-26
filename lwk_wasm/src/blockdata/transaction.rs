@@ -52,8 +52,8 @@ impl Transaction {
         elements::Transaction::serialize(&self.inner)
     }
 
-    pub fn fee(&self, policy_asset: AssetId) -> u64 {
-        self.inner.fee_in((policy_asset).into())
+    pub fn fee(&self, policy_asset: &AssetId) -> u64 {
+        self.inner.fee_in((*policy_asset).into())
     }
 
     #[wasm_bindgen(js_name = toString)]
@@ -142,6 +142,6 @@ mod tests {
         assert_eq!(expected, tx.txid().to_string());
 
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        assert_eq!(tx.fee(AssetId::new(policy_asset).unwrap()), 250);
+        assert_eq!(tx.fee(&AssetId::new(policy_asset).unwrap()), 250);
     }
 }

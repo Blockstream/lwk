@@ -37,9 +37,9 @@ impl Network {
         lwk_wollet::ElementsNetwork::LiquidTestnet.into()
     }
 
-    pub fn regtest(policy_asset: AssetId) -> Network {
+    pub fn regtest(policy_asset: &AssetId) -> Network {
         lwk_wollet::ElementsNetwork::ElementsRegtest {
-            policy_asset: policy_asset.into(),
+            policy_asset: (*policy_asset).into(),
         }
         .into()
     }

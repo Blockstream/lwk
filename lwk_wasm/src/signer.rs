@@ -16,6 +16,7 @@ impl Signer {
         Ok(Self { inner })
     }
 
+    /// Sign and consume the given PSET, returning the signed one
     pub fn sign(&self, pset: Pset) -> Result<Pset, Error> {
         let mut pset: PartiallySignedTransaction = pset.into();
         lwk_common::Signer::sign(&self.inner, &mut pset)?;

@@ -18,19 +18,19 @@ impl std::fmt::Display for Contract {
 impl Contract {
     /// Construct a Contract object
     pub fn new(
-        domain: String,
+        domain: &str,
         issuer_pubkey: &str,
-        name: String,
+        name: &str,
         precision: u8,
-        ticker: String,
+        ticker: &str,
         version: u8,
     ) -> Result<Contract, Error> {
         let inner = lwk_wollet::Contract {
-            entity: lwk_wollet::Entity::Domain(domain),
+            entity: lwk_wollet::Entity::Domain(domain.to_string()),
             issuer_pubkey: Vec::<u8>::from_hex(issuer_pubkey)?,
-            name,
+            name: name.to_string(),
             precision,
-            ticker,
+            ticker: ticker.to_string(),
             version,
         };
         inner.validate()?; // TODO validate should be the constructor
@@ -52,11 +52,11 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_contract() {
         let contract = Contract::new(
-            "ciao.it".to_string(),
+            "ciao.it",
             "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904",
-            "NAME".to_string(),
+            "NAME",
             0,
-            "NME".to_string(),
+            "NME",
             0,
         )
         .unwrap();

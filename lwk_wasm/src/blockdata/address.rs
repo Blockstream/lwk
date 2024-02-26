@@ -42,14 +42,17 @@ impl Address {
         Ok(inner.into())
     }
 
+    #[wasm_bindgen(js_name = scriptPubkey)]
     pub fn script_pubkey(&self) -> Script {
         self.inner.script_pubkey().into()
     }
 
+    #[wasm_bindgen(js_name = isBlinded)]
     pub fn is_blinded(&self) -> bool {
         self.inner.is_blinded()
     }
 
+    #[wasm_bindgen(js_name = toUnconfidential)]
     pub fn to_unconfidential(&self) -> Address {
         self.inner.to_unconfidential().into()
     }

@@ -20,7 +20,8 @@ impl TxOutSecrets {
         self.inner.asset.into()
     }
 
-    pub fn asset_bf(&self) -> String {
+    #[wasm_bindgen(js_name = assetBlindingFactor)]
+    pub fn asset_blinding_factor(&self) -> String {
         self.inner
             .asset_bf
             .to_string()
@@ -32,7 +33,8 @@ impl TxOutSecrets {
         self.inner.value
     }
 
-    pub fn value_bf(&self) -> String {
+    #[wasm_bindgen(js_name = valueBlindingFactor)]
+    pub fn value_blinding_factor(&self) -> String {
         self.inner
             .value_bf
             .to_string()
@@ -59,7 +61,7 @@ mod tests {
 
         assert_eq!(tx_out_secrets.value(), 1000);
         assert_eq!(
-            tx_out_secrets.value_bf().to_string(),
+            tx_out_secrets.value_blinding_factor().to_string(),
             "0000000000000000000000000000000000000000000000000000000000000000"
         );
 
@@ -68,7 +70,7 @@ mod tests {
             "0000000000000000000000000000000000000000000000000000000000000000"
         );
         assert_eq!(
-            tx_out_secrets.asset_bf().to_string(),
+            tx_out_secrets.asset_blinding_factor().to_string(),
             "0000000000000000000000000000000000000000000000000000000000000000"
         );
     }

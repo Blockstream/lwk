@@ -41,6 +41,7 @@ impl Wollet {
         Ok(address_result.into())
     }
 
+    #[wasm_bindgen(js_name = applyUpdate)]
     pub fn apply_update(&mut self, update: &Update) -> Result<(), Error> {
         Ok(self.inner.apply_update(update.into())?)
     }
@@ -59,6 +60,7 @@ impl Wollet {
             .collect())
     }
 
+    #[wasm_bindgen(js_name = sendLbtc)]
     pub fn send_lbtc(
         &self,
         satoshis: u64,
@@ -71,6 +73,7 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = sendAsset)]
     pub fn send_asset(
         &self,
         satoshis: u64,
@@ -87,6 +90,7 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = issueAsset)]
     pub fn issue_asset(
         &self,
         satoshi_asset: u64,

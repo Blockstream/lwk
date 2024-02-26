@@ -24,6 +24,7 @@ impl Signer {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = wpkhSlip77Descriptor)]
     pub fn wpkh_slip77_descriptor(&self) -> Result<WolletDescriptor, Error> {
         // TODO: make script_variant and blinding_variant parameters
 

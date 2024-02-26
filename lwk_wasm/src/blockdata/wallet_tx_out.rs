@@ -40,6 +40,7 @@ impl WalletTxOut {
         self.inner.outpoint.into()
     }
 
+    #[wasm_bindgen(js_name = scriptPubkey)]
     pub fn script_pubkey(&self) -> Script {
         self.inner.script_pubkey.clone().into()
     }
@@ -52,10 +53,12 @@ impl WalletTxOut {
         self.inner.unblinded.into()
     }
 
+    #[wasm_bindgen(js_name = wildcardIndex)]
     pub fn wildcard_index(&self) -> u32 {
         self.inner.wildcard_index
     }
 
+    #[wasm_bindgen(js_name = extInt)]
     pub fn ext_int(&self) -> Chain {
         self.inner.ext_int.into()
     }

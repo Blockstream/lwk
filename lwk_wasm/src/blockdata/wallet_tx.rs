@@ -44,7 +44,8 @@ impl WalletTx {
         self.inner.fee
     }
 
-    pub fn type_(&self) -> String {
+    #[wasm_bindgen(js_name = txType)]
+    pub fn tx_type(&self) -> String {
         self.inner.type_.clone()
     }
 
@@ -70,6 +71,7 @@ impl WalletTx {
             .collect()
     }
 
+    #[wasm_bindgen(js_name = unblindedUrl)]
     pub fn unblinded_url(&self, explorer_url: &str) -> String {
         self.inner.unblinded_url(explorer_url)
     }
@@ -128,7 +130,7 @@ mod tests {
 
         assert_eq!(wallet_tx.fee(), 23);
 
-        assert_eq!(wallet_tx.type_(), "type");
+        assert_eq!(wallet_tx.tx_type(), "type");
 
         assert_eq!(wallet_tx.timestamp(), Some(124));
 

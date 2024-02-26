@@ -15,6 +15,7 @@ impl EsploraClient {
         Self { inner }
     }
 
+    #[wasm_bindgen(js_name = fullScan)]
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let update: Option<lwk_wollet::Update> = self.inner.full_scan(wollet.as_ref()).await?;
         Ok(update.map(Into::into))

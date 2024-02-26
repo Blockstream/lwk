@@ -37,15 +37,18 @@ impl Pset {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = extractTx)]
     pub fn extract_tx(&self) -> Result<Transaction, Error> {
         let tx: Transaction = self.inner.extract_tx()?.into();
         Ok(tx)
     }
 
+    #[wasm_bindgen(js_name = issuanceAsset)]
     pub fn issuance_asset(&self, index: u32) -> Option<AssetId> {
         self.issuances_ids(index).map(|e| e.0)
     }
 
+    #[wasm_bindgen(js_name = issuanceToken)]
     pub fn issuance_token(&self, index: u32) -> Option<AssetId> {
         self.issuances_ids(index).map(|e| e.1)
     }

@@ -43,7 +43,33 @@ run specific test (note the double `--`)
 $ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
 
-## Build & publish
+## NPM Package, and example page
+
+Requires NPM and node installed
+
+tested with:
+
+```
+$ node --version
+v20.11.1
+$ npm --version
+10.2.4
+```
+
+Instructions:
+
+```
+cd lwk_wasm/
+CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build
+cd www
+npm install
+npm run start  # changes are live reloaded
+```
+
+Open the broswer `http://localhost:8080/`, in the dev tools console type `lwk` and all the types
+should appear. try for example `lwk.Network.testnet().toString()`
+
+## Build & publish web page
 
 ```
 $ git checkout master

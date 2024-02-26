@@ -36,7 +36,7 @@ impl std::fmt::Display for Script {
 
 #[wasm_bindgen]
 impl Script {
-    /// Construct an Script object
+    /// Creates a `Script`
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Script, Error> {
         let bytes = Vec::<u8>::from_hex(s)?;

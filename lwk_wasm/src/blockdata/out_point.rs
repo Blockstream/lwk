@@ -22,6 +22,8 @@ impl Display for OutPoint {
 
 #[wasm_bindgen]
 impl OutPoint {
+    /// Creates an `OutPoint`
+    #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<OutPoint, Error> {
         let out_point: elements::OutPoint = s.parse()?;
         Ok(out_point.into())

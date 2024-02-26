@@ -23,7 +23,8 @@ impl Display for Mnemonic {
 
 #[wasm_bindgen]
 impl Mnemonic {
-    /// Construct a Mnemonic
+    /// Creates a Mnemonic
+    #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Mnemonic, Error> {
         let inner = bip39::Mnemonic::from_str(s)?;
         Ok(inner.into())

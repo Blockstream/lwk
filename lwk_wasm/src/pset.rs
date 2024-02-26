@@ -30,7 +30,8 @@ impl Display for Pset {
 
 #[wasm_bindgen]
 impl Pset {
-    /// Construct a PSET from base64
+    /// Creates a `Pset`
+    #[wasm_bindgen(constructor)]
     pub fn new(base64: &str) -> Result<Pset, Error> {
         let pset: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(pset.into())

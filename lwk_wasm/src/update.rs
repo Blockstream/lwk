@@ -34,6 +34,8 @@ impl AsRef<lwk_wollet::Update> for Update {
 
 #[wasm_bindgen]
 impl Update {
+    /// Creates an `Update`
+    #[wasm_bindgen(constructor)]
     pub fn new(bytes: &[u8]) -> Result<Update, Error> {
         Ok(lwk_wollet::Update::deserialize(bytes)?.into())
     }

@@ -10,7 +10,8 @@ pub struct Signer {
 
 #[wasm_bindgen]
 impl Signer {
-    /// Construct a software signer
+    /// Creates a `Signer`
+    #[wasm_bindgen(constructor)]
     pub fn new(mnemonic: &Mnemonic, network: &Network) -> Result<Signer, Error> {
         let inner = lwk_signer::SwSigner::new(&mnemonic.to_string(), network.is_mainnet())?;
         Ok(Self { inner })

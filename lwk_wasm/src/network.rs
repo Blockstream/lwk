@@ -29,14 +29,17 @@ impl From<Network> for lwk_wollet::ElementsNetwork {
 
 #[wasm_bindgen]
 impl Network {
+    /// Creates a mainnet `Network``
     pub fn mainnet() -> Network {
         lwk_wollet::ElementsNetwork::Liquid.into()
     }
 
+    /// Creates a testnet `Network``
     pub fn testnet() -> Network {
         lwk_wollet::ElementsNetwork::LiquidTestnet.into()
     }
 
+    /// Creates a regtest `Network``
     pub fn regtest(policy_asset: &AssetId) -> Network {
         lwk_wollet::ElementsNetwork::ElementsRegtest {
             policy_asset: (*policy_asset).into(),
@@ -44,6 +47,7 @@ impl Network {
         .into()
     }
 
+    /// Creates the default regtest `Network`
     pub fn regtest_default() -> Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
         let policy_asset: elements::AssetId = policy_asset.parse().expect("static");

@@ -37,6 +37,7 @@ impl From<Transaction> for elements::Transaction {
 
 #[wasm_bindgen]
 impl Transaction {
+    /// Creates a `Transaction`
     #[wasm_bindgen(constructor)]
     pub fn new(tx_hex: &str) -> Result<Transaction, Error> {
         let bytes = Vec::<u8>::from_hex(tx_hex)?;
@@ -91,6 +92,7 @@ impl From<Txid> for elements::Txid {
 
 #[wasm_bindgen]
 impl Txid {
+    /// Creates a `Txid`
     #[wasm_bindgen(constructor)]
     pub fn new(tx_id: &str) -> Result<Txid, Error> {
         Ok(elements::Txid::from_str(tx_id)?.into())

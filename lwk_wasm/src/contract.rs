@@ -16,7 +16,8 @@ impl std::fmt::Display for Contract {
 
 #[wasm_bindgen]
 impl Contract {
-    /// Construct a Contract object
+    /// Creates a `Contract`
+    #[wasm_bindgen(constructor)]
     pub fn new(
         domain: &str,
         issuer_pubkey: &str,

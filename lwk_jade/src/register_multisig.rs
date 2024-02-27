@@ -1,12 +1,14 @@
 use elements::{
-    bitcoin::bip32::{Fingerprint, Xpub},
+    bitcoin::bip32::{ChildNumber, Fingerprint, Xpub},
     hex::ToHex,
+    Script,
 };
 use elements_miniscript::{
     confidential::Key, descriptor::WshInner, ConfidentialDescriptor, Descriptor,
     DescriptorPublicKey, Terminal,
 };
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use crate::{derivation_path_to_vec, Error, Network};
 
@@ -102,6 +104,50 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for JadeDescriptor {
     }
 }
 
+impl TryFrom<&JadeDescriptor> for ConfidentialDescriptor<DescriptorPublicKey> {
+    type Error = Error;
+
+    fn try_from(desc: &JadeDescriptor) -> Result<Self, Self::Error> {
+        if &desc.variant != "wsh(multi(k))" {
+            return Err(Error::UnsupportedDescriptorType);
+        }
+        let sorted = if desc.sorted { "sorted" } else { "" };
+        let slip77 = desc.master_blinding_key.to_hex();
+        let threshold = desc.threshold;
+        let xpubs = desc
+            .signers
+            .iter()
+            .map(|s| s.keyorigin_xpub())
+            .collect::<Vec<_>>()
+            .join(",");
+        let desc = format!("ct(slip77({slip77}),elwsh({sorted}multi({threshold},{xpubs})))");
+        Self::from_str(&desc).map_err(|_| Error::UnsupportedDescriptorType)
+    }
+}
+
+impl JadeDescriptor {
+    /// Derive the witness script
+    ///
+    /// `JadeDescriptor`s returned from Jade's `get_registered_multisig` signers do not have `path`
+    /// set. When we need to derive the witness script we need to derive the definite descriptor
+    /// which requires the paths from the xpubs.
+    /// In this functions the path used for _all_ xpubs is `/is_change/index`.
+    pub fn derive_witness_script(&self, is_change: bool, index: u32) -> Result<Script, Error> {
+        let mut jade_desc = self.clone();
+        for signer in jade_desc.signers.iter_mut() {
+            signer.path = vec![if is_change { 1 } else { 0 }];
+        }
+        let ct_desc: ConfidentialDescriptor<DescriptorPublicKey> = (&jade_desc).try_into()?;
+        let def_desc = ct_desc
+            .descriptor
+            .at_derivation_index(index)
+            .map_err(|_| Error::UnsupportedDescriptorType)?;
+        def_desc
+            .explicit_script()
+            .map_err(|_| Error::UnsupportedDescriptorType)
+    }
+}
+
 impl TryFrom<&DescriptorPublicKey> for MultisigSigner {
     type Error = Error;
 
@@ -133,6 +179,24 @@ pub struct MultisigSigner {
 
     /// From the xpub to the signer
     pub path: Vec<u32>,
+}
+
+fn path_to_string(path: &[u32]) -> String {
+    path.iter()
+        .map(|e| format!("/{}", ChildNumber::from(*e)))
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+impl MultisigSigner {
+    pub fn keyorigin_xpub(&self) -> String {
+        let keyorigin = if self.derivation.is_empty() {
+            "".to_string()
+        } else {
+            format!("[{}{}]", self.fingerprint, path_to_string(&self.derivation))
+        };
+        format!("{keyorigin}{}{}/*", self.xpub, path_to_string(&self.path))
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -216,7 +280,10 @@ mod test {
                             }
                         ]
                     }
-                )
+                );
+                let desc2: ConfidentialDescriptor<DescriptorPublicKey> =
+                    (&jade_desc).try_into().unwrap();
+                assert_eq!(desc, desc2);
             }
         }
     }

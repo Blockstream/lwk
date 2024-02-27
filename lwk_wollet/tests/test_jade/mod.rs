@@ -134,6 +134,22 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     // Spend from multi1 (with change)
     let node_address = server.node_getnewaddress();
     w1.send_btc(signers_m1, None, Some((node_address, 10_000)));
+
+    // Spend from multi1 to a change address of multi2 (with change)
+    // (Jade shows both "change" outputs in this case)
+    let w2_address = w2.wollet.change(None).unwrap().address().clone();
+
+    let mut pset = w1
+        .wollet
+        .send_lbtc(10_000, &w2_address.to_string(), None)
+        .unwrap();
+    w2.wollet.add_details(&mut pset).unwrap();
+    for signer in signers_m1 {
+        w1.sign(signer, &mut pset);
+    }
+    w1.send(&mut pset);
+    w2.sync();
+    assert!(w2.balance(&w2.policy_asset()) > 0)
 }
 
 #[test]

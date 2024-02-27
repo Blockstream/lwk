@@ -72,16 +72,13 @@ After building NPM package from previous section
 
 ```
 $ git checkout master
-$ rm -rf /tmp/docs && mkdir /tmp/docs
-$ cd lwk_wasm
-$ cp www/{index.html,index.js,bootstrap.js} /tmp/docs/
-$ cp -r pkg /tmp/docs/
-$ rm /tmp/docs/pkg/.gitignore
-$ cd ..
+$ cd lwk_wasm/www
+$ npm run build
+$ cd -
 $ git checkout gh-pages
 $ git reset --hard HEAD~1
 $ git rebase master
-$ cp -r /tmp/docs .
+$ cp lwk_wasm/www/dist/* docs/
 $ git add docs
 $ git commit -m "gh-pages: update site"
 $ git push github gh-pages

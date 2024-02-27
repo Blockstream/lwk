@@ -99,9 +99,6 @@ pub enum Error {
     #[error("Unsupported spending script pubkey: {0}")]
     UnsupportedScriptPubkeyType(String),
 
-    #[error("Multiple registered multisig, please remove all multisigs but one from the physical device")]
-    MultipleRegisteredMultisig,
-
     #[error("Only slip77 master blinding key are supported")]
     OnlySlip77Supported,
 

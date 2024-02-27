@@ -149,7 +149,11 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     }
     w1.send(&mut pset);
     w2.sync();
-    assert!(w2.balance(&w2.policy_asset()) > 0)
+    assert!(w2.balance(&w2.policy_asset()) > 0);
+
+    // Spend from multi2
+    let node_address = server.node_getnewaddress();
+    w2.send_btc(signers_m2, None, Some((node_address, 1_000)));
 }
 
 #[test]

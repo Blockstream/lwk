@@ -72,9 +72,9 @@ After building NPM package from previous section
 
 ```
 $ git checkout master
+$ rm -rf /tmp/docs && mkdir /tmp/docs
 $ cd lwk_wasm
-$ mkdir /tmp/docs
-$ cp index.html /tmp/docs/
+$ cp www/{index.html,index.js,bootstrap.js} /tmp/docs/
 $ cp -r pkg /tmp/docs/
 $ rm /tmp/docs/pkg/.gitignore
 $ cd ..

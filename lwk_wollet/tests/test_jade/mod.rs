@@ -187,4 +187,18 @@ mod serial {
         let signers = &[&jade_signer, &sw_signer];
         roundtrip(&server, signers, None, Some(2));
     }
+
+    #[test]
+    #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
+    fn jade_multi_multisig() {
+        init_logging();
+        let server = setup(false);
+        let network = Network::LocaltestLiquid;
+        let ports = MutexJade::available_ports_with_jade();
+        let port_name = &ports.first().unwrap().port_name;
+        let jade = MutexJade::from_serial(network, port_name, None).unwrap();
+        let id = jade.identifier().unwrap();
+        let jade_signer = AnySigner::Jade(jade, id);
+        multi_multisig(&server, &jade_signer);
+    }
 }

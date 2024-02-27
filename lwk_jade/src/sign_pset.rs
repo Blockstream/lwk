@@ -87,6 +87,7 @@ impl Jade {
             let mut change = None;
             for (fingerprint, path) in output.bip32_derivation.values() {
                 if fingerprint == &my_fingerprint {
+                    // This ensures that path has at least 2 elements
                     let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
                     if is_change {
                         if output.script_pubkey.is_v0_p2wpkh() {
@@ -126,6 +127,7 @@ impl Jade {
                                         got_registered_multisigs = true;
                                     }
                                     for details in &multisigs_details {
+                                        // path has at least 2 elements
                                         let index = path[path.len() - 1];
                                         if let Ok(derived_witness_script) = details
                                             .descriptor
@@ -140,6 +142,7 @@ impl Jade {
                                                     // the last 2 elements in the derivation path which we
                                                     // expect to be "0|1,*"
                                                     let v = derivation_path_to_vec(path);
+                                                    // path has at least 2 elements
                                                     let v = v[(path.len() - 2)..].to_vec();
                                                     paths.push(v);
                                                 }

@@ -77,6 +77,11 @@ impl Network {
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
+
+    #[wasm_bindgen(js_name = policyAsset)]
+    pub fn policy_asset(&self) -> AssetId {
+        self.inner.policy_asset().into()
+    }
 }
 
 #[cfg(test)]

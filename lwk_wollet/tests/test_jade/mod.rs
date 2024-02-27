@@ -109,6 +109,44 @@ fn jade_slip77() {
     assert!(desc_str.contains(lwk_test_util::TEST_MNEMONIC_SLIP77))
 }
 
+fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
+    // Signers: jade, sw1, sw2
+    let sw_signer1 = AnySigner::Software(generate_signer());
+    let sw_signer2 = AnySigner::Software(generate_signer());
+
+    // Wallet multi1
+    let signers_m1 = &[jade_signer, &sw_signer1];
+    let desc = multisig_desc(signers_m1, 2);
+    register_multisig(signers_m1, "multi1", &desc);
+    let mut w1 = TestWollet::new(&server.electrs.electrum_url, &desc);
+
+    // Wallet multi2
+    let signers_m2 = &[jade_signer, &sw_signer2];
+    let desc = multisig_desc(signers_m2, 2);
+    register_multisig(signers_m2, "multi2", &desc);
+    let mut w2 = TestWollet::new(&server.electrs.electrum_url, &desc);
+
+    // Jade has now 2 registered multisigs
+
+    // Fund multi1
+    w1.fund_btc(server);
+
+    // Spend from multi1 (with change)
+    let node_address = server.node_getnewaddress();
+    w1.send_btc(signers_m1, None, Some((node_address, 10_000)));
+}
+
+#[test]
+fn emul_multi_multisig() {
+    init_logging();
+    let server = setup(false);
+    let docker = Cli::default();
+    let jade = jade_setup(&docker, TEST_MNEMONIC);
+    let id = jade.jade.identifier().unwrap();
+    let jade_signer = AnySigner::Jade(jade.jade, id);
+    multi_multisig(&server, &jade_signer);
+}
+
 #[cfg(feature = "serial")]
 mod serial {
     use super::*;

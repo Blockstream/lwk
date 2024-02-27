@@ -16,6 +16,7 @@ use crate::{
     derivation_path_to_vec,
     get_receive_address::{SingleOrMulti, Variant},
     protocol::GetSignatureParams,
+    register_multisig::GetRegisteredMultisigParams,
     sign_liquid_tx::{
         AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, TxInputParams,
     },
@@ -36,7 +37,8 @@ impl Jade {
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
 
-        let mut multisig_details = None;
+        let mut got_registered_multisigs = false;
+        let mut multisigs_details = vec![];
         let mut asset_ids_in_tx = HashSet::new();
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
@@ -110,47 +112,49 @@ impl Jade {
                         } else if output.script_pubkey.is_v0_p2wsh() {
                             if let Some(witness_script) = output.witness_script.as_ref() {
                                 if is_multisig(witness_script) {
-                                    if multisig_details.is_none() {
-                                        let result = self.get_registered_multisigs()?;
-                                        if result.len() > 1 {
-                                            // FIXME: from get_registered_multisigs we can't
-                                            // reconstruct the multisig descriptors and determine
-                                            // whether this script belongs to any and which of the
-                                            // registered multisigs. Thus we're unable to provide
-                                            // Jade with the information to correctly display the
-                                            // change. So we error early here. To solve this error
-                                            // the caller can remove all the registered wallets but
-                                            // one.
-                                            // Once Jade will return the information to reconstruct
-                                            // the multisig descriptor, e.g. with
-                                            // get_multisig_details, we'll be able to remove this
-                                            // error and correctly handle Jades with multiple
-                                            // registered multisigs.
-                                            return Err(Error::MultipleRegisteredMultisig);
+                                    if !got_registered_multisigs {
+                                        // Get all the registered multisigs including the signer
+                                        for (name, _) in self.get_registered_multisigs()? {
+                                            let details = self.get_registered_multisig(
+                                                GetRegisteredMultisigParams {
+                                                    multisig_name: name,
+                                                },
+                                            )?;
+                                            multisigs_details.push(details);
                                         }
-                                        multisig_details = result.into_iter().next();
+                                        // Call get_registered_multisigs once per "sign" call
+                                        got_registered_multisigs = true;
                                     }
-                                    if let Some((multisig_name, multisig_meta)) =
-                                        multisig_details.as_ref()
-                                    {
-                                        let mut paths = vec![];
-                                        for _ in 0..multisig_meta.num_signers {
-                                            // FIXME: here we should only pass the paths that were
-                                            // not passed when calling register_multisig. However
-                                            // deducing them now is not trivial, thus we only take
-                                            // the last 2 elements in the derivation path which we
-                                            // expect to be "0|1,*"
-                                            let v = derivation_path_to_vec(path);
-                                            let v = v[(path.len() - 2)..].to_vec();
-                                            paths.push(v);
+                                    for details in &multisigs_details {
+                                        let index = path[path.len() - 1];
+                                        if let Ok(derived_witness_script) = details
+                                            .descriptor
+                                            .derive_witness_script(is_change, index.into())
+                                        {
+                                            if witness_script == &derived_witness_script {
+                                                let mut paths = vec![];
+                                                for _ in 0..details.descriptor.signers.len() {
+                                                    // FIXME: here we should only pass the paths that were
+                                                    // not passed when calling register_multisig. However
+                                                    // deducing them now is not trivial, thus we only take
+                                                    // the last 2 elements in the derivation path which we
+                                                    // expect to be "0|1,*"
+                                                    let v = derivation_path_to_vec(path);
+                                                    let v = v[(path.len() - 2)..].to_vec();
+                                                    paths.push(v);
+                                                }
+                                                change = Some(Change {
+                                                    address: SingleOrMulti::Multi {
+                                                        multisig_name: details
+                                                            .multisig_name
+                                                            .to_string(),
+                                                        paths,
+                                                    },
+                                                    is_change,
+                                                });
+                                                break; // No need to check for more multisigs
+                                            }
                                         }
-                                        change = Some(Change {
-                                            address: SingleOrMulti::Multi {
-                                                multisig_name: multisig_name.to_string(),
-                                                paths,
-                                            },
-                                            is_change,
-                                        });
                                     }
                                 }
                             }

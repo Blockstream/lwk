@@ -138,6 +138,28 @@ impl FsPersisterInner {
         path.push(counter.to_string());
         path
     }
+
+    fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
+        let next = self.next.0;
+        if index < next {
+            let path = self.path(&Counter::from(index));
+            let bytes = fs::read(path)?;
+
+            let nonce_bytes = &bytes[..12];
+            let mut ciphertext = bytes[12..].to_vec();
+
+            let nonce = GenericArray::from_slice(nonce_bytes);
+
+            self.cipher
+                .decrypt_in_place(nonce, b"", &mut ciphertext)
+                .map_err(to_other)?;
+            let plaintext = ciphertext;
+
+            Ok(Some(Update::deserialize(&plaintext)?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 fn to_other<D: std::fmt::Debug>(d: D) -> PersistError {
@@ -147,26 +169,7 @@ fn to_other<D: std::fmt::Debug>(d: D) -> PersistError {
 impl Persister for FsPersister {
     fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
         let inner = self.inner.lock().map_err(to_other)?;
-        let next = inner.next.0;
-        if index < next {
-            let path = inner.path(&Counter::from(index));
-            let bytes = fs::read(path)?;
-
-            let nonce_bytes = &bytes[..12];
-            let mut ciphertext = bytes[12..].to_vec();
-
-            let nonce = GenericArray::from_slice(nonce_bytes);
-
-            inner
-                .cipher
-                .decrypt_in_place(nonce, b"", &mut ciphertext)
-                .map_err(to_other)?;
-            let plaintext = ciphertext;
-
-            Ok(Some(Update::deserialize(&plaintext)?))
-        } else {
-            Ok(None)
-        }
+        inner.get(index)
     }
 
     fn push(&self, update: Update) -> Result<(), PersistError> {

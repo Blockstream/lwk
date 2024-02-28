@@ -43,13 +43,13 @@ pub enum Error {
     PoisonError(String),
 
     #[error(transparent)]
-    Http(#[from] minreq::Error),
+    Http(#[from] reqwest::Error),
 
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
 
     #[error("Http request to {0} returned {1} instead of 200")]
-    HttpStatus(String, i32),
+    HttpStatus(String, u16),
 
     #[error("Jade authentication returned a response without urlA")]
     MissingUrlA,

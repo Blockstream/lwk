@@ -114,7 +114,9 @@ impl MutexJade {
     }
 
     pub fn unlock(&self) -> Result<(), crate::Error> {
-        self.inner.lock()?.unlock()
+        tokio::runtime::Builder::new_current_thread()
+            .build()?
+            .block_on(self.inner.lock()?.unlock())
     }
 
     pub fn into_inner(self) -> Result<Jade, Box<PoisonError<Jade>>> {

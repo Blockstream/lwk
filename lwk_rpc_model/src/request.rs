@@ -368,6 +368,19 @@ pub struct SignerJadeId {
     pub emulator: Option<SocketAddr>,
 }
 
+/// Request to set a transaction memo
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletSetTxMemo {
+    /// The wallet name
+    pub name: String,
+
+    /// Transaction id
+    pub txid: String,
+
+    /// Transaction memo
+    pub memo: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

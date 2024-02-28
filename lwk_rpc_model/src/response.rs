@@ -323,6 +323,9 @@ pub struct Tx {
 
     /// Unblinded url
     pub unblinded_url: String,
+
+    /// Memo
+    pub memo: String,
 }
 
 /// Wallet transactions

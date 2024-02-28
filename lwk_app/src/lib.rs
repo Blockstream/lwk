@@ -780,11 +780,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::WalletTxs = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let explorer_url = s.config.explorer_url.clone();
+            let memos = s.tx_memos.for_wollet(&r.name);
             let wollet = s.wollets.get_mut(&r.name)?;
             let mut txs: Vec<response::Tx> = wollet
                 .transactions()?
                 .iter()
-                .map(|tx| convert_tx(tx, &explorer_url))
+                .map(|tx| convert_tx(tx, &explorer_url, &memos))
                 .collect();
             if r.with_tickers {
                 for tx in &mut txs {
@@ -1031,8 +1032,13 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
     }
 }
 
-fn convert_tx(tx: &lwk_wollet::WalletTx, explorer_url: &str) -> response::Tx {
+fn convert_tx(
+    tx: &lwk_wollet::WalletTx,
+    explorer_url: &str,
+    memos: &HashMap<Txid, String>,
+) -> response::Tx {
     let unblinded_url = tx.unblinded_url(explorer_url);
+    let memo = memos.get(&tx.txid).cloned().unwrap_or_default();
     response::Tx {
         txid: tx.txid.to_string(),
         height: tx.height,
@@ -1045,6 +1051,7 @@ fn convert_tx(tx: &lwk_wollet::WalletTx, explorer_url: &str) -> response::Tx {
         timestamp: tx.timestamp,
         type_: tx.type_.clone(),
         unblinded_url,
+        memo,
     }
 }
 

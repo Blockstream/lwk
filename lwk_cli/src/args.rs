@@ -164,6 +164,7 @@ pub enum WalletSubCommandsEnum {
     PsetDetails,
     Utxos,
     Txs,
+    SetTxMemo,
 }
 
 #[derive(Debug, Args)]
@@ -592,6 +593,21 @@ pub enum WalletCommand {
         /// Replace asset ids with tickers when possible
         #[arg(long, action)]
         with_tickers: bool,
+    },
+
+    /// Set a wallet tx memo
+    SetTxMemo {
+        /// Wallet name
+        #[arg(short, long)]
+        wallet: String,
+
+        /// The transaction id
+        #[arg(long)]
+        txid: String,
+
+        /// The memo to set
+        #[arg(long)]
+        memo: String,
     },
 }
 

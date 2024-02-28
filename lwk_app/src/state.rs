@@ -123,6 +123,9 @@ pub struct Signers(HashMap<String, AppSigner>);
 #[derive(Default)]
 pub struct Assets(HashMap<AssetId, AppAsset>);
 
+#[derive(Default)]
+pub struct TxMemos(HashMap<String, HashMap<Txid, String>>);
+
 pub struct State {
     // TODO: config is read-only, so it's not useful to wrap it in a mutex.
     // Ideally it should be in _another_ struct accessible by method_handler.
@@ -130,6 +133,7 @@ pub struct State {
     pub wollets: Wollets,
     pub signers: Signers,
     pub assets: Assets,
+    pub tx_memos: TxMemos,
     pub do_persist: bool,
 
     /// Number of scan loops started
@@ -155,7 +159,6 @@ impl Wollets {
             .get_mut(name)
             .ok_or_else(|| Error::WalletNotExist(name.to_string()))
     }
-
     pub fn insert(&mut self, name: &str, wollet: Wollet) -> Result<(), Error> {
         if self.0.contains_key(name) {
             return Err(Error::WalletAlreadyLoaded(name.to_string()));
@@ -323,6 +326,32 @@ impl Signers {
 impl Assets {
     pub fn iter(&self) -> impl Iterator<Item = (&AssetId, &AppAsset)> {
         self.0.iter()
+    }
+}
+
+impl TxMemos {
+    #[allow(dead_code)]
+    pub fn for_wollet(&self, wollet: &str) -> HashMap<Txid, String> {
+        self.0.get(wollet).cloned().unwrap_or_default()
+    }
+
+    #[allow(dead_code)]
+    pub fn get(&self, wollet: &str, txid: &Txid) -> String {
+        self.for_wollet(wollet)
+            .get(txid)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    pub fn set(&mut self, wollet: &str, txid: &Txid, memo: &str) -> Result<(), Error> {
+        if let Some(wollet_memos) = self.0.get_mut(wollet) {
+            wollet_memos.insert(*txid, memo.to_string());
+        } else {
+            let mut wollet_memos = HashMap::new();
+            wollet_memos.insert(*txid, memo.to_string());
+            self.0.insert(wollet.to_string(), wollet_memos);
+        }
+        Ok(())
     }
 }
 

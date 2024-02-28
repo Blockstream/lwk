@@ -91,6 +91,7 @@ impl App {
             wollets: Default::default(),
             signers: Default::default(),
             assets: Default::default(),
+            tx_memos: Default::default(),
             do_persist: false,
             scan_loops_started: 0,
             scan_loops_completed: 0,

@@ -139,6 +139,13 @@ impl FsPersisterInner {
         path
     }
 
+    fn last(&self) -> Result<Option<Update>, PersistError> {
+        if self.next.0 == 0 {
+            return Ok(None);
+        }
+        self.get(self.next.0 - 1)
+    }
+
     fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
         let next = self.next.0;
         if index < next {
@@ -174,6 +181,15 @@ impl Persister for FsPersister {
 
     fn push(&self, update: Update) -> Result<(), PersistError> {
         let mut inner = self.inner.lock().map_err(to_other)?;
+        if update.only_tip() {
+            if let Ok(Some(prev_update)) = inner.last() {
+                if prev_update.only_tip() {
+                    // since this update and the last are only an update of the tip, we can
+                    // overwrite last update instead of creating a new file.
+                    inner.next = (inner.next.0 - 1).into() // safety: next is at least 1 or last() would be None
+                }
+            }
+        }
         let path = inner.path(&inner.next);
         let mut plaintext = update.serialize()?;
 

@@ -353,6 +353,10 @@ impl TxMemos {
         }
         Ok(())
     }
+
+    pub fn remove(&mut self, wollet: &str) {
+        self.0.remove(wollet);
+    }
 }
 
 impl State {

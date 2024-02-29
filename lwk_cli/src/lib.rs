@@ -336,6 +336,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_set_tx_memo(wallet, txid, memo)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::SetAddrMemo {
+                wallet,
+                address,
+                memo,
+            } => {
+                let r = client.wallet_set_addr_memo(wallet, address, memo)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Asset(a) => match a.command {
             AssetCommand::Contract {

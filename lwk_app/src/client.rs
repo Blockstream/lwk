@@ -259,6 +259,20 @@ impl Client {
         self.make_request(Method::WalletSetTxMemo, Some(req))
     }
 
+    pub fn wallet_set_addr_memo(
+        &self,
+        name: String,
+        address: String,
+        memo: String,
+    ) -> Result<response::Empty, Error> {
+        let req = request::WalletSetAddrMemo {
+            name,
+            address,
+            memo,
+        };
+        self.make_request(Method::WalletSetAddrMemo, Some(req))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn issue(
         &self,

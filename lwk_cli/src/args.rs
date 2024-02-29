@@ -165,6 +165,7 @@ pub enum WalletSubCommandsEnum {
     Utxos,
     Txs,
     SetTxMemo,
+    SetAddrMemo,
 }
 
 #[derive(Debug, Args)]
@@ -604,6 +605,21 @@ pub enum WalletCommand {
         /// The transaction id
         #[arg(long)]
         txid: String,
+
+        /// The memo to set
+        #[arg(long)]
+        memo: String,
+    },
+
+    /// Set a wallet address memo
+    SetAddrMemo {
+        /// Wallet name
+        #[arg(short, long)]
+        wallet: String,
+
+        /// The address
+        #[arg(long)]
+        address: String,
 
         /// The memo to set
         #[arg(long)]

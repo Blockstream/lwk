@@ -403,7 +403,7 @@ fn test_wallet_load_unload_list() {
 
 #[test]
 fn test_wallet_memos() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, params, server) = setup_cli();
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -468,6 +468,37 @@ fn test_wallet_memos() {
         "{cli} wallet set-addr-memo -w w2 --address {w1_addr} --memo {memo1}"
     ));
     // But you can't get it
+
+    // Set memos
+    sh(&format!(
+        "{cli} wallet set-tx-memo -w w1 --txid {txid} --memo {memo1}"
+    ));
+    assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
+
+    sh(&format!(
+        "{cli} wallet set-addr-memo -w w1 --address {w1_addr} --memo {memo1}"
+    ));
+    assert_eq!(addr_memo(&cli, "w1", index), memo1);
+
+    // And unload w2 to trigger a global persistence
+    sh(&format!("{cli} wallet unload --wallet w2"));
+
+    // Stop and restart to check persistence
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+
+    // Memo are not persisted across sessions
+    assert_eq!(tx_memo(&cli, "w1", &txid), "");
+    assert_eq!(addr_memo(&cli, "w1", index), "");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

@@ -286,6 +286,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let removed = s.wollets.remove(&r.name)?;
             s.tx_memos.remove(&r.name);
+            s.addr_memos.remove(&r.name);
             s.persist_all()?;
 
             Response::result(

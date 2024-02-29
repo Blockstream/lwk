@@ -373,7 +373,6 @@ impl AddrMemos {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn remove(&mut self, wollet: &str) {
         self.0.remove(wollet);
     }

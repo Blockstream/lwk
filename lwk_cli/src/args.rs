@@ -250,7 +250,7 @@ pub enum SignerCommand {
 
     /// Load a software signer giving it a name
     LoadSoftware {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         #[arg(long)]
@@ -259,7 +259,7 @@ pub enum SignerCommand {
 
     /// Load a Jade signer giving it a name
     LoadJade {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         /// Identifier of the jade (20 bytes as 40 hex chars)
@@ -273,7 +273,7 @@ pub enum SignerCommand {
 
     /// Load a signer (software, serial, external) giving it a name
     LoadExternal {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         #[arg(long)]
@@ -282,7 +282,7 @@ pub enum SignerCommand {
 
     /// Unload a software signer
     Unload {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
     },
 
@@ -291,7 +291,7 @@ pub enum SignerCommand {
 
     /// Sign a transaction
     Sign {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         #[arg(long)]
@@ -300,7 +300,7 @@ pub enum SignerCommand {
 
     ///  Prints a singlesig descriptor using this signer key
     SinglesigDesc {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         #[arg(long)]
@@ -312,7 +312,7 @@ pub enum SignerCommand {
 
     /// Get an extended public key from the signer
     Xpub {
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         #[arg(long)]
@@ -325,11 +325,11 @@ pub enum SignerCommand {
     /// For other signers this command does nothing.
     RegisterMultisig {
         /// Signer name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: String,
 
         /// Wallet name
-        #[arg(long, env)]
+        #[arg(long)]
         wallet: String,
     },
 }
@@ -419,7 +419,7 @@ pub enum WalletCommand {
         /// Signer name
         ///
         /// Display the address on hardware signers.
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         signer: Option<String>,
     },
 

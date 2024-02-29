@@ -122,6 +122,10 @@ fn tx(cli: &str, wallet: &str, txid: &str) -> Option<Value> {
         .find(|tx| get_str(tx, "txid") == txid)
 }
 
+fn tx_memo(cli: &str, wallet: &str, txid: &str) -> String {
+    get_str(&tx(cli, wallet, txid).unwrap(), "memo").to_string()
+}
+
 fn wait_ms(ms: u64) {
     std::thread::sleep(std::time::Duration::from_millis(ms));
 }
@@ -153,7 +157,14 @@ fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     wait_tx(cli, wallet, &txid);
 }
 
-fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers: &[&str]) {
+fn send(
+    cli: &str,
+    wallet: &str,
+    address: &str,
+    asset: &str,
+    sats: u64,
+    signers: &[&str],
+) -> String {
     let recipient = format!(" --recipient {address}:{sats}:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet {wallet} {recipient}"));
     let mut pset = get_str(&r, "pset").to_string();
@@ -170,6 +181,7 @@ fn send(cli: &str, wallet: &str, address: &str, asset: &str, sats: u64, signers:
     ));
     let txid = get_str(&r, "txid");
     wait_tx(cli, wallet, txid);
+    txid.to_string()
 }
 
 #[test]
@@ -379,6 +391,61 @@ fn test_wallet_load_unload_list() {
     let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
     assert!(wallets.as_array().unwrap().is_empty());
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_wallet_memos() {
+    let (t, _tmp, cli, _params, server) = setup_cli();
+
+    // Create 2 wallets
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
+    singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
+
+    // Fund w1
+    fund(&server, &cli, "w1", 1_000_000);
+
+    // Send from w1 to w2
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let w2_addr = address(&cli, "w2");
+    let txid = send(&cli, "w1", &w2_addr, policy_asset, 1_000, &["s1"]);
+
+    // Memo are empty for both wallets
+    assert_eq!(tx_memo(&cli, "w1", &txid), "");
+    assert_eq!(tx_memo(&cli, "w2", &txid), "");
+
+    // Set memo for w1
+    let memo1 = "MEMO1";
+    sh(&format!(
+        "{cli} wallet set-tx-memo -w w1 --txid {txid} --memo {memo1}"
+    ));
+    assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
+    assert_eq!(tx_memo(&cli, "w2", &txid), "");
+
+    // Set another memo for w2
+    let memo2 = "MEMO2";
+    sh(&format!(
+        "{cli} wallet set-tx-memo -w w2 --txid {txid} --memo {memo2}"
+    ));
+    assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
+    assert_eq!(tx_memo(&cli, "w2", &txid), memo2);
+
+    // Unload and load wallet, memo is removed
+    sh(&format!("{cli} wallet unload --wallet w1"));
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
+    assert_eq!(tx_memo(&cli, "w1", &txid), "");
+    assert_eq!(tx_memo(&cli, "w2", &txid), memo2);
+
+    // Remove memo
+    sh(&format!(
+        "{cli} wallet set-tx-memo -w w2 --txid {txid} --memo ''"
+    ));
+    assert_eq!(tx_memo(&cli, "w1", &txid), "");
+    assert_eq!(tx_memo(&cli, "w2", &txid), "");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

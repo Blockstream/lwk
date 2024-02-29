@@ -148,6 +148,11 @@ fn address(cli: &str, wallet: &str) -> String {
     get_str(&r, "address").to_string()
 }
 
+fn addr_memo(cli: &str, w: &str, i: u32) -> String {
+    let r = sh(&format!("{cli} wallet address --wallet {w} --index {i}"));
+    get_str(&r, "memo").to_string()
+}
+
 fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
@@ -414,9 +419,14 @@ fn test_wallet_memos() {
     let w2_addr = address(&cli, "w2");
     let txid = send(&cli, "w1", &w2_addr, policy_asset, 1_000, &["s1"]);
 
+    let r = sh(&format!("{cli} wallet address --wallet w1"));
+    let w1_addr = get_str(&r, "address").to_string();
+    let index = r.get("index").unwrap().as_u64().unwrap() as u32;
+
     // Memo are empty for both wallets
     assert_eq!(tx_memo(&cli, "w1", &txid), "");
     assert_eq!(tx_memo(&cli, "w2", &txid), "");
+    assert_eq!(addr_memo(&cli, "w1", index), "");
 
     // Set memo for w1
     let memo1 = "MEMO1";
@@ -425,6 +435,11 @@ fn test_wallet_memos() {
     ));
     assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
     assert_eq!(tx_memo(&cli, "w2", &txid), "");
+
+    sh(&format!(
+        "{cli} wallet set-addr-memo -w w1 --address {w1_addr} --memo {memo1}"
+    ));
+    assert_eq!(addr_memo(&cli, "w1", index), memo1);
 
     // Set another memo for w2
     let memo2 = "MEMO2";
@@ -439,6 +454,7 @@ fn test_wallet_memos() {
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     assert_eq!(tx_memo(&cli, "w1", &txid), "");
     assert_eq!(tx_memo(&cli, "w2", &txid), memo2);
+    assert_eq!(addr_memo(&cli, "w1", index), "");
 
     // Remove memo
     sh(&format!(
@@ -446,6 +462,12 @@ fn test_wallet_memos() {
     ));
     assert_eq!(tx_memo(&cli, "w1", &txid), "");
     assert_eq!(tx_memo(&cli, "w2", &txid), "");
+
+    // It's possible to set a memo for any address (w1_addr does not belog to w2)
+    sh(&format!(
+        "{cli} wallet set-addr-memo -w w2 --address {w1_addr} --memo {memo1}"
+    ));
+    // But you can't get it
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

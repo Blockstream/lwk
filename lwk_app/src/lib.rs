@@ -446,11 +446,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 }
             };
 
+            let address = addr.address();
+            let memos = s.addr_memos.for_wollet(&r.name);
+            let memo = memos.get(address).cloned().unwrap_or_default();
             Response::result(
                 request.id,
                 serde_json::to_value(response::Address {
-                    address: addr.address().to_string(),
+                    address: address.to_string(),
                     index: addr.index(),
+                    memo,
                 })?,
             )
         }

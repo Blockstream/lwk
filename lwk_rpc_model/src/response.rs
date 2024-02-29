@@ -93,6 +93,9 @@ pub struct Address {
 
     /// The index of the derivation of the given address
     pub index: u32,
+
+    /// Memo
+    pub memo: String,
 }
 
 /// Balance respone

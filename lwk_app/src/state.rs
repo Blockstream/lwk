@@ -357,7 +357,6 @@ impl TxMemos {
 
 impl AddrMemos {
     // TODO; return Option<&HashMap<Address, String>>
-    #[allow(dead_code)]
     pub fn for_wollet(&self, wollet: &str) -> HashMap<Address, String> {
         self.0.get(wollet).cloned().unwrap_or_default()
     }

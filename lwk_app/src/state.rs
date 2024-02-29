@@ -353,6 +353,10 @@ impl TxMemos {
     pub fn remove(&mut self, wollet: &str) {
         self.0.remove(wollet);
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &HashMap<Txid, String>)> {
+        self.0.iter()
+    }
 }
 
 impl AddrMemos {
@@ -374,6 +378,10 @@ impl AddrMemos {
 
     pub fn remove(&mut self, wollet: &str) {
         self.0.remove(wollet);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &HashMap<Address, String>)> {
+        self.0.iter()
     }
 }
 
@@ -498,6 +506,42 @@ impl State {
                 params: Some(serde_json::to_value(params)?),
             };
             requests.push(r);
+        }
+
+        // Tx memos
+        for (name, wollet_memos) in self.tx_memos.iter() {
+            for (txid, memo) in wollet_memos.iter() {
+                let params = request::WalletSetTxMemo {
+                    name: name.to_string(),
+                    txid: txid.to_string(),
+                    memo: memo.to_string(),
+                };
+                let r = Request {
+                    jsonrpc: "2.0".into(),
+                    id: None,
+                    method: Method::WalletSetTxMemo.to_string(),
+                    params: Some(serde_json::to_value(params)?),
+                };
+                requests.push(r);
+            }
+        }
+
+        // Addr memos
+        for (name, wollet_memos) in self.addr_memos.iter() {
+            for (address, memo) in wollet_memos.iter() {
+                let params = request::WalletSetAddrMemo {
+                    name: name.to_string(),
+                    address: address.to_string(),
+                    memo: memo.to_string(),
+                };
+                let r = Request {
+                    jsonrpc: "2.0".into(),
+                    id: None,
+                    method: Method::WalletSetAddrMemo.to_string(),
+                    params: Some(serde_json::to_value(params)?),
+                };
+                requests.push(r);
+            }
         }
 
         // Signers

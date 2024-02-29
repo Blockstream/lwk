@@ -810,6 +810,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let _wollet = s.wollets.get(&r.name)?;
             let txid = Txid::from_str(&r.txid).map_err(|e| Error::Generic(e.to_string()))?;
             s.tx_memos.set(&r.name, &txid, &r.memo)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::WalletSetAddrMemo => {
@@ -821,6 +822,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 Address::from_str(&r.address).map_err(|e| Error::Generic(e.to_string()))?;
             // TODO: check address belongs to the wallet
             s.addr_memos.set(&r.name, &address, &r.memo)?;
+            s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::Issue => {

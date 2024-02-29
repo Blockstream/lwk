@@ -496,9 +496,8 @@ fn test_wallet_memos() {
     };
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
-    // Memo are not persisted across sessions
-    assert_eq!(tx_memo(&cli, "w1", &txid), "");
-    assert_eq!(addr_memo(&cli, "w1", index), "");
+    assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
+    assert_eq!(addr_memo(&cli, "w1", index), memo1);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

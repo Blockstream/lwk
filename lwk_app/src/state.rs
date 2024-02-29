@@ -13,7 +13,7 @@ use lwk_tiny_jrpc::Request;
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements::pset::elip100::AssetMetadata;
-use lwk_wollet::elements::{AssetId, OutPoint, Txid};
+use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::Contract;
 use lwk_wollet::Wollet;
 use serde::Serialize;
@@ -126,6 +126,9 @@ pub struct Assets(HashMap<AssetId, AppAsset>);
 #[derive(Default)]
 pub struct TxMemos(HashMap<String, HashMap<Txid, String>>);
 
+#[derive(Default)]
+pub struct AddrMemos(HashMap<String, HashMap<Address, String>>);
+
 pub struct State {
     // TODO: config is read-only, so it's not useful to wrap it in a mutex.
     // Ideally it should be in _another_ struct accessible by method_handler.
@@ -134,6 +137,7 @@ pub struct State {
     pub signers: Signers,
     pub assets: Assets,
     pub tx_memos: TxMemos,
+    pub addr_memos: AddrMemos,
     pub do_persist: bool,
 
     /// Number of scan loops started
@@ -346,6 +350,31 @@ impl TxMemos {
         Ok(())
     }
 
+    pub fn remove(&mut self, wollet: &str) {
+        self.0.remove(wollet);
+    }
+}
+
+impl AddrMemos {
+    // TODO; return Option<&HashMap<Address, String>>
+    #[allow(dead_code)]
+    pub fn for_wollet(&self, wollet: &str) -> HashMap<Address, String> {
+        self.0.get(wollet).cloned().unwrap_or_default()
+    }
+
+    #[allow(dead_code)]
+    pub fn set(&mut self, wollet: &str, addr: &Address, memo: &str) -> Result<(), Error> {
+        if let Some(wollet_memos) = self.0.get_mut(wollet) {
+            wollet_memos.insert(addr.clone(), memo.to_string());
+        } else {
+            let mut wollet_memos = HashMap::new();
+            wollet_memos.insert(addr.clone(), memo.to_string());
+            self.0.insert(wollet.to_string(), wollet_memos);
+        }
+        Ok(())
+    }
+
+    #[allow(dead_code)]
     pub fn remove(&mut self, wollet: &str) {
         self.0.remove(wollet);
     }

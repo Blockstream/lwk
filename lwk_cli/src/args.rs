@@ -329,7 +329,7 @@ pub enum SignerCommand {
         signer: String,
 
         /// Wallet name
-        #[arg(long)]
+        #[arg(long, env)]
         wallet: String,
     },
 }
@@ -390,7 +390,7 @@ pub enum WalletCommand {
     /// Load a wallet with a CT descriptor giving it a name
     Load {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         #[arg(short, long)]
@@ -400,7 +400,7 @@ pub enum WalletCommand {
     /// Unload a wallet
     Unload {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
     },
 
@@ -410,7 +410,7 @@ pub enum WalletCommand {
     /// Get an address from the given wallet name
     Address {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         #[arg(long)]
@@ -426,7 +426,7 @@ pub enum WalletCommand {
     /// Get the balance of the given wallet name
     Balance {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// Replace asset ids with tickers when possible
@@ -437,7 +437,7 @@ pub enum WalletCommand {
     /// Create an unsigned transaction (PSET)
     Send {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// Specify a recipient in the form "address:satoshi:asset_id"
@@ -457,7 +457,7 @@ pub enum WalletCommand {
     /// Issue an asset
     Issue {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// The number of units of the newly issued asset
@@ -491,7 +491,7 @@ pub enum WalletCommand {
     /// Reissue a previously issued asset, needs ownership of the issuance token
     Reissue {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// The asset to re-issue
@@ -531,7 +531,7 @@ pub enum WalletCommand {
     /// Try to finalize the PSET and broadcast the transaction
     Broadcast {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// Do the finalization without the broadcast
@@ -545,14 +545,14 @@ pub enum WalletCommand {
     /// Get detailed information about the wallet
     Details {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
     },
 
     /// Combine PSETs
     Combine {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// PSETs to combine
@@ -565,7 +565,7 @@ pub enum WalletCommand {
     /// Get the details of a PSET
     PsetDetails {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// PSET
@@ -580,14 +580,14 @@ pub enum WalletCommand {
     /// Get the wallet unspent transaction outputs
     Utxos {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
     },
 
     /// Get the wallet transactions
     Txs {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// Replace asset ids with tickers when possible
@@ -598,7 +598,7 @@ pub enum WalletCommand {
     /// Set a wallet tx memo
     SetTxMemo {
         /// Wallet name
-        #[arg(short, long)]
+        #[arg(short, long, env)]
         wallet: String,
 
         /// The transaction id

@@ -1,73 +1,66 @@
-#![doc = include_str!("../README.md")]
-#![cfg_attr(not(test), deny(clippy::unwrap_used))]
-
 use std::{
     collections::HashMap,
     io::ErrorKind,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use connection::Connection;
-use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
-use get_receive_address::GetReceiveAddressParams;
-use protocol::{
-    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeInitParams, IsAuthResult, Params, Request, Response, SignMessageParams,
-    UpdatePinserverParams, VersionInfoResult,
-};
+use elements::bitcoin::bip32::{Fingerprint, Xpub};
 use rand::RngCore;
-use register_multisig::{
-    GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
-    RegisteredMultisigDetails,
-};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
-use sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-pub mod async_jade;
-pub mod connection;
-pub mod consts;
-pub mod error;
-pub mod get_receive_address;
-pub mod mutex_jade;
-mod network;
-pub mod protocol;
-pub mod register_multisig;
-pub mod sign_liquid_tx;
-pub mod sign_pset;
-pub mod unlock;
-
-pub use consts::{BAUD_RATE, TIMEOUT};
-pub use error::Error;
-pub use network::Network;
-
-#[cfg(feature = "serial")]
-pub use serialport;
-
-pub type Result<T> = std::result::Result<T, error::Error>;
+use crate::{
+    get_receive_address::GetReceiveAddressParams,
+    protocol::{
+        AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
+        GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
+        HandshakeData, HandshakeInitParams, IsAuthResult, Params, Request, Response,
+        SignMessageParams, UpdatePinserverParams, VersionInfoResult,
+    },
+    register_multisig::{
+        GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
+        RegisteredMultisigDetails,
+    },
+    sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
+};
+use crate::{Error, Network, Result};
 
 #[derive(Debug)]
-pub struct Jade {
+pub struct AsyncJade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)
-    conn: Connection,
+    stream: S,
 
     /// The network
-    network: crate::Network,
+    network: Network,
 
     /// Cached master xpub
     master_xpub: Option<Xpub>,
 }
 
-impl Jade {
-    pub fn new(conn: Connection, network: Network) -> Self {
+#[cfg(feature = "tcp")]
+impl AsyncJade<tokio::net::TcpStream> {
+    pub async fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
         Self {
-            conn,
+            stream,
             network,
             master_xpub: None,
         }
     }
+}
 
+#[cfg(feature = "serial")]
+impl AsyncJade<tokio_serial::SerialStream> {
+    pub async fn new_serial(stream: tokio_serial::SerialStream, network: Network) -> Self {
+        Self {
+            stream,
+            network,
+            master_xpub: None,
+        }
+    }
+}
+
+impl<S: AsyncReadExt + AsyncWriteExt + Unpin> AsyncJade<S> {
     fn check_network(&self, passed: Network) -> Result<()> {
         let init = self.network;
         if passed != init {
@@ -77,156 +70,159 @@ impl Jade {
         }
     }
 
-    pub fn ping(&mut self) -> Result<u8> {
-        self.send_request("ping", None)
+    pub async fn ping(&mut self) -> Result<u8> {
+        self.send_request("ping", None).await
     }
 
-    pub fn logout(&mut self) -> Result<bool> {
-        self.send_request("logout", None)
+    pub async fn logout(&mut self) -> Result<bool> {
+        self.send_request("logout", None).await
     }
 
-    pub fn version_info(&mut self) -> Result<VersionInfoResult> {
-        self.send_request("get_version_info", None)
+    pub async fn version_info(&mut self) -> Result<VersionInfoResult> {
+        self.send_request("get_version_info", None).await
     }
 
-    pub fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
+    pub async fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
         let params = Params::Epoch(EpochParams { epoch });
-        self.send_request("set_epoch", Some(params))
+        self.send_request("set_epoch", Some(params)).await
     }
 
-    pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
+    pub async fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
         let params = Params::Entropy(EntropyParams {
             entropy: entropy.to_vec(),
         });
-        self.send_request("add_entropy", Some(params))
+        self.send_request("add_entropy", Some(params)).await
     }
 
-    pub fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
+    pub async fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
         let epoch = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(error::Error::SystemTimeError)?
+            .map_err(Error::SystemTimeError)?
             .as_secs();
         let params = Params::AuthUser(AuthUserParams {
             network: self.network,
             epoch,
         });
-        self.send_request("auth_user", Some(params))
+        self.send_request("auth_user", Some(params)).await
     }
 
-    pub fn handshake_init(
+    pub async fn handshake_init(
         &mut self,
         params: HandshakeInitParams,
     ) -> Result<AuthResult<HandshakeData>> {
         let params = Params::HandshakeInit(params);
-        self.send_request("handshake_init", Some(params))
+        self.send_request("handshake_init", Some(params)).await
     }
 
-    pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
+    pub async fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
         let params = Params::UpdatePinServer(params);
-        self.send_request("update_pinserver", Some(params))
+        self.send_request("update_pinserver", Some(params)).await
     }
 
-    pub fn handshake_complete(
-        &mut self,
-        params: protocol::HandshakeCompleteParams,
-    ) -> Result<bool> {
+    pub async fn handshake_complete(&mut self, params: HandshakeCompleteParams) -> Result<bool> {
         let params = Params::HandshakeComplete(params);
-        self.send_request("handshake_complete", Some(params))
+        self.send_request("handshake_complete", Some(params)).await
     }
 
-    fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
+    async fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         self.check_network(params.network)?;
         let params = Params::GetXpub(params);
-        self.send_request("get_xpub", Some(params))
+        self.send_request("get_xpub", Some(params)).await
     }
 
-    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
+    pub async fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         if params.path.is_empty() {
-            self.get_master_xpub()
+            self.get_master_xpub().await
         } else {
-            self.inner_get_xpub(params)
+            self.inner_get_xpub(params).await
         }
     }
 
-    pub fn fingerprint(&mut self) -> Result<Fingerprint> {
-        Ok(self.get_master_xpub()?.fingerprint())
+    pub async fn fingerprint(&mut self) -> Result<Fingerprint> {
+        Ok(self.get_master_xpub().await?.fingerprint())
     }
 
-    pub fn get_master_xpub(&mut self) -> Result<Xpub> {
+    pub async fn get_master_xpub(&mut self) -> Result<Xpub> {
         if self.master_xpub.is_none() {
-            let master_xpub = self.inner_get_xpub(GetXpubParams {
-                network: self.network,
-                path: vec![],
-            })?;
+            let master_xpub = self
+                .inner_get_xpub(GetXpubParams {
+                    network: self.network,
+                    path: vec![],
+                })
+                .await?;
             self.master_xpub = Some(master_xpub);
         }
         Ok(self.master_xpub.expect("ensure it is some before"))
     }
 
-    pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
+    pub async fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
         self.check_network(params.network)?;
         let params = Params::GetReceiveAddress(params);
-        self.send_request("get_receive_address", Some(params))
+        self.send_request("get_receive_address", Some(params)).await
     }
 
-    pub fn get_master_blinding_key(
+    pub async fn get_master_blinding_key(
         &mut self,
         params: GetMasterBlindingKeyParams,
     ) -> Result<ByteBuf> {
         let params = Params::GetMasterBlindingKey(params);
         self.send_request("get_master_blinding_key", Some(params))
+            .await
     }
 
-    pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {
+    pub async fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {
         let params = Params::SignMessage(params);
-        self.send_request("sign_message", Some(params))
+        self.send_request("sign_message", Some(params)).await
     }
 
-    pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<String> {
+    pub async fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<String> {
         let params = Params::GetSignature(params);
-        self.send_request("get_signature", Some(params))
+        self.send_request("get_signature", Some(params)).await
     }
 
-    pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteBuf> {
+    pub async fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteBuf> {
         let params = Params::GetSignature(params);
-        self.send_request("get_signature", Some(params))
+        self.send_request("get_signature", Some(params)).await
     }
 
-    pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
+    pub async fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::SignLiquidTx(params);
-        self.send_request("sign_liquid_tx", Some(params))
+        self.send_request("sign_liquid_tx", Some(params)).await
     }
 
-    pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteBuf> {
+    pub async fn tx_input(&mut self, params: TxInputParams) -> Result<ByteBuf> {
         let params = Params::TxInput(params);
-        self.send_request("tx_input", Some(params))
+        self.send_request("tx_input", Some(params)).await
     }
 
-    pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<bool> {
+    pub async fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<bool> {
         let params = Params::DebugSetMnemonic(params);
-        self.send_request("debug_set_mnemonic", Some(params))
+        self.send_request("debug_set_mnemonic", Some(params)).await
     }
 
-    pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
+    pub async fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::RegisterMultisig(params);
-        self.send_request("register_multisig", Some(params))
+        self.send_request("register_multisig", Some(params)).await
     }
 
-    pub fn get_registered_multisigs(&mut self) -> Result<HashMap<String, RegisteredMultisig>> {
-        self.send_request("get_registered_multisigs", None)
+    pub async fn get_registered_multisigs(
+        &mut self,
+    ) -> Result<HashMap<String, RegisteredMultisig>> {
+        self.send_request("get_registered_multisigs", None).await
     }
 
-    pub fn get_registered_multisig(
+    pub async fn get_registered_multisig(
         &mut self,
         params: GetRegisteredMultisigParams,
     ) -> Result<RegisteredMultisigDetails> {
         let params = Params::GetRegisteredMultisig(params);
         self.send_request("get_registered_multisig", Some(params))
+            .await
     }
 
-    fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>
+    async fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
@@ -246,13 +242,13 @@ impl Jade {
             &hex::encode(&buf),
         );
 
-        self.conn.write_all(&buf)?;
+        self.stream.write_all(&buf).await?;
 
         let mut rx = [0u8; 4096];
 
         let mut total = 0;
         loop {
-            match self.conn.read(&mut rx[total..]) {
+            match self.stream.read(&mut rx[total..]).await {
                 Ok(len) => {
                     total += len;
                     match serde_cbor::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
@@ -299,8 +295,4 @@ impl Jade {
             }
         }
     }
-}
-
-pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
-    path.into_iter().map(|e| (*e).into()).collect()
 }

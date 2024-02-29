@@ -22,7 +22,7 @@ fn serial_test_setup() -> Jade {
 fn unlock() {
     let mut jade_api = serial_test_setup();
 
-    jade_api.unlock().unwrap();
+    jade_api.unlock_blocking().unwrap();
 
     let result = jade_api.version_info().unwrap();
     assert_eq!(result.jade_state, JadeState::Ready);
@@ -67,7 +67,7 @@ fn version_info() {
 fn receive_address() {
     let mut jade_api = serial_test_setup();
 
-    jade_api.unlock().unwrap();
+    jade_api.unlock_blocking().unwrap();
 
     let params = GetReceiveAddressParams {
         network: lwk_jade::Network::TestnetLiquid,

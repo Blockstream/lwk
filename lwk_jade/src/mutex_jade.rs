@@ -113,10 +113,18 @@ impl MutexJade {
         Ok(Self::new(jade))
     }
 
-    pub fn unlock(&self) -> Result<(), crate::Error> {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn unlock_blocking(&self) -> Result<(), crate::Error> {
         tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
             .build()?
-            .block_on(self.inner.lock()?.unlock())
+            .block_on(self.inner.lock()?.unlock_async())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn unlock_blocking(&self) -> Result<(), crate::Error> {
+        unreachable!()
     }
 
     pub fn into_inner(self) -> Result<Jade, Box<PoisonError<Jade>>> {
@@ -131,7 +139,7 @@ impl MutexJade {
         &self,
         params: crate::register_multisig::RegisterMultisigParams,
     ) -> Result<(), Error> {
-        self.unlock()?;
+        self.unlock_blocking()?;
         self.inner.lock()?.register_multisig(params)?;
         Ok(())
     }
@@ -172,7 +180,7 @@ impl Signer for &MutexJade {
     type Error = crate::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
-        self.unlock()?;
+        self.unlock_blocking()?;
         self.inner.lock()?.sign(pset)
     }
 
@@ -186,7 +194,7 @@ impl Signer for &MutexJade {
             path: derivation_path_to_vec(path),
         };
 
-        self.unlock()?;
+        self.unlock_blocking()?;
         self.inner.lock()?.get_xpub(params)
     }
 

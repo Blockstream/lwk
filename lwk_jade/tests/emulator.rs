@@ -119,7 +119,7 @@ fn jade_init_logout_unlock() {
     let mut jade = TestJadeEmulator::new_with_pin(&docker);
 
     assert!(jade.jade.logout().unwrap());
-    jade.jade.unlock().unwrap();
+    jade.jade.unlock_blocking().unwrap();
 }
 
 #[test]
@@ -422,4 +422,22 @@ fn mock_version_info() -> VersionInfoResult {
         jade_networks: "ALL".to_string(),
         jade_has_pin: false,
     }
+}
+
+#[cfg(feature = "tcp")]
+#[tokio::test]
+async fn async_ping() {
+    lwk_test_util::init_logging();
+
+    let docker = clients::Cli::default();
+
+    let container = docker.run(lwk_containers::JadeEmulator);
+    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+        .await
+        .unwrap();
+    let network = lwk_jade::Network::LocaltestLiquid;
+    let mut jade = lwk_jade::async_jade::AsyncJade::new_tcp(stream, network).await;
+    let result = jade.ping().await.unwrap();
+    assert_eq!(result, 0);
 }

@@ -4,12 +4,21 @@ use crate::{
 };
 
 impl Jade {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn unlock_blocking(&mut self) -> Result<(), crate::Error> {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()?
+            .block_on(self.unlock_async())
+    }
+
     /// Unlock an already initialized Jade.
     ///
     /// The device asks for the pin,
     /// and the host performs network calls to the pin server
     /// to decrypt the secret on the device.
-    pub async fn unlock(&mut self) -> Result<(), Error> {
+    pub async fn unlock_async(&mut self) -> Result<(), Error> {
         match self.auth_user()? {
             IsAuthResult::AlreadyAuth(result) => {
                 if result {
@@ -22,7 +31,7 @@ impl Jade {
             IsAuthResult::AuthResult(result) => {
                 let client = reqwest::Client::new();
                 let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
-                let resp = client.get(url).send().await?;
+                let resp = client.post(url).send().await?;
                 let status_code = resp.status().as_u16();
                 if status_code != 200 {
                     return Err(Error::HttpStatus(url.to_string(), status_code));

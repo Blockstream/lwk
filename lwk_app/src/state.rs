@@ -237,7 +237,7 @@ impl Signers {
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {
                 // verify connection, if fails AvailableSigner(Jade) -> JadeId
-                if j.unlock().is_err() {
+                if j.unlock_blocking().is_err() {
                     // TODO if emulator should throw the error instead of becoming JadeId
                     // TODO ensure identifier it's cached
                     Some(AppSigner::JadeId(*id, j.network()))

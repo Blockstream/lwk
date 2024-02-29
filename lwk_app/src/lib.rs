@@ -954,7 +954,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                         .ok_or(Error::Generic("no Jade available".to_string()))?
                 }
             };
-            jade.unlock()?;
+            jade.unlock_blocking()?;
             let identifier = jade.identifier()?.to_string();
             Response::result(
                 request.id,

@@ -138,18 +138,18 @@ impl FsPersisterInner {
         path.push(counter.to_string());
         path
     }
-}
 
-fn to_other<D: std::fmt::Debug>(d: D) -> PersistError {
-    PersistError::Other(format!("{d:?}"))
-}
+    fn last(&self) -> Result<Option<Update>, PersistError> {
+        if self.next.0 == 0 {
+            return Ok(None);
+        }
+        self.get(self.next.0 - 1)
+    }
 
-impl Persister for FsPersister {
     fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
-        let inner = self.inner.lock().map_err(to_other)?;
-        let next = inner.next.0;
+        let next = self.next.0;
         if index < next {
-            let path = inner.path(&Counter::from(index));
+            let path = self.path(&Counter::from(index));
             let bytes = fs::read(path)?;
 
             let nonce_bytes = &bytes[..12];
@@ -157,8 +157,7 @@ impl Persister for FsPersister {
 
             let nonce = GenericArray::from_slice(nonce_bytes);
 
-            inner
-                .cipher
+            self.cipher
                 .decrypt_in_place(nonce, b"", &mut ciphertext)
                 .map_err(to_other)?;
             let plaintext = ciphertext;
@@ -168,9 +167,29 @@ impl Persister for FsPersister {
             Ok(None)
         }
     }
+}
+
+fn to_other<D: std::fmt::Debug>(d: D) -> PersistError {
+    PersistError::Other(format!("{d:?}"))
+}
+
+impl Persister for FsPersister {
+    fn get(&self, index: usize) -> Result<Option<Update>, PersistError> {
+        let inner = self.inner.lock().map_err(to_other)?;
+        inner.get(index)
+    }
 
     fn push(&self, update: Update) -> Result<(), PersistError> {
         let mut inner = self.inner.lock().map_err(to_other)?;
+        if update.only_tip() {
+            if let Ok(Some(prev_update)) = inner.last() {
+                if prev_update.only_tip() {
+                    // since this update and the last are only an update of the tip, we can
+                    // overwrite last update instead of creating a new file.
+                    inner.next = (inner.next.0 - 1).into() // safety: next is at least 1 or last() would be None
+                }
+            }
+        }
         let path = inner.path(&inner.next);
         let mut plaintext = update.serialize()?;
 

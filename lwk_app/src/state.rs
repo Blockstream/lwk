@@ -330,17 +330,9 @@ impl Assets {
 }
 
 impl TxMemos {
-    #[allow(dead_code)]
+    // TODO; return Option<&HashMap<Txid, String>>
     pub fn for_wollet(&self, wollet: &str) -> HashMap<Txid, String> {
         self.0.get(wollet).cloned().unwrap_or_default()
-    }
-
-    #[allow(dead_code)]
-    pub fn get(&self, wollet: &str, txid: &Txid) -> String {
-        self.for_wollet(wollet)
-            .get(txid)
-            .cloned()
-            .unwrap_or_default()
     }
 
     pub fn set(&mut self, wollet: &str, txid: &Txid, memo: &str) -> Result<(), Error> {

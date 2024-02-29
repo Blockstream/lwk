@@ -362,7 +362,6 @@ impl AddrMemos {
         self.0.get(wollet).cloned().unwrap_or_default()
     }
 
-    #[allow(dead_code)]
     pub fn set(&mut self, wollet: &str, addr: &Address, memo: &str) -> Result<(), Error> {
         if let Some(wollet_memos) = self.0.get_mut(wollet) {
             wollet_memos.insert(addr.clone(), memo.to_string());

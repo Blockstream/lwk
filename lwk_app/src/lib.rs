@@ -34,7 +34,7 @@ use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
-use lwk_wollet::elements::{AssetId, Txid};
+use lwk_wollet::elements::{Address, AssetId, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
@@ -805,6 +805,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let _wollet = s.wollets.get(&r.name)?;
             let txid = Txid::from_str(&r.txid).map_err(|e| Error::Generic(e.to_string()))?;
             s.tx_memos.set(&r.name, &txid, &r.memo)?;
+            Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
+        Method::WalletSetAddrMemo => {
+            let r: request::WalletSetAddrMemo = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            // Make sure the wallet exists
+            let _wollet = s.wollets.get(&r.name)?;
+            let address =
+                Address::from_str(&r.address).map_err(|e| Error::Generic(e.to_string()))?;
+            // TODO: check address belongs to the wallet
+            s.addr_memos.set(&r.name, &address, &r.memo)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::Issue => {

@@ -381,6 +381,19 @@ pub struct WalletSetTxMemo {
     pub memo: String,
 }
 
+/// Request to set an address memo
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletSetAddrMemo {
+    /// The wallet name
+    pub name: String,
+
+    /// Address
+    pub address: String,
+
+    /// Address memo
+    pub memo: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

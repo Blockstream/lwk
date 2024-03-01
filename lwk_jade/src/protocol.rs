@@ -42,6 +42,33 @@ pub enum Params {
     GetRegisteredMultisig(GetRegisteredMultisigParams),
 }
 
+impl std::fmt::Display for Params {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Params::Ping => write!(f, "ping"),
+            Params::Logout => write!(f, "logout"),
+            Params::GetVersionInfo => write!(f, "get_version_info"),
+            Params::SetEpoch(_) => write!(f, "set_epoch"),
+            Params::AddEntropy(_) => write!(f, "add_entropy"),
+            Params::AuthUser(_) => write!(f, "auth_user"),
+            Params::HandshakeInit(_) => write!(f, "handshake_init"),
+            Params::UpdatePinserver(_) => write!(f, "update_pinserver"),
+            Params::HandshakeComplete(_) => write!(f, "handshake_complete"),
+            Params::GetXpub(_) => write!(f, "get_xpub"),
+            Params::GetReceiveAddress(_) => write!(f, "get_receive_address"),
+            Params::GetMasterBlindingKey(_) => write!(f, "get_master_blinding_key"),
+            Params::SignMessage(_) => write!(f, "sign_message"),
+            Params::GetSignature(_) => write!(f, "get_signature"),
+            Params::SignLiquidTx(_) => write!(f, "sign_liquid_tx"),
+            Params::TxInput(_) => write!(f, "tx_input"),
+            Params::DebugSetMnemonic(_) => write!(f, "debug_set_mnemonic"),
+            Params::RegisterMultisig(_) => write!(f, "register_multisig"),
+            Params::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
+            Params::GetRegisteredMultisig(_) => write!(f, "get_registered_multisig"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct AuthUserParams {
     pub network: crate::Network,

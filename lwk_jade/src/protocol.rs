@@ -14,12 +14,12 @@ use crate::{
 pub struct FullRequest {
     pub id: String,
     pub method: String,
-    pub params: Params,
+    pub params: Request,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum Params {
+pub enum Request {
     Ping,
     Logout,
     GetVersionInfo,
@@ -42,29 +42,29 @@ pub enum Params {
     GetRegisteredMultisig(GetRegisteredMultisigParams),
 }
 
-impl std::fmt::Display for Params {
+impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Params::Ping => write!(f, "ping"),
-            Params::Logout => write!(f, "logout"),
-            Params::GetVersionInfo => write!(f, "get_version_info"),
-            Params::SetEpoch(_) => write!(f, "set_epoch"),
-            Params::AddEntropy(_) => write!(f, "add_entropy"),
-            Params::AuthUser(_) => write!(f, "auth_user"),
-            Params::HandshakeInit(_) => write!(f, "handshake_init"),
-            Params::UpdatePinserver(_) => write!(f, "update_pinserver"),
-            Params::HandshakeComplete(_) => write!(f, "handshake_complete"),
-            Params::GetXpub(_) => write!(f, "get_xpub"),
-            Params::GetReceiveAddress(_) => write!(f, "get_receive_address"),
-            Params::GetMasterBlindingKey(_) => write!(f, "get_master_blinding_key"),
-            Params::SignMessage(_) => write!(f, "sign_message"),
-            Params::GetSignature(_) => write!(f, "get_signature"),
-            Params::SignLiquidTx(_) => write!(f, "sign_liquid_tx"),
-            Params::TxInput(_) => write!(f, "tx_input"),
-            Params::DebugSetMnemonic(_) => write!(f, "debug_set_mnemonic"),
-            Params::RegisterMultisig(_) => write!(f, "register_multisig"),
-            Params::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
-            Params::GetRegisteredMultisig(_) => write!(f, "get_registered_multisig"),
+            Request::Ping => write!(f, "ping"),
+            Request::Logout => write!(f, "logout"),
+            Request::GetVersionInfo => write!(f, "get_version_info"),
+            Request::SetEpoch(_) => write!(f, "set_epoch"),
+            Request::AddEntropy(_) => write!(f, "add_entropy"),
+            Request::AuthUser(_) => write!(f, "auth_user"),
+            Request::HandshakeInit(_) => write!(f, "handshake_init"),
+            Request::UpdatePinserver(_) => write!(f, "update_pinserver"),
+            Request::HandshakeComplete(_) => write!(f, "handshake_complete"),
+            Request::GetXpub(_) => write!(f, "get_xpub"),
+            Request::GetReceiveAddress(_) => write!(f, "get_receive_address"),
+            Request::GetMasterBlindingKey(_) => write!(f, "get_master_blinding_key"),
+            Request::SignMessage(_) => write!(f, "sign_message"),
+            Request::GetSignature(_) => write!(f, "get_signature"),
+            Request::SignLiquidTx(_) => write!(f, "sign_liquid_tx"),
+            Request::TxInput(_) => write!(f, "tx_input"),
+            Request::DebugSetMnemonic(_) => write!(f, "debug_set_mnemonic"),
+            Request::RegisterMultisig(_) => write!(f, "register_multisig"),
+            Request::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
+            Request::GetRegisteredMultisig(_) => write!(f, "get_registered_multisig"),
         }
     }
 }
@@ -280,7 +280,7 @@ pub struct GetMasterBlindingKeyParams {
 mod test {
     #[test]
     fn serialize_empty() {
-        let a = super::Params::Ping;
+        let a = super::Request::Ping;
         let s = serde_json::to_string(&a).unwrap();
         assert_eq!(s, "null");
     }

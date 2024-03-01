@@ -12,9 +12,9 @@ use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeInitParams, IsAuthResult, Request, Response, SignMessageParams, UpdatePinserverParams,
-    VersionInfoResult,
+    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
+    HandshakeData, HandshakeInitParams, IsAuthResult, Request, Response, SignMessageParams,
+    UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::{
@@ -89,15 +89,11 @@ impl Jade {
     }
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
-        let params = Request::SetEpoch(EpochParams { epoch });
-        self.send(params)
+        self.send(Request::SetEpoch(EpochParams { epoch }))
     }
 
-    pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
-        let params = Request::AddEntropy(EntropyParams {
-            entropy: entropy.to_vec(),
-        });
-        self.send(params)
+    pub fn add_entropy(&mut self, entropy: Vec<u8>) -> Result<bool> {
+        self.send(Request::AddEntropy(EntropyParams { entropy }))
     }
 
     pub fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
@@ -116,26 +112,19 @@ impl Jade {
         &mut self,
         params: HandshakeInitParams,
     ) -> Result<AuthResult<HandshakeData>> {
-        let params = Request::HandshakeInit(params);
-        self.send(params)
+        self.send(Request::HandshakeInit(params))
     }
 
     pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
-        let params = Request::UpdatePinserver(params);
-        self.send(params)
+        self.send(Request::UpdatePinserver(params))
     }
 
-    pub fn handshake_complete(
-        &mut self,
-        params: protocol::HandshakeCompleteParams,
-    ) -> Result<bool> {
-        let params = Request::HandshakeComplete(params);
-        self.send(params)
+    pub fn handshake_complete(&mut self, params: HandshakeCompleteParams) -> Result<bool> {
+        self.send(Request::HandshakeComplete(params))
     }
 
     fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
-        let params = Request::GetXpub(params);
-        self.send(params)
+        self.send(Request::GetXpub(params))
     }
 
     pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
@@ -162,51 +151,42 @@ impl Jade {
     }
 
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
-        let params = Request::GetReceiveAddress(params);
-        self.send(params)
+        self.send(Request::GetReceiveAddress(params))
     }
 
     pub fn get_master_blinding_key(
         &mut self,
         params: GetMasterBlindingKeyParams,
     ) -> Result<ByteBuf> {
-        let params = Request::GetMasterBlindingKey(params);
-        self.send(params)
+        self.send(Request::GetMasterBlindingKey(params))
     }
 
     pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {
-        let params = Request::SignMessage(params);
-        self.send(params)
+        self.send(Request::SignMessage(params))
     }
 
     pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<String> {
-        let params = Request::GetSignature(params);
-        self.send(params)
+        self.send(Request::GetSignature(params))
     }
 
     pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteBuf> {
-        let params = Request::GetSignature(params);
-        self.send(params)
+        self.send(Request::GetSignature(params))
     }
 
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
-        let params = Request::SignLiquidTx(params);
-        self.send(params)
+        self.send(Request::SignLiquidTx(params))
     }
 
     pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteBuf> {
-        let params = Request::TxInput(params);
-        self.send(params)
+        self.send(Request::TxInput(params))
     }
 
     pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<bool> {
-        let params = Request::DebugSetMnemonic(params);
-        self.send(params)
+        self.send(Request::DebugSetMnemonic(params))
     }
 
     pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
-        let params = Request::RegisterMultisig(params);
-        self.send(params)
+        self.send(Request::RegisterMultisig(params))
     }
 
     pub fn get_registered_multisigs(&mut self) -> Result<HashMap<String, RegisteredMultisig>> {
@@ -217,8 +197,7 @@ impl Jade {
         &mut self,
         params: GetRegisteredMultisigParams,
     ) -> Result<RegisteredMultisigDetails> {
-        let params = Request::GetRegisteredMultisig(params);
-        self.send(params)
+        self.send(Request::GetRegisteredMultisig(params))
     }
 
     fn send<T>(&mut self, request: Request) -> Result<T>

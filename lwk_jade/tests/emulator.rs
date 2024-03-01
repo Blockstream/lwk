@@ -31,7 +31,7 @@ fn entropy() {
     let docker = clients::Cli::default();
     let mut jade = TestJadeEmulator::new(&docker);
 
-    let result = jade.jade.add_entropy(&[1, 2, 3, 4]).unwrap();
+    let result = jade.jade.add_entropy([1, 2, 3, 4].to_vec()).unwrap();
     assert!(result);
 }
 

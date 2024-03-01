@@ -14,7 +14,7 @@ use crate::{
 pub struct Request {
     pub id: String,
     pub method: String,
-    pub params: Option<Params>,
+    pub params: Params,
 }
 
 #[derive(Debug, Serialize)]

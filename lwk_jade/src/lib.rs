@@ -77,27 +77,27 @@ impl Jade {
     }
 
     pub fn ping(&mut self) -> Result<u8> {
-        self.send_request("ping", None)
+        self.send_request(Params::Ping)
     }
 
     pub fn logout(&mut self) -> Result<bool> {
-        self.send_request("logout", None)
+        self.send_request(Params::Logout)
     }
 
     pub fn version_info(&mut self) -> Result<VersionInfoResult> {
-        self.send_request("get_version_info", None)
+        self.send_request(Params::GetVersionInfo)
     }
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
         let params = Params::SetEpoch(EpochParams { epoch });
-        self.send_request("set_epoch", Some(params))
+        self.send_request(params)
     }
 
     pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
         let params = Params::AddEntropy(EntropyParams {
             entropy: entropy.to_vec(),
         });
-        self.send_request("add_entropy", Some(params))
+        self.send_request(params)
     }
 
     pub fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
@@ -109,7 +109,7 @@ impl Jade {
             network: self.network,
             epoch,
         });
-        self.send_request("auth_user", Some(params))
+        self.send_request(params)
     }
 
     pub fn handshake_init(
@@ -117,12 +117,12 @@ impl Jade {
         params: HandshakeInitParams,
     ) -> Result<AuthResult<HandshakeData>> {
         let params = Params::HandshakeInit(params);
-        self.send_request("handshake_init", Some(params))
+        self.send_request(params)
     }
 
     pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
         let params = Params::UpdatePinserver(params);
-        self.send_request("update_pinserver", Some(params))
+        self.send_request(params)
     }
 
     pub fn handshake_complete(
@@ -130,13 +130,13 @@ impl Jade {
         params: protocol::HandshakeCompleteParams,
     ) -> Result<bool> {
         let params = Params::HandshakeComplete(params);
-        self.send_request("handshake_complete", Some(params))
+        self.send_request(params)
     }
 
     fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         self.check_network(params.network)?;
         let params = Params::GetXpub(params);
-        self.send_request("get_xpub", Some(params))
+        self.send_request(params)
     }
 
     pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
@@ -165,7 +165,7 @@ impl Jade {
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
         self.check_network(params.network)?;
         let params = Params::GetReceiveAddress(params);
-        self.send_request("get_receive_address", Some(params))
+        self.send_request(params)
     }
 
     pub fn get_master_blinding_key(
@@ -173,48 +173,48 @@ impl Jade {
         params: GetMasterBlindingKeyParams,
     ) -> Result<ByteBuf> {
         let params = Params::GetMasterBlindingKey(params);
-        self.send_request("get_master_blinding_key", Some(params))
+        self.send_request(params)
     }
 
     pub fn sign_message(&mut self, params: SignMessageParams) -> Result<ByteBuf> {
         let params = Params::SignMessage(params);
-        self.send_request("sign_message", Some(params))
+        self.send_request(params)
     }
 
     pub fn get_signature_for_msg(&mut self, params: GetSignatureParams) -> Result<String> {
         let params = Params::GetSignature(params);
-        self.send_request("get_signature", Some(params))
+        self.send_request(params)
     }
 
     pub fn get_signature_for_tx(&mut self, params: GetSignatureParams) -> Result<ByteBuf> {
         let params = Params::GetSignature(params);
-        self.send_request("get_signature", Some(params))
+        self.send_request(params)
     }
 
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::SignLiquidTx(params);
-        self.send_request("sign_liquid_tx", Some(params))
+        self.send_request(params)
     }
 
     pub fn tx_input(&mut self, params: TxInputParams) -> Result<ByteBuf> {
         let params = Params::TxInput(params);
-        self.send_request("tx_input", Some(params))
+        self.send_request(params)
     }
 
     pub fn debug_set_mnemonic(&mut self, params: DebugSetMnemonicParams) -> Result<bool> {
         let params = Params::DebugSetMnemonic(params);
-        self.send_request("debug_set_mnemonic", Some(params))
+        self.send_request(params)
     }
 
     pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
         self.check_network(params.network)?;
         let params = Params::RegisterMultisig(params);
-        self.send_request("register_multisig", Some(params))
+        self.send_request(params)
     }
 
     pub fn get_registered_multisigs(&mut self) -> Result<HashMap<String, RegisteredMultisig>> {
-        self.send_request("get_registered_multisigs", None)
+        self.send_request(Params::GetRegisteredMultisigs)
     }
 
     pub fn get_registered_multisig(
@@ -222,10 +222,10 @@ impl Jade {
         params: GetRegisteredMultisigParams,
     ) -> Result<RegisteredMultisigDetails> {
         let params = Params::GetRegisteredMultisig(params);
-        self.send_request("get_registered_multisig", Some(params))
+        self.send_request(params)
     }
 
-    fn send_request<T>(&mut self, method: &str, params: Option<Params>) -> Result<T>
+    fn send_request<T>(&mut self, params: Params) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
@@ -233,7 +233,7 @@ impl Jade {
         let id = rng.next_u32().to_string();
         let req = Request {
             id,
-            method: method.into(),
+            method: params.to_string(),
             params,
         };
         let mut buf = Vec::new();

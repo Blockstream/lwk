@@ -221,19 +221,19 @@ impl Jade {
         self.send(params)
     }
 
-    fn send<T>(&mut self, params: Request) -> Result<T>
+    fn send<T>(&mut self, request: Request) -> Result<T>
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
-        if let Some(network) = params.network() {
+        if let Some(network) = request.network() {
             self.check_network(network)?;
         }
         let mut rng = rand::thread_rng();
         let id = rng.next_u32().to_string();
         let req = FullRequest {
             id,
-            method: params.to_string(),
-            params,
+            method: request.to_string(),
+            params: request,
         };
         let mut buf = Vec::new();
         serde_cbor::to_writer(&mut buf, &req)?;

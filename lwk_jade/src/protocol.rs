@@ -11,10 +11,10 @@ use crate::{
 };
 
 #[derive(Debug, Serialize)]
-pub struct Request<P> {
+pub struct Request {
     pub id: String,
     pub method: String,
-    pub params: Option<P>,
+    pub params: Option<Params>,
 }
 
 #[derive(Debug, Serialize)]

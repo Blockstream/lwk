@@ -1,5 +1,5 @@
 use crate::{
-    protocol::{HandshakeCompleteParams, HandshakeInitParams, IsAuthResult},
+    protocol::{AuthUserParams, HandshakeCompleteParams, HandshakeInitParams, IsAuthResult},
     Error, Jade,
 };
 
@@ -10,7 +10,7 @@ impl Jade {
     /// and the host performs network calls to the pin server
     /// to decrypt the secret on the device.
     pub fn unlock(&mut self) -> Result<(), Error> {
-        match self.auth_user()? {
+        match self.auth_user(AuthUserParams::new(self.network)?)? {
             IsAuthResult::AlreadyAuth(result) => {
                 if result {
                     Ok(())

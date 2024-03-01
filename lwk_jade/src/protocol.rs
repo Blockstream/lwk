@@ -88,6 +88,16 @@ pub struct AuthUserParams {
     pub epoch: u64,
 }
 
+impl AuthUserParams {
+    pub fn new(network: crate::Network) -> Result<Self, crate::Error> {
+        let epoch = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(crate::Error::SystemTimeError)?
+            .as_secs();
+        Ok(AuthUserParams { network, epoch })
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct EpochParams {
     pub epoch: u64,

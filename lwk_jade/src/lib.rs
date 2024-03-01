@@ -4,7 +4,6 @@
 use std::{
     collections::HashMap,
     io::ErrorKind,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 use connection::Connection;
@@ -87,16 +86,8 @@ impl Jade {
         self.send(Request::AddEntropy(EntropyParams { entropy }))
     }
 
-    pub fn auth_user(&mut self) -> Result<IsAuthResult<String>> {
-        let epoch = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(error::Error::SystemTimeError)?
-            .as_secs();
-        let params = Request::AuthUser(AuthUserParams {
-            network: self.network,
-            epoch,
-        });
-        self.send(params)
+    pub fn auth_user(&mut self, params: AuthUserParams) -> Result<IsAuthResult<String>> {
+        self.send(Request::AuthUser(params))
     }
 
     pub fn handshake_init(

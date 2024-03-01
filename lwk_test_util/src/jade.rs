@@ -9,7 +9,7 @@ use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
     mutex_jade::MutexJade,
     protocol::{
-        DebugSetMnemonicParams, HandshakeCompleteParams, HandshakeInitParams, IsAuthResult,
+        DebugSetMnemonicParams, HandshakeInitParams,
         UpdatePinserverParams,
     },
     Jade, Network,
@@ -92,31 +92,7 @@ impl<'a> TestJadeEmulator<'a> {
         let result = test_jade_emul.jade.update_pinserver(params).unwrap();
         assert!(result);
 
-        let result = test_jade_emul.jade.auth_user().unwrap();
-        if let IsAuthResult::AuthResult(result) = result {
-            // Unlock the jade
-            let start_handshake_url = &result.urls()[0];
-            assert_eq!(
-                start_handshake_url,
-                &format!("{pin_server_url}/start_handshake")
-            );
-
-            let resp = minreq::post(start_handshake_url).send().unwrap();
-            let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
-            pin_server_verify(&params, &pin_server_pub_key);
-
-            let result = test_jade_emul.jade.handshake_init(params).unwrap();
-            let handshake_data = result.data();
-            let next_url = &result.urls()[0];
-            assert_eq!(next_url, &format!("{pin_server_url}/set_pin"));
-            let data = serde_json::to_vec(&handshake_data).unwrap();
-            let resp = minreq::post(next_url).with_body(data).send().unwrap();
-            assert_eq!(resp.status_code, 200);
-            let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes()).unwrap();
-
-            let result = test_jade_emul.jade.handshake_complete(params).unwrap();
-            assert!(result);
-        }
+        test_jade_emul.jade.unlock().unwrap();
 
         test_jade_emul._pin_server = Some(pin_container);
         test_jade_emul._pin_server_dir = Some(tempdir);

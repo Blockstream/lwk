@@ -123,16 +123,8 @@ impl Jade {
         self.send(Request::HandshakeComplete(params))
     }
 
-    fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
+    fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         self.send(Request::GetXpub(params))
-    }
-
-    pub fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
-        if params.path.is_empty() {
-            self.get_master_xpub()
-        } else {
-            self.inner_get_xpub(params)
-        }
     }
 
     pub fn fingerprint(&mut self) -> Result<Fingerprint> {
@@ -141,7 +133,7 @@ impl Jade {
 
     pub fn get_master_xpub(&mut self) -> Result<Xpub> {
         if self.master_xpub.is_none() {
-            let master_xpub = self.inner_get_xpub(GetXpubParams {
+            let master_xpub = self.get_xpub(GetXpubParams {
                 network: self.network,
                 path: vec![],
             })?;
@@ -198,6 +190,14 @@ impl Jade {
         params: GetRegisteredMultisigParams,
     ) -> Result<RegisteredMultisigDetails> {
         self.send(Request::GetRegisteredMultisig(params))
+    }
+
+    pub fn get_xpub_cached(&mut self, params: GetXpubParams) -> Result<Xpub> {
+        if params.path.is_empty() {
+            self.get_master_xpub()
+        } else {
+            self.get_xpub(params)
+        }
     }
 
     fn send<T>(&mut self, request: Request) -> Result<T>

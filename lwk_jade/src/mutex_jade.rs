@@ -185,7 +185,7 @@ impl Signer for &MutexJade {
         };
 
         self.unlock()?;
-        self.inner.lock()?.get_xpub(params)
+        self.inner.lock()?.get_xpub_cached(params)
     }
 
     fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {

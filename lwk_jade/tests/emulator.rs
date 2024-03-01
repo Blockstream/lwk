@@ -136,7 +136,7 @@ fn jade_xpub() {
         network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0],
     };
-    let xpub = jade.jade.get_xpub(params).unwrap();
+    let xpub = jade.jade.get_xpub_cached(params).unwrap();
     assert_ne!(xpub_master, xpub);
     assert_eq!(xpub.depth, 1);
     assert_eq!(
@@ -176,7 +176,7 @@ fn jade_register_multisig() {
         network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
-    let jade_xpub = jade.jade.get_xpub(params).unwrap();
+    let jade_xpub = jade.jade.get_xpub_cached(params).unwrap();
 
     let signers = vec![
         MultisigSigner {
@@ -225,7 +225,7 @@ fn jade_max_multisigs() {
     let jade_signer = MultisigSigner {
         fingerprint: jade.jade.fingerprint().unwrap(),
         derivation: vec![0, 1],
-        xpub: jade.jade.get_xpub(xpub_params).unwrap(),
+        xpub: jade.jade.get_xpub_cached(xpub_params).unwrap(),
         path: vec![],
     };
 
@@ -369,7 +369,7 @@ fn jade_sign_message() {
         network: lwk_jade::Network::LocaltestLiquid,
         path: vec![0],
     };
-    let xpub = jade.jade.get_xpub(params).unwrap();
+    let xpub = jade.jade.get_xpub_cached(params).unwrap();
     let msg_hash = signed_msg_hash(message);
     let message = Message::from_digest_slice(msg_hash.as_byte_array()).unwrap();
     let signature = Signature::from_compact(&signature_bytes).unwrap();

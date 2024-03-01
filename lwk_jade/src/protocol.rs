@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use elements::hex::ToHex;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -80,6 +81,27 @@ impl Request {
             _ => None,
         }
     }
+}
+
+impl Request {
+    pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
+        let mut rng = rand::thread_rng();
+    let id = rng.next_u32().to_string();
+    let req = FullRequest {
+        id,
+        method: self.to_string(),
+        params: self,
+    };
+    let mut buf = Vec::new();
+    serde_cbor::to_writer(&mut buf, &req)?;
+    tracing::debug!(
+        "\n--->\t{:#?}\n\t({} bytes) {}",
+        &req,
+        buf.len(),
+        &hex::encode(&buf),
+    );
+    Ok(buf)
+}
 }
 
 #[derive(Debug, Serialize)]

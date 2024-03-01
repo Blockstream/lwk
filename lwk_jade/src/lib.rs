@@ -10,12 +10,11 @@ use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
-    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest,
+    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
     GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
     HandshakeData, HandshakeInitParams, IsAuthResult, Request, Response, SignMessageParams,
     UpdatePinserverParams, VersionInfoResult,
 };
-use rand::RngCore;
 use register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
     RegisteredMultisigDetails,
@@ -198,21 +197,7 @@ impl Jade {
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
-        let mut rng = rand::thread_rng();
-        let id = rng.next_u32().to_string();
-        let req = FullRequest {
-            id,
-            method: request.to_string(),
-            params: request,
-        };
-        let mut buf = Vec::new();
-        serde_cbor::to_writer(&mut buf, &req)?;
-        tracing::debug!(
-            "\n--->\t{:#?}\n\t({} bytes) {}",
-            &req,
-            buf.len(),
-            &hex::encode(&buf),
-        );
+        let buf = request.serialize()?;
 
         self.conn.write_all(&buf)?;
 

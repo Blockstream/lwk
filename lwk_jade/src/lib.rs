@@ -67,15 +67,6 @@ impl Jade {
         }
     }
 
-    fn check_network(&self, passed: Network) -> Result<()> {
-        let init = self.network;
-        if passed != init {
-            Err(Error::MismatchingXpub { init, passed })
-        } else {
-            Ok(())
-        }
-    }
-
     pub fn ping(&mut self) -> Result<u8> {
         self.send(Request::Ping)
     }
@@ -125,21 +116,6 @@ impl Jade {
 
     fn get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         self.send(Request::GetXpub(params))
-    }
-
-    pub fn fingerprint(&mut self) -> Result<Fingerprint> {
-        Ok(self.get_master_xpub()?.fingerprint())
-    }
-
-    pub fn get_master_xpub(&mut self) -> Result<Xpub> {
-        if self.master_xpub.is_none() {
-            let master_xpub = self.get_xpub(GetXpubParams {
-                network: self.network,
-                path: vec![],
-            })?;
-            self.master_xpub = Some(master_xpub);
-        }
-        Ok(self.master_xpub.expect("ensure it is some before"))
     }
 
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
@@ -198,6 +174,30 @@ impl Jade {
         } else {
             self.get_xpub(params)
         }
+    }
+
+    pub fn fingerprint(&mut self) -> Result<Fingerprint> {
+        Ok(self.get_master_xpub()?.fingerprint())
+    }
+
+    fn check_network(&self, passed: Network) -> Result<()> {
+        let init = self.network;
+        if passed != init {
+            Err(Error::MismatchingXpub { init, passed })
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn get_master_xpub(&mut self) -> Result<Xpub> {
+        if self.master_xpub.is_none() {
+            let master_xpub = self.get_xpub(GetXpubParams {
+                network: self.network,
+                path: vec![],
+            })?;
+            self.master_xpub = Some(master_xpub);
+        }
+        Ok(self.master_xpub.expect("ensure it is some before"))
     }
 
     fn send<T>(&mut self, request: Request) -> Result<T>

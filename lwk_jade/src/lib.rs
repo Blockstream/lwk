@@ -11,10 +11,10 @@ use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use get_receive_address::GetReceiveAddressParams;
 use protocol::{
-    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
+    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, FullRequest,
     GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeInitParams, IsAuthResult, Request, FullRequest, Response, SignMessageParams,
-    UpdatePinserverParams, VersionInfoResult,
+    HandshakeInitParams, IsAuthResult, Request, Response, SignMessageParams, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use rand::RngCore;
 use register_multisig::{
@@ -134,7 +134,6 @@ impl Jade {
     }
 
     fn inner_get_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
-        self.check_network(params.network)?;
         let params = Request::GetXpub(params);
         self.send(params)
     }
@@ -163,7 +162,6 @@ impl Jade {
     }
 
     pub fn get_receive_address(&mut self, params: GetReceiveAddressParams) -> Result<String> {
-        self.check_network(params.network)?;
         let params = Request::GetReceiveAddress(params);
         self.send(params)
     }
@@ -192,7 +190,6 @@ impl Jade {
     }
 
     pub fn sign_liquid_tx(&mut self, params: SignLiquidTxParams) -> Result<bool> {
-        self.check_network(params.network)?;
         let params = Request::SignLiquidTx(params);
         self.send(params)
     }
@@ -208,7 +205,6 @@ impl Jade {
     }
 
     pub fn register_multisig(&mut self, params: RegisterMultisigParams) -> Result<bool> {
-        self.check_network(params.network)?;
         let params = Request::RegisterMultisig(params);
         self.send(params)
     }
@@ -229,6 +225,9 @@ impl Jade {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        if let Some(network) = params.network() {
+            self.check_network(network)?;
+        }
         let mut rng = rand::thread_rng();
         let id = rng.next_u32().to_string();
         let req = FullRequest {

@@ -8,6 +8,7 @@ use crate::{
     get_receive_address::GetReceiveAddressParams,
     register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
+    Network,
 };
 
 #[derive(Debug, Serialize)]
@@ -65,6 +66,18 @@ impl std::fmt::Display for Request {
             Request::RegisterMultisig(_) => write!(f, "register_multisig"),
             Request::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
             Request::GetRegisteredMultisig(_) => write!(f, "get_registered_multisig"),
+        }
+    }
+}
+
+impl Request {
+    pub fn network(&self) -> Option<Network> {
+        match self {
+            Request::GetXpub(e) => Some(e.network),
+            Request::GetReceiveAddress(e) => Some(e.network),
+            Request::SignLiquidTx(e) => Some(e.network),
+            Request::RegisterMultisig(e) => Some(e.network),
+            _ => None,
         }
     }
 }

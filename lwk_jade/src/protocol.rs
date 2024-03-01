@@ -20,6 +20,7 @@ pub struct Request {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Params {
+    Ping,
     Epoch(EpochParams),
     Entropy(EntropyParams),
     AuthUser(AuthUserParams),
@@ -243,4 +244,14 @@ impl Debug for UpdatePinserverParams {
 #[derive(Debug, Serialize, Clone)]
 pub struct GetMasterBlindingKeyParams {
     pub only_if_silent: bool,
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn serialize_empty() {
+        let a = super::Params::Ping;
+        let s = serde_json::to_string(&a).unwrap();
+        assert_eq!(s, "null");
+    }
 }

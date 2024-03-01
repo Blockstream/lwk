@@ -13,7 +13,7 @@ use get_receive_address::GetReceiveAddressParams;
 use protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
     GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeData,
-    HandshakeInitParams, IsAuthResult, Params, Request, Response, SignMessageParams,
+    HandshakeInitParams, IsAuthResult, Params, FullRequest, Response, SignMessageParams,
     UpdatePinserverParams, VersionInfoResult,
 };
 use rand::RngCore;
@@ -231,7 +231,7 @@ impl Jade {
     {
         let mut rng = rand::thread_rng();
         let id = rng.next_u32().to_string();
-        let req = Request {
+        let req = FullRequest {
             id,
             method: params.to_string(),
             params,

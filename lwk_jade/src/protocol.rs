@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[derive(Debug, Serialize)]
-pub struct Request {
+pub struct FullRequest {
     pub id: String,
     pub method: String,
     pub params: Params,

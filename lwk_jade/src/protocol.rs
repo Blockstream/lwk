@@ -21,22 +21,25 @@ pub struct Request {
 #[serde(untagged)]
 pub enum Params {
     Ping,
-    Epoch(EpochParams),
-    Entropy(EntropyParams),
+    Logout,
+    GetVersionInfo,
+    SetEpoch(EpochParams),
+    AddEntropy(EntropyParams),
     AuthUser(AuthUserParams),
     HandshakeInit(HandshakeInitParams),
-    UpdatePinServer(UpdatePinserverParams),
+    UpdatePinserver(UpdatePinserverParams),
     HandshakeComplete(HandshakeCompleteParams),
     GetXpub(GetXpubParams),
     GetReceiveAddress(GetReceiveAddressParams),
+    GetMasterBlindingKey(GetMasterBlindingKeyParams),
     SignMessage(SignMessageParams),
     GetSignature(GetSignatureParams),
     SignLiquidTx(SignLiquidTxParams),
-    DebugSetMnemonic(DebugSetMnemonicParams),
     TxInput(TxInputParams),
+    DebugSetMnemonic(DebugSetMnemonicParams),
     RegisterMultisig(RegisterMultisigParams),
+    GetRegisteredMultisigs,
     GetRegisteredMultisig(GetRegisteredMultisigParams),
-    GetMasterBlindingKey(GetMasterBlindingKeyParams),
 }
 
 #[derive(Debug, Serialize)]

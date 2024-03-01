@@ -89,12 +89,12 @@ impl Jade {
     }
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<bool> {
-        let params = Params::Epoch(EpochParams { epoch });
+        let params = Params::SetEpoch(EpochParams { epoch });
         self.send_request("set_epoch", Some(params))
     }
 
     pub fn add_entropy(&mut self, entropy: &[u8]) -> Result<bool> {
-        let params = Params::Entropy(EntropyParams {
+        let params = Params::AddEntropy(EntropyParams {
             entropy: entropy.to_vec(),
         });
         self.send_request("add_entropy", Some(params))
@@ -121,7 +121,7 @@ impl Jade {
     }
 
     pub fn update_pinserver(&mut self, params: UpdatePinserverParams) -> Result<bool> {
-        let params = Params::UpdatePinServer(params);
+        let params = Params::UpdatePinserver(params);
         self.send_request("update_pinserver", Some(params))
     }
 

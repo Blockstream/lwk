@@ -233,15 +233,15 @@ mod test {
     use elements::bitcoin::bip32::Fingerprint;
     use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 
-    use crate::{protocol::Request, register_multisig::MultisigSigner};
+    use crate::register_multisig::MultisigSigner;
 
     use super::{JadeDescriptor, RegisterMultisigParams};
 
     #[test]
     fn parse_register_multisig() {
-        let json = include_str!("../test_data/register_multisig_request.json");
+        let json = include_str!("../test_data/register_multisig.json");
 
-        let _resp: Request<RegisterMultisigParams> = serde_json::from_str(json).unwrap();
+        let _resp: RegisterMultisigParams = serde_json::from_str(json).unwrap();
     }
 
     #[test]

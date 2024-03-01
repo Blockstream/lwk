@@ -1,0 +1,37 @@
+{
+    "network": "liquid",
+    "multisig_name": "small_beans",
+    "descriptor": {
+        "variant": "sh(multi(k))",
+        "sorted": true,
+        "threshold": 2,
+        "master_blinding_key": "bytes",
+        "signers": [
+            {
+                "fingerprint": "00010203",
+                "derivation": [
+                    44,
+                    2147483648,
+                    2147483648
+                ],
+                "xpub": "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG",
+                "path": [
+                    3,
+                    1
+                ]
+            },
+            {
+                "fingerprint": "00010203",
+                "derivation": [
+                    2147483651,
+                    2147483649,
+                    1
+                ],
+                "xpub": "tpubDDExQpZg2tziZ7ACSBCYsY3rYxAZtTRBgWwioRLYqgNBguH6rMHN1D8epTxUQUB5kM5nxkEtr2SNic6PJLPubcGMR6S2fmDZTzL9dHpU7ka",
+                "path": [
+                    1
+                ]
+            }
+        ]
+    }
+}

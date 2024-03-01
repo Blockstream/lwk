@@ -10,7 +10,7 @@ use crate::{
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct Request<P> {
     pub id: String,
     pub method: String,

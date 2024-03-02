@@ -1,10 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
-use std::{
-    collections::HashMap,
-    io::ErrorKind,
-};
+use std::{collections::HashMap, io::ErrorKind};
 
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
@@ -52,8 +49,8 @@ pub struct Jade {
     /// The network
     network: crate::Network,
 
-    /// Cached master xpub
-    master_xpub: Option<Xpub>,
+    /// Cached xpubs
+    cached_xpubs: HashMap<DerivationPath, Xpub>,
 }
 
 impl Jade {
@@ -61,7 +58,7 @@ impl Jade {
         Self {
             conn,
             network,
-            master_xpub: None,
+            cached_xpubs: HashMap::new(),
         }
     }
 
@@ -159,8 +156,8 @@ impl Jade {
     }
 
     pub fn get_xpub_cached(&mut self, params: GetXpubParams) -> Result<Xpub> {
-        if params.path.is_empty() {
-            self.get_master_xpub()
+        if let Some(xpub) = self.cached_xpubs.get(&vec_to_derivation_path(&params.path)) {
+            Ok(xpub.clone())
         } else {
             self.get_xpub(params)
         }
@@ -180,14 +177,11 @@ impl Jade {
     }
 
     pub fn get_master_xpub(&mut self) -> Result<Xpub> {
-        if self.master_xpub.is_none() {
-            let master_xpub = self.get_xpub(GetXpubParams {
-                network: self.network,
-                path: vec![],
-            })?;
-            self.master_xpub = Some(master_xpub);
-        }
-        Ok(self.master_xpub.expect("ensure it is some before"))
+        let params = GetXpubParams {
+            network: self.network,
+            path: vec![],
+        };
+        self.get_xpub_cached(params)
     }
 
     fn send<T>(&mut self, request: Request) -> Result<T>
@@ -256,4 +250,8 @@ impl Jade {
 
 pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
     path.into_iter().map(|e| (*e).into()).collect()
+}
+
+pub fn vec_to_derivation_path(path: &[u32]) -> DerivationPath {
+    DerivationPath::from_iter(path.iter().cloned().map(Into::into))
 }

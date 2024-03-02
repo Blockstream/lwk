@@ -202,14 +202,16 @@ impl Jade {
             match self.conn.read(&mut rx[total..]) {
                 Ok(len) => {
                     total += len;
-                    match serde_cbor::from_reader::<Response<T>, &[u8]>(&rx[..total]) {
+                    let reader = &rx[..total];
+
+                    match serde_cbor::from_reader::<Response<T>, &[u8]>(reader) {
                         Ok(r) => {
                             if let Some(result) = r.result {
                                 tracing::debug!(
                                     "\n<---\t{:?}\n\t({} bytes) {}",
                                     &result,
-                                    total,
-                                    hex::encode(&rx[..total])
+                                    reader.len(),
+                                    hex::encode(reader)
                                 );
                                 return Ok(result);
                             }
@@ -220,8 +222,7 @@ impl Jade {
                         }
 
                         Err(e) => {
-                            let res =
-                                serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(&rx[..total]);
+                            let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
                             if let Ok(value) = res {
                                 // The value returned is a valid CBOR, but our structs doesn't map it correctly
                                 dbg!(&value);

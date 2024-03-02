@@ -204,31 +204,8 @@ impl Jade {
                     total += len;
                     let reader = &rx[..total];
 
-                    match serde_cbor::from_reader::<Response<T>, &[u8]>(reader) {
-                        Ok(r) => {
-                            if let Some(result) = r.result {
-                                tracing::debug!(
-                                    "\n<---\t{:?}\n\t({} bytes) {}",
-                                    &result,
-                                    reader.len(),
-                                    hex::encode(reader)
-                                );
-                                return Ok(result);
-                            }
-                            if let Some(error) = r.error {
-                                return Err(Error::JadeError(error));
-                            }
-                            return Err(Error::JadeNeitherErrorNorResult);
-                        }
-
-                        Err(e) => {
-                            let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
-                            if let Ok(value) = res {
-                                // The value returned is a valid CBOR, but our structs doesn't map it correctly
-                                dbg!(&value);
-                                return Err(Error::SerdeCbor(e));
-                            }
-                        }
+                    if let Some(value) = try_parse_response(reader) {
+                        return value;
                     }
                 }
                 Err(e) => {
@@ -240,6 +217,39 @@ impl Jade {
             }
         }
     }
+}
+
+fn try_parse_response<T>(reader: &[u8]) -> Option<Result<T>>
+where
+    T: std::fmt::Debug + DeserializeOwned,
+{
+    match serde_cbor::from_reader::<Response<T>, &[u8]>(reader) {
+        Ok(r) => {
+            if let Some(result) = r.result {
+                tracing::debug!(
+                    "\n<---\t{:?}\n\t({} bytes) {}",
+                    &result,
+                    reader.len(),
+                    hex::encode(reader)
+                );
+                return Some(Ok(result));
+            }
+            if let Some(error) = r.error {
+                return Some(Err(Error::JadeError(error)));
+            }
+            return Some(Err(Error::JadeNeitherErrorNorResult));
+        }
+
+        Err(e) => {
+            let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
+            if let Ok(value) = res {
+                // The value returned is a valid CBOR, but our structs doesn't map it correctly
+                dbg!(&value);
+                return Some(Err(Error::SerdeCbor(e)));
+            }
+        }
+    }
+    None
 }
 
 pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {

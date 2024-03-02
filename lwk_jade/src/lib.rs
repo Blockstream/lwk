@@ -228,13 +228,6 @@ impl Jade {
                                 dbg!(&value);
                                 return Err(Error::SerdeCbor(e));
                             }
-
-                            if len == 0 {
-                                // There is no more data coming from jade and we can't parse its message, return error
-                                return Err(Error::SerdeCbor(e));
-                            } else {
-                                // it may be the parsing failed because there is other data to be read
-                            }
                         }
                     }
                 }

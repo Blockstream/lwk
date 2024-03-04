@@ -12,7 +12,6 @@ pub mod register_multisig;
 pub mod sign_liquid_tx;
 pub mod sign_pset;
 mod sync;
-pub mod unlock;
 
 pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::bitcoin::bip32::DerivationPath;

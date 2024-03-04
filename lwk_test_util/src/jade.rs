@@ -8,10 +8,7 @@ use lwk_containers::testcontainers::{clients::Cli, Container};
 use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
     mutex_jade::MutexJade,
-    protocol::{
-        DebugSetMnemonicParams, HandshakeInitParams,
-        UpdatePinserverParams,
-    },
+    protocol::{DebugSetMnemonicParams, HandshakeInitParams, UpdatePinserverParams},
     Jade, Network,
 };
 use tempfile::TempDir;

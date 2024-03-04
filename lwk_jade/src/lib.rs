@@ -157,7 +157,7 @@ impl Jade {
 
     pub fn get_xpub_cached(&mut self, params: GetXpubParams) -> Result<Xpub> {
         if let Some(xpub) = self.cached_xpubs.get(&vec_to_derivation_path(&params.path)) {
-            Ok(xpub.clone())
+            Ok(*xpub)
         } else {
             self.get_xpub(params)
         }

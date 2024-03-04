@@ -61,6 +61,6 @@ pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
     path.into_iter().map(|e| (*e).into()).collect()
 }
 
-pub fn vec_to_derivation_path(path: &[u32]) -> DerivationPath {
+pub(crate) fn vec_to_derivation_path(path: &[u32]) -> DerivationPath {
     DerivationPath::from_iter(path.iter().cloned().map(Into::into))
 }

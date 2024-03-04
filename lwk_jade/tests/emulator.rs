@@ -29,7 +29,7 @@ use std::{str::FromStr, time::UNIX_EPOCH, vec};
 #[test]
 fn entropy() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.add_entropy([1, 2, 3, 4].to_vec()).unwrap();
     assert!(result);
@@ -48,7 +48,7 @@ fn debug_set_mnemonic() {
 #[test]
 fn epoch() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new(&docker);
 
     let seconds = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -61,7 +61,7 @@ fn epoch() {
 #[test]
 fn ping() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.ping().unwrap();
     assert_eq!(result, 0);
@@ -70,7 +70,7 @@ fn ping() {
 #[test]
 fn version() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new(&docker);
 
     let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
@@ -81,7 +81,7 @@ fn version() {
 #[test]
 fn update_pinserver() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new(&docker);
+    let jade = TestJadeEmulator::new(&docker);
 
     let tempdir = tempfile::tempdir().unwrap();
     let pin_server = PinServer::new(&tempdir).unwrap();
@@ -105,7 +105,7 @@ fn update_pinserver() {
 #[test]
 fn jade_initialization_with_pin_server() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new_with_pin(&docker);
+    let jade = TestJadeEmulator::new_with_pin(&docker);
 
     let result = jade.jade.version_info().unwrap();
     let mut expected = mock_version_info();
@@ -116,7 +116,7 @@ fn jade_initialization_with_pin_server() {
 #[test]
 fn jade_init_logout_unlock() {
     let docker = clients::Cli::default();
-    let mut jade = TestJadeEmulator::new_with_pin(&docker);
+    let jade = TestJadeEmulator::new_with_pin(&docker);
 
     assert!(jade.jade.logout().unwrap());
     jade.jade.unlock().unwrap();

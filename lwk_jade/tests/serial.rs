@@ -20,7 +20,7 @@ fn serial_test_setup() -> Jade {
 #[test]
 #[ignore = "requires hardware jade connected via usb/serial to input pin"]
 fn unlock() {
-    let mut jade_api = serial_test_setup();
+    let jade_api = serial_test_setup();
 
     jade_api.unlock().unwrap();
 
@@ -33,7 +33,7 @@ fn unlock() {
 #[test]
 #[ignore = "requires hardware jade connected via usb/serial that is already logged in"]
 fn logout() {
-    let mut jade_api = serial_test_setup();
+    let jade_api = serial_test_setup();
 
     let result = jade_api.logout().unwrap();
     assert!(result);
@@ -47,7 +47,7 @@ fn logout() {
 #[test]
 #[ignore = "requires hardware jade connected via usb/serial"]
 fn ping() {
-    let mut jade_api = serial_test_setup();
+    let jade_api = serial_test_setup();
 
     let result = jade_api.ping().unwrap();
     assert_eq!(result, 0);
@@ -56,7 +56,7 @@ fn ping() {
 #[test]
 #[ignore = "requires hardware jade connected via usb/serial"]
 fn version_info() {
-    let mut jade_api = serial_test_setup();
+    let jade_api = serial_test_setup();
 
     let result = jade_api.version_info().unwrap();
     assert_eq!(result.jade_networks, "TEST".to_string());
@@ -65,7 +65,7 @@ fn version_info() {
 #[test]
 #[ignore = "requires hardware jade connected via usb/serial"]
 fn receive_address() {
-    let mut jade_api = serial_test_setup();
+    let jade_api = serial_test_setup();
 
     jade_api.unlock().unwrap();
 

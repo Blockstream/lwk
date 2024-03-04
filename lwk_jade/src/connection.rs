@@ -99,7 +99,7 @@ mod test {
 
         let connection = Connection::PartialReadTest { data, status: 0 };
 
-        let mut jade = Jade::new(connection, crate::Network::LocaltestLiquid);
+        let jade = Jade::new(connection, crate::Network::LocaltestLiquid);
         let result: Value = jade.send(Request::Ping).unwrap();
         assert_eq!(result, text);
     }

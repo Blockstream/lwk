@@ -132,7 +132,7 @@ impl Jade {
         self.send(Request::GetRegisteredMultisig(params))
     }
 
-    pub fn get_xpub_cached(&mut self, params: GetXpubParams) -> Result<Xpub> {
+    pub fn get_cached_xpub(&mut self, params: GetXpubParams) -> Result<Xpub> {
         if let Some(xpub) = self.cached_xpubs.get(&vec_to_derivation_path(&params.path)) {
             Ok(*xpub)
         } else {
@@ -158,7 +158,7 @@ impl Jade {
             network: self.network,
             path: vec![],
         };
-        self.get_xpub_cached(params)
+        self.get_cached_xpub(params)
     }
 
     /// Unlock an already initialized Jade.

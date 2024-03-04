@@ -31,10 +31,7 @@ pub enum AnySigner {
     Software(SwSigner),
 
     #[cfg(feature = "jade")]
-    Jade(
-        lwk_jade::mutex_jade::MutexJade,
-        elements_miniscript::bitcoin::XKeyIdentifier,
-    ),
+    Jade(lwk_jade::Jade, elements_miniscript::bitcoin::XKeyIdentifier),
 }
 
 impl Signer for AnySigner {

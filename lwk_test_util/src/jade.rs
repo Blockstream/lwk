@@ -7,7 +7,6 @@ use elements::{
 use lwk_containers::testcontainers::{clients::Cli, Container};
 use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
-    mutex_jade::MutexJade,
     protocol::{DebugSetMnemonicParams, HandshakeInitParams, UpdatePinserverParams},
     Jade, Network,
 };
@@ -94,33 +93,5 @@ impl<'a> TestJadeEmulator<'a> {
         test_jade_emul._pin_server = Some(pin_container);
         test_jade_emul._pin_server_dir = Some(tempdir);
         test_jade_emul
-    }
-}
-
-/// A struct for MutexJade testing with emulator
-pub struct TestMutexJadeEmulator<'a> {
-    pub jade: MutexJade,
-    // Keep the containers and temp dir so they are not dropped.
-    _jade_emul: Container<'a, JadeEmulator>,
-    _pin_server: Option<Container<'a, PinServer>>,
-    _pin_server_dir: Option<TempDir>,
-}
-
-impl<'a> TestMutexJadeEmulator<'a> {
-    /// MutexJade with emulator
-    pub fn new(test_jade_emul: TestJadeEmulator<'a>) -> Self {
-        let TestJadeEmulator {
-            jade,
-            _jade_emul,
-            _pin_server,
-            _pin_server_dir,
-        } = test_jade_emul;
-        let jade = MutexJade::new(jade);
-        Self {
-            jade,
-            _jade_emul,
-            _pin_server,
-            _pin_server_dir,
-        }
     }
 }

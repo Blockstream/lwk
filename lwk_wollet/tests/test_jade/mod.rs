@@ -2,15 +2,14 @@ use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::AnySigner;
 use lwk_test_util::{
-    generate_signer, init_logging,
-    jade::{TestJadeEmulator, TestMutexJadeEmulator},
-    multisig_desc, register_multisig, setup, TestElectrumServer, TestWollet, TEST_MNEMONIC,
+    generate_signer, init_logging, jade::TestJadeEmulator, multisig_desc, register_multisig, setup,
+    TestElectrumServer, TestWollet, TEST_MNEMONIC,
 };
 
-pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestMutexJadeEmulator<'a> {
+pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
     test_jade_emul.set_debug_mnemonic(mnemonic);
-    TestMutexJadeEmulator::new(test_jade_emul)
+    test_jade_emul
 }
 
 fn roundtrip(
@@ -170,16 +169,16 @@ fn emul_multi_multisig() {
 #[cfg(feature = "serial")]
 mod serial {
     use super::*;
-    use lwk_jade::{mutex_jade::MutexJade, Network};
+    use lwk_jade::{Jade, Network};
 
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
         let server = setup(false);
         let network = Network::LocaltestLiquid;
-        let ports = MutexJade::available_ports_with_jade();
+        let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
-        let jade = MutexJade::from_serial(network, port_name, None).unwrap();
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
         let id = jade.identifier().unwrap();
         let jade_signer = AnySigner::Jade(jade, id);
         let signers = &[&jade_signer];
@@ -198,9 +197,9 @@ mod serial {
         init_logging();
         let server = setup(false);
         let network = Network::LocaltestLiquid;
-        let ports = MutexJade::available_ports_with_jade();
+        let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
-        let jade = MutexJade::from_serial(network, port_name, None).unwrap();
+        let jade = Jade::from_serial(network, port_name, None).unwrap();
         let id = jade.identifier().unwrap();
         let jade_signer = AnySigner::Jade(jade, id);
         multi_multisig(&server, &jade_signer);

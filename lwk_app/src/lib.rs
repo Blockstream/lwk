@@ -26,8 +26,8 @@ use lwk_common::{
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_jade::get_receive_address::Variant;
-use lwk_jade::mutex_jade::MutexJade;
 use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
+use lwk_jade::Jade;
 use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use lwk_wollet::bitcoin::bip32::Fingerprint;
@@ -333,7 +333,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let signer = match r.emulator {
                 Some(socket) => {
                     // The emulator is meant to be used only in testing, we don't aim to handle connection/disconnection
-                    let jade = MutexJade::from_socket(socket, s.config.jade_network())?;
+                    let jade = Jade::from_socket(socket, s.config.jade_network())?;
                     AppSigner::AvailableSigner(AnySigner::Jade(jade, id))
                 }
                 None => AppSigner::JadeId(id, s.config.jade_network()),
@@ -943,10 +943,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             tracing::debug!("jade network: {}", network);
 
             let jade = match r.emulator {
-                Some(emulator) => MutexJade::from_socket(emulator, network)?,
+                Some(emulator) => Jade::from_socket(emulator, network)?,
                 None => {
                     // TODO instead of the first working, we should return all the available jades with the port currently connected on
-                    let mut jade = MutexJade::from_any_serial(network, timeout)
+                    let mut jade = Jade::from_any_serial(network, timeout)
                         .into_iter()
                         .filter_map(|e| e.ok())
                         .next();

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use lwk_common::Signer;
-use lwk_jade::mutex_jade::MutexJade;
+use lwk_jade::Jade;
 use lwk_jade::Network;
 use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
@@ -232,7 +232,7 @@ impl Signers {
             AppSigner::JadeId(id, network) => {
                 // try to connect JadeId -> AvailableSigner(Jade)
                 // TODO possible errors should be kept
-                MutexJade::from_serial_matching_id(*network, id, timeout)
+                Jade::from_serial_matching_id(*network, id, timeout)
                     .map(|jade| AppSigner::AvailableSigner(AnySigner::Jade(jade, *id)))
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {

@@ -31,14 +31,16 @@ tokio = { version = "1.36.0", features = [
     "rt",
     "macros",
     "io-util",
+    "sync",
 ], optional = true }
 tokio-serial = { version = "5.4.4", optional = true }
 
 [features]
 default = ["sync"]
 sync = []
-serial = ["serialport"]
-asyncr = ["tokio", "tokio-serial"]
+tcp = []
+serial = ["serialport", "tokio-serial"]
+asyncr = ["tokio"]
 
 [[test]]
 name = "e2e"

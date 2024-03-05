@@ -22,12 +22,64 @@ pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
+use lwk_jade::asyncr;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
 pub use signer::Signer;
 pub use update::Update;
 pub use wollet::Wollet;
+
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub async fn test_port() {
+    web_sys::console::log_1(&"1".into());
+    let window = web_sys::window().unwrap();
+    let navigator = window.navigator();
+    let serial = navigator.serial();
+    web_sys::console::log_1(&"2".into());
+    // web_sys::SerialPortRequestOptions::new
+    let promise = serial.request_port();
+    web_sys::console::log_1(&"3".into());
+
+    let result = wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
+    web_sys::console::log_1(&result);
+
+    let serial: web_sys::SerialPort = result.dyn_into().unwrap();
+    web_sys::console::log_1(&serial);
+
+    let serial_options = web_sys::SerialOptions::new(115_200);
+    web_sys::console::log_1(&serial_options);
+
+    let promise = serial.open(&serial_options);
+    web_sys::console::log_1(&"5".into());
+    let result = wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
+
+    web_sys::console::log_1(&serial);
+
+    let jade = asyncr::Jade::new(&serial, lwk_jade::Network::TestnetLiquid);
+    web_sys::console::log_1(&"6".into());
+    let x = jade.version_info().await.unwrap();
+
+    web_sys::console::log_1(&serde_wasm_bindgen::to_value(&x).unwrap());
+
+    jade.unlock().await.unwrap();
+
+    let xpub = jade.get_master_xpub().await.unwrap();
+    web_sys::console::log_1(&xpub.to_string().into());
+
+    let promise = serial.close();
+    web_sys::console::log_1(&"closed".into());
+
+    let result = wasm_bindgen_futures::JsFuture::from(promise).await;
+    let e = match result {
+        Ok(e) => e,
+        Err(e) => e,
+    };
+
+    web_sys::console::log_1(&e);
+}
 
 #[cfg(test)]
 mod tests {
@@ -66,5 +118,16 @@ mod tests {
             *balance.get(&(network.policy_asset().into())).unwrap() >= expected_at_least,
             "balance isn't as expected, it could be some coin has been spent"
         )
+    }
+
+    #[ignore = "require `RUSTFLAGS=--cfg=web_sys_unstable_apis`"]
+    #[wasm_bindgen_test]
+    async fn test_serial() {
+        let window = web_sys::window().unwrap();
+        let navigator = window.navigator();
+        let serial = navigator.serial();
+        let promise = serial.request_port();
+        let result = wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
+        panic!("{:?}", result)
     }
 }

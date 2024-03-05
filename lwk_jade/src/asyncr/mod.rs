@@ -16,13 +16,14 @@ use crate::{try_parse_response, vec_to_derivation_path, Error, Network, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
+use web_sys::js_sys::Uint8Array;
 
 #[derive(Debug)]
-pub struct Jade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
-    /// Jade working via emulator(tcp), physical(serial/bluetooth)
-    stream: Mutex<S>,
+pub struct Jade {
+    reader: web_sys::ReadableStreamDefaultReader,
+
+    writer: web_sys::WritableStreamDefaultWriter,
 
     /// The network
     network: Network,
@@ -31,29 +32,15 @@ pub struct Jade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-impl Jade<tokio::net::TcpStream> {
-    pub async fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
-        Self {
-            stream: Mutex::new(stream),
+impl Jade {
+    pub fn new(serial: &web_sys::SerialPort, network: Network) -> Jade {
+        Jade {
+            reader: web_sys::ReadableStreamDefaultReader::new(&serial.readable()).unwrap(),
+            writer: serial.writable().get_writer().unwrap(),
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
         }
     }
-}
-
-#[cfg(feature = "serial")]
-impl Jade<tokio_serial::SerialStream> {
-    pub async fn new_serial(stream: tokio_serial::SerialStream, network: Network) -> Self {
-        Self {
-            stream: Mutex::new(stream),
-            network,
-            cached_xpubs: Mutex::new(HashMap::new()),
-        }
-    }
-}
-
-impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
     pub async fn ping(&self) -> Result<u8> {
         self.send(Request::Ping).await
     }
@@ -265,34 +252,63 @@ impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
     where
         T: std::fmt::Debug + DeserializeOwned,
     {
+        web_sys::console::log_1(&"a".into());
         if let Some(network) = request.network() {
             self.check_network(network)?;
         }
+        web_sys::console::log_1(&"a1".into());
+
         let buf = request.serialize()?;
 
-        let stream = &mut self.stream.lock().await;
-        stream.write_all(&buf).await?;
+        let arr = Uint8Array::new_with_length(buf.len() as u32);
+        arr.copy_from(&buf);
+        web_sys::console::log_1(&"b".into());
+        web_sys::console::log_1(&"b1".into());
 
-        let mut rx = [0u8; 4096];
+        let promise = self.writer.write_with_chunk(&arr);
+        web_sys::console::log_1(&"c".into());
 
-        let mut total = 0;
+        wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
+        web_sys::console::log_1(&"d".into());
+
+        let mut rx = vec![];
+
         loop {
-            match stream.read(&mut rx[total..]).await {
-                Ok(len) => {
-                    total += len;
-                    let reader = &rx[..total];
+            let promise = self.reader.read();
 
-                    if let Some(value) = try_parse_response(reader) {
-                        return value;
-                    }
-                }
-                Err(e) => {
-                    if e.kind() != ErrorKind::Interrupted {
-                        dbg!(&e);
-                        return Err(Error::IoError(e));
-                    }
-                }
+            let result = wasm_bindgen_futures::JsFuture::from(promise).await.unwrap();
+            web_sys::console::log_1(&result);
+
+            let value = web_sys::js_sys::Reflect::get(&result, &"value".into()).unwrap();
+
+            let data = Uint8Array::new(&value);
+            rx.extend(&data.to_vec());
+
+            web_sys::console::log_1(&"x".into());
+
+            if let Some(value) = try_parse_response(&rx) {
+                web_sys::console::log_1(&"i".into());
+
+                return value;
             }
+            web_sys::console::log_1(&"l".into());
         }
+
+        // match stream.read(&mut rx[total..]).await {
+        //     Ok(len) => {
+        //         total += len;
+        //         let reader = &rx[..total];
+
+        //         if let Some(value) = try_parse_response(reader) {
+        //             return value;
+        //         }
+        //     }
+        //     Err(e) => {
+        //         if e.kind() != ErrorKind::Interrupted {
+        //             dbg!(&e);
+        //             return Err(Error::IoError(e));
+        //         }
+        //     }
+        // }
     }
 }

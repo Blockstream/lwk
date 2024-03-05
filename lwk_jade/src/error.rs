@@ -113,6 +113,10 @@ pub enum Error {
 
     #[error("Slip 77 master blinding keys must be 32 bytes")]
     Slip77MasterBlindingKeyInvalidSize,
+
+    #[cfg(feature = "asyncr")]
+    #[error(transparent)]
+    HttpReqwest(#[from] reqwest::Error),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

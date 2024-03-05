@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
+#[cfg(feature = "asyncr")]
+pub mod asyncr;
+
 pub mod consts;
 pub mod error;
 pub mod get_receive_address;

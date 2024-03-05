@@ -407,6 +407,24 @@ fn jade_get_master_blinding_key() {
     assert_eq!(hex::encode(result), lwk_test_util::TEST_MNEMONIC_SLIP77);
 }
 
+#[cfg(feature = "asyncr")]
+#[tokio::test]
+async fn async_ping() {
+    lwk_test_util::init_logging();
+
+    let docker = clients::Cli::default();
+
+    let container = docker.run(lwk_containers::JadeEmulator);
+    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+        .await
+        .unwrap();
+    let network = lwk_jade::Network::LocaltestLiquid;
+    let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network).await;
+    let result = jade.ping().await.unwrap();
+    assert_eq!(result, 0);
+}
+
 fn mock_version_info() -> VersionInfoResult {
     VersionInfoResult {
         jade_version: "1".to_string(),

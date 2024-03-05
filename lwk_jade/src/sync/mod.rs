@@ -26,6 +26,7 @@ use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
 mod connection;
+mod sign_pset;
 
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};

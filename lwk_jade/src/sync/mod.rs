@@ -2,7 +2,6 @@ use std::net::SocketAddr;
 use std::sync::Mutex;
 use std::{collections::HashMap, io::ErrorKind};
 
-use crate::connection::Connection;
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
@@ -18,12 +17,15 @@ use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 use crate::{
     derivation_path_to_vec, try_parse_response, vec_to_derivation_path, Error, Network, Result,
 };
+use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::Signer;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
+
+mod connection;
 
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};

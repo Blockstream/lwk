@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
-pub mod connection;
 pub mod consts;
 pub mod error;
 pub mod get_receive_address;

@@ -38,7 +38,6 @@ tokio-serial = { version = "5.4.4", optional = true }
 [features]
 default = ["sync"]
 sync = []
-tcp = []
 serial = ["serialport", "tokio-serial"]
 asyncr = ["tokio"]
 

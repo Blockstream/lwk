@@ -31,7 +31,7 @@ pub struct Jade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
 }
 
-#[cfg(feature = "tcp")]
+#[cfg(not(target_arch = "wasm32"))]
 impl Jade<tokio::net::TcpStream> {
     pub async fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
         Self {

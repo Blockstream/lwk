@@ -11,13 +11,16 @@ mod network;
 pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
-pub mod sign_pset;
+
+#[cfg(feature = "sync")]
 mod sync;
 
 pub use consts::{BAUD_RATE, TIMEOUT};
 use elements::bitcoin::bip32::DerivationPath;
 pub use error::Error;
 pub use network::Network;
+
+#[cfg(feature = "sync")]
 pub use sync::Jade;
 
 #[cfg(feature = "serial")]

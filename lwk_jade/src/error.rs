@@ -43,13 +43,10 @@ pub enum Error {
     PoisonError(String),
 
     #[error(transparent)]
-    Http(#[from] minreq::Error),
-
-    #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
 
     #[error("Http request to {0} returned {1} instead of 200")]
-    HttpStatus(String, i32),
+    HttpStatus(String, u16),
 
     #[error("Jade authentication returned a response without urlA")]
     MissingUrlA,
@@ -114,7 +111,6 @@ pub enum Error {
     #[error("Slip 77 master blinding keys must be 32 bytes")]
     Slip77MasterBlindingKeyInvalidSize,
 
-    #[cfg(feature = "asyncr")]
     #[error(transparent)]
     HttpReqwest(#[from] reqwest::Error),
 }

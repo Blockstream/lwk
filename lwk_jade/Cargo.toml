@@ -22,10 +22,10 @@ thiserror = "1"
 
 tracing = "0.1"
 
-minreq = { version = "2.9", features = ["https"] }
 elements-miniscript = "0.3"
 
 lwk_common = { version = "0.2.0" }
+reqwest = { version = "0.11.24", features = ["blocking"] }
 
 tokio = { version = "1.36.0", features = [
     "rt",
@@ -33,11 +33,10 @@ tokio = { version = "1.36.0", features = [
     "io-util",
 ], optional = true }
 tokio-serial = { version = "5.4.4", optional = true }
-reqwest = { version = "0.11.24", optional = true }
 
 [features]
 serial = ["serialport"]
-asyncr = ["tokio", "tokio-serial", "reqwest"]
+asyncr = ["tokio", "tokio-serial"]
 
 [[test]]
 name = "e2e"

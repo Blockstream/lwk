@@ -196,21 +196,26 @@ impl Jade {
                 }
             }
             IsAuthResult::AuthResult(result) => {
+                let client = reqwest::blocking::Client::new();
+
                 let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
-                let resp = minreq::post(url).send()?;
-                if resp.status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), resp.status_code));
+                let resp = client.post(url).send()?;
+                let status_code = resp.status().as_u16();
+                if status_code != 200 {
+                    return Err(Error::HttpStatus(url.to_string(), status_code));
                 }
 
-                let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes())?;
+                let params: HandshakeInitParams = serde_json::from_slice(resp.bytes()?.as_ref())?;
                 let result = self.handshake_init(params)?;
                 let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
                 let data = serde_json::to_vec(result.data())?;
-                let resp = minreq::post(url).with_body(data).send()?;
-                if resp.status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), resp.status_code));
+                let resp = client.post(url).body(data).send()?;
+                let status_code = resp.status().as_u16();
+                if status_code != 200 {
+                    return Err(Error::HttpStatus(url.to_string(), status_code));
                 }
-                let params: HandshakeCompleteParams = serde_json::from_slice(resp.as_bytes())?;
+                let params: HandshakeCompleteParams =
+                    serde_json::from_slice(resp.bytes()?.as_ref())?;
 
                 let result = self.handshake_complete(params)?;
 

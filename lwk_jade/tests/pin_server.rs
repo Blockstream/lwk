@@ -14,15 +14,17 @@ fn pin_server() {
     let pin_server = PinServer::new(&tempdir).unwrap();
     let pin_server_pub_key = *pin_server.pub_key();
     let container = docker.run(pin_server);
+    let client = reqwest::blocking::Client::new();
 
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
     let pin_server_url = format!("http://127.0.0.1:{port}");
-    let result = minreq::get(&pin_server_url).send().unwrap();
-    assert_eq!(result.status_code, 200);
+    let result = client.get(&pin_server_url).send().unwrap();
+    assert_eq!(result.status().as_u16(), 200);
 
     let start_handshake_url = format!("{pin_server_url}/start_handshake");
-    let resp = minreq::post(start_handshake_url).send().unwrap();
-    let params: HandshakeInitParams = serde_json::from_slice(resp.as_bytes()).unwrap();
+    let resp = client.post(start_handshake_url).send().unwrap();
+    let params: HandshakeInitParams =
+        serde_json::from_slice(resp.bytes().unwrap().as_ref()).unwrap();
     verify(&params, &pin_server_pub_key);
 }
 

@@ -202,7 +202,7 @@ impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
                 let resp = client.post(url).send().await?;
                 let status_code = resp.status().as_u16();
                 if status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), status_code as i32));
+                    return Err(Error::HttpStatus(url.to_string(), status_code));
                 }
 
                 let params: HandshakeInitParams =
@@ -213,7 +213,7 @@ impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
                 let resp = client.post(url).body(data).send().await?;
                 let status_code = resp.status().as_u16();
                 if status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), status_code as i32));
+                    return Err(Error::HttpStatus(url.to_string(), status_code));
                 }
                 let params: HandshakeCompleteParams =
                     serde_json::from_slice(resp.bytes().await?.as_ref())?;

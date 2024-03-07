@@ -6,9 +6,9 @@ use lwk_jade::asyncr;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-struct Jade {
+pub struct Jade {
     inner: asyncr::Jade<WebSerial>,
-    port: web_sys::SerialPort,
+    _port: web_sys::SerialPort,
 }
 
 #[wasm_bindgen]
@@ -20,6 +20,11 @@ impl Jade {
         let web_serial = WebSerial::new(&port)?;
 
         let inner = asyncr::Jade::new(web_serial, network.into());
-        Ok(Jade { inner, port })
+        Ok(Jade { inner, _port: port })
+    }
+
+    pub async fn get_version(&self) -> Result<JsValue, Error> {
+        let version = self.inner.version_info().await?;
+        Ok(serde_wasm_bindgen::to_value(&version)?)
     }
 }

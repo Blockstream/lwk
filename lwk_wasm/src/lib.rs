@@ -24,6 +24,7 @@ pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
+pub use jade::Jade;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;

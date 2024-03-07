@@ -32,7 +32,7 @@ impl From<Network> for lwk_jade::Network {
         match value.inner {
             lwk_wollet::ElementsNetwork::Liquid => lwk_jade::Network::Liquid,
             lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_jade::Network::TestnetLiquid,
-            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset } => {
+            lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
                 lwk_jade::Network::LocaltestLiquid
             }
         }

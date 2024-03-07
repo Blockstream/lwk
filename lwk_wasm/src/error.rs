@@ -38,6 +38,9 @@ pub enum Error {
     #[error(transparent)]
     SignerNew(#[from] lwk_signer::NewError),
 
+    #[error(transparent)]
+    Jade(#[from] lwk_jade::Error),
+
     #[error("{0}")]
     Generic(String),
 }

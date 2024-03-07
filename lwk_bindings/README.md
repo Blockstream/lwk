@@ -19,13 +19,38 @@ For android build you need the NDK greater than r23 in `${PROJECT_DIR}/bin/andro
 
 ## Python bindings
 
-### Example
+### Examples
 
 * [List transactions](./tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
 * [Send transaction](./tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
 * [Send asset](./tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
 * [Custom persister](./tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
 
+### Build Python wheel
+
+First, create a virtual env, skip the step if you already created it.
+
+```shell
+cd lwk/lwk_bindings
+virtualenv venv
+source venv/bin/activate
+pip install maturin maturin[patchelf] uniffi-bindgen
+```
+
+Then build the wheel
+
+```shell
+cd lwk/lwk_bindings
+maturin develop
+```
+
+Try it (note there is still an issue in how we import the package when using the wheel):
+
+```python
+from lwk_bindings import lwk_bindings
+from lwk_bindings import *
+str(Network.mainnet())
+```
 
 ### Test
 

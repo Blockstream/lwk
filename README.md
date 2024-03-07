@@ -26,8 +26,9 @@
 
 ## Building from source
 
-First you need [rust](https://www.rust-lang.org/tools/install),
+First you need [rust](https://www.rust-lang.org/tools/install), our MSRV is 1.75.0
 then you can build from source:
+
 ```sh
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk

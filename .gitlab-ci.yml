@@ -125,12 +125,6 @@ bindings:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
 
-check_rust_170:
-  extends: .base
-  script:
-    - cargo update -p bumpalo --precise 3.14.0
-    - cargo +1.70.0 check
-
 wasm:
   extends: .base
   script:

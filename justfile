@@ -1,19 +1,19 @@
 default:
     just --list
 
-build-python-bindings:
+python-build-bindings:
     LIBNAME=liblwk_bindings.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
 
-test-python-bindings: build-python-bindings
+python-test-bindings: python-build-bindings
     PYTHONPATH=target/debug/bindings/ python3 -c 'import lwk_bindings'
 
-env-python-bindings: build-python-bindings
+python-env-bindings: python-build-bindings
     PYTHONPATH=target/debug/bindings/ python3
 
-build-docker:
+docker-build:
     cd context && docker build . -t xenoky/lwk-builder && cd -
 
-push-docker: build-docker
+docker-push: docker-build
     docker push xenoky/lwk-builder # require credentials
 
 kotlin-android: kotlin android

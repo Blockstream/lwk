@@ -6,6 +6,7 @@ mod esplora;
 mod mnemonic;
 mod network;
 mod pset;
+mod serial;
 mod signer;
 mod update;
 mod wollet;

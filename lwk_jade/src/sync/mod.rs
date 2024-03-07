@@ -187,7 +187,7 @@ impl Jade {
     /// and the host performs network calls to the pin server
     /// to decrypt the secret on the device.
     pub fn unlock(&self) -> Result<()> {
-        match self.auth_user(AuthUserParams::new(self.network)?)? {
+        match self.auth_user(AuthUserParams::new(self.network))? {
             IsAuthResult::AlreadyAuth(result) => {
                 if result {
                     Ok(())

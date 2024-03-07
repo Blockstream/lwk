@@ -3,6 +3,7 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_HOST: tcp://localhost:2375
   DOCKER_TLS_CERTDIR: ""
+  RUSTFLAGS: "--cfg=web_sys_unstable_apis"
 
 .base:
   image: xenoky/lwk-builder@sha256:57eb782036178609e8b4f4c57b77df81048429187a9ef5ea9ec44cfc24e511f9
@@ -65,7 +66,7 @@ test_cli:
 test_coverage:
   extends: .base
   variables:
-    RUSTFLAGS: "-C instrument-coverage"
+    RUSTFLAGS: "$RUSTFLAGS -C instrument-coverage"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
     TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
 

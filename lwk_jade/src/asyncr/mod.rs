@@ -38,11 +38,15 @@ pub trait Stream {
 #[cfg(not(target_arch = "wasm32"))]
 impl Stream for Mutex<tokio::net::TcpStream> {
     async fn read(&self, buf: &mut [u8]) -> Result<usize> {
+        use tokio::io::AsyncReadExt;
+
         let mut stream = self.lock().await;
         Ok(stream.read(buf).await?)
     }
 
     async fn write(&self, data: &[u8]) -> Result<()> {
+        use tokio::io::AsyncWriteExt;
+
         let mut stream = self.lock().await;
         Ok(stream.write_all(data).await?)
     }

@@ -420,7 +420,7 @@ async fn async_ping() {
         .await
         .unwrap();
     let network = lwk_jade::Network::LocaltestLiquid;
-    let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network).await;
+    let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network);
     let result = jade.ping().await.unwrap();
     assert_eq!(result, 0);
 }

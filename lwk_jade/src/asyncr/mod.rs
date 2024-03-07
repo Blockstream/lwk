@@ -20,9 +20,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
-pub struct Jade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
+pub struct Jade<S: Stream> {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)
-    stream: Mutex<S>,
+    stream: S,
 
     /// The network
     network: Network,
@@ -31,9 +31,27 @@ pub struct Jade<S: AsyncReadExt + AsyncWriteExt + Unpin> {
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
 }
 
+pub trait Stream {
+    fn read(&self, buf: &mut [u8]) -> impl std::future::Future<Output = Result<usize>>;
+    fn write(&self, data: &[u8]) -> impl std::future::Future<Output = Result<()>>;
+}
+
 #[cfg(not(target_arch = "wasm32"))]
-impl Jade<tokio::net::TcpStream> {
-    pub async fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
+impl Stream for Mutex<tokio::net::TcpStream> {
+    async fn read(&self, buf: &mut [u8]) -> Result<usize> {
+        let mut stream = self.lock().await;
+        Ok(stream.read(buf).await?)
+    }
+
+    async fn write(&self, data: &[u8]) -> Result<()> {
+        let mut stream = self.lock().await;
+        Ok(stream.write_all(data).await?)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Jade<Mutex<tokio::net::TcpStream>> {
+    pub fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
         Self {
             stream: Mutex::new(stream),
             network,
@@ -42,18 +60,7 @@ impl Jade<tokio::net::TcpStream> {
     }
 }
 
-#[cfg(feature = "serial")]
-impl Jade<tokio_serial::SerialStream> {
-    pub async fn new_serial(stream: tokio_serial::SerialStream, network: Network) -> Self {
-        Self {
-            stream: Mutex::new(stream),
-            network,
-            cached_xpubs: Mutex::new(HashMap::new()),
-        }
-    }
-}
-
-impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
+impl<S: Stream> Jade<S> {
     pub async fn ping(&self) -> Result<u8> {
         self.send(Request::Ping).await
     }
@@ -270,14 +277,13 @@ impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
         }
         let buf = request.serialize()?;
 
-        let stream = &mut self.stream.lock().await;
-        stream.write_all(&buf).await?;
+        self.stream.write(&buf).await?;
 
         let mut rx = [0u8; 4096];
 
         let mut total = 0;
         loop {
-            match stream.read(&mut rx[total..]).await {
+            match self.stream.read(&mut rx[total..]).await {
                 Ok(len) => {
                     total += len;
                     let reader = &rx[..total];
@@ -286,11 +292,10 @@ impl<S: AsyncReadExt + AsyncWriteExt + Unpin> Jade<S> {
                         return value;
                     }
                 }
+                Err(Error::IoError(e)) if e.kind() == ErrorKind::Interrupted => (),
+
                 Err(e) => {
-                    if e.kind() != ErrorKind::Interrupted {
-                        dbg!(&e);
-                        return Err(Error::IoError(e));
-                    }
+                    return Err(e);
                 }
             }
         }

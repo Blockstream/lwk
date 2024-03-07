@@ -28,4 +28,10 @@ impl Jade {
         let version = self.inner.version_info().await?;
         Ok(serde_wasm_bindgen::to_value(&version)?)
     }
+
+    #[wasm_bindgen(js_name = getMasterXpub)]
+    pub async fn get_master_xpub(&self) -> Result<String, Error> {
+        let xpub = self.inner.get_master_xpub().await?;
+        Ok(xpub.to_string())
+    }
 }

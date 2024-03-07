@@ -113,6 +113,9 @@ pub enum Error {
 
     #[error(transparent)]
     HttpReqwest(#[from] reqwest::Error),
+
+    #[error("{0}")]
+    Generic(String),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

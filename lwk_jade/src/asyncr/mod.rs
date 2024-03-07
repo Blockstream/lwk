@@ -52,15 +52,19 @@ impl Stream for Mutex<tokio::net::TcpStream> {
 #[cfg(not(target_arch = "wasm32"))]
 impl Jade<Mutex<tokio::net::TcpStream>> {
     pub fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
-        Self {
-            stream: Mutex::new(stream),
-            network,
-            cached_xpubs: Mutex::new(HashMap::new()),
-        }
+        Jade::new(Mutex::new(stream), network)
     }
 }
 
 impl<S: Stream> Jade<S> {
+    pub fn new(stream: S, network: Network) -> Self {
+        Self {
+            stream,
+            network,
+            cached_xpubs: Mutex::new(HashMap::new()),
+        }
+    }
+
     pub async fn ping(&self) -> Result<u8> {
         self.send(Request::Ping).await
     }

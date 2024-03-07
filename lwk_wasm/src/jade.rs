@@ -31,6 +31,7 @@ impl Jade {
 
     #[wasm_bindgen(js_name = getMasterXpub)]
     pub async fn get_master_xpub(&self) -> Result<String, Error> {
+        self.inner.unlock().await?;
         let xpub = self.inner.get_master_xpub().await?;
         Ok(xpub.to_string())
     }

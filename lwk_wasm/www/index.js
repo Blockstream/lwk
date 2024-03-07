@@ -43,9 +43,8 @@ async function jadeButtonPressed(e) {
     try {
         let network = lwk.Network.testnet()
         let jade = await new lwk.Jade(network)
-        let version = await jade.getVersion()
-        let versionString = JSON.stringify(version, null, 1)
-        jadeText.innerText = versionString
+        let xpub = await jade.getMasterXpub()
+        jadeText.innerText = xpub
     } catch (e) {
         jadeText.innerText = e
     } finally {

@@ -3,6 +3,7 @@ mod contract;
 mod descriptor;
 mod error;
 mod esplora;
+mod jade;
 mod mnemonic;
 mod network;
 mod pset;

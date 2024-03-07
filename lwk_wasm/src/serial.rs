@@ -4,7 +4,7 @@ use web_sys::js_sys::Uint8Array;
 
 use crate::Error;
 
-async fn get_jade_serial(_filter: bool) -> Result<web_sys::SerialPort, Error> {
+pub(crate) async fn get_jade_serial(_filter: bool) -> Result<web_sys::SerialPort, Error> {
     let window =
         web_sys::window().ok_or_else(|| Error::Generic("cannot get window".to_string()))?;
     let navigator = window.navigator();
@@ -32,9 +32,18 @@ fn generic_err(val: JsValue) -> Error {
     Error::Generic(format!("{:?}", val))
 }
 
-struct WebSerial {
+pub struct WebSerial {
     reader: web_sys::ReadableStreamDefaultReader,
     writer: web_sys::WritableStreamDefaultWriter,
+}
+impl WebSerial {
+    pub fn new(serial_port: &web_sys::SerialPort) -> Result<Self, Error> {
+        Ok(Self {
+            reader: web_sys::ReadableStreamDefaultReader::new(&serial_port.readable())
+                .map_err(generic_err)?,
+            writer: serial_port.writable().get_writer().map_err(generic_err)?,
+        })
+    }
 }
 
 impl Stream for WebSerial {

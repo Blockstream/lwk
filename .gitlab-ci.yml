@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:bed4b76fc94e0ec824c33fa153313212906f23069525ce15b199330ef548c9cc
+  image: xenoky/lwk-builder@sha256:57eb782036178609e8b4f4c57b77df81048429187a9ef5ea9ec44cfc24e511f9
   tags:
     - cloud
   retry:

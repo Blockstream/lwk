@@ -112,8 +112,8 @@ pub struct AuthUserParams {
 
 impl AuthUserParams {
     pub fn new(network: crate::Network) -> Result<Self, crate::Error> {
-        let epoch = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let epoch = wasm_timer::SystemTime::now()
+            .duration_since(wasm_timer::SystemTime::UNIX_EPOCH)
             .map_err(crate::Error::SystemTimeError)?
             .as_secs();
         Ok(AuthUserParams { network, epoch })

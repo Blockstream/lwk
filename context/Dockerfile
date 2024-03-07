@@ -1,4 +1,4 @@
-FROM rust:1.74.1
+FROM rust:1.75.0
 
 RUN apt update -qq
 RUN apt upgrade --no-install-recommends -yqq
@@ -14,7 +14,6 @@ RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
 RUN rustup target add wasm32-unknown-unknown
-RUN rustup toolchain install 1.70.0
 
 RUN cargo install cargo-audit
 RUN cargo install cargo-nextest

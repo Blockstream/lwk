@@ -16,7 +16,6 @@ use crate::{try_parse_response, vec_to_derivation_path, Error, Network, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 
 #[derive(Debug)]

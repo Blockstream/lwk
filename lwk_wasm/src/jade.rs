@@ -23,6 +23,7 @@ impl Jade {
         Ok(Jade { inner, _port: port })
     }
 
+    #[wasm_bindgen(js_name = getVersion)]
     pub async fn get_version(&self) -> Result<JsValue, Error> {
         let version = self.inner.version_info().await?;
         Ok(serde_wasm_bindgen::to_value(&version)?)

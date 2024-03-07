@@ -55,13 +55,13 @@ impl Stream for WebSerial {
         let value =
             web_sys::js_sys::Reflect::get(&result, &"value".into()).map_err(generic_jade_err)?;
         let data = web_sys::js_sys::Uint8Array::new(&value).to_vec();
-        buf.copy_from_slice(&data);
+        buf[..data.len()].copy_from_slice(&data);
         Ok(data.len())
     }
 
     async fn write(&self, buf: &[u8]) -> Result<(), lwk_jade::Error> {
         let arr = Uint8Array::new_with_length(buf.len() as u32);
-        arr.copy_from(&buf);
+        arr.copy_from(buf);
         let promise = self.writer.write_with_chunk(&arr);
         wasm_bindgen_futures::JsFuture::from(promise)
             .await

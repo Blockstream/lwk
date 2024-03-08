@@ -28,6 +28,20 @@ pub use serialport;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 
+/// Vendor ID and Product ID to filter blockstream JADEs on the serial.
+///
+/// Note these refer to the usb serial chip not to the JADE itself, so you may have false-positive.
+///
+/// Note that DYI device may be filtered out by these.
+///
+/// Taken from reference impl <https://github.com/Blockstream/Jade/blob/f7fc4de8c3662b082c7d41e9354c4ff573f371ff/jadepy/jade_serial.py#L24>
+pub const JADE_DEVICE_IDS: [(u16, u16); 4] = [
+    (0x10c4, 0xea60),
+    (0x1a86, 0x55d4),
+    (0x0403, 0x6001),
+    (0x1a86, 0x7523),
+];
+
 fn try_parse_response<T>(reader: &[u8]) -> Option<Result<T>>
 where
     T: std::fmt::Debug + serde::de::DeserializeOwned,

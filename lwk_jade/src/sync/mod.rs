@@ -31,15 +31,6 @@ mod sign_pset;
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};
 
-// Taken from reference impl https://github.com/Blockstream/Jade/blob/f7fc4de8c3662b082c7d41e9354c4ff573f371ff/jadepy/jade_serial.py#L24
-#[cfg(feature = "serial")]
-const JADE_DEVICE_IDS: [(u16, u16); 4] = [
-    (0x10c4, 0xea60),
-    (0x1a86, 0x55d4),
-    (0x0403, 0x6001),
-    (0x1a86, 0x7523),
-];
-
 #[derive(Debug)]
 pub struct Jade {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)
@@ -271,7 +262,7 @@ impl Jade {
             .into_iter()
             .filter(|e| {
                 if let serialport::SerialPortType::UsbPort(val) = &e.port_type {
-                    JADE_DEVICE_IDS.contains(&(val.vid, val.pid))
+                    crate::JADE_DEVICE_IDS.contains(&(val.vid, val.pid))
                 } else {
                     false
                 }

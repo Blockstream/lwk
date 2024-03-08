@@ -90,6 +90,14 @@ impl SwSigner {
         Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
     }
 
+    pub fn from_xprv(xprv: Xpriv) -> Self {
+        Self {
+            xprv,
+            secp: Secp256k1::new(),
+            mnemonic: None,
+        }
+    }
+
     pub fn xpub(&self) -> Xpub {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
@@ -192,5 +200,16 @@ mod tests {
             slip77.as_bytes().to_hex(),
             lwk_test_util::TEST_MNEMONIC_SLIP77
         );
+    }
+
+    #[test]
+    fn from_xprv() {
+        use std::str::FromStr;
+        let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
+        let xpub = Xpub::from_str("tpubD8ew5PYUhsq1xF9ysDA2fS2Ux66askpbns89XS3wuehFXpbZEVjtCHH1PUhj6KAfCs4iCx5wKgswv1n3we2ZHEs2sP5pw9PnLsCFwiVgdjw").unwrap();
+        let signer = SwSigner::from_xprv(xprv);
+        assert_eq!(signer.xpub(), xpub);
+        assert!(signer.mnemonic().is_none());
+        assert!(signer.seed().is_none());
     }
 }

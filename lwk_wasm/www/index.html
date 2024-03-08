@@ -58,7 +58,13 @@
   <p>
     Jade
   </p>
-  <button disabled id="jade-button" type="button">Ask Jade Tpub</button>
+  <label for="network-select">Liquid network:</label>
+
+  <select name="network-select" id="network-select">
+    <option value="mainnet">Mainnet</option>
+    <option value="testnet" selected>Testnet</option>
+  </select>
+  <button disabled id="jade-button" type="button">Ask Jade master xpub</button>
   <div id="jade-text"></div>
 
 </body>

@@ -5,6 +5,8 @@ const scanButton = document.getElementById("scan-button")
 const jadeButton = document.getElementById("jade-button")
 const jadeText = document.getElementById("jade-text")
 const descriptor = document.getElementById("descriptor")
+const networkSelect = document.getElementById("network-select")
+
 
 scanButton.disabled = false  // The button start disabled and it's enabled here once the wasm has been loaded
 scanButton.addEventListener("click", scanButtonPressed)
@@ -41,7 +43,8 @@ async function scanButtonPressed(e) {
 
 async function jadeButtonPressed(e) {
     try {
-        let network = lwk.Network.testnet()
+        let network = networkSelect.value == "mainnet" ? lwk.Network.mainnet() : lwk.Network.testnet()
+
         let jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
         let xpub = await jade.getMasterXpub()
         jadeText.innerText = xpub

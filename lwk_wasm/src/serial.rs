@@ -1,17 +1,42 @@
 use lwk_jade::asyncr::Stream;
+use serde::Serialize;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::js_sys::Uint8Array;
 
 use crate::Error;
 
-pub(crate) async fn get_jade_serial(_filter: bool) -> Result<web_sys::SerialPort, Error> {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SerialFilter {
+    usb_vendor_id: u16,
+    usb_product_id: u16,
+}
+
+fn populate_filters(options: &mut web_sys::SerialPortRequestOptions) {
+    let ids: Vec<_> = lwk_jade::JADE_DEVICE_IDS
+        .iter()
+        .map(|ids| SerialFilter {
+            usb_vendor_id: ids.0,
+            usb_product_id: ids.1,
+        })
+        .collect();
+    let ids = serde_wasm_bindgen::to_value(&ids).expect("static");
+    options.filters(&ids);
+}
+
+pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort, Error> {
     let window =
         web_sys::window().ok_or_else(|| Error::Generic("cannot get window".to_string()))?;
     let navigator = window.navigator();
     let serial = navigator.serial(); // TODO verify it exists, on firefox it doesn't
 
-    // TODO optionally filter "official jade" with SerialPortRequestOptions
-    let promise = serial.request_port();
+    let promise = if filter {
+        let mut options = web_sys::SerialPortRequestOptions::new();
+        populate_filters(&mut options);
+        serial.request_port_with_options(&options)
+    } else {
+        serial.request_port()
+    };
     let result = wasm_bindgen_futures::JsFuture::from(promise)
         .await
         .map_err(generic_err)?;

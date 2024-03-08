@@ -42,12 +42,11 @@ async function scanButtonPressed(e) {
 async function jadeButtonPressed(e) {
     try {
         let network = lwk.Network.testnet()
-        let jade = await new lwk.Jade(network)
+        let jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
         let xpub = await jade.getMasterXpub()
         jadeText.innerText = xpub
+        jadeButton.disabled = true
     } catch (e) {
         jadeText.innerText = e
-    } finally {
-        scanButton.disabled = false
     }
 }

@@ -3,7 +3,6 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_HOST: tcp://localhost:2375
   DOCKER_TLS_CERTDIR: ""
-  RUSTFLAGS: "--cfg=web_sys_unstable_apis"
 
 .base:
   image: xenoky/lwk-builder@sha256:57eb782036178609e8b4f4c57b77df81048429187a9ef5ea9ec44cfc24e511f9
@@ -22,6 +21,7 @@ variables:
 fmt_clippy:
   extends: .base
   script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
 
@@ -49,6 +49,7 @@ test_ledger:
 test_serial:
   extends: .base
   script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test --no-run --features serial
 
 # run tests for minor crates all together
@@ -66,7 +67,7 @@ test_cli:
 test_coverage:
   extends: .base
   variables:
-    RUSTFLAGS: "$RUSTFLAGS -C instrument-coverage"
+    RUSTFLAGS: "-C instrument-coverage"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
     TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
 
@@ -113,6 +114,7 @@ doc:
   variables:
     RUSTDOCFLAGS: "-D warnings"
   script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo doc --no-deps
 
 examples:
@@ -129,6 +131,7 @@ bindings:
 wasm:
   extends: .base
   script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
     - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features

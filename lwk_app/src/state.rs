@@ -559,7 +559,10 @@ impl State {
                     AnySigner::Software(a) => {
                         let params = request::SignerLoadSoftware {
                             name: n.to_string(),
-                            mnemonic: a.mnemonic().to_string(),
+                            mnemonic: a
+                                .mnemonic()
+                                .expect("we only create signers from mnemonic")
+                                .to_string(),
                         };
                         (serde_json::to_value(params)?, Method::SignerLoadSoftware)
                     }

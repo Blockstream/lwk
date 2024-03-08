@@ -33,6 +33,9 @@ pub enum SignError {
 
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
+
+    #[error("Cannot derive slip77 key (mnemonic/seed not available)")]
+    DeterministicSlip77NotAvailable,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -48,7 +51,7 @@ pub enum NewError {
 pub struct SwSigner {
     pub(crate) xprv: Xpriv,
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
-    pub(crate) mnemonic: Mnemonic,
+    pub(crate) mnemonic: Option<Mnemonic>,
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -78,7 +81,7 @@ impl SwSigner {
         Ok(Self {
             xprv,
             secp,
-            mnemonic,
+            mnemonic: Some(mnemonic),
         })
     }
 
@@ -91,11 +94,11 @@ impl SwSigner {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
 
-    pub fn seed(&self) -> [u8; 64] {
-        self.mnemonic.to_seed("")
+    pub fn seed(&self) -> Option<[u8; 64]> {
+        self.mnemonic.as_ref().map(|m| m.to_seed(""))
     }
 
-    pub fn mnemonic(&self) -> Mnemonic {
+    pub fn mnemonic(&self) -> Option<Mnemonic> {
         self.mnemonic.clone()
     }
 
@@ -157,7 +160,10 @@ impl Signer for SwSigner {
     }
 
     fn slip77_master_blinding_key(&self) -> Result<MasterBlindingKey, Self::Error> {
-        Ok(MasterBlindingKey::from_seed(&self.seed()[..]))
+        let seed = self
+            .seed()
+            .ok_or_else(|| SignError::DeterministicSlip77NotAvailable)?;
+        Ok(MasterBlindingKey::from_seed(&seed[..]))
     }
 }
 

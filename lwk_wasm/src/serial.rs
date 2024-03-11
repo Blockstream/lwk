@@ -28,7 +28,16 @@ pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort,
     let window =
         web_sys::window().ok_or_else(|| Error::Generic("cannot get window".to_string()))?;
     let navigator = window.navigator();
-    let serial = navigator.serial(); // TODO verify it exists, on firefox it doesn't
+
+    let has_serial = web_sys::js_sys::Reflect::get(&navigator, &"serial".into())
+        .map(|val| !val.is_undefined())
+        .unwrap_or(false);
+    if !has_serial {
+        let msg = "The used browser doesn't support web serial".to_string();
+        return Err(Error::Generic(msg));
+    }
+
+    let serial = navigator.serial();
 
     let promise = if filter {
         let mut options = web_sys::SerialPortRequestOptions::new();

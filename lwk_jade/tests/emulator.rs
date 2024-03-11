@@ -1,7 +1,11 @@
 use base64::Engine;
 use elements::{
-    bitcoin::{self, bip32::Fingerprint, bip32::Xpub, sign_message::signed_msg_hash},
-    hashes::Hash,
+    bitcoin::{
+        self,
+        bip32::{Fingerprint, Xpub},
+        sign_message::signed_msg_hash,
+    },
+    hashes::{hex::FromHex, Hash},
     pset::PartiallySignedTransaction,
     secp256k1_zkp::{ecdsa::Signature, Message, Secp256k1},
     Address, AddressParams,
@@ -100,6 +104,31 @@ fn update_pinserver() {
     };
     let result = jade.jade.update_pinserver(params).unwrap();
     assert!(result);
+}
+
+#[ignore = "use prod pin server"]
+#[test]
+fn staging_pinserver() {
+    let docker = clients::Cli::default();
+    let jade = TestJadeEmulator::new(&docker);
+
+    let pub_key: Vec<u8> =
+        Vec::<u8>::from_hex("03b32a93bd083d9f8a3c0a0c62d94a93a797acd1005bd73b05f24330280fb35429")
+            .unwrap();
+
+    let params = UpdatePinserverParams {
+        reset_details: false,
+        reset_certificate: false,
+        url_a: "https://jadepin-staging.blockstream.com/".to_string(),
+        url_b: "".to_string(),
+        pubkey: pub_key,
+        certificate: "".into(),
+    };
+    let result = jade.jade.update_pinserver(params).unwrap();
+    assert!(result);
+
+    jade.jade.unlock().unwrap();
+    jade.jade.get_master_xpub().unwrap();
 }
 
 #[test]

@@ -49,3 +49,6 @@ thiserror = "1.0.57"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
+
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = ['-O', '--debuginfo']

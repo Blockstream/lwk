@@ -6,17 +6,41 @@ Liquid Wallet Kit working in the WASM environment.
 
 Example is [live](https://blockstream.github.io/lwk/)
 
-## Run demo locally
+## For LWK library consumers (front-end developers)
+
+The demo page showcasing some of the library functionalities can be run locally with:
 
 ```shell
-$ cd lwk_wasm
-$ wasm-pack build --dev --target web
-$ python3 -m http.server 8080
+$ cd lwk_wasm/www
+$ npm install
+$ npm run start
 ```
 
-## Test
+Open the browser at `http://localhost:8080`
 
-Other than rust the [`wasm-pack` tool](https://rustwasm.github.io/wasm-pack/installer/) is needed.
+Any changes in `index.html` and `index.js` are live reloaded in the browser.
+
+Tested with:
+
+```shell
+$ node --version
+v20.11.1
+$ npm --version
+10.2.4
+```
+
+## For LWK Library developers
+
+To build the WASM library you need [rust](https://www.rust-lang.org/learn/get-started) and
+[wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) installed
+
+```shell
+$ wasm-pack build --dev
+```
+
+Then follow the library consumer section.
+
+### Test
 
 ```shell
 $ cd lwk_wasm
@@ -25,8 +49,6 @@ $ wasm-pack test --firefox # or --chrome
 
 Then open the browser at http://127.0.0.1:8000, open also the dev tools to see console messages and
 network requests.
-
-### Headless test
 
 To avoid requiring opening the browser the headless mode is possible.
 
@@ -43,34 +65,36 @@ run specific test (note the double `--`)
 $ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
 
-## Build NPM Package, and example page
+### Build NPM Package for release
 
-Requires wasm-pack, NPM and node installed
+Build rust crates in release mode, optimizing for space.
 
-tested with:
-
-```
-$ node --version
-v20.11.1
-$ npm --version
-10.2.4
+```shell
+$ cd lwk_wasm/
+$ CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build
 ```
 
-Instructions:
+### Build wasm lib for profiling
+
+To analyze the generated wasm file to optimize for size, we want to follow the same optimization
+as release but we want to keep debug info to analyze the produced lib with function names.
+
+```shell
+$ cd lwk_wasm/
+$ CARGO_PROFILE_RELEASE_OPT_LEVEL=z CARGO_PROFILE_RELEASE_DEBUG=2 wasm-pack build --profiling
+```
+
+With [twiggy](https://github.com/rustwasm/twiggy) is then possible to analyze the library:
 
 ```
-cd lwk_wasm/
-CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build
-cd www
-npm install
-npm run start  # changes are live reloaded
+twiggy top -n 10 pkg/lwk_wasm_bg.wasm
 ```
 
-## Publish web page
+### Publish web page
 
 After building NPM package from previous section
 
-```
+```shell
 $ git checkout master
 $ cd lwk_wasm/www
 $ npm run build

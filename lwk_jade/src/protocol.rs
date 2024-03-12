@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use elements::hex::ToHex;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use serde_cbor::Value;
 
 use crate::{
     error::ErrorDetails,
@@ -28,9 +29,7 @@ pub enum Request {
     SetEpoch(EpochParams),
     AddEntropy(EntropyParams),
     AuthUser(AuthUserParams),
-    HandshakeInit(HandshakeInitParams),
     UpdatePinserver(UpdatePinserverParams),
-    HandshakeComplete(HandshakeCompleteParams),
     GetXpub(GetXpubParams),
     GetReceiveAddress(GetReceiveAddressParams),
     GetMasterBlindingKey(GetMasterBlindingKeyParams),
@@ -42,6 +41,15 @@ pub enum Request {
     RegisterMultisig(RegisterMultisigParams),
     GetRegisteredMultisigs,
     GetRegisteredMultisig(GetRegisteredMultisigParams),
+    Generic(GenericMethod),
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenericMethod {
+    #[serde(skip)]
+    pub(crate) method: String,
+    #[serde(flatten)]
+    pub(crate) params: serde_cbor::Value,
 }
 
 impl std::fmt::Display for Request {
@@ -53,9 +61,7 @@ impl std::fmt::Display for Request {
             Request::SetEpoch(_) => write!(f, "set_epoch"),
             Request::AddEntropy(_) => write!(f, "add_entropy"),
             Request::AuthUser(_) => write!(f, "auth_user"),
-            Request::HandshakeInit(_) => write!(f, "handshake_init"),
             Request::UpdatePinserver(_) => write!(f, "update_pinserver"),
-            Request::HandshakeComplete(_) => write!(f, "handshake_complete"),
             Request::GetXpub(_) => write!(f, "get_xpub"),
             Request::GetReceiveAddress(_) => write!(f, "get_receive_address"),
             Request::GetMasterBlindingKey(_) => write!(f, "get_master_blinding_key"),
@@ -67,6 +73,7 @@ impl std::fmt::Display for Request {
             Request::RegisterMultisig(_) => write!(f, "register_multisig"),
             Request::GetRegisteredMultisigs => write!(f, "get_registered_multisigs"),
             Request::GetRegisteredMultisig(_) => write!(f, "get_registered_multisig"),
+            Request::Generic(g) => write!(f, "{0}", g.method),
         }
     }
 }
@@ -87,9 +94,10 @@ impl Request {
     pub fn serialize(self) -> Result<Vec<u8>, crate::Error> {
         let mut rng = rand::thread_rng();
         let id = rng.next_u32().to_string();
+        let method = self.to_string();
         let req = FullRequest {
             id,
-            method: self.to_string(),
+            method,
             params: self,
         };
         let mut buf = Vec::new();
@@ -129,18 +137,6 @@ pub struct EpochParams {
 pub struct EntropyParams {
     #[serde(with = "serde_bytes")]
     pub entropy: Vec<u8>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HandshakeInitParams {
-    pub sig: String,
-    pub ske: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HandshakeCompleteParams {
-    pub encrypted_key: String,
-    pub hmac: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -245,46 +241,43 @@ pub enum JadeState {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum IsAuthResult<T> {
+pub enum IsAuthResult {
     AlreadyAuth(bool),
-    AuthResult(AuthResult<T>),
+    AuthResult(AuthResult),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AuthResult<T> {
-    http_request: HttpRequest<T>,
+pub struct AuthResult {
+    http_request: HttpRequest,
 }
 
-impl<T> AuthResult<T> {
+impl AuthResult {
     pub fn urls(&self) -> &[String] {
         self.http_request.params.urls.as_slice()
     }
 
-    pub fn data(&self) -> &T {
+    pub fn data(&self) -> &Value {
         &self.http_request.params.data
+    }
+
+    pub fn on_reply(&self) -> &str {
+        &self.http_request.on_reply
     }
 }
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HttpRequest<T> {
-    params: HttpParams<T>,
+pub struct HttpRequest {
+    params: HttpParams,
     #[serde(rename = "on-reply")]
     on_reply: String,
 }
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HttpParams<T> {
+pub struct HttpParams {
     urls: Vec<String>,
     method: String,
     accept: String,
-    data: T,
-}
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HandshakeData {
-    cke: String,
-    encrypted_data: String,
-    hmac_encrypted_data: String,
-    ske: String,
-    error: Option<String>,
+    /// Generic data, must remain opaque for protocol upgrades
+    data: Value,
 }
 
 #[derive(Deserialize, Serialize)]

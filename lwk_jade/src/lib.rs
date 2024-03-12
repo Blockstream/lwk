@@ -82,3 +82,25 @@ pub fn derivation_path_to_vec(path: &DerivationPath) -> Vec<u32> {
 pub(crate) fn vec_to_derivation_path(path: &[u32]) -> DerivationPath {
     DerivationPath::from_iter(path.iter().cloned().map(Into::into))
 }
+
+pub(crate) fn json_to_cbor(value: &serde_json::Value) -> Result<serde_cbor::Value> {
+    // serde_cbor::to_value doesn't exist
+    Ok(serde_cbor::from_slice(&serde_cbor::to_vec(&value)?)?)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::json_to_cbor;
+
+    fn cbor_to_json(value: serde_cbor::Value) -> Result<serde_json::Value, crate::Error> {
+        Ok(serde_json::to_value(value)?)
+    }
+
+    #[test]
+    fn json_to_cbor_roundtrip() {
+        let json = serde_json::json!({"foo": 8, "bar": [1, 2], "baz": "ciao"});
+        let cbor = json_to_cbor(&json).unwrap();
+        let back = cbor_to_json(cbor).unwrap();
+        assert_eq!(json, back);
+    }
+}

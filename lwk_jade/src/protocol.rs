@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use elements::hex::ToHex;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use serde_cbor::Value;
 
 use crate::{
     error::ErrorDetails,
@@ -245,46 +246,39 @@ pub enum JadeState {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum IsAuthResult<T> {
+pub enum IsAuthResult {
     AlreadyAuth(bool),
-    AuthResult(AuthResult<T>),
+    AuthResult(AuthResult),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AuthResult<T> {
-    http_request: HttpRequest<T>,
+pub struct AuthResult {
+    http_request: HttpRequest,
 }
 
-impl<T> AuthResult<T> {
+impl AuthResult {
     pub fn urls(&self) -> &[String] {
         self.http_request.params.urls.as_slice()
     }
 
-    pub fn data(&self) -> &T {
+    pub fn data(&self) -> &Value {
         &self.http_request.params.data
     }
 }
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HttpRequest<T> {
-    params: HttpParams<T>,
+pub struct HttpRequest {
+    params: HttpParams,
     #[serde(rename = "on-reply")]
     on_reply: String,
 }
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HttpParams<T> {
+pub struct HttpParams {
     urls: Vec<String>,
     method: String,
     accept: String,
-    data: T,
-}
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct HandshakeData {
-    cke: String,
-    encrypted_data: String,
-    hmac_encrypted_data: String,
-    ske: String,
-    error: Option<String>,
+    /// Generic data, must remain opaque for protocol upgrades
+    data: Value,
 }
 
 #[derive(Deserialize, Serialize)]

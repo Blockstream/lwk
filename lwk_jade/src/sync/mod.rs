@@ -6,8 +6,8 @@ use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant
 use crate::protocol::{
     AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
     GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
-    HandshakeData, HandshakeInitParams, IsAuthResult, Request, SignMessageParams,
-    UpdatePinserverParams, VersionInfoResult,
+    HandshakeInitParams, IsAuthResult, Request, SignMessageParams, UpdatePinserverParams,
+    VersionInfoResult,
 };
 use crate::register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
@@ -72,11 +72,11 @@ impl Jade {
         self.send(Request::AddEntropy(EntropyParams { entropy }))
     }
 
-    pub fn auth_user(&self, params: AuthUserParams) -> Result<IsAuthResult<String>> {
+    pub fn auth_user(&self, params: AuthUserParams) -> Result<IsAuthResult> {
         self.send(Request::AuthUser(params))
     }
 
-    pub fn handshake_init(&self, params: HandshakeInitParams) -> Result<AuthResult<HandshakeData>> {
+    pub fn handshake_init(&self, params: HandshakeInitParams) -> Result<AuthResult> {
         self.send(Request::HandshakeInit(params))
     }
 

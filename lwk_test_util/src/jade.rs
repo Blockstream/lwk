@@ -1,31 +1,11 @@
 use crate::init_logging;
-use elements::{
-    bitcoin::PublicKey,
-    hashes::{hex::FromHex, sha256, Hash},
-    secp256k1_zkp::{ecdsa::Signature, Message, Secp256k1},
-};
 use lwk_containers::testcontainers::{clients::Cli, Container};
 use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use lwk_jade::{
-    protocol::{DebugSetMnemonicParams, HandshakeInitParams, UpdatePinserverParams},
+    protocol::{DebugSetMnemonicParams, UpdatePinserverParams},
     Jade, Network,
 };
 use tempfile::TempDir;
-
-pub fn pin_server_verify(params: &HandshakeInitParams, pin_server_pub_key: &PublicKey) {
-    let ske_bytes = Vec::<u8>::from_hex(&params.ske).unwrap();
-    let ske_hash = sha256::Hash::hash(&ske_bytes);
-
-    let signature_bytes = Vec::<u8>::from_hex(&params.sig).unwrap();
-    let signature = Signature::from_compact(&signature_bytes).unwrap();
-
-    let message = Message::from_digest_slice(&ske_hash[..]).unwrap();
-
-    let verify = Secp256k1::verification_only()
-        .verify_ecdsa(&message, &signature, &pin_server_pub_key.inner)
-        .is_ok();
-    assert!(verify);
-}
 
 /// A struct for Jade testing with emulator
 pub struct TestJadeEmulator<'a> {

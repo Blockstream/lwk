@@ -2,17 +2,16 @@ use std::{collections::HashMap, io::ErrorKind};
 
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
 use crate::protocol::{
-    AuthResult, AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams,
-    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, HandshakeCompleteParams,
-    HandshakeInitParams, IsAuthResult, Request, SignMessageParams, UpdatePinserverParams,
-    VersionInfoResult,
+    AuthUserParams, DebugSetMnemonicParams, EntropyParams, EpochParams, GenericMethod,
+    GetMasterBlindingKeyParams, GetSignatureParams, GetXpubParams, IsAuthResult, Request,
+    SignMessageParams, UpdatePinserverParams, VersionInfoResult,
 };
 use crate::register_multisig::{
     GetRegisteredMultisigParams, RegisterMultisigParams, RegisteredMultisig,
     RegisteredMultisigDetails,
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
-use crate::{try_parse_response, vec_to_derivation_path, Error, Network, Result};
+use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Network, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
@@ -68,6 +67,15 @@ impl<S: Stream> Jade<S> {
         }
     }
 
+    pub async fn generic(
+        &self,
+        method: String,
+        params: serde_cbor::Value,
+    ) -> Result<serde_cbor::Value> {
+        self.send(Request::Generic(GenericMethod { method, params }))
+            .await
+    }
+
     pub async fn ping(&self) -> Result<u8> {
         self.send(Request::Ping).await
     }
@@ -93,16 +101,8 @@ impl<S: Stream> Jade<S> {
         self.send(Request::AuthUser(params)).await
     }
 
-    pub async fn handshake_init(&self, params: HandshakeInitParams) -> Result<AuthResult> {
-        self.send(Request::HandshakeInit(params)).await
-    }
-
     pub async fn update_pinserver(&self, params: UpdatePinserverParams) -> Result<bool> {
         self.send(Request::UpdatePinserver(params)).await
-    }
-
-    pub async fn handshake_complete(&self, params: HandshakeCompleteParams) -> Result<bool> {
-        self.send(Request::HandshakeComplete(params)).await
     }
 
     async fn get_xpub(&self, params: GetXpubParams) -> Result<Xpub> {
@@ -208,35 +208,35 @@ impl<S: Stream> Jade<S> {
                     Err(Error::NotInitialized)
                 }
             }
-            IsAuthResult::AuthResult(result) => {
+            IsAuthResult::AuthResult(mut result) => {
                 let client = reqwest::Client::new();
-                let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
-                let resp = client.post(url).send().await?;
-                let status_code = resp.status().as_u16();
-                if status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), status_code));
+
+                loop {
+                    let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
+                    tracing::debug!("POSTING to {url} data: {:?}", result.data());
+                    let data = serde_json::to_vec(result.data())?;
+                    let resp = client.post(url).body(data).send().await?;
+                    let status_code = resp.status().as_u16();
+                    if status_code != 200 {
+                        return Err(Error::HttpStatus(url.to_string(), status_code));
+                    }
+                    let bytes = &resp.bytes().await?;
+                    let value: serde_json::Value = serde_json::from_slice(bytes.as_ref())?;
+                    tracing::debug!("RECEIVED from {url} data: {:?}", value);
+
+                    let params: serde_cbor::Value = json_to_cbor(&value)?;
+
+                    let method = result.on_reply().to_string();
+                    let value = self.generic(method, params).await?;
+                    if let serde_cbor::Value::Bool(val) = &value {
+                        if *val {
+                            return Ok(());
+                        } else {
+                            return Err(Error::HandshakeFailed);
+                        }
+                    }
+                    result = serde_cbor::from_slice(&serde_cbor::to_vec(&value)?)?;
                 }
-
-                let params: HandshakeInitParams =
-                    serde_json::from_slice(resp.bytes().await?.as_ref())?;
-                let result = self.handshake_init(params).await?;
-                let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
-                let data = serde_json::to_vec(result.data())?;
-                let resp = client.post(url).body(data).send().await?;
-                let status_code = resp.status().as_u16();
-                if status_code != 200 {
-                    return Err(Error::HttpStatus(url.to_string(), status_code));
-                }
-                let params: HandshakeCompleteParams =
-                    serde_json::from_slice(resp.bytes().await?.as_ref())?;
-
-                let result = self.handshake_complete(params).await?;
-
-                if !result {
-                    return Err(Error::HandshakeFailed);
-                }
-
-                Ok(())
             }
         }
     }

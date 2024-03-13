@@ -48,8 +48,8 @@ pub enum Error {
     #[error("Http request to {0} returned {1} instead of 200")]
     HttpStatus(String, u16),
 
-    #[error("Jade authentication returned a response without urlA")]
-    MissingUrlA,
+    #[error("Jade authentication returned a response without a usable url")]
+    NoUsableUrl,
 
     #[error("The handshake complete call to the pin server failed")]
     HandshakeFailed,

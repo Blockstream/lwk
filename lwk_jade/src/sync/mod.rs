@@ -187,7 +187,7 @@ impl Jade {
                 let client = reqwest::blocking::Client::new();
 
                 loop {
-                    let url = result.urls().first().ok_or(Error::MissingUrlA)?.as_str();
+                    let url = result.url(false).ok_or(Error::NoUsableUrl)?;
                     tracing::debug!("POSTING to {url} data: {:?}", result.data());
                     let data = serde_json::to_vec(result.data())?;
                     let resp = client.post(url).body(data).send()?;

@@ -252,8 +252,16 @@ pub struct AuthResult {
 }
 
 impl AuthResult {
-    pub fn urls(&self) -> &[String] {
-        self.http_request.params.urls.as_slice()
+    /// Given a set of urls select the most appropriate
+    /// Preference is in order:
+    ///  - onion
+    ///  - https
+    ///  - http
+    ///
+    /// onion urls are ignored if use_tor is false.
+    /// TODO: at the moment LWK doesn't support TOR
+    pub fn url(&self, use_tor: bool) -> Option<&str> {
+        select_url(&self.http_request.params.urls, use_tor)
     }
 
     pub fn data(&self) -> &Value {
@@ -264,6 +272,21 @@ impl AuthResult {
         &self.http_request.on_reply
     }
 }
+
+fn select_url(urls: &[String], use_tor: bool) -> Option<&str> {
+    let (onion, clear): (Vec<_>, Vec<_>) = urls.iter().partition(|e| e.ends_with(".onion"));
+    if use_tor {
+        onion.first()
+    } else {
+        let https = clear.iter().find(|e| e.starts_with("https://"));
+        match https {
+            Some(url) => Some(url),
+            None => clear.first(),
+        }
+    }
+    .map(|e| e.as_str())
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HttpRequest {
     params: HttpParams,
@@ -316,10 +339,34 @@ pub struct GetMasterBlindingKeyParams {
 
 #[cfg(test)]
 mod test {
+    use crate::protocol::select_url;
+
     #[test]
     fn serialize_empty() {
         let a = super::Request::Ping;
         let s = serde_json::to_string(&a).unwrap();
         assert_eq!(s, "null");
+    }
+
+    #[test]
+    fn test_select_url() {
+        let http = "http://ciao.it";
+        let https = "https://ciao.it";
+        let onion = "http://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion";
+
+        let urls = [http.to_owned(), https.to_owned()];
+        assert_eq!(select_url(&urls, false), Some(https));
+
+        let urls = [onion.to_owned()];
+        assert_eq!(select_url(&urls, false), None);
+
+        let urls = [onion.to_owned(), https.to_owned()];
+        assert_eq!(select_url(&urls, false), Some(https));
+
+        let urls = [onion.to_owned(), http.to_owned()];
+        assert_eq!(select_url(&urls, false), Some(http));
+
+        let urls = [https.to_owned(), onion.to_owned()];
+        assert_eq!(select_url(&urls, true), Some(onion));
     }
 }

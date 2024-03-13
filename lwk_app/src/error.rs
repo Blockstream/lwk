@@ -26,6 +26,9 @@ pub enum Error {
     #[error("Minreq Error: {0}")]
     Minreq(#[from] jsonrpc::minreq_http::Error),
 
+    #[error("Reqwest Error: {0}")]
+    Reqwest(#[from] reqwest::Error),
+
     #[error("Hex Error: {0}")]
     Hex(lwk_wollet::elements::hex::Error),
 

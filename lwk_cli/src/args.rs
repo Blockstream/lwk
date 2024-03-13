@@ -201,6 +201,7 @@ pub enum AssetSubCommandsEnum {
     List,
     Insert,
     Remove,
+    Publish,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -702,6 +703,18 @@ pub enum AssetCommand {
 
     /// Remove an asset
     Remove {
+        /// Asset ID in hex
+        #[arg(short, long)]
+        asset: String,
+    },
+
+    /// Try to publish the contract identified by the given asset id
+    ///
+    /// The asset must be stored in the server so that the contract can be fetched internally
+    ///
+    /// It may fail if there isn't a proof on the issuer's domain, if failing it gives info on how
+    /// to do this.
+    Publish {
         /// Asset ID in hex
         #[arg(short, long)]
         asset: String,

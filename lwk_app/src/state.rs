@@ -58,6 +58,9 @@ impl RegistryAssetData {
     pub fn contract_str(&self) -> String {
         serde_json::to_string(&self.contract).expect("contract")
     }
+    pub fn contract(&self) -> &Contract {
+        &self.contract
+    }
 }
 
 pub enum AppAsset {

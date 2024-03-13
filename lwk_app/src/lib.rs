@@ -968,6 +968,44 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Stop => {
             return Err(Error::Stop);
         }
+        Method::AssetPublish => {
+            let r: request::AssetPublish = serde_json::from_value(params)?;
+            let asset_id =
+                AssetId::from_str(&r.asset_id).map_err(|e| Error::Generic(e.to_string()))?;
+            let s = state.lock()?;
+            let asset = s.get_asset(&asset_id)?;
+            if let AppAsset::RegistryAsset(asset) = asset {
+                let client = reqwest::blocking::Client::new();
+                let url = match s.config.network {
+                    lwk_wollet::ElementsNetwork::Liquid => "https://assets.blockstream.info",
+                    lwk_wollet::ElementsNetwork::LiquidTestnet => {
+                        "https://assets-testnet.blockstream.info/"
+                    }
+                    lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
+                        return Err(Error::Generic("Can't publish on regtest".to_string()));
+                    }
+                };
+                let contract = asset.contract();
+                let data = serde_json::json!({"asset_id": asset_id, "contract": contract});
+                let response = client.post(url).json(&data).send()?;
+                let mut result = response.text()?;
+                if result.contains("failed verifying linked entity") {
+                    let domain = contract.entity.domain();
+                    result = format!("https://{domain}/.well-known/liquid-asset-proof-{asset_id} must contain the following 'Authorize linking the domain name <{domain}> to the Liquid asset <{asset_id}>'");
+                }
+                Response::result(
+                    request.id,
+                    serde_json::to_value(response::AssetPublish {
+                        asset_id: asset_id.to_string(),
+                        result,
+                    })?,
+                )
+            } else {
+                return Err(Error::Generic(
+                    "Can't publish a policy asset or a reissuance token".to_string(),
+                ));
+            }
+        }
     };
     Ok(response)
 }

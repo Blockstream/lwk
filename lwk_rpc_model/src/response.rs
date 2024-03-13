@@ -358,6 +358,16 @@ pub struct Asset {
     pub name: String,
 }
 
+/// Publish asset response
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialOrd, Ord, PartialEq, Eq)]
+pub struct AssetPublish {
+    /// The asset identifier (32 bytes as 64 hex chars)
+    pub asset_id: String,
+
+    /// None if the asset has been published in the registry, otherwise it contains an error message
+    pub result: String,
+}
+
 /// A list of assets
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ListAssets {

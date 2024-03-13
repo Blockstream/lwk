@@ -50,6 +50,7 @@ pub enum Method {
     ListAssets,
     AssetInsert,
     AssetRemove,
+    AssetPublish,
     Scan,
     Stop,
     SignerJadeId,
@@ -95,6 +96,7 @@ impl Method {
                 Method::Scan => schema_for!(request::Empty),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(request::Empty),
+                Method::AssetPublish => schema_for!(request::AssetPublish),
             },
             Direction::Response => match self {
                 Method::Schema => return serde_json::from_str(include_str!("../schema.json")),
@@ -134,6 +136,7 @@ impl Method {
                 Method::Scan => schema_for!(response::Empty),
                 Method::Stop => schema_for!(request::Empty),
                 Method::SignerJadeId => schema_for!(response::JadeId),
+                Method::AssetPublish => schema_for!(response::AssetPublish),
             },
         })
     }
@@ -179,6 +182,7 @@ impl FromStr for Method {
             "asset_insert" => Method::AssetInsert,
             "asset_remove" => Method::AssetRemove,
             "signer_jade_id" => Method::SignerJadeId,
+            "asset_publish" => Method::AssetPublish,
             "scan" => Method::Scan,
             "stop" => Method::Stop,
             _ => {
@@ -230,6 +234,7 @@ impl std::fmt::Display for Method {
             Method::Scan => "scan",
             Method::Stop => "stop",
             Method::SignerJadeId => "signer_jade_id",
+            Method::AssetPublish => "asset_publish",
         };
         write!(f, "{}", s)
     }

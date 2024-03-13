@@ -361,6 +361,13 @@ pub struct AssetRemove {
     pub asset_id: String,
 }
 
+/// Request to publish
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetPublish {
+    /// The asset identifier
+    pub asset_id: String,
+}
+
 /// Request to obtain jade identifiers
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignerJadeId {

@@ -18,6 +18,14 @@ pub enum Entity {
     Domain(String),
 }
 
+impl Entity {
+    pub fn domain(&self) -> &str {
+        match self {
+            Entity::Domain(d) => d.as_str(),
+        }
+    }
+}
+
 // TODO: should we allow the caller to set extra arbitrary fields? if so how should we treat them?
 // should we allow them to contribute to the contract hash, but we should skip validation for
 // those? For instance how should we handle the nonce field that asset

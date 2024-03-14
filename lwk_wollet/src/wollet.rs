@@ -86,6 +86,11 @@ impl Wollet {
         self.config.policy_asset()
     }
 
+    /// Get the network
+    pub fn network(&self) -> &ElementsNetwork {
+        self.config.network()
+    }
+
     /// Get a reference of the wallet descriptor
     pub fn descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
         self.descriptor.as_ref()

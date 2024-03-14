@@ -1,12 +1,14 @@
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
+use crate::pset_create::validate_address;
 use crate::secp256k1::PublicKey;
 use crate::store::Timestamp;
-use crate::Error;
+use crate::{ElementsNetwork, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WalletTxOut {
@@ -83,6 +85,40 @@ impl TryFrom<String> for UnvalidatedAddressee {
             address: pieces[0].to_string(),
             asset: pieces[2].to_string(),
         })
+    }
+}
+
+impl UnvalidatedAddressee {
+    fn validate_asset(&self, network: &ElementsNetwork) -> Result<AssetId, Error> {
+        if self.asset.is_empty() {
+            Ok(network.policy_asset())
+        } else {
+            Ok(AssetId::from_str(&self.asset)?)
+        }
+    }
+
+    fn validate_satoshi(&self) -> Result<u64, Error> {
+        if self.satoshi == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        Ok(self.satoshi)
+    }
+
+    pub fn validate(&self, network: &ElementsNetwork) -> Result<Addressee, Error> {
+        let satoshi = self.validate_satoshi()?;
+        let asset = self.validate_asset(network)?;
+        if self.address == "burn" {
+            let burn_script = Script::new_op_return(&[]);
+            Ok(Addressee {
+                satoshi,
+                script_pubkey: burn_script,
+                blinding_pubkey: None,
+                asset,
+            })
+        } else {
+            let address = validate_address(&self.address, network)?;
+            Ok(Addressee::from_address(self.satoshi, &address, asset))
+        }
     }
 }
 

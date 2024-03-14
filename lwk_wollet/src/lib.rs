@@ -17,6 +17,7 @@ mod persister;
 mod pset_create;
 mod registry;
 mod store;
+mod tx_builder;
 mod update;
 mod util;
 mod wollet;

@@ -34,6 +34,14 @@ impl ElementsNetwork {
             ElementsNetwork::ElementsRegtest { .. } => "liquid-regtest",
         }
     }
+
+    pub fn address_params(&self) -> &'static AddressParams {
+        match self {
+            ElementsNetwork::Liquid => &AddressParams::LIQUID,
+            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
+            ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -47,14 +55,14 @@ impl Config {
     }
 
     pub fn address_params(&self) -> &'static AddressParams {
-        match self.network {
-            ElementsNetwork::Liquid => &AddressParams::LIQUID,
-            ElementsNetwork::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
-            ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
-        }
+        self.network.address_params()
     }
 
     pub fn policy_asset(&self) -> AssetId {
         self.network.policy_asset()
+    }
+
+    pub fn network(&self) -> &ElementsNetwork {
+        &self.network
     }
 }

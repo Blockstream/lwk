@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 // We make issuance and reissuance are mutually exclusive for simplicity
-pub(crate) enum IssuanceRequest {
+pub enum IssuanceRequest {
     None,
     Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
     Reissuance(AssetId, u64, Option<Address>),
@@ -169,21 +169,6 @@ impl Wollet {
         Ok(Addressee::from_address(satoshi, address.address(), asset))
     }
 
-    fn create_pset(
-        &self,
-        addressees: Vec<UnvalidatedAddressee>,
-        fee_rate: Option<f32>, // TODO consider using bitcoin::FeeRate
-        issuance_request: IssuanceRequest,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let mut builder = TxBuilder::new(*self.network());
-        builder.add_recipients(&addressees)?;
-        if let Some(fee_rate) = fee_rate {
-            builder.fee_rate(fee_rate);
-        }
-        builder.set_issuance_request(issuance_request);
-        builder.finish(self)
-    }
-
     /// Create a PSET sending some satoshi to an address
     pub fn send_lbtc(
         &self,
@@ -191,12 +176,15 @@ impl Wollet {
         address: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![UnvalidatedAddressee {
+        let address = UnvalidatedAddressee {
             satoshi,
             address: address.to_string(),
             asset: "".to_string(),
-        }];
-        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
+        };
+        TxBuilder::new(*self.network())
+            .add_recipient(&address)?
+            .fee_rate(fee_rate)
+            .finish(&self)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -207,12 +195,15 @@ impl Wollet {
         asset: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![UnvalidatedAddressee {
+        let address = UnvalidatedAddressee {
             satoshi,
             address: address.to_string(),
             asset: asset.to_string(),
-        }];
-        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
+        };
+        TxBuilder::new(*self.network())
+            .add_recipient(&address)?
+            .fee_rate(fee_rate)
+            .finish(&self)
     }
 
     /// Create a PSET sending to many outputs
@@ -224,7 +215,10 @@ impl Wollet {
         if addressees.is_empty() {
             return Err(Error::SendManyEmptyAddressee);
         }
-        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
+        TxBuilder::new(*self.network())
+            .add_recipients(&addressees)?
+            .fee_rate(fee_rate)
+            .finish(&self)
     }
 
     /// Create a PSET burning an asset
@@ -234,12 +228,15 @@ impl Wollet {
         satoshi: u64,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![UnvalidatedAddressee {
+        let address = UnvalidatedAddressee {
             satoshi,
             address: "burn".to_string(),
             asset: asset.to_string(),
-        }];
-        self.create_pset(addressees, fee_rate, IssuanceRequest::None)
+        };
+        TxBuilder::new(*self.network())
+            .add_recipient(&address)?
+            .fee_rate(fee_rate)
+            .finish(&self)
     }
 
     /// Create a PSET issuing an asset
@@ -252,7 +249,6 @@ impl Wollet {
         contract: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![];
         let contract = if contract.is_empty() {
             None
         } else {
@@ -270,7 +266,10 @@ impl Wollet {
             address_token,
             contract,
         );
-        self.create_pset(addressees, fee_rate, issuance)
+        TxBuilder::new(*self.network())
+            .fee_rate(fee_rate)
+            .set_issuance_request(issuance)
+            .finish(&self)
     }
 
     /// Create a PSET reissuing an asset
@@ -281,11 +280,13 @@ impl Wollet {
         address_asset: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let addressees = vec![];
         let asset = AssetId::from_str(asset)?;
         let address_asset = validate_empty_address(address_asset, self.network())?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
-        self.create_pset(addressees, fee_rate, reissuance)
+        TxBuilder::new(*self.network())
+            .fee_rate(fee_rate)
+            .set_issuance_request(reissuance)
+            .finish(&self)
     }
 }
 

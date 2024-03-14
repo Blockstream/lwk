@@ -31,6 +31,7 @@ pub use crate::model::{
 };
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
+pub use crate::tx_builder::TxBuilder;
 pub use crate::update::Update;
 pub use crate::util::EC;
 pub use crate::wollet::Wollet;

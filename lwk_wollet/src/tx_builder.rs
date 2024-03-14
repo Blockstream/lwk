@@ -11,10 +11,20 @@ use crate::{
     Wollet, EC,
 };
 
+/// A transaction builder
+///
+///
+/// Design decisions:
+///
+/// * We are not holding a reference of the wallet in the struct and we instead pass a reference
+/// of the wallet in the finish methods because this it more friendly for bindings implementation.
+/// Moreover, we could have an alternative finish which don't use a wallet at all.
+/// * We are consuming and returning self to build the tx with method chaining
+#[derive(Debug)]
 pub struct TxBuilder {
     network: ElementsNetwork,
     addressees: Vec<Addressee>,
-    fee_rate: f32, // TODO consider using bitcoin::FeeRate
+    fee_rate: f32,
     issuance_request: IssuanceRequest,
 }
 
@@ -27,22 +37,24 @@ impl TxBuilder {
             issuance_request: IssuanceRequest::None,
         }
     }
-    pub fn add_recipient(&mut self, addr: &UnvalidatedAddressee) -> Result<&mut Self, Error> {
-        let addr: Addressee = addr.validate(&self.network)?;
+    pub fn add_recipient(mut self, addr: &UnvalidatedAddressee) -> Result<Self, Error> {
+        let addr: Addressee = addr.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
     }
-    pub fn add_recipients(&mut self, addrs: &[UnvalidatedAddressee]) -> Result<&mut Self, Error> {
+    pub fn add_recipients(mut self, addrs: &[UnvalidatedAddressee]) -> Result<Self, Error> {
         for addr in addrs {
-            self.add_recipient(addr)?;
+            self = self.add_recipient(addr)?;
         }
         Ok(self)
     }
-    pub fn fee_rate(&mut self, fee_rate: f32) -> &mut Self {
-        self.fee_rate = fee_rate;
+    pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
+        if let Some(fee_rate) = fee_rate {
+            self.fee_rate = fee_rate
+        }
         self
     }
-    pub fn set_issuance_request(&mut self, issuance_request: IssuanceRequest) -> &mut Self {
+    pub fn set_issuance_request(mut self, issuance_request: IssuanceRequest) -> Self {
         self.issuance_request = issuance_request;
         self
     }
@@ -56,10 +68,11 @@ impl TxBuilder {
 
         let mut inp_weight = 0;
 
+        let policy_asset = self.network().policy_asset();
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
             .addressees
             .into_iter()
-            .partition(|a| a.asset == self.network.policy_asset());
+            .partition(|a| a.asset == policy_asset);
 
         // Assets inputs and outputs
         let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
@@ -245,5 +258,9 @@ impl TxBuilder {
         wollet.add_details(&mut pset)?;
 
         Ok(pset)
+    }
+
+    fn network(&self) -> &ElementsNetwork {
+        &self.network
     }
 }

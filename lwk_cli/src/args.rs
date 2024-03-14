@@ -642,7 +642,7 @@ pub enum AssetCommand {
         #[arg(long)]
         domain: String,
 
-        /// Http domain of the issuer
+        /// A pubkey (66 hex chars) owned by the issuer to handle asset metadata updates
         #[arg(long)]
         issuer_pubkey: String,
 

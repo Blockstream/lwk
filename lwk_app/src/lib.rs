@@ -991,7 +991,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let mut result = response.text()?;
                 if result.contains("failed verifying linked entity") {
                     let domain = contract.entity.domain();
-                    result = format!("https://{domain}/.well-known/liquid-asset-proof-{asset_id} must contain the following 'Authorize linking the domain name <{domain}> to the Liquid asset <{asset_id}>'");
+                    result = format!("https://{domain}/.well-known/liquid-asset-proof-{asset_id} must contain the following 'Authorize linking the domain name {domain} to the Liquid asset {asset_id}'");
                 }
                 Response::result(
                     request.id,

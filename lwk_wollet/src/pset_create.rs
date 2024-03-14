@@ -9,6 +9,7 @@ use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::util::EC;
 use crate::wollet::Wollet;
+use crate::ElementsNetwork;
 use elements::pset::elip100::AssetMetadata;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
@@ -49,63 +50,6 @@ impl Wollet {
             .get(outpoint.vout as usize)
             .ok_or_else(|| Error::MissingVout)?
             .clone())
-    }
-
-    fn validate_address(&self, address: &str) -> Result<Address, Error> {
-        let params = self.config.address_params();
-        let address = Address::parse_with_params(address, params)?;
-        if address.blinding_pubkey.is_none() {
-            return Err(Error::NotConfidentialAddress);
-        };
-        Ok(address)
-    }
-
-    fn validate_empty_address(&self, address: &str) -> Result<Option<Address>, Error> {
-        (!address.is_empty())
-            .then(|| self.validate_address(address))
-            .transpose()
-    }
-
-    fn validate_asset(&self, asset: &str) -> Result<AssetId, Error> {
-        if asset.is_empty() {
-            Ok(self.policy_asset())
-        } else {
-            Ok(AssetId::from_str(asset)?)
-        }
-    }
-
-    fn validate_satoshi(&self, satoshi: u64) -> Result<u64, Error> {
-        if satoshi == 0 {
-            return Err(Error::InvalidAmount);
-        }
-        Ok(satoshi)
-    }
-
-    fn validate_addressee(&self, addressee: &UnvalidatedAddressee) -> Result<Addressee, Error> {
-        let satoshi = self.validate_satoshi(addressee.satoshi)?;
-        let asset = self.validate_asset(&addressee.asset)?;
-        if addressee.address == "burn" {
-            let burn_script = Script::new_op_return(&[]);
-            Ok(Addressee {
-                satoshi,
-                script_pubkey: burn_script,
-                blinding_pubkey: None,
-                asset,
-            })
-        } else {
-            let address = self.validate_address(&addressee.address)?;
-            Ok(Addressee::from_address(addressee.satoshi, &address, asset))
-        }
-    }
-
-    fn validate_addressees(
-        &self,
-        addressees: Vec<UnvalidatedAddressee>,
-    ) -> Result<Vec<Addressee>, Error> {
-        addressees
-            .iter()
-            .map(|a| self.validate_addressee(a))
-            .collect()
     }
 
     fn add_output(
@@ -233,7 +177,7 @@ impl Wollet {
         issuance_request: IssuanceRequest,
     ) -> Result<PartiallySignedTransaction, Error> {
         // Check user inputs
-        let addressees = self.validate_addressees(addressees)?;
+        let addressees = validate_addressees(addressees, self.network())?;
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = addressees
             .into_iter()
             .partition(|a| a.asset == self.policy_asset());
@@ -507,8 +451,8 @@ impl Wollet {
             contract.validate()?;
             Some(contract)
         };
-        let address_asset = self.validate_empty_address(address_asset)?;
-        let address_token = self.validate_empty_address(address_token)?;
+        let address_asset = validate_empty_address(address_asset, self.network())?;
+        let address_token = validate_empty_address(address_token, self.network())?;
         let issuance = IssuanceRequest::Issuance(
             satoshi_asset,
             address_asset,
@@ -529,7 +473,7 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let addressees = vec![];
         let asset = AssetId::from_str(asset)?;
-        let address_asset = self.validate_empty_address(address_asset)?;
+        let address_asset = validate_empty_address(address_asset, self.network())?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
         self.create_pset(addressees, fee_rate, reissuance)
     }
@@ -537,4 +481,29 @@ impl Wollet {
 
 fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPublicKey {
     BitcoinPublicKey::new(pk)
+}
+
+pub(crate) fn validate_address(address: &str, network: &ElementsNetwork) -> Result<Address, Error> {
+    let params = network.address_params();
+    let address = Address::parse_with_params(address, params)?;
+    if address.blinding_pubkey.is_none() {
+        return Err(Error::NotConfidentialAddress);
+    };
+    Ok(address)
+}
+
+pub(crate) fn validate_empty_address(
+    address: &str,
+    network: &ElementsNetwork,
+) -> Result<Option<Address>, Error> {
+    (!address.is_empty())
+        .then(|| validate_address(address, network))
+        .transpose()
+}
+
+pub(crate) fn validate_addressees(
+    addressees: Vec<UnvalidatedAddressee>,
+    network: &ElementsNetwork,
+) -> Result<Vec<Addressee>, Error> {
+    addressees.iter().map(|a| a.validate(network)).collect()
 }

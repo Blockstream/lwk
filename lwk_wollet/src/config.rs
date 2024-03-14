@@ -55,7 +55,7 @@ impl Config {
     }
 
     pub fn address_params(&self) -> &'static AddressParams {
-        &self.network.address_params()
+        self.network.address_params()
     }
 
     pub fn policy_asset(&self) -> AssetId {

@@ -9,6 +9,7 @@ mod network;
 mod pset;
 mod serial;
 mod signer;
+mod tx_builder;
 mod update;
 mod wollet;
 

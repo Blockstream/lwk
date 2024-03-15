@@ -184,7 +184,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .add_recipient(&address)?
             .fee_rate(fee_rate)
-            .finish(&self)
+            .finish(self)
     }
 
     /// Create a PSET sending some satoshi of an asset to an address
@@ -203,7 +203,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .add_recipient(&address)?
             .fee_rate(fee_rate)
-            .finish(&self)
+            .finish(self)
     }
 
     /// Create a PSET sending to many outputs
@@ -218,7 +218,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .add_recipients(&addressees)?
             .fee_rate(fee_rate)
-            .finish(&self)
+            .finish(self)
     }
 
     /// Create a PSET burning an asset
@@ -236,7 +236,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .add_recipient(&address)?
             .fee_rate(fee_rate)
-            .finish(&self)
+            .finish(self)
     }
 
     /// Create a PSET issuing an asset
@@ -269,7 +269,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .fee_rate(fee_rate)
             .set_issuance_request(issuance)
-            .finish(&self)
+            .finish(self)
     }
 
     /// Create a PSET reissuing an asset
@@ -286,7 +286,7 @@ impl Wollet {
         TxBuilder::new(*self.network())
             .fee_rate(fee_rate)
             .set_issuance_request(reissuance)
-            .finish(&self)
+            .finish(self)
     }
 }
 

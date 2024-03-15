@@ -58,7 +58,7 @@ impl TxBuilder {
         self
     }
 
-    pub fn set_issuance_request(mut self, issuance_request: IssuanceRequest) -> Self {
+    pub fn issuance_request(mut self, issuance_request: IssuanceRequest) -> Self {
         self.issuance_request = issuance_request;
         self
     }

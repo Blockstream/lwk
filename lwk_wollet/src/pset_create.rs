@@ -268,7 +268,7 @@ impl Wollet {
         );
         TxBuilder::new(*self.network())
             .fee_rate(fee_rate)
-            .set_issuance_request(issuance)
+            .issuance_request(issuance)
             .finish(self)
     }
 
@@ -285,7 +285,7 @@ impl Wollet {
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
         TxBuilder::new(*self.network())
             .fee_rate(fee_rate)
-            .set_issuance_request(reissuance)
+            .issuance_request(reissuance)
             .finish(self)
     }
 }

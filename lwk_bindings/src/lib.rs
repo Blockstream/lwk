@@ -13,6 +13,7 @@ mod persister;
 mod pset;
 mod signer;
 mod test_env;
+mod tx_builder;
 pub mod types;
 mod update;
 mod wollet;

@@ -37,23 +37,27 @@ impl TxBuilder {
             issuance_request: IssuanceRequest::None,
         }
     }
+
     pub fn add_recipient(mut self, addr: &UnvalidatedAddressee) -> Result<Self, Error> {
         let addr: Addressee = addr.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
     }
+
     pub fn add_recipients(mut self, addrs: &[UnvalidatedAddressee]) -> Result<Self, Error> {
         for addr in addrs {
             self = self.add_recipient(addr)?;
         }
         Ok(self)
     }
+
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate
         }
         self
     }
+
     pub fn set_issuance_request(mut self, issuance_request: IssuanceRequest) -> Self {
         self.issuance_request = issuance_request;
         self

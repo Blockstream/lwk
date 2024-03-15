@@ -176,13 +176,9 @@ impl Wollet {
         address: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let address = UnvalidatedAddressee {
-            satoshi,
-            address: address.to_string(),
-            asset: "".to_string(),
-        };
+        let recipient = UnvalidatedAddressee::lbtc(address.to_string(), satoshi);
         TxBuilder::new(*self.network())
-            .add_recipient(&address)?
+            .add_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -228,13 +224,9 @@ impl Wollet {
         satoshi: u64,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let address = UnvalidatedAddressee {
-            satoshi,
-            address: "burn".to_string(),
-            asset: asset.to_string(),
-        };
+        let recipient = UnvalidatedAddressee::burn(asset.to_string(), satoshi);
         TxBuilder::new(*self.network())
-            .add_recipient(&address)?
+            .add_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }

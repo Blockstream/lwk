@@ -68,6 +68,23 @@ pub struct UnvalidatedAddressee {
     pub asset: String,
 }
 
+impl UnvalidatedAddressee {
+    pub fn lbtc(address: String, satoshi: u64) -> Self {
+        UnvalidatedAddressee {
+            address,
+            satoshi,
+            asset: "".to_string(),
+        }
+    }
+    pub fn burn(asset: String, satoshi: u64) -> Self {
+        UnvalidatedAddressee {
+            address: "burn".to_string(),
+            satoshi,
+            asset: asset.to_string(),
+        }
+    }
+}
+
 impl TryFrom<String> for UnvalidatedAddressee {
     type Error = crate::Error;
 

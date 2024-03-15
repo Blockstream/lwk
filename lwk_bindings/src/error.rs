@@ -106,6 +106,14 @@ impl From<String> for LwkError {
     }
 }
 
+impl From<&str> for LwkError {
+    fn from(msg: &str) -> Self {
+        LwkError::Generic {
+            msg: msg.to_owned(),
+        }
+    }
+}
+
 impl<T> From<PoisonError<MutexGuard<'_, T>>> for LwkError {
     fn from(e: PoisonError<MutexGuard<'_, T>>) -> Self {
         LwkError::PoisonError { msg: e.to_string() }

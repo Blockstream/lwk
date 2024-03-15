@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError};
+use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
@@ -84,5 +84,9 @@ impl Network {
 
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
+    }
+
+    pub fn tx_builder(&self) -> Arc<TxBuilder> {
+        Arc::new(TxBuilder::new(self))
     }
 }

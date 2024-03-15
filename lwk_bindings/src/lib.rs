@@ -41,6 +41,7 @@ pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use pset::Pset;
 pub use test_env::TestEnv;
+pub use tx_builder::TxBuilder;
 pub use update::Update;
 
 uniffi::setup_scaffolding!();

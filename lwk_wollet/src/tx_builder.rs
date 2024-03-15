@@ -44,6 +44,11 @@ impl TxBuilder {
         Ok(self)
     }
 
+    pub fn add_validated_recipient(mut self, addr: Addressee) -> Self {
+        self.addressees.push(addr);
+        self
+    }
+
     pub fn add_recipients(mut self, addrs: &[UnvalidatedAddressee]) -> Result<Self, Error> {
         for addr in addrs {
             self = self.add_recipient(addr)?;

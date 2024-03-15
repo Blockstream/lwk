@@ -6,6 +6,9 @@ on:
 
 name: CI
 
+env:
+  RUSTFLAGS: "--cfg=web_sys_unstable_apis"
+
 jobs:
 
   build:

@@ -60,7 +60,7 @@ impl TxBuilder {
     pub fn add_lbtc_recipient(&self, address: &Address, satoshi: u64) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedAddressee::lbtc(address.to_string(), satoshi);
         let recipient = unvalidated_recipient.validate(&self.network)?;
-        self.push_recipient(recipient)
+        self.add_validated_recipient(recipient)
     }
 
     /// Add a recipient receiving the given asset
@@ -76,19 +76,19 @@ impl TxBuilder {
             asset: asset.to_string(),
         };
         let recipient = unvalidated_recipient.validate(&self.network)?;
-        self.push_recipient(recipient)
+        self.add_validated_recipient(recipient)
     }
 
     /// Burn satoshi units of the given asset
     pub fn add_burn(&self, satoshi: u64, asset: &AssetId) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedAddressee::burn(asset.to_string(), satoshi);
         let recipient = unvalidated_recipient.validate(&self.network)?;
-        self.push_recipient(recipient)
+        self.add_validated_recipient(recipient)
     }
 }
 
 impl TxBuilder {
-    fn push_recipient(&self, recipient: lwk_wollet::Addressee) -> Result<(), LwkError> {
+    fn add_validated_recipient(&self, recipient: lwk_wollet::Addressee) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;
         *lock = Some(inner.add_validated_recipient(recipient));

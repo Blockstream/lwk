@@ -1,8 +1,10 @@
 use crate::store::Height;
 use crate::Error;
+use electrum_client::ScriptStatus;
 use electrum_client::{Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
 use elements::encode::deserialize as elements_deserialize;
 use elements::encode::serialize as elements_serialize;
+use elements::Address;
 use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -13,6 +15,8 @@ pub struct ElectrumClient {
     client: Client,
 
     tip: BlockHeader,
+
+    script_status: HashMap<Script, ScriptStatus>,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +67,35 @@ impl ElectrumClient {
         let header = client.block_headers_subscribe_raw()?;
         let tip: BlockHeader = elements_deserialize(&header.header)?;
 
-        Ok(Self { client, tip })
+        Ok(Self {
+            client,
+            tip,
+            script_status: HashMap::new(),
+        })
+    }
+
+    /// Return the status of an address as defined by the electrum protocol
+    ///
+    /// The status is function of the transaction ids where this address appears and the height of
+    /// the block containing when it is confirmed. Unconfirmed transactions use a negative height,
+    /// so the status change when they are confirmed.
+    pub fn address_status(&mut self, address: &Address) -> Result<Option<ScriptStatus>, Error> {
+        let elements_script = address.script_pubkey();
+        let bitcoin_script = bitcoin::ScriptBuf::from(elements_script.to_bytes());
+
+        let val = match self.client.script_subscribe(&bitcoin_script) {
+            Ok(val) => val,
+            Err(electrum_client::Error::AlreadySubscribed(_)) => {
+                self.client.script_get_history(&bitcoin_script)?; // it seems it must be called, otherwise the server don't update the status
+                self.client.script_pop(&bitcoin_script)?
+            }
+            Err(e) => return Err(e.into()),
+        };
+
+        if let Some(val) = val {
+            self.script_status.insert(elements_script.clone(), val);
+        }
+        Ok(self.script_status.get(&elements_script).cloned())
     }
 }
 impl super::BlockchainBackend for ElectrumClient {

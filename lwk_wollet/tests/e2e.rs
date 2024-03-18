@@ -1,6 +1,7 @@
 mod test_jade;
 
 use crate::test_jade::jade_setup;
+use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -733,4 +734,41 @@ fn jade_single_sig() {
 
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);
+}
+
+#[test]
+fn address_status() {
+    let server = setup(false);
+    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false);
+    let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    let address = server.node_getnewaddress();
+    let initial_status = client.address_status(&address).unwrap();
+    assert_eq!(initial_status, None);
+
+    server.node_sendtoaddress(&address, 10000, None);
+
+    let new_status = wait_status_change(&mut client, &address, initial_status);
+
+    server.generate(1);
+
+    let last_status = wait_status_change(&mut client, &address, new_status);
+
+    let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    let new_client_status = client.address_status(&address).unwrap();
+    assert_eq!(last_status, new_client_status);
+}
+
+fn wait_status_change(
+    client: &mut ElectrumClient,
+    address: &elements::Address,
+    initial_status: Option<ScriptStatus>,
+) -> Option<ScriptStatus> {
+    for _ in 0..50 {
+        let status = client.address_status(address).unwrap();
+        if initial_status != status {
+            return status;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("status didn't change");
 }

@@ -53,7 +53,7 @@ impl Recipient {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UnvalidatedAddressee {
+pub struct UnvalidatedRecipient {
     /// The amount to send in satoshi
     pub satoshi: u64,
 
@@ -68,16 +68,16 @@ pub struct UnvalidatedAddressee {
     pub asset: String,
 }
 
-impl UnvalidatedAddressee {
+impl UnvalidatedRecipient {
     pub fn lbtc(address: String, satoshi: u64) -> Self {
-        UnvalidatedAddressee {
+        UnvalidatedRecipient {
             address,
             satoshi,
             asset: "".to_string(),
         }
     }
     pub fn burn(asset: String, satoshi: u64) -> Self {
-        UnvalidatedAddressee {
+        UnvalidatedRecipient {
             address: "burn".to_string(),
             satoshi,
             asset: asset.to_string(),
@@ -85,7 +85,7 @@ impl UnvalidatedAddressee {
     }
 }
 
-impl TryFrom<String> for UnvalidatedAddressee {
+impl TryFrom<String> for UnvalidatedRecipient {
     type Error = crate::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
@@ -97,7 +97,7 @@ impl TryFrom<String> for UnvalidatedAddressee {
                 value,
             )));
         }
-        Ok(UnvalidatedAddressee {
+        Ok(UnvalidatedRecipient {
             satoshi: pieces[1].parse()?,
             address: pieces[0].to_string(),
             asset: pieces[2].to_string(),
@@ -105,7 +105,7 @@ impl TryFrom<String> for UnvalidatedAddressee {
     }
 }
 
-impl UnvalidatedAddressee {
+impl UnvalidatedRecipient {
     fn validate_asset(&self, network: &ElementsNetwork) -> Result<AssetId, Error> {
         if self.asset.is_empty() {
             Ok(network.policy_asset())

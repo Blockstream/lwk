@@ -506,7 +506,7 @@ fn create_pset_error() {
     let token = token.to_string();
 
     // Invalid address
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: 1_000,
         address: "".to_string(),
         asset: "".to_string(),
@@ -523,7 +523,7 @@ fn create_pset_error() {
     let mut address = wallet.address();
     address.blinding_pubkey = None;
     let not_conf_address = address.to_string();
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: 1_000,
         address: not_conf_address,
         asset: "".to_string(),
@@ -533,7 +533,7 @@ fn create_pset_error() {
 
     let address = wallet.address().to_string();
     // Invalid amount
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: 0,
         address: address.clone(),
         asset: "".to_string(),
@@ -542,7 +542,7 @@ fn create_pset_error() {
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
 
     // Invalid asset
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: 1_000,
         address: address.clone(),
         asset: "aaaa".to_string(),
@@ -557,7 +557,7 @@ fn create_pset_error() {
 
     // Insufficient funds
     // Not enough lbtc
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: 2_200_000_000_000_000,
         address: address.clone(),
         asset: "".to_string(),
@@ -566,7 +566,7 @@ fn create_pset_error() {
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // Not enough asset
-    let addressees = vec![UnvalidatedAddressee {
+    let addressees = vec![UnvalidatedRecipient {
         satoshi: satoshi_a + 1,
         address,
         asset: asset.to_string(),

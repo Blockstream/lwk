@@ -5,7 +5,7 @@ use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
 use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
-use crate::model::{Recipient, UnvalidatedAddressee, WalletTxOut};
+use crate::model::{Recipient, UnvalidatedRecipient, WalletTxOut};
 use crate::registry::Contract;
 use crate::tx_builder::TxBuilder;
 use crate::wollet::Wollet;
@@ -176,7 +176,7 @@ impl Wollet {
         address: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let recipient = UnvalidatedAddressee::lbtc(address.to_string(), satoshi);
+        let recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         TxBuilder::new(*self.network())
             .add_recipient(&recipient)?
             .fee_rate(fee_rate)
@@ -191,7 +191,7 @@ impl Wollet {
         asset: &str,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let address = UnvalidatedAddressee {
+        let address = UnvalidatedRecipient {
             satoshi,
             address: address.to_string(),
             asset: asset.to_string(),
@@ -205,7 +205,7 @@ impl Wollet {
     /// Create a PSET sending to many outputs
     pub fn send_many(
         &self,
-        addressees: Vec<UnvalidatedAddressee>,
+        addressees: Vec<UnvalidatedRecipient>,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         if addressees.is_empty() {
@@ -224,7 +224,7 @@ impl Wollet {
         satoshi: u64,
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
-        let recipient = UnvalidatedAddressee::burn(asset.to_string(), satoshi);
+        let recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         TxBuilder::new(*self.network())
             .add_recipient(&recipient)?
             .fee_rate(fee_rate)

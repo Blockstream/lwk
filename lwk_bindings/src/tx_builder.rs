@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Mutex};
 
-use lwk_wollet::UnvalidatedAddressee;
+use lwk_wollet::UnvalidatedRecipient;
 
 use crate::{types::AssetId, Address, LwkError, Network, Pset, Wollet};
 
@@ -58,7 +58,7 @@ impl TxBuilder {
 
     /// Add a recipient receiving L-BTC
     pub fn add_lbtc_recipient(&self, address: &Address, satoshi: u64) -> Result<(), LwkError> {
-        let unvalidated_recipient = UnvalidatedAddressee::lbtc(address.to_string(), satoshi);
+        let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         let recipient = unvalidated_recipient.validate(&self.network)?;
         self.add_validated_recipient(recipient)
     }
@@ -70,7 +70,7 @@ impl TxBuilder {
         satoshi: u64,
         asset: &AssetId,
     ) -> Result<(), LwkError> {
-        let unvalidated_recipient = UnvalidatedAddressee {
+        let unvalidated_recipient = UnvalidatedRecipient {
             satoshi,
             address: address.to_string(),
             asset: asset.to_string(),
@@ -81,7 +81,7 @@ impl TxBuilder {
 
     /// Burn satoshi units of the given asset
     pub fn add_burn(&self, satoshi: u64, asset: &AssetId) -> Result<(), LwkError> {
-        let unvalidated_recipient = UnvalidatedAddressee::burn(asset.to_string(), satoshi);
+        let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         let recipient = unvalidated_recipient.validate(&self.network)?;
         self.add_validated_recipient(recipient)
     }

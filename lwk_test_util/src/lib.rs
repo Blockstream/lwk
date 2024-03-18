@@ -552,13 +552,13 @@ impl TestWollet {
         let addr2 = addr2.to_string();
         let ass1 = asset1.to_string();
         let ass2 = asset2.to_string();
-        let addressees: Vec<UnvalidatedAddressee> = vec![
-            UnvalidatedAddressee {
+        let addressees: Vec<UnvalidatedRecipient> = vec![
+            UnvalidatedRecipient {
                 satoshi: 1_000,
                 address: addr1,
                 asset: ass1,
             },
-            UnvalidatedAddressee {
+            UnvalidatedRecipient {
                 satoshi: 2_000,
                 address: addr2,
                 asset: ass2,

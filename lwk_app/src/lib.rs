@@ -1030,8 +1030,8 @@ fn scan(state: &Arc<Mutex<State>>) -> Result<(), Error> {
     Ok(())
 }
 
-fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::UnvalidatedAddressee {
-    lwk_wollet::UnvalidatedAddressee {
+fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::UnvalidatedRecipient {
+    lwk_wollet::UnvalidatedRecipient {
         satoshi: a.satoshi,
         address: a.address,
         asset: a.asset,

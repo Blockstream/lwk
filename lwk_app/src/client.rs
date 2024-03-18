@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use lwk_jade::TIMEOUT;
-use lwk_wollet::UnvalidatedAddressee;
+use lwk_wollet::UnvalidatedRecipient;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::value::to_raw_value;
@@ -133,7 +133,7 @@ impl Client {
     pub fn send_many(
         &self,
         name: String,
-        addressees: Vec<UnvalidatedAddressee>,
+        addressees: Vec<UnvalidatedRecipient>,
         fee_rate: Option<f32>,
     ) -> Result<response::Pset, Error> {
         let req = request::Send {
@@ -395,7 +395,7 @@ impl Client {
     }
 }
 
-fn unvalidate_addressee(a: lwk_wollet::UnvalidatedAddressee) -> request::UnvalidatedAddressee {
+fn unvalidate_addressee(a: lwk_wollet::UnvalidatedRecipient) -> request::UnvalidatedAddressee {
     request::UnvalidatedAddressee {
         satoshi: a.satoshi,
         address: a.address,

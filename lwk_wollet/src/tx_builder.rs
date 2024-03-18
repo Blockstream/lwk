@@ -7,7 +7,7 @@ use elements::{
 use rand::thread_rng;
 
 use crate::{
-    model::Recipient, pset_create::IssuanceRequest, ElementsNetwork, Error, UnvalidatedAddressee,
+    model::Recipient, pset_create::IssuanceRequest, ElementsNetwork, Error, UnvalidatedRecipient,
     Wollet, EC,
 };
 
@@ -38,7 +38,7 @@ impl TxBuilder {
         }
     }
 
-    pub fn add_recipient(mut self, addr: &UnvalidatedAddressee) -> Result<Self, Error> {
+    pub fn add_recipient(mut self, addr: &UnvalidatedRecipient) -> Result<Self, Error> {
         let addr: Recipient = addr.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
@@ -49,7 +49,7 @@ impl TxBuilder {
         self
     }
 
-    pub fn add_recipients(mut self, addrs: &[UnvalidatedAddressee]) -> Result<Self, Error> {
+    pub fn add_recipients(mut self, addrs: &[UnvalidatedRecipient]) -> Result<Self, Error> {
         for addr in addrs {
             self = self.add_recipient(addr)?;
         }

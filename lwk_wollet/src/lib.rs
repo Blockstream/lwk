@@ -27,7 +27,7 @@ pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
 pub use crate::model::{
-    AddressResult, IssuanceDetails, Recipient, UnvalidatedAddressee, WalletTx, WalletTxOut,
+    AddressResult, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx, WalletTxOut,
 };
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};

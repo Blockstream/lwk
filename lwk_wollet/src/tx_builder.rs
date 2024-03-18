@@ -7,7 +7,7 @@ use elements::{
 use rand::thread_rng;
 
 use crate::{
-    model::Addressee, pset_create::IssuanceRequest, ElementsNetwork, Error, UnvalidatedAddressee,
+    model::Recipient, pset_create::IssuanceRequest, ElementsNetwork, Error, UnvalidatedAddressee,
     Wollet, EC,
 };
 
@@ -23,7 +23,7 @@ use crate::{
 #[derive(Debug)]
 pub struct TxBuilder {
     network: ElementsNetwork,
-    addressees: Vec<Addressee>,
+    addressees: Vec<Recipient>,
     fee_rate: f32,
     issuance_request: IssuanceRequest,
 }
@@ -39,12 +39,12 @@ impl TxBuilder {
     }
 
     pub fn add_recipient(mut self, addr: &UnvalidatedAddressee) -> Result<Self, Error> {
-        let addr: Addressee = addr.validate(self.network())?;
+        let addr: Recipient = addr.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
     }
 
-    pub fn add_validated_recipient(mut self, addr: Addressee) -> Self {
+    pub fn add_validated_recipient(mut self, addr: Recipient) -> Self {
         self.addressees.push(addr);
         self
     }
@@ -144,7 +144,7 @@ impl TxBuilder {
                     wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
 
                 let addressee = match address_asset {
-                    Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
+                    Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
                     None => wollet.addressee_external(
                         satoshi_asset,
                         asset,
@@ -155,7 +155,7 @@ impl TxBuilder {
 
                 if satoshi_token > 0 {
                     let addressee = match address_token {
-                        Some(address) => Addressee::from_address(satoshi_token, &address, token),
+                        Some(address) => Recipient::from_address(satoshi_token, &address, token),
                         None => wollet.addressee_external(
                             satoshi_token,
                             token,
@@ -208,7 +208,7 @@ impl TxBuilder {
                 )?;
 
                 let addressee = match address_asset {
-                    Some(address) => Addressee::from_address(satoshi_asset, &address, asset),
+                    Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
                     None => wollet.addressee_external(
                         satoshi_asset,
                         asset,

@@ -34,14 +34,14 @@ pub struct WalletTx {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Addressee {
+pub struct Recipient {
     pub satoshi: u64,
     pub script_pubkey: Script,
     pub blinding_pubkey: Option<PublicKey>,
     pub asset: AssetId,
 }
 
-impl Addressee {
+impl Recipient {
     pub fn from_address(satoshi: u64, address: &Address, asset: AssetId) -> Self {
         Self {
             satoshi,
@@ -121,12 +121,12 @@ impl UnvalidatedAddressee {
         Ok(self.satoshi)
     }
 
-    pub fn validate(&self, network: &ElementsNetwork) -> Result<Addressee, Error> {
+    pub fn validate(&self, network: &ElementsNetwork) -> Result<Recipient, Error> {
         let satoshi = self.validate_satoshi()?;
         let asset = self.validate_asset(network)?;
         if self.address == "burn" {
             let burn_script = Script::new_op_return(&[]);
-            Ok(Addressee {
+            Ok(Recipient {
                 satoshi,
                 script_pubkey: burn_script,
                 blinding_pubkey: None,
@@ -134,7 +134,7 @@ impl UnvalidatedAddressee {
             })
         } else {
             let address = validate_address(&self.address, network)?;
-            Ok(Addressee::from_address(self.satoshi, &address, asset))
+            Ok(Recipient::from_address(self.satoshi, &address, asset))
         }
     }
 }

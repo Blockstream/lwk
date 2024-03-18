@@ -5,7 +5,7 @@ use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
 use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
-use crate::model::{Addressee, UnvalidatedAddressee, WalletTxOut};
+use crate::model::{Recipient, UnvalidatedAddressee, WalletTxOut};
 use crate::registry::Contract;
 use crate::tx_builder::TxBuilder;
 use crate::wollet::Wollet;
@@ -54,7 +54,7 @@ impl Wollet {
     pub(crate) fn add_output(
         &self,
         pset: &mut PartiallySignedTransaction,
-        addressee: &Addressee,
+        addressee: &Recipient,
     ) -> Result<(), Error> {
         let output = Output {
             script_pubkey: addressee.script_pubkey.clone(),
@@ -152,10 +152,10 @@ impl Wollet {
         satoshi: u64,
         asset: AssetId,
         last_unused: &mut u32,
-    ) -> Result<Addressee, Error> {
+    ) -> Result<Recipient, Error> {
         let address = self.change(Some(*last_unused))?;
         *last_unused += 1;
-        Ok(Addressee::from_address(satoshi, address.address(), asset))
+        Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
     pub(crate) fn addressee_external(
@@ -163,10 +163,10 @@ impl Wollet {
         satoshi: u64,
         asset: AssetId,
         last_unused: &mut u32,
-    ) -> Result<Addressee, Error> {
+    ) -> Result<Recipient, Error> {
         let address = self.address(Some(*last_unused))?;
         *last_unused += 1;
-        Ok(Addressee::from_address(satoshi, address.address(), asset))
+        Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
     /// Create a PSET sending some satoshi to an address

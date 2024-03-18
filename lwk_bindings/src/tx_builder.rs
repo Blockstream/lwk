@@ -88,7 +88,7 @@ impl TxBuilder {
 }
 
 impl TxBuilder {
-    fn add_validated_recipient(&self, recipient: lwk_wollet::Addressee) -> Result<(), LwkError> {
+    fn add_validated_recipient(&self, recipient: lwk_wollet::Recipient) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;
         *lock = Some(inner.add_validated_recipient(recipient));

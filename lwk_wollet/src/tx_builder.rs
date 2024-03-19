@@ -38,19 +38,22 @@ impl TxBuilder {
         }
     }
 
-    pub fn add_unvalidated_recipient(mut self, addr: &UnvalidatedRecipient) -> Result<Self, Error> {
-        let addr: Recipient = addr.validate(self.network())?;
+    pub fn add_unvalidated_recipient(
+        mut self,
+        recipient: &UnvalidatedRecipient,
+    ) -> Result<Self, Error> {
+        let addr: Recipient = recipient.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
     }
 
-    pub fn add_validated_recipient(mut self, addr: Recipient) -> Self {
-        self.addressees.push(addr);
+    pub fn add_validated_recipient(mut self, recipient: Recipient) -> Self {
+        self.addressees.push(recipient);
         self
     }
 
-    pub fn add_recipients(mut self, addrs: &[UnvalidatedRecipient]) -> Result<Self, Error> {
-        for addr in addrs {
+    pub fn add_recipients(mut self, recipient: &[UnvalidatedRecipient]) -> Result<Self, Error> {
+        for addr in recipient {
             self = self.add_unvalidated_recipient(addr)?;
         }
         Ok(self)

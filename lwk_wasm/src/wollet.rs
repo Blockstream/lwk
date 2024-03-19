@@ -1,7 +1,4 @@
-use crate::{
-    Address, AddressResult, AssetId, Contract, Error, Network, Pset, Update, WalletTx,
-    WolletDescriptor,
-};
+use crate::{AddressResult, Error, Network, Pset, Update, WalletTx, WolletDescriptor};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
@@ -58,57 +55,6 @@ impl Wollet {
             .into_iter()
             .map(Into::into)
             .collect())
-    }
-
-    #[wasm_bindgen(js_name = sendLbtc)]
-    pub fn send_lbtc(
-        &self,
-        satoshis: u64,
-        out_address: &Address,
-        fee_rate: f32,
-    ) -> Result<Pset, Error> {
-        let pset = self
-            .inner
-            .send_lbtc(satoshis, &out_address.to_string(), Some(fee_rate))?;
-        Ok(pset.into())
-    }
-
-    #[wasm_bindgen(js_name = sendAsset)]
-    pub fn send_asset(
-        &self,
-        satoshis: u64,
-        out_address: &Address,
-        asset: &AssetId,
-        fee_rate: f32,
-    ) -> Result<Pset, Error> {
-        let pset = self.inner.send_asset(
-            satoshis,
-            &out_address.to_string(),
-            &asset.to_string(),
-            Some(fee_rate),
-        )?;
-        Ok(pset.into())
-    }
-
-    #[wasm_bindgen(js_name = issueAsset)]
-    pub fn issue_asset(
-        &self,
-        satoshi_asset: u64,
-        address_asset: &Address,
-        satoshi_token: u64,
-        address_token: &Address,
-        contract: &Contract,
-        fee_rate: f32,
-    ) -> Result<Pset, Error> {
-        let pset = self.inner.issue_asset(
-            satoshi_asset,
-            &address_asset.to_string(),
-            satoshi_token,
-            &address_token.to_string(),
-            &contract.to_string(),
-            Some(fee_rate),
-        )?;
-        Ok(pset.into())
     }
 
     /// Finalize and consume the given PSET, returning the finalized one

@@ -178,7 +178,7 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         TxBuilder::new(*self.network())
-            .add_recipient(&recipient)?
+            .add_unvalidated_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -197,7 +197,7 @@ impl Wollet {
             asset: asset.to_string(),
         };
         TxBuilder::new(*self.network())
-            .add_recipient(&address)?
+            .add_unvalidated_recipient(&address)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -226,7 +226,7 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         TxBuilder::new(*self.network())
-            .add_recipient(&recipient)?
+            .add_unvalidated_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }

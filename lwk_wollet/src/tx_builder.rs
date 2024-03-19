@@ -38,7 +38,7 @@ impl TxBuilder {
         }
     }
 
-    pub fn add_recipient(mut self, addr: &UnvalidatedRecipient) -> Result<Self, Error> {
+    pub fn add_unvalidated_recipient(mut self, addr: &UnvalidatedRecipient) -> Result<Self, Error> {
         let addr: Recipient = addr.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
@@ -51,14 +51,14 @@ impl TxBuilder {
 
     pub fn add_recipients(mut self, addrs: &[UnvalidatedRecipient]) -> Result<Self, Error> {
         for addr in addrs {
-            self = self.add_recipient(addr)?;
+            self = self.add_unvalidated_recipient(addr)?;
         }
         Ok(self)
     }
 
     pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
-        Ok(self.add_recipient(&rec)?)
+        Ok(self.add_unvalidated_recipient(&rec)?)
     }
 
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {

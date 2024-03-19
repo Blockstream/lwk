@@ -49,7 +49,10 @@ impl TxBuilder {
     pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<TxBuilder, Error> {
         let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         // TODO error variant should contain the TxBuilder so that caller can recover it
-        Ok(self.inner.add_recipient(&unvalidated_recipient)?.into())
+        Ok(self
+            .inner
+            .add_unvalidated_recipient(&unvalidated_recipient)?
+            .into())
     }
 
     /// Add a recipient receiving the given asset
@@ -66,14 +69,17 @@ impl TxBuilder {
             address: address.to_string(),
             asset: asset.to_string(),
         };
-        Ok(self.inner.add_recipient(&unvalidated_recipient)?.into())
+        Ok(self
+            .inner
+            .add_unvalidated_recipient(&unvalidated_recipient)?
+            .into())
     }
 
     /// Burn satoshi units of the given asset
     pub fn add_burn(self, satoshi: u64, asset: &AssetId) -> TxBuilder {
         let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         self.inner
-            .add_recipient(&unvalidated_recipient)
+            .add_unvalidated_recipient(&unvalidated_recipient)
             .expect("recipient can't be invalid")
             .into()
     }

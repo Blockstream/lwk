@@ -78,6 +78,11 @@ impl TxBuilder {
         Ok(self.add_unvalidated_recipient(&rec)?)
     }
 
+    pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
+        let rec = UnvalidatedRecipient::burn(asset_id.to_string(), satoshi);
+        Ok(self.add_unvalidated_recipient(&rec)?)
+    }
+
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate

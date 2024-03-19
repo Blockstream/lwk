@@ -112,10 +112,10 @@ audit:
 doc:
   extends: .base
   variables:
-    RUSTDOCFLAGS: "-D warnings"
+    RUSTDOCFLAGS: "-D warnings --cfg docsrs"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo doc --no-deps
+    - cargo +nightly doc --all-features --no-deps
 
 examples:
   extends: .base

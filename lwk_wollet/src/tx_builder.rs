@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use elements::{
     pset::{Output, PartiallySignedTransaction},
-    Script,
+    Address, AssetId, Script,
 };
 use rand::thread_rng;
 
@@ -38,22 +38,52 @@ impl TxBuilder {
         }
     }
 
-    pub fn add_recipient(mut self, addr: &UnvalidatedRecipient) -> Result<Self, Error> {
-        let addr: Recipient = addr.validate(self.network())?;
+    pub fn add_recipient(
+        self,
+        address: &Address,
+        satoshi: u64,
+        asset_id: AssetId,
+    ) -> Result<Self, Error> {
+        let rec = UnvalidatedRecipient {
+            satoshi,
+            address: address.to_string(),
+            asset: asset_id.to_string(),
+        };
+        self.add_unvalidated_recipient(&rec)
+    }
+
+    pub fn add_unvalidated_recipient(
+        mut self,
+        recipient: &UnvalidatedRecipient,
+    ) -> Result<Self, Error> {
+        let addr: Recipient = recipient.validate(self.network())?;
         self.addressees.push(addr);
         Ok(self)
     }
 
-    pub fn add_validated_recipient(mut self, addr: Recipient) -> Self {
-        self.addressees.push(addr);
+    pub fn add_validated_recipient(mut self, recipient: Recipient) -> Self {
+        self.addressees.push(recipient);
         self
     }
 
-    pub fn add_recipients(mut self, addrs: &[UnvalidatedRecipient]) -> Result<Self, Error> {
-        for addr in addrs {
-            self = self.add_recipient(addr)?;
+    pub fn add_unvalidated_recipients(
+        mut self,
+        recipient: &[UnvalidatedRecipient],
+    ) -> Result<Self, Error> {
+        for addr in recipient {
+            self = self.add_unvalidated_recipient(addr)?;
         }
         Ok(self)
+    }
+
+    pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<Self, Error> {
+        let rec = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
+        self.add_unvalidated_recipient(&rec)
+    }
+
+    pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
+        let rec = UnvalidatedRecipient::burn(asset_id.to_string(), satoshi);
+        self.add_unvalidated_recipient(&rec)
     }
 
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
@@ -269,7 +299,7 @@ impl TxBuilder {
         Ok(pset)
     }
 
-    fn network(&self) -> &ElementsNetwork {
-        &self.network
+    fn network(&self) -> ElementsNetwork {
+        self.network
     }
 }

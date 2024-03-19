@@ -106,7 +106,7 @@ impl TryFrom<String> for UnvalidatedRecipient {
 }
 
 impl UnvalidatedRecipient {
-    fn validate_asset(&self, network: &ElementsNetwork) -> Result<AssetId, Error> {
+    fn validate_asset(&self, network: ElementsNetwork) -> Result<AssetId, Error> {
         if self.asset.is_empty() {
             Ok(network.policy_asset())
         } else {
@@ -121,7 +121,7 @@ impl UnvalidatedRecipient {
         Ok(self.satoshi)
     }
 
-    pub fn validate(&self, network: &ElementsNetwork) -> Result<Recipient, Error> {
+    pub fn validate(&self, network: ElementsNetwork) -> Result<Recipient, Error> {
         let satoshi = self.validate_satoshi()?;
         let asset = self.validate_asset(network)?;
         if self.address == "burn" {

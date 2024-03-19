@@ -1,5 +1,6 @@
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
+use crate::TxBuilder;
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -42,6 +43,10 @@ impl ElementsNetwork {
             ElementsNetwork::ElementsRegtest { .. } => &AddressParams::ELEMENTS,
         }
     }
+
+    pub fn tx_builder(&self) -> TxBuilder {
+        TxBuilder::new(*self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -62,7 +67,7 @@ impl Config {
         self.network.policy_asset()
     }
 
-    pub fn network(&self) -> &ElementsNetwork {
-        &self.network
+    pub fn network(&self) -> ElementsNetwork {
+        self.network
     }
 }

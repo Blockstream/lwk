@@ -59,7 +59,7 @@ impl TxBuilder {
     /// Add a recipient receiving L-BTC
     pub fn add_lbtc_recipient(&self, address: &Address, satoshi: u64) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
-        let recipient = unvalidated_recipient.validate(&self.network)?;
+        let recipient = unvalidated_recipient.validate(self.network)?;
         self.add_validated_recipient(recipient)
     }
 
@@ -75,14 +75,14 @@ impl TxBuilder {
             address: address.to_string(),
             asset: asset.to_string(),
         };
-        let recipient = unvalidated_recipient.validate(&self.network)?;
+        let recipient = unvalidated_recipient.validate(self.network)?;
         self.add_validated_recipient(recipient)
     }
 
     /// Burn satoshi units of the given asset
     pub fn add_burn(&self, satoshi: u64, asset: &AssetId) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
-        let recipient = unvalidated_recipient.validate(&self.network)?;
+        let recipient = unvalidated_recipient.validate(self.network)?;
         self.add_validated_recipient(recipient)
     }
 }

@@ -39,6 +39,7 @@ impl TxBuilder {
     }
 
     /// Set the fee rate
+    #[wasm_bindgen(js_name = feeRate)]
     pub fn fee_rate(self, fee_rate: Option<f32>) -> TxBuilder {
         self.inner.fee_rate(fee_rate).into()
     }
@@ -46,15 +47,20 @@ impl TxBuilder {
     /// Add a recipient receiving L-BTC
     ///
     /// Errors if address's network is incompatible
+    #[wasm_bindgen(js_name = addLbtcRecipient)]
     pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<TxBuilder, Error> {
         let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         // TODO error variant should contain the TxBuilder so that caller can recover it
-        Ok(self.inner.add_recipient(&unvalidated_recipient)?.into())
+        Ok(self
+            .inner
+            .add_unvalidated_recipient(&unvalidated_recipient)?
+            .into())
     }
 
     /// Add a recipient receiving the given asset
     ///
     /// Errors if address's network is incompatible
+    #[wasm_bindgen(js_name = addRecipient)]
     pub fn add_recipient(
         self,
         address: &Address,
@@ -66,14 +72,18 @@ impl TxBuilder {
             address: address.to_string(),
             asset: asset.to_string(),
         };
-        Ok(self.inner.add_recipient(&unvalidated_recipient)?.into())
+        Ok(self
+            .inner
+            .add_unvalidated_recipient(&unvalidated_recipient)?
+            .into())
     }
 
     /// Burn satoshi units of the given asset
+    #[wasm_bindgen(js_name = addBurn)]
     pub fn add_burn(self, satoshi: u64, asset: &AssetId) -> TxBuilder {
         let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         self.inner
-            .add_recipient(&unvalidated_recipient)
+            .add_unvalidated_recipient(&unvalidated_recipient)
             .expect("recipient can't be invalid")
             .into()
     }

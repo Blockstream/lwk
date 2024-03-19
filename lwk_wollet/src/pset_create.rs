@@ -177,8 +177,8 @@ impl Wollet {
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
-        TxBuilder::new(*self.network())
-            .add_recipient(&recipient)?
+        TxBuilder::new(self.network())
+            .add_unvalidated_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -196,8 +196,8 @@ impl Wollet {
             address: address.to_string(),
             asset: asset.to_string(),
         };
-        TxBuilder::new(*self.network())
-            .add_recipient(&address)?
+        TxBuilder::new(self.network())
+            .add_unvalidated_recipient(&address)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -211,8 +211,8 @@ impl Wollet {
         if addressees.is_empty() {
             return Err(Error::SendManyEmptyAddressee);
         }
-        TxBuilder::new(*self.network())
-            .add_recipients(&addressees)?
+        TxBuilder::new(self.network())
+            .add_unvalidated_recipients(&addressees)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -225,8 +225,8 @@ impl Wollet {
         fee_rate: Option<f32>,
     ) -> Result<PartiallySignedTransaction, Error> {
         let recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
-        TxBuilder::new(*self.network())
-            .add_recipient(&recipient)?
+        TxBuilder::new(self.network())
+            .add_unvalidated_recipient(&recipient)?
             .fee_rate(fee_rate)
             .finish(self)
     }
@@ -258,7 +258,7 @@ impl Wollet {
             address_token,
             contract,
         );
-        TxBuilder::new(*self.network())
+        TxBuilder::new(self.network())
             .fee_rate(fee_rate)
             .issuance_request(issuance)
             .finish(self)
@@ -275,7 +275,7 @@ impl Wollet {
         let asset = AssetId::from_str(asset)?;
         let address_asset = validate_empty_address(address_asset, self.network())?;
         let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
-        TxBuilder::new(*self.network())
+        TxBuilder::new(self.network())
             .fee_rate(fee_rate)
             .issuance_request(reissuance)
             .finish(self)
@@ -286,7 +286,7 @@ fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPubli
     BitcoinPublicKey::new(pk)
 }
 
-pub(crate) fn validate_address(address: &str, network: &ElementsNetwork) -> Result<Address, Error> {
+pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Result<Address, Error> {
     let params = network.address_params();
     let address = Address::parse_with_params(address, params)?;
     if address.blinding_pubkey.is_none() {
@@ -297,7 +297,7 @@ pub(crate) fn validate_address(address: &str, network: &ElementsNetwork) -> Resu
 
 pub(crate) fn validate_empty_address(
     address: &str,
-    network: &ElementsNetwork,
+    network: ElementsNetwork,
 ) -> Result<Option<Address>, Error> {
     (!address.is_empty())
         .then(|| validate_address(address, network))

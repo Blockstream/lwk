@@ -7,8 +7,9 @@ use elements::{
 use rand::thread_rng;
 
 use crate::{
-    model::Recipient, pset_create::IssuanceRequest, ElementsNetwork, Error, UnvalidatedRecipient,
-    Wollet, EC,
+    model::Recipient,
+    pset_create::{validate_address, IssuanceRequest},
+    Contract, ElementsNetwork, Error, UnvalidatedRecipient, Wollet, EC,
 };
 
 /// A transaction builder
@@ -93,9 +94,68 @@ impl TxBuilder {
         self
     }
 
-    pub fn issuance_request(mut self, issuance_request: IssuanceRequest) -> Self {
-        self.issuance_request = issuance_request;
-        self
+    /// Issue an asset
+    ///
+    /// There will be `satoshi_to_issue` units of this asset that will be received by
+    /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
+    ///
+    /// There will be `token` reissuance tokens that allow token holder to reissue the created
+    /// asset. Reissuance token will be received by `token_receiver` if it's some, or to an
+    /// address of the wallet generating the issuance if none.
+    ///
+    /// If a `contract` is provided, it's metadata will be committed in the generated asset id.
+    ///
+    /// Can't be used if `reissue_asset` has been called
+    pub fn issue_asset(
+        mut self,
+        satoshi_to_issue: u64,
+        asset_receiver: Option<Address>,
+        token: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+    ) -> Result<Self, Error> {
+        if let Some(addr) = asset_receiver.as_ref() {
+            validate_address(&addr.to_string(), self.network())?;
+        }
+        if let Some(addr) = token_receiver.as_ref() {
+            validate_address(&addr.to_string(), self.network())?;
+        }
+        if satoshi_to_issue == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        self.issuance_request = IssuanceRequest::Issuance(
+            satoshi_to_issue,
+            asset_receiver,
+            token,
+            token_receiver,
+            contract,
+        );
+        Ok(self)
+    }
+
+    /// Reissue an asset
+    ///
+    /// reissue the asset defined by `asset_to_reissue`, provided the reissuance token is owned
+    /// by the wallet generating te reissuance.
+    ///
+    /// Generated transaction will create `satoshi_to_reissue` new asset units, and they will be
+    /// sent to the provided `asset_receiver` address if some, or to an address from the wallet
+    /// generating the reissuance transaction if none.
+    pub fn reissue_asset(
+        mut self,
+        asset_to_reissue: AssetId,
+        satoshi_to_reissue: u64,
+        asset_receiver: Option<Address>,
+    ) -> Result<Self, Error> {
+        if let Some(addr) = asset_receiver.as_ref() {
+            validate_address(&addr.to_string(), self.network())?;
+        }
+        if satoshi_to_reissue == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        self.issuance_request =
+            IssuanceRequest::Reissuance(asset_to_reissue, satoshi_to_reissue, asset_receiver);
+        Ok(self)
     }
 
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {

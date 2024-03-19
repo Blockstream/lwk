@@ -251,16 +251,15 @@ impl Wollet {
         };
         let address_asset = validate_empty_address(address_asset, self.network())?;
         let address_token = validate_empty_address(address_token, self.network())?;
-        let issuance = IssuanceRequest::Issuance(
-            satoshi_asset,
-            address_asset,
-            satoshi_token,
-            address_token,
-            contract,
-        );
         TxBuilder::new(self.network())
             .fee_rate(fee_rate)
-            .issuance_request(issuance)
+            .issue_asset(
+                satoshi_asset,
+                address_asset,
+                satoshi_token,
+                address_token,
+                contract,
+            )?
             .finish(self)
     }
 
@@ -274,10 +273,9 @@ impl Wollet {
     ) -> Result<PartiallySignedTransaction, Error> {
         let asset = AssetId::from_str(asset)?;
         let address_asset = validate_empty_address(address_asset, self.network())?;
-        let reissuance = IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset);
         TxBuilder::new(self.network())
             .fee_rate(fee_rate)
-            .issuance_request(reissuance)
+            .reissue_asset(asset, satoshi_asset, address_asset)?
             .finish(self)
     }
 }

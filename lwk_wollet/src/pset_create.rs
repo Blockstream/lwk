@@ -212,7 +212,7 @@ impl Wollet {
             return Err(Error::SendManyEmptyAddressee);
         }
         TxBuilder::new(*self.network())
-            .add_recipients(&addressees)?
+            .add_unvalidated_recipients(&addressees)?
             .fee_rate(fee_rate)
             .finish(self)
     }

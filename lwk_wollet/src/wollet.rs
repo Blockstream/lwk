@@ -87,7 +87,7 @@ impl Wollet {
     }
 
     /// Get the network
-    pub fn network(&self) -> &ElementsNetwork {
+    pub fn network(&self) -> ElementsNetwork {
         self.config.network()
     }
 

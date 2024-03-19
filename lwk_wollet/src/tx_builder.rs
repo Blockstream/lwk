@@ -299,7 +299,7 @@ impl TxBuilder {
         Ok(pset)
     }
 
-    fn network(&self) -> &ElementsNetwork {
-        &self.network
+    fn network(&self) -> ElementsNetwork {
+        self.network
     }
 }

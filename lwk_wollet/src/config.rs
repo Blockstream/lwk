@@ -67,7 +67,7 @@ impl Config {
         self.network.policy_asset()
     }
 
-    pub fn network(&self) -> &ElementsNetwork {
-        &self.network
+    pub fn network(&self) -> ElementsNetwork {
+        self.network
     }
 }

@@ -49,7 +49,7 @@ impl TxBuilder {
             address: address.to_string(),
             asset: asset_id.to_string(),
         };
-        Ok(self.add_unvalidated_recipient(&rec)?)
+        self.add_unvalidated_recipient(&rec)
     }
 
     pub fn add_unvalidated_recipient(
@@ -78,12 +78,12 @@ impl TxBuilder {
 
     pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
-        Ok(self.add_unvalidated_recipient(&rec)?)
+        self.add_unvalidated_recipient(&rec)
     }
 
     pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::burn(asset_id.to_string(), satoshi);
-        Ok(self.add_unvalidated_recipient(&rec)?)
+        self.add_unvalidated_recipient(&rec)
     }
 
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {

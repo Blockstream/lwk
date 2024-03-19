@@ -52,3 +52,7 @@ wasm-bindgen-test = "0.3.34"
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = ['-O', '--debuginfo']
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

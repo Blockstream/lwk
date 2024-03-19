@@ -65,3 +65,7 @@ path = "tests/e2e.rs"
 
 [[example]]
 name = "list_transactions"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

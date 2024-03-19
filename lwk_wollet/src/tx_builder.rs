@@ -69,10 +69,10 @@ impl TxBuilder {
 
     pub fn add_unvalidated_recipients(
         mut self,
-        recipient: &[UnvalidatedRecipient],
+        recipients: &[UnvalidatedRecipient],
     ) -> Result<Self, Error> {
-        for addr in recipient {
-            self = self.add_unvalidated_recipient(addr)?;
+        for recipient in recipients {
+            self = self.add_unvalidated_recipient(recipient)?;
         }
         Ok(self)
     }

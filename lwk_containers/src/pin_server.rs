@@ -86,7 +86,7 @@ impl Image for PinServer {
     }
 
     fn tag(&self) -> String {
-        env::var("PIN_SERVER_IMAGE_VERSION").unwrap_or("v0.0.5".into())
+        env::var("PIN_SERVER_IMAGE_VERSION").unwrap_or("v0.0.7".into())
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {

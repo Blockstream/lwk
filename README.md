@@ -141,7 +141,7 @@ And also the following docker images:
 
 ```
 docker pull xenoky/local-jade-emulator:1.0.27
-docker pull tulipan81/blind_pin_server:v0.0.5
+docker pull tulipan81/blind_pin_server:v0.0.7
 ```
 
 Note: Failed test executions can leave docker containers running. To stop all running containers run:

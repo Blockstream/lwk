@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use elements::{
     pset::{Output, PartiallySignedTransaction},
-    Address, Script,
+    Address, AssetId, Script,
 };
 use rand::thread_rng;
 
@@ -36,6 +36,20 @@ impl TxBuilder {
             fee_rate: 100.0,
             issuance_request: IssuanceRequest::None,
         }
+    }
+
+    pub fn add_recipient(
+        self,
+        address: &Address,
+        satoshi: u64,
+        asset_id: AssetId,
+    ) -> Result<Self, Error> {
+        let rec = UnvalidatedRecipient {
+            satoshi,
+            address: address.to_string(),
+            asset: asset_id.to_string(),
+        };
+        Ok(self.add_unvalidated_recipient(&rec)?)
     }
 
     pub fn add_unvalidated_recipient(

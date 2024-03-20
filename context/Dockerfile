@@ -31,3 +31,5 @@ COPY get-docker.sh /get-docker.sh
 RUN sh ./get-docker.sh
 
 # move following layers up once upper layers needs modification
+
+RUN rustup install nightly # for docs building

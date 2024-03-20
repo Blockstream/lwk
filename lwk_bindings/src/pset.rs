@@ -2,7 +2,7 @@ use crate::{types::AssetId, LwkError, Transaction};
 use elements::pset::PartiallySignedTransaction;
 use std::{fmt::Display, sync::Arc};
 
-/// Partially Signed Elements Transaction
+/// Partially Signed Elements Transaction, wrapper over [`elements::pset::PartiallySignedTransaction`]
 #[derive(uniffi::Object, PartialEq, Debug)]
 #[uniffi::export(Display)]
 pub struct Pset {

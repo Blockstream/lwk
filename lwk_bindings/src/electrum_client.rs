@@ -4,6 +4,7 @@ use lwk_wollet::BlockchainBackend;
 
 use crate::{LwkError, Transaction, Txid, Update, Wollet};
 
+/// Wrapper over [`lwk_wollet::ElectrumClient`]
 #[derive(uniffi::Object, Debug)]
 pub struct ElectrumClient {
     inner: Mutex<lwk_wollet::ElectrumClient>,

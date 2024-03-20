@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use crate::{types::AssetId, Address, Txid};
 
+/// Represent a test environment with an elements node and an electrum server.
+/// useful for testing only, wrapper over [`lwk_test_util::TestElectrumServer`]
 #[derive(uniffi::Object)]
 pub struct TestEnv {
     inner: lwk_test_util::TestElectrumServer,

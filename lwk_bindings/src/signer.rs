@@ -1,7 +1,7 @@
 use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
-/// A Software signer
+/// A Software signer, wrapper over [`lwk_signer::SwSigner`]
 #[derive(uniffi::Object)]
 pub struct Signer {
     inner: lwk_signer::SwSigner,

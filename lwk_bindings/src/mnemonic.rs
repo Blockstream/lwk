@@ -4,6 +4,7 @@ use lwk_signer::bip39;
 
 use crate::LwkError;
 
+/// Wrapper over [`bip39::Mnemonic`]
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
 #[uniffi::export(Display)]
 pub struct Mnemonic {
@@ -24,7 +25,7 @@ impl Display for Mnemonic {
 
 #[uniffi::export]
 impl Mnemonic {
-    /// Construct a Script object
+    /// Construct a Mnemonic type
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner = bip39::Mnemonic::from_str(s)?;

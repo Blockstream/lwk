@@ -4,6 +4,7 @@ use lwk_wollet::Persister;
 
 use crate::{LwkError, Update};
 
+/// An exported trait, useful for caller-defined persistence.
 #[uniffi::export(with_foreign)]
 pub trait ForeignPersister: Send + Sync {
     fn get(&self, index: u64) -> Result<Option<Arc<Update>>, LwkError>;
@@ -16,6 +17,7 @@ impl From<LwkError> for lwk_wollet::PersistError {
     }
 }
 
+/// Implements [`ForeignPersister`]
 #[derive(uniffi::Object)]
 pub struct ForeignPersisterLink {
     pub(crate) inner: Arc<dyn ForeignPersister>,

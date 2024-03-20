@@ -12,7 +12,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-/// A Watch-Only wallet
+/// A Watch-Only wallet, wrapper over [`lwk_wollet::Wollet`]
 #[derive(uniffi::Object)]
 pub struct Wollet {
     inner: Mutex<lwk_wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex

@@ -4,6 +4,7 @@ use elements::hashes::hex::FromHex;
 
 use crate::LwkError;
 
+/// Wrapper over [`lwk_wollet::Contract`]
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Contract {

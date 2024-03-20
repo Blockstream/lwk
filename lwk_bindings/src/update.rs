@@ -1,5 +1,6 @@
 use crate::LwkError;
 
+/// Wrapper over [`lwk_wollet::Update`]
 #[derive(uniffi::Object, Clone, PartialEq, Eq)]
 pub struct Update {
     inner: lwk_wollet::Update,

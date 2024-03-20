@@ -2,6 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
+/// Wrapper over [`lwk_wollet::ElementsNetwork`]
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
 pub struct Network {

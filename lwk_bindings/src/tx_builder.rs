@@ -4,6 +4,7 @@ use lwk_wollet::UnvalidatedRecipient;
 
 use crate::{types::AssetId, Address, LwkError, Network, Pset, Wollet};
 
+/// Wrapper over [`lwk_wollet::TxBuilder`]
 #[derive(uniffi::Object, Debug)]
 #[uniffi::export(Display)]
 pub struct TxBuilder {

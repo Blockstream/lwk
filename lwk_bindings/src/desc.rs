@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr, sync::Arc};
 
 use crate::LwkError;
 
-/// The output descriptors
+/// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct WolletDescriptor {

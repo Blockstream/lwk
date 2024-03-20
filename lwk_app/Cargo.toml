@@ -1,6 +1,6 @@
 [package]
 name = "lwk_app"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Liquid Wallet Kit - RPC server App"
 license = "MIT OR BSD-2-Clause"

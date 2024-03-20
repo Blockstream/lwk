@@ -22,7 +22,6 @@ resolver = "2"
 lwk_app = { path = "lwk_app" }
 lwk_cli = { path = "lwk_cli" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
-lwk_wollet = { path = "lwk_wollet" }
 lwk_rpc_model = { path = "lwk_rpc_model" }
 
 [profile.release-smaller]

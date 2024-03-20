@@ -14,7 +14,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen = "0.2.84"
-lwk_wollet = { version = "0.2.0", default-features = false, features = [
+lwk_wollet = { version = "0.3.0", default-features = false, features = [
     "esplora_wasm",
 ] }
 lwk_signer = { version = "0.3.0", default-features = false }

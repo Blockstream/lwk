@@ -10,7 +10,7 @@ documentation = "https://docs.rs/lwk_bindings"
 elements = "0.24.0"
 thiserror = "1.0.50"
 uniffi = { version = "0.26.1", features = ["bindgen-tests"] }
-lwk_wollet = { version = "0.2.0" }
+lwk_wollet = { version = "0.3.0" }
 lwk_common = { version = "0.3.0" }
 lwk_signer = { version = "0.3.0" }
 serde_json = "1"

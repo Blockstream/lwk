@@ -2,7 +2,7 @@ use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
-/// A Software signer
+/// A Software signer, wrapper of [`lwk_signer::SwSigner`]
 #[wasm_bindgen]
 pub struct Signer {
     inner: lwk_signer::SwSigner,

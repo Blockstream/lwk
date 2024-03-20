@@ -3,6 +3,7 @@ use lwk_wollet::elements;
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`elements::OutPoint`]
 #[wasm_bindgen]
 pub struct OutPoint {
     inner: elements::OutPoint,

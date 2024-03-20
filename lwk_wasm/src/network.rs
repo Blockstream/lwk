@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{AssetId, EsploraClient};
 
+/// Wrapper of [`lwk_wollet::ElementsNetwork`]
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Network {

@@ -2,6 +2,7 @@ use crate::Error;
 use lwk_wollet::hashes::hex::FromHex;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::Contract`]
 #[wasm_bindgen]
 pub struct Contract {
     inner: lwk_wollet::Contract,

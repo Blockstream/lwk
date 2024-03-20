@@ -2,6 +2,7 @@ use crate::{AddressResult, Error, Network, Pset, Update, WalletTx, WolletDescrip
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::Wollet`]
 #[wasm_bindgen]
 pub struct Wollet {
     inner: lwk_wollet::Wollet,

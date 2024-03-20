@@ -10,7 +10,7 @@ use lwk_wollet::{
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
-/// A Liquid transaction
+/// A Liquid transaction, wrapper of [`elements::Transaction`]
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
 pub struct Transaction {

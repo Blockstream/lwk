@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::Error;
 
+/// Wrapper of [`lwk_wollet::Update`]
 #[wasm_bindgen]
 #[derive(Clone, PartialEq, Eq)]
 pub struct Update {

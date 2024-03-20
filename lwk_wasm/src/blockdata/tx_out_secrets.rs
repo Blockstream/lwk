@@ -2,6 +2,7 @@ use crate::AssetId;
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`elements::TxOutSecrets`]
 #[derive(PartialEq, Eq, Debug)]
 #[wasm_bindgen]
 pub struct TxOutSecrets {

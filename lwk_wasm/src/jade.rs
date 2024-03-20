@@ -5,6 +5,7 @@ use crate::{
 use lwk_jade::asyncr;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`asyncr::Jade`]
 #[wasm_bindgen]
 pub struct Jade {
     inner: asyncr::Jade<WebSerial>,

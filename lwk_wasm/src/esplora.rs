@@ -1,6 +1,7 @@
 use crate::{Error, Update, Wollet};
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::EsploraWasmClient`]
 #[wasm_bindgen]
 pub struct EsploraClient {
     inner: lwk_wollet::EsploraWasmClient,

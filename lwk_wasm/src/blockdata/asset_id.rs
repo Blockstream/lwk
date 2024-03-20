@@ -4,7 +4,7 @@ use crate::Error;
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
-/// A valid asset identifier.
+/// A valid asset identifier. wrapper of [`elements::AssetId`]
 ///
 /// 32 bytes encoded as hex string.
 #[wasm_bindgen]

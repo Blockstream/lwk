@@ -3,6 +3,7 @@ use lwk_signer::bip39;
 use std::{fmt::Display, str::FromStr};
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`bip39::Mnemonic`]
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug)]
 pub struct Mnemonic {

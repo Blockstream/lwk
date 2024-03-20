@@ -3,6 +3,7 @@ use lwk_wollet::elements;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::WalletTx`]
 #[derive(Debug)]
 #[wasm_bindgen]
 pub struct WalletTx {

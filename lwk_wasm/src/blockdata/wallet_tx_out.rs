@@ -1,6 +1,7 @@
 use crate::{OutPoint, Script, TxOutSecrets};
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::WalletTxOut`]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct WalletTxOut {

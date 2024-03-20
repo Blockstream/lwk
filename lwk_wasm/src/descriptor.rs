@@ -2,6 +2,7 @@ use crate::Error;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
+/// Wrapper of [`lwk_wollet::WolletDescriptor`]
 #[wasm_bindgen]
 pub struct WolletDescriptor {
     inner: lwk_wollet::WolletDescriptor,

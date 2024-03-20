@@ -213,9 +213,10 @@ impl<S: Stream> Jade<S> {
 
                 loop {
                     let url = result.url(false).ok_or(Error::NoUsableUrl)?;
-                    tracing::debug!("POSTING to {url} data: {:?}", result.data());
-                    let data = serde_json::to_vec(result.data())?;
-                    let resp = client.post(url).body(data).send().await?;
+                    let str = serde_json::to_string(result.data())?;
+                    let value: serde_json::Value = serde_json::from_str(&str)?;
+                    tracing::debug!("POSTING to {url} data: {value}",);
+                    let resp = client.post(url).json(&value).send().await?;
                     let status_code = resp.status().as_u16();
                     if status_code != 200 {
                         return Err(Error::HttpStatus(url.to_string(), status_code));

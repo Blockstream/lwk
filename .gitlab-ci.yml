@@ -37,7 +37,7 @@ test_jade:
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
   script:
-    - docker pull tulipan81/blind_pin_server:v0.0.5
+    - docker pull tulipan81/blind_pin_server:v0.0.7
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cargo test -p lwk_jade
 
@@ -72,7 +72,7 @@ test_coverage:
     TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
 
   script:
-    - docker pull tulipan81/blind_pin_server:v0.0.5
+    - docker pull tulipan81/blind_pin_server:v0.0.7
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo nextest run --features foreign_bindings,asyncr --profile ci

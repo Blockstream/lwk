@@ -6,10 +6,11 @@ To generate bindings the projects use [Mozilla uniffi](https://mozilla.github.io
 There is an architectural refactor already planned for the crates the bindings are created on, this initial version is for experimentation only, 
 expect **breaking changes** in the API
 
-Building bindings requires launching commands with many arguments, [just](https://github.com/casey/just) tool is used for that.
-It's a simple make-like tool, you can either install the tool or copy-paste the shell commands inside it.
+Most of the rust types in this crate are wrappers on types in [`lwk_wollet`] and [`lwk_signer`] which satisfy uniffi requirements such as:
+* Methods on types support only `&self`, thus if the inner type needs mutability, it is usually enclosed in a [`std::sync::Mutex`].
+* Returned values must be wrapped in [`std::sync::Arc`] so that there aren't issue in memory management.
 
-## Host
+## Host & Requirements
 
 Build supported on Mac and Linux.
 
@@ -17,7 +18,10 @@ Note the following commands requires some env var defined in `../context/env.sh`
 
 For android build you need the NDK greater than r23 in `${PROJECT_DIR}/bin/android-ndk`, if you already have it elsewhere just symlink your path.
 
-## Python bindings
+Building bindings requires launching commands with many arguments, [just](https://github.com/casey/just) tool is used for that.
+It's a simple make-like tool, you can either install the tool or copy-paste the shell commands inside it.
+
+## Python
 
 ### Examples
 
@@ -62,7 +66,7 @@ cargo test -p lwk_bindings --features foreign_bindings --test bindings -- py
 Live environment
 
 ```sh
-just env-python-bindings
+just python-env-bindings
 ```
 
 ## Kotlin

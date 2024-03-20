@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},

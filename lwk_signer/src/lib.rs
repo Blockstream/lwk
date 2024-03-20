@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! Contains a software signer [`SwSigner`] and an [`AnySigner`] that can be a Jade or a Software signer
 

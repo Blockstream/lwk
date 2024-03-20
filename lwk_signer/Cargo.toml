@@ -25,3 +25,7 @@ lwk_test_util = { path = "../lwk_test_util" }
 [features]
 default = ["jade"]
 jade = ["lwk_jade"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

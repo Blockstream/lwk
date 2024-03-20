@@ -1,3 +1,6 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![doc = include_str!("../README.md")]
+
 mod blockdata;
 mod contract;
 mod descriptor;

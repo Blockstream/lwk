@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:57eb782036178609e8b4f4c57b77df81048429187a9ef5ea9ec44cfc24e511f9
+  image: xenoky/lwk-builder@sha256:5468d3679a1cd2a1ca174ca7792cef62e11dbcedd14fad3e9e937e865e981aee
   tags:
     - cloud
   retry:
@@ -112,10 +112,10 @@ audit:
 doc:
   extends: .base
   variables:
-    RUSTDOCFLAGS: "-D warnings"
+    RUSTDOCFLAGS: "-D warnings --cfg docsrs"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo doc --no-deps
+    - cargo +nightly doc --all-features --no-deps
 
 examples:
   extends: .base

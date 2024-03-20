@@ -25,3 +25,7 @@ name = "lwk_bindings"
 
 [features]
 foreign_bindings = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

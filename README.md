@@ -181,7 +181,7 @@ cargo test -p lwk_wollet --features serial -- serial --include-ignored --test-th
 To generate documentation you can use
 
 ```
-cargo doc --no-deps --open
+RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features --no-deps --open
 ```
 
 ## History

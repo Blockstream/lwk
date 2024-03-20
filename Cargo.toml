@@ -21,7 +21,6 @@ resolver = "2"
 [patch.crates-io]
 lwk_app = { path = "lwk_app" }
 lwk_cli = { path = "lwk_cli" }
-lwk_rpc_model = { path = "lwk_rpc_model" }
 
 [profile.release-smaller]
 inherits = "release"

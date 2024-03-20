@@ -10,7 +10,7 @@ documentation = "https://docs.rs/lwk_cli"
 [dependencies]
 anyhow = "1.0.75"
 lwk_app = { version = "0.2.0" }
-lwk_rpc_model = { version = "0.2.0" }
+lwk_rpc_model = { version = "0.3.0" }
 clap = { version = "~4.4", features = ["derive", "env"] }
 # config = "0.13.3"
 tracing = "0.1"

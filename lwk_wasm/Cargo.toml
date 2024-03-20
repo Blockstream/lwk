@@ -21,7 +21,7 @@ lwk_signer = { version = "0.2.0", default-features = false }
 lwk_jade = { version = "0.2.0", default-features = false, features = [
     "asyncr",
 ] }
-lwk_common = "0.2.0"
+lwk_common = "0.3.0"
 serde_json = "1"
 serde = { version = "1.0", features = ["derive"] }
 web-sys = { version = "0.3.69", features = [

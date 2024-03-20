@@ -25,7 +25,6 @@ lwk_jade = { path = "lwk_jade" }
 lwk_signer = { path = "lwk_signer" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
-lwk_common = { path = "lwk_common" }
 lwk_rpc_model = { path = "lwk_rpc_model" }
 
 [profile.release-smaller]

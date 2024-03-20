@@ -56,6 +56,7 @@ sha256t_hash_newtype! {
     pub struct DirectoryIdHash(_);
 }
 
+/// Implementation of a [`Persister`] which persist nothing.
 pub struct NoPersist {}
 
 impl NoPersist {

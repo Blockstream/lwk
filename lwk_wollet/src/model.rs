@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 
+/// Details of a wallet transaction output used in [`WalletTx`]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WalletTxOut {
     pub outpoint: OutPoint,
@@ -19,6 +20,8 @@ pub struct WalletTxOut {
     pub ext_int: Chain,
 }
 
+/// Value returned by [`crate::Wollet::transactions()`] containing details about a transaction
+/// from the perspective of the wallet, for example the net-balance of the wallet.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WalletTx {
     pub tx: Transaction,
@@ -32,6 +35,10 @@ pub struct WalletTx {
     pub outputs: Vec<Option<WalletTxOut>>,
 }
 
+/// A recipient of a transaction.
+///
+/// Note that, since it doesn't use the [`Address`] but the [`Script`] and the [`PublicKey`] it's
+/// network independent.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Recipient {
     pub satoshi: u64,
@@ -51,6 +58,9 @@ impl Recipient {
     }
 }
 
+/// A not-yet validated recipient of a transaction.
+///
+/// By calling [`UnvalidatedRecipient::validate()`] can be transformed in a validated [`Recipient`]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UnvalidatedRecipient {
     /// The amount to send in satoshi
@@ -138,6 +148,8 @@ impl UnvalidatedRecipient {
     }
 }
 
+/// Value returned from [`crate::Wollet::address()`], containing the confidential [`Address`] and the
+/// derivation index (the last element in the derivation path)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AddressResult {
     address: Address,
@@ -158,6 +170,7 @@ impl AddressResult {
     }
 }
 
+/// Value returned from [`crate::Wollet::issuance()`] containing details about an issuance
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IssuanceDetails {
     pub txid: Txid,

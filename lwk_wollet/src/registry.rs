@@ -33,6 +33,8 @@ impl Entity {
 
 // Order of the fields here determines the serialization order, make sure it's ordered
 // lexicographically.
+
+/// A contract defining metadata of an asset such the name and the ticker
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Contract {
     pub entity: Entity,

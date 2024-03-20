@@ -11,6 +11,7 @@ use std::fmt::Debug;
 
 use super::History;
 
+/// A client to issue TCP requests to an electrum server.
 pub struct ElectrumClient {
     client: Client,
 

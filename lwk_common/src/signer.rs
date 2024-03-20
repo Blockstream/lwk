@@ -12,6 +12,7 @@ use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::descriptor::Bip;
 
+/// A trait defining methods of signers, providing blanket implementations for some methods.
 pub trait Signer {
     type Error: std::fmt::Debug;
 

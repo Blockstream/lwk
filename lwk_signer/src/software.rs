@@ -17,6 +17,7 @@ use elements_miniscript::{
 };
 use lwk_common::Signer;
 
+/// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
 pub enum SignError {
     #[error(transparent)]
@@ -38,6 +39,7 @@ pub enum SignError {
     DeterministicSlip77NotAvailable,
 }
 
+/// Possible errors when creating a new software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
 pub enum NewError {
     #[error(transparent)]
@@ -47,6 +49,7 @@ pub enum NewError {
     Bip32(#[from] bip32::Error),
 }
 
+/// A software signer
 #[derive(Clone)]
 pub struct SwSigner {
     pub(crate) xprv: Xpriv,

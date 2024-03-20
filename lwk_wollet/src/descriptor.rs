@@ -1,8 +1,4 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt::Display,
-    str::FromStr,
-};
+use std::{fmt::Display, str::FromStr};
 
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::{Address, AddressParams};

@@ -6,7 +6,6 @@ use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::{Descriptor, DescriptorPublicKey};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::sync::atomic::AtomicU32;
 
 pub const BATCH_SIZE: u32 = 20;

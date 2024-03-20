@@ -11,7 +11,7 @@ use elements::{
 use elements::{BlockHash, BlockHeader, Transaction, Txid};
 use lwk_common::derive_blinding_key;
 use std::collections::{HashMap, HashSet};
-use std::{convert::TryInto, sync::atomic};
+use std::sync::atomic;
 
 #[cfg(feature = "esplora")]
 pub(crate) mod esplora_client;

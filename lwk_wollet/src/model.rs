@@ -6,7 +6,6 @@ use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::str::FromStr;
 

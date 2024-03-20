@@ -9,7 +9,6 @@ pub use crate::software::{NewError, SignError, SwSigner};
 pub use bip39;
 
 use elements_miniscript::bitcoin::bip32::DerivationPath;
-use elements_miniscript::elements;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use lwk_common::Signer;

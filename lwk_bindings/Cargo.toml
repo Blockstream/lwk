@@ -14,7 +14,7 @@ lwk_wollet = { version = "0.3.0" }
 lwk_common = { version = "0.3.0" }
 lwk_signer = { version = "0.3.0" }
 serde_json = "1"
-lwk_test_util = { path = "../lwk_test_util" }
+lwk_test_util = { version = "0.2.0" }
 
 [build-dependencies]
 uniffi = { version = "0.26.1", features = ["build"] }

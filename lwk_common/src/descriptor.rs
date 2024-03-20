@@ -122,10 +122,30 @@ impl FromStr for Singlesig {
     }
 }
 
+/// Some descriptor blinding keys variant
+///
+/// Not all the possible cases described in
+/// [ELIP150](<https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki>)
+/// have a corresponding variant in this enum.
 #[derive(Debug, Clone, Copy)]
 pub enum DescriptorBlindingKey {
+    /// Deterministic [SLIP77](<https://github.com/satoshilabs/slips/blob/master/slip-0077.md>) master blinding key
+    ///
+    /// Derived from the BIP32 seed.
     Slip77,
+
+    /// Random [SLIP77](<https://github.com/satoshilabs/slips/blob/master/slip-0077.md>) master blinding key
+    ///
+    /// Randomly generated SLIP77 master blinding key.
+    /// Useful fot cases where the seed isn't available or is not well defined (e.g. multisig).
+    ///
+    /// Note that single blinding keys are derived _deterministically_ from this SLIP77 master
+    /// blinding key.
     Slip77Rand,
+
+    /// [ELIP151](<https://github.com/ElementsProject/ELIPs/blob/main/elip-0151.mediawiki>) descriptor blinding key
+    ///
+    /// Derived from the ordinary descriptor.
     Elip151,
 }
 

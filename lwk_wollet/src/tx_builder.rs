@@ -96,10 +96,10 @@ impl TxBuilder {
 
     /// Issue an asset
     ///
-    /// There will be `satoshi_to_issue` units of this asset that will be received by
+    /// There will be `asset_sats` units of this asset that will be received by
     /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
     ///
-    /// There will be `token` reissuance tokens that allow token holder to reissue the created
+    /// There will be `token_sats` reissuance tokens that allow token holder to reissue the created
     /// asset. Reissuance token will be received by `token_receiver` if it's some, or to an
     /// address of the wallet generating the issuance if none.
     ///
@@ -108,25 +108,28 @@ impl TxBuilder {
     /// Can't be used if `reissue_asset` has been called
     pub fn issue_asset(
         mut self,
-        satoshi_to_issue: u64,
+        asset_sats: u64,
         asset_receiver: Option<Address>,
-        token: u64,
+        token_sats: u64,
         token_receiver: Option<Address>,
         contract: Option<Contract>,
     ) -> Result<Self, Error> {
+        if !matches!(self.issuance_request, IssuanceRequest::None) {
+            return Err(Error::IssuanceAlreadySet);
+        }
         if let Some(addr) = asset_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }
         if let Some(addr) = token_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }
-        if satoshi_to_issue == 0 {
+        if asset_sats == 0 {
             return Err(Error::InvalidAmount);
         }
         self.issuance_request = IssuanceRequest::Issuance(
-            satoshi_to_issue,
+            asset_sats,
             asset_receiver,
-            token,
+            token_sats,
             token_receiver,
             contract,
         );
@@ -147,6 +150,9 @@ impl TxBuilder {
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
     ) -> Result<Self, Error> {
+        if !matches!(self.issuance_request, IssuanceRequest::None) {
+            return Err(Error::IssuanceAlreadySet);
+        }
         if let Some(addr) = asset_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }

@@ -160,6 +160,9 @@ pub enum Error {
         update_tip_height: u32,
         store_tip_height: u32,
     },
+
+    #[error("An issuance has already being set on this tx builder")]
+    IssuanceAlreadySet,
 }
 
 // cannot derive automatically with this error because of trait bound

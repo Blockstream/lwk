@@ -21,7 +21,6 @@ resolver = "2"
 [patch.crates-io]
 lwk_app = { path = "lwk_app" }
 lwk_cli = { path = "lwk_cli" }
-lwk_jade = { path = "lwk_jade" }
 lwk_signer = { path = "lwk_signer" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }

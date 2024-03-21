@@ -111,6 +111,24 @@ impl TxBuilder {
         *lock = Some(new_inner);
         Ok(())
     }
+
+    /// Reissue an asset, wrapper of [`lwk_wollet::TxBuilder::reissue_asset()`]
+    pub fn reissue_asset(
+        &self,
+        asset_to_reissue: AssetId,
+        satoshi_to_reissue: u64,
+        asset_receiver: Option<Arc<Address>>,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        let new_inner = inner.reissue_asset(
+            asset_to_reissue.into(),
+            satoshi_to_reissue,
+            asset_receiver.map(|e| e.as_ref().into()),
+        )?;
+        *lock = Some(new_inner);
+        Ok(())
+    }
 }
 
 impl TxBuilder {

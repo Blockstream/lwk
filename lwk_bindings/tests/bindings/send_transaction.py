@@ -26,8 +26,12 @@ assert(wollet.balance()[policy_asset] == funded_satoshi)
 
 node_address = node.get_new_address()
 sent_satoshi = 1000
-unsigned_pset = wollet.send_lbtc(sent_satoshi, node_address, fee_rate=100.0 )
+
+builder = network.tx_builder()
+builder.add_lbtc_recipient(node_address, sent_satoshi)
+unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
+
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)

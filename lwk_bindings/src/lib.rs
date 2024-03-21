@@ -105,7 +105,12 @@ mod tests {
         let out_address = Address::new(expected_address_1).unwrap();
         let satoshis = 900;
         let fee_rate = 280_f32; // this seems like absolute fees
-        let pset = wollet.send_lbtc(satoshis, &out_address, fee_rate).unwrap();
+
+        let builder = network.tx_builder();
+        builder.add_lbtc_recipient(&out_address, satoshis).unwrap();
+        builder.fee_rate(Some(fee_rate)).unwrap();
+        let pset = builder.finish(&wollet).unwrap();
+
         let signed_pset = signer.sign(&pset).unwrap();
         let finalized_pset = wollet.finalize(&signed_pset).unwrap();
         let txid = electrum_client
@@ -118,9 +123,14 @@ mod tests {
             server.node_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
         let txid = Txid::from_str(&txid.to_string()).unwrap();
         let _tx = wollet.wait_for_tx(&txid, &electrum_client).unwrap();
-        let pset = wollet
-            .send_asset(100, &out_address, &asset.into(), fee_rate)
+
+        let builder = network.tx_builder();
+        builder
+            .add_recipient(&out_address, 100, &asset.into())
             .unwrap();
+        builder.fee_rate(Some(fee_rate)).unwrap();
+        let pset = builder.finish(&wollet).unwrap();
+
         let signed_pset = signer.sign(&pset).unwrap();
         let finalized_pset = wollet.finalize(&signed_pset).unwrap();
         let txid = electrum_client

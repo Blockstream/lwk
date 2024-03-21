@@ -31,8 +31,12 @@ wollet.wait_for_tx(txid2, client)
 assert(wollet.balance()[asset] == issue_asset)
 
 node_address = node.get_new_address()
-unsigned_pset = wollet.send_asset(issue_asset-1, node_address, asset, fee_rate=100.0 )
+
+builder = network.tx_builder()
+builder.add_recipient( node_address,issue_asset-1, asset)
+unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
+
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)

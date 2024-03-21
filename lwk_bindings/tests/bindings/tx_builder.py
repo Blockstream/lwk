@@ -40,7 +40,7 @@ try:
     builder.finish(wollet)
     assert(False)
 except LwkError as e:
-    assert(e.msg == "This transaction builder already called finish")
+    assert(e.msg == "This transaction builder already called finish or errored")
 else:
     assert(False)
 

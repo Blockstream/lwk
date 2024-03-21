@@ -1,8 +1,11 @@
-use std::{fmt::Display, sync::Mutex};
+use std::{
+    fmt::Display,
+    sync::{Arc, Mutex},
+};
 
 use lwk_wollet::UnvalidatedRecipient;
 
-use crate::{types::AssetId, Address, LwkError, Network, Pset, Wollet};
+use crate::{types::AssetId, Address, Contract, LwkError, Network, Pset, Wollet};
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
 #[derive(uniffi::Object, Debug)]
@@ -27,7 +30,7 @@ impl Display for TxBuilder {
 }
 
 fn builder_finished() -> LwkError {
-    "This transaction builder already called finish".into()
+    "This transaction builder already called finish or errored".into()
 }
 
 #[uniffi::export]
@@ -85,6 +88,28 @@ impl TxBuilder {
         let unvalidated_recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
         let recipient = unvalidated_recipient.validate(self.network)?;
         self.add_validated_recipient(recipient)
+    }
+
+    /// Issue an asset, wrapper of [`lwk_wollet::TxBuilder::issue_asset()`]
+    pub fn issue_asset(
+        &self,
+        asset_sats: u64,
+        asset_receiver: Option<Arc<Address>>,
+        token_sats: u64,
+        token_receiver: Option<Arc<Address>>,
+        contract: Option<Arc<Contract>>,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        let new_inner = inner.issue_asset(
+            asset_sats,
+            asset_receiver.map(|e| e.as_ref().into()),
+            token_sats,
+            token_receiver.map(|e| e.as_ref().into()),
+            contract.map(|e| e.as_ref().into()),
+        )?;
+        *lock = Some(new_inner);
+        Ok(())
     }
 }
 

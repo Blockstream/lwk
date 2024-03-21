@@ -11,6 +11,24 @@ pub struct Contract {
     inner: lwk_wollet::Contract,
 }
 
+impl From<lwk_wollet::Contract> for Contract {
+    fn from(inner: lwk_wollet::Contract) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<Contract> for lwk_wollet::Contract {
+    fn from(contract: Contract) -> Self {
+        contract.inner
+    }
+}
+
+impl From<&Contract> for lwk_wollet::Contract {
+    fn from(contract: &Contract) -> Self {
+        contract.inner.clone()
+    }
+}
+
 impl std::fmt::Display for Contract {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let json = serde_json::to_string(&self.inner).expect("contain simple types");

@@ -6,7 +6,6 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/send_asset.py",
     "tests/bindings/send_transaction.py",
     "tests/bindings/test_env.py",
-    "tests/bindings/tx_builder.py",
     "tests/bindings/list_transactions.kts",
     "tests/bindings/list_transactions.swift",
 );

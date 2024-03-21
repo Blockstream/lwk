@@ -22,6 +22,12 @@ impl From<&elements::Address> for Address {
     }
 }
 
+impl From<Address> for elements::Address {
+    fn from(addr: Address) -> Self {
+        addr.inner
+    }
+}
+
 impl AsRef<elements::Address> for Address {
     fn as_ref(&self) -> &elements::Address {
         &self.inner

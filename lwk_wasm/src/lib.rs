@@ -33,6 +33,7 @@ pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
 pub use signer::Signer;
+pub use tx_builder::TxBuilder;
 pub use update::Update;
 pub use wollet::Wollet;
 

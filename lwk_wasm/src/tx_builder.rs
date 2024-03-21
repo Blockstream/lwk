@@ -111,6 +111,24 @@ impl TxBuilder {
             .into())
     }
 
+    /// Reissue an asset, wrapper of [`lwk_wollet::TxBuilder::reissue_asset()`]
+    #[wasm_bindgen(js_name = reissueAsset)]
+    pub fn reissue_asset(
+        self,
+        asset_to_reissue: AssetId,
+        satoshi_to_reissue: u64,
+        asset_receiver: Option<Address>,
+    ) -> Result<TxBuilder, Error> {
+        Ok(self
+            .inner
+            .reissue_asset(
+                asset_to_reissue.into(),
+                satoshi_to_reissue,
+                asset_receiver.map(Into::into),
+            )?
+            .into())
+    }
+
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         self.to_string()

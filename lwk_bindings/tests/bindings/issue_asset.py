@@ -30,7 +30,9 @@ assert(str(contract) == '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cce
 
 issued_asset = 10000
 reissuance_tokens = 1
-unsigned_pset = wollet.issue_asset(issued_asset, wollet_adddress, reissuance_tokens, wollet_adddress, contract, 100.0)
+builder = network.tx_builder()
+builder.issue_asset(issued_asset, wollet_adddress, reissuance_tokens, wollet_adddress, contract)
+unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()

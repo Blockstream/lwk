@@ -19,6 +19,18 @@ impl AsRef<elements::Address> for Address {
     }
 }
 
+impl From<Address> for elements::Address {
+    fn from(addr: Address) -> Self {
+        addr.inner
+    }
+}
+
+impl From<&Address> for elements::Address {
+    fn from(addr: &Address) -> Self {
+        addr.inner.clone()
+    }
+}
+
 impl Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

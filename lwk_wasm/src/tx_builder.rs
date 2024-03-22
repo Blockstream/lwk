@@ -3,8 +3,9 @@ use std::fmt::Display;
 use lwk_wollet::UnvalidatedRecipient;
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Error, Network, Pset, Wollet};
+use crate::{Address, AssetId, Contract, Error, Network, Pset, Wollet};
 
+/// Wrapper of [`lwk_wollet::TxBuilder`]
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct TxBuilder {
@@ -86,6 +87,46 @@ impl TxBuilder {
             .add_unvalidated_recipient(&unvalidated_recipient)
             .expect("recipient can't be invalid")
             .into()
+    }
+
+    /// Issue an asset, wrapper of [`lwk_wollet::TxBuilder::issue_asset()`]
+    #[wasm_bindgen(js_name = issueAsset)]
+    pub fn issue_asset(
+        self,
+        asset_sats: u64,
+        asset_receiver: Option<Address>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+    ) -> Result<TxBuilder, Error> {
+        Ok(self
+            .inner
+            .issue_asset(
+                asset_sats,
+                asset_receiver.map(Into::into),
+                token_sats,
+                token_receiver.map(Into::into),
+                contract.map(Into::into),
+            )?
+            .into())
+    }
+
+    /// Reissue an asset, wrapper of [`lwk_wollet::TxBuilder::reissue_asset()`]
+    #[wasm_bindgen(js_name = reissueAsset)]
+    pub fn reissue_asset(
+        self,
+        asset_to_reissue: AssetId,
+        satoshi_to_reissue: u64,
+        asset_receiver: Option<Address>,
+    ) -> Result<TxBuilder, Error> {
+        Ok(self
+            .inner
+            .reissue_asset(
+                asset_to_reissue.into(),
+                satoshi_to_reissue,
+                asset_receiver.map(Into::into),
+            )?
+            .into())
     }
 
     #[wasm_bindgen(js_name = toString)]

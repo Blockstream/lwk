@@ -486,7 +486,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .map(unvalidated_addressee)
                 .collect();
             let mut tx = TxBuilder::new(wollet.network())
-                .add_unvalidated_recipients(&recipients)?
+                .set_unvalidated_recipients(&recipients)?
                 .fee_rate(r.fee_rate)
                 .finish(&wollet)?;
 

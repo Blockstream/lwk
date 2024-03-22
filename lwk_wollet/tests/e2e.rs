@@ -512,7 +512,7 @@ fn create_pset_error() {
         asset: "".to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     let expected = "base58 error: base58ck data not even long enough for a checksum";
     assert_eq!(err.to_string(), expected);
@@ -527,7 +527,7 @@ fn create_pset_error() {
         asset: "".to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
 
@@ -539,7 +539,7 @@ fn create_pset_error() {
         asset: "".to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
 
@@ -550,7 +550,7 @@ fn create_pset_error() {
         asset: "aaaa".to_string(),
     }];
     let _err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     // TODO uncomment once https://github.com/ElementsProject/rust-elements/issues/189 is resolved
     // assert_eq!(
@@ -566,7 +566,7 @@ fn create_pset_error() {
         asset: "".to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap()
         .finish(&wallet.wollet)
         .unwrap_err();
@@ -579,7 +579,7 @@ fn create_pset_error() {
         asset: asset.to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
-        .add_unvalidated_recipients(&addressees)
+        .set_unvalidated_recipients(&addressees)
         .unwrap()
         .finish(&wallet.wollet)
         .unwrap_err();

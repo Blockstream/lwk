@@ -564,7 +564,7 @@ impl TestWollet {
         ];
 
         let mut pset = TxBuilder::new(self.network())
-            .add_unvalidated_recipients(&addressees)
+            .set_unvalidated_recipients(&addressees)
             .unwrap()
             .fee_rate(fee_rate)
             .finish(&self.wollet)

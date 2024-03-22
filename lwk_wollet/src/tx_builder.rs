@@ -67,10 +67,12 @@ impl TxBuilder {
         self
     }
 
-    pub fn add_unvalidated_recipients(
+    /// Replace current recipients with the given list
+    pub fn set_unvalidated_recipients(
         mut self,
         recipients: &[UnvalidatedRecipient],
     ) -> Result<Self, Error> {
+        self.addressees.clear();
         for recipient in recipients {
             self = self.add_unvalidated_recipient(recipient)?;
         }

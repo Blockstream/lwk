@@ -495,21 +495,19 @@ impl TestWollet {
     pub fn send_asset(
         &mut self,
         signers: &[&AnySigner],
-        node_address: &Address,
+        address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
     ) {
         let balance_before = self.balance(asset);
         let satoshi: u64 = 10;
-        let mut pset = self
-            .wollet
-            .send_asset(
-                satoshi,
-                &node_address.to_string(),
-                &asset.to_string(),
-                fee_rate,
-            )
+        let mut pset = TxBuilder::new(self.network())
+            .add_recipient(address, satoshi, *asset)
+            .unwrap()
+            .fee_rate(fee_rate)
+            .finish(&self.wollet)
             .unwrap();
+
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();
@@ -799,6 +797,10 @@ impl TestWollet {
             assert_eq!(expected, balance);
             assert_eq!(expected_updates, wollet.updates().unwrap());
         }
+    }
+
+    pub fn network(&self) -> ElementsNetwork {
+        self.wollet.network()
     }
 }
 

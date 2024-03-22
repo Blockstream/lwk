@@ -504,7 +504,6 @@ fn create_pset_error() {
         None,
     );
     let asset = asset.to_string();
-    let token = token.to_string();
 
     // Invalid address
     let addressees = vec![UnvalidatedRecipient {
@@ -583,10 +582,12 @@ fn create_pset_error() {
 
     // Send token elsewhere
     let address = wallet2.address();
-    let mut pset = wallet
-        .wollet
-        .send_asset(satoshi_t, &address.to_string(), &token, None)
+    let mut pset = TxBuilder::new(wallet.network())
+        .add_recipient(&address, satoshi_t, token)
+        .unwrap()
+        .finish(&wallet.wollet)
         .unwrap();
+
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);
 

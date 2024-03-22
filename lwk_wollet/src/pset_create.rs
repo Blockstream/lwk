@@ -183,25 +183,6 @@ impl Wollet {
             .finish(self)
     }
 
-    /// Create a PSET sending some satoshi of an asset to an address
-    pub fn send_asset(
-        &self,
-        satoshi: u64,
-        address: &str,
-        asset: &str,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let address = UnvalidatedRecipient {
-            satoshi,
-            address: address.to_string(),
-            asset: asset.to_string(),
-        };
-        TxBuilder::new(self.network())
-            .add_unvalidated_recipient(&address)?
-            .fee_rate(fee_rate)
-            .finish(self)
-    }
-
     /// Create a PSET sending to many outputs
     pub fn send_many(
         &self,

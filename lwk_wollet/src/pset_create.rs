@@ -7,13 +7,11 @@ use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::registry::Contract;
-use crate::tx_builder::TxBuilder;
 use crate::wollet::Wollet;
 use crate::ElementsNetwork;
 use elements::pset::elip100::AssetMetadata;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 // We make issuance and reissuance are mutually exclusive for simplicity
@@ -168,22 +166,6 @@ impl Wollet {
         *last_unused += 1;
         Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
-
-    /// Create a PSET reissuing an asset
-    pub fn reissue_asset(
-        &self,
-        asset: &str,
-        satoshi_asset: u64,
-        address_asset: &str,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let asset = AssetId::from_str(asset)?;
-        let address_asset = validate_empty_address(address_asset, self.network())?;
-        TxBuilder::new(self.network())
-            .fee_rate(fee_rate)
-            .reissue_asset(asset, satoshi_asset, address_asset)?
-            .finish(self)
-    }
 }
 
 fn convert_pubkey(pk: crate::elements::secp256k1_zkp::PublicKey) -> BitcoinPublicKey {
@@ -197,15 +179,6 @@ pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Resul
         return Err(Error::NotConfidentialAddress);
     };
     Ok(address)
-}
-
-pub(crate) fn validate_empty_address(
-    address: &str,
-    network: ElementsNetwork,
-) -> Result<Option<Address>, Error> {
-    (!address.is_empty())
-        .then(|| validate_address(address, network))
-        .transpose()
 }
 
 #[cfg(test)]

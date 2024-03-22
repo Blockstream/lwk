@@ -460,11 +460,14 @@ fn multiple_descriptors() {
     // Reissue the asset, sending the asset to asset wallet, and keeping the token in the token
     // wallet
     let satoshi_ar = 1_000;
-    let address_a = wallet_a.address().to_string();
-    let mut pset = wallet_t
-        .wollet
-        .reissue_asset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
+    let address_a = wallet_a.address();
+
+    let mut pset = TxBuilder::new(wallet_t.network())
+        .reissue_asset(*asset, satoshi_ar, Some(address_a))
+        .unwrap()
+        .finish(&wallet_t.wollet)
         .unwrap();
+
     wallet_a.wollet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
@@ -502,7 +505,7 @@ fn create_pset_error() {
         None,
         None,
     );
-    let asset = asset.to_string();
+    let asset_str = asset.to_string();
 
     // Invalid address
     let addressees = vec![UnvalidatedRecipient {
@@ -575,7 +578,7 @@ fn create_pset_error() {
     let addressees = vec![UnvalidatedRecipient {
         satoshi: satoshi_a + 1,
         address,
-        asset: asset.to_string(),
+        asset: asset_str.to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
         .set_unvalidated_recipients(&addressees)
@@ -601,17 +604,20 @@ fn create_pset_error() {
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);
 
-    let err = wallet
-        .wollet
-        .reissue_asset(&asset, satoshi_a, "", None)
+    let err = TxBuilder::new(wallet.network())
+        .reissue_asset(asset, satoshi_a, None)
+        .unwrap()
+        .finish(&wallet.wollet)
         .unwrap_err();
+
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // The other wallet is unaware of the issuance transaction,
     // so it can't reissue the asset.
-    let err = wallet2
-        .wollet
-        .reissue_asset(&asset, satoshi_a, "", None)
+    let err = TxBuilder::new(wallet2.network())
+        .reissue_asset(asset, satoshi_a, None)
+        .unwrap()
+        .finish(&wallet2.wollet)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }

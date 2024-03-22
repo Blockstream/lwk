@@ -679,9 +679,11 @@ impl TestWollet {
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let balance_token_before = self.balance(&issuance.token);
-        let mut pset = self
-            .wollet
-            .reissue_asset(asset.to_string().as_str(), satoshi_asset, "", fee_rate)
+        let mut pset = TxBuilder::new(self.network())
+            .reissue_asset(*asset, satoshi_asset, None)
+            .unwrap()
+            .fee_rate(fee_rate)
+            .finish(&self.wollet)
             .unwrap();
         pset = pset_rt(&pset);
 

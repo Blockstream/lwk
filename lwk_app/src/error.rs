@@ -26,6 +26,9 @@ pub enum Error {
     #[error("Address Error: {0}")]
     Address(#[from] lwk_wollet::elements::AddressError),
 
+    #[error("HexArray Error: {0}")]
+    HexArray(#[from] lwk_wollet::hashes::hex::HexToArrayError),
+
     #[error("Minreq Error: {0}")]
     Minreq(#[from] jsonrpc::minreq_http::Error),
 

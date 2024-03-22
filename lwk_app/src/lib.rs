@@ -844,7 +844,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                         .transpose()?,
                 )?
                 .fee_rate(r.fee_rate)
-                .finish(&wollet)?;
+                .finish(wollet)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -857,12 +857,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
 
-            let mut pset = wollet.reissue_asset(
-                &r.asset,
-                r.satoshi_asset,
-                r.address_asset.as_deref().unwrap_or(""),
-                r.fee_rate,
-            )?;
+            let mut pset = TxBuilder::new(wollet.network())
+                .reissue_asset(
+                    AssetId::from_str(&r.asset)?,
+                    r.satoshi_asset,
+                    r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
+                )?
+                .fee_rate(r.fee_rate)
+                .finish(wollet)?;
+
             add_contracts(&mut pset, s.assets.iter());
             Response::result(
                 request.id,

@@ -635,6 +635,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
 
+            let descriptor = wollet.descriptor().to_string();
             let type_ = match wollet.descriptor().descriptor.desc_type() {
                 DescriptorType::Wpkh => response::WalletType::Wpkh,
                 DescriptorType::ShWpkh => response::WalletType::ShWpkh,
@@ -677,6 +678,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletDetails {
+                    descriptor,
                     type_: type_.to_string(),
                     signers,
                     warnings: warnings.join(", "),

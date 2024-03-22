@@ -183,6 +183,9 @@ pub struct SignerDetails {
 /// Details of a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletDetails {
+    /// Wallet descriptor
+    pub descriptor: String,
+
     /// Type of the wallet // TODO make enum
     #[serde(rename = "type")]
     pub type_: String,

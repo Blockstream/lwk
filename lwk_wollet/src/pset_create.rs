@@ -5,7 +5,7 @@ use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
 use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
-use crate::model::{Recipient, UnvalidatedRecipient, WalletTxOut};
+use crate::model::{Recipient, WalletTxOut};
 use crate::registry::Contract;
 use crate::tx_builder::TxBuilder;
 use crate::wollet::Wollet;
@@ -167,20 +167,6 @@ impl Wollet {
         let address = self.address(Some(*last_unused))?;
         *last_unused += 1;
         Ok(Recipient::from_address(satoshi, address.address(), asset))
-    }
-
-    /// Create a PSET burning an asset
-    pub fn burn_asset(
-        &self,
-        asset: &str,
-        satoshi: u64,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let recipient = UnvalidatedRecipient::burn(asset.to_string(), satoshi);
-        TxBuilder::new(self.network())
-            .add_unvalidated_recipient(&recipient)?
-            .fee_rate(fee_rate)
-            .finish(self)
     }
 
     /// Create a PSET issuing an asset

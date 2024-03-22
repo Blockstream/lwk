@@ -511,12 +511,10 @@ fn create_pset_error() {
         address: "".to_string(),
         asset: "".to_string(),
     }];
-    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
+    let err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap_err();
     let expected = "base58 error: base58ck data not even long enough for a checksum";
-    assert_eq!(err.to_string(), expected);
-
-    let err = wallet.wollet.send_many(vec![], None).unwrap_err();
-    let expected = "Send many cannot be called with an empty addressee list";
     assert_eq!(err.to_string(), expected);
 
     // Not confidential address
@@ -528,7 +526,9 @@ fn create_pset_error() {
         address: not_conf_address,
         asset: "".to_string(),
     }];
-    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
+    let err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap_err();
     assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
 
     let address = wallet.address().to_string();
@@ -538,7 +538,9 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "".to_string(),
     }];
-    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
+    let err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
 
     // Invalid asset
@@ -547,8 +549,9 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "aaaa".to_string(),
     }];
-    let _err = wallet.wollet.send_many(addressees, None).unwrap_err();
-
+    let _err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap_err();
     // TODO uncomment once https://github.com/ElementsProject/rust-elements/issues/189 is resolved
     // assert_eq!(
     //     err.to_string(),
@@ -562,7 +565,11 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "".to_string(),
     }];
-    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
+    let err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap()
+        .finish(&wallet.wollet)
+        .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // Not enough asset
@@ -571,7 +578,11 @@ fn create_pset_error() {
         address,
         asset: asset.to_string(),
     }];
-    let err = wallet.wollet.send_many(addressees, None).unwrap_err();
+    let err = TxBuilder::new(wallet.network())
+        .add_unvalidated_recipients(&addressees)
+        .unwrap()
+        .finish(&wallet.wollet)
+        .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // Not enough token

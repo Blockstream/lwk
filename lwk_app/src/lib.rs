@@ -38,7 +38,7 @@ use lwk_wollet::elements::{Address, AssetId, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::{full_scan_with_electrum_client, Wollet};
+use lwk_wollet::{full_scan_with_electrum_client, TxBuilder, Wollet};
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 use state::id_to_fingerprint;
@@ -479,13 +479,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Send = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
-            let mut tx = wollet.send_many(
-                r.addressees
-                    .into_iter()
-                    .map(unvalidated_addressee)
-                    .collect(),
-                r.fee_rate,
-            )?;
+
+            let recipients: Vec<_> = r
+                .addressees
+                .into_iter()
+                .map(unvalidated_addressee)
+                .collect();
+            let mut tx = TxBuilder::new(wollet.network())
+                .add_unvalidated_recipients(&recipients)?
+                .fee_rate(r.fee_rate)
+                .finish(&wollet)?;
+
             add_contracts(&mut tx, s.assets.iter());
             Response::result(
                 request.id,

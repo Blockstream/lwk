@@ -562,7 +562,14 @@ impl TestWollet {
                 asset: ass2,
             },
         ];
-        let mut pset = self.wollet.send_many(addressees, fee_rate).unwrap();
+
+        let mut pset = TxBuilder::new(self.network())
+            .add_unvalidated_recipients(&addressees)
+            .unwrap()
+            .fee_rate(fee_rate)
+            .finish(&self.wollet)
+            .unwrap();
+
         pset = pset_rt(&pset);
 
         let details = self.wollet.get_details(&pset).unwrap();

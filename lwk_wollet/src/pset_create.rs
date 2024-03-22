@@ -169,21 +169,6 @@ impl Wollet {
         Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
-    /// Create a PSET sending to many outputs
-    pub fn send_many(
-        &self,
-        addressees: Vec<UnvalidatedRecipient>,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        if addressees.is_empty() {
-            return Err(Error::SendManyEmptyAddressee);
-        }
-        TxBuilder::new(self.network())
-            .add_unvalidated_recipients(&addressees)?
-            .fee_rate(fee_rate)
-            .finish(self)
-    }
-
     /// Create a PSET burning an asset
     pub fn burn_asset(
         &self,

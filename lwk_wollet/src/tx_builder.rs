@@ -24,7 +24,7 @@ use crate::{
 #[derive(Debug)]
 pub struct TxBuilder {
     network: ElementsNetwork,
-    addressees: Vec<Recipient>,
+    recipients: Vec<Recipient>,
     fee_rate: f32,
     issuance_request: IssuanceRequest,
 }
@@ -33,7 +33,7 @@ impl TxBuilder {
     pub fn new(network: ElementsNetwork) -> Self {
         TxBuilder {
             network,
-            addressees: vec![],
+            recipients: vec![],
             fee_rate: 100.0,
             issuance_request: IssuanceRequest::None,
         }
@@ -58,12 +58,12 @@ impl TxBuilder {
         recipient: &UnvalidatedRecipient,
     ) -> Result<Self, Error> {
         let addr: Recipient = recipient.validate(self.network())?;
-        self.addressees.push(addr);
+        self.recipients.push(addr);
         Ok(self)
     }
 
     pub fn add_validated_recipient(mut self, recipient: Recipient) -> Self {
-        self.addressees.push(recipient);
+        self.recipients.push(recipient);
         self
     }
 
@@ -72,7 +72,7 @@ impl TxBuilder {
         mut self,
         recipients: &[UnvalidatedRecipient],
     ) -> Result<Self, Error> {
-        self.addressees.clear();
+        self.recipients.clear();
         for recipient in recipients {
             self = self.add_unvalidated_recipient(recipient)?;
         }
@@ -177,7 +177,7 @@ impl TxBuilder {
 
         let policy_asset = self.network().policy_asset();
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
-            .addressees
+            .recipients
             .into_iter()
             .partition(|a| a.asset == policy_asset);
 

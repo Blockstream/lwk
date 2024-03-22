@@ -488,7 +488,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut tx = TxBuilder::new(wollet.network())
                 .set_unvalidated_recipients(&recipients)?
                 .fee_rate(r.fee_rate)
-                .finish(&wollet)?;
+                .finish(wollet)?;
 
             add_contracts(&mut tx, s.assets.iter());
             Response::result(

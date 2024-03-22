@@ -23,6 +23,9 @@ pub enum Error {
     #[error("Wollet Error: {0}")]
     Wollet(#[from] lwk_wollet::Error),
 
+    #[error("Address Error: {0}")]
+    Address(#[from] lwk_wollet::elements::AddressError),
+
     #[error("Minreq Error: {0}")]
     Minreq(#[from] jsonrpc::minreq_http::Error),
 

@@ -597,13 +597,20 @@ impl TestWollet {
         signers: &[&AnySigner],
         satoshi_asset: u64,
         satoshi_token: u64,
-        contract: &str,
+        contract: Option<&str>,
         fee_rate: Option<f32>,
     ) -> (AssetId, AssetId) {
         let balance_before = self.balance_btc();
-        let mut pset = self
-            .wollet
-            .issue_asset(satoshi_asset, "", satoshi_token, "", contract, fee_rate)
+        let contract = contract.map(|c| Contract::from_str(c).unwrap());
+        let contract_hash = contract
+            .as_ref()
+            .map(|c| c.contract_hash().unwrap())
+            .unwrap_or_else(|| ContractHash::from_slice(&[0u8; 32]).expect("static"));
+        let mut pset = TxBuilder::new(self.network())
+            .issue_asset(satoshi_asset, None, satoshi_token, None, contract)
+            .unwrap()
+            .fee_rate(fee_rate)
+            .finish(&self.wollet)
             .unwrap();
         pset = pset_rt(&pset);
 
@@ -656,11 +663,6 @@ impl TestWollet {
             issuance_input.previous_txid,
             issuance_input.previous_output_index,
         );
-        let contract_hash = if contract.is_empty() {
-            ContractHash::from_slice(&[0u8; 32]).unwrap()
-        } else {
-            ContractHash::from_json_contract(contract).unwrap()
-        };
         assert_eq!(asset, AssetId::new_issuance(prevout, contract_hash));
 
         (asset, token)

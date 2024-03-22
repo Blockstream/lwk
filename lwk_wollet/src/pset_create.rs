@@ -169,38 +169,6 @@ impl Wollet {
         Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
-    /// Create a PSET issuing an asset
-    pub fn issue_asset(
-        &self,
-        satoshi_asset: u64,
-        address_asset: &str,
-        satoshi_token: u64,
-        address_token: &str,
-        contract: &str,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let contract = if contract.is_empty() {
-            None
-        } else {
-            let contract = serde_json::Value::from_str(contract)?;
-            let contract = Contract::from_value(&contract)?;
-            contract.validate()?;
-            Some(contract)
-        };
-        let address_asset = validate_empty_address(address_asset, self.network())?;
-        let address_token = validate_empty_address(address_token, self.network())?;
-        TxBuilder::new(self.network())
-            .fee_rate(fee_rate)
-            .issue_asset(
-                satoshi_asset,
-                address_asset,
-                satoshi_token,
-                address_token,
-                contract,
-            )?
-            .finish(self)
-    }
-
     /// Create a PSET reissuing an asset
     pub fn reissue_asset(
         &self,

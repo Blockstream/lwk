@@ -41,7 +41,7 @@ fn roundtrip(
     wallet.send_btc(signers, None, Some((node_address, 10_000)));
 
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":2,\"ticker\":\"TEST\",\"version\":0}";
-    let (asset, _token) = wallet.issueasset(signers, 10_000, 1, contract, None);
+    let (asset, _token) = wallet.issueasset(signers, 10_000, 1, Some(contract), None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 10, &asset, None);
     let node_address = server.node_getnewaddress();

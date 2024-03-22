@@ -645,8 +645,12 @@ fn multisig_flow() {
     wallet.fund_btc(&server);
     // Create a simple PSET
     let satoshi = 1_000;
-    let node_addr = server.node_getnewaddress().to_string();
-    let pset = wallet.wollet.send_lbtc(satoshi, &node_addr, None).unwrap();
+    let node_addr = server.node_getnewaddress();
+    let pset = TxBuilder::new(wallet.network())
+        .add_lbtc_recipient(&node_addr, satoshi)
+        .unwrap()
+        .finish(&wallet.wollet)
+        .unwrap();
 
     // Send the PSET to each signer
     let mut pset1 = pset.clone();
@@ -686,9 +690,10 @@ fn jade_sign_wollet_pset() {
 
     let my_addr = wallet.address();
 
-    let mut pset = wallet
-        .wollet
-        .send_lbtc(1000, &my_addr.to_string(), None)
+    let mut pset = TxBuilder::new(wallet.network())
+        .add_lbtc_recipient(&my_addr, 1000)
+        .unwrap()
+        .finish(&wallet.wollet)
         .unwrap();
 
     let docker = Cli::default();
@@ -730,8 +735,13 @@ fn jade_single_sig() {
     wallet.fund_btc(&server);
 
     let satoshi = satoshi_utxo1 + 1;
-    let node_addr = server.node_getnewaddress().to_string();
-    let mut pset = wallet.wollet.send_lbtc(satoshi, &node_addr, None).unwrap();
+    let node_addr = server.node_getnewaddress();
+
+    let mut pset = TxBuilder::new(wallet.network())
+        .add_lbtc_recipient(&node_addr, satoshi)
+        .unwrap()
+        .finish(&wallet.wollet)
+        .unwrap();
 
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);

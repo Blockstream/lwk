@@ -447,9 +447,11 @@ impl TestWollet {
 
         let recipient = external.clone().unwrap_or((self.address(), 10_000));
 
-        let mut pset = self
-            .wollet
-            .send_lbtc(recipient.1, &recipient.0.to_string(), fee_rate)
+        let mut pset = TxBuilder::new(self.network())
+            .add_lbtc_recipient(&recipient.0, recipient.1)
+            .unwrap()
+            .fee_rate(fee_rate)
+            .finish(&self.wollet)
             .unwrap();
         pset = pset_rt(&pset);
 

@@ -5,6 +5,7 @@ use lwk_test_util::{
     generate_signer, init_logging, jade::TestJadeEmulator, multisig_desc, register_multisig, setup,
     TestElectrumServer, TestWollet, TEST_MNEMONIC,
 };
+use lwk_wollet::TxBuilder;
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
@@ -138,10 +139,12 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     // (Jade shows both "change" outputs in this case)
     let w2_address = w2.wollet.change(None).unwrap().address().clone();
 
-    let mut pset = w1
-        .wollet
-        .send_lbtc(10_000, &w2_address.to_string(), None)
+    let mut pset = TxBuilder::new(w1.network())
+        .add_lbtc_recipient(&w2_address, 10_000)
+        .unwrap()
+        .finish(&w1.wollet)
         .unwrap();
+
     w2.wollet.add_details(&mut pset).unwrap();
     for signer in signers_m1 {
         w1.sign(signer, &mut pset);

@@ -169,20 +169,6 @@ impl Wollet {
         Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
-    /// Create a PSET sending some satoshi to an address
-    pub fn send_lbtc(
-        &self,
-        satoshi: u64,
-        address: &str,
-        fee_rate: Option<f32>,
-    ) -> Result<PartiallySignedTransaction, Error> {
-        let recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
-        TxBuilder::new(self.network())
-            .add_unvalidated_recipient(&recipient)?
-            .fee_rate(fee_rate)
-            .finish(self)
-    }
-
     /// Create a PSET sending to many outputs
     pub fn send_many(
         &self,

@@ -1,6 +1,5 @@
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
-use crate::TxBuilder;
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -44,8 +43,9 @@ impl ElementsNetwork {
         }
     }
 
-    pub fn tx_builder(&self) -> TxBuilder {
-        TxBuilder::new(*self)
+    #[cfg(feature = "bindings")]
+    pub fn tx_builder(&self) -> crate::TxBuilder {
+        crate::TxBuilder::new(*self)
     }
 }
 

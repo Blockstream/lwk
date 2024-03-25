@@ -595,10 +595,10 @@ fn create_pset_error() {
 
     // Send token elsewhere
     let address = wallet2.address();
-    let mut pset = TxBuilder::new(wallet.network())
+    let mut pset = wallet.tx_builder()
         .add_recipient(&address, satoshi_t, token)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap();
 
     wallet.sign(&signer, &mut pset);

@@ -58,6 +58,7 @@ serial = ["lwk_jade/serial"]
 esplora = ["minreq"]
 electrum = ["electrum-client"]
 esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "tokio"]
+bindings = []
 
 [[test]]
 name = "e2e"

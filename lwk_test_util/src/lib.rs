@@ -333,6 +333,10 @@ impl TestWollet {
         }
     }
 
+    pub fn tx_builder(&self) -> WolletTxBuilder {
+        self.wollet.tx_builder()
+    }
+
     pub fn db_root_dir(self) -> TempDir {
         self.db_root_dir
     }

@@ -11,6 +11,7 @@ use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
 use crate::store::Store;
+use crate::tx_builder::WolletTxBuilder;
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
@@ -31,6 +32,12 @@ pub struct Wollet {
     pub(crate) store: Store,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     descriptor: WolletDescriptor,
+}
+
+impl std::fmt::Debug for Wollet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "wollet({:?})", self.descriptor)
+    }
 }
 
 impl Wollet {
@@ -84,6 +91,11 @@ impl Wollet {
     /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
         self.config.policy_asset()
+    }
+
+    /// Creates a transaction builder with a reference to this wallet
+    pub fn tx_builder(&self) -> WolletTxBuilder {
+        WolletTxBuilder::new(self)
     }
 
     /// Get the network

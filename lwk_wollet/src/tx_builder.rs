@@ -14,6 +14,7 @@ use crate::{
 
 /// A transaction builder
 ///
+/// See [`WolletTxBuilder`] for usage from rust.
 ///
 /// Design decisions:
 ///
@@ -30,6 +31,7 @@ pub struct TxBuilder {
 }
 
 impl TxBuilder {
+    /// Creates a transaction builder for bindings code. From rust use [`WolletTxBuilder`]
     pub fn new(network: ElementsNetwork) -> Self {
         TxBuilder {
             network,
@@ -37,6 +39,10 @@ impl TxBuilder {
             fee_rate: 100.0,
             issuance_request: IssuanceRequest::None,
         }
+    }
+
+    fn network(&self) -> ElementsNetwork {
+        self.network
     }
 
     pub fn add_recipient(
@@ -366,8 +372,131 @@ impl TxBuilder {
 
         Ok(pset)
     }
+}
 
-    fn network(&self) -> ElementsNetwork {
-        self.network
+/// A transaction builder.
+#[derive(Debug)]
+pub struct WolletTxBuilder<'a> {
+    wollet: &'a Wollet,
+    inner: TxBuilder,
+}
+
+impl<'a> WolletTxBuilder<'a> {
+    /// Creates a transaction builder. Could be conveniently created with [`Wollet::tx_builder()`]
+    pub fn new(wollet: &'a Wollet) -> Self {
+        WolletTxBuilder {
+            wollet,
+            inner: TxBuilder::new(wollet.network()),
+        }
+    }
+
+    /// Consume this builder and create a transaction
+    pub fn finish(self) -> Result<PartiallySignedTransaction, Error> {
+        self.inner.finish(self.wollet)
+    }
+
+    /// Wrapper of [`TxBuilder::add_recipient()`]
+    pub fn add_recipient(
+        self,
+        address: &Address,
+        satoshi: u64,
+        asset_id: AssetId,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_recipient(address, satoshi, asset_id)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_unvalidated_recipient()`]
+    pub fn add_unvalidated_recipient(
+        self,
+        recipient: &UnvalidatedRecipient,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_unvalidated_recipient(recipient)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_validated_recipient()`]
+    pub fn add_validated_recipient(self, recipient: Recipient) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.add_validated_recipient(recipient),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::set_unvalidated_recipients()`]
+    pub fn set_unvalidated_recipients(
+        self,
+        recipients: &[UnvalidatedRecipient],
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.set_unvalidated_recipients(recipients)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_lbtc_recipient()`]
+    pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_lbtc_recipient(address, satoshi)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::add_burn()`]
+    pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_burn(satoshi, asset_id)?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::fee_rate()`]
+    pub fn fee_rate(self, fee_rate: Option<f32>) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.fee_rate(fee_rate),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::issue_asset()`]
+    pub fn issue_asset(
+        self,
+        asset_sats: u64,
+        asset_receiver: Option<Address>,
+        token_sats: u64,
+        token_receiver: Option<Address>,
+        contract: Option<Contract>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.issue_asset(
+                asset_sats,
+                asset_receiver,
+                token_sats,
+                token_receiver,
+                contract,
+            )?,
+        })
+    }
+
+    /// Wrapper of [`TxBuilder::reissue_asset()`]
+    pub fn reissue_asset(
+        self,
+        asset_to_reissue: AssetId,
+        satoshi_to_reissue: u64,
+        asset_receiver: Option<Address>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.reissue_asset(
+                asset_to_reissue,
+                satoshi_to_reissue,
+                asset_receiver,
+            )?,
+        })
     }
 }

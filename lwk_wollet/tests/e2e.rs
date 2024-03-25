@@ -433,10 +433,11 @@ fn multiple_descriptors() {
     let satoshi_a = 100_000;
     let satoshi_t = 1;
     let address_t = wallet_t.address();
-    let mut pset = TxBuilder::new(wallet_a.network())
+    let mut pset = wallet_a
+        .tx_builder()
         .issue_asset(satoshi_a, None, satoshi_t, Some(address_t), None)
         .unwrap()
-        .finish(&wallet_a.wollet)
+        .finish()
         .unwrap();
 
     wallet_t.wollet.add_details(&mut pset).unwrap();
@@ -462,10 +463,11 @@ fn multiple_descriptors() {
     let satoshi_ar = 1_000;
     let address_a = wallet_a.address();
 
-    let mut pset = TxBuilder::new(wallet_t.network())
+    let mut pset = wallet_t
+        .tx_builder()
         .reissue_asset(*asset, satoshi_ar, Some(address_a))
         .unwrap()
-        .finish(&wallet_t.wollet)
+        .finish()
         .unwrap();
 
     wallet_a.wollet.add_details(&mut pset).unwrap();
@@ -513,7 +515,8 @@ fn create_pset_error() {
         address: "".to_string(),
         asset: "".to_string(),
     }];
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     let expected = "base58 error: base58ck data not even long enough for a checksum";
@@ -528,7 +531,8 @@ fn create_pset_error() {
         address: not_conf_address,
         asset: "".to_string(),
     }];
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::NotConfidentialAddress.to_string());
@@ -540,7 +544,8 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "".to_string(),
     }];
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
@@ -551,7 +556,8 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "aaaa".to_string(),
     }];
-    let _err = TxBuilder::new(wallet.network())
+    let _err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap_err();
     // TODO uncomment once https://github.com/ElementsProject/rust-elements/issues/189 is resolved
@@ -567,10 +573,11 @@ fn create_pset_error() {
         address: address.clone(),
         asset: "".to_string(),
     }];
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
@@ -580,10 +587,11 @@ fn create_pset_error() {
         address,
         asset: asset_str.to_string(),
     }];
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
@@ -595,7 +603,8 @@ fn create_pset_error() {
 
     // Send token elsewhere
     let address = wallet2.address();
-    let mut pset = wallet.tx_builder()
+    let mut pset = wallet
+        .tx_builder()
         .add_recipient(&address, satoshi_t, token)
         .unwrap()
         .finish()
@@ -604,20 +613,22 @@ fn create_pset_error() {
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);
 
-    let err = TxBuilder::new(wallet.network())
+    let err = wallet
+        .tx_builder()
         .reissue_asset(asset, satoshi_a, None)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap_err();
 
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // The other wallet is unaware of the issuance transaction,
     // so it can't reissue the asset.
-    let err = TxBuilder::new(wallet2.network())
+    let err = wallet2
+        .tx_builder()
         .reissue_asset(asset, satoshi_a, None)
         .unwrap()
-        .finish(&wallet2.wollet)
+        .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }
@@ -662,10 +673,11 @@ fn multisig_flow() {
     // Create a simple PSET
     let satoshi = 1_000;
     let node_addr = server.node_getnewaddress();
-    let pset = TxBuilder::new(wallet.network())
+    let pset = wallet
+        .tx_builder()
         .add_lbtc_recipient(&node_addr, satoshi)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap();
 
     // Send the PSET to each signer
@@ -706,10 +718,11 @@ fn jade_sign_wollet_pset() {
 
     let my_addr = wallet.address();
 
-    let mut pset = TxBuilder::new(wallet.network())
+    let mut pset = wallet
+        .tx_builder()
         .add_lbtc_recipient(&my_addr, 1000)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap();
 
     let docker = Cli::default();
@@ -753,10 +766,11 @@ fn jade_single_sig() {
     let satoshi = satoshi_utxo1 + 1;
     let node_addr = server.node_getnewaddress();
 
-    let mut pset = TxBuilder::new(wallet.network())
+    let mut pset = wallet
+        .tx_builder()
         .add_lbtc_recipient(&node_addr, satoshi)
         .unwrap()
-        .finish(&wallet.wollet)
+        .finish()
         .unwrap();
 
     wallet.sign(&signer, &mut pset);

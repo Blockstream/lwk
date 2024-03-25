@@ -451,11 +451,12 @@ impl TestWollet {
 
         let recipient = external.clone().unwrap_or((self.address(), 10_000));
 
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .add_lbtc_recipient(&recipient.0, recipient.1)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
         pset = pset_rt(&pset);
 
@@ -507,11 +508,12 @@ impl TestWollet {
     ) {
         let balance_before = self.balance(asset);
         let satoshi: u64 = 10;
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .add_recipient(address, satoshi, *asset)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
 
         pset = pset_rt(&pset);
@@ -567,11 +569,12 @@ impl TestWollet {
             },
         ];
 
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .set_unvalidated_recipients(&addressees)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
 
         pset = pset_rt(&pset);
@@ -610,11 +613,12 @@ impl TestWollet {
             .as_ref()
             .map(|c| c.contract_hash().unwrap())
             .unwrap_or_else(|| ContractHash::from_slice(&[0u8; 32]).expect("static"));
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .issue_asset(satoshi_asset, None, satoshi_token, None, contract)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
         pset = pset_rt(&pset);
 
@@ -683,11 +687,12 @@ impl TestWollet {
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
         let balance_token_before = self.balance(&issuance.token);
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .reissue_asset(*asset, satoshi_asset, None)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
         pset = pset_rt(&pset);
 
@@ -747,11 +752,12 @@ impl TestWollet {
     ) {
         let balance_btc_before = self.balance_btc();
         let balance_asset_before = self.balance(asset);
-        let mut pset = TxBuilder::new(self.network())
+        let mut pset = self
+            .tx_builder()
             .add_burn(satoshi_asset, *asset)
             .unwrap()
             .fee_rate(fee_rate)
-            .finish(&self.wollet)
+            .finish()
             .unwrap();
         pset = pset_rt(&pset);
 

@@ -38,7 +38,7 @@ use lwk_wollet::elements::{Address, AssetId, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::{full_scan_with_electrum_client, TxBuilder, Wollet};
+use lwk_wollet::{full_scan_with_electrum_client, Wollet};
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 use state::id_to_fingerprint;
@@ -485,10 +485,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .into_iter()
                 .map(unvalidated_addressee)
                 .collect();
-            let mut tx = TxBuilder::new(wollet.network())
+            let mut tx = wollet
+                .tx_builder()
                 .set_unvalidated_recipients(&recipients)?
                 .fee_rate(r.fee_rate)
-                .finish(wollet)?;
+                .finish()?;
 
             add_contracts(&mut tx, s.assets.iter());
             Response::result(
@@ -835,7 +836,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::Issue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
-            let tx = TxBuilder::new(wollet.network())
+            let tx = wollet
+                .tx_builder()
                 .issue_asset(
                     r.satoshi_asset,
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
@@ -846,7 +848,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                         .transpose()?,
                 )?
                 .fee_rate(r.fee_rate)
-                .finish(wollet)?;
+                .finish()?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -859,14 +861,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
 
-            let mut pset = TxBuilder::new(wollet.network())
+            let mut pset = wollet
+                .tx_builder()
                 .reissue_asset(
                     AssetId::from_str(&r.asset)?,
                     r.satoshi_asset,
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
                 )?
                 .fee_rate(r.fee_rate)
-                .finish(wollet)?;
+                .finish()?;
 
             add_contracts(&mut pset, s.assets.iter());
             Response::result(

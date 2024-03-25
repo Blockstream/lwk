@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::domain::verify_domain_name;
 use crate::elements::hashes::{sha256, Hash};
 use crate::elements::{AssetId, ContractHash, OutPoint};
@@ -79,6 +81,17 @@ impl Contract {
     pub fn contract_hash(&self) -> Result<ContractHash, Error> {
         let value = serde_json::to_value(self)?;
         contract_json_hash(&value)
+    }
+}
+
+impl FromStr for Contract {
+    type Err = Error;
+
+    fn from_str(contract: &str) -> Result<Self, Self::Err> {
+        let contract = serde_json::Value::from_str(contract)?;
+        let contract = Contract::from_value(&contract)?;
+        contract.validate()?;
+        Ok(contract)
     }
 }
 

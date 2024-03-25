@@ -85,7 +85,7 @@ fn liquid_issue(signers: &[&AnySigner]) {
 
     wallet.fund_btc(&server);
 
-    let (asset, _token) = wallet.issueasset(signers, 10, 1, "", None);
+    let (asset, _token) = wallet.issueasset(signers, 10, 1, None, None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 5, &asset, None);
 
@@ -204,7 +204,7 @@ fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers:
     wallet.fund_btc(server);
     server.generate(1);
     wallet.send_btc(signers, None, None);
-    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, "", None);
+    let (asset, _token) = wallet.issueasset(signers, 100_000, 1, None, None);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
     let node_address1 = server.node_getnewaddress();
@@ -349,7 +349,7 @@ fn fee_rate() {
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, fee_rate, None);
-    let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, "", fee_rate);
+    let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None, fee_rate);
     let node_address = server.node_getnewaddress();
     wallet.send_asset(&signers, &node_address, &asset, fee_rate);
     let node_address1 = server.node_getnewaddress();
@@ -380,7 +380,7 @@ fn contract() {
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, None, None);
-    let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, contract, None);
+    let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, Some(contract), None);
 
     // Error cases
     let contract_d = "{\"entity\":{\"domain\":\"testcom\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
@@ -398,10 +398,7 @@ fn contract() {
         (contract_t, Error::InvalidTicker),
         (contract_i, Error::InvalidIssuerPubkey),
     ] {
-        let err = wallet
-            .wollet
-            .issue_asset(10, "", 1, "", contract, None)
-            .unwrap_err();
+        let err = Contract::from_str(contract).unwrap_err();
         assert_eq!(err.to_string(), expected.to_string());
     }
 }
@@ -435,11 +432,13 @@ fn multiple_descriptors() {
     // Issue an asset, sending the asset to asset wallet, and the token to the token wallet
     let satoshi_a = 100_000;
     let satoshi_t = 1;
-    let address_t = wallet_t.address().to_string();
-    let mut pset = wallet_a
-        .wollet
-        .issue_asset(satoshi_a, "", satoshi_t, &address_t, "", None)
+    let address_t = wallet_t.address();
+    let mut pset = TxBuilder::new(wallet_a.network())
+        .issue_asset(satoshi_a, None, satoshi_t, Some(address_t), None)
+        .unwrap()
+        .finish(&wallet_a.wollet)
         .unwrap();
+
     wallet_t.wollet.add_details(&mut pset).unwrap();
     let (asset, token) = &pset.inputs()[0].issuance_ids();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
@@ -461,11 +460,14 @@ fn multiple_descriptors() {
     // Reissue the asset, sending the asset to asset wallet, and keeping the token in the token
     // wallet
     let satoshi_ar = 1_000;
-    let address_a = wallet_a.address().to_string();
-    let mut pset = wallet_t
-        .wollet
-        .reissue_asset(asset.to_string().as_str(), satoshi_ar, &address_a, None)
+    let address_a = wallet_a.address();
+
+    let mut pset = TxBuilder::new(wallet_t.network())
+        .reissue_asset(*asset, satoshi_ar, Some(address_a))
+        .unwrap()
+        .finish(&wallet_t.wollet)
         .unwrap();
+
     wallet_a.wollet.add_details(&mut pset).unwrap();
     let details_a = wallet_a.wollet.get_details(&pset).unwrap();
     let details_t = wallet_t.wollet.get_details(&pset).unwrap();
@@ -500,10 +502,10 @@ fn create_pset_error() {
         &[&AnySigner::Software(signer.clone())],
         satoshi_a,
         satoshi_t,
-        "",
+        None,
         None,
     );
-    let asset = asset.to_string();
+    let asset_str = asset.to_string();
 
     // Invalid address
     let addressees = vec![UnvalidatedRecipient {
@@ -576,7 +578,7 @@ fn create_pset_error() {
     let addressees = vec![UnvalidatedRecipient {
         satoshi: satoshi_a + 1,
         address,
-        asset: asset.to_string(),
+        asset: asset_str.to_string(),
     }];
     let err = TxBuilder::new(wallet.network())
         .set_unvalidated_recipients(&addressees)
@@ -602,17 +604,20 @@ fn create_pset_error() {
     wallet.sign(&signer, &mut pset);
     wallet.send(&mut pset);
 
-    let err = wallet
-        .wollet
-        .reissue_asset(&asset, satoshi_a, "", None)
+    let err = TxBuilder::new(wallet.network())
+        .reissue_asset(asset, satoshi_a, None)
+        .unwrap()
+        .finish(&wallet.wollet)
         .unwrap_err();
+
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 
     // The other wallet is unaware of the issuance transaction,
     // so it can't reissue the asset.
-    let err = wallet2
-        .wollet
-        .reissue_asset(&asset, satoshi_a, "", None)
+    let err = TxBuilder::new(wallet2.network())
+        .reissue_asset(asset, satoshi_a, None)
+        .unwrap()
+        .finish(&wallet2.wollet)
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }

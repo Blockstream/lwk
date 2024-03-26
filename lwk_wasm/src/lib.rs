@@ -6,10 +6,12 @@ mod contract;
 mod descriptor;
 mod error;
 mod esplora;
+#[cfg(feature = "serial")]
 mod jade;
 mod mnemonic;
 mod network;
 mod pset;
+#[cfg(feature = "serial")]
 mod serial;
 mod signer;
 mod tx_builder;
@@ -28,6 +30,7 @@ pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
+#[cfg(feature = "serial")]
 pub use jade::Jade;
 pub use mnemonic::Mnemonic;
 pub use network::Network;

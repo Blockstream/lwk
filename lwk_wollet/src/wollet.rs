@@ -20,7 +20,7 @@ use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
-use lwk_common::{pset_balance, pset_issuances, pset_signatures, PsetDetails};
+use lwk_common::{burn_script, pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -506,7 +506,7 @@ fn tx_type(
     balance: &HashMap<AssetId, i64>,
     fee: u64,
 ) -> String {
-    let burn_script = Script::new_op_return(&[]);
+    let burn_script = burn_script();
     if tx
         .input
         .iter()

@@ -32,7 +32,9 @@ use elements_miniscript::descriptor::DescriptorSecretKey;
 use elements_miniscript::elements::bitcoin::secp256k1::SecretKey;
 use elements_miniscript::elements::{
     bitcoin::{bip32::KeySource, key::PublicKey},
+    opcodes::all::OP_RETURN,
     pset::PartiallySignedTransaction,
+    script::Builder,
     secp256k1_zkp::{All, Generator, PedersenCommitment, Secp256k1},
     AssetId, BlindAssetProofs, BlindValueProofs, OutPoint, Script, TxOutSecrets,
 };
@@ -274,4 +276,9 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
 
 pub fn pset_issuances(pset: &PartiallySignedTransaction) -> Vec<Issuance> {
     pset.inputs().iter().map(Issuance::new).collect()
+}
+
+/// Create the same burn script that Elements Core wallet creates
+pub fn burn_script() -> Script {
+    Builder::new().push_opcode(OP_RETURN).into_script()
 }

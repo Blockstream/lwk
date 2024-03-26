@@ -22,6 +22,7 @@ use crate::{
     },
     Error, Jade,
 };
+use lwk_common::burn_script;
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
@@ -37,6 +38,7 @@ impl Jade {
         let mut sigs_added_or_overwritten = 0;
         let my_fingerprint = self.fingerprint()?;
 
+        let burn_script = burn_script();
         let mut got_registered_multisigs = false;
         let mut multisigs_details = vec![];
         let mut asset_ids_in_tx = HashSet::new();
@@ -47,7 +49,6 @@ impl Jade {
             asset_ids_in_tx.insert(asset_id);
             let mut asset_id = serialize(&asset_id);
             asset_id.reverse(); // Jade want it reversed
-            let burn_script = Script::new_op_return(&[]);
             let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
             let trusted_commitment = if unblinded {
                 // fee output or burn output

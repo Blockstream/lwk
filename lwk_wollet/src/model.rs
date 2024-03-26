@@ -4,6 +4,7 @@ use crate::pset_create::validate_address;
 use crate::secp256k1::PublicKey;
 use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
+use lwk_common::burn_script;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -134,7 +135,7 @@ impl UnvalidatedRecipient {
         let satoshi = self.validate_satoshi()?;
         let asset = self.validate_asset(network)?;
         if self.address == "burn" {
-            let burn_script = Script::new_op_return(&[]);
+            let burn_script = burn_script();
             Ok(Recipient {
                 satoshi,
                 script_pubkey: burn_script,

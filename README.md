@@ -35,6 +35,12 @@ $ cd lwk
 $ cargo install --path ./lwk_cli/ 
 ```
 
+Or
+```
+$ cargo install --path ./lwk_cli/ --features serial
+```
+To enable connection with Jade over serial.
+
 ## CLI Usage
 
 Start the rpc server (default in Liquid Testnet)

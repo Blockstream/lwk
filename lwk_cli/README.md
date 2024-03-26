@@ -9,6 +9,11 @@ $ cargo build --release
 $ alias cli="$(pwd)/target/release/lwk_cli"
 ```
 
+If you want to enable Jade over serial build with
+```sh
+$ cargo build --release --features serial
+```
+
 Help shows available commands:
 
 ```sh

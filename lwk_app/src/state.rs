@@ -5,7 +5,6 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use lwk_common::Signer;
-use lwk_jade::Jade;
 use lwk_jade::Network;
 use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
@@ -232,10 +231,16 @@ impl Signers {
         let app_signer = self.get(name)?;
         tracing::debug!("get_available({}) return {:?}", name, app_signer);
         let jade = match app_signer {
+            #[cfg(not(feature = "serial"))]
+            AppSigner::JadeId(_, _) => {
+                let _timeout = timeout;
+                return Err(Error::FeatSerialDisabled);
+            }
+            #[cfg(feature = "serial")]
             AppSigner::JadeId(id, network) => {
                 // try to connect JadeId -> AvailableSigner(Jade)
                 // TODO possible errors should be kept
-                Jade::from_serial_matching_id(*network, id, timeout)
+                lwk_jade::Jade::from_serial_matching_id(*network, id, timeout)
                     .map(|jade| AppSigner::AvailableSigner(AnySigner::Jade(jade, *id)))
             }
             AppSigner::AvailableSigner(AnySigner::Jade(j, id)) => {

@@ -83,6 +83,9 @@ pub enum Error {
     #[error("Poison error: {0}")]
     PoisonError(String),
 
+    #[error("Feature \"serial\" is disabled, enable it to solve this error")]
+    FeatSerialDisabled,
+
     #[error("Received stop command")]
     Stop,
 

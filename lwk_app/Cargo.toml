@@ -7,7 +7,7 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
-lwk_jade = { version = "0.3.0", features = ["serial"] }
+lwk_jade = { version = "0.3.0" }
 jsonrpc = "0.17.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
@@ -23,6 +23,9 @@ rand = "0.8.5"
 schemars = "0.8.16"
 home = "0.5.5"
 reqwest = { version = "0.11.24", features = ["blocking", "json"] }
+
+[features]
+serial = ["lwk_jade/serial"]
 
 [dev-dependencies]
 enum-iterator = "1.4.1"

@@ -960,6 +960,12 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let jade = match r.emulator {
                 Some(emulator) => Jade::from_socket(emulator, network)?,
+                #[cfg(not(feature = "serial"))]
+                None => {
+                    let _timeout = timeout;
+                    return Err(Error::FeatSerialDisabled);
+                }
+                #[cfg(feature = "serial")]
                 None => {
                     // TODO instead of the first working, we should return all the available jades with the port currently connected on
                     let mut jade = Jade::from_any_serial(network, timeout)

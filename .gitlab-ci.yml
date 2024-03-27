@@ -25,6 +25,11 @@ fmt_clippy:
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
 
+test_clean:
+  image: rust:1.75
+  script:
+    - cargo build
+
 test_wollet:
   extends: .base
   script:

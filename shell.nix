@@ -7,6 +7,9 @@
       pkg-config
       udev
       openssl
+      python3
+      # kotlin # default version not ok
+      # swiftPackages.swift-unwrapped # concurrency err
     ];
     
     OPENSSL_DEV=pkgs.openssl.dev;

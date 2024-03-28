@@ -20,6 +20,36 @@
         "type": "github"
       }
     },
+    "electrs-flake": {
+      "inputs": {
+        "crane": [
+          "crane"
+        ],
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": [
+          "rust-overlay"
+        ]
+      },
+      "locked": {
+        "lastModified": 1711644578,
+        "narHash": "sha256-s2V21fqpNUxq6zMtcf1ICpFaVfwUk4TEdWd5hV7ULTo=",
+        "owner": "RCasatta",
+        "repo": "electrs",
+        "rev": "a7be7b13ad2a4a54b0529ef5d397f3891e5a54f8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "RCasatta",
+        "ref": "nix_flake_liquid",
+        "repo": "electrs",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -57,6 +87,7 @@
     "root": {
       "inputs": {
         "crane": "crane",
+        "electrs-flake": "electrs-flake",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"

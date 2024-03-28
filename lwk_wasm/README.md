@@ -54,14 +54,14 @@ To avoid requiring opening the browser the headless mode is possible.
 
 Note the increased timeout specified via the env var, the 20s default one could be too low.
 
-```
+```shell
 $ cd lwk_wasm
 $ WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --firefox --headless
 ```
 
 run specific test (note the double `--`)
 
-```
+```shell
 $ wasm-pack test --firefox --headless -- -- balance_test_testnet
 ```
 
@@ -86,7 +86,7 @@ $ CARGO_PROFILE_RELEASE_OPT_LEVEL=z CARGO_PROFILE_RELEASE_DEBUG=2 wasm-pack buil
 
 With [twiggy](https://github.com/rustwasm/twiggy) is then possible to analyze the library:
 
-```
+```shell
 twiggy top -n 10 pkg/lwk_wasm_bg.wasm
 ```
 

@@ -179,6 +179,7 @@ mod tests {
         block
     }
 
+    #[ignore = "to be moved in e2e tests"]
     #[test]
     fn esplora_local() {
         let server = lwk_test_util::setup(true);

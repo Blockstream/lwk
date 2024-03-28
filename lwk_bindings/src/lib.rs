@@ -54,6 +54,7 @@ mod tests {
 
     use crate::{wollet::Wollet, Address, ElectrumClient, Mnemonic, Network, Signer, Txid};
 
+    #[ignore = "must be moved in e2e tests"]
     #[test]
     fn test_lwk_flow() {
         let mnemonic = lwk_test_util::TEST_MNEMONIC;

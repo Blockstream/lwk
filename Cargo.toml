@@ -1,5 +1,9 @@
 [workspace]
 
+# next two field are needed for flake, keep in sync with lwk_cli
+package.version = "0.3.0"  
+package.name = "lwk" 
+
 members = [
     "lwk_app",
     "lwk_bindings",

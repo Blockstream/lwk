@@ -18,10 +18,7 @@
         pkgs.mkShell {
           buildInputs = with pkgs; [
             cargo
-            cargo-watch
-            nodejs
             wasm-pack
-            wasm-bindgen-cli
             clang
             (rust-bin.stable.latest.default.override {
               extensions = [ "rust-src" ];
@@ -29,7 +26,6 @@
             })
           ];
 
-          shellHook = "";
           CC_wasm32_unknown_unknown = "clang-17";
           CFLAGS_wasm32_unknown_unknown="-I${pkgs.clang_17}/resource-root/include";
 

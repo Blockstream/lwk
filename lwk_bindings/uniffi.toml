@@ -1,5 +1,5 @@
 [bindings.kotlin]
-package_name = "lwk_bindings"
+package_name = "lwk"
 
 [bindings.python]
 cdylib_name = "lwk"

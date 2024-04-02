@@ -1,4 +1,4 @@
-import lwk_bindings.*
+import lwk.*
 
 val network = Network.testnet()
 

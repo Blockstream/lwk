@@ -1,4 +1,4 @@
-import lwk_bindings
+import lwk
 
 let mnemonic = try Mnemonic(s: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 let network = Network.testnet()

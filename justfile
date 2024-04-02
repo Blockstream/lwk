@@ -2,10 +2,10 @@ default:
     just --list
 
 python-build-bindings:
-    LIBNAME=liblwk_bindings.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
+    LIBNAME=liblwk.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
 
 python-test-bindings: python-build-bindings
-    PYTHONPATH=target/debug/bindings/ python3 -c 'import lwk_bindings'
+    PYTHONPATH=target/debug/bindings/ python3 -c 'import lwk'
 
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/debug/bindings/ python3

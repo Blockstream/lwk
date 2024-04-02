@@ -1,4 +1,4 @@
-from lwk_bindings import *
+from lwk import *
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.testnet()

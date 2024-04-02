@@ -1,4 +1,4 @@
-from lwk_bindings import *
+from lwk import *
 
 node = TestEnv() # launch electrs and elementsd
 

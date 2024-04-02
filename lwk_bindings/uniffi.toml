@@ -2,5 +2,5 @@
 package_name = "lwk_bindings"
 
 [bindings.python]
-cdylib_name = "lwk_bindings"
+cdylib_name = "lwk"
 

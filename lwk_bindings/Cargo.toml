@@ -21,7 +21,7 @@ uniffi = { version = "0.26.1", features = ["build"] }
 
 [lib]
 crate-type = ["cdylib"]
-name = "lwk_bindings"
+name = "lwk"
 
 [features]
 foreign_bindings = []

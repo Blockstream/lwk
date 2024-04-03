@@ -16,6 +16,12 @@ docker-build:
 docker-push: docker-build
     docker push xenoky/lwk-builder # require credentials
 
+docker-bindings-build:
+    cd lwk_bindings && docker build . -t xenoky/lwk-bindings-builder && cd -
+
+docker-bindings-push: docker-bindings-build
+    docker push xenoky/lwk-bindings-builder # require credentials
+
 kotlin-android: kotlin android
 
 kotlin:

@@ -51,20 +51,19 @@ maturin develop
 Try it (note there is still an issue in how we import the package when using the wheel):
 
 ```python
-from lwk_bindings import lwk_bindings
-from lwk_bindings import *
-str(Network.mainnet())
+import lwk
+str(lwk.Network.mainnet())
 ```
 
 ### Test
 
-```
+```shell
 cargo test -p lwk_bindings --features foreign_bindings --test bindings -- py
 ```
 
 Live environment
 
-```sh
+```shell
 just python-env-bindings
 ```
 

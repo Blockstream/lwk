@@ -19,7 +19,7 @@ pub struct Client {
 impl Client {
     pub fn new(addr: SocketAddr) -> Result<Self, Error> {
         let url = format!("http://{addr}");
-        let transport = jsonrpc::minreq_http::Builder::new()
+        let transport = jsonrpc::simple_http::Builder::new()
             .timeout(TIMEOUT)
             // todo: auth
             .url(&url)?

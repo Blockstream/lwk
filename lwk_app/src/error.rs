@@ -29,9 +29,6 @@ pub enum Error {
     #[error("HexArray Error: {0}")]
     HexArray(#[from] lwk_wollet::hashes::hex::HexToArrayError),
 
-    #[error("Minreq Error: {0}")]
-    Minreq(#[from] jsonrpc::minreq_http::Error),
-
     #[error("Reqwest Error: {0}")]
     Reqwest(#[from] reqwest::Error),
 

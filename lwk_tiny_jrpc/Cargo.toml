@@ -7,7 +7,7 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_tiny_jrpc"
 
 [dependencies]
-jsonrpc = { version = "0.17.0", features = ["minreq_http"] }
+jsonrpc = { version = "0.17.0" }
 anyhow = "1.0.75"
 serde = "1.0.188"
 serde_derive = "1.0.188"
@@ -17,5 +17,5 @@ tiny_http = "0.12.0"
 tracing = "0.1"
 
 [dev-dependencies]
-minreq = "2.9"
+reqwest = { version = "0.11.24", features = ["blocking", "json"] }
 tempfile = "3.8.0"

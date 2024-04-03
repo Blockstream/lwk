@@ -546,18 +546,23 @@ mod test {
         let port = rpc.port().unwrap();
         let url = format!("http://127.0.0.1:{}", port);
 
-        let resp = minreq::options(url).send().unwrap();
-        assert_eq!(resp.status_code, 204);
-        assert_eq!(resp.headers.get("allow").unwrap(), "GET, POST, OPTIONS");
+        let client = reqwest::blocking::Client::builder().build().unwrap();
+
+        let resp = client
+            .request(reqwest::Method::OPTIONS, url)
+            .send()
+            .unwrap();
+        assert_eq!(resp.status(), 204);
+        assert_eq!(resp.headers().get("allow").unwrap(), "GET, POST, OPTIONS");
         assert_eq!(
-            resp.headers.get("access-control-allow-origin").unwrap(),
+            resp.headers().get("access-control-allow-origin").unwrap(),
             "http://127.0.0.1:8000"
         );
         assert_eq!(
-            resp.headers.get("access-control-allow-headers").unwrap(),
+            resp.headers().get("access-control-allow-headers").unwrap(),
             "content-type"
         );
-        assert!(resp.as_bytes().is_empty());
+        assert!(resp.bytes().unwrap().is_empty());
     }
 
     fn make_file(dir_path: PathBuf, file_name: String, data: &[u8]) -> File {
@@ -599,15 +604,15 @@ mod test {
             let file_name = format!("file.{}", ext);
             let url = format!("http://127.0.0.1:{}/{}", port, file_name);
             make_file(dir_path.clone(), file_name, data);
-            let resp = minreq::get(url).send().unwrap();
-            assert_eq!(resp.status_code, 200);
-            assert_eq!(resp.as_bytes(), data);
+            let resp = reqwest::blocking::get(url).unwrap();
+            assert_eq!(resp.status(), 200);
+            assert_eq!(&resp.bytes().unwrap()[..], data);
         }
 
         // 404
         let url = format!("http://127.0.0.1:{}/missing.file", port);
-        let resp = minreq::get(url).send().unwrap();
-        assert_eq!(resp.status_code, 404);
-        assert_eq!(resp.as_str().unwrap(), "404: File not found");
+        let resp = reqwest::blocking::get(url).unwrap();
+        assert_eq!(resp.status(), 404);
+        assert_eq!(resp.text().unwrap(), "404: File not found");
     }
 }

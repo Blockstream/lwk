@@ -122,7 +122,7 @@ pub struct Send {
     /// Recipient addressees
     pub addressees: Vec<UnvalidatedAddressee>,
 
-    /// Optiona fee rate in sat/vb
+    /// Optional fee rate in sat/vb
     pub fee_rate: Option<f32>,
 }
 

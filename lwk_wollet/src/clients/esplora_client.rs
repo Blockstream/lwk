@@ -7,7 +7,7 @@ use elements::{
     pset::serialize::Serialize,
     BlockHash, Script, Txid,
 };
-use minreq::Response;
+use reqwest::blocking::Response;
 use serde::Deserialize;
 
 use crate::{store::Height, BlockchainBackend, Error};
@@ -34,7 +34,7 @@ impl EsploraClient {
 
     fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
         let response = get_with_retry(&self.tip_hash_url, 0)?;
-        Ok(BlockHash::from_str(response.as_str()?)?)
+        Ok(BlockHash::from_str(&response.text()?)?)
     }
 }
 
@@ -44,7 +44,7 @@ impl BlockchainBackend for EsploraClient {
 
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
         let response = get_with_retry(&header_url, 0)?;
-        let header_bytes = Vec::<u8>::from_hex(response.as_str()?)?;
+        let header_bytes = Vec::<u8>::from_hex(&response.text()?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
         Ok(header)
@@ -52,10 +52,9 @@ impl BlockchainBackend for EsploraClient {
 
     fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, crate::Error> {
         let tx_bytes = tx.serialize();
-        let response = minreq::post(&self.broadcast_url)
-            .with_body(tx_bytes)
-            .send()?;
-        let txid = elements::Txid::from_str(response.as_str()?)?;
+        let client = reqwest::blocking::Client::new();
+        let response = client.post(&self.broadcast_url).body(tx_bytes).send()?;
+        let txid = elements::Txid::from_str(&response.text()?)?;
         Ok(txid)
     }
 
@@ -64,7 +63,7 @@ impl BlockchainBackend for EsploraClient {
         for txid in txids.iter() {
             let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
             let response = get_with_retry(&tx_url, 0)?;
-            let tx = elements::Transaction::consensus_decode(response.as_bytes())?;
+            let tx = elements::Transaction::consensus_decode(&response.bytes()?[..])?;
             result.push(tx);
         }
         Ok(result)
@@ -82,13 +81,13 @@ impl BlockchainBackend for EsploraClient {
                 None => {
                     let block_height = format!("{}/block-height/{}", self.base_url, height);
                     let response = get_with_retry(&block_height, 0)?;
-                    BlockHash::from_str(response.as_str()?)?
+                    BlockHash::from_str(&response.text()?)?
                 }
             };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
             let response = get_with_retry(&block_header, 0)?;
-            let header_bytes = Vec::<u8>::from_hex(response.as_str()?)?;
+            let header_bytes = Vec::<u8>::from_hex(&response.text()?)?;
 
             let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
 
@@ -118,15 +117,15 @@ impl BlockchainBackend for EsploraClient {
 }
 
 fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
-    let response = minreq::get(url).send()?;
+    let response = reqwest::blocking::get(url)?;
     tracing::debug!(
-        "{} status_code:{} body bytes:{}",
-        &response.url,
-        response.status_code,
-        response.as_bytes().len()
+        "{} status_code:{} body bytes:{:?}",
+        &url,
+        response.status(),
+        response.content_length(),
     );
 
-    if response.status_code == 429 {
+    if response.status() == 429 {
         if attempt > 6 {
             return Err(Error::Generic("Too many retry".to_string()));
         }
@@ -174,9 +173,8 @@ mod tests {
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{}/block/{}/raw", base_url, hash);
-        let response = minreq::get(url).send().unwrap();
-        let block = elements::Block::consensus_decode(response.as_bytes()).unwrap();
-        block
+        let response = reqwest::blocking::get(url).unwrap();
+        elements::Block::consensus_decode(&response.bytes().unwrap()[..]).unwrap()
     }
 
     #[test]

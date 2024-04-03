@@ -22,7 +22,14 @@ lwk_wollet = { version = "0.3.0" }
 rand = "0.8.5"
 schemars = "0.8.16"
 home = "0.5.5"
-reqwest = { version = "0.11.24", features = ["blocking", "json"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "charset",
+    "http2",
+    "macos-system-configuration",
+    "blocking",
+    "json",
+    "rustls-tls",
+] }
 
 [features]
 serial = ["lwk_jade/serial"]

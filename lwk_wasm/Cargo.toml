@@ -42,7 +42,14 @@ web-sys = { version = "0.3.69", optional = true, features = [
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
-reqwest = "0.11.24"
+reqwest = { version = "0.12", default-features = false, features = [
+    "charset",
+    "http2",
+    "macos-system-configuration",
+    "blocking",
+    "json",
+    "rustls-tls",
+] }
 wasm-bindgen-futures = "0.4.41"
 wasm-bindgen-test = "0.3.34"
 serde-wasm-bindgen = "0.6.3"

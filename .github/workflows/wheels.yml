@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+name: Build python wheels on mac
+
+jobs:
+
+  osx-wheels:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]  # https://endoflife.date/python
+    steps:
+     - uses: actions/checkout@v4
+     - uses: dtolnay/rust-toolchain@1.75.0
+     - uses: actions/setup-python@v5
+       with:
+         python-version: ${{ matrix.python-version }}
+     - run: python3 -m pip install maturin
+     - run: python3 -m pip install uniffi-bindgen==0.26.1  # must be the same version as the dep in lwk_bindings/Cargo.toml 
+     - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
+     - uses: actions/upload-artifact@v4
+       with:
+         name: osx-${{ matrix.python-version }}-wheel
+         path: target/wheels

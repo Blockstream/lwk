@@ -10,11 +10,10 @@ env:
   RUSTFLAGS: "--cfg=web_sys_unstable_apis"
 
 jobs:
-
   build:
     strategy:
       matrix:
-        os: ["macos-12", "ubuntu-22.04"]
+        os: ["macos-12", "ubuntu-22.04", "windows-2022"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -23,4 +22,3 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y libudev-dev
         if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
-

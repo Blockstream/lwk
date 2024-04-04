@@ -7,7 +7,7 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_test_util"
 
 [dependencies]
-electrsd = { version = "0.27.1", features = ["legacy"] }
+electrsd = { version = "0.27.2", features = ["legacy"] }
 elements = "0.24.0"
 serde_json = "1"
 tracing = "0.1"

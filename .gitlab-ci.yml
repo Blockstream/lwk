@@ -17,6 +17,10 @@ variables:
   services:
     - docker:20.10.12-dind
 
+linux-wheels:
+  image: xenoky/lwk-bindings-builder
+  script:
+    - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
 
 fmt_clippy:
   extends: .base

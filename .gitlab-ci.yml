@@ -19,7 +19,8 @@ variables:
 
 linux-wheels:
   image: 
-    name: xenoky/lwk-bindings-builder
+    name: ghcr.io/pyo3/maturin
     entrypoint: [""]
   script:
+    - pip install uniffi-bindgen
     - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi

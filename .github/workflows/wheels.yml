@@ -9,7 +9,7 @@ jobs:
 
   linux-wheels:
     runs-on: ubuntu-latest
-    container: xenoky/lwk-bindings-builder
+    container: ghcr.io/pyo3/maturin
     steps:
      - uses: actions/checkout@v4
      - name: Build wheels

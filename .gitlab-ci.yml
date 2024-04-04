@@ -22,5 +22,5 @@ linux-wheels:
     name: ghcr.io/pyo3/maturin
     entrypoint: [""]
   script:
-    - pip install uniffi-bindgen
+    - pip install uniffi-bindgen==0.26.1 # must be the same as in lwk_bindings/Cargo.toml
     - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi

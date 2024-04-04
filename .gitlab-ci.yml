@@ -142,3 +142,14 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr
     - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless
+
+linux-wheels:
+  image:
+    name: ghcr.io/pyo3/maturin
+    entrypoint: [""]
+  script:
+    - pip install uniffi-bindgen==0.26.1 # must be the same as in lwk_bindings/Cargo.toml
+    - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
+  artifacts:
+    paths:
+      - target/wheels/

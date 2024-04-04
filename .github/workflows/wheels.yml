@@ -1,0 +1,20 @@
+name: lwk-wheels
+
+on:
+  push:
+#     tags:
+#        - 'wheel*'
+
+jobs:
+
+  linux-wheels:
+    runs-on: ubuntu-latest
+    container: xenoky/lwk-bindings-builder
+    steps:
+     - uses: actions/checkout@v4
+     - name: Build wheels
+       run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
+     - uses: actions/upload-artifact@v4
+       with:
+         name: linux-wheels
+         path: target/wheels/

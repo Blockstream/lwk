@@ -76,19 +76,20 @@ fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).unwrap().as_str().unwrap()
 }
 
-fn get_desc(r: &Value, remove_checksum: bool) -> String {
+fn get_desc(r: &Value) -> String {
     let desc = get_str(r, "descriptor");
     // The returned descriptor is equivalent but it could be slightly different
     let desc = desc.replace('\'', "h");
-    if remove_checksum {
-        desc.split('#')
-            .collect::<Vec<_>>()
-            .first()
-            .unwrap()
-            .to_string()
-    } else {
-        desc.to_string()
-    }
+    // Changing the descriptor string invalidates the checksum
+    remove_checksum(&desc)
+}
+
+fn remove_checksum(desc: &str) -> String {
+    desc.split('#')
+        .collect::<Vec<_>>()
+        .first()
+        .unwrap()
+        .to_string()
 }
 
 fn sw_signer(cli: &str, name: &str) {
@@ -583,7 +584,7 @@ fn test_wallet_details() {
 
     // Details
     let r = sh(&format!("{cli} wallet details --wallet ss"));
-    assert_eq!(get_desc(&r, true), desc_ss);
+    assert_eq!(get_desc(&r), remove_checksum(desc_ss));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
@@ -591,7 +592,7 @@ fn test_wallet_details() {
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!("{cli} wallet details --wallet sssh"));
-    assert_eq!(get_desc(&r, true), desc_sssh);
+    assert_eq!(get_desc(&r), remove_checksum(desc_sssh));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "sh_wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
@@ -599,7 +600,7 @@ fn test_wallet_details() {
     assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!("{cli} wallet details --wallet ms"));
-    assert_eq!(get_desc(&r, true), desc_ms);
+    assert_eq!(get_desc(&r), remove_checksum(desc_ms));
     assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();

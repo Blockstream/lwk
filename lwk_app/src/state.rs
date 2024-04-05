@@ -44,7 +44,6 @@ pub fn id_to_fingerprint(id: &XKeyIdentifier) -> Fingerprint {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct RegistryAssetData {
     asset_id: AssetId,
     token_id: AssetId,
@@ -94,7 +93,6 @@ impl AppAsset {
         }
     }
 
-    #[allow(dead_code)]
     pub fn asset_metadata(&self) -> Option<AssetMetadata> {
         match self {
             AppAsset::PolicyAsset(_) => None,
@@ -153,7 +151,6 @@ pub struct State {
 }
 
 impl Wollets {
-    #[allow(dead_code)]
     pub fn get(&self, name: &str) -> Result<&Wollet, Error> {
         self.0
             .get(name)

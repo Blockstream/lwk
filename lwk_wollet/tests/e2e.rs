@@ -681,6 +681,16 @@ fn create_pset_error() {
         .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
+
+    // If you pass the issuance transaction it must contain the asset issuance
+    let tx = wallet.wollet.transactions().unwrap()[0].tx.clone();
+    let err = wallet2
+        .tx_builder()
+        .reissue_asset(asset, satoshi_a, None, Some(tx))
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 }
 
 #[test]

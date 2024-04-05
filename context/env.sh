@@ -10,4 +10,3 @@ export LIB_EXT=$([ $(uname) == "Darwin" ] && echo "dylib" || echo "so")
 export CLASSPATH="$CLASSPATH:$PWD/bin/jna-5.13.0.jar"
 export PATH="$PATH:$PWD/bin/kotlinc/bin:$PWD/bin/openlogic-openjdk-11.0.21+9-linux-x64/bin:$PWD/bin/swift-5.5-RELEASE-ubuntu18.04/usr/bin"
 export WASM_BINDGEN_TEST_TIMEOUT=60
-export RUSTFLAGS="$RUSTFLAGS --cfg=web_sys_unstable_apis"

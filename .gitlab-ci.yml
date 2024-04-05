@@ -53,6 +53,8 @@ test_ledger:
 
 test_serial:
   extends: .base
+  variables:
+    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test --no-run --features serial
@@ -118,6 +120,7 @@ doc:
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
+    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo +nightly doc --all-features --no-deps
@@ -135,13 +138,15 @@ bindings:
 
 wasm:
   extends: .base
+  variables:
+    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm
+    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm,serial
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
-    - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr
-    - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless
+    - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
+    - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial
 
 linux-wheels:
   image:

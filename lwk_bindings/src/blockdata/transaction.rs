@@ -34,6 +34,12 @@ impl From<Transaction> for elements::Transaction {
     }
 }
 
+impl From<&Transaction> for elements::Transaction {
+    fn from(value: &Transaction) -> Self {
+        value.inner.clone()
+    }
+}
+
 impl Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner.serialize().to_hex())

@@ -3,6 +3,7 @@ name = "lwk"
 version = "0.2.1"
 description = "Liquid Wallet Kit"
 keywords = ["liquid", "elements", "wallet"]
+readme = "README-wheel.md"
 
 [project.urls]
 homepage = "https://github.com/blockstream/lwk"

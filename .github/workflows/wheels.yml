@@ -30,6 +30,8 @@ jobs:
      - uses: actions/checkout@v4
      - uses: dtolnay/rust-toolchain@1.75.0
      - uses: actions/setup-python@v5
+       with:
+         python-version: "3.12"
      - run: python3 -m pip install maturin
      - run: python3 -m pip install uniffi-bindgen==0.26.1  # must be the same version as the dep in lwk_bindings/Cargo.toml
      - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
@@ -37,3 +39,4 @@ jobs:
        with:
          name: windows-wheels
          path: target/wheels
+

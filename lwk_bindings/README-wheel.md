@@ -4,7 +4,7 @@ A Python package to build on the [Liquid](https://blockstream.com/liquid/) netwo
 
 ```python
 import lwk
-network = Network.mainnet()
+network = lwk.Network.mainnet()
 assert(str(network) == "Liquid")
 ```
 

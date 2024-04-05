@@ -684,7 +684,7 @@ pub enum AssetCommand {
         ///
         /// You can fetch it from the asset registry from
         /// `https://assets.blockstream.info/<ASSET-ID-HEX>`
-        /// alongside the issuenace prevout.
+        /// alongside the issuance prevout.
         #[arg(long)]
         contract: String,
 

@@ -6,12 +6,12 @@ mod contract;
 mod descriptor;
 mod error;
 mod esplora;
-#[cfg(feature = "serial")]
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade;
 mod mnemonic;
 mod network;
 mod pset;
-#[cfg(feature = "serial")]
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
 mod tx_builder;
@@ -30,7 +30,7 @@ pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
-#[cfg(feature = "serial")]
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::Jade;
 pub use mnemonic::Mnemonic;
 pub use network::Network;

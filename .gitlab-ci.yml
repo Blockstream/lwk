@@ -54,7 +54,6 @@ test_ledger:
 test_serial:
   extends: .base
   variables:
-    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test --no-run --features serial
@@ -120,7 +119,6 @@ doc:
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
-    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo +nightly doc --all-features --no-deps

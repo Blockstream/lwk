@@ -1,3 +1,13 @@
+[project]
+name = "lwk"
+version = "0.2.1"
+description = "Liquid Wallet Kit"
+keywords = ["liquid", "elements", "wallet"]
+
+[project.urls]
+homepage = "https://github.com/blockstream/lwk"
+documentation = "https://docs.rs/lwk_bindings/latest/lwk_bindings/"
+
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"

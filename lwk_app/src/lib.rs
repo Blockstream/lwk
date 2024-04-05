@@ -867,6 +867,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     AssetId::from_str(&r.asset)?,
                     r.satoshi_asset,
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
+                    None, // TODO: pass issuance transaction if available
                 )?
                 .fee_rate(r.fee_rate)
                 .finish()?;

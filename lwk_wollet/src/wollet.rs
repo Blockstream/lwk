@@ -1,8 +1,6 @@
 use crate::bitcoin::bip32::Fingerprint;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
-use crate::elements::confidential::Value;
-use crate::elements::issuance::ContractHash;
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
@@ -11,7 +9,7 @@ use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
 use crate::store::Store;
-use crate::tx_builder::WolletTxBuilder;
+use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
@@ -294,38 +292,7 @@ impl Wollet {
     pub fn issuances(&self) -> Result<Vec<IssuanceDetails>, Error> {
         let mut r = vec![];
         for tx in self.transactions()? {
-            let tx = tx.tx;
-            for (vin, txin) in tx.input.iter().enumerate() {
-                if txin.has_issuance() {
-                    let contract_hash =
-                        ContractHash::from_byte_array(txin.asset_issuance.asset_entropy);
-                    let entropy =
-                        AssetId::generate_asset_entropy(txin.previous_output, contract_hash)
-                            .to_byte_array();
-                    let (asset, token) = txin.issuance_ids();
-                    let is_reissuance = txin.asset_issuance.asset_blinding_nonce != ZERO_TWEAK;
-                    // FIXME: attempt to unblind if blinded
-                    let asset_amount = match txin.asset_issuance.amount {
-                        Value::Explicit(a) => Some(a),
-                        _ => None,
-                    };
-                    let token_amount = match txin.asset_issuance.inflation_keys {
-                        Value::Explicit(a) => Some(a),
-                        _ => None,
-                    };
-                    // FIXME: comment if the issuance is blinded
-                    r.push(IssuanceDetails {
-                        txid: tx.txid(),
-                        vin: vin as u32,
-                        entropy,
-                        asset,
-                        token,
-                        is_reissuance,
-                        asset_amount,
-                        token_amount,
-                    });
-                }
-            }
+            r.extend(extract_issuances(&tx.tx));
         }
         Ok(r)
     }

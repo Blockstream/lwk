@@ -5,7 +5,7 @@ use std::{
 
 use lwk_wollet::UnvalidatedRecipient;
 
-use crate::{types::AssetId, Address, Contract, LwkError, Network, Pset, Wollet};
+use crate::{types::AssetId, Address, Contract, LwkError, Network, Pset, Transaction, Wollet};
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
 #[derive(uniffi::Object, Debug)]
@@ -118,6 +118,7 @@ impl TxBuilder {
         asset_to_reissue: AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Arc<Address>>,
+        issuance_tx: Option<Arc<Transaction>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;
@@ -125,6 +126,7 @@ impl TxBuilder {
             asset_to_reissue.into(),
             satoshi_to_reissue,
             asset_receiver.map(|e| e.as_ref().into()),
+            issuance_tx.map(|e| e.as_ref().into()),
         )?;
         *lock = Some(new_inner);
         Ok(())

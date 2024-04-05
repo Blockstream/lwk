@@ -49,7 +49,7 @@ assert(wollet.balance()[token_id] == reissuance_tokens)
 ## reissue the asset
 reissue_asset = 100
 builder = network.tx_builder()
-builder.reissue_asset(asset_id, 100, None)
+builder.reissue_asset(asset_id, 100, None, None)
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)

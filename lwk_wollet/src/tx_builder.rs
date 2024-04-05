@@ -1,16 +1,54 @@
 use std::collections::{HashMap, HashSet};
 
 use elements::{
+    confidential::Value,
+    issuance::ContractHash,
     pset::{Output, PartiallySignedTransaction},
-    Address, AssetId, Script,
+    secp256k1_zkp::ZERO_TWEAK,
+    Address, AssetId, Script, Transaction,
 };
 use rand::thread_rng;
 
 use crate::{
-    model::Recipient,
+    hashes::Hash,
+    model::{IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest},
     Contract, ElementsNetwork, Error, UnvalidatedRecipient, Wollet, EC,
 };
+
+pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
+    let mut r = vec![];
+    for (vin, txin) in tx.input.iter().enumerate() {
+        if txin.has_issuance() {
+            let contract_hash = ContractHash::from_byte_array(txin.asset_issuance.asset_entropy);
+            let entropy = AssetId::generate_asset_entropy(txin.previous_output, contract_hash)
+                .to_byte_array();
+            let (asset, token) = txin.issuance_ids();
+            let is_reissuance = txin.asset_issuance.asset_blinding_nonce != ZERO_TWEAK;
+            // FIXME: attempt to unblind if blinded
+            let asset_amount = match txin.asset_issuance.amount {
+                Value::Explicit(a) => Some(a),
+                _ => None,
+            };
+            let token_amount = match txin.asset_issuance.inflation_keys {
+                Value::Explicit(a) => Some(a),
+                _ => None,
+            };
+            // FIXME: comment if the issuance is blinded
+            r.push(IssuanceDetails {
+                txid: tx.txid(),
+                vin: vin as u32,
+                entropy,
+                asset,
+                token,
+                is_reissuance,
+                asset_amount,
+                token_amount,
+            });
+        }
+    }
+    r
+}
 
 /// A transaction builder
 ///
@@ -152,11 +190,15 @@ impl TxBuilder {
     /// Generated transaction will create `satoshi_to_reissue` new asset units, and they will be
     /// sent to the provided `asset_receiver` address if some, or to an address from the wallet
     /// generating the reissuance transaction if none.
+    ///
+    /// If the issuance transaction does not involve this wallet,
+    /// pass the issuance transaction in `issuance_tx`.
     pub fn reissue_asset(
         mut self,
         asset_to_reissue: AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
+        issuance_tx: Option<Transaction>,
     ) -> Result<Self, Error> {
         if !matches!(self.issuance_request, IssuanceRequest::None) {
             return Err(Error::IssuanceAlreadySet);
@@ -167,8 +209,12 @@ impl TxBuilder {
         if satoshi_to_reissue == 0 {
             return Err(Error::InvalidAmount);
         }
-        self.issuance_request =
-            IssuanceRequest::Reissuance(asset_to_reissue, satoshi_to_reissue, asset_receiver);
+        self.issuance_request = IssuanceRequest::Reissuance(
+            asset_to_reissue,
+            satoshi_to_reissue,
+            asset_receiver,
+            issuance_tx,
+        );
         Ok(self)
     }
 
@@ -269,8 +315,16 @@ impl TxBuilder {
                     wollet.add_output(&mut pset, &addressee)?;
                 }
             }
-            IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset) => {
-                let issuance = wollet.issuance(&asset)?;
+            IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {
+                let issuance = if let Some(issuance_tx) = issuance_tx {
+                    extract_issuances(&issuance_tx)
+                        .iter()
+                        .find(|i| i.asset == asset)
+                        .ok_or_else(|| Error::MissingIssuance)?
+                        .clone()
+                } else {
+                    wollet.issuance(&asset)?
+                };
                 let token = issuance.token;
                 // Find or add input for the token
                 let (idx, token_asset_bf) =
@@ -489,6 +543,7 @@ impl<'a> WolletTxBuilder<'a> {
         asset_to_reissue: AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
+        issuance_tx: Option<Transaction>,
     ) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
@@ -496,6 +551,7 @@ impl<'a> WolletTxBuilder<'a> {
                 asset_to_reissue,
                 satoshi_to_reissue,
                 asset_receiver,
+                issuance_tx,
             )?,
         })
     }

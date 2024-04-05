@@ -18,7 +18,7 @@ use std::collections::HashMap;
 pub enum IssuanceRequest {
     None,
     Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
-    Reissuance(AssetId, u64, Option<Address>),
+    Reissuance(AssetId, u64, Option<Address>, Option<Transaction>),
 }
 
 impl Wollet {

@@ -689,7 +689,7 @@ impl TestWollet {
         let balance_token_before = self.balance(&issuance.token);
         let mut pset = self
             .tx_builder()
-            .reissue_asset(*asset, satoshi_asset, None)
+            .reissue_asset(*asset, satoshi_asset, None, None)
             .unwrap()
             .fee_rate(fee_rate)
             .finish()

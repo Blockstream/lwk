@@ -3,7 +3,7 @@ use std::fmt::Display;
 use lwk_wollet::UnvalidatedRecipient;
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Contract, Error, Network, Pset, Wollet};
+use crate::{Address, AssetId, Contract, Error, Network, Pset, Transaction, Wollet};
 
 /// Wrapper of [`lwk_wollet::TxBuilder`]
 #[wasm_bindgen]
@@ -118,6 +118,7 @@ impl TxBuilder {
         asset_to_reissue: AssetId,
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
+        issuance_tx: Option<Transaction>,
     ) -> Result<TxBuilder, Error> {
         Ok(self
             .inner
@@ -125,6 +126,7 @@ impl TxBuilder {
                 asset_to_reissue.into(),
                 satoshi_to_reissue,
                 asset_receiver.map(Into::into),
+                issuance_tx.map(Into::into),
             )?
             .into())
     }

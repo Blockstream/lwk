@@ -465,7 +465,7 @@ fn multiple_descriptors() {
 
     let mut pset = wallet_t
         .tx_builder()
-        .reissue_asset(*asset, satoshi_ar, Some(address_a))
+        .reissue_asset(*asset, satoshi_ar, Some(address_a), None)
         .unwrap()
         .finish()
         .unwrap();
@@ -487,6 +487,56 @@ fn multiple_descriptors() {
     wallet_a.sync();
     assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar);
     assert_eq!(wallet_t.balance(token), satoshi_t);
+
+    // Send the reissuance token to another wallet and issue from there
+    let signer_nt = generate_signer();
+    let view_key_nt = generate_view_key();
+    let desc_nt = format!("ct({},elwpkh({}/*))", view_key_nt, signer_nt.xpub());
+    let mut wallet_nt = TestWollet::new(&server.electrs.electrum_url, &desc_nt);
+
+    wallet_nt.fund_btc(&server);
+    let address_nt = wallet_nt.address();
+    let mut pset = wallet_t
+        .tx_builder()
+        .add_recipient(&address_nt, satoshi_t, *token)
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet_t.sign(&signer_t1, &mut pset);
+    wallet_t.sign(&signer_t2, &mut pset);
+    wallet_t.send(&mut pset);
+    wallet_nt.sync();
+    assert_eq!(wallet_nt.balance(token), satoshi_t);
+    assert_eq!(wallet_t.balance(token), 0);
+
+    let issuance = wallet_t
+        .wollet
+        .issuances()
+        .unwrap()
+        .into_iter()
+        .find(|i| !i.is_reissuance)
+        .unwrap();
+    let issuance_tx = wallet_t
+        .wollet
+        .transactions()
+        .unwrap()
+        .iter()
+        .find(|tx| tx.txid == issuance.txid)
+        .unwrap()
+        .tx
+        .clone();
+    let address_a = wallet_a.address();
+    let mut pset = wallet_nt
+        .tx_builder()
+        .reissue_asset(*asset, satoshi_ar, Some(address_a), Some(issuance_tx))
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet_nt.sign(&signer_nt, &mut pset);
+    wallet_nt.send(&mut pset);
+    wallet_a.sync();
+    assert_eq!(wallet_nt.balance(token), satoshi_t);
+    assert_eq!(wallet_a.balance(asset), satoshi_a + satoshi_ar * 2);
 }
 
 #[test]
@@ -615,7 +665,7 @@ fn create_pset_error() {
 
     let err = wallet
         .tx_builder()
-        .reissue_asset(asset, satoshi_a, None)
+        .reissue_asset(asset, satoshi_a, None, None)
         .unwrap()
         .finish()
         .unwrap_err();
@@ -626,7 +676,7 @@ fn create_pset_error() {
     // so it can't reissue the asset.
     let err = wallet2
         .tx_builder()
-        .reissue_asset(asset, satoshi_a, None)
+        .reissue_asset(asset, satoshi_a, None, None)
         .unwrap()
         .finish()
         .unwrap_err();

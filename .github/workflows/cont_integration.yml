@@ -23,3 +23,11 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-22.04' }}
       - run: cargo build
       - run: cargo build --features serial
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@main
+      - run: nix build .
+

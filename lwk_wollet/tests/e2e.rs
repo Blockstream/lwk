@@ -3,6 +3,9 @@ mod test_jade;
 use crate::test_jade::jade_setup;
 use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
+use elements::encode::deserialize;
+use elements::hex::FromHex;
+use elements::Transaction;
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::*;
@@ -683,7 +686,8 @@ fn create_pset_error() {
     assert_eq!(err.to_string(), Error::MissingIssuance.to_string());
 
     // If you pass the issuance transaction it must contain the asset issuance
-    let tx = wallet.wollet.transactions().unwrap()[0].tx.clone();
+    let tx_hex = include_str!("../tests/data/usdt-issuance-tx.hex");
+    let tx: Transaction = deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
     let err = wallet2
         .tx_builder()
         .reissue_asset(asset, satoshi_a, None, Some(tx))

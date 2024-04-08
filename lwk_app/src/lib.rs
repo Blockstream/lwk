@@ -122,7 +122,16 @@ impl App {
                 for line in string.lines() {
                     let r: Request = serde_json::from_str(line)?;
                     let method: Method = r.method.parse()?;
-                    let _value: Value = client.make_request(method, r.params)?;
+                    if let Err(err) =
+                        client.make_request::<Value, Value>(method.clone(), r.params.clone())
+                    {
+                        tracing::warn!(
+                            "Error re-applying state request (error: {}, method: {}, params {})",
+                            err,
+                            method,
+                            r.params.unwrap_or_default()
+                        );
+                    }
                 }
             }
             Err(_) => {

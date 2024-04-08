@@ -33,3 +33,5 @@ RUN sh ./get-docker.sh
 # move following layers up once upper layers needs modification
 
 RUN rustup install nightly # for docs building
+
+RUN curl -L https://nixos.org/nix/install >install && chmod +x install && ./install --daemon --yes # for checking nix build

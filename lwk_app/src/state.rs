@@ -144,6 +144,13 @@ impl AppAsset {
             AppAsset::ReissuanceToken(d) => d.token_id,
         }
     }
+
+    pub fn issuance_tx(&self) -> Option<Transaction> {
+        match self {
+            AppAsset::RegistryAsset(d) => Some(d.issuance_tx.clone()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -464,6 +471,10 @@ impl State {
     fn get_asset_from_str(&self, asset: &str) -> Result<&AppAsset, Error> {
         let asset = AssetId::from_str(asset).map_err(|e| Error::Generic(e.to_string()))?;
         self.get_asset(&asset)
+    }
+
+    pub fn get_issuance_tx(&self, asset: &AssetId) -> Option<Transaction> {
+        self.get_asset(asset).ok().and_then(|a| a.issuance_tx())
     }
 
     pub fn replace_id_with_ticker(

@@ -868,15 +868,17 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::Reissue => {
             let r: request::Reissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
+            let asset_id = AssetId::from_str(&r.asset)?;
+            let issuance_tx = s.get_issuance_tx(&asset_id);
             let wollet = s.wollets.get_mut(&r.name)?;
 
             let mut pset = wollet
                 .tx_builder()
                 .reissue_asset(
-                    AssetId::from_str(&r.asset)?,
+                    asset_id,
                     r.satoshi_asset,
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
-                    None, // TODO: pass issuance transaction if available
+                    issuance_tx,
                 )?
                 .fee_rate(r.fee_rate)
                 .finish()?;

@@ -179,18 +179,8 @@ fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     wait_tx(cli, wallet, &txid);
 }
 
-fn send(
-    cli: &str,
-    wallet: &str,
-    address: &str,
-    asset: &str,
-    sats: u64,
-    signers: &[&str],
-) -> String {
-    let recipient = format!(" --recipient {address}:{sats}:{asset}");
-    let r = sh(&format!("{cli} wallet send --wallet {wallet} {recipient}"));
-    let mut pset = get_str(&r, "pset").to_string();
-
+fn complete(cli: &str, wallet: &str, pset: &str, signers: &[&str]) -> String {
+    let mut pset = pset.to_string();
     for signer in signers {
         let r = sh(&format!(
             "{cli} signer sign --signer {signer} --pset {pset}"
@@ -204,6 +194,19 @@ fn send(
     let txid = get_str(&r, "txid");
     wait_tx(cli, wallet, txid);
     txid.to_string()
+}
+
+fn send(
+    cli: &str,
+    wallet: &str,
+    address: &str,
+    asset: &str,
+    sats: u64,
+    signers: &[&str],
+) -> String {
+    let recipient = format!(" --recipient {address}:{sats}:{asset}");
+    let r = sh(&format!("{cli} wallet send --wallet {wallet} {recipient}"));
+    complete(cli, wallet, get_str(&r, "pset"), signers)
 }
 
 #[test]
@@ -874,6 +877,26 @@ fn test_issue() {
 
     let balance = txs[0].get("balance").unwrap().as_object().unwrap();
     assert!(balance.contains_key("L-BTC"));
+
+    // Move the reissuance token to another wallet and perform an "external" reissuance
+    sw_signer(&cli, "s2");
+    singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
+    fund(&server, &cli, "w2", 1_000_000);
+    let w2_addr = address(&cli, "w2");
+    let txid = send(&cli, "w1", &w2_addr, token, 1, &["s1"]);
+    wait_tx(&cli, "w2", &txid);
+    let r = sh(&format!(
+        "{cli} wallet reissue --wallet w2 --asset {asset} --satoshi-asset 1"
+    ));
+    complete(&cli, "w2", get_str(&r, "pset"), &["s2"]);
+    assert_eq!(1, get_balance(&cli, "w2", asset));
+
+    // Removing the asset will cause the "external" reissuance to fail
+    sh(&format!("{cli} asset remove --asset {asset}"));
+    let r = sh_result(&format!(
+        "{cli} wallet reissue --wallet w2 --asset {asset} --satoshi-asset 1"
+    ));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Missing issuance"));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

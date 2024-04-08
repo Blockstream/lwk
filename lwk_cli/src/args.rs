@@ -688,17 +688,12 @@ pub enum AssetCommand {
         #[arg(long)]
         contract: String,
 
-        /// Issuance prevout txid
+        /// The issuance transaction in hex
+        ///
+        /// You can fetch it from your node or from a block explorer,
+        /// e.g. `https://blockstream.info/liquid/api/<TXID>/hex`
         #[arg(long)]
-        prev_txid: String,
-
-        /// Issuance prevout vout
-        #[arg(long)]
-        prev_vout: u32,
-
-        /// Whether the issuance was blinded or not
-        #[arg(long, default_value_t = false)]
-        is_confidential: bool,
+        issuance_tx: String,
     },
 
     /// Remove an asset

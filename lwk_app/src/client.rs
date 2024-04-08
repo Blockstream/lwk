@@ -346,17 +346,13 @@ impl Client {
     pub fn asset_insert(
         &self,
         asset_id: String,
+        issuance_tx: String,
         contract: String,
-        prev_txid: String,
-        prev_vout: u32,
-        is_confidential: Option<bool>,
     ) -> Result<response::Empty, Error> {
         let req = request::AssetInsert {
             asset_id,
+            issuance_tx,
             contract,
-            prev_txid,
-            prev_vout,
-            is_confidential,
         };
         self.make_request(Method::AssetInsert, Some(req))
     }

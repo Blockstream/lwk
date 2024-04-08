@@ -9,10 +9,13 @@ use lwk_jade::Network;
 use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
 use lwk_tiny_jrpc::Request;
+use lwk_wollet::asset_ids;
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
+use lwk_wollet::elements::encode::serialize;
+use lwk_wollet::elements::hex::ToHex;
 use lwk_wollet::elements::pset::elip100::AssetMetadata;
-use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
+use lwk_wollet::elements::{Address, AssetId, OutPoint, Transaction, Txid};
 use lwk_wollet::Contract;
 use lwk_wollet::Wollet;
 use serde::Serialize;
@@ -47,17 +50,46 @@ pub fn id_to_fingerprint(id: &XKeyIdentifier) -> Fingerprint {
 pub struct RegistryAssetData {
     asset_id: AssetId,
     token_id: AssetId,
-    issuance_prevout: OutPoint,
-    issuance_is_confidential: bool,
+    issuance_vin: u32,
+    issuance_tx: Transaction,
     contract: Contract,
 }
 
 impl RegistryAssetData {
+    pub fn new(
+        asset_id: AssetId,
+        issuance_tx: Transaction,
+        contract: Contract,
+    ) -> Result<Self, Error> {
+        for (vin, txin) in issuance_tx.input.iter().enumerate() {
+            let (asset_id_txin, token_id) = txin.issuance_ids();
+            if asset_id_txin == asset_id {
+                let (asset_id_contract, token_id_contract) = asset_ids(txin, &contract)?;
+                if asset_id_contract != asset_id || token_id_contract != token_id {
+                    return Err(Error::InvalidContractForAsset(asset_id.to_string()));
+                }
+                return Ok(Self {
+                    asset_id,
+                    token_id,
+                    issuance_vin: vin as u32,
+                    issuance_tx,
+                    contract,
+                });
+            }
+        }
+        Err(Error::InvalidIssuanceTxtForAsset(asset_id.to_string()))
+    }
+
     pub fn contract_str(&self) -> String {
         serde_json::to_string(&self.contract).expect("contract")
     }
+
     pub fn contract(&self) -> &Contract {
         &self.contract
+    }
+
+    pub fn issuance_prevout(&self) -> OutPoint {
+        self.issuance_tx.input[self.issuance_vin as usize].previous_output
     }
 }
 
@@ -97,10 +129,10 @@ impl AppAsset {
         match self {
             AppAsset::PolicyAsset(_) => None,
             AppAsset::RegistryAsset(d) => {
-                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout))
+                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout()))
             }
             AppAsset::ReissuanceToken(d) => {
-                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout))
+                Some(AssetMetadata::new(d.contract_str(), d.issuance_prevout()))
             }
         }
     }
@@ -408,31 +440,16 @@ impl State {
     pub fn insert_asset(
         &mut self,
         asset_id: AssetId,
-        prev_txid: Txid,
-        prev_vout: u32,
+        issuance_tx: Transaction,
         contract: Contract,
-        is_confidential: Option<bool>,
     ) -> Result<(), Error> {
-        let previous_output = OutPoint::new(prev_txid, prev_vout);
-        let is_confidential = is_confidential.unwrap_or(false);
-        let (asset_id_c, token_id) =
-            lwk_wollet::issuance_ids(&contract, previous_output, is_confidential)?;
-        if asset_id != asset_id_c {
-            return Err(Error::InvalidContractForAsset(asset_id.to_string()));
-        }
-        let data = RegistryAssetData {
-            asset_id,
-            token_id,
-            issuance_prevout: previous_output,
-            issuance_is_confidential: is_confidential,
-            contract,
-        };
+        let data = RegistryAssetData::new(asset_id, issuance_tx, contract)?;
         self.assets
             .0
             .insert(asset_id, AppAsset::RegistryAsset(data.clone()));
         self.assets
             .0
-            .insert(token_id, AppAsset::ReissuanceToken(data));
+            .insert(data.token_id, AppAsset::ReissuanceToken(data));
         Ok(())
     }
 
@@ -605,9 +622,7 @@ impl State {
                     let params = request::AssetInsert {
                         asset_id: a.asset_id.to_string(),
                         contract: a.contract_str(),
-                        prev_txid: a.issuance_prevout.txid.to_string(),
-                        prev_vout: a.issuance_prevout.vout,
-                        is_confidential: Some(a.issuance_is_confidential),
+                        issuance_tx: serialize(&a.issuance_tx).to_hex(),
                     };
                     let r = Request {
                         jsonrpc: "2.0".into(),

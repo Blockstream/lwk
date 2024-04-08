@@ -936,17 +936,13 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let asset_id = lwk_wollet::elements::AssetId::from_str(&r.asset_id)
                 .map_err(|e| Error::Generic(e.to_string()))?;
-            let prev_txid = lwk_wollet::elements::Txid::from_str(&r.prev_txid)
+            let issuance_tx =
+                Vec::<u8>::from_hex(&r.issuance_tx).map_err(|e| Error::Generic(e.to_string()))?;
+            let issuance_tx = lwk_wollet::elements::encode::deserialize(&issuance_tx)
                 .map_err(|e| Error::Generic(e.to_string()))?;
             let contract = serde_json::Value::from_str(&r.contract)?;
             let contract = lwk_wollet::Contract::from_value(&contract)?;
-            s.insert_asset(
-                asset_id,
-                prev_txid,
-                r.prev_vout,
-                contract,
-                r.is_confidential,
-            )?;
+            s.insert_asset(asset_id, issuance_tx, contract)?;
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }

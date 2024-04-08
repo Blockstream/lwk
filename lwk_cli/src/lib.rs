@@ -365,18 +365,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             AssetCommand::List => serde_json::to_value(client.list_assets()?)?,
             AssetCommand::Insert {
                 asset,
+                issuance_tx,
                 contract,
-                prev_txid,
-                prev_vout,
-                is_confidential,
             } => {
-                let r = client.asset_insert(
-                    asset,
-                    contract,
-                    prev_txid,
-                    prev_vout,
-                    Some(is_confidential),
-                )?;
+                let r = client.asset_insert(asset, issuance_tx, contract)?;
                 serde_json::to_value(r)?
             }
             AssetCommand::Remove { asset } => {

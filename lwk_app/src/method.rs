@@ -13,7 +13,7 @@ pub struct MethodNotExist {
     name: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(enum_iterator::Sequence))]
 pub enum Method {
     Schema,

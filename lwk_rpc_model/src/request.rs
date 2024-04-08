@@ -344,14 +344,8 @@ pub struct AssetInsert {
     /// Contract committed to the asset id
     pub contract: String,
 
-    /// Previous output txid corresponding to the issuance input
-    pub prev_txid: String,
-
-    /// Previous output vout corresponding to the issuance input
-    pub prev_vout: u32,
-
-    /// Whether the issuance was blinded or not
-    pub is_confidential: Option<bool>,
+    /// Issuance transaction in hex
+    pub issuance_tx: String,
 }
 
 /// Request to remove an asset

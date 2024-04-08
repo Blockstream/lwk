@@ -6,6 +6,8 @@ use std::{
 };
 
 use clap::{Parser, ValueEnum};
+use elements::encode::serialize;
+use elements::hex::ToHex;
 use elements::{pset::PartiallySignedTransaction, Address};
 use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use serde_json::Value;
@@ -237,10 +239,9 @@ fn test_start_stop_persist() {
 
     let contract = "{\"entity\":{\"domain\":\"tether.to\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Tether USD\",\"precision\":8,\"ticker\":\"USDt\",\"version\":0}";
     let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
-    let prev_txid = "9596d259270ef5bac0020435e6d859aea633409483ba64e232b8ba04ce288668";
-    let prev_vout = 0;
+    let tx = include_str!("../../lwk_wollet/tests/data/usdt-issuance-tx.hex");
     sh(&format!(
-        "{cli} asset insert --asset {asset} --contract '{contract}' --prev-txid {prev_txid} --prev-vout {prev_vout}"
+        "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
     let expected_signers = sh(&format!("{cli} signer list"));
@@ -732,8 +733,6 @@ fn test_issue() {
     let token_sats = issuance.get("token_satoshi").unwrap().as_u64().unwrap();
     assert_eq!(asset_sats, 1000);
     assert_eq!(token_sats, 1);
-    let prev_txid = issuance.get("prev_txid").unwrap().as_str().unwrap();
-    let prev_vout = issuance.get("prev_vout").unwrap().as_u64().unwrap();
 
     let balance = r.get("balance").unwrap().as_object().unwrap();
     // TODO: util to check balance with less unwrap
@@ -776,9 +775,15 @@ fn test_issue() {
     let assets = r.get("assets").unwrap().as_array().unwrap();
     assert_eq!(assets.len(), 1);
 
-    let prevout = format!("--prev-txid {prev_txid} --prev-vout {prev_vout}");
+    let tx = serialize(
+        &PartiallySignedTransaction::from_str(pset)
+            .unwrap()
+            .extract_tx()
+            .unwrap(),
+    )
+    .to_hex();
     sh(&format!(
-        "{cli} asset insert --asset {asset} --contract '{contract}' {prevout}"
+        "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
     let result = sh(&format!("{cli} asset list"));

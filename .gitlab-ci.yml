@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:5468d3679a1cd2a1ca174ca7792cef62e11dbcedd14fad3e9e937e865e981aee
+  image: xenoky/lwk-builder@sha256:f8ec5bae18b24b1f5ba1559464c0ddff3619f9bafa7d6f1e5de273d04fd97dd7
   tags:
     - cloud
   retry:
@@ -156,3 +156,9 @@ linux-wheels:
   artifacts:
     paths:
       - target/wheels/
+
+nix-build:
+  extends: .base
+  script:
+    - nix --extra-experimental-features nix-command --extra-experimental-features flakes build
+

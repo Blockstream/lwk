@@ -24,7 +24,6 @@
         rust-overlay.follows = "rust-overlay";
       };
     };
-    # fbbe-flake.url = "github:RCasatta/fbbe";
   };
   outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake }:
     flake-utils.lib.eachDefaultSystem
@@ -34,13 +33,6 @@
           pkgs = import nixpkgs {
             inherit system overlays;
           };
-          # electrs = import electrs-flake.packages {
-          #   inherit system;
-          # };
-          # electrs = electrs-flake.packages;
-          # fbbe = import fbbe-flake.packages {
-          #   inherit system;
-          # };
 
           rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 

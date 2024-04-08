@@ -424,6 +424,7 @@ mod tests {
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
 
+    // TODO move in e2e tests
     #[tokio::test]
     async fn esplora_wasm_local() {
         let server = lwk_test_util::setup(true);

@@ -48,6 +48,13 @@
 
           commonArgs = {
             inherit src buildInputs nativeBuildInputs;
+
+            # the following must be kept in sync with the ones in ./lwk_cli/Cargo.toml
+            # note there should be a way to read those from there with
+            # craneLib.crateNameFromCargoToml { cargoToml = ./path/to/Cargo.toml; }
+            # but I can't make it work
+            pname = "lwk_cli";
+            version = "0.3.0";
           };
           cargoArtifacts = craneLib.buildDepsOnly commonArgs;
           # remember, `set1 // set2` does a shallow merge:

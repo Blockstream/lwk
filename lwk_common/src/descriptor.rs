@@ -58,7 +58,7 @@ fn fmt_path(path: &DerivationPath) -> String {
 // TODO impl error handling
 pub fn multisig_desc(
     threshold: u32,
-    xpubs: Vec<(KeySource, Xpub)>,
+    xpubs: Vec<(Option<KeySource>, Xpub)>,
     script_variant: Multisig,
     blinding_variant: DescriptorBlindingKey,
 ) -> Result<String, String> {
@@ -88,8 +88,13 @@ pub fn multisig_desc(
 
     let xpubs = xpubs
         .iter()
-        .map(|((fingerprint, path), xpub)| {
-            format!("[{fingerprint}/{}]{xpub}/<0;1>/*", fmt_path(path))
+        .map(|(keyorigin, xpub)| {
+            let prefix = if let Some((fingerprint, path)) = keyorigin {
+                format!("[{fingerprint}/{}]", fmt_path(path))
+            } else {
+                "".to_string()
+            };
+            format!("{prefix}{xpub}/<0;1>/*")
         })
         .collect::<Vec<_>>()
         .join(",");

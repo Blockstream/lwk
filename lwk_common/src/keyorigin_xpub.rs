@@ -9,8 +9,12 @@ pub struct InvalidKeyOriginXpub(String);
 // TODO: cleanup this fn
 pub fn keyorigin_xpub_from_str(
     s: &str,
-) -> Result<((Fingerprint, DerivationPath), Xpub), InvalidKeyOriginXpub> {
+) -> Result<(Option<(Fingerprint, DerivationPath)>, Xpub), InvalidKeyOriginXpub> {
     let parts: Vec<_> = s.split('[').collect();
+    if parts.len() == 1 {
+        let xpub = Xpub::from_str(s).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
+        return Ok((None, xpub));
+    }
     if parts.len() != 2 {
         return Err(InvalidKeyOriginXpub("unexpected format".to_string()));
     }
@@ -39,7 +43,7 @@ pub fn keyorigin_xpub_from_str(
         Fingerprint::from_str(fingerprint).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     let path = DerivationPath::from_str(&path).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
     let xpub = Xpub::from_str(xpub).map_err(|e| InvalidKeyOriginXpub(e.to_string()))?;
-    Ok(((fingerprint, path), xpub))
+    Ok((Some((fingerprint, path)), xpub))
 }
 
 #[cfg(test)]
@@ -54,6 +58,7 @@ mod test {
 
         let s = &format!("[{fingerprint}/{path}]{xpub}");
         keyorigin_xpub_from_str(s).unwrap();
+        keyorigin_xpub_from_str(xpub).unwrap();
 
         for s in [
             &format!("{fingerprint}/{path}]{xpub}"),

@@ -743,6 +743,10 @@ pub enum ServerCommand {
         /// Interval between blockchain scans (seconds)
         #[arg(long)]
         scanning_interval: Option<u64>,
+
+        /// Ignore start errors
+        #[arg(long)]
+        ignore_start_error: Option<bool>,
     },
 
     /// Wait until an entire blockchain scan has been completed

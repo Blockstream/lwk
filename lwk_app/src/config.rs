@@ -22,6 +22,7 @@ pub struct Config {
     pub explorer_url: String,
     pub timeout: Duration,
     pub scanning_interval: Duration,
+    pub ignore_start_error: bool,
 }
 
 impl Config {
@@ -36,6 +37,7 @@ impl Config {
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            ignore_start_error: false,
         }
     }
 
@@ -50,6 +52,7 @@ impl Config {
             explorer_url: "https://blockstream.info/liquid/".into(),
             timeout: TIMEOUT,
             scanning_interval: consts::SCANNING_INTERVAL,
+            ignore_start_error: false,
         }
     }
 
@@ -67,6 +70,7 @@ impl Config {
             timeout: TIMEOUT,
             // Scan more frequently while testing
             scanning_interval: Duration::from_secs(1),
+            ignore_start_error: false,
         }
     }
 

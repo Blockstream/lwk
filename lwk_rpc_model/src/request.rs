@@ -83,6 +83,13 @@ pub struct SignerLoadExternal {
     pub fingerprint: String,
 }
 
+/// Get the signer details
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerDetails {
+    /// The name of the signer
+    pub name: String,
+}
+
 /// Unload the signer identified by the given name
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UnloadSigner {

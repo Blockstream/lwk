@@ -212,6 +212,11 @@ impl Client {
         self.make_request(Method::WalletDetails, Some(req))
     }
 
+    pub fn signer_details(&self, name: String) -> Result<response::SignerDetails, Error> {
+        let req = request::SignerDetails { name };
+        self.make_request(Method::SignerDetails, Some(req))
+    }
+
     pub fn wallet_combine(
         &self,
         name: String,

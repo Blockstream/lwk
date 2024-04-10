@@ -183,6 +183,28 @@ pub struct SignerShortDetails {
     pub fingerprint: String,
 }
 
+/// Details of a loaded signer
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerDetails {
+    /// Signer name
+    pub name: String,
+
+    /// Fingerprint
+    pub fingerprint: String,
+
+    /// Full identifier of the signer, of which the fingerprint is a subset
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// Master xpub
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xpub: Option<String>,
+
+    /// Mnemonic
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mnemonic: Option<String>,
+}
+
 /// Details of a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletDetails {

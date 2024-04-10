@@ -68,6 +68,7 @@ impl From<SignerSubCommandsEnum> for Method {
             SignerSubCommandsEnum::LoadJade => Method::SignerLoadJade,
             SignerSubCommandsEnum::LoadExternal => Method::SignerLoadExternal,
             SignerSubCommandsEnum::Unload => Method::UnloadSigner,
+            SignerSubCommandsEnum::Details => Method::SignerDetails,
             SignerSubCommandsEnum::List => Method::ListSigners,
             SignerSubCommandsEnum::Sign => Method::Sign,
             SignerSubCommandsEnum::SinglesigDesc => Method::SinglesigDescriptor,

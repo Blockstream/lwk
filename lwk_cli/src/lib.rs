@@ -192,6 +192,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(j)?
             }
             SignerCommand::List => serde_json::to_value(client.list_signers()?)?,
+            SignerCommand::Details { signer } => {
+                let r = client.signer_details(signer)?;
+                serde_json::to_value(r)?
+            }
             SignerCommand::Unload { signer } => {
                 let r = client.unload_signer(signer)?;
                 serde_json::to_value(r)?

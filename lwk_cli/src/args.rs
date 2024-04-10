@@ -182,6 +182,7 @@ pub enum SignerSubCommandsEnum {
     LoadJade,
     LoadExternal,
     Unload,
+    Details,
     List,
     Sign,
     SinglesigDesc,
@@ -280,6 +281,12 @@ pub enum SignerCommand {
 
         #[arg(long)]
         fingerprint: String,
+    },
+
+    /// Details of a signer
+    Details {
+        #[arg(short, long, env)]
+        signer: String,
     },
 
     /// Unload a software signer

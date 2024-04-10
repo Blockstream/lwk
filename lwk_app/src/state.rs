@@ -39,6 +39,15 @@ impl AppSigner {
             AppSigner::JadeId(id, _) => id_to_fingerprint(id),
         })
     }
+
+    pub fn mnemonic(&self) -> Option<String> {
+        match self {
+            AppSigner::AvailableSigner(AnySigner::Software(s)) => {
+                s.mnemonic().map(|m| m.to_string())
+            }
+            _ => None,
+        }
+    }
 }
 
 // TODO upstream as method of XKeyIdentifier to rust-bitcoin

@@ -379,6 +379,22 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::UnloadSigner { unloaded: signer })?,
             )
         }
+        Method::SignerDetails => {
+            let r: request::SignerDetails = serde_json::from_value(params)?;
+            let s = state.lock()?;
+            let signer = s.signers.get(&r.name)?;
+            let sr = signer_response_from(&r.name, signer)?;
+            Response::result(
+                request.id,
+                serde_json::to_value(response::SignerDetails {
+                    name: sr.name,
+                    fingerprint: sr.fingerprint,
+                    id: sr.id,
+                    xpub: sr.xpub,
+                    mnemonic: signer.mnemonic(),
+                })?,
+            )
+        }
         Method::ListSigners => {
             let s = state.lock()?;
             let signers: Result<Vec<_>, _> = s

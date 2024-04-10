@@ -169,9 +169,12 @@ pub struct Entity {
     domain: String,
 }
 
-/// Details of a signer
+/// Details of a signer (short version)
+///
+/// Intended for use in complex responses,
+/// eg when showing PSET details
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct SignerDetails {
+pub struct SignerShortDetails {
     /// The name of the signer
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -191,7 +194,7 @@ pub struct WalletDetails {
     pub type_: String,
 
     /// Signers of this wallet
-    pub signers: Vec<SignerDetails>,
+    pub signers: Vec<SignerShortDetails>,
 
     /// Warnings on this wallet
     pub warnings: String,
@@ -255,10 +258,10 @@ pub struct Reissuance {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletPsetDetails {
     /// Signatures contained in the PSET
-    pub has_signatures_from: Vec<SignerDetails>,
+    pub has_signatures_from: Vec<SignerShortDetails>,
 
     /// Signature required to spend but missing in the PSET
-    pub missing_signatures_from: Vec<SignerDetails>,
+    pub missing_signatures_from: Vec<SignerShortDetails>,
 
     /// Net balance of the assets for the point of view of the given wallet
     pub balance: HashMap<String, i64>,

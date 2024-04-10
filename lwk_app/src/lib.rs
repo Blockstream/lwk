@@ -683,7 +683,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .iter()
                 .map(|fingerprint| {
                     let name = s.signers.name_from_fingerprint(fingerprint, &mut warnings);
-                    response::SignerDetails {
+                    response::SignerShortDetails {
                         name,
                         fingerprint: fingerprint.to_string(),
                     }
@@ -728,7 +728,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let has_signatures_from = details
                 .fingerprints_has()
                 .iter()
-                .map(|f| response::SignerDetails {
+                .map(|f| response::SignerShortDetails {
                     name: s.signers.name_from_fingerprint(f, &mut warnings),
                     fingerprint: f.to_string(),
                 })
@@ -736,7 +736,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let missing_signatures_from = details
                 .fingerprints_missing()
                 .iter()
-                .map(|f| response::SignerDetails {
+                .map(|f| response::SignerShortDetails {
                     name: s.signers.name_from_fingerprint(f, &mut warnings),
                     fingerprint: f.to_string(),
                 })

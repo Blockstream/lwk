@@ -20,7 +20,7 @@ lwk_test_util = { version = "0.2.0" }
 uniffi = { version = "0.26.1", features = ["build"] }
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 name = "lwk"
 
 [features]

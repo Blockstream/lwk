@@ -177,7 +177,7 @@ mod tests {
         elements::Block::consensus_decode(&response.bytes().unwrap()[..]).unwrap()
     }
 
-    // TODO move in e2e tests
+    #[ignore = "Should be integration test, but it is testing private function"]
     #[test]
     fn esplora_local() {
         let server = lwk_test_util::setup(true);

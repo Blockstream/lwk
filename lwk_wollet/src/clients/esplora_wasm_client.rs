@@ -424,7 +424,7 @@ mod tests {
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
 
-    // TODO move in e2e tests
+    #[ignore = "Should be integration test, but it is testing private function"]
     #[tokio::test]
     async fn esplora_wasm_local() {
         let server = lwk_test_util::setup(true);

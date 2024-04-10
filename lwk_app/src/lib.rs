@@ -383,18 +383,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::SignerDetails = serde_json::from_value(params)?;
             let s = state.lock()?;
             let signer = s.signers.get(&r.name)?;
-            let sr = signer_response_from(&r.name, signer)?;
-            Response::result(
-                request.id,
-                serde_json::to_value(response::SignerDetails {
-                    name: sr.name,
-                    fingerprint: sr.fingerprint,
-                    id: sr.id,
-                    xpub: sr.xpub,
-                    mnemonic: signer.mnemonic(),
-                    type_: signer.type_(),
-                })?,
-            )
+            let details = signer_details(&r.name, signer)?;
+            Response::result(request.id, serde_json::to_value(details)?)
         }
         Method::ListSigners => {
             let s = state.lock()?;
@@ -1090,10 +1080,17 @@ fn unvalidated_addressee(a: request::UnvalidatedAddressee) -> lwk_wollet::Unvali
     }
 }
 
-fn signer_response_from(
+fn signer_response_from(name: &str, signer: &AppSigner) -> Result<response::Signer, Error> {
+    Ok(response::Signer {
+        name: name.to_string(),
+        fingerprint: signer.fingerprint()?.to_string(),
+    })
+}
+
+fn signer_details(
     name: &str,
     signer: &AppSigner,
-) -> Result<response::Signer, lwk_signer::SignerError> {
+) -> Result<response::SignerDetails, lwk_signer::SignerError> {
     let (fingerprint, id, xpub) = match signer {
         AppSigner::AvailableSigner(signer) => (
             signer.fingerprint()?,
@@ -1104,11 +1101,13 @@ fn signer_response_from(
         AppSigner::JadeId(id, _) => (id_to_fingerprint(id), Some(*id), None),
     };
 
-    Ok(response::Signer {
+    Ok(response::SignerDetails {
         name: name.to_string(),
         id: id.map(|i| i.to_string()),
         fingerprint: fingerprint.to_string(),
         xpub: xpub.map(|x| x.to_string()),
+        mnemonic: signer.mnemonic(),
+        type_: signer.type_(),
     })
 }
 

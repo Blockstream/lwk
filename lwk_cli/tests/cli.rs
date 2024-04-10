@@ -925,11 +925,11 @@ fn test_jade_emulator() {
     let identifier = result.get("identifier").unwrap().as_str().unwrap();
     assert_eq!(identifier, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");
 
-    let result = sh(&format!(
+    sh(&format!(
         "{cli} signer load-jade --signer emul --id {identifier}  --emulator {jade_addr}"
     ));
-    assert!(result.get("id").is_some());
     let r = sh(&format!("{cli} signer details -s emul"));
+    assert!(r.get("id").is_some());
     assert!(r.get("mnemonic").is_none());
     assert_eq!(get_str(&r, "type"), "jade");
     // Load singlesig wallets

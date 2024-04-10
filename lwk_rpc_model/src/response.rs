@@ -74,15 +74,6 @@ pub struct Signer {
 
     /// The fingerprint of the signer, 4 bytes returned as 8 hex characters
     pub fingerprint: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-
-    /// Full identifier of the signer, of which the fingerprint is a subset
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-
-    /// Master xpub of the signer
-    pub xpub: Option<String>,
-    // TODO add kind of signer?
 }
 
 /// Address response

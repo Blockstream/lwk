@@ -9,3 +9,6 @@ leak-timeout = "5s"                                    # test is leaky if after 
 
 [profile.ci.junit]
 path = "junit.xml"
+
+[profile.unit]
+slow-timeout = { period = "1s", terminate-after = 1 }

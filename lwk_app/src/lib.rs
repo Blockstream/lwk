@@ -392,6 +392,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     id: sr.id,
                     xpub: sr.xpub,
                     mnemonic: signer.mnemonic(),
+                    type_: signer.type_(),
                 })?,
             )
         }

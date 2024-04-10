@@ -237,10 +237,13 @@ fn test_start_stop_persist() {
     ));
     let r = sh(&format!("{cli} signer details -s s1"));
     assert_eq!(get_str(&r, "mnemonic"), mnemonic);
+    assert_eq!(get_str(&r, "type"), "software");
     let r = sh(&format!("{cli} signer details -s s2"));
     assert!(r.get("mnemonic").is_none());
+    assert_eq!(get_str(&r, "type"), "external");
     let r = sh(&format!("{cli} signer details -s s3"));
     assert!(r.get("mnemonic").is_none());
+    assert_eq!(get_str(&r, "type"), "jade-id");
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
     sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
@@ -926,6 +929,9 @@ fn test_jade_emulator() {
         "{cli} signer load-jade --signer emul --id {identifier}  --emulator {jade_addr}"
     ));
     assert!(result.get("id").is_some());
+    let r = sh(&format!("{cli} signer details -s emul"));
+    assert!(r.get("mnemonic").is_none());
+    assert_eq!(get_str(&r, "type"), "jade");
     // Load singlesig wallets
     singlesig_wallet(&cli, "ss-wpkh", "emul", "slip77", "wpkh");
     singlesig_wallet(&cli, "ss-shwpkh", "emul", "slip77", "shwpkh");

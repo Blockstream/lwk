@@ -203,6 +203,10 @@ pub struct SignerDetails {
     /// Mnemonic
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mnemonic: Option<String>,
+
+    /// Signer type
+    #[serde(rename = "type")]
+    pub type_: String,
 }
 
 /// Details of a wallet

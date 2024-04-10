@@ -48,6 +48,15 @@ impl AppSigner {
             _ => None,
         }
     }
+
+    pub fn type_(&self) -> String {
+        match self {
+            AppSigner::ExternalSigner(_) => "external".into(),
+            AppSigner::JadeId(_, _) => "jade-id".into(),
+            AppSigner::AvailableSigner(AnySigner::Software(_)) => "software".into(),
+            AppSigner::AvailableSigner(AnySigner::Jade(_, _)) => "jade".into(),
+        }
+    }
 }
 
 // TODO upstream as method of XKeyIdentifier to rust-bitcoin

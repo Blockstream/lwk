@@ -70,6 +70,11 @@ test_cli:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
 
+unit_tests:
+  extends: .base
+  script:
+    - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
+
 test_coverage:
   extends: .base
   variables:

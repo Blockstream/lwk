@@ -16,7 +16,7 @@
       };
     };
     electrs-flake = {
-      url = "github:blockstream/electrs/flake";
+      url = "github:blockstream/electrs";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";

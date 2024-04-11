@@ -88,8 +88,8 @@ impl Client {
         self.make_request(Method::SignerLoadExternal, Some(req))
     }
 
-    pub fn list_wallets(&self) -> Result<response::ListWallets, Error> {
-        self.make_request(Method::ListWallets, None::<Box<RawValue>>)
+    pub fn wallet_list(&self) -> Result<response::WalletList, Error> {
+        self.make_request(Method::WalletList, None::<Box<RawValue>>)
     }
 
     pub fn wallet_load(&self, descriptor: String, name: String) -> Result<response::Wallet, Error> {

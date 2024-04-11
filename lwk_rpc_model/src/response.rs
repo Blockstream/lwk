@@ -47,7 +47,7 @@ pub struct Wallet {
 
 /// Response for list wallets call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ListWallets {
+pub struct WalletList {
     /// Returned wallets currently loaded in the server
     pub wallets: Vec<Wallet>,
 }

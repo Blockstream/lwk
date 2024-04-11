@@ -40,7 +40,7 @@ impl From<WalletSubCommandsEnum> for Method {
         match value {
             WalletSubCommandsEnum::Load => Method::WalletLoad,
             WalletSubCommandsEnum::Unload => Method::WalletUnload,
-            WalletSubCommandsEnum::List => Method::ListWallets,
+            WalletSubCommandsEnum::List => Method::WalletList,
             WalletSubCommandsEnum::Address => Method::Address,
             WalletSubCommandsEnum::Balance => Method::Balance,
             WalletSubCommandsEnum::Send => Method::SendMany,

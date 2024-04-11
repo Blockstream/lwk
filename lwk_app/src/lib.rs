@@ -313,7 +313,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::ListWallets => {
+        Method::WalletList => {
             let s = state.lock()?;
             let wallets = s
                 .wollets
@@ -323,7 +323,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     name: name.clone(),
                 })
                 .collect();
-            let r = response::ListWallets { wallets };
+            let r = response::WalletList { wallets };
             Response::result(request.id, serde_json::to_value(r)?)
         }
         Method::SignerLoadSoftware => {

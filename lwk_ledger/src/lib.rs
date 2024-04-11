@@ -13,7 +13,6 @@ mod tests {
     use lwk_containers::testcontainers::clients;
     use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 
-    #[ignore = "requires .elf in the path"]
     #[test]
     fn test_ledger_version() {
         let docker = clients::Cli::default();

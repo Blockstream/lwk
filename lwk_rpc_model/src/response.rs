@@ -23,7 +23,7 @@ pub struct Version {
 
 /// Response for generate signer
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct GenerateSigner {
+pub struct SignerGenerate {
     /// Randomly generated mnemonic from the server
     pub mnemonic: String,
 }

@@ -62,7 +62,7 @@ impl From<WalletSubCommandsEnum> for Method {
 impl From<SignerSubCommandsEnum> for Method {
     fn from(value: SignerSubCommandsEnum) -> Self {
         match value {
-            SignerSubCommandsEnum::Generate => Method::GenerateSigner,
+            SignerSubCommandsEnum::Generate => Method::SignerGenerate,
             SignerSubCommandsEnum::JadeId => Method::SignerJadeId,
             SignerSubCommandsEnum::LoadSoftware => Method::SignerLoadSoftware,
             SignerSubCommandsEnum::LoadJade => Method::SignerLoadJade,

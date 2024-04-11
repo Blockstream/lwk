@@ -56,8 +56,8 @@ impl Client {
         self.make_request(Method::Version, None::<Box<RawValue>>)
     }
 
-    pub fn generate_signer(&self) -> Result<response::GenerateSigner, Error> {
-        self.make_request(Method::GenerateSigner, None::<Box<RawValue>>)
+    pub fn signer_generate(&self) -> Result<response::SignerGenerate, Error> {
+        self.make_request(Method::SignerGenerate, None::<Box<RawValue>>)
     }
 
     pub fn signer_load_software(

@@ -257,11 +257,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let method: Method = r.method.parse()?;
             Response::result(request.id, method.schema(r.direction)?)
         }
-        Method::GenerateSigner => {
+        Method::SignerGenerate => {
             let (_signer, mnemonic) = SwSigner::random(state.lock()?.config.is_mainnet())?;
             Response::result(
                 request.id,
-                serde_json::to_value(response::GenerateSigner {
+                serde_json::to_value(response::SignerGenerate {
                     mnemonic: mnemonic.to_string(),
                 })?,
             )

@@ -161,7 +161,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         }
         CliCommand::Signer(a) => match a.command {
             SignerCommand::Generate => {
-                let j = client.generate_signer()?;
+                let j = client.signer_generate()?;
                 serde_json::to_value(j)?
             }
             SignerCommand::JadeId { emulator } => {

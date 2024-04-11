@@ -17,7 +17,7 @@ pub struct MethodNotExist {
 #[cfg_attr(test, derive(enum_iterator::Sequence))]
 pub enum Method {
     Schema,
-    GenerateSigner,
+    SignerGenerate,
     Version,
     LoadWallet,
     UnloadWallet,
@@ -61,7 +61,7 @@ impl Method {
         serde_json::to_value(match direction {
             Direction::Request => match self {
                 Method::Schema => schema_for!(request::Schema),
-                Method::GenerateSigner => schema_for!(request::Empty),
+                Method::SignerGenerate => schema_for!(request::Empty),
                 Method::Version => schema_for!(request::Empty),
                 Method::LoadWallet => schema_for!(request::LoadWallet),
                 Method::UnloadWallet => schema_for!(request::UnloadWallet),
@@ -102,7 +102,7 @@ impl Method {
             },
             Direction::Response => match self {
                 Method::Schema => return serde_json::from_str(include_str!("../schema.json")),
-                Method::GenerateSigner => schema_for!(response::GenerateSigner),
+                Method::SignerGenerate => schema_for!(response::SignerGenerate),
                 Method::Version => schema_for!(response::Version),
                 Method::LoadWallet => schema_for!(response::Wallet),
                 Method::UnloadWallet => schema_for!(response::UnloadWallet),
@@ -151,7 +151,7 @@ impl FromStr for Method {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "schema" => Method::Schema,
-            "generate_signer" => Method::GenerateSigner,
+            "signer_generate" => Method::SignerGenerate,
             "version" => Method::Version,
             "load_wallet" => Method::LoadWallet,
             "unload_wallet" => Method::UnloadWallet,
@@ -202,7 +202,7 @@ impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Method::Schema => "schema",
-            Method::GenerateSigner => "generate_signer",
+            Method::SignerGenerate => "signer_generate",
             Method::Version => "version",
             Method::LoadWallet => "load_wallet",
             Method::UnloadWallet => "unload_wallet",

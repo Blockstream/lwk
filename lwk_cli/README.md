@@ -74,7 +74,7 @@ $ cli signer generate
 is equivalent to:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"generate_signer","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
+$ curl --header "Content-Type: application/json" --request POST --data '{"method":"signer_generate","params":[],"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 ```
 
 To see RPC data exchanged via the cli commands enable app log tracing eg:

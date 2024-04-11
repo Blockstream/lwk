@@ -1,5 +1,6 @@
 use std::{
     collections::HashSet,
+    fs,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::FromStr,
     thread::JoinHandle,
@@ -212,6 +213,49 @@ fn send(
     let recipient = format!(" --recipient {address}:{sats}:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet {wallet} {recipient}"));
     complete(cli, wallet, get_str(&r, "pset"), signers)
+}
+
+#[test]
+fn test_state_regression() {
+    let server = setup(false);
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let cli = format!("cli --addr {addr} -n regtest");
+    let params = format!("--datadir {datadir} --electrum-url {electrum_url}");
+
+    // copy static state into data dir
+    let state = include_str!("./test_data/state.json");
+    let mut to = tmp.as_ref().to_path_buf();
+    to.push("liquid-regtest");
+    fs::create_dir(&to).unwrap();
+    to.push("state.json");
+    fs::write(to, state).unwrap();
+
+    let t = {
+        let cli = cli.clone();
+
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let expected_signers = sh(&format!("{cli} signer list"));
+    let r = expected_signers.get("signers").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 3);
+
+    let expected_wallets = sh(&format!("{cli} wallet list"));
+    let r = expected_wallets.get("wallets").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 1);
+
+    let expected_assets = sh(&format!("{cli} asset list"));
+    let r = expected_assets.get("assets").unwrap();
+    assert_eq!(r.as_array().unwrap().len(), 3);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
 }
 
 #[test]

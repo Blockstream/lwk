@@ -70,7 +70,7 @@ impl From<SignerSubCommandsEnum> for Method {
             SignerSubCommandsEnum::Unload => Method::SignerUnload,
             SignerSubCommandsEnum::Details => Method::SignerDetails,
             SignerSubCommandsEnum::List => Method::SignerList,
-            SignerSubCommandsEnum::Sign => Method::Sign,
+            SignerSubCommandsEnum::Sign => Method::SignerSign,
             SignerSubCommandsEnum::SinglesigDesc => Method::SinglesigDescriptor,
             SignerSubCommandsEnum::Xpub => Method::SignerXpub,
         }

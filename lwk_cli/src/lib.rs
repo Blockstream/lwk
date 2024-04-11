@@ -169,7 +169,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(j)?
             }
             SignerCommand::Sign { signer, pset } => {
-                let r = client.sign(signer, pset)?;
+                let r = client.signer_sign(signer, pset)?;
                 serde_json::to_value(r)?
             }
             SignerCommand::LoadSoftware { signer, mnemonic } => {

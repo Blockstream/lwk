@@ -196,9 +196,9 @@ impl Client {
         self.make_request(Method::SignerRegisterMultisig, Some(req))
     }
 
-    pub fn sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {
-        let req = request::Sign { name, pset };
-        self.make_request(Method::Sign, Some(req))
+    pub fn signer_sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {
+        let req = request::SignerSign { name, pset };
+        self.make_request(Method::SignerSign, Some(req))
     }
 
     pub fn wallet_broadcast(

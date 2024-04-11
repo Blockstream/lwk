@@ -611,8 +611,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::SignerXpub { keyorigin_xpub })?,
             )
         }
-        Method::Sign => {
-            let r: request::Sign = serde_json::from_value(params)?;
+        Method::SignerSign => {
+            let r: request::SignerSign = serde_json::from_value(params)?;
             let mut s = state.lock()?;
 
             let signer = s.get_available_signer(&r.name)?;

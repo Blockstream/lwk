@@ -201,7 +201,7 @@ pub struct SignerXpub {
 
 /// A request to sign a PSET
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Sign {
+pub struct SignerSign {
     /// The signer name
     pub name: String,
 

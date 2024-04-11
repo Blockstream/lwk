@@ -223,7 +223,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         },
         CliCommand::Wallet(a) => match a.command {
             WalletCommand::Load { descriptor, wallet } => {
-                let r = client.load_wallet(descriptor, wallet)?;
+                let r = client.wallet_load(descriptor, wallet)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Unload { wallet } => {

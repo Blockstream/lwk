@@ -546,14 +546,14 @@ impl State {
 
         // Wollets
         for (n, w) in self.wollets.iter() {
-            let params = request::LoadWallet {
+            let params = request::WalletLoad {
                 descriptor: w.descriptor().to_string(),
                 name: n.to_string(),
             };
             let r = Request {
                 jsonrpc: "2.0".into(),
                 id: None,
-                method: Method::LoadWallet.to_string(),
+                method: Method::WalletLoad.to_string(),
                 params: Some(serde_json::to_value(params)?),
             };
             requests.push(r);

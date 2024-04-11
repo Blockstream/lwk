@@ -35,7 +35,7 @@ pub enum Direction {
 
 /// Request to load a wallet in the server, returning [`response::Wallet`]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct LoadWallet {
+pub struct WalletLoad {
     /// The read-only descriptor describing the wallet outputs
     pub descriptor: String,
 
@@ -410,9 +410,9 @@ mod test {
 
     #[test]
     fn test_json_schema() {
-        let schema = schema_for!(LoadWallet);
+        let schema = schema_for!(WalletLoad);
         assert_eq!(
-            r#"{"$schema":"http://json-schema.org/draft-07/schema#","title":"LoadWallet","description":"Request to load a wallet in the server, returning [`response::Wallet`]","type":"object","required":["descriptor","name"],"properties":{"descriptor":{"description":"The read-only descriptor describing the wallet outputs","type":"string"},"name":{"description":"The name given to the wallet, will be needed for calls related to the wallet","type":"string"}}}"#,
+            r#"{"$schema":"http://json-schema.org/draft-07/schema#","title":"WalletLoad","description":"Request to load a wallet in the server, returning [`response::Wallet`]","type":"object","required":["descriptor","name"],"properties":{"descriptor":{"description":"The read-only descriptor describing the wallet outputs","type":"string"},"name":{"description":"The name given to the wallet, will be needed for calls related to the wallet","type":"string"}}}"#,
             serde_json::to_string(&schema).unwrap()
         );
     }

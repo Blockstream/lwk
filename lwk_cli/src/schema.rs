@@ -38,7 +38,7 @@ impl From<ServerSubCommandsEnum> for Method {
 impl From<WalletSubCommandsEnum> for Method {
     fn from(value: WalletSubCommandsEnum) -> Self {
         match value {
-            WalletSubCommandsEnum::Load => Method::LoadWallet,
+            WalletSubCommandsEnum::Load => Method::WalletLoad,
             WalletSubCommandsEnum::Unload => Method::WalletUnload,
             WalletSubCommandsEnum::List => Method::ListWallets,
             WalletSubCommandsEnum::Address => Method::Address,

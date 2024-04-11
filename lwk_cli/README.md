@@ -105,7 +105,7 @@ $ cli wallet balance --wallet custody
 is equivalent to:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"load_wallet","params":{"descriptor":"ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "name": "custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
+$ curl --header "Content-Type: application/json" --request POST --data '{"method":"wallet_load","params":{"descriptor":"ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63", "name": "custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s
 
 $ curl --header "Content-Type: application/json" --request POST --data '{"method":"balance","params":{"name":"custody"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq .result
 ```
@@ -120,7 +120,7 @@ $ cli wallet address --wallet custody --index 4
 An error test case:
 
 ```sh
-$ curl --header "Content-Type: application/json" --request POST --data '{"method":"load_wallet","params":{"desc":"fake"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq
+$ curl --header "Content-Type: application/json" --request POST --data '{"method":"wallet_load","params":{"desc":"fake"},"id":1,"jsonrpc":"2.0"}' http://localhost:32111 -s | jq
 {
   "jsonrpc": "2.0",
   "id": 1,

@@ -35,7 +35,7 @@ pub struct SignerList {
     pub signers: Vec<Signer>,
 }
 
-/// Wallet response, returned from various call such as [`request::LoadWallet`], [`request::WalletUnload`]
+/// Wallet response, returned from various call such as [`request::WalletLoad`], [`request::WalletUnload`]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Wallet {
     /// Public descriptor definining wallet outputs

@@ -276,8 +276,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::LoadWallet => {
-            let r: request::LoadWallet = serde_json::from_value(params)?;
+        Method::WalletLoad => {
+            let r: request::WalletLoad = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             // TODO recognize different name same descriptor?
 

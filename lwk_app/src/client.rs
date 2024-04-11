@@ -92,9 +92,9 @@ impl Client {
         self.make_request(Method::ListWallets, None::<Box<RawValue>>)
     }
 
-    pub fn load_wallet(&self, descriptor: String, name: String) -> Result<response::Wallet, Error> {
-        let req = request::LoadWallet { descriptor, name };
-        self.make_request(Method::LoadWallet, Some(req))
+    pub fn wallet_load(&self, descriptor: String, name: String) -> Result<response::Wallet, Error> {
+        let req = request::WalletLoad { descriptor, name };
+        self.make_request(Method::WalletLoad, Some(req))
     }
 
     pub fn wallet_unload(&self, name: String) -> Result<response::WalletUnload, Error> {

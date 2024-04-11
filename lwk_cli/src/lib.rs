@@ -172,8 +172,13 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.signer_sign(signer, pset)?;
                 serde_json::to_value(r)?
             }
-            SignerCommand::LoadSoftware { signer, mnemonic } => {
-                let j = client.signer_load_software(signer, mnemonic)?;
+            SignerCommand::LoadSoftware {
+                signer,
+                mnemonic,
+                persist,
+            } => {
+                let persist = persist.expect("required");
+                let j = client.signer_load_software(signer, mnemonic, persist)?;
                 serde_json::to_value(j)?
             }
             SignerCommand::LoadJade {

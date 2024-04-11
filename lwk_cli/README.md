@@ -141,7 +141,7 @@ cli --network testnet server start
 
 ```sh
 $ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
-$ cli signer load-software --mnemonic "$MNEMONIC" --signer s1
+$ cli signer load-software --persist true --mnemonic "$MNEMONIC" --signer s1
 $ DESCRIPTOR=$(cli signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
 $ cli wallet load --wallet w1 -d "$DESCRIPTOR"
 $ cli wallet address --wallet w1

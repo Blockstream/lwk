@@ -96,7 +96,7 @@ fn sw_signer(cli: &str, name: &str) {
     let r = sh(&format!("{cli} signer generate"));
     let mnemonic = get_str(&r, "mnemonic");
     sh(&format!(
-        "{cli} signer load-software --mnemonic \"{mnemonic}\" --signer {name}"
+        "{cli} signer load-software --persist true --mnemonic \"{mnemonic}\" --signer {name}"
     ));
 }
 
@@ -220,12 +220,12 @@ fn test_start_stop_persist() {
 
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1"#
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1"#
     ));
     let result = sh(&format!("{cli} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --signer s2"#,
+        r#"{cli} signer load-software --persist true --mnemonic "{different_mnemonic}" --signer s2"#,
     ));
     sh(&format!(r#"{cli} signer unload --signer s2"#)); // Verify unloads are handled
 
@@ -326,19 +326,19 @@ fn test_signer_load_unload_list() {
 
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
     let result = sh(&format!("{cli} signer generate"));
     let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
     let result = sh_result(&format!(
-        r#"{cli} signer load-software --mnemonic "{different_mnemonic}" --signer ss"#,
+        r#"{cli} signer load-software --persist true --mnemonic "{different_mnemonic}" --signer ss"#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
     let result = sh_result(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss2 "#,
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer ss2 "#,
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
@@ -539,14 +539,14 @@ fn test_wallet_details() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load-software --mnemonic \"{m1}\" --signer s1"
+        "{cli} signer load-software --persist true --mnemonic \"{m1}\" --signer s1"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     let r = sh(&format!(
-        "{cli} signer load-software --mnemonic \"{m2}\" --signer s2"
+        "{cli} signer load-software --persist true --mnemonic \"{m2}\" --signer s2"
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s2");
 
@@ -647,7 +647,7 @@ fn test_broadcast() {
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
 
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1 "#
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1 "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
 
@@ -709,7 +709,7 @@ fn test_issue() {
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
 
     let r = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer s1 "#
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1 "#
     ));
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
 
@@ -1008,7 +1008,7 @@ fn test_commands() {
 
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let result = sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{mnemonic}" --signer ss "#
+        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer ss "#
     ));
     assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
 
@@ -1054,12 +1054,12 @@ fn test_multisig() {
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{m1}" --signer s1 "#
+        r#"{cli} signer load-software --persist true --mnemonic "{m1}" --signer s1 "#
     ));
     let r = sh(&format!("{cli} signer generate"));
     let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
     sh(&format!(
-        r#"{cli} signer load-software --mnemonic "{m2}" --signer s2 "#
+        r#"{cli} signer load-software --persist true --mnemonic "{m2}" --signer s2 "#
     ));
 
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));

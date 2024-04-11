@@ -58,6 +58,9 @@ pub struct SignerLoadSoftware {
 
     /// The mnemonic (12 or 24 words)
     pub mnemonic: String,
+
+    /// Whether to persist the software signer
+    pub persist: bool,
 }
 
 /// Load a signer in the server

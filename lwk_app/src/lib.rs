@@ -41,7 +41,6 @@ use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_wollet::{full_scan_with_electrum_client, Wollet};
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
-use state::id_to_fingerprint;
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
@@ -329,29 +328,19 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerLoadSoftware => {
             let r: request::SignerLoadSoftware = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let mnemonic = r.mnemonic;
-
-            let signer = AppSigner::AvailableSigner(AnySigner::Software(SwSigner::new(
-                &mnemonic,
-                s.config.is_mainnet(),
-            )?));
+            let signer = AppSigner::new_sw(&r.mnemonic, s.config.is_mainnet(), r.persist)?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
-            s.persist(&request)?;
+            if r.persist {
+                s.persist(&request)?;
+            }
             Response::result(request.id, serde_json::to_value(resp)?)
         }
         Method::SignerLoadJade => {
             let r: request::SignerLoadJade = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let id = XKeyIdentifier::from_str(&r.id).map_err(|e| e.to_string())?; // TODO remove map_err
-            let signer = match r.emulator {
-                Some(socket) => {
-                    // The emulator is meant to be used only in testing, we don't aim to handle connection/disconnection
-                    let jade = Jade::from_socket(socket, s.config.jade_network())?;
-                    AppSigner::AvailableSigner(AnySigner::Jade(jade, id))
-                }
-                None => AppSigner::JadeId(id, s.config.jade_network()),
-            };
+            let signer = AppSigner::new_jade(id, r.emulator, s.config.jade_network())?;
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             s.persist(&request)?;
@@ -362,7 +351,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let fingerprint =
                 Fingerprint::from_str(&r.fingerprint).map_err(|e| Error::Generic(e.to_string()))?;
-            let signer = AppSigner::ExternalSigner(fingerprint);
+            let signer = AppSigner::new_external(fingerprint);
             let resp: response::Signer = signer_response_from(&r.name, &signer)?;
             s.signers.insert(&r.name, signer)?;
             s.persist(&request)?;
@@ -1087,25 +1076,12 @@ fn signer_response_from(name: &str, signer: &AppSigner) -> Result<response::Sign
     })
 }
 
-fn signer_details(
-    name: &str,
-    signer: &AppSigner,
-) -> Result<response::SignerDetails, lwk_signer::SignerError> {
-    let (fingerprint, id, xpub) = match signer {
-        AppSigner::AvailableSigner(signer) => (
-            signer.fingerprint()?,
-            Some(signer.identifier()?),
-            Some(signer.xpub()?),
-        ),
-        AppSigner::ExternalSigner(fingerprint) => (*fingerprint, None, None),
-        AppSigner::JadeId(id, _) => (id_to_fingerprint(id), Some(*id), None),
-    };
-
+fn signer_details(name: &str, signer: &AppSigner) -> Result<response::SignerDetails, Error> {
     Ok(response::SignerDetails {
         name: name.to_string(),
-        id: id.map(|i| i.to_string()),
-        fingerprint: fingerprint.to_string(),
-        xpub: xpub.map(|x| x.to_string()),
+        id: signer.id()?.map(|i| i.to_string()),
+        fingerprint: signer.fingerprint()?.to_string(),
+        xpub: signer.xpub()?.map(|x| x.to_string()),
         mnemonic: signer.mnemonic(),
         type_: signer.type_(),
     })

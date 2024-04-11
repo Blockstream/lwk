@@ -64,8 +64,13 @@ impl Client {
         &self,
         name: String,
         mnemonic: String,
+        persist: bool,
     ) -> Result<response::Signer, Error> {
-        let req = request::SignerLoadSoftware { name, mnemonic };
+        let req = request::SignerLoadSoftware {
+            name,
+            mnemonic,
+            persist,
+        };
         self.make_request(Method::SignerLoadSoftware, Some(req))
     }
 

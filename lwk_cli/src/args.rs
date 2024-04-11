@@ -258,6 +258,15 @@ pub enum SignerCommand {
 
         #[arg(long)]
         mnemonic: String, // TODO is it right to have the mnemonic as arg?
+
+        /// Specify if the rpc-server should persist the signer
+        ///
+        /// If true, the mnemonic is persisted to disk, but will be available at following restarts.
+        ///
+        /// If false, nothing is persisted, but at following restarts this signer will not be
+        /// availabled.
+        #[arg(long, required(true))]
+        persist: Option<bool>,
     },
 
     /// Load a Jade signer giving it a name

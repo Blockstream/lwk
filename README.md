@@ -51,7 +51,7 @@ $ lwk_cli server start &
 
 Create a software *signer* named `sw` from a given BIP39 mnemonic
 ```sh
-$ lwk_cli signer load-software -s sw --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+$ lwk_cli signer load-software -s sw --persist false --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 ```
 
 Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)

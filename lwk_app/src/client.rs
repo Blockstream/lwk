@@ -102,9 +102,9 @@ impl Client {
         self.make_request(Method::UnloadWallet, Some(req))
     }
 
-    pub fn unload_signer(&self, name: String) -> Result<response::UnloadSigner, Error> {
-        let req = request::UnloadSigner { name };
-        self.make_request(Method::UnloadSigner, Some(req))
+    pub fn signer_unload(&self, name: String) -> Result<response::SignerUnload, Error> {
+        let req = request::SignerUnload { name };
+        self.make_request(Method::SignerUnload, Some(req))
     }
 
     pub fn list_signers(&self) -> Result<response::ListSigners, Error> {

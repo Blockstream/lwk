@@ -61,7 +61,7 @@ pub struct UnloadWallet {
 
 /// Response for unload signer call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UnloadSigner {
+pub struct SignerUnload {
     /// Details of the signer unloaded from the server
     pub unloaded: Signer,
 }

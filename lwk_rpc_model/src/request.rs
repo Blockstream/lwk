@@ -92,7 +92,7 @@ pub struct SignerDetails {
 
 /// Unload the signer identified by the given name
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UnloadSigner {
+pub struct SignerUnload {
     /// The name of the signer
     pub name: String,
 }

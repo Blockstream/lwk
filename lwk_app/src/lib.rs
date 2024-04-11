@@ -368,15 +368,15 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(resp)?)
         }
-        Method::UnloadSigner => {
-            let r: request::UnloadSigner = serde_json::from_value(params)?;
+        Method::SignerUnload => {
+            let r: request::SignerUnload = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let removed = s.signers.remove(&r.name)?;
             let signer: response::Signer = signer_response_from(&r.name, &removed)?;
             s.persist_all()?;
             Response::result(
                 request.id,
-                serde_json::to_value(response::UnloadSigner { unloaded: signer })?,
+                serde_json::to_value(response::SignerUnload { unloaded: signer })?,
             )
         }
         Method::SignerDetails => {

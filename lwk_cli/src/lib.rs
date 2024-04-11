@@ -197,7 +197,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             SignerCommand::Unload { signer } => {
-                let r = client.unload_signer(signer)?;
+                let r = client.signer_unload(signer)?;
                 serde_json::to_value(r)?
             }
             SignerCommand::SinglesigDesc {

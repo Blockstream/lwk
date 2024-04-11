@@ -80,7 +80,7 @@ impl From<SignerSubCommandsEnum> for Method {
 impl From<AssetSubCommandsEnum> for Method {
     fn from(value: AssetSubCommandsEnum) -> Self {
         match value {
-            AssetSubCommandsEnum::Contract => Method::Contract,
+            AssetSubCommandsEnum::Contract => Method::AssetContract,
             AssetSubCommandsEnum::Details => Method::AssetDetails,
             AssetSubCommandsEnum::List => Method::AssetList,
             AssetSubCommandsEnum::Insert => Method::AssetInsert,

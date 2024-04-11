@@ -364,7 +364,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 ticker,
                 version,
             } => {
-                let r = client.contract(domain, issuer_pubkey, name, precision, ticker, version)?;
+                let r = client.asset_contract(domain, issuer_pubkey, name, precision, ticker, version)?;
                 serde_json::to_value(r)?
             }
             AssetCommand::Details { asset } => {

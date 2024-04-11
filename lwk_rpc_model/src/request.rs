@@ -247,7 +247,7 @@ pub struct WalletIssue {
     /// The address receiving the reissuance token, if missing a receiving address from the wallet doing the issuance is used
     pub address_token: Option<String>,
 
-    /// The contract defininig asset metadata, such as name, ticker and precision. See [`Contract`] request to create
+    /// The contract defininig asset metadata, such as name, ticker and precision. See [`AssetContract`] request to create
     pub contract: Option<String>,
 
     /// The optional fee rate
@@ -275,7 +275,7 @@ pub struct WalletReissue {
 
 /// A request creating a contract in the JSON format expected by the issue call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Contract {
+pub struct AssetContract {
     /// Domain of the issuer
     pub domain: String,
 

@@ -133,7 +133,7 @@ pub struct WalletBroadcast {
 
 /// A response of a JSON contract containing asset metadata and validated according to the contract rules
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Contract {
+pub struct AssetContract {
     /// Entity emitting the asset
     pub entity: Entity,
 

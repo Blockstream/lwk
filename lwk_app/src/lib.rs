@@ -903,8 +903,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::Contract => {
-            let r: request::Contract = serde_json::from_value(params)?;
+        Method::AssetContract => {
+            let r: request::AssetContract = serde_json::from_value(params)?;
             let c = lwk_wollet::Contract {
                 entity: lwk_wollet::Entity::Domain(r.domain),
                 issuer_pubkey: Vec::<u8>::from_hex(&r.issuer_pubkey)?,

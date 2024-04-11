@@ -323,7 +323,7 @@ impl Client {
         self.make_request(Method::WalletReissue, Some(req))
     }
 
-    pub fn contract(
+    pub fn asset_contract(
         &self,
         domain: String,
         issuer_pubkey: String,
@@ -331,8 +331,8 @@ impl Client {
         precision: u8,
         ticker: String,
         version: u8,
-    ) -> Result<response::Contract, Error> {
-        let req = request::Contract {
+    ) -> Result<response::AssetContract, Error> {
+        let req = request::AssetContract {
             domain,
             issuer_pubkey,
             name,
@@ -340,7 +340,7 @@ impl Client {
             ticker,
             version,
         };
-        self.make_request(Method::Contract, Some(req))
+        self.make_request(Method::AssetContract, Some(req))
     }
 
     pub fn asset_details(&self, asset_id: String) -> Result<response::AssetDetails, Error> {

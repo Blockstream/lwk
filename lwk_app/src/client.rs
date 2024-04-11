@@ -183,13 +183,13 @@ impl Client {
         self.make_request(Method::Xpub, Some(req))
     }
 
-    pub fn register_multisig(
+    pub fn signer_register_multisig(
         &self,
         name: String,
         wallet: String,
     ) -> Result<response::Empty, Error> {
-        let req = request::RegisterMultisig { name, wallet };
-        self.make_request(Method::RegisterMultisig, Some(req))
+        let req = request::SignerRegisterMultisig { name, wallet };
+        self.make_request(Method::SignerRegisterMultisig, Some(req))
     }
 
     pub fn sign(&self, name: String, pset: String) -> Result<response::Pset, Error> {

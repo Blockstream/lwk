@@ -575,8 +575,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::MultisigDescriptor { descriptor })?,
             )
         }
-        Method::RegisterMultisig => {
-            let r: request::RegisterMultisig = serde_json::from_value(params)?;
+        Method::SignerRegisterMultisig => {
+            let r: request::SignerRegisterMultisig = serde_json::from_value(params)?;
             let mut s = state.lock()?;
 
             let network = s.config.jade_network();

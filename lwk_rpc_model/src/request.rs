@@ -181,7 +181,7 @@ pub struct MultisigDescriptor {
 
 /// Request to register a multisig wallet on a signer
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct RegisterMultisig {
+pub struct SignerRegisterMultisig {
     /// The signer name
     pub name: String,
 

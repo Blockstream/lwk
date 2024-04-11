@@ -217,7 +217,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             SignerCommand::RegisterMultisig { signer, wallet } => {
-                let r = client.register_multisig(signer, wallet)?;
+                let r = client.signer_register_multisig(signer, wallet)?;
                 serde_json::to_value(r)?
             }
         },

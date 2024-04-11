@@ -520,8 +520,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::SinglesigDescriptor => {
-            let r: request::SinglesigDescriptor = serde_json::from_value(params)?;
+        Method::SignerSinglesigDescriptor => {
+            let r: request::SignerSinglesigDescriptor = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let is_mainnet = s.config.is_mainnet();
 
@@ -540,7 +540,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let descriptor = singlesig_desc(signer, script_variant, blinding_variant, is_mainnet)?;
             Response::result(
                 request.id,
-                serde_json::to_value(response::SinglesigDescriptor { descriptor })?,
+                serde_json::to_value(response::SignerSinglesigDescriptor { descriptor })?,
             )
         }
         Method::WalletMultisigDescriptor => {

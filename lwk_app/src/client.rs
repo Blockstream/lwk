@@ -148,18 +148,18 @@ impl Client {
         self.make_request(Method::WalletSendMany, Some(req))
     }
 
-    pub fn singlesig_descriptor(
+    pub fn signer_singlesig_descriptor(
         &self,
         name: String,
         descriptor_blinding_key: String,
         singlesig_kind: String,
-    ) -> Result<response::SinglesigDescriptor, Error> {
-        let req = request::SinglesigDescriptor {
+    ) -> Result<response::SignerSinglesigDescriptor, Error> {
+        let req = request::SignerSinglesigDescriptor {
             name,
             descriptor_blinding_key,
             singlesig_kind,
         };
-        self.make_request(Method::SinglesigDescriptor, Some(req))
+        self.make_request(Method::SignerSinglesigDescriptor, Some(req))
     }
 
     pub fn wallet_multisig_descriptor(

@@ -152,7 +152,7 @@ pub struct UnvalidatedAddressee {
 
 /// A request containing information to create a single signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct SinglesigDescriptor {
+pub struct SignerSinglesigDescriptor {
     /// The signer name
     pub name: String,
 

@@ -105,7 +105,7 @@ pub struct Pset {
 
 /// Response containing a single signature descriptor
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct SinglesigDescriptor {
+pub struct SignerSinglesigDescriptor {
     /// The singlesig descriptor
     pub descriptor: String,
 }

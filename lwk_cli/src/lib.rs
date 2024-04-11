@@ -205,7 +205,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 descriptor_blinding_key,
                 kind,
             } => {
-                let r = client.singlesig_descriptor(
+                let r = client.signer_singlesig_descriptor(
                     signer,
                     descriptor_blinding_key.to_string(),
                     kind.to_string(),

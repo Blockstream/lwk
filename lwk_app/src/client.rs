@@ -107,8 +107,8 @@ impl Client {
         self.make_request(Method::SignerUnload, Some(req))
     }
 
-    pub fn list_signers(&self) -> Result<response::ListSigners, Error> {
-        self.make_request(Method::ListSigners, None::<Box<RawValue>>)
+    pub fn signer_list(&self) -> Result<response::SignerList, Error> {
+        self.make_request(Method::SignerList, None::<Box<RawValue>>)
     }
 
     pub fn balance(&self, name: String, with_tickers: bool) -> Result<response::Balance, Error> {

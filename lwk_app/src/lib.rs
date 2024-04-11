@@ -386,7 +386,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let details = signer_details(&r.name, signer)?;
             Response::result(request.id, serde_json::to_value(details)?)
         }
-        Method::ListSigners => {
+        Method::SignerList => {
             let s = state.lock()?;
             let signers: Result<Vec<_>, _> = s
                 .signers
@@ -395,7 +395,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .collect();
             let mut signers = signers?;
             signers.sort();
-            let r = response::ListSigners { signers };
+            let r = response::SignerList { signers };
             Response::result(request.id, serde_json::to_value(r)?)
         }
         Method::Address => {

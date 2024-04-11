@@ -191,7 +191,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let j = client.signer_load_external(signer, fingerprint)?;
                 serde_json::to_value(j)?
             }
-            SignerCommand::List => serde_json::to_value(client.list_signers()?)?,
+            SignerCommand::List => serde_json::to_value(client.signer_list()?)?,
             SignerCommand::Details { signer } => {
                 let r = client.signer_details(signer)?;
                 serde_json::to_value(r)?

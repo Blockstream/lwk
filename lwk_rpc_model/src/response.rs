@@ -30,7 +30,7 @@ pub struct SignerGenerate {
 
 /// Response for list signers call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ListSigners {
+pub struct SignerList {
     /// Returned signers currently loaded in the server
     pub signers: Vec<Signer>,
 }

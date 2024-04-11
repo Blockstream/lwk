@@ -496,8 +496,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::WalletBalance { balance })?,
             )
         }
-        Method::SendMany => {
-            let r: request::Send = serde_json::from_value(params)?;
+        Method::WalletSendMany => {
+            let r: request::WalletSendMany = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
 

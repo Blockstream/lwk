@@ -250,7 +250,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     );
                 }
 
-                let r = client.send_many(wallet, addressees, fee_rate)?;
+                let r = client.wallet_send_many(wallet, addressees, fee_rate)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Address {

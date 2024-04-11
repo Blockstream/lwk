@@ -43,7 +43,7 @@ impl From<WalletSubCommandsEnum> for Method {
             WalletSubCommandsEnum::List => Method::WalletList,
             WalletSubCommandsEnum::Address => Method::WalletAddress,
             WalletSubCommandsEnum::Balance => Method::WalletBalance,
-            WalletSubCommandsEnum::Send => Method::SendMany,
+            WalletSubCommandsEnum::Send => Method::WalletSendMany,
             WalletSubCommandsEnum::Issue => Method::Issue,
             WalletSubCommandsEnum::Reissue => Method::Reissue,
             WalletSubCommandsEnum::MultisigDesc => Method::MultisigDescriptor,

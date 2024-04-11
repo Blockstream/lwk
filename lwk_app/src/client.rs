@@ -134,18 +134,18 @@ impl Client {
         self.make_request(Method::WalletAddress, Some(req))
     }
 
-    pub fn send_many(
+    pub fn wallet_send_many(
         &self,
         name: String,
         addressees: Vec<UnvalidatedRecipient>,
         fee_rate: Option<f32>,
     ) -> Result<response::Pset, Error> {
-        let req = request::Send {
+        let req = request::WalletSendMany {
             addressees: addressees.into_iter().map(unvalidate_addressee).collect(),
             fee_rate,
             name,
         };
-        self.make_request(Method::SendMany, Some(req))
+        self.make_request(Method::WalletSendMany, Some(req))
     }
 
     pub fn singlesig_descriptor(

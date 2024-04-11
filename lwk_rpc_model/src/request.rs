@@ -122,7 +122,7 @@ pub struct WalletBalance {
 
 /// Send a transaction from a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Send {
+pub struct WalletSendMany {
     /// The wallet name creating the transaction
     pub name: String,
 

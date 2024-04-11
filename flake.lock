@@ -36,16 +36,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1712420227,
-        "narHash": "sha256-0p1/xJ0v5NkwbsaWsRm/uHCtwHMffxmHcpHeWEXcoAg=",
+        "lastModified": 1712771317,
+        "narHash": "sha256-izFdbUfahGx3W/RYluNu7Ek53jyqhJ5x7XfUOhVe6H0=",
         "owner": "blockstream",
         "repo": "electrs",
-        "rev": "3022109ddf57309ba9ad5a6c984e58fdcfe49677",
+        "rev": "4ff496a9cbce7259ab885a7f72c35aff7135384f",
         "type": "github"
       },
       "original": {
         "owner": "blockstream",
-        "ref": "flake",
         "repo": "electrs",
         "type": "github"
       }

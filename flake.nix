@@ -16,7 +16,7 @@
       };
     };
     electrs-flake = {
-      url = "github:blockstream/electrs/flake";
+      url = "github:blockstream/electrs";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";
@@ -60,7 +60,7 @@
           # remember, `set1 // set2` does a shallow merge:
           bin = craneLib.buildPackage (commonArgs // {
             inherit cargoArtifacts;
-            doCheck = false; # use cargoTestExtraArgs = "--lib"; once there is no e2e tests in lib and once .elf files are not removed from cleanSource
+            cargoTestExtraArgs = "--lib"; # only unit testing, integration testing has more requirements (docker and other executables)
           });
 
         in

@@ -853,8 +853,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
-        Method::Issue => {
-            let r: request::Issue = serde_json::from_value(params)?;
+        Method::WalletIssue => {
+            let r: request::WalletIssue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
             let tx = wollet

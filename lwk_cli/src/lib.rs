@@ -271,7 +271,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 contract,
                 fee_rate,
             } => {
-                let r = client.issue(
+                let r = client.wallet_issue(
                     wallet,
                     satoshi_asset,
                     address_asset,

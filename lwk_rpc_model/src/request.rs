@@ -231,7 +231,7 @@ pub struct WalletDetails {
 
 /// Request to do an issuance
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Issue {
+pub struct WalletIssue {
     /// The wallet name doing the issuance
     pub name: String,
 

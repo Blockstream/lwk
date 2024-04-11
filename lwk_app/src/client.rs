@@ -283,7 +283,7 @@ impl Client {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn issue(
+    pub fn wallet_issue(
         &self,
         name: String,
         satoshi_asset: u64,
@@ -293,7 +293,7 @@ impl Client {
         contract: Option<String>,
         fee_rate: Option<f32>,
     ) -> Result<response::Pset, Error> {
-        let req = request::Issue {
+        let req = request::WalletIssue {
             name,
             satoshi_asset,
             address_asset,
@@ -302,7 +302,7 @@ impl Client {
             contract,
             fee_rate,
         };
-        self.make_request(Method::Issue, Some(req))
+        self.make_request(Method::WalletIssue, Some(req))
     }
 
     pub fn reissue(

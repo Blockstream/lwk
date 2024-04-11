@@ -119,7 +119,7 @@ pub struct MultisigDescriptor {
 
 /// A response containing an xpub with keyorigin
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Xpub {
+pub struct SignerXpub {
     /// The xpub with keyorigin prepended (fingerprint+derivation path)
     pub keyorigin_xpub: String,
 }

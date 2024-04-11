@@ -178,9 +178,13 @@ impl Client {
         self.make_request(Method::MultisigDescriptor, Some(req))
     }
 
-    pub fn xpub(&self, name: String, xpub_kind: String) -> Result<response::Xpub, Error> {
-        let req = request::Xpub { name, xpub_kind };
-        self.make_request(Method::Xpub, Some(req))
+    pub fn signer_xpub(
+        &self,
+        name: String,
+        xpub_kind: String,
+    ) -> Result<response::SignerXpub, Error> {
+        let req = request::SignerXpub { name, xpub_kind };
+        self.make_request(Method::SignerXpub, Some(req))
     }
 
     pub fn signer_register_multisig(

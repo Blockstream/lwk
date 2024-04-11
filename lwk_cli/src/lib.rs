@@ -213,7 +213,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 serde_json::to_value(r)?
             }
             SignerCommand::Xpub { signer, kind } => {
-                let r = client.xpub(signer, kind.to_string())?;
+                let r = client.signer_xpub(signer, kind.to_string())?;
                 serde_json::to_value(r)?
             }
             SignerCommand::RegisterMultisig { signer, wallet } => {
@@ -364,7 +364,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 ticker,
                 version,
             } => {
-                let r = client.asset_contract(domain, issuer_pubkey, name, precision, ticker, version)?;
+                let r = client.asset_contract(
+                    domain,
+                    issuer_pubkey,
+                    name,
+                    precision,
+                    ticker,
+                    version,
+                )?;
                 serde_json::to_value(r)?
             }
             AssetCommand::Details { asset } => {

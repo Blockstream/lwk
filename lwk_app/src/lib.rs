@@ -593,8 +593,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             }
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
-        Method::Xpub => {
-            let r: request::Xpub = serde_json::from_value(params)?;
+        Method::SignerXpub => {
+            let r: request::SignerXpub = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let is_mainnet = s.config.is_mainnet();
 
@@ -608,7 +608,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let keyorigin_xpub = signer.keyorigin_xpub(bip, is_mainnet)?;
             Response::result(
                 request.id,
-                serde_json::to_value(response::Xpub { keyorigin_xpub })?,
+                serde_json::to_value(response::SignerXpub { keyorigin_xpub })?,
             )
         }
         Method::Sign => {

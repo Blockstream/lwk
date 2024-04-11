@@ -191,7 +191,7 @@ pub struct SignerRegisterMultisig {
 
 /// Request to a signer for a derived xpub
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Xpub {
+pub struct SignerXpub {
     /// The signer name
     pub name: String,
 

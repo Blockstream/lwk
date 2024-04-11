@@ -289,7 +289,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 address_asset,
                 fee_rate,
             } => {
-                let r = client.reissue(wallet, asset, satoshi_asset, address_asset, fee_rate)?;
+                let r =
+                    client.wallet_reissue(wallet, asset, satoshi_asset, address_asset, fee_rate)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::MultisigDesc {

@@ -256,7 +256,7 @@ pub struct WalletIssue {
 
 /// Request to do a reissuance
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Reissue {
+pub struct WalletReissue {
     /// The wallet name doing the reissuance
     pub name: String,
 

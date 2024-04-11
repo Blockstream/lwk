@@ -877,8 +877,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::Reissue => {
-            let r: request::Reissue = serde_json::from_value(params)?;
+        Method::WalletReissue => {
+            let r: request::WalletReissue = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let asset_id = AssetId::from_str(&r.asset)?;
             let issuance_tx = s.get_issuance_tx(&asset_id);

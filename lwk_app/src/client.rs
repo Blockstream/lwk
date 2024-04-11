@@ -305,7 +305,7 @@ impl Client {
         self.make_request(Method::WalletIssue, Some(req))
     }
 
-    pub fn reissue(
+    pub fn wallet_reissue(
         &self,
         name: String,
         asset: String,
@@ -313,14 +313,14 @@ impl Client {
         address_asset: Option<String>,
         fee_rate: Option<f32>,
     ) -> Result<response::Pset, Error> {
-        let req = request::Reissue {
+        let req = request::WalletReissue {
             name,
             asset,
             satoshi_asset,
             address_asset,
             fee_rate,
         };
-        self.make_request(Method::Reissue, Some(req))
+        self.make_request(Method::WalletReissue, Some(req))
     }
 
     pub fn contract(

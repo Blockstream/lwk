@@ -76,6 +76,10 @@ fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).unwrap().as_str().unwrap()
 }
 
+fn get_len(v: &Value, key: &str) -> usize {
+    v.get(key).unwrap().as_array().unwrap().len()
+}
+
 fn get_desc(r: &Value) -> String {
     let desc = get_str(r, "descriptor");
     // The returned descriptor is equivalent but it could be slightly different
@@ -268,6 +272,15 @@ fn test_start_stop_persist() {
     let expected_assets = sh(&format!("{cli} asset list"));
     let r = expected_assets.get("assets").unwrap();
     assert_eq!(r.as_array().unwrap().len(), 3);
+
+    // Add another signer that is not persisted
+    let r = sh(&format!("{cli} signer generate"));
+    let m = get_str(&r, "mnemonic");
+    sh(&format!(
+        "{cli} signer load-software --persist false --mnemonic '{m}' --signer s4"
+    ));
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 4);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

@@ -78,7 +78,7 @@ pub struct Signer {
 
 /// Address response
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Address {
+pub struct WalletAddress {
     /// The receiving address
     pub address: String,
 

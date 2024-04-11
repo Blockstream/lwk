@@ -116,18 +116,18 @@ impl Client {
         self.make_request(Method::Balance, Some(req))
     }
 
-    pub fn address(
+    pub fn wallet_address(
         &self,
         name: String,
         index: Option<u32>,
         signer: Option<String>,
-    ) -> Result<response::Address, Error> {
-        let req = request::Address {
+    ) -> Result<response::WalletAddress, Error> {
+        let req = request::WalletAddress {
             name,
             index,
             signer,
         };
-        self.make_request(Method::Address, Some(req))
+        self.make_request(Method::WalletAddress, Some(req))
     }
 
     pub fn send_many(

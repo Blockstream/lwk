@@ -99,7 +99,7 @@ pub struct SignerUnload {
 
 /// Request a receiving address
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Address {
+pub struct WalletAddress {
     /// The wallet name
     pub name: String,
 

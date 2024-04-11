@@ -258,7 +258,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 wallet,
                 signer,
             } => {
-                let r = client.address(wallet, index, signer)?;
+                let r = client.wallet_address(wallet, index, signer)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::List => serde_json::to_value(client.wallet_list()?)?,

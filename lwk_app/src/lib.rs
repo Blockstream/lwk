@@ -543,8 +543,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::SinglesigDescriptor { descriptor })?,
             )
         }
-        Method::MultisigDescriptor => {
-            let r: request::MultisigDescriptor = serde_json::from_value(params)?;
+        Method::WalletMultisigDescriptor => {
+            let r: request::WalletMultisigDescriptor = serde_json::from_value(params)?;
 
             let multisig_variant = r
                 .multisig_kind
@@ -572,7 +572,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             )?;
             Response::result(
                 request.id,
-                serde_json::to_value(response::MultisigDescriptor { descriptor })?,
+                serde_json::to_value(response::WalletMultisigDescriptor { descriptor })?,
             )
         }
         Method::SignerRegisterMultisig => {

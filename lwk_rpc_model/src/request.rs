@@ -165,7 +165,7 @@ pub struct SinglesigDescriptor {
 
 /// A request containing information to create a multi signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct MultisigDescriptor {
+pub struct WalletMultisigDescriptor {
     /// The descriptor blinding key
     pub descriptor_blinding_key: String,
 

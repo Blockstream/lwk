@@ -162,20 +162,20 @@ impl Client {
         self.make_request(Method::SinglesigDescriptor, Some(req))
     }
 
-    pub fn multisig_descriptor(
+    pub fn wallet_multisig_descriptor(
         &self,
         descriptor_blinding_key: String,
         multisig_kind: String,
         threshold: u32,
         keyorigin_xpubs: Vec<String>,
-    ) -> Result<response::MultisigDescriptor, Error> {
-        let req = request::MultisigDescriptor {
+    ) -> Result<response::WalletMultisigDescriptor, Error> {
+        let req = request::WalletMultisigDescriptor {
             descriptor_blinding_key,
             multisig_kind,
             threshold,
             keyorigin_xpubs,
         };
-        self.make_request(Method::MultisigDescriptor, Some(req))
+        self.make_request(Method::WalletMultisigDescriptor, Some(req))
     }
 
     pub fn signer_xpub(

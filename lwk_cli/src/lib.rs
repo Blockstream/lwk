@@ -299,7 +299,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 threshold,
                 keyorigin_xpub,
             } => {
-                let r = client.multisig_descriptor(
+                let r = client.wallet_multisig_descriptor(
                     descriptor_blinding_key.to_string(),
                     kind.to_string(),
                     threshold,

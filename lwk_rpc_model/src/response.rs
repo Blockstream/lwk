@@ -112,7 +112,7 @@ pub struct SinglesigDescriptor {
 
 /// Response containing a multi signature descriptor
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct MultisigDescriptor {
+pub struct WalletMultisigDescriptor {
     /// The multisig descriptor
     pub descriptor: String,
 }

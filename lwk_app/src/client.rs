@@ -111,9 +111,13 @@ impl Client {
         self.make_request(Method::SignerList, None::<Box<RawValue>>)
     }
 
-    pub fn balance(&self, name: String, with_tickers: bool) -> Result<response::Balance, Error> {
-        let req = request::Balance { name, with_tickers };
-        self.make_request(Method::Balance, Some(req))
+    pub fn wallet_balance(
+        &self,
+        name: String,
+        with_tickers: bool,
+    ) -> Result<response::WalletBalance, Error> {
+        let req = request::WalletBalance { name, with_tickers };
+        self.make_request(Method::WalletBalance, Some(req))
     }
 
     pub fn wallet_address(

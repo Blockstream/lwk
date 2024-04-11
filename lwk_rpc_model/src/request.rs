@@ -112,7 +112,7 @@ pub struct WalletAddress {
 
 /// The balance of a wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Balance {
+pub struct WalletBalance {
     /// The wallet name
     pub name: String,
 

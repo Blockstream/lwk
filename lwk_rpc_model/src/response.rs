@@ -91,7 +91,7 @@ pub struct WalletAddress {
 
 /// Balance respone
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Balance {
+pub struct WalletBalance {
     /// A map of the balance of every asset in the wallet
     pub balance: HashMap<String, i64>,
 }

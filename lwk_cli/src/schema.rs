@@ -82,7 +82,7 @@ impl From<AssetSubCommandsEnum> for Method {
         match value {
             AssetSubCommandsEnum::Contract => Method::Contract,
             AssetSubCommandsEnum::Details => Method::AssetDetails,
-            AssetSubCommandsEnum::List => Method::ListAssets,
+            AssetSubCommandsEnum::List => Method::AssetList,
             AssetSubCommandsEnum::Insert => Method::AssetInsert,
             AssetSubCommandsEnum::Remove => Method::AssetRemove,
             AssetSubCommandsEnum::Publish => Method::AssetPublish,

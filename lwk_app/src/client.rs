@@ -344,8 +344,8 @@ impl Client {
         self.make_request(Method::AssetDetails, Some(req))
     }
 
-    pub fn list_assets(&self) -> Result<response::ListAssets, Error> {
-        self.make_request(Method::ListAssets, None::<Box<RawValue>>)
+    pub fn asset_list(&self) -> Result<response::AssetList, Error> {
+        self.make_request(Method::AssetList, None::<Box<RawValue>>)
     }
 
     pub fn asset_insert(

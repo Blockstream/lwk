@@ -393,7 +393,7 @@ pub struct AssetPublish {
 
 /// A list of assets
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ListAssets {
+pub struct AssetList {
     /// The list of assets
     pub assets: Vec<Asset>,
 }

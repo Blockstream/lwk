@@ -45,7 +45,7 @@ pub struct LoadWallet {
 
 /// Unload the wallet identified by the given name
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UnloadWallet {
+pub struct WalletUnload {
     /// The name given to the wallet
     pub name: String,
 }

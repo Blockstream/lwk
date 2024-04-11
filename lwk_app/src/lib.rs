@@ -295,8 +295,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::UnloadWallet => {
-            let r: request::UnloadWallet = serde_json::from_value(params)?;
+        Method::WalletUnload => {
+            let r: request::WalletUnload = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let removed = s.wollets.remove(&r.name)?;
             s.tx_memos.remove(&r.name);
@@ -305,7 +305,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(
                 request.id,
-                serde_json::to_value(response::UnloadWallet {
+                serde_json::to_value(response::WalletUnload {
                     unloaded: response::Wallet {
                         name: r.name,
                         descriptor: removed.descriptor().to_string(),

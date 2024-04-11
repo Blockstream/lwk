@@ -97,9 +97,9 @@ impl Client {
         self.make_request(Method::LoadWallet, Some(req))
     }
 
-    pub fn unload_wallet(&self, name: String) -> Result<response::UnloadWallet, Error> {
-        let req = request::UnloadWallet { name };
-        self.make_request(Method::UnloadWallet, Some(req))
+    pub fn wallet_unload(&self, name: String) -> Result<response::WalletUnload, Error> {
+        let req = request::WalletUnload { name };
+        self.make_request(Method::WalletUnload, Some(req))
     }
 
     pub fn signer_unload(&self, name: String) -> Result<response::SignerUnload, Error> {

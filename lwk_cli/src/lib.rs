@@ -311,7 +311,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 pset,
                 wallet,
             } => {
-                let r = client.broadcast(wallet, dry_run, pset)?;
+                let r = client.wallet_broadcast(wallet, dry_run, pset)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Details { wallet } => {

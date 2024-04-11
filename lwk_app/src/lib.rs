@@ -631,8 +631,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
-        Method::Broadcast => {
-            let r: request::Broadcast = serde_json::from_value(params)?;
+        Method::WalletBroadcast => {
+            let r: request::WalletBroadcast = serde_json::from_value(params)?;
             let mut s = state.lock()?;
 
             let wollet = s.wollets.get_mut(&r.name)?;
@@ -647,7 +647,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(
                 request.id,
-                serde_json::to_value(response::Broadcast {
+                serde_json::to_value(response::WalletBroadcast {
                     txid: tx.txid().to_string(),
                 })?,
             )

@@ -126,7 +126,7 @@ pub struct Xpub {
 
 /// The response of a broadcast
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Broadcast {
+pub struct WalletBroadcast {
     /// The txid of the transaction just broadacasted
     pub txid: String,
 }

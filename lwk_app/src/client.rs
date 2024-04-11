@@ -197,18 +197,18 @@ impl Client {
         self.make_request(Method::Sign, Some(req))
     }
 
-    pub fn broadcast(
+    pub fn wallet_broadcast(
         &self,
         name: String,
         dry_run: bool,
         pset: String,
-    ) -> Result<response::Broadcast, Error> {
-        let req = request::Broadcast {
+    ) -> Result<response::WalletBroadcast, Error> {
+        let req = request::WalletBroadcast {
             name,
             dry_run,
             pset,
         };
-        self.make_request(Method::Broadcast, Some(req))
+        self.make_request(Method::WalletBroadcast, Some(req))
     }
 
     pub fn wallet_details(&self, name: String) -> Result<response::WalletDetails, Error> {

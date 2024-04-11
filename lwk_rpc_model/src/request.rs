@@ -211,7 +211,7 @@ pub struct Sign {
 
 /// Request to broadcast a transaction
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Broadcast {
+pub struct WalletBroadcast {
     /// The wallet name
     pub name: String,
 

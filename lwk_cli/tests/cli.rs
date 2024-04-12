@@ -242,17 +242,14 @@ fn test_state_regression() {
     };
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    let expected_signers = sh(&format!("{cli} signer list"));
-    let r = expected_signers.get("signers").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 3);
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 3);
 
-    let expected_wallets = sh(&format!("{cli} wallet list"));
-    let r = expected_wallets.get("wallets").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 1);
+    let r = sh(&format!("{cli} wallet list"));
+    assert_eq!(get_len(&r, "wallets"), 1);
 
-    let expected_assets = sh(&format!("{cli} asset list"));
-    let r = expected_assets.get("assets").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 3);
+    let r = sh(&format!("{cli} asset list"));
+    assert_eq!(get_len(&r, "assets"), 3);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -306,16 +303,13 @@ fn test_start_stop_persist() {
     ));
 
     let expected_signers = sh(&format!("{cli} signer list"));
-    let r = expected_signers.get("signers").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 3);
+    assert_eq!(get_len(&expected_signers, "signers"), 3);
 
     let expected_wallets = sh(&format!("{cli} wallet list"));
-    let r = expected_wallets.get("wallets").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 1);
+    assert_eq!(get_len(&expected_wallets, "wallets"), 1);
 
     let expected_assets = sh(&format!("{cli} asset list"));
-    let r = expected_assets.get("assets").unwrap();
-    assert_eq!(r.as_array().unwrap().len(), 3);
+    assert_eq!(get_len(&expected_assets, "assets"), 3);
 
     // Add another signer that is not persisted
     let r = sh(&format!("{cli} signer generate"));

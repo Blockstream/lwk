@@ -1296,3 +1296,44 @@ fn test_elip151() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_3of5() {
+    let (t, _tmp, cli, _params, server) = setup_cli();
+
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
+    sw_signer(&cli, "s3");
+    sw_signer(&cli, "s4");
+    sw_signer(&cli, "s5");
+
+    let signers = &["s1", "s2", "s3", "s4", "s5"];
+    multisig_wallet(&cli, "multi", 3, signers, "elip151");
+
+    fund(&server, &cli, "multi", 1_000_000);
+
+    let r = sh(&format!(
+        "{cli} wallet issue --wallet multi --satoshi-asset 1000 --satoshi-token 1"
+    ));
+    let pset = get_str(&r, "pset");
+    let r = sh(&format!(
+        "{cli} wallet pset-details --wallet multi -p {pset}"
+    ));
+    let issuances = r.get("issuances").unwrap().as_array().unwrap();
+    let issuance = &issuances[0].as_object().unwrap();
+    let asset = issuance.get("asset").unwrap().as_str().unwrap();
+    let token = issuance.get("token").unwrap().as_str().unwrap();
+    complete(&cli, "multi", pset, signers);
+    assert_eq!(1000, get_balance(&cli, "multi", asset));
+    assert_eq!(1, get_balance(&cli, "multi", token));
+
+    let r = sh(&format!(
+        "{cli} wallet reissue --wallet multi --asset {asset} --satoshi-asset 1"
+    ));
+    complete(&cli, "multi", get_str(&r, "pset"), signers);
+    assert_eq!(1001, get_balance(&cli, "multi", asset));
+    assert_eq!(1, get_balance(&cli, "multi", token));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

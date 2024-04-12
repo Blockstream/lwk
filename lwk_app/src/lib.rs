@@ -56,6 +56,7 @@ mod config;
 pub mod consts;
 mod error;
 pub mod method;
+mod reqwest_transport;
 mod state;
 
 pub struct App {

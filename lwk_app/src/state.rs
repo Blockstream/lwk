@@ -223,6 +223,25 @@ impl AppAsset {
             _ => None,
         }
     }
+
+    pub fn request(&self) -> Option<Request> {
+        match self {
+            AppAsset::RegistryAsset(a) => {
+                let params = request::AssetInsert {
+                    asset_id: a.asset_id.to_string(),
+                    contract: a.contract_str(),
+                    issuance_tx: serialize(&a.issuance_tx).to_hex(),
+                };
+                Some(Request {
+                    jsonrpc: "2.0".into(),
+                    id: None,
+                    method: Method::AssetInsert.to_string(),
+                    params: Some(serde_json::to_value(params).expect("derived")),
+                })
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -705,22 +724,8 @@ impl State {
 
         // Assets
         for (_, a) in self.assets.iter() {
-            match a {
-                AppAsset::RegistryAsset(a) => {
-                    let params = request::AssetInsert {
-                        asset_id: a.asset_id.to_string(),
-                        contract: a.contract_str(),
-                        issuance_tx: serialize(&a.issuance_tx).to_hex(),
-                    };
-                    let r = Request {
-                        jsonrpc: "2.0".into(),
-                        id: None,
-                        method: Method::AssetInsert.to_string(),
-                        params: Some(serde_json::to_value(params)?),
-                    };
-                    requests.push(r);
-                }
-                _ => continue,
+            if let Some(r) = a.request() {
+                requests.push(r);
             }
         }
 

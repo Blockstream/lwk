@@ -302,6 +302,9 @@ fn test_start_stop_persist() {
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
+    let r = sh_result(&format!("{cli} asset from-explorer --asset {asset}"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("already inserted"));
+
     let expected_signers = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&expected_signers, "signers"), 3);
 

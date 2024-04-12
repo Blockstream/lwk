@@ -33,6 +33,7 @@
           pkgs = import nixpkgs {
             inherit system overlays;
           };
+          inherit (pkgs) lib;
 
           rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
@@ -40,8 +41,22 @@
 
           electrs = electrs-flake.apps.${system}.blockstream-electrs-liquid;
 
-          #src = craneLib.cleanCargoSource ./.; # rust specific, but filters out md files, which are included with include_str for doc purpose
-          src = nixpkgs.lib.cleanSource ./.;
+          # When filtering sources, we want to allow assets other than .rs files
+          src = lib.cleanSourceWith {
+            src = ./.; # The original, unfiltered source
+            filter = path: type:
+              (lib.hasSuffix "\.elf" path) ||
+              (lib.hasSuffix "\.json" path) ||
+              (lib.hasSuffix "\.md" path) ||
+              (lib.hasInfix "/test_data/" path) ||
+              (lib.hasInfix "/test/data/" path) ||
+              (lib.hasInfix "/tests/data/" path) || # TODO unify these dir names
+
+              # Default filter from crane (allow .rs files)
+              (craneLib.filterCargoSources path type)
+            ;
+          };
+
 
           nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ]; # required only at build time
           buildInputs = [ pkgs.openssl pkgs.udev ]; # also required at runtime

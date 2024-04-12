@@ -2,7 +2,6 @@ use std::{fmt, time::Duration};
 
 use jsonrpc::{Request, Response};
 
-/// An HTTP transport that uses [`minreq`] and is useful for running a bitcoind RPC client.
 #[derive(Clone, Debug)]
 pub struct ReqwestHttpTransport {
     /// URL of the RPC server.

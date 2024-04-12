@@ -38,6 +38,9 @@ pub enum Error {
     #[error("Hex Error: {0}")]
     Hex(lwk_wollet::elements::hex::Error),
 
+    #[error("Elements Encode Error: {0}")]
+    ElementsEncode(lwk_wollet::elements::encode::Error),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
@@ -136,6 +139,11 @@ impl From<String> for Error {
 impl From<lwk_wollet::elements::hex::Error> for Error {
     fn from(value: lwk_wollet::elements::hex::Error) -> Self {
         Error::Hex(value)
+    }
+}
+impl From<lwk_wollet::elements::encode::Error> for Error {
+    fn from(value: lwk_wollet::elements::encode::Error) -> Self {
+        Error::ElementsEncode(value)
     }
 }
 

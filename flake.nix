@@ -76,6 +76,12 @@
           bin = craneLib.buildPackage (commonArgs // {
             inherit cargoArtifacts;
             cargoTestExtraArgs = "--lib"; # only unit testing, integration testing has more requirements (docker and other executables)
+
+            # Without the following also libs are included in the package, and we need to produce only the executable.
+            # There should probably a way to avoid creating it in the first place, but for now this works.
+            postInstall = ''
+              rm -r $out/lib
+            '';
           });
 
         in

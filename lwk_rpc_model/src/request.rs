@@ -365,6 +365,13 @@ pub struct AssetRemove {
     pub asset_id: String,
 }
 
+/// Request to insert an asset retrieving information from the explorer
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AssetFromExplorer {
+    /// The asset identifier
+    pub asset_id: String,
+}
+
 /// Request to publish
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetPublish {

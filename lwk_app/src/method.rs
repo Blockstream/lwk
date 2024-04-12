@@ -54,6 +54,7 @@ pub enum Method {
     AssetRemove,
     AssetList,
     AssetDetails,
+    AssetFromExplorer,
     AssetPublish,
 }
 impl Method {
@@ -100,6 +101,7 @@ impl Method {
                 Method::AssetRemove => schema_for!(request::AssetRemove),
                 Method::AssetList => schema_for!(request::Empty),
                 Method::AssetDetails => schema_for!(request::AssetDetails),
+                Method::AssetFromExplorer => schema_for!(request::AssetFromExplorer),
                 Method::AssetPublish => schema_for!(request::AssetPublish),
             },
             Direction::Response => match self {
@@ -143,6 +145,7 @@ impl Method {
                 Method::AssetRemove => schema_for!(request::Empty),
                 Method::AssetList => schema_for!(response::AssetList),
                 Method::AssetDetails => schema_for!(response::AssetDetails),
+                Method::AssetFromExplorer => schema_for!(request::Empty),
                 Method::AssetPublish => schema_for!(response::AssetPublish),
             },
         })
@@ -192,6 +195,7 @@ impl FromStr for Method {
             "asset_remove" => Method::AssetRemove,
             "asset_list" => Method::AssetList,
             "asset_details" => Method::AssetDetails,
+            "asset_from_explorer" => Method::AssetFromExplorer,
             "asset_publish" => Method::AssetPublish,
             _ => {
                 return Err(MethodNotExist {
@@ -243,6 +247,7 @@ impl std::fmt::Display for Method {
             Method::AssetRemove => "asset_remove",
             Method::AssetList => "asset_list",
             Method::AssetDetails => "asset_details",
+            Method::AssetFromExplorer => "asset_from_explorer",
             Method::AssetPublish => "asset_publish",
         };
         write!(f, "{}", s)

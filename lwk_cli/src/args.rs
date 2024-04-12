@@ -719,6 +719,15 @@ pub enum AssetCommand {
         asset: String,
     },
 
+    /// Insert an asset getting data from the block explorer
+    ///
+    /// This is worse from a privacy perspective.
+    FromExplorer {
+        /// Asset ID in hex
+        #[arg(short, long)]
+        asset: String,
+    },
+
     /// Try to publish the contract identified by the given asset id
     ///
     /// The asset must be stored in the server so that the contract can be fetched internally

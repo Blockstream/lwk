@@ -396,6 +396,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.asset_remove(asset)?;
                 serde_json::to_value(r)?
             }
+            AssetCommand::FromExplorer { asset } => {
+                let r = client.asset_from_explorer(asset)?;
+                serde_json::to_value(r)?
+            }
             AssetCommand::Publish { asset } => {
                 let r = client.asset_publish(asset)?;
                 serde_json::to_value(r)?

@@ -380,6 +380,11 @@ impl Client {
         self.make_request(Method::AssetRemove, Some(req))
     }
 
+    pub fn asset_from_explorer(&self, asset_id: String) -> Result<response::Empty, Error> {
+        let req = request::AssetFromExplorer { asset_id };
+        self.make_request(Method::AssetFromExplorer, Some(req))
+    }
+
     pub fn asset_publish(&self, asset_id: String) -> Result<response::AssetPublish, Error> {
         let req = request::AssetPublish { asset_id };
         self.make_request(Method::AssetPublish, Some(req))

@@ -42,6 +42,7 @@ use lwk_wollet::{full_scan_with_electrum_client, Wollet};
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 
+use crate::explorer::{get_registry_data, get_tx};
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
 use lwk_rpc_model::{request, response};
@@ -55,6 +56,7 @@ mod client;
 mod config;
 pub mod consts;
 mod error;
+mod explorer;
 pub mod method;
 mod state;
 
@@ -956,6 +958,22 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .map_err(|e| Error::Generic(e.to_string()))?;
             s.remove_asset(&asset_id)?;
             s.persist_all()?;
+            Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
+        Method::AssetFromExplorer => {
+            let r: request::AssetFromExplorer = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            let asset_id = AssetId::from_str(&r.asset_id)?;
+            if s.get_asset(&asset_id).is_ok() {
+                return Err(Error::AssetAlreadyInserted(r.asset_id));
+            }
+            let registry_data = get_registry_data(&s.config.registry_url, &asset_id)?;
+            let txid = Txid::from_str(&registry_data.issuance_txin.txid)?;
+            let issuance_tx = get_tx(&s.config.explorer_url, &txid)?;
+            s.insert_asset(asset_id, issuance_tx, registry_data.contract)?;
+            // convert the request to an AssetInsert to skip network calls
+            let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");
+            s.persist(&asset_insert_request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
         Method::SignerJadeId => {

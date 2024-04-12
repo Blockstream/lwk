@@ -83,6 +83,9 @@ pub enum Error {
     #[error("Given contract does not commit to asset '{0}'")]
     InvalidContractForAsset(String),
 
+    #[error("Asset '{0}' already inserted")]
+    AssetAlreadyInserted(String),
+
     #[error(transparent)]
     MethodNotExist(#[from] crate::method::MethodNotExist),
 

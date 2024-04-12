@@ -7,9 +7,12 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, bail, Context};
 use clap::CommandFactory;
-use lwk_app::Config;
+use lwk_app::{
+    Config,
+    Error::{SerdeJson, TinyHttp},
+};
 use serde_json::Value;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter, FmtSubscriber};
 
@@ -116,14 +119,17 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         config.ignore_start_error = ignore_start_error;
                     }
                     config.addr = addr;
+                    let state_path = config.state_path()?;
                     let mut app = lwk_app::App::new(config)?;
 
-                    app.run().with_context(|| {
-                        format!(
-                            "Cannot start the server at \"{}\". It is probably already running.",
-                            app.addr()
-                        )
-                    })?;
+                    if let Err(err) = app.run() {
+                        let msg = format!("Cannot start the server at {}", addr);
+                        match err {
+                            TinyHttp(e) => bail!("{}, is it already running?\nPlease stop the server and try again. Error: {}", msg, e),
+                            SerdeJson(e) => bail!("{}, there was an error decoding the state file {}\nPlease back it up and remove it and try again. Error: {}", msg, state_path.display(), e),
+                            _ => bail!("Cannot start the server at {}: {}", addr, err),
+                        }
+                    }
 
                     // get the app version
                     let version = client.version()?.version;

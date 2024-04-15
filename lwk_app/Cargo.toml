@@ -8,7 +8,7 @@ documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
 lwk_jade = { version = "0.3.0" }
-jsonrpc = { version = "0.17.0", features = ["minreq_http"] }
+jsonrpc = { version = "0.17.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 secp256k1 = "0.27"

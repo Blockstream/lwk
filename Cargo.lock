@@ -1279,7 +1279,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26d9104d516092f092d97448787505881fdb6518293b2d6500bf9c180c839dd"
 dependencies = [
  "base64 0.13.1",
- "minreq",
  "serde",
  "serde_json",
 ]
@@ -1662,17 +1661,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d811f3e15f28568be3407c8e7fdb6514c1cda3cb30683f15b6a1a1dc4ea14a7"
 dependencies = [
  "adler",
-]
-
-[[package]]
-name = "minreq"
-version = "2.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb3371dfc7b772c540da1380123674a8e20583aca99907087d990ca58cf44203"
-dependencies = [
- "log",
- "serde",
- "serde_json",
 ]
 
 [[package]]

@@ -68,16 +68,6 @@ impl PinServer {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct Args;
-
-impl ImageArgs for Args {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        let args = ["bash".to_string()];
-        Box::new(args.into_iter())
-    }
-}
-
 impl Image for PinServer {
     type Args = ();
 

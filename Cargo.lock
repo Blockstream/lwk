@@ -1435,6 +1435,7 @@ name = "lwk_containers"
 version = "0.2.0"
 dependencies = [
  "bitcoin",
+ "lwk_test_util",
  "rand",
  "tempfile",
  "testcontainers",

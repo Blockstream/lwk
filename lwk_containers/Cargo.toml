@@ -11,3 +11,6 @@ bitcoin = "0.31"
 rand = "0.8.5"
 tempfile = "3.8.0"
 testcontainers = "0.14.0"
+
+[dev-dependencies]
+lwk_test_util = { version = "0.2.0" }

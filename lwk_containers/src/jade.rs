@@ -1,6 +1,6 @@
 use std::env;
 
-use testcontainers::{core::WaitFor, Image, ImageArgs};
+use testcontainers::{core::WaitFor, Image};
 
 pub const EMULATOR_PORT: u16 = 30_121;
 

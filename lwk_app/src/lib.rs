@@ -984,7 +984,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             }
             let registry_data = get_registry_data(&s.config.registry_url, &asset_id)?;
             let txid = Txid::from_str(&registry_data.issuance_txin.txid)?;
-            let issuance_tx = get_tx(&s.config.explorer_url, &txid)?;
+            let issuance_tx = get_tx(&s.config.esplora_api_url, &txid)?;
             s.insert_asset(asset_id, issuance_tx, registry_data.contract)?;
             // convert the request to an AssetInsert to skip network calls
             let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");
@@ -1040,17 +1040,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let asset = s.get_asset(&asset_id)?;
             if let AppAsset::RegistryAsset(asset) = asset {
                 let client = reqwest::blocking::Client::new();
-                let url = match s.config.network {
-                    lwk_wollet::ElementsNetwork::Liquid => "https://assets.blockstream.info",
-                    lwk_wollet::ElementsNetwork::LiquidTestnet => {
-                        "https://assets-testnet.blockstream.info/"
-                    }
-                    lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                        return Err(Error::Generic("Can't publish on regtest".to_string()));
-                    }
-                };
+                let url = &s.config.registry_url;
                 let contract = asset.contract();
                 let data = serde_json::json!({"asset_id": asset_id, "contract": contract});
+                tracing::debug!("posting {data:?} as json to {url} ");
                 let response = client.post(url).json(&data).send()?;
                 let mut result = response.text()?;
                 if result.contains("failed verifying linked entity") {

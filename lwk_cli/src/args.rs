@@ -775,6 +775,16 @@ pub enum ServerCommand {
         #[arg(short, long)]
         electrum_url: Option<String>,
 
+        #[arg(long)]
+        #[cfg(feature = "registry")]
+        /// Needed only in regtest because public network have their official defaults
+        registry_url: Option<String>,
+
+        #[arg(long)]
+        #[cfg(feature = "registry")]
+        /// Needed only in regtest for the registry server to fetch transactions
+        esplora_api_url: Option<String>,
+
         /// Location for logs, server state, and other LWK data
         ///
         /// Default is `$HOME/.lwk`, or `./.lwk` if unable to determine the home dir

@@ -79,6 +79,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             match a.command {
                 ServerCommand::Start {
                     electrum_url,
+                    #[cfg(feature = "registry")]
+                    registry_url,
+                    #[cfg(feature = "registry")]
+                    esplora_api_url,
                     datadir,
                     timeout,
                     scanning_interval,
@@ -95,12 +99,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     let mut config = match args.network {
                         Network::Mainnet => Config::default_mainnet(datadir),
                         Network::Testnet => Config::default_testnet(datadir),
-                        Network::Regtest => Config::default_regtest(
-                            electrum_url.as_ref().ok_or_else(|| {
-                                anyhow!("on regtest you have to specify --electrum-url")
-                            })?,
-                            datadir,
-                        ),
+                        Network::Regtest => Config::default_regtest(datadir),
                     };
                     if let Some(timeout) = timeout {
                         config.timeout = Duration::from_secs(timeout);
@@ -110,7 +109,20 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     };
                     if let Some(url) = electrum_url {
                         config.electrum_url = url;
+                    } else if let Network::Regtest = args.network {
+                        anyhow::bail!("on regtest you have to specify --electrum-url");
                     };
+
+                    #[cfg(feature = "registry")]
+                    if let Network::Regtest = args.network {
+                        config.registry_url = registry_url.ok_or(anyhow!(
+                            "on regtest with registry feature you have to specify --registry-url"
+                        ))?;
+                        config.esplora_api_url = esplora_api_url.ok_or(anyhow!(
+                            "on regtest with registry feature you have to specify --esplora-api-url"
+                        ))?;
+                    }
+
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;
 

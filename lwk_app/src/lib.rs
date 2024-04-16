@@ -84,6 +84,13 @@ impl App {
         })
     }
 
+    fn apply_request(&self, client: &Client, line: &str) -> Result<(), Error> {
+        let r: Request = serde_json::from_str(line)?;
+        let method: Method = r.method.parse()?;
+        let _value: Value = client.make_request(method, r.params)?;
+        Ok(())
+    }
+
     pub fn run(&mut self) -> Result<(), Error> {
         if self.rpc.is_some() {
             return Err(error::Error::AlreadyStarted);
@@ -123,18 +130,9 @@ impl App {
                 let client = self.client()?;
 
                 for (n, line) in string.lines().enumerate() {
-                    let r: Request = serde_json::from_str(line)?;
-                    let method: Method = r.method.parse()?;
-                    if let Err(err) =
-                        client.make_request::<Value, Value>(method.clone(), r.params.clone())
-                    {
+                    if let Err(err) = self.apply_request(&client, line) {
                         if self.config.ignore_start_error {
-                            tracing::warn!(
-                                "Error re-applying state request (error: {}, method: {}, params {})",
-                                err,
-                                method,
-                                r.params.unwrap_or_default()
-                            );
+                            tracing::warn!("Error re-applying state request (error: {})", err);
                         } else {
                             tracing::error!("Error re-applying state request, consider starting using flag --ignore-start-error or remove line {} from {}", n+1, path.display());
                             return Err(err);

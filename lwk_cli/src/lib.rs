@@ -82,7 +82,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     datadir,
                     timeout,
                     scanning_interval,
-                    ignore_start_error,
                 } => {
                     let (tx, rx) = std::sync::mpsc::channel();
                     let _ = ctrlc::try_set_handler(move || {
@@ -112,9 +111,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     if let Some(url) = electrum_url {
                         config.electrum_url = url;
                     };
-                    if let Some(ignore_start_error) = ignore_start_error {
-                        config.ignore_start_error = ignore_start_error;
-                    }
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;
 

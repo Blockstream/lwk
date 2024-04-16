@@ -95,6 +95,9 @@ pub enum Error {
     #[error("Cannot start the server at \"{0}\". It is probably already running.")]
     ServerStart(String),
 
+    #[error("Error re-applying start request\nError {0}\nAt line {1} from file {2}\nConsider: (a) correct the line (b) remove the line (c) remove the file")]
+    StartStateLoad(String, usize, String),
+
     #[error("Received stop command")]
     Stop,
 

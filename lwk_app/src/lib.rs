@@ -130,14 +130,9 @@ impl App {
                 let client = self.client()?;
 
                 for (n, line) in string.lines().enumerate() {
-                    if let Err(err) = self.apply_request(&client, line) {
-                        if self.config.ignore_start_error {
-                            tracing::warn!("Error re-applying state request (error: {})", err);
-                        } else {
-                            tracing::error!("Error re-applying state request, consider starting using flag --ignore-start-error or remove line {} from {}", n+1, path.display());
-                            return Err(err);
-                        }
-                    }
+                    self.apply_request(&client, line).map_err(|err| {
+                        Error::StartStateLoad(err.to_string(), n + 1, path.display().to_string())
+                    })?
                 }
             }
             Err(_) => {

@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     fs,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    process::{Child, Command, Stdio},
     str::FromStr,
     thread::JoinHandle,
 };
@@ -50,14 +51,71 @@ pub fn sh(command: &str) -> Value {
     sh_result(command).unwrap()
 }
 
-fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) {
-    let server = setup(false);
-    let electrum_url = &server.electrs.electrum_url;
-    let addr = get_available_addr().unwrap();
+struct RegistryProc {
+    child: Child,
+    pub url: String,
+}
+
+impl Drop for RegistryProc {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+    }
+}
+
+fn setup_cli(
+    with_registry: bool,
+) -> (
+    JoinHandle<()>,
+    TempDir,
+    String,
+    String,
+    TestElectrumServer,
+    Option<RegistryProc>,
+) {
+    let server = setup(with_registry);
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
+
+    let stderr = if std::env::var_os("RUST_LOG").is_some() {
+        Stdio::inherit()
+    } else {
+        Stdio::null()
+    };
+
+    let child = if with_registry {
+        let addr = get_available_addr().unwrap();
+        let url = format!("127.0.0.1:{}", addr.port());
+        let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+        let child = Command::new("server")
+            .args(["--addr", &url])
+            .args(["--db-path", &datadir])
+            .args(["--esplora-url", &esplora_url])
+            .stderr(stderr)
+            .spawn()
+            .unwrap();
+        Some(RegistryProc { child, url })
+    } else {
+        None
+    };
+
+    let registry_url = child
+        .as_ref()
+        .map(|r| format!("--registry-url http://{}/", r.url))
+        .unwrap_or("".to_owned());
+
+    let esplora_url = server
+        .electrs
+        .esplora_url
+        .as_ref()
+        .map(|r| format!("--esplora-api-url http://{}/", r))
+        .unwrap_or("".to_owned());
+
+    let electrum_url = &server.electrs.electrum_url;
+    let addr = get_available_addr().unwrap();
+
     let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} --electrum-url {electrum_url}");
+    let params =
+        format!("--datadir {datadir} --electrum-url {electrum_url} {registry_url} {esplora_url}");
 
     let t = {
         let cli = cli.clone();
@@ -70,7 +128,7 @@ fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) 
     };
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    (t, tmp, cli, params, server)
+    (t, tmp, cli, params, server, child)
 }
 
 fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -257,7 +315,7 @@ fn test_state_regression() {
 
 #[test]
 fn test_start_stop_persist() {
-    let (t, _tmp, cli, params, _server) = setup_cli();
+    let (t, _tmp, cli, params, _server, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
@@ -372,7 +430,7 @@ fn test_start_stop_persist() {
 
 #[test]
 fn test_signer_load_unload_list() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
@@ -414,7 +472,7 @@ fn test_signer_load_unload_list() {
 
 #[test]
 fn test_signer_external() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     let name = "ext";
     let fingerprint = "11111111";
@@ -450,7 +508,7 @@ fn test_signer_external() {
 
 #[test]
 fn test_wallet_load_unload_list() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
@@ -486,7 +544,7 @@ fn test_wallet_load_unload_list() {
 
 #[test]
 fn test_wallet_memos() {
-    let (t, _tmp, cli, params, server) = setup_cli();
+    let (t, _tmp, cli, params, server, _) = setup_cli(false);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -588,7 +646,7 @@ fn test_wallet_memos() {
 
 #[test]
 fn test_wallet_details() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -695,7 +753,7 @@ fn test_wallet_details() {
 
 #[test]
 fn test_broadcast() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} signer generate"));
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
@@ -757,7 +815,7 @@ fn test_broadcast() {
 
 #[test]
 fn test_issue() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} signer generate"));
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -968,7 +1026,7 @@ fn test_issue() {
 
 #[test]
 fn test_jade_emulator() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
@@ -1018,7 +1076,7 @@ fn test_jade_emulator() {
 
 #[test]
 fn test_commands() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
@@ -1103,7 +1161,7 @@ fn test_commands() {
 
 #[test]
 fn test_multisig() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -1221,7 +1279,7 @@ fn test_multisig() {
 
 #[test]
 fn test_inconsistent_network() {
-    let (_t, _tmp, cli, _params, _server) = setup_cli();
+    let (_t, _tmp, cli, _params, _server, _) = setup_cli(false);
     let cli_addr = cli.split(" -n").next().unwrap();
     let r = sh_result(&format!("{cli_addr} -n testnet wallet list"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Inconsistent network"));
@@ -1229,7 +1287,7 @@ fn test_inconsistent_network() {
 
 #[test]
 fn test_schema() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     for a in ServerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
@@ -1275,9 +1333,71 @@ fn test_schema() {
     t.join().unwrap();
 }
 
+#[cfg_attr(
+    not(feature = "registry"),
+    ignore = "require registry `server` executable in path"
+)]
+#[test]
+fn test_registry_publish() {
+    let (t, _tmp, cli, _params, server, _registry) = setup_cli(true);
+
+    sw_signer(&cli, "s1");
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
+    fund(&server, &cli, "w1", 1_000_000);
+
+    let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
+    let contract = serde_json::to_string(&r).unwrap();
+    let r = sh(&format!(
+        "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
+    ));
+    let pset = get_str(&r, "pset");
+
+    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    let issuances = r.get("issuances").unwrap().as_array().unwrap();
+    let issuance = &issuances[0].as_object().unwrap();
+    let asset = issuance.get("asset").unwrap().as_str().unwrap();
+    let token = issuance.get("token").unwrap().as_str().unwrap();
+
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
+
+    sh(&format!(
+        "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
+    ));
+
+    server.generate(10);
+    wait_ms(6_000); // otherwise registry may find the issuance tx unconfirmed, wait_tx is not enough
+
+    sh(&format!("{cli} server scan"));
+
+    let tx = serialize(&pset_signed.extract_tx().unwrap()).to_hex();
+    sh(&format!(
+        "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
+    ));
+    let r = sh(&format!("{cli} asset list"));
+    assert_eq!(get_len(&r, "assets"), 3);
+
+    sh(&format!("{cli} asset publish --asset {asset}"));
+
+    sh(&format!("{cli} asset remove --asset {asset}"));
+
+    sh(&format!("{cli} asset remove --asset {token}"));
+
+    sh(&format!("{cli} asset list"));
+
+    sh(&format!("{cli} asset from-explorer --asset {asset}"));
+
+    sh(&format!("{cli} asset list"));
+    assert_eq!(get_len(&r, "assets"), 3);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
 #[test]
 fn test_elip151() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1340,7 +1460,7 @@ fn test_elip151() {
 
 #[test]
 fn test_3of5() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");

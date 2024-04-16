@@ -110,7 +110,7 @@
 
             ELEMENTSD_EXEC = "${pkgs.elements}/bin/elementsd";
             ELECTRS_LIQUID_EXEC = electrs.program;
-
+            SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
           };
         }
       );

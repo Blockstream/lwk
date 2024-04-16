@@ -264,6 +264,18 @@ impl TestElectrumServer {
         let raw: serde_json::Value = self.node.client.call("getblockchaininfo", &[]).unwrap();
         raw.get("blocks").unwrap().as_u64().unwrap()
     }
+
+    pub fn esplora_port(&self) -> u16 {
+        self.electrs
+            .esplora_url
+            .as_ref()
+            .unwrap()
+            .split(":")
+            .last()
+            .unwrap()
+            .parse::<u16>()
+            .unwrap()
+    }
 }
 
 pub struct TestWollet {

@@ -10,15 +10,19 @@ use clap::{Parser, ValueEnum};
 use elements::encode::serialize;
 use elements::hex::ToHex;
 use elements::{pset::PartiallySignedTransaction, Address};
-use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
+use lwk_containers::{
+    testcontainers::{clients, Container},
+    JadeEmulator, Registry, EMULATOR_PORT,
+};
 use serde_json::Value;
 
 use lwk_cli::{
     inner_main, AssetSubCommandsEnum, Cli, ServerSubCommandsEnum, SignerSubCommandsEnum,
     WalletSubCommandsEnum,
 };
-use lwk_test_util::{setup, TestElectrumServer};
+use lwk_test_util::{init_logging, setup, TestElectrumServer};
 use tempfile::TempDir;
+use tracing_subscriber::registry;
 
 /// Returns a non-used local port if available.
 ///
@@ -50,14 +54,36 @@ pub fn sh(command: &str) -> Value {
     sh_result(command).unwrap()
 }
 
-fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) {
-    let server = setup(false);
+/// Setup the integration testing environment for the cli tests
+///
+/// Pass a docker cli if you want to start a registry server
+fn setup_cli(
+    docker: Option<&clients::Cli>,
+) -> (
+    JoinHandle<()>,
+    TempDir,
+    String,
+    String,
+    TestElectrumServer,
+    Option<Container<'_, Registry>>,
+) {
+    let server = setup(docker.is_some());
     let electrum_url = &server.electrs.electrum_url;
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let cli = format!("cli --addr {addr} -n regtest");
     let params = format!("--datadir {datadir} --electrum-url {electrum_url}");
+
+    let registry = match docker {
+        Some(docker) => {
+            let esplora_port = server.esplora_port(); // FIXME: it doesn't work because the port is taken!
+            let registry = Registry::new(esplora_port);
+            let registry = docker.run(registry);
+            Some(registry)
+        }
+        None => None,
+    };
 
     let t = {
         let cli = cli.clone();
@@ -68,9 +94,8 @@ fn setup_cli() -> (JoinHandle<()>, TempDir, String, String, TestElectrumServer) 
             ));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
 
-    (t, tmp, cli, params, server)
+    (t, tmp, cli, params, server, registry)
 }
 
 fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -257,7 +282,7 @@ fn test_state_regression() {
 
 #[test]
 fn test_start_stop_persist() {
-    let (t, _tmp, cli, params, _server) = setup_cli();
+    let (t, _tmp, cli, params, _server, _) = setup_cli(None);
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
@@ -372,7 +397,7 @@ fn test_start_stop_persist() {
 
 #[test]
 fn test_signer_load_unload_list() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     let result = sh(&format!("{cli} signer list"));
     let signers = result.get("signers").unwrap();
@@ -414,7 +439,7 @@ fn test_signer_load_unload_list() {
 
 #[test]
 fn test_signer_external() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     let name = "ext";
     let fingerprint = "11111111";
@@ -450,7 +475,7 @@ fn test_signer_external() {
 
 #[test]
 fn test_wallet_load_unload_list() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     let result = sh(&format!("{cli} wallet list"));
     let wallets = result.get("wallets").unwrap();
@@ -486,7 +511,7 @@ fn test_wallet_load_unload_list() {
 
 #[test]
 fn test_wallet_memos() {
-    let (t, _tmp, cli, params, server) = setup_cli();
+    let (t, _tmp, cli, params, server, _) = setup_cli(None);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -588,7 +613,7 @@ fn test_wallet_memos() {
 
 #[test]
 fn test_wallet_details() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -695,7 +720,7 @@ fn test_wallet_details() {
 
 #[test]
 fn test_broadcast() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     let result = sh(&format!("{cli} signer generate"));
     let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
@@ -757,7 +782,7 @@ fn test_broadcast() {
 
 #[test]
 fn test_issue() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     let r = sh(&format!("{cli} signer generate"));
     let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -968,7 +993,7 @@ fn test_issue() {
 
 #[test]
 fn test_jade_emulator() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
@@ -1017,8 +1042,17 @@ fn test_jade_emulator() {
 }
 
 #[test]
+fn test_registry_publishing() {
+    init_logging();
+    let docker = clients::Cli::default();
+
+    let (t, _tmp, cli, _params, server, _registry) = setup_cli(Some(&docker));
+    std::thread::sleep(std::time::Duration::from_secs(10));
+}
+
+#[test]
 fn test_commands() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
@@ -1103,7 +1137,7 @@ fn test_commands() {
 
 #[test]
 fn test_multisig() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     let r = sh(&format!("{cli} signer generate"));
     let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
@@ -1221,7 +1255,7 @@ fn test_multisig() {
 
 #[test]
 fn test_inconsistent_network() {
-    let (_t, _tmp, cli, _params, _server) = setup_cli();
+    let (_t, _tmp, cli, _params, _server, _) = setup_cli(None);
     let cli_addr = cli.split(" -n").next().unwrap();
     let r = sh_result(&format!("{cli_addr} -n testnet wallet list"));
     assert!(format!("{:?}", r.unwrap_err()).contains("Inconsistent network"));
@@ -1229,7 +1263,7 @@ fn test_inconsistent_network() {
 
 #[test]
 fn test_schema() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     for a in ServerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
@@ -1277,7 +1311,7 @@ fn test_schema() {
 
 #[test]
 fn test_elip151() {
-    let (t, _tmp, cli, _params, _server) = setup_cli();
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(None);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1340,7 +1374,7 @@ fn test_elip151() {
 
 #[test]
 fn test_3of5() {
-    let (t, _tmp, cli, _params, server) = setup_cli();
+    let (t, _tmp, cli, _params, server, _) = setup_cli(None);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");

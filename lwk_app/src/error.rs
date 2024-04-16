@@ -92,6 +92,9 @@ pub enum Error {
     #[error("Feature \"serial\" is disabled, enable it to solve this error")]
     FeatSerialDisabled,
 
+    #[error("Cannot start the server at \"{0}\". It is probably already running.")]
+    ServerStart(String),
+
     #[error("Received stop command")]
     Stop,
 

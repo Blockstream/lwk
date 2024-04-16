@@ -102,7 +102,8 @@ impl App {
         };
         state.insert_policy_asset();
         let state = Arc::new(Mutex::new(state));
-        let server = tiny_http::Server::http(self.config.addr)?;
+        let server = tiny_http::Server::http(self.config.addr)
+            .map_err(|_| Error::ServerStart(self.config.addr.to_string()))?;
 
         // TODO, for some reasons, using the default number of threads (4) cause a request to be
         // replied after 15 seconds, using 1 instead seems to not have that issue.

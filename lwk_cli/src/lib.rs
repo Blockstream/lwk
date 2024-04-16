@@ -118,12 +118,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;
 
-                    app.run().with_context(|| {
-                        format!(
-                            "Cannot start the server at \"{}\". It is probably already running.",
-                            app.addr()
-                        )
-                    })?;
+                    app.run()?;
 
                     // get the app version
                     let version = client.version()?.version;

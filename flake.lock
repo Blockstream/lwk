@@ -83,12 +83,43 @@
         "type": "github"
       }
     },
+    "registry-flake": {
+      "inputs": {
+        "crane": [
+          "crane"
+        ],
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": [
+          "rust-overlay"
+        ]
+      },
+      "locked": {
+        "lastModified": 1713271724,
+        "narHash": "sha256-0TRBGEJROTxtv1+ISeZ+vGriAd999v6lJ1L8aFdlNV4=",
+        "owner": "blockstream",
+        "repo": "asset_registry",
+        "rev": "f1c62fd793652827d3387e9aa4fca13c76de334e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "blockstream",
+        "ref": "flake",
+        "repo": "asset_registry",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "crane": "crane",
         "electrs-flake": "electrs-flake",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "registry-flake": "registry-flake",
         "rust-overlay": "rust-overlay"
       }
     },

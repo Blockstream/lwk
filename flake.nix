@@ -24,8 +24,17 @@
         rust-overlay.follows = "rust-overlay";
       };
     };
+    registry-flake = {
+      url = "github:blockstream/asset_registry/flake";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+        crane.follows = "crane";
+        rust-overlay.follows = "rust-overlay";
+      };
+    };
   };
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, registry-flake }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
@@ -40,6 +49,7 @@
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
           electrs = electrs-flake.apps.${system}.blockstream-electrs-liquid;
+          registry = registry-flake.packages.${system};
 
           # When filtering sources, we want to allow assets other than .rs files
           src = lib.cleanSourceWith {
@@ -56,7 +66,6 @@
               (craneLib.filterCargoSources path type)
             ;
           };
-
 
           nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ]; # required only at build time
           buildInputs = [ pkgs.openssl pkgs.udev ]; # also required at runtime
@@ -97,7 +106,7 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = [ bin ];
 
-            buildInputs = [ ];
+            buildInputs = [ registry.bin ];
 
             ELEMENTSD_EXEC = "${pkgs.elements}/bin/elementsd";
             ELECTRS_LIQUID_EXEC = electrs.program;

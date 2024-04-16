@@ -1378,3 +1378,14 @@ fn test_3of5() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_start_errors() {
+    let (t, _tmp, cli, params, _server) = setup_cli();
+
+    let r = sh_result(&format!("{cli} server start {params}"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("It is probably already running."));
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

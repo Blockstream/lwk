@@ -745,52 +745,14 @@ fn test_broadcast() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
-
-    let result = sh(&format!(
-        r#"{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"#
-    ));
-    let desc_generated = result.get("descriptor").unwrap().as_str().unwrap();
-
-    let result = sh(&format!(
-        r#"{cli} wallet load --wallet w1 -d {desc_generated}"#
-    ));
-    assert_eq!(
-        result.get("descriptor").unwrap().as_str().unwrap(),
-        desc_generated
-    );
-
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     fund(&server, &cli, "w1", 1_000_000);
 
-    let regtest_policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    sh(&format!("{cli} server scan"));
-    let result = sh(&format!("{cli} wallet balance --wallet w1"));
-    let balance_obj = result.get("balance").unwrap();
-    let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
-    assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1_000_000);
-
-    let node_address = server.node_getnewaddress();
-    let result = sh(&format!(
-        r#"{cli} wallet send --wallet w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
-    ));
-    let pset = result.get("pset").unwrap().as_str().unwrap();
-    let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
-
-    let result = sh(&format!(r#"{cli} signer sign --signer s1 --pset {pset}"#));
-    let pset = result.get("pset").unwrap().as_str().unwrap();
-    let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
-
-    assert_ne!(pset_signed, pset_unsigned);
-
-    let result = sh(&format!(
-        r#"{cli} wallet broadcast --wallet w1 --pset {pset_signed}"#
-    ));
-    assert!(result.get("txid").unwrap().as_str().is_some());
-
-    sh(&format!("{cli} server scan"));
-    let result = sh(&format!("{cli} wallet balance --wallet w1"));
-    let balance_obj = result.get("balance").unwrap();
-    let policy_obj = balance_obj.get(regtest_policy_asset).unwrap();
-    assert!(policy_obj.as_number().unwrap().as_u64().unwrap() < 1_000_000);
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    assert_eq!(1_000_000, get_balance(&cli, "w1", policy_asset));
+    let addr = server.node_getnewaddress().to_string();
+    send(&cli, "w1", &addr, policy_asset, 1000, &["s1"]);
+    assert!(1_000_000 > get_balance(&cli, "w1", policy_asset));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

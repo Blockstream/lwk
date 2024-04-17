@@ -234,6 +234,14 @@ fn addr_memo(cli: &str, w: &str, i: u32) -> String {
     get_str(&r, "memo").to_string()
 }
 
+fn asset_ids_from_issuance_pset(cli: &str, wallet: &str, pset: &str) -> (String, String) {
+    let r = sh(&format!("{cli} wallet pset-details -w {wallet} -p {pset}"));
+    let issuances = r.get("issuances").unwrap().as_array().unwrap();
+    let asset = get_str(&issuances[0], "asset").to_string();
+    let token = get_str(&issuances[0], "token").to_string();
+    (asset, token)
+}
+
 fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
@@ -1440,13 +1448,8 @@ fn test_3of5() {
         "{cli} wallet issue --wallet multi --satoshi-asset 1000 --satoshi-token 1"
     ));
     let pset = get_str(&r, "pset");
-    let r = sh(&format!(
-        "{cli} wallet pset-details --wallet multi -p {pset}"
-    ));
-    let issuances = r.get("issuances").unwrap().as_array().unwrap();
-    let issuance = &issuances[0].as_object().unwrap();
-    let asset = issuance.get("asset").unwrap().as_str().unwrap();
-    let token = issuance.get("token").unwrap().as_str().unwrap();
+    let (asset, token) = asset_ids_from_issuance_pset(&cli, "multi", pset);
+    let (asset, token) = (&asset, &token);
     complete(&cli, "multi", pset, signers);
     assert_eq!(1000, get_balance(&cli, "multi", asset));
     assert_eq!(1, get_balance(&cli, "multi", token));

@@ -317,9 +317,8 @@ fn test_state_regression() {
 fn test_start_stop_persist() {
     let (t, _tmp, cli, params, _server, _) = setup_cli(false);
 
-    let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert_eq!(signers.as_array().unwrap().len(), 0);
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 0);
 
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     sh(&format!(
@@ -432,9 +431,8 @@ fn test_start_stop_persist() {
 fn test_signer_load_unload_list() {
     let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
-    let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert!(signers.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 0);
 
     let mnemonic = lwk_test_util::TEST_MNEMONIC;
     let result = sh(&format!(
@@ -454,17 +452,15 @@ fn test_signer_load_unload_list() {
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
 
-    let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert!(!signers.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 1);
 
     let result = sh(&format!("{cli} signer unload --signer ss"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
 
-    let result = sh(&format!("{cli} signer list"));
-    let signers = result.get("signers").unwrap();
-    assert!(signers.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} signer list"));
+    assert_eq!(get_len(&r, "signers"), 0);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -510,9 +506,8 @@ fn test_signer_external() {
 fn test_wallet_load_unload_list() {
     let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
-    let result = sh(&format!("{cli} wallet list"));
-    let wallets = result.get("wallets").unwrap();
-    assert!(wallets.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} wallet list"));
+    assert_eq!(get_len(&r, "wallets"), 0);
 
     let desc = "ct(c25deb86fa11e49d651d7eae27c220ef930fbd86ea023eebfa73e54875647963,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#q9cypnmc";
     let result = sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
@@ -526,17 +521,15 @@ fn test_wallet_load_unload_list() {
     ));
     assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
 
-    let result = sh(&format!("{cli} wallet list"));
-    let wallets = result.get("wallets").unwrap();
-    assert!(!wallets.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} wallet list"));
+    assert_eq!(get_len(&r, "wallets"), 1);
 
     let result = sh(&format!("{cli} wallet unload --wallet custody"));
     let unloaded = result.get("unloaded").unwrap();
     assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "custody");
 
-    let result = sh(&format!("{cli} wallet list"));
-    let wallets = result.get("wallets").unwrap();
-    assert!(wallets.as_array().unwrap().is_empty());
+    let r = sh(&format!("{cli} wallet list"));
+    assert_eq!(get_len(&r, "wallets"), 0);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -897,8 +890,7 @@ fn test_issue() {
     assert_eq!(r.get("ticker").unwrap().as_str().unwrap(), "L-BTC");
 
     let r = sh(&format!("{cli} asset list"));
-    let assets = r.get("assets").unwrap().as_array().unwrap();
-    assert_eq!(assets.len(), 1);
+    assert_eq!(get_len(&r, "assets"), 1);
 
     let tx = serialize(
         &PartiallySignedTransaction::from_str(pset)
@@ -911,9 +903,8 @@ fn test_issue() {
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
-    let result = sh(&format!("{cli} asset list"));
-    let assets = result.get("assets").unwrap().as_array().unwrap();
-    assert_eq!(assets.len(), 3);
+    let r = sh(&format!("{cli} asset list"));
+    assert_eq!(get_len(&r, "assets"), 3);
 
     let r = sh(&format!("{cli} asset details --asset {asset}"));
     let name = r.get("name").unwrap().as_str().unwrap();
@@ -926,8 +917,7 @@ fn test_issue() {
 
     sh(&format!("{cli} asset remove --asset {token}"));
     let r = sh(&format!("{cli} asset list"));
-    let assets = r.get("assets").unwrap().as_array().unwrap();
-    assert_eq!(assets.len(), 2);
+    assert_eq!(get_len(&r, "assets"), 2);
 
     let asset_balance_pre = get_balance(&cli, "w1", asset);
     let node_address = server.node_getnewaddress();
@@ -968,8 +958,7 @@ fn test_issue() {
     assert_eq!(asset_balance_post - 1, get_balance(&cli, "w1", asset));
 
     let r = sh(&format!("{cli} wallet utxos --wallet w1"));
-    let utxos = r.get("utxos").unwrap().as_array().unwrap();
-    assert!(!utxos.is_empty());
+    assert_eq!(get_len(&r, "utxos"), 4);
 
     let r = sh(&format!("{cli} wallet txs --wallet w1"));
     let txs = r.get("txs").unwrap().as_array().unwrap();

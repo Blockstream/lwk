@@ -789,11 +789,11 @@ fn test_broadcast() {
     let result = sh(&format!(
         r#"{cli} wallet send --wallet w1 --recipient {node_address}:1000:{regtest_policy_asset}"#
     ));
-    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&result, "pset");
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
     let result = sh(&format!(r#"{cli} signer sign --signer s1 --pset {pset}"#));
-    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&result, "pset");
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
     assert_ne!(pset_signed, pset_unsigned);
@@ -817,21 +817,8 @@ fn test_broadcast() {
 fn test_issue() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
-    let r = sh(&format!("{cli} signer generate"));
-    let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
-
-    let r = sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1 "#
-    ));
-    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
-
-    let r = sh(&format!(
-        "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
-    ));
-    let desc = r.get("descriptor").unwrap().as_str().unwrap();
-
-    let r = sh(&format!("{cli} wallet load --wallet w1 -d {desc}"));
-    assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
+    sw_signer(&cli, "s1");
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
 
     fund(&server, &cli, "w1", 1_000_000);
 
@@ -840,7 +827,7 @@ fn test_issue() {
     let r = sh(&format!(
         "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
     ));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
@@ -871,7 +858,7 @@ fn test_issue() {
     assert!(balance.get("L-BTC").unwrap().as_i64().unwrap() < 0);
 
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
     assert_ne!(pset_signed, pset_unsigned);
@@ -933,10 +920,10 @@ fn test_issue() {
     let node_address = server.node_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     // TODO: add PSET introspection verifying there are asset metadata
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     let asset_balance_post = get_balance(&cli, "w1", asset);
@@ -945,18 +932,18 @@ fn test_issue() {
     let r = sh(&format!(
         "{cli} wallet reissue --wallet w1 --asset {asset} --satoshi-asset 1"
     ));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
     let recipient = format!("--recipient burn:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
@@ -1110,7 +1097,7 @@ fn test_commands() {
     assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
 
     let result = sh(&format!("{cli} wallet send --wallet custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
-    let pset = result.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&result, "pset");
     let _: PartiallySignedTransaction = pset.parse().unwrap();
 
     let result = sh(&format!("{cli}  wallet unload --wallet custody"));
@@ -1192,13 +1179,13 @@ fn test_multisig() {
     let r = sh(&format!(
         "{cli} wallet send --wallet multi --recipient {recipient}"
     ));
-    let pset_u = r.get("pset").unwrap().as_str().unwrap();
+    let pset_u = get_str(&r, "pset");
 
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset_u}"));
-    let pset_s1 = r.get("pset").unwrap().as_str().unwrap();
+    let pset_s1 = get_str(&r, "pset");
 
     let r = sh(&format!("{cli} signer sign --signer s2 --pset {pset_u}"));
-    let pset_s2 = r.get("pset").unwrap().as_str().unwrap();
+    let pset_s2 = get_str(&r, "pset");
 
     assert_ne!(pset_u, pset_s1);
     assert_ne!(pset_u, pset_s2);
@@ -1266,7 +1253,7 @@ fn test_multisig() {
     let r = sh(&format!(
         "{cli} wallet combine --wallet multi -p {pset_s1} -p {pset_s2}"
     ));
-    let pset_s = r.get("pset").unwrap().as_str().unwrap();
+    let pset_s = get_str(&r, "pset");
 
     let r = sh(&format!(
         "{cli} wallet broadcast --wallet multi --pset {pset_s}"
@@ -1359,7 +1346,7 @@ fn test_registry_publish() {
     let token = issuance.get("token").unwrap().as_str().unwrap();
 
     let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
 
     sh(&format!(

@@ -3,7 +3,7 @@ use std::{collections::HashMap, env, io::Write};
 use bitcoin::{secp256k1::Secp256k1, PrivateKey, PublicKey};
 use rand::{thread_rng, RngCore};
 use tempfile::TempDir;
-use testcontainers::{core::WaitFor, Image, ImageArgs};
+use testcontainers::{core::WaitFor, Image};
 
 pub const PIN_SERVER_PORT: u16 = 8_096;
 
@@ -65,16 +65,6 @@ impl PinServer {
             Ok(var) => TempDir::new_in(var),
             Err(_) => tempfile::tempdir(),
         }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Args;
-
-impl ImageArgs for Args {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        let args = ["bash".to_string()];
-        Box::new(args.into_iter())
     }
 }
 

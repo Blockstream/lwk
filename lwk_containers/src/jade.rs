@@ -1,21 +1,11 @@
 use std::env;
 
-use testcontainers::{core::WaitFor, Image, ImageArgs};
+use testcontainers::{core::WaitFor, Image};
 
 pub const EMULATOR_PORT: u16 = 30_121;
 
 #[derive(Debug, Default)]
 pub struct JadeEmulator;
-
-#[derive(Clone, Debug, Default)]
-struct Args;
-
-impl ImageArgs for Args {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        let args = ["bash".to_string()];
-        Box::new(args.into_iter())
-    }
-}
 
 impl Image for JadeEmulator {
     type Args = ();

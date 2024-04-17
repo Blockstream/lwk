@@ -640,19 +640,8 @@ fn test_wallet_memos() {
 fn test_wallet_details() {
     let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
 
-    let r = sh(&format!("{cli} signer generate"));
-    let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
-    let r = sh(&format!(
-        "{cli} signer load-software --persist true --mnemonic \"{m1}\" --signer s1"
-    ));
-    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
-
-    let r = sh(&format!("{cli} signer generate"));
-    let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
-    let r = sh(&format!(
-        "{cli} signer load-software --persist true --mnemonic \"{m2}\" --signer s2"
-    ));
-    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s2");
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
 
     // Single sig wallet
     let r = sh(&format!(
@@ -747,13 +736,7 @@ fn test_wallet_details() {
 fn test_broadcast() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
-    let result = sh(&format!("{cli} signer generate"));
-    let mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
-
-    let result = sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1 "#
-    ));
-    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "s1");
+    sw_signer(&cli, "s1");
 
     let result = sh(&format!(
         r#"{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"#
@@ -809,13 +792,7 @@ fn test_broadcast() {
 fn test_issue() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
-    let r = sh(&format!("{cli} signer generate"));
-    let mnemonic = r.get("mnemonic").unwrap().as_str().unwrap();
-
-    let r = sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer s1 "#
-    ));
-    assert_eq!(r.get("name").unwrap().as_str().unwrap(), "s1");
+    sw_signer(&cli, "s1");
 
     let r = sh(&format!(
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
@@ -1157,16 +1134,8 @@ fn test_commands() {
 fn test_multisig() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
-    let r = sh(&format!("{cli} signer generate"));
-    let m1 = r.get("mnemonic").unwrap().as_str().unwrap();
-    sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{m1}" --signer s1 "#
-    ));
-    let r = sh(&format!("{cli} signer generate"));
-    let m2 = r.get("mnemonic").unwrap().as_str().unwrap();
-    sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{m2}" --signer s2 "#
-    ));
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
 
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));
     let keyorigin_xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();

@@ -361,6 +361,13 @@ pub struct WalletTxs {
     pub txs: Vec<Tx>,
 }
 
+/// Transaction
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletTx {
+    /// Transaction in hex
+    pub tx: String,
+}
+
 /// Details of an asset
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetDetails {

@@ -633,6 +633,17 @@ pub enum WalletCommand {
         with_tickers: bool,
     },
 
+    /// Get a transaction
+    Tx {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// Transaction ID
+        #[arg(short, long)]
+        txid: String,
+    },
+
     /// Set a wallet tx memo
     SetTxMemo {
         /// Wallet name

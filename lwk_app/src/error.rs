@@ -65,6 +65,9 @@ pub enum Error {
     #[error("Wallet '{0}' is already loaded")]
     WalletAlreadyLoaded(String),
 
+    #[error("Tx '{0}' was not found in wallet '{1}'")]
+    WalletTxNotFound(String, String),
+
     #[error("Signer '{0}' does not exist")]
     SignerNotExist(String),
 

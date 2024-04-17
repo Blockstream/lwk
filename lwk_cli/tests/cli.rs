@@ -810,7 +810,7 @@ fn test_issue() {
     let r = sh(&format!(
         "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
-    assert!(r.get("txid").unwrap().as_str().is_some());
+    let issuance_txid = get_str(&r, "txid");
     sh(&format!("{cli} server scan"));
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -827,13 +827,8 @@ fn test_issue() {
     let r = sh(&format!("{cli} asset list"));
     assert_eq!(get_len(&r, "assets"), 1);
 
-    let tx = serialize(
-        &PartiallySignedTransaction::from_str(pset)
-            .unwrap()
-            .extract_tx()
-            .unwrap(),
-    )
-    .to_hex();
+    let r = sh(&format!("{cli} wallet tx -w w1 -t {issuance_txid}"));
+    let tx = get_str(&r, "tx");
     sh(&format!(
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
@@ -936,6 +931,9 @@ fn test_issue() {
         "{cli} wallet reissue --wallet w2 --asset {asset} --satoshi-asset 1"
     ));
     assert!(format!("{:?}", r.unwrap_err()).contains("Missing issuance"));
+
+    let r = sh_result(&format!("{cli} wallet tx -w w2 -t {issuance_txid}"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("was not found in wallet 'w2'"));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

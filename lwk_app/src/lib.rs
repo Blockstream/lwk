@@ -32,6 +32,7 @@ use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
+use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, AssetId, Txid};
@@ -816,6 +817,19 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 request.id,
                 serde_json::to_value(response::WalletTxs { txs })?,
             )
+        }
+        Method::WalletTx => {
+            let r: request::WalletTx = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            let wollet = s.wollets.get_mut(&r.name)?;
+            let txid = Txid::from_str(&r.txid)?;
+            let txs = wollet.transactions()?;
+            let tx = txs
+                .iter()
+                .find(|tx| tx.txid == txid)
+                .ok_or_else(|| Error::WalletTxNotFound(r.txid, r.name))?;
+            let tx = serialize(&tx.tx).to_hex();
+            Response::result(request.id, serde_json::to_value(response::WalletTx { tx })?)
         }
         Method::WalletSetTxMemo => {
             let r: request::WalletSetTxMemo = serde_json::from_value(params)?;

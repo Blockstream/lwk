@@ -763,15 +763,7 @@ fn test_issue() {
     let (t, _tmp, cli, _params, server, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
-
-    let r = sh(&format!(
-        "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
-    ));
-    let desc = r.get("descriptor").unwrap().as_str().unwrap();
-
-    let r = sh(&format!("{cli} wallet load --wallet w1 -d {desc}"));
-    assert_eq!(r.get("descriptor").unwrap().as_str().unwrap(), desc);
-
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     fund(&server, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
@@ -779,13 +771,13 @@ fn test_issue() {
     let r = sh(&format!(
         "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"
     ));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset = get_str(&r, "pset");
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
 
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
-    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
+    assert!(get_str(&r, "warnings").is_empty());
     assert!(r.get("fee").unwrap().as_u64().unwrap() > 0);
-    assert!(r.get("reissuances").unwrap().as_array().unwrap().is_empty());
+    assert_eq!(get_len(&r, "reissuances"), 0);
     let issuances = r.get("issuances").unwrap().as_array().unwrap();
     assert_eq!(issuances.len(), 1);
     let issuance = &issuances[0].as_object().unwrap();
@@ -822,18 +814,15 @@ fn test_issue() {
     sh(&format!("{cli} server scan"));
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let r = sh(&format!("{cli} wallet balance --wallet w1"));
-    let balance = r.get("balance").unwrap().as_object().unwrap();
-    assert_eq!(balance.get(asset).unwrap().as_u64().unwrap(), 1000);
+    assert_eq!(get_balance(&cli, "w1", asset), 1000);
 
     let r = sh(&format!("{cli} wallet balance --wallet w1 --with-tickers"));
     let balance = r.get("balance").unwrap().as_object().unwrap();
     assert!(balance.get("L-BTC").unwrap().as_u64().unwrap() > 0);
 
     let r = sh(&format!("{cli} asset details --asset {policy_asset}"));
-    let name = r.get("name").unwrap().as_str().unwrap();
-    assert_eq!(name, "liquid bitcoin");
-    assert_eq!(r.get("ticker").unwrap().as_str().unwrap(), "L-BTC");
+    assert_eq!(get_str(&r, "name"), "liquid bitcoin");
+    assert_eq!(get_str(&r, "ticker"), "L-BTC");
 
     let r = sh(&format!("{cli} asset list"));
     assert_eq!(get_len(&r, "assets"), 1);
@@ -853,13 +842,12 @@ fn test_issue() {
     assert_eq!(get_len(&r, "assets"), 3);
 
     let r = sh(&format!("{cli} asset details --asset {asset}"));
-    let name = r.get("name").unwrap().as_str().unwrap();
+    let name = get_str(&r, "name");
     assert_eq!(name, "example");
 
     let reissuance_token_name = &format!("reissuance token for {name}");
     let r = sh(&format!("{cli} asset details --asset {token}"));
-    let name = r.get("name").unwrap().as_str().unwrap();
-    assert_eq!(name, reissuance_token_name);
+    assert_eq!(get_str(&r, "name"), reissuance_token_name);
 
     sh(&format!("{cli} asset remove --asset {token}"));
     let r = sh(&format!("{cli} asset list"));
@@ -869,32 +857,20 @@ fn test_issue() {
     let node_address = server.node_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
     // TODO: add PSET introspection verifying there are asset metadata
-    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
-    let _txid = r.get("txid").unwrap().as_str().unwrap();
+    complete(&cli, "w1", get_str(&r, "pset"), &["s1"]);
     let asset_balance_post = get_balance(&cli, "w1", asset);
     assert_eq!(asset_balance_pre, asset_balance_post + 1);
 
     let r = sh(&format!(
         "{cli} wallet reissue --wallet w1 --asset {asset} --satoshi-asset 1"
     ));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
-    let _txid = r.get("txid").unwrap().as_str().unwrap();
+    complete(&cli, "w1", get_str(&r, "pset"), &["s1"]);
     assert_eq!(asset_balance_post + 1, get_balance(&cli, "w1", asset));
 
     let recipient = format!("--recipient burn:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
-    let pset = r.get("pset").unwrap().as_str().unwrap();
-    let r = sh(&format!("{cli} wallet broadcast --wallet w1 --pset {pset}"));
-    let _txid = r.get("txid").unwrap().as_str().unwrap();
+    complete(&cli, "w1", get_str(&r, "pset"), &["s1"]);
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
 
     let r = sh(&format!(

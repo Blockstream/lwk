@@ -889,6 +889,26 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
+        Method::WalletBurn => {
+            let r: request::WalletBurn = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            let asset_id = AssetId::from_str(&r.asset)?;
+            let wollet = s.wollets.get_mut(&r.name)?;
+
+            let mut pset = wollet
+                .tx_builder()
+                .add_burn(r.satoshi_asset, asset_id)?
+                .fee_rate(r.fee_rate)
+                .finish()?;
+
+            add_contracts(&mut pset, s.assets.iter());
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Pset {
+                    pset: pset.to_string(),
+                })?,
+            )
+        }
         Method::AssetContract => {
             let r: request::AssetContract = serde_json::from_value(params)?;
             let c = lwk_wollet::Contract {

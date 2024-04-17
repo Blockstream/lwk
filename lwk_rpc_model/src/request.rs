@@ -276,6 +276,22 @@ pub struct WalletReissue {
     pub fee_rate: Option<f32>,
 }
 
+/// Request to do burn an asset
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletBurn {
+    /// The wallet name
+    pub name: String,
+
+    /// The asset to burn
+    pub asset: String,
+
+    /// The number of units of the asset to burn
+    pub satoshi_asset: u64,
+
+    /// The optional fee rate
+    pub fee_rate: Option<f32>,
+}
+
 /// A request creating a contract in the JSON format expected by the issue call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AssetContract {

@@ -289,6 +289,15 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     client.wallet_reissue(wallet, asset, satoshi_asset, address_asset, fee_rate)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::Burn {
+                wallet,
+                asset,
+                satoshi_asset,
+                fee_rate,
+            } => {
+                let r = client.wallet_burn(wallet, asset, satoshi_asset, fee_rate)?;
+                serde_json::to_value(r)?
+            }
             WalletCommand::MultisigDesc {
                 descriptor_blinding_key,
                 kind,

@@ -531,6 +531,26 @@ pub enum WalletCommand {
         fee_rate: Option<f32>,
     },
 
+    /// Burn an asset
+    Burn {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// The asset to burn
+        #[arg(long)]
+        asset: String,
+
+        /// The number of units of the asset to burn
+        #[arg(long)]
+        satoshi_asset: u64,
+
+        // TODO default value
+        /// To optionally specify a fee
+        #[arg(long)]
+        fee_rate: Option<f32>,
+    },
+
     /// Print a multisig descriptor
     MultisigDesc {
         #[arg(long)]

@@ -329,6 +329,22 @@ impl Client {
         self.make_request(Method::WalletReissue, Some(req))
     }
 
+    pub fn wallet_burn(
+        &self,
+        name: String,
+        asset: String,
+        satoshi_asset: u64,
+        fee_rate: Option<f32>,
+    ) -> Result<response::Pset, Error> {
+        let req = request::WalletBurn {
+            name,
+            asset,
+            satoshi_asset,
+            fee_rate,
+        };
+        self.make_request(Method::WalletBurn, Some(req))
+    }
+
     pub fn asset_contract(
         &self,
         domain: String,

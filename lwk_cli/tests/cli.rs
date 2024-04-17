@@ -903,6 +903,12 @@ fn test_issue() {
     let _txid = r.get("txid").unwrap().as_str().unwrap();
     assert_eq!(asset_balance_post, get_balance(&cli, "w1", asset));
 
+    let r = sh(&format!(
+        "{cli} wallet burn -w w1 --asset {asset} --satoshi-asset 1"
+    ));
+    complete(&cli, "w1", get_str(&r, "pset"), &["s1"]);
+    assert_eq!(asset_balance_post - 1, get_balance(&cli, "w1", asset));
+
     let r = sh(&format!("{cli} wallet utxos --wallet w1"));
     let utxos = r.get("utxos").unwrap().as_array().unwrap();
     assert!(!utxos.is_empty());

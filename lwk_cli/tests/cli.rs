@@ -655,14 +655,14 @@ fn test_wallet_details() {
     let r = sh(&format!(
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh"
     ));
-    let desc_ss = r.get("descriptor").unwrap().as_str().unwrap();
+    let desc_ss = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --wallet ss -d {desc_ss}"));
     assert!(desc_ss.contains(&keyorigin(&cli, "s1", "bip84")));
 
     let r = sh(&format!(
         "{cli} signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind shwpkh"
     ));
-    let desc_sssh = r.get("descriptor").unwrap().as_str().unwrap();
+    let desc_sssh = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --wallet sssh -d {desc_sssh}"));
     assert!(desc_sssh.contains(&keyorigin(&cli, "s1", "bip49")));
 
@@ -674,11 +674,11 @@ fn test_wallet_details() {
 
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));
-    let xpub1 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+    let xpub1 = get_str(&r, "keyorigin_xpub");
     let r = sh(&format!("{cli} signer xpub --signer s2 --kind bip87"));
-    let xpub2 = r.get("keyorigin_xpub").unwrap().as_str().unwrap();
+    let xpub2 = get_str(&r, "keyorigin_xpub");
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
-    let desc_ms = r.get("descriptor").unwrap().as_str().unwrap();
+    let desc_ms = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --wallet ms -d {desc_ms}"));
 
     let r = sh_result(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
@@ -687,7 +687,7 @@ fn test_wallet_details() {
 
     // Multi sig wallet, same signers
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
-    let desc_ms_same_signers = r.get("descriptor").unwrap().as_str().unwrap();
+    let desc_ms_same_signers = get_str(&r, "descriptor");
     sh(&format!(
         "{cli} wallet load --wallet ms_same_signers -d {desc_ms_same_signers}"
     ));
@@ -695,46 +695,46 @@ fn test_wallet_details() {
     // Details
     let r = sh(&format!("{cli} wallet details --wallet ss"));
     assert_eq!(get_desc(&r), remove_checksum(desc_ss));
-    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wpkh");
+    assert!(get_str(&r, "warnings").is_empty());
+    assert_eq!(get_str(&r, "type"), "wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
-    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(get_str(&signers[0], "name"), "s1");
 
     let r = sh(&format!("{cli} wallet details --wallet sssh"));
     assert_eq!(get_desc(&r), remove_checksum(desc_sssh));
-    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "sh_wpkh");
+    assert!(get_str(&r, "warnings").is_empty());
+    assert_eq!(get_str(&r, "type"), "sh_wpkh");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 1);
-    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(get_str(&signers[0], "name"), "s1");
 
     let r = sh(&format!("{cli} wallet details --wallet ms"));
     assert_eq!(get_desc(&r), remove_checksum(desc_ms));
-    assert!(r.get("warnings").unwrap().as_str().unwrap().is_empty());
-    assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
+    assert!(get_str(&r, "warnings").is_empty());
+    assert_eq!(get_str(&r, "type"), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
-    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
-    assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s2");
+    assert_eq!(get_str(&signers[0], "name"), "s1");
+    assert_eq!(get_str(&signers[1], "name"), "s2");
 
     sh(&format!("{cli} signer unload --signer s2"));
     let r = sh(&format!("{cli} wallet details --wallet ms"));
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
-    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(get_str(&signers[0], "name"), "s1");
     assert!(signers[1].get("name").is_none());
 
     let r = sh(&format!("{cli} wallet details --wallet ms_same_signers"));
     assert_eq!(
-        r.get("warnings").unwrap().as_str().unwrap(),
+        get_str(&r, "warnings"),
         "wallet has multiple signers with the same fingerprint"
     );
     assert_eq!(r.get("type").unwrap().as_str().unwrap(), "wsh_multi_2of2");
     let signers = r.get("signers").unwrap().as_array().unwrap();
     assert_eq!(signers.len(), 2);
-    assert_eq!(signers[0].get("name").unwrap().as_str().unwrap(), "s1");
-    assert_eq!(signers[1].get("name").unwrap().as_str().unwrap(), "s1");
+    assert_eq!(get_str(&signers[0], "name"), "s1");
+    assert_eq!(get_str(&signers[1], "name"), "s1");
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

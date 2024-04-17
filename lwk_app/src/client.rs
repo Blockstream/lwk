@@ -264,8 +264,17 @@ impl Client {
         self.make_request(Method::WalletTxs, Some(req))
     }
 
-    pub fn wallet_tx(&self, name: String, txid: String) -> Result<response::WalletTx, Error> {
-        let req = request::WalletTx { name, txid };
+    pub fn wallet_tx(
+        &self,
+        name: String,
+        txid: String,
+        from_explorer: bool,
+    ) -> Result<response::WalletTx, Error> {
+        let req = request::WalletTx {
+            name,
+            txid,
+            from_explorer,
+        };
         self.make_request(Method::WalletTx, Some(req))
     }
 

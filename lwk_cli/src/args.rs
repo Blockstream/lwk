@@ -642,6 +642,10 @@ pub enum WalletCommand {
         /// Transaction ID
         #[arg(short, long)]
         txid: String,
+
+        /// Use the explorer if necessary
+        #[arg(long, action)]
+        from_explorer: bool,
     },
 
     /// Set a wallet tx memo

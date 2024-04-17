@@ -359,8 +359,12 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_txs(wallet, with_tickers)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::Tx { wallet, txid } => {
-                let r = client.wallet_tx(wallet, txid)?;
+            WalletCommand::Tx {
+                wallet,
+                txid,
+                from_explorer,
+            } => {
+                let r = client.wallet_tx(wallet, txid, from_explorer)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::SetTxMemo { wallet, txid, memo } => {

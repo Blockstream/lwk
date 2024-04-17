@@ -362,6 +362,9 @@ pub struct WalletTx {
 
     /// Transaction ID
     pub txid: String,
+
+    /// Use the explorer if necessary
+    pub from_explorer: bool,
 }
 
 /// Request to have details of an asset

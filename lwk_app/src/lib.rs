@@ -824,11 +824,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let wollet = s.wollets.get_mut(&r.name)?;
             let txid = Txid::from_str(&r.txid)?;
             let txs = wollet.transactions()?;
-            let tx = txs
-                .iter()
-                .find(|tx| tx.txid == txid)
-                .ok_or_else(|| Error::WalletTxNotFound(r.txid, r.name))?;
-            let tx = serialize(&tx.tx).to_hex();
+            let tx = if let Some(tx) = txs.iter().find(|tx| tx.txid == txid) {
+                tx.tx.clone()
+            } else if r.from_explorer {
+                get_tx(&s.config.esplora_api_url, &txid)?
+            } else {
+                return Err(Error::WalletTxNotFound(r.txid, r.name));
+            };
+            let tx = serialize(&tx).to_hex();
             Response::result(request.id, serde_json::to_value(response::WalletTx { tx })?)
         }
         Method::WalletSetTxMemo => {

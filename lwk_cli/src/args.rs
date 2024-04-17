@@ -796,8 +796,7 @@ pub enum ServerCommand {
         registry_url: Option<String>,
 
         #[arg(long)]
-        #[cfg(feature = "registry")]
-        /// Needed only in regtest for the registry server to fetch transactions
+        /// Esplora API URL, if not specified a reasonable default is used according to the network
         esplora_api_url: Option<String>,
 
         /// Location for logs, server state, and other LWK data

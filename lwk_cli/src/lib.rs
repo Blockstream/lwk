@@ -81,7 +81,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     electrum_url,
                     #[cfg(feature = "registry")]
                     registry_url,
-                    #[cfg(feature = "registry")]
                     esplora_api_url,
                     datadir,
                     timeout,
@@ -112,14 +111,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     } else if let Network::Regtest = args.network {
                         anyhow::bail!("on regtest you have to specify --electrum-url");
                     };
+                    if let Some(url) = esplora_api_url {
+                        config.esplora_api_url = url;
+                    };
 
                     #[cfg(feature = "registry")]
                     if let Network::Regtest = args.network {
                         config.registry_url = registry_url.ok_or(anyhow!(
                             "on regtest with registry feature you have to specify --registry-url"
-                        ))?;
-                        config.esplora_api_url = esplora_api_url.ok_or(anyhow!(
-                            "on regtest with registry feature you have to specify --esplora-api-url"
                         ))?;
                     }
 

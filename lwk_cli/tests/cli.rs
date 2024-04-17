@@ -935,6 +935,11 @@ fn test_issue() {
     let r = sh_result(&format!("{cli} wallet tx -w w2 -t {issuance_txid}"));
     assert!(format!("{:?}", r.unwrap_err()).contains("was not found in wallet 'w2'"));
 
+    // w2 can get the tx from the explorer
+    sh(&format!(
+        "{cli} wallet tx -w w2 -t {issuance_txid} --from-explorer"
+    ));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

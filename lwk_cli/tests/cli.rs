@@ -72,7 +72,7 @@ fn setup_cli(
     TestElectrumServer,
     Option<RegistryProc>,
 ) {
-    let server = setup(with_registry);
+    let server = setup(true);
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
 

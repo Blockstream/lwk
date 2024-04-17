@@ -434,30 +434,29 @@ fn test_signer_load_unload_list() {
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
 
-    let mnemonic = lwk_test_util::TEST_MNEMONIC;
-    let result = sh(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer ss "#
-    ));
-    assert_eq!(result.get("name").unwrap().as_str().unwrap(), "ss");
+    sw_signer(&cli, "s1");
+    let r = sh(&format!("{cli} signer details -s s1"));
+    let m1 = get_str(&r, "mnemonic");
+    let m2 = lwk_test_util::TEST_MNEMONIC;
 
-    let result = sh(&format!("{cli} signer generate"));
-    let different_mnemonic = result.get("mnemonic").unwrap().as_str().unwrap();
-    let result = sh_result(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{different_mnemonic}" --signer ss"#,
+    assert_ne!(m1, m2);
+    // Same name, different mnemonic
+    let r = sh_result(&format!(
+        "{cli} signer load-software --persist true --mnemonic '{m2}' --signer s1"
     ));
-    assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Signer 's1' is already loaded"));
 
-    let result = sh_result(&format!(
-        r#"{cli} signer load-software --persist true --mnemonic "{mnemonic}" --signer ss2 "#,
+    // Same mnemonic, different name
+    let r = sh_result(&format!(
+        "{cli} signer load-software --persist true --mnemonic '{m1}' --signer s2"
     ));
-    assert!(format!("{:?}", result.unwrap_err()).contains("Signer 'ss' is already loaded"));
+    assert!(format!("{:?}", r.unwrap_err()).contains("Signer 's1' is already loaded"));
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 1);
 
-    let result = sh(&format!("{cli} signer unload --signer ss"));
-    let unloaded = result.get("unloaded").unwrap();
-    assert_eq!(unloaded.get("name").unwrap().as_str().unwrap(), "ss");
+    let r = sh(&format!("{cli} signer unload --signer s1"));
+    assert_eq!(get_str(r.get("unloaded").unwrap(), "name"), "s1");
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);

@@ -2,7 +2,6 @@ services:
   - docker:dind
 
 docker_test:
-  stage: docker_test
   image: nixos/nix:2.22.0pre20240417_c16fc2c
   variables:
       DOCKER_HOST: "tcp://docker:2375"

@@ -116,11 +116,9 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     };
 
                     #[cfg(feature = "registry")]
-                    if let Network::Regtest = args.network {
-                        config.registry_url = registry_url.ok_or(anyhow!(
-                            "on regtest with registry feature you have to specify --registry-url"
-                        ))?;
-                    }
+                    if let Some(url) = registry_url {
+                        config.registry_url = url;
+                    };
 
                     config.addr = addr;
                     let mut app = lwk_app::App::new(config)?;

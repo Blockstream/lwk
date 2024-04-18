@@ -13,7 +13,7 @@ variables:
       - unknown_failure
       - stuck_or_timeout_failure  
   services:
-    - docker:dind
+    - name: docker:dind
       alias: thedockerhost
 
 

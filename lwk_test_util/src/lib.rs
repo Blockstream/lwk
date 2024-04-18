@@ -382,20 +382,8 @@ impl TestWollet {
         self.balance(&self.wollet.policy_asset())
     }
 
-    fn get_tx_from_list(&mut self, txid: &Txid) -> WalletTx {
-        let list = self.wollet.transactions().unwrap();
-        for tx in list.iter() {
-            if tx.height.is_some() {
-                assert!(tx.timestamp.is_some());
-            }
-        }
-        let filtered_list: Vec<_> = list.iter().filter(|e| &e.txid == txid).cloned().collect();
-        assert!(
-            !filtered_list.is_empty(),
-            "just made tx {} is not in tx list",
-            txid
-        );
-        filtered_list.first().unwrap().clone()
+    fn get_tx(&mut self, txid: &Txid) -> WalletTx {
+        self.wollet.transaction(txid).unwrap().unwrap()
     }
 
     pub fn fund(
@@ -411,7 +399,7 @@ impl TestWollet {
         let address = address.unwrap_or_else(|| self.address());
         let txid = server.node_sendtoaddress(&address, satoshi, asset);
         self.wait_for_tx(&txid);
-        let tx = self.get_tx_from_list(&txid);
+        let tx = self.get_tx(&txid);
         // We only received, all balances are positive
         assert!(tx.balance.values().all(|v| *v > 0));
         assert_eq!(&tx.type_, "incoming");
@@ -481,7 +469,7 @@ impl TestWollet {
         let txid = self.send(&mut pset);
         let balance_after = self.balance_btc();
         assert!(balance_before > balance_after);
-        let tx = self.get_tx_from_list(&txid);
+        let tx = self.get_tx(&txid);
         // We only sent, so all balances are negative
         assert!(tx.balance.values().all(|v| *v < 0));
         assert_eq!(&tx.type_, "outgoing");
@@ -653,7 +641,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid);
+        let tx = self.get_tx(&txid);
         assert_eq!(&tx.type_, "issuance");
 
         assert_eq!(self.balance(&asset), satoshi_asset);
@@ -728,7 +716,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid);
+        let tx = self.get_tx(&txid);
         assert_eq!(&tx.type_, "reissuance");
 
         assert_eq!(self.balance(asset), balance_asset_before + satoshi_asset);
@@ -783,7 +771,7 @@ impl TestWollet {
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
         let txid = self.send(&mut pset);
-        let tx = self.get_tx_from_list(&txid);
+        let tx = self.get_tx(&txid);
         assert_eq!(&tx.type_, "burn");
 
         assert_eq!(self.balance(asset), balance_asset_before - satoshi_asset);

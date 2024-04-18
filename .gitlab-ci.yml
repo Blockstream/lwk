@@ -6,6 +6,7 @@ docker_test:
   variables:
       DOCKER_HOST: "tcp://docker:2375"
   script:
+  - nix-env --install docker
   - docker version
 
 

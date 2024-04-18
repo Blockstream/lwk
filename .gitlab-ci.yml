@@ -1,10 +1,13 @@
+variables:
+  CI_DISPOSABLE_ENVIRONMENT: "true"
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_TLS_CERTDIR: ""
 services:
   - docker:20.10.12-dind
 
 docker_test:
   image: nixos/nix:2.22.0pre20240417_c16fc2c
-  variables:
-      DOCKER_HOST: "tcp://docker:2375"
   script:
   - nix-env -iA nixpkgs.docker-client
   - docker version

@@ -22,6 +22,7 @@ pub struct Config {
 
     pub explorer_url: String,
 
+    // Unfortunately we cannot always derive the "api" url from "explorer_url", thus we need two separate values
     pub esplora_api_url: String,
 
     pub registry_url: String,

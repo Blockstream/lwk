@@ -108,7 +108,7 @@
 
             buildInputs = [ registry.bin rustToolchain ];
 
-            ELEMENTSD_EXEC = "${pkgs.elements}/bin/elementsd";
+            ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             ELECTRS_LIQUID_EXEC = electrs.program;
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
           };

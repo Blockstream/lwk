@@ -1,27 +1,39 @@
-variables:
-  CI_DISPOSABLE_ENVIRONMENT: "true"
-  DOCKER_DRIVER: overlay2
-  DOCKER_HOST: tcp://thedockerhost:2375
-  DOCKER_TLS_CERTDIR: ""
+services:
+  - docker:dind
 
-.nix:
+docker_test:
+  stage: docker_test
   image: nixos/nix:2.22.0pre20240417_c16fc2c
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - unknown_failure
-      - stuck_or_timeout_failure  
-  services:
-    - name: docker:20.10.12-dind
-      alias: thedockerhost
-
-
-nix:
-  extends: .nix
   variables:
-      EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
-      CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it
+      DOCKER_HOST: "tcp://docker:2375"
   script:
-    - nix-env --install docker
-    - docker run hello-world
+  - docker version
+
+
+# variables:
+#   CI_DISPOSABLE_ENVIRONMENT: "true"
+#   DOCKER_DRIVER: overlay2
+#   DOCKER_HOST: tcp://thedockerhost:2375
+#   DOCKER_TLS_CERTDIR: ""
+
+# .nix:
+#   image: nixos/nix:2.22.0pre20240417_c16fc2c
+#   retry:
+#     max: 2
+#     when:
+#       - runner_system_failure
+#       - unknown_failure
+#       - stuck_or_timeout_failure  
+#   services:
+#     - name: docker:20.10.12-dind
+#       alias: thedockerhost
+
+
+# nix:
+#   extends: .nix
+#   variables:
+#       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
+#       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it
+#   script:
+#     - nix-env --install docker
+#     - docker run hello-world

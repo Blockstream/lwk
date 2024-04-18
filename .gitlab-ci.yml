@@ -164,6 +164,8 @@ linux-wheels:
 
 nix:
   image: nixos/nix:2.22.0pre20240417_c16fc2c
+  services:
+    - docker:20.10.12-dind
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it

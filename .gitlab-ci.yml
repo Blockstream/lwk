@@ -1,7 +1,7 @@
 variables:
   CI_DISPOSABLE_ENVIRONMENT: "true"
   DOCKER_DRIVER: overlay2
-  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_HOST: tcp://thedockerhost:2375
   DOCKER_TLS_CERTDIR: ""
 
 .nix:
@@ -13,7 +13,8 @@ variables:
       - unknown_failure
       - stuck_or_timeout_failure  
   services:
-    - docker:20.10.12-dind
+    - docker:dind
+      alias: thedockerhost
 
 
 nix:

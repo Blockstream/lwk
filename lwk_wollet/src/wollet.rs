@@ -288,6 +288,37 @@ impl Wollet {
         Ok(txs)
     }
 
+    /// Get a wallet transaction
+    pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
+        let height = self.store.cache.heights.get(txid);
+        let tx = self.store.cache.all_txs.get(txid);
+        if let (Some(height), Some(tx)) = (height, tx) {
+            let txos = self.txos()?;
+
+            let balance = tx_balance(tx, &txos);
+            let fee = tx_fee(tx);
+            let policy_asset = self.policy_asset();
+            let type_ = tx_type(tx, &policy_asset, &balance, fee);
+            let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
+            let inputs = tx_inputs(tx, &txos);
+            let outputs = tx_outputs(tx, &txos);
+
+            Ok(Some(WalletTx {
+                tx: tx.clone(),
+                txid: *txid,
+                height: *height,
+                balance,
+                fee,
+                type_,
+                timestamp,
+                inputs,
+                outputs,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Get the wallet (re)issuances
     pub fn issuances(&self) -> Result<Vec<IssuanceDetails>, Error> {
         let mut r = vec![];

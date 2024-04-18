@@ -519,12 +519,15 @@ fn multiple_descriptors() {
         .into_iter()
         .find(|i| !i.is_reissuance)
         .unwrap();
+    assert!(wallet_nt
+        .wollet
+        .transaction(&issuance.txid)
+        .unwrap()
+        .is_none());
     let issuance_tx = wallet_t
         .wollet
-        .transactions()
+        .transaction(&issuance.txid)
         .unwrap()
-        .iter()
-        .find(|tx| tx.txid == issuance.txid)
         .unwrap()
         .tx
         .clone();

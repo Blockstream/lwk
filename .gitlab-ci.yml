@@ -4,10 +4,8 @@ variables:
   DOCKER_HOST: tcp://localhost:2375
   DOCKER_TLS_CERTDIR: ""
 
-.base:
-  image: xenoky/lwk-builder@sha256:5468d3679a1cd2a1ca174ca7792cef62e11dbcedd14fad3e9e937e865e981aee
-  tags:
-    - cloud
+.nix:
+  image: nixos/nix:2.22.0pre20240417_c16fc2c
   retry:
     max: 2
     when:
@@ -18,154 +16,8 @@ variables:
     - docker:20.10.12-dind
 
 
-fmt_clippy:
-  extends: .base
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo fmt --check
-    - cargo clippy --all-targets -- -D warnings
-
-test_clean:
-  image: rust:1.75
-  script:
-    - cargo build
-
-test_wollet:
-  extends: .base
-  script:
-    - docker pull xenoky/local-jade-emulator:1.0.27
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_wollet -p lwk_signer
-
-test_jade:
-  extends: .base
-  variables:
-      TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
-  script:
-    - docker pull tulipan81/blind_pin_server:v0.0.7
-    - docker pull xenoky/local-jade-emulator:1.0.27
-    - cargo test -p lwk_jade
-
-test_ledger:
-  extends: .base
-  script:
-    - cargo test -p lwk_ledger
-
-test_serial:
-  extends: .base
-  variables:
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test --no-run --features serial
-
-# run tests for minor crates all together
-test_minor:
-  extends: .base
-  script:
-    - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
-
-test_cli:
-  extends: .base
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_cli
-
-unit_tests:
-  extends: .base
-  script:
-    - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
-
-test_coverage:
-  extends: .base
-  variables:
-    RUSTFLAGS: "-C instrument-coverage"
-    LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
-    TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
-
-  script:
-    - docker pull tulipan81/blind_pin_server:v0.0.7
-    - docker pull xenoky/local-jade-emulator:1.0.27
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo nextest run --features foreign_bindings,asyncr --profile ci
-    - grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage.xml -p $(pwd)
-    - "xmllint --xpath \"concat('Coverage: ', 100 * string(//coverage/@line-rate), ' perc')\" target/coverage.xml"
-    - grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing --ignore "*cargo*" -o ./target/coverage/ -p $(pwd)
-  coverage: '/Coverage: \d+(?:\.\d+)?/'
-  artifacts:
-    paths:
-      - target/coverage.xml
-      - target/coverage/
-      - target/nextest/ci/junit.xml
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: target/coverage.xml
-      junit: target/nextest/ci/junit.xml
-
-build_cli:
-  extends: .base
-  only:
-    - master@liquid/lwk
-  script:
-    - cargo build --release -p lwk_cli
-  artifacts:
-    paths:
-      - target/release/lwk_cli
-    when: always
-    expire_in: 14 days
-
-audit:
-  extends: .base
-  script:
-    # ignore unmantained serde_cbor
-    - cargo audit -D warnings --ignore RUSTSEC-2021-0127
-
-doc:
-  extends: .base
-  variables:
-    RUSTDOCFLAGS: "-D warnings --cfg docsrs"
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo +nightly doc --all-features --no-deps
-
-examples:
-  extends: .base
-  script:
-    - cargo run --example list_transactions
-
-bindings:
-  extends: .base
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo test -p lwk_bindings --features foreign_bindings
-
-wasm:
-  extends: .base
-  variables:
-    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm,serial
-    - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
-    - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
-    - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial
-
-linux-wheels:
-  image:
-    name: ghcr.io/pyo3/maturin
-    entrypoint: [""]
-  script:
-    - pip install uniffi-bindgen==0.26.1 # must be the same as in lwk_bindings/Cargo.toml
-    - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
-  artifacts:
-    paths:
-      - target/wheels/
-
 nix:
-  image: nixos/nix:2.22.0pre20240417_c16fc2c
-  services:
-    - docker:20.10.12-dind
+  extends: .nix
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it

@@ -51,6 +51,10 @@ pub fn sh(command: &str) -> Value {
     sh_result(command).unwrap()
 }
 
+fn sh_err(command: &str) -> String {
+    format!("{:?}", sh_result(command).unwrap_err())
+}
+
 struct RegistryProc {
     child: Child,
     pub url: String,
@@ -367,8 +371,8 @@ fn test_start_stop_persist() {
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
-    let r = sh_result(&format!("{cli} asset from-explorer --asset {asset}"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("already inserted"));
+    let err = sh_err(&format!("{cli} asset from-explorer --asset {asset}"));
+    assert!(err.contains("already inserted"));
 
     let expected_signers = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&expected_signers, "signers"), 3);
@@ -449,16 +453,16 @@ fn test_signer_load_unload_list() {
 
     assert_ne!(m1, m2);
     // Same name, different mnemonic
-    let r = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} signer load-software --persist true --mnemonic '{m2}' --signer s1"
     ));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Signer 's1' is already loaded"));
+    assert!(err.contains("Signer 's1' is already loaded"));
 
     // Same mnemonic, different name
-    let r = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} signer load-software --persist true --mnemonic '{m1}' --signer s2"
     ));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Signer 's1' is already loaded"));
+    assert!(err.contains("Signer 's1' is already loaded"));
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 1);
@@ -485,14 +489,14 @@ fn test_signer_external() {
     assert_eq!(r.get("name").unwrap().as_str().unwrap(), name);
 
     // Some actions are not possible with the external signer
-    let r = sh_result(&format!("{cli} signer xpub --signer {name} --kind bip84"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
-    let r = sh_result(&format!("{cli} signer sign --signer {name} --pset pset"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
-    let r = sh_result(&format!(
+    let err = sh_err(&format!("{cli} signer xpub --signer {name} --kind bip84"));
+    assert!(err.contains("Invalid operation for external signer"));
+    let err = sh_err(&format!("{cli} signer sign --signer {name} --pset pset"));
+    assert!(err.contains("Invalid operation for external signer"));
+    let err = sh_err(&format!(
         "{cli} signer singlesig-desc --signer {name} --descriptor-blinding-key slip77 --kind wpkh"
     ));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Invalid operation for external signer"));
+    assert!(err.contains("Invalid operation for external signer"));
 
     // Load a wallet and see external signer name in the wallet details
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
@@ -520,13 +524,13 @@ fn test_wallet_load_unload_list() {
     let result = sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --wallet custody -d {desc}"));
-    assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+    let err = sh_err(&format!("{cli} wallet load --wallet custody -d {desc}"));
+    assert!(err.contains("Wallet 'custody' is already loaded"));
 
-    let result = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} wallet load --wallet differentname -d {desc}"
     ));
-    assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'custody' is already loaded"));
+    assert!(err.contains("Wallet 'custody' is already loaded"));
 
     let r = sh(&format!("{cli} wallet list"));
     assert_eq!(get_len(&r, "wallets"), 1);
@@ -666,11 +670,11 @@ fn test_wallet_details() {
     sh(&format!("{cli} wallet load --wallet sssh -d {desc_sssh}"));
     assert!(desc_sssh.contains(&keyorigin(&cli, "s1", "bip49")));
 
-    let r = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} signer singlesig-desc -s s1 --descriptor-blinding-key slip77-rand --kind wpkh"
     ));
-    let err = "Random slip77 key not supported in singlesig descriptor generation";
-    assert!(format!("{:?}", r.unwrap_err()).contains(err));
+    let exp_err = "Random slip77 key not supported in singlesig descriptor generation";
+    assert!(err.contains(exp_err));
 
     // Multi sig wallet
     let r = sh(&format!("{cli} signer xpub --signer s1 --kind bip87"));
@@ -681,9 +685,9 @@ fn test_wallet_details() {
     let desc_ms = get_str(&r, "descriptor");
     sh(&format!("{cli} wallet load --wallet ms -d {desc_ms}"));
 
-    let r = sh_result(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
-    let err = "Deterministic slip77 key not supported in multisig descriptor generation";
-    assert!(format!("{:?}", r.unwrap_err()).contains(err));
+    let err = sh_err(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77 --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub2}"));
+    let exp_err = "Deterministic slip77 key not supported in multisig descriptor generation";
+    assert!(err.contains(exp_err));
 
     // Multi sig wallet, same signers
     let r = sh(&format!("{cli} wallet multisig-desc --descriptor-blinding-key slip77-rand --kind wsh --threshold 2 --keyorigin-xpub {xpub1} --keyorigin-xpub {xpub1}"));
@@ -927,13 +931,13 @@ fn test_issue() {
 
     // Removing the asset will cause the "external" reissuance to fail
     sh(&format!("{cli} asset remove --asset {asset}"));
-    let r = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} wallet reissue --wallet w2 --asset {asset} --satoshi-asset 1"
     ));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Missing issuance"));
+    assert!(err.contains("Missing issuance"));
 
-    let r = sh_result(&format!("{cli} wallet tx -w w2 -t {issuance_txid}"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("was not found in wallet 'w2'"));
+    let err = sh_err(&format!("{cli} wallet tx -w w2 -t {issuance_txid}"));
+    assert!(err.contains("was not found in wallet 'w2'"));
 
     // w2 can get the tx from the explorer
     sh(&format!(
@@ -983,11 +987,11 @@ fn test_jade_emulator() {
     sh(&format!("{cli} wallet address -w multi -s emul"));
 
     singlesig_wallet(&cli, "ss-sw", "sw", "slip77", "wpkh");
-    let r = sh_result(&format!("{cli} wallet address -w ss-sw -s emul"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Signer is not in wallet"));
+    let err = sh_err(&format!("{cli} wallet address -w ss-sw -s emul"));
+    assert!(err.contains("Signer is not in wallet"));
 
-    let r = sh_result(&format!("{cli} wallet address -w ss-sw -s sw"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Cannot display address with software signer"));
+    let err = sh_err(&format!("{cli} wallet address -w ss-sw -s sw"));
+    assert!(err.contains("Cannot display address with software signer"));
 
     sh(&format!("{cli} server stop"));
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -1005,10 +1009,8 @@ fn test_commands() {
     let result = sh(&format!("{cli} wallet load --wallet custody -d {desc}"));
     assert_eq!(result.get("descriptor").unwrap().as_str().unwrap(), desc);
 
-    let result = sh_result(&format!("{cli} wallet load --wallet wrong -d wrong"));
-    assert!(
-        format!("{:?}", result.unwrap_err()).contains("Invalid descriptor: Not a CT Descriptor")
-    );
+    let err = sh_err(&format!("{cli} wallet load --wallet wrong -d wrong"));
+    assert!(err.contains("Invalid descriptor: Not a CT Descriptor"));
 
     fund(&server, &cli, "custody", 1_000_000);
 
@@ -1018,8 +1020,8 @@ fn test_commands() {
     let policy_obj = balance_obj.get(asset).unwrap();
     assert_eq!(policy_obj.as_number().unwrap().as_u64().unwrap(), 1000000);
 
-    let result = sh_result(&format!("{cli}  wallet balance --wallet notexist"));
-    assert!(format!("{:?}", result.unwrap_err()).contains("Wallet 'notexist' does not exist"));
+    let err = sh_err(&format!("{cli}  wallet balance --wallet notexist"));
+    assert!(err.contains("Wallet 'notexist' does not exist"));
 
     let result = sh(&format!("{cli} wallet address --wallet custody"));
     assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70");
@@ -1193,8 +1195,8 @@ fn test_multisig() {
 fn test_inconsistent_network() {
     let (_t, _tmp, cli, _params, _server, _) = setup_cli(false);
     let cli_addr = cli.split(" -n").next().unwrap();
-    let r = sh_result(&format!("{cli_addr} -n testnet wallet list"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("Inconsistent network"));
+    let err = sh_err(&format!("{cli_addr} -n testnet wallet list"));
+    assert!(err.contains("Inconsistent network"));
 }
 
 #[test]
@@ -1348,11 +1350,10 @@ fn test_elip151() {
     // Registering the sw wallet works (no-op)
     sh(&format!("{cli} signer register-multisig -s s1 --wallet mj"));
     // Jade fails though because it does not support elip151 keys
-    let r = sh_result(&format!(
+    let err = sh_err(&format!(
         "{cli} signer register-multisig -s emul --wallet mj"
     ));
-    assert!(format!("{:?}", r.unwrap_err())
-        .contains("Jade Error: Only slip77 master blinding key are supported"));
+    assert!(err.contains("Jade Error: Only slip77 master blinding key are supported"));
 
     // Jade does not support elip151 for singlesig too,
     // but since it assumes that the key is slip77 we can do nothing about it.
@@ -1361,10 +1362,8 @@ fn test_elip151() {
     ));
     let desc_ssj = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load -w ssj -d {desc_ssj}"));
-    let r = sh_result(&format!("{cli} wallet address -w ssj -s emul"));
-    assert!(
-        format!("{:?}", r.unwrap_err()).contains("Mismatching addresses between wallet and jade")
-    );
+    let err = sh_err(&format!("{cli} wallet address -w ssj -s emul"));
+    assert!(err.contains("Mismatching addresses between wallet and jade"));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
@@ -1410,8 +1409,8 @@ fn test_3of5() {
 fn test_start_errors() {
     let (t, _tmp, cli, params, _server, _) = setup_cli(false);
 
-    let r = sh_result(&format!("{cli} server start {params}"));
-    assert!(format!("{:?}", r.unwrap_err()).contains("It is probably already running."));
+    let err = sh_err(&format!("{cli} server start {params}"));
+    assert!(err.contains("It is probably already running."));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

@@ -7,7 +7,7 @@ docker_test:
       DOCKER_HOST: "tcp://docker:2375"
       DOCKER_TLS_CERTDIR: ""
   script:
-  - nix-env --install docker-client
+  - nix-env -iA nixpkgs.docker-client
   - docker version
 
 

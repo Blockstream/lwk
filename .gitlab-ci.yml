@@ -161,3 +161,12 @@ linux-wheels:
   artifacts:
     paths:
       - target/wheels/
+
+nix:
+  image: nixos/nix:2.22.0pre20240417_c16fc2c
+  variables:
+      EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
+      CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it
+  script:
+    - nix $EXP_FEAT $CACHE build .
+    - nix $EXP_FEAT $CACHE develop . -c cargo test -p lwk_cli --features registry -- registry_publish

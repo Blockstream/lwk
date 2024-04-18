@@ -5,8 +5,9 @@ docker_test:
   image: nixos/nix:2.22.0pre20240417_c16fc2c
   variables:
       DOCKER_HOST: "tcp://docker:2375"
+      DOCKER_TLS_CERTDIR: ""
   script:
-  - nix-env --install docker
+  - nix-env --install docker-client
   - docker version
 
 

@@ -23,8 +23,8 @@ pub fn get_registry_data(registry_url: &str, asset: &AssetId) -> Result<Registry
     Ok(data)
 }
 
-pub fn get_tx(explorer_url: &str, txid: &Txid) -> Result<Transaction, Error> {
-    let url = format!("{explorer_url}tx/{txid}/hex");
+pub fn get_tx(esplora_api_url: &str, txid: &Txid) -> Result<Transaction, Error> {
+    let url = format!("{esplora_api_url}tx/{txid}/hex");
     tracing::debug!("getting tx {url}");
     let tx_hex = reqwest::blocking::get(url)?.text()?;
     tracing::debug!("got {tx_hex}");

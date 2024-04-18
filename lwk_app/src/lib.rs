@@ -823,8 +823,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut s = state.lock()?;
             let wollet = s.wollets.get_mut(&r.name)?;
             let txid = Txid::from_str(&r.txid)?;
-            let txs = wollet.transactions()?;
-            let tx = if let Some(tx) = txs.iter().find(|tx| tx.txid == txid) {
+            let tx = if let Some(tx) = wollet.transaction(&txid)? {
                 tx.tx.clone()
             } else if r.from_explorer {
                 get_tx(&s.config.esplora_api_url, &txid)?

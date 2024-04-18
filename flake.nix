@@ -106,7 +106,7 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = [ bin ];
 
-            buildInputs = [ registry.bin rustToolchain ];
+            buildInputs = [ registry.bin rustToolchain pkgs.docker ];
 
             ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             ELECTRS_LIQUID_EXEC = electrs.program;

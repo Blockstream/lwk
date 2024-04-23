@@ -13,6 +13,7 @@ mod descriptor;
 mod error;
 mod keyorigin_xpub;
 mod model;
+mod qr;
 mod signer;
 
 pub use crate::descriptor::{
@@ -23,6 +24,7 @@ pub use crate::descriptor::{
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
+pub use crate::qr::*;
 pub use crate::signer::Signer;
 
 use elements::confidential::{Asset, Value};

@@ -37,6 +37,11 @@ impl Pset {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
+
     #[wasm_bindgen(js_name = extractTx)]
     pub fn extract_tx(&self) -> Result<Transaction, Error> {
         let tx: Transaction = self.inner.extract_tx()?.into();

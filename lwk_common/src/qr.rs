@@ -4,7 +4,7 @@ use base64::engine::general_purpose;
 use elements::Address;
 
 // In case of blech32 addresses, the address is uppercased so that use less QR code space
-// we don't prepend uri schema because it seems green doesn't interpret it and elements core use `bitcoin`
+// we don't prepend uri schema because it seems Green doesn't interpret it and Elements Core uses `bitcoin`
 fn address_to_qr_text(address: &Address) -> String {
     match address.payload {
         elements::address::Payload::WitnessProgram { .. } => {
@@ -41,8 +41,6 @@ pub enum Error {
 /// The image format is monocromatic bitmap, encoded in base64 in the uri.
 ///
 /// The text content of the QR doesn't contain a schema
-///
-/// The text content of the QR is not uppercased when possible to optimize
 ///
 /// Without `pixel_per_module` the default is no border, and 1 pixel per module, to be used
 /// for example in html: `style="image-rendering: pixelated; border: 20px solid white;"`

@@ -380,6 +380,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bmp-monochrome"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "829a082bd3761fde7476dc2ed85ca56c11628948460ece621e4f56fef5046567"
+
+[[package]]
 name = "bollard-stubs"
 version = "1.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1423,9 +1429,11 @@ dependencies = [
 name = "lwk_common"
 version = "0.3.0"
 dependencies = [
+ "base64 0.21.7",
  "elements",
  "elements-miniscript",
  "getrandom",
+ "qr_code",
  "rand",
  "thiserror",
 ]
@@ -1919,6 +1927,15 @@ dependencies = [
  "getopts",
  "memchr",
  "unicase",
+]
+
+[[package]]
+name = "qr_code"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43d2564aae5faaf3acb512b35b8bcb9a298d9d8c72d181c598691d800ee78a00"
+dependencies = [
+ "bmp-monochrome",
 ]
 
 [[package]]

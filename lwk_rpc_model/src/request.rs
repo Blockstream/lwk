@@ -111,6 +111,12 @@ pub struct WalletAddress {
 
     /// The signer name
     pub signer: Option<String>,
+
+    /// Wether to return a QR code of the address encoded as text
+    pub with_text_qr: bool,
+
+    /// Return a image QR code encoded as uri with the given pixel per module
+    pub with_uri_qr: Option<u8>,
 }
 
 /// The balance of a wallet

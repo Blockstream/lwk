@@ -21,8 +21,9 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use lwk_common::{
-    keyorigin_xpub_from_str, multisig_desc, singlesig_desc, InvalidBipVariant,
-    InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant, Signer,
+    address_to_text_qr, address_to_uri_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
+    InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant,
+    Signer,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_jade::get_receive_address::Variant;
@@ -395,6 +396,18 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .wollet_descriptor()
                 .definite_descriptor(lwk_wollet::Chain::External, addr.index())?;
 
+            let text_qr = r
+                .with_text_qr
+                .then(|| address_to_text_qr(addr.address()))
+                .transpose()?;
+            let uri_qr = r
+                .with_uri_qr
+                .map(|e| {
+                    let pixel_per_module = (e != 0).then_some(e);
+                    address_to_uri_qr(addr.address(), pixel_per_module)
+                })
+                .transpose()?;
+
             if let Some(signer) = r.signer {
                 let signer = s.get_available_signer(&signer)?;
                 if let AnySigner::Jade(jade, _id) = signer {
@@ -463,6 +476,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     address: address.to_string(),
                     index: addr.index(),
                     memo,
+                    text_qr,
+                    uri_qr,
                 })?,
             )
         }

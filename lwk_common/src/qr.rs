@@ -15,14 +15,14 @@ fn address_to_qr_text(address: &Address) -> String {
 }
 
 /// Convert the given address in a string representing a QR code to be consumed from a terminal
-pub fn address_to_text_qr(address: &Address) -> Result<String, Error> {
+pub fn address_to_text_qr(address: &Address) -> Result<String, QrError> {
     let address = address_to_qr_text(address);
     let qr_code = qr_code::QrCode::new(address)?;
     Ok(qr_code.to_string(true, 3))
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum QrError {
     #[error(transparent)]
     Qr(#[from] qr_code::types::QrError),
 
@@ -44,7 +44,10 @@ pub enum Error {
 ///
 /// Without `pixel_per_module` the default is no border, and 1 pixel per module, to be used
 /// for example in html: `style="image-rendering: pixelated; border: 20px solid white;"`
-pub fn address_to_uri_qr(address: &Address, pixel_per_module: Option<u8>) -> Result<String, Error> {
+pub fn address_to_uri_qr(
+    address: &Address,
+    pixel_per_module: Option<u8>,
+) -> Result<String, QrError> {
     let address = address_to_qr_text(address);
     let qr_code = qr_code::QrCode::new(address)?;
     let mut bmp = qr_code.to_bmp();

@@ -87,6 +87,12 @@ pub struct WalletAddress {
 
     /// Memo
     pub memo: String,
+
+    /// QR code encoded as text
+    pub text_qr: Option<String>,
+
+    /// QR code image encoded as uri
+    pub uri_qr: Option<String>,
 }
 
 /// Balance respone

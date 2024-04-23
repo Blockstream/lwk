@@ -59,6 +59,9 @@ pub enum Error {
     #[error("Signer Error: {0}")]
     Signer(#[from] lwk_signer::SignerError),
 
+    #[error(transparent)]
+    QrError(#[from] lwk_common::QrError),
+
     #[error("Wallet '{0}' does not exist")]
     WalletNotExist(String),
 

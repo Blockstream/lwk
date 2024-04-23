@@ -127,11 +127,15 @@ impl Client {
         name: String,
         index: Option<u32>,
         signer: Option<String>,
+        with_text_qr: bool,
+        with_uri_qr: Option<u8>,
     ) -> Result<response::WalletAddress, Error> {
         let req = request::WalletAddress {
             name,
             index,
             signer,
+            with_text_qr,
+            with_uri_qr,
         };
         self.make_request(Method::WalletAddress, Some(req))
     }

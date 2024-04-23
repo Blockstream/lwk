@@ -431,6 +431,7 @@ pub enum WalletCommand {
         #[arg(short, long, env)]
         wallet: String,
 
+        /// The derivation index of the address
         #[arg(long)]
         index: Option<u32>,
 
@@ -439,6 +440,15 @@ pub enum WalletCommand {
         /// Display the address on hardware signers.
         #[arg(short, long, env)]
         signer: Option<String>,
+
+        /// Returns a text-encoded qr in the json
+        #[arg(long)]
+        with_text_qr: bool,
+
+        /// Returns a qr image in the json,
+        /// the given number is the number of pixel per qr code module
+        #[arg(long)]
+        with_uri_qr: Option<u8>,
     },
 
     /// Get the balance of the given wallet name

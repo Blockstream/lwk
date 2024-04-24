@@ -4,8 +4,9 @@ use base64::engine::general_purpose;
 use elements::Address;
 
 // In case of blech32 addresses, the address is uppercased so that use less QR code space
-// we don't prepend uri schema because it seems Green doesn't interpret it and Elements Core uses `bitcoin`
 fn address_to_qr_text(address: &Address) -> String {
+    // TODO gdk use also `liquidtestnet` as schema, I don't think it's right but it may be already adopted.
+    // verify it and consider to add that or to remove this comment
     let address_string = match address.payload {
         elements::address::Payload::WitnessProgram { .. } => {
             address.to_string().to_ascii_uppercase()

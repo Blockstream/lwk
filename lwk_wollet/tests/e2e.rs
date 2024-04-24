@@ -880,3 +880,30 @@ fn wait_status_change(
     }
     panic!("status didn't change");
 }
+
+#[cfg(feature = "esplora_wasm")]
+#[tokio::test]
+async fn test_esplora_wasm_client() {
+    let server = setup(true);
+    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let mut client = EsploraWasmClient::new(&url);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let network = network_regtest();
+
+    let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+
+    let mut wollet = Wollet::new(network, NoPersist::new(), descriptor).unwrap();
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+
+    let address = wollet.address(None).unwrap();
+    server.node_sendtoaddress(address.address(), 10000, None);
+
+    std::thread::sleep(std::time::Duration::from_millis(10_000)); // TODO should wait the tx properly
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+}

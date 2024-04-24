@@ -82,7 +82,6 @@ mod test {
     fn test_address_to_text_qr() {
         let address = Address::from_str(ADDR).unwrap();
         let text_qr = address_to_text_qr(&address).unwrap();
-        println!("{}", text_qr);
         let expected = "
 ███████████████████████████████████████████████
 ███████████████████████████████████████████████

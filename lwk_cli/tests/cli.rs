@@ -1033,7 +1033,7 @@ fn test_commands() {
 
     let cli_addr = format!("{cli} wallet address --wallet custody");
     let r = sh(&format!("{cli_addr} --with-text-qr"));
-    assert!(get_str(&r, "text_qr").contains("█"));
+    assert!(get_str(&r, "text_qr").contains('█'));
     assert!(r.get("uri_qr").is_none());
 
     let r = sh(&format!("{cli_addr} --with-uri-qr 1"));
@@ -1041,7 +1041,7 @@ fn test_commands() {
     assert!(get_str(&r, "uri_qr").contains("data:image/bmp;base64"));
 
     let r = sh(&format!("{cli_addr} --with-uri-qr 1 --with-text-qr"));
-    assert!(get_str(&r, "text_qr").contains("█"));
+    assert!(get_str(&r, "text_qr").contains('█'));
     assert!(get_str(&r, "uri_qr").contains("data:image/bmp;base64"));
 
     let result = sh(&format!("{cli} wallet send --wallet custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));

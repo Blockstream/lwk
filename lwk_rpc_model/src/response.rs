@@ -89,9 +89,11 @@ pub struct WalletAddress {
     pub memo: String,
 
     /// QR code encoded as text
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub text_qr: Option<String>,
 
     /// QR code image encoded as uri
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub uri_qr: Option<String>,
 }
 

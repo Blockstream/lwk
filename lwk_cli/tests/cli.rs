@@ -1023,13 +1023,13 @@ fn test_commands() {
     let err = sh_err(&format!("{cli}  wallet balance --wallet notexist"));
     assert!(err.contains("Wallet 'notexist' does not exist"));
 
-    let result = sh(&format!("{cli} wallet address --wallet custody"));
-    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70");
-    assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 1);
+    let r = sh(&format!("{cli} wallet address --wallet custody"));
+    assert_eq!(get_str(&r, "address"), "el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70");
+    assert_eq!(r.get("index").unwrap().as_u64().unwrap(), 1);
 
-    let result = sh(&format!("{cli} wallet address --wallet custody --index 0"));
-    assert_eq!(result.get("address").unwrap().as_str().unwrap(), "el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry");
-    assert_eq!(result.get("index").unwrap().as_u64().unwrap(), 0);
+    let r = sh(&format!("{cli} wallet address --wallet custody --index 0"));
+    assert_eq!(get_str(&r, "address"), "el1qqg0nthgrrl4jxeapsa40us5d2wv4ps2y63pxwqpf3zk6y69jderdtzfyr95skyuu3t03sh0fvj09f9xut8erjly3ndquhu0ry");
+    assert_eq!(r.get("index").unwrap().as_u64().unwrap(), 0);
 
     let result = sh(&format!("{cli} wallet send --wallet custody --recipient el1qqdtwgfchn6rtl8peyw6afhrkpphqlyxls04vlwycez2fz6l7chlhxr8wtvy9s2v34f9sk0e2g058p0dwdp9kj38296xw5ur70:2:5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     let pset = result.get("pset").unwrap().as_str().unwrap();

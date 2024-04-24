@@ -54,7 +54,10 @@ pub fn address_to_uri_qr(
     let qr_code = qr_code::QrCode::new(address)?;
     let mut bmp = qr_code.to_bmp();
     if let Some(pixel_per_module) = pixel_per_module {
-        bmp = bmp.add_white_border(2)?.mul(pixel_per_module)?;
+        bmp = bmp.add_white_border(2)?;
+        if pixel_per_module > 1 {
+            bmp = bmp.mul(pixel_per_module)?;
+        }
     }
     let mut enc = base64::write::EncoderWriter::new(Vec::new(), &general_purpose::STANDARD);
 

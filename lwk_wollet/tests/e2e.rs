@@ -900,16 +900,24 @@ async fn test_esplora_wasm_client() {
     wollet.apply_update(update).unwrap();
 
     let address = wollet.address(None).unwrap();
-    server.node_sendtoaddress(address.address(), 10000, None);
+    let txid = server.node_sendtoaddress(address.address(), 10000, None);
 
     let update = wait_update(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
+    let tx = wollet.transaction(&txid).unwrap().unwrap();
+    assert!(tx.height.is_none());
+
+    server.generate(1);
+    let update = wait_update(&mut client, &wollet).await;
+    wollet.apply_update(update).unwrap();
+    let tx = wollet.transaction(&txid).unwrap().unwrap();
+    assert!(tx.height.is_some());
 }
 
 #[cfg(feature = "esplora_wasm")]
 async fn wait_update(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update {
     for _ in 0..50 {
-        let update = client.full_scan(&wollet).await.unwrap();
+        let update = client.full_scan(wollet).await.unwrap();
         if let Some(update) = update {
             return update;
         }

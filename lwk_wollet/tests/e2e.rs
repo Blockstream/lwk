@@ -902,8 +902,18 @@ async fn test_esplora_wasm_client() {
     let address = wollet.address(None).unwrap();
     server.node_sendtoaddress(address.address(), 10000, None);
 
-    std::thread::sleep(std::time::Duration::from_millis(10_000)); // TODO should wait the tx properly
-
-    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    let update = wait_update(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
+}
+
+#[cfg(feature = "esplora_wasm")]
+async fn wait_update(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update {
+    for _ in 0..50 {
+        let update = client.full_scan(&wollet).await.unwrap();
+        if let Some(update) = update {
+            return update;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("update didn't arrive");
 }

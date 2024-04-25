@@ -1,8 +1,19 @@
 # Liquid Wallet Kit
 
-**WARNING: LWK is still early stage software, use it at your own risk.**
+**NOTE: LWK is in public beta and still undergoing significant development. Use it at your own risk.**
 
-**Liquid Wallet Kit** is a collection of Rust crates for [Liquid](https://liquid.net) Wallets.
+## What is Liquid Wallet Kit (LWK)?
+
+**LWK** is a collection of Rust crates for [Liquid](https://liquid.net) Wallets.
+Its goal is to provide all the necessary building blocks for Liquid wallet development to enable a broad range of use cases on Liquid.
+
+By not following a monolithic approach but instead providing a group of functionality-specific libraries, LWK allows us to offer a modular, flexible and ergonomic toolset for Liquid development. This design lets application developers pick only what they need and focus on the relevant aspects of their use cases
+
+We want LWK to be a reference tool driven both by Blocksteam and Liquid participants that helps make Liquid integration frictionless, define ecosystem standards and leverage advanced Liquid capabilities such as covenants or swaps.
+
+While LWK is Rust native, we provide [bindnigs](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishinhg these bindings and expanding on the available options. 
+Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.com/SatoshiPortal/lwk-dart) bindings.  
+
 
 ## Main Features
 
@@ -24,60 +35,9 @@
 * **WASM** preliminary support with [`lwk_wasm`](./lwk_wasm) crate, see it [live](https://blockstream.github.io/lwk/).
 * **JSON-RPC Server** support: all functions are exposed via JSON-RPC Server, making it easier to build your own frontend, GUI, or integration.
 
-## Building from source
+## LWK Structure
 
-First you need [rust](https://www.rust-lang.org/tools/install), our MSRV is 1.75.0
-then you can build from source:
-
-```sh
-$ git clone git@github.com:Blockstream/lwk.git
-$ cd lwk
-$ cargo install --path ./lwk_cli/ 
-```
-
-Or
-```
-$ cargo install --path ./lwk_cli/ --features serial
-```
-To enable connection with Jade over serial.
-
-## CLI Usage
-
-Start the rpc server (default in Liquid Testnet)
-and put it in background
-```sh
-$ lwk_cli server start &
-```
-
-Create a software *signer* named `sw` from a given BIP39 mnemonic
-```sh
-$ lwk_cli signer load-software -s sw --persist false --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-```
-
-Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)
-```sh
-$ DESC=$(lwk_cli signer singlesig-desc -s sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
-$ lwk_cli wallet load -w ss -d $DESC
-```
-
-Get the wallet balance
-```sh
-$ lwk_cli wallet balance -w ss
-```
-
-When you're done, stop the rpc server.
-```sh
-$ lwk_cli server stop
-```
-
-### Jade
-
-If you have a Jade, you can plug it in and use it to create a
-wallet and sign its transactions.
-
-## Workspace Structure
-
-The projects are split into different component crates that might be useful independently.
+LWK funtionalities are split into different component crates that might be useful independently.
 
 Internal crate dependencies are shown in this diagram, where an arrow indicates "depends on":
 
@@ -131,6 +91,184 @@ For instance, mobile app devs might be interested mainly in
 `lwk_bindings`, `lwk_wollet` and `lwk_signer`.
 While backend developers might want to directly use `lwk_cli`
 in their systems.
+
+## Getting started with LWK Development
+
+### Rust
+
+#### Rust Examples
+
+* [Create a testnet watch-only wallet from a CT wallet descriptor and get list of transactions](./lwk_wollet/examples/list_transactions.rs)
+
+### Python
+
+#### Build Python wheel
+
+First, create a virtual env, skip the step if you already created it.
+
+```shell
+cd lwk/lwk_bindings
+virtualenv venv
+source venv/bin/activate
+pip install maturin maturin[patchelf] uniffi-bindgen
+```
+
+Then build the wheel
+
+```shell
+cd lwk/lwk_bindings
+maturin develop
+```
+
+Try it (note there is still an issue in how we import the package when using the wheel):
+
+```python
+import lwk
+str(lwk.Network.mainnet())
+```
+
+#### Test
+
+```shell
+cargo test -p lwk_bindings --features foreign_bindings --test bindings -- py
+```
+
+Live environment
+
+```shell
+just python-env-bindings
+```
+
+#### Python Examples
+
+* [List transactions](./tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
+* [Send transaction](./tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
+* [Send asset](./tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
+* [Custom persister](./tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
+
+### Kotlin
+
+#### Build
+
+This will build the bindings library in debug mode and generate the kotlin file
+
+```shell
+just kotlin
+```
+
+Create android bindings library libs, 4 architectures in release mode
+
+```shell
+just android
+```
+
+#### Kotlin Examples
+
+* [List transactions](./tests/bindings/list_transactions.kts) of a wpkh/slip77 wallet
+
+### Swift
+
+#### Swift Examples
+
+* [List transactions](./tests/bindings/list_transactions.swift) of a wpkh/slip77 wallet
+
+### WASM
+
+We currently provide preliminary support but are commited to continue working on this to have a fully featured LWK working on WASM enviroments.
+[See these instructions to try out LWK on WASM](./lwk_wasm)
+
+## See what LWK is capable of by using the command line tool (LWK_CLI)
+
+All LWK functions are exposed via a local JSON-RPC server that communicates with a CLI tool so you can see LWK in action.
+
+This JSON-RPC Server also makes it easier to build your own frontend, GUI, or integration. 
+
+If you want to see an overview of LWK and a demo with the CLI tool check out this [video](https://community.liquid.net/c/videos/demo-liquid-wallet-kit-lwk)
+
+### Installing LWK_CLI from crates.io
+
+```sh
+$ cargo install lwk_cli 
+```
+or if you want to connect Jade over serial:
+
+```sh
+$ cargo install lwk_cli --features-serial 
+``` 
+
+### Building LWK_CLI from source
+
+First you need [rust](https://www.rust-lang.org/tools/install), our MSRV is 1.75.0
+then you can build from source:
+
+```sh
+$ git clone git@github.com:Blockstream/lwk.git
+$ cd lwk
+$ cargo install --path ./lwk_cli/ 
+```
+
+Or
+```
+$ cargo install --path ./lwk_cli/ --features serial
+```
+To enable connection with Jade over serial.
+
+## Using LWK_CLI
+
+Help will show available commands:
+
+```sh
+$ lwk_cli --help
+```
+
+Start the rpc server (default in Liquid Testnet)
+and put it in background
+```sh
+$ lwk_cli server start
+```
+Every command requires the server running so open a new shell to run the client. 
+
+Create new BIP39 mnemonic for a software signer
+```sh
+$ lwk_cli signer generate
+```
+Load a software *signer* named `sw` from a given BIP39 mnemonic
+```sh
+$ lwk_cli signer load-software --signer sw --persist false --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+```
+
+Create a p2wpkh *wallet* named `ss` (install [`jq`](https://github.com/jqlang/jq) or extract the descriptor manually)
+```sh
+$ DESC=$(lwk_cli signer singlesig-desc -signer sw --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ lwk_cli wallet load --wallet ss -d $DESC
+```
+
+Get the wallet balance
+```sh
+$ lwk_cli wallet balance -w ss
+```
+If you have a Jade, you can plug it in and use it to create a
+wallet and sign its transactions.
+
+Probe connected Jades and promt user to unlock it to get identifiers needed to load Jade on LWK
+
+```sh
+$ lwk_cli signer jade-id
+```
+load Jade using returned ID
+
+```sh
+$ lwk_cli signer load-jade --signer <NAME_FOR_THIS_JADE> --id <ID>
+```
+
+
+When you're done, stop the rpc server.
+```sh
+$ lwk_cli server stop
+```
+
+
+
 
 ## Tests
 

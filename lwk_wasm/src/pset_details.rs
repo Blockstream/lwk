@@ -173,3 +173,45 @@ impl From<lwk_common::Issuance> for Issuance {
         Self { inner: pset_iss }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use wasm_bindgen_test::*;
+
+    use crate::{Network, Pset, Wollet, WolletDescriptor};
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn test_pset_details() {
+        let pset = include_str!("../test_data/pset_details/pset.base64");
+        let pset = Pset::new(pset).unwrap();
+
+        let descriptor = include_str!("../test_data/pset_details/desc");
+        let descriptor = WolletDescriptor::new(descriptor).unwrap();
+        let network = Network::regtest_default();
+        let wollet = Wollet::new(&network, &descriptor).unwrap();
+
+        let details = wollet.pset_details(&pset).unwrap();
+        assert_eq!(details.balance().fee(), 254);
+        let balance: HashMap<lwk_wollet::elements::AssetId, i64> =
+            serde_wasm_bindgen::from_value(details.balance().balances()).unwrap();
+        assert_eq!(
+            format!("{:?}", balance),
+            "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1254}"
+        );
+
+        let signatures = details.signatures();
+        assert_eq!(signatures.len(), 1);
+
+        assert_eq!(format!("{:?}", signatures[0].has_signature()), "JsValue([[\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\", \"6e055509\"]])");
+        assert_eq!(format!("{:?}", signatures[0].missing_signature()), "JsValue([[\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\", \"281e2239\"]])");
+
+        let issuances = details.inputs_issuances();
+        assert_eq!(issuances.len(), 1);
+        assert!(!issuances[0].is_issuance());
+        assert!(!issuances[0].is_reissuance());
+    }
+}

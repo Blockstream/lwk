@@ -1,4 +1,4 @@
-use crate::{AddressResult, Error, Network, Pset, Update, WalletTx, WolletDescriptor};
+use crate::{AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WolletDescriptor};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
@@ -63,6 +63,12 @@ impl Wollet {
         let mut pset: PartiallySignedTransaction = pset.into();
         self.inner.finalize(&mut pset)?;
         Ok(pset.into())
+    }
+
+    pub fn pset_details(&self, pset: &Pset) -> Result<PsetDetails, Error> {
+        let pset: PartiallySignedTransaction = pset.clone().into();
+        let details = self.inner.get_details(&pset)?;
+        Ok(details.into())
     }
 }
 

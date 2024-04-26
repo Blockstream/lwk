@@ -442,6 +442,9 @@ pub enum WalletCommand {
         signer: Option<String>,
 
         /// Returns a text-encoded qr in the json
+        ///
+        /// To view it in the terminal is possible to pipe the resulting json to `jq`:
+        /// eg `lwk_cli wallet address --wallet w1 --with-text-qr | jq -r .text_qr`
         #[arg(long)]
         with_text_qr: bool,
 

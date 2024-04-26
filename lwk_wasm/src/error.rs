@@ -41,6 +41,9 @@ pub enum Error {
     #[error(transparent)]
     Jade(#[from] lwk_jade::Error),
 
+    #[error(transparent)]
+    Qr(#[from] lwk_common::QrError),
+
     #[error("{0}")]
     Generic(String),
 }

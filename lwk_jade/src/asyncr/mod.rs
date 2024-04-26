@@ -269,7 +269,7 @@ impl<S: Stream> Jade<S> {
         self.get_receive_address(params).await
     }
 
-    pub async fn network(&self) -> Network {
+    pub fn network(&self) -> Network {
         self.network
     }
 

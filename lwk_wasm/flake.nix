@@ -27,6 +27,7 @@
               cargo
               wasm-pack
               clang
+              nodejs_21
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
                 targets = [ "wasm32-unknown-unknown" ];
@@ -35,6 +36,7 @@
 
             CC_wasm32_unknown_unknown = "clang-17";
             CFLAGS_wasm32_unknown_unknown = "-I${pkgs.clang_17}/resource-root/include";
+            RUSTFLAGS = "--cfg=web_sys_unstable_apis";
 
           }) { pkgs = pkgs; });
     };

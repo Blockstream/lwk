@@ -7,19 +7,19 @@ use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PsetBalance {
     pub fee: u64,
     pub balances: HashMap<AssetId, i64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PsetSignatures {
     pub has_signature: Vec<(PublicKey, KeySource)>,
     pub missing_signature: Vec<(PublicKey, KeySource)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Issuance {
     asset: AssetId,
     token: AssetId,
@@ -81,7 +81,7 @@ impl Issuance {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PsetDetails {
     pub balance: PsetBalance,
 

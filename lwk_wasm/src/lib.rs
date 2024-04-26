@@ -11,6 +11,7 @@ mod jade;
 mod mnemonic;
 mod network;
 mod pset;
+mod pset_details;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
@@ -35,6 +36,7 @@ pub use jade::Jade;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;
+pub use pset_details::PsetDetails;
 pub use signer::Signer;
 pub use tx_builder::TxBuilder;
 pub use update::Update;

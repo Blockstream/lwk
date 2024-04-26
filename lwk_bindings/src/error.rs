@@ -100,6 +100,14 @@ impl From<lwk_signer::SignError> for LwkError {
     }
 }
 
+impl From<lwk_common::QrError> for LwkError {
+    fn from(value: lwk_common::QrError) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}
+
 impl From<String> for LwkError {
     fn from(msg: String) -> Self {
         LwkError::Generic { msg }

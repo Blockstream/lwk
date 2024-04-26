@@ -256,16 +256,27 @@ fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
 }
 
 fn complete(cli: &str, wallet: &str, pset: &str, signers: &[&str]) -> String {
-    let mut pset = pset.to_string();
+    // Sign both serially and in parallel
+    let pset = pset.to_string();
+    let mut pset_serial = pset.to_string();
+    let mut pset_args = "".to_string();
     for signer in signers {
         let r = sh(&format!(
-            "{cli} signer sign --signer {signer} --pset {pset}"
+            "{cli} signer sign -s {signer} --pset {pset_serial}"
         ));
-        pset = get_str(&r, "pset").to_string();
+        pset_serial = get_str(&r, "pset").to_string();
+        let r = sh(&format!("{cli} signer sign -s {signer} --pset {pset}"));
+        pset_args = format!("{pset_args} --pset {}", get_str(&r, "pset"));
     }
+    let r = sh(&format!("{cli} wallet combine -w {wallet} {pset_args}"));
+    let pset_combined = get_str(&r, "pset");
+    // In general PSETs are not equal since order of keys and signatures might differ
 
+    sh(&format!(
+        "{cli} wallet broadcast -w {wallet} --pset {pset_serial} --dry-run"
+    ));
     let r = sh(&format!(
-        "{cli} wallet broadcast --wallet {wallet} --pset {pset}"
+        "{cli} wallet broadcast -w {wallet} --pset {pset_combined}"
     ));
     let txid = get_str(&r, "txid");
     wait_tx(cli, wallet, txid);

@@ -1,5 +1,5 @@
 use elements::{
-    bitcoin::bip32::ChildNumber,
+    bitcoin::bip32::{ChildNumber, Fingerprint},
     encode::serialize,
     hex::ToHex,
     opcodes::{
@@ -16,10 +16,11 @@ use crate::{
     derivation_path_to_vec,
     get_receive_address::{SingleOrMulti, Variant},
     protocol::GetSignatureParams,
+    register_multisig::RegisteredMultisigDetails,
     sign_liquid_tx::{
         AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, TxInputParams,
     },
-    Error, Jade,
+    Error, Jade, Network,
 };
 use lwk_common::burn_script;
 
@@ -32,153 +33,7 @@ impl Jade {
         let multisigs_details = self.get_cached_registered_multisigs()?;
         let network = self.network;
 
-        let tx = pset.extract_tx()?;
-        let txn = serialize(&tx);
-
-        let burn_script = burn_script();
-        let mut asset_ids_in_tx = HashSet::new();
-        let mut trusted_commitments = vec![];
-        let mut changes = vec![];
-        for (i, output) in pset.outputs().iter().enumerate() {
-            let asset_id = output.asset.ok_or(Error::MissingAssetIdInOutput(i))?;
-            asset_ids_in_tx.insert(asset_id);
-            let mut asset_id = serialize(&asset_id);
-            asset_id.reverse(); // Jade want it reversed
-            let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
-            let trusted_commitment = if unblinded {
-                // fee output or burn output
-                None
-            } else {
-                Some(Commitment {
-                    asset_blind_proof: output
-                        .blind_asset_proof
-                        .as_ref()
-                        .ok_or(Error::MissingBlindAssetProofInOutput(i))?
-                        .serialize(),
-                    asset_generator: output
-                        .asset_comm
-                        .ok_or(Error::MissingAssetCommInOutput(i))?
-                        .serialize()
-                        .to_vec(),
-                    asset_id,
-                    blinding_key: output
-                        .blinding_key
-                        .ok_or(Error::MissingBlindingKeyInOutput(i))?
-                        .to_bytes(),
-                    value: output.amount.ok_or(Error::MissingAmountInOutput(i))?,
-                    value_commitment: output
-                        .amount_comm
-                        .ok_or(Error::MissingAmountCommInOutput(i))?
-                        .serialize()
-                        .to_vec(),
-                    value_blind_proof: output
-                        .blind_value_proof
-                        .as_ref()
-                        .ok_or(Error::MissingBlindValueProofInOutput(i))?
-                        .serialize(),
-                })
-            };
-            trusted_commitments.push(trusted_commitment);
-
-            let mut change = None;
-            for (fingerprint, path) in output.bip32_derivation.values() {
-                if fingerprint == &my_fingerprint {
-                    // This ensures that path has at least 2 elements
-                    let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
-                    if is_change {
-                        if output.script_pubkey.is_v0_p2wpkh() {
-                            change = Some(Change {
-                                address: SingleOrMulti::Single {
-                                    variant: Variant::Wpkh,
-                                    path: derivation_path_to_vec(path),
-                                },
-                                is_change,
-                            });
-                        } else if output.script_pubkey.is_p2sh() {
-                            if let Some(redeem_script) = output.redeem_script.as_ref() {
-                                if redeem_script.is_v0_p2wpkh() {
-                                    change = Some(Change {
-                                        address: SingleOrMulti::Single {
-                                            variant: Variant::ShWpkh,
-                                            path: derivation_path_to_vec(path),
-                                        },
-                                        is_change,
-                                    });
-                                }
-                            }
-                        } else if output.script_pubkey.is_v0_p2wsh() {
-                            if let Some(witness_script) = output.witness_script.as_ref() {
-                                if is_multisig(witness_script) {
-                                    for details in &multisigs_details {
-                                        // path has at least 2 elements
-                                        let index = path[path.len() - 1];
-                                        if let Ok(derived_witness_script) = details
-                                            .descriptor
-                                            .derive_witness_script(is_change, index.into())
-                                        {
-                                            if witness_script == &derived_witness_script {
-                                                let mut paths = vec![];
-                                                for _ in 0..details.descriptor.signers.len() {
-                                                    // FIXME: here we should only pass the paths that were
-                                                    // not passed when calling register_multisig. However
-                                                    // deducing them now is not trivial, thus we only take
-                                                    // the last 2 elements in the derivation path which we
-                                                    // expect to be "0|1,*"
-                                                    let v = derivation_path_to_vec(path);
-                                                    // path has at least 2 elements
-                                                    let v = v[(path.len() - 2)..].to_vec();
-                                                    paths.push(v);
-                                                }
-                                                change = Some(Change {
-                                                    address: SingleOrMulti::Multi {
-                                                        multisig_name: details
-                                                            .multisig_name
-                                                            .to_string(),
-                                                        paths,
-                                                    },
-                                                    is_change,
-                                                });
-                                                break; // No need to check for more multisigs
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            changes.push(change);
-        }
-
-        let mut assets_info = vec![];
-        for asset_id in asset_ids_in_tx {
-            if let Some(Ok(meta)) = pset.get_asset_metadata(asset_id) {
-                if let Ok(contract) = serde_json::from_str::<Contract>(meta.contract()) {
-                    let asset_info = AssetInfo {
-                        asset_id: asset_id.to_string(),
-                        contract,
-                        issuance_prevout: Prevout {
-                            txid: meta.issuance_prevout().txid.to_hex(),
-                            vout: meta.issuance_prevout().vout,
-                        },
-                    };
-
-                    assets_info.push(asset_info);
-                }
-            }
-        }
-
-        let params = SignLiquidTxParams {
-            network,
-            txn,
-            num_inputs: tx.input.len() as u32,
-            use_ae_signatures: true,
-            change: changes,
-            asset_info: assets_info,
-            trusted_commitments,
-            additional_info: None,
-        };
+        let params = create_jade_sign_req(pset, my_fingerprint, multisigs_details, network)?;
 
         let mut sigs_added_or_overwritten = 0;
         let sign_response = self.sign_liquid_tx(params)?;
@@ -262,6 +117,159 @@ impl Jade {
 
         Ok(sigs_added_or_overwritten)
     }
+}
+
+fn create_jade_sign_req(
+    pset: &mut PartiallySignedTransaction,
+    my_fingerprint: Fingerprint,
+    multisigs_details: Vec<RegisteredMultisigDetails>,
+    network: Network,
+) -> Result<SignLiquidTxParams, Error> {
+    let tx = pset.extract_tx()?;
+    let txn = serialize(&tx);
+    let burn_script = burn_script();
+    let mut asset_ids_in_tx = HashSet::new();
+    let mut trusted_commitments = vec![];
+    let mut changes = vec![];
+    for (i, output) in pset.outputs().iter().enumerate() {
+        let asset_id = output.asset.ok_or(Error::MissingAssetIdInOutput(i))?;
+        asset_ids_in_tx.insert(asset_id);
+        let mut asset_id = serialize(&asset_id);
+        asset_id.reverse(); // Jade want it reversed
+        let unblinded = output.script_pubkey.is_empty() || output.script_pubkey == burn_script;
+        let trusted_commitment = if unblinded {
+            // fee output or burn output
+            None
+        } else {
+            Some(Commitment {
+                asset_blind_proof: output
+                    .blind_asset_proof
+                    .as_ref()
+                    .ok_or(Error::MissingBlindAssetProofInOutput(i))?
+                    .serialize(),
+                asset_generator: output
+                    .asset_comm
+                    .ok_or(Error::MissingAssetCommInOutput(i))?
+                    .serialize()
+                    .to_vec(),
+                asset_id,
+                blinding_key: output
+                    .blinding_key
+                    .ok_or(Error::MissingBlindingKeyInOutput(i))?
+                    .to_bytes(),
+                value: output.amount.ok_or(Error::MissingAmountInOutput(i))?,
+                value_commitment: output
+                    .amount_comm
+                    .ok_or(Error::MissingAmountCommInOutput(i))?
+                    .serialize()
+                    .to_vec(),
+                value_blind_proof: output
+                    .blind_value_proof
+                    .as_ref()
+                    .ok_or(Error::MissingBlindValueProofInOutput(i))?
+                    .serialize(),
+            })
+        };
+        trusted_commitments.push(trusted_commitment);
+
+        let mut change = None;
+        for (fingerprint, path) in output.bip32_derivation.values() {
+            if fingerprint == &my_fingerprint {
+                // This ensures that path has at least 2 elements
+                let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
+                if is_change {
+                    if output.script_pubkey.is_v0_p2wpkh() {
+                        change = Some(Change {
+                            address: SingleOrMulti::Single {
+                                variant: Variant::Wpkh,
+                                path: derivation_path_to_vec(path),
+                            },
+                            is_change,
+                        });
+                    } else if output.script_pubkey.is_p2sh() {
+                        if let Some(redeem_script) = output.redeem_script.as_ref() {
+                            if redeem_script.is_v0_p2wpkh() {
+                                change = Some(Change {
+                                    address: SingleOrMulti::Single {
+                                        variant: Variant::ShWpkh,
+                                        path: derivation_path_to_vec(path),
+                                    },
+                                    is_change,
+                                });
+                            }
+                        }
+                    } else if output.script_pubkey.is_v0_p2wsh() {
+                        if let Some(witness_script) = output.witness_script.as_ref() {
+                            if is_multisig(witness_script) {
+                                for details in &multisigs_details {
+                                    // path has at least 2 elements
+                                    let index = path[path.len() - 1];
+                                    if let Ok(derived_witness_script) = details
+                                        .descriptor
+                                        .derive_witness_script(is_change, index.into())
+                                    {
+                                        if witness_script == &derived_witness_script {
+                                            let mut paths = vec![];
+                                            for _ in 0..details.descriptor.signers.len() {
+                                                // FIXME: here we should only pass the paths that were
+                                                // not passed when calling register_multisig. However
+                                                // deducing them now is not trivial, thus we only take
+                                                // the last 2 elements in the derivation path which we
+                                                // expect to be "0|1,*"
+                                                let v = derivation_path_to_vec(path);
+                                                // path has at least 2 elements
+                                                let v = v[(path.len() - 2)..].to_vec();
+                                                paths.push(v);
+                                            }
+                                            change = Some(Change {
+                                                address: SingleOrMulti::Multi {
+                                                    multisig_name: details
+                                                        .multisig_name
+                                                        .to_string(),
+                                                    paths,
+                                                },
+                                                is_change,
+                                            });
+                                            break; // No need to check for more multisigs
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        changes.push(change);
+    }
+    let mut assets_info = vec![];
+    for asset_id in asset_ids_in_tx {
+        if let Some(Ok(meta)) = pset.get_asset_metadata(asset_id) {
+            if let Ok(contract) = serde_json::from_str::<Contract>(meta.contract()) {
+                let asset_info = AssetInfo {
+                    asset_id: asset_id.to_string(),
+                    contract,
+                    issuance_prevout: Prevout {
+                        txid: meta.issuance_prevout().txid.to_hex(),
+                        vout: meta.issuance_prevout().vout,
+                    },
+                };
+
+                assets_info.push(asset_info);
+            }
+        }
+    }
+    let params = SignLiquidTxParams {
+        network,
+        txn,
+        num_inputs: tx.input.len() as u32,
+        use_ae_signatures: true,
+        change: changes,
+        asset_info: assets_info,
+        trusted_commitments,
+        additional_info: None,
+    };
+    Ok(params)
 }
 
 // Get a script from witness script pubkey hash

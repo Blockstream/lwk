@@ -32,13 +32,14 @@ impl Jade {
     /// are not interleaved, use `MutexJade` which grant that by using a lock for something
     /// implementing the `Signer` trait
     pub fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
+        let my_fingerprint = self.fingerprint()?;
+        let multisigs_details = self.get_cached_registered_multisigs()?;
+        let network = self.network;
+
         let tx = pset.extract_tx()?;
         let txn = serialize(&tx);
-        let mut sigs_added_or_overwritten = 0;
-        let my_fingerprint = self.fingerprint()?;
 
         let burn_script = burn_script();
-        let multisigs_details = self.get_cached_registered_multisigs()?;
         let mut asset_ids_in_tx = HashSet::new();
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
@@ -173,7 +174,7 @@ impl Jade {
         }
 
         let params = SignLiquidTxParams {
-            network: self.network,
+            network,
             txn,
             num_inputs: tx.input.len() as u32,
             use_ae_signatures: true,
@@ -182,6 +183,8 @@ impl Jade {
             trusted_commitments,
             additional_info: None,
         };
+
+        let mut sigs_added_or_overwritten = 0;
         let sign_response = self.sign_liquid_tx(params)?;
         assert!(sign_response);
 

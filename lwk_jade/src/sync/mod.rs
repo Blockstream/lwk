@@ -151,6 +151,34 @@ impl Jade {
         }
     }
 
+    fn get_cached_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
+        let mut guard = self.multisigs_details.lock()?;
+        if let Some(multisigs_details) = guard.as_ref() {
+            Ok(multisigs_details.clone())
+        } else {
+            let result = self.ask_registered_multisigs()?;
+            *guard = Some(result.clone());
+            Ok(result)
+        }
+    }
+
+    fn ask_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
+        let mut multisigs_details = Vec::new();
+        // Get all the registered multisigs including the signer
+        for (name, _) in self.get_registered_multisigs()? {
+            let details = self.get_registered_multisig(GetRegisteredMultisigParams {
+                multisig_name: name,
+            })?;
+            multisigs_details.push(details);
+        }
+        Ok(multisigs_details)
+    }
+
+    fn invalidate_registered_multisigs(&self) -> Result<()> {
+        *self.multisigs_details.lock()? = None;
+        Ok(())
+    }
+
     pub fn fingerprint(&self) -> Result<Fingerprint> {
         Ok(self.get_master_xpub()?.fingerprint())
     }

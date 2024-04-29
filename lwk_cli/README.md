@@ -5,25 +5,24 @@ Building the needed executable requires [rust](https://www.rust-lang.org/tools/i
 ```sh
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk
-$ cargo build --release
-$ alias cli="$(pwd)/target/release/lwk_cli"
+$ cargo install --path ./lwk_cli
 ```
 
 If you want to enable Jade over serial build with
 ```sh
-$ cargo build --release --features serial
+$ cargo install --path ./lwk_cli --features serial
 ```
 
 Help shows available commands:
 
 ```sh
-$ cli --help
+$ lwk_cli --help
 ```
 
 Install bash completion with:
 
 ```sh
-$ cli generate-completion bash | jq -r . | sudo tee /usr/share/bash-completion/completions/cli
+$ lwk_cli generate-completion bash | jq -r . | sudo tee /usr/share/bash-completion/completions/lwk_cli
 ```
 
 Other shell are available: bash, elvish, fish, powershell, zsh.
@@ -34,20 +33,20 @@ The destination file path `/usr/share/bash-completion/completions/cli` may chang
 ### Start
 
 ```sh
-$ cli server start
+$ lwk_cli server start
 ```
 
 Or with more logs:
 
 
 ```sh
-$ RUST_LOG=debug cli server start
+$ RUST_LOG=debug lwk_cli server start
 ```
 
 Start the server in background and have logs on file
 
 ```sh
-$ cli server start 2>debug.log &
+$ lwk_cli server start 2>debug.log &
 ```
 
 ### Stop
@@ -55,7 +54,7 @@ $ cli server start 2>debug.log &
 If not in background hit ctrl-c in the terminal where it started or in another shell:
 
 ```sh
-$ cli server stop
+$ lwk_cli server stop
 ```
 
 Another way to terminate a server started in background is to type `fg` to bring the background
@@ -68,7 +67,7 @@ Every command requires the server running.
 Generate a software signer ("stateless" request)
 
 ```sh
-$ cli signer generate
+$ lwk_cli signer generate
 ```
 
 is equivalent to:
@@ -98,8 +97,8 @@ Load a wallet and request a balance ("stateful" request)
 
 
 ```sh
-$ cli wallet load --wallet custody -d "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
-$ cli wallet balance --wallet custody
+$ lwk_cli wallet load --wallet custody -d "ct(L3jXxwef3fpB7hcrFozcWgHeJCPSAFiZ1Ji2YJMPxceaGvy3PC1q,elwpkh(tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87/*))#lrwadl63"
+$ lwk_cli wallet balance --wallet custody
 ```
 
 is equivalent to:
@@ -113,8 +112,8 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 Request an address:
 
 ```sh
-$ cli wallet address --wallet custody
-$ cli wallet address --wallet custody --index 4
+$ lwk_cli wallet address --wallet custody
+$ lwk_cli wallet address --wallet custody --index 4
 ```
 
 An error test case:
@@ -136,21 +135,21 @@ $ curl --header "Content-Type: application/json" --request POST --data '{"method
 
 First start the server
 ```sh
-cli --network testnet server start
+lwk_cli --network testnet server start
 ```
 
 ```sh
-$ MNEMONIC=$(cli signer generate | jq -r .mnemonic)
-$ cli signer load-software --persist true --mnemonic "$MNEMONIC" --signer s1
-$ DESCRIPTOR=$(cli signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
-$ cli wallet load --wallet w1 -d "$DESCRIPTOR"
-$ cli wallet address --wallet w1
+$ MNEMONIC=$(lwk_cli signer generate | jq -r .mnemonic)
+$ lwk_cli signer load-software --persist true --mnemonic "$MNEMONIC" --signer s1
+$ DESCRIPTOR=$(lwk_cli signer singlesig-desc --signer s1 --descriptor-blinding-key slip77 --kind wpkh | jq -r .descriptor)
+$ lwk_cli wallet load --wallet w1 -d "$DESCRIPTOR"
+$ lwk_cli wallet address --wallet w1
 ```
 
 Send some lbtc to the address
 
 ```sh
-$ cli wallet balance --wallet w1
+$ lwk_cli wallet balance --wallet w1
 ```
 
 Should show a balance
@@ -161,7 +160,7 @@ You must have a loaded singlesig wallet `w1`, with the corresponding signer `w1`
 Must also have funds in the wallet.
 
 ```sh
-$ UNSIGNED_PSET=$(cli wallet send --wallet w1 --recipient tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg:1000:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 | jq -r .pset)
+$ UNSIGNED_PSET=$(lwk_cli wallet send --wallet w1 --recipient tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg:1000:144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 | jq -r .pset)
 ```
 
 Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 is the policy asset in testnet) to the address tlq1qqwe0a3dp3hce866snkll5vq244n47ph5zy2xr330uc8wkrvc0whwsvw4w67xksmfyxwqdyrykp0tsxzsm24mqm994pfy4f6lg
@@ -170,12 +169,12 @@ Creates an unsigned PSET sending 1000 satoshi of liquid btc (144c654344aa716d6f3
 Sign the pset
 
 ```sh
-$ SIGNED_PSET=$(cli signer sign --signer s1 --pset $UNSIGNED_PSET | jq -r .pset)
+$ SIGNED_PSET=$(lwk_cli signer sign --signer s1 --pset $UNSIGNED_PSET | jq -r .pset)
 ```
 
 Broadcast it. Remove `--dry-run` to effectively broadcast live, otherwise only partial checks on the transactions finalization are made (for example it's not checked inputs are unspent)
 
 ```sh
-$ cli wallet broadcast --dry-run --wallet w1 --pset $SIGNED_PSET)
+$ lwk_cli wallet broadcast --dry-run --wallet w1 --pset $SIGNED_PSET)
 
 ```

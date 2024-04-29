@@ -27,10 +27,6 @@ const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };
 
 impl Jade {
     /// Sign a pset from a Jade
-    ///
-    /// Mostly equivalent to `Signer::sign`` but it takes self mutably to ensure calls to the jade
-    /// are not interleaved, use `MutexJade` which grant that by using a lock for something
-    /// implementing the `Signer` trait
     pub fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let my_fingerprint = self.fingerprint()?;
         let multisigs_details = self.get_cached_registered_multisigs()?;

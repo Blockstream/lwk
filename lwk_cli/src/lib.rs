@@ -427,7 +427,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         CliCommand::Schema(a) => schema::schema(a, client)?,
         CliCommand::GenerateCompletion { shell } => {
             let mut result = vec![];
-            clap_complete::generate(shell, &mut Cli::command(), "cli", &mut result);
+            clap_complete::generate(shell, &mut Cli::command(), "lwk_cli", &mut result);
             let s = String::from_utf8(result)?;
             Value::String(s)
         }

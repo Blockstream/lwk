@@ -30,6 +30,9 @@ impl Jade {
     /// Sign a pset from a Jade
     pub fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let my_fingerprint = self.fingerprint()?;
+
+        // Singlesig signing don't need this, however, it is simpler to always ask for it and once cached is a
+        // fast operation anyway (and in a real scenario you may ask for registered multisigs at the beginning of the session)
         let multisigs_details = self.get_cached_registered_multisigs()?;
         let network = self.network;
 

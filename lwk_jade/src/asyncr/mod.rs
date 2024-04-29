@@ -176,6 +176,7 @@ impl<S: Stream> Jade<S> {
         }
     }
 
+    #[allow(dead_code)]
     async fn get_cached_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
         let mut guard = self.multisigs_details.lock().await;
         if let Some(multisigs_details) = guard.as_ref() {
@@ -187,6 +188,7 @@ impl<S: Stream> Jade<S> {
         }
     }
 
+    #[allow(dead_code)]
     async fn ask_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
         let mut multisigs_details = Vec::new();
         // Get all the registered multisigs including the signer

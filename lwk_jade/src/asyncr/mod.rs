@@ -160,15 +160,14 @@ impl<S: Stream> Jade<S> {
     }
 
     pub async fn get_cached_xpub(&self, params: GetXpubParams) -> Result<Xpub> {
-        if let Some(xpub) = self
-            .cached_xpubs
-            .lock()
-            .await
-            .get(&vec_to_derivation_path(&params.path))
-        {
+        let mut guard = self.cached_xpubs.lock().await;
+        let der_path = vec_to_derivation_path(&params.path);
+        if let Some(xpub) = guard.get(&der_path) {
             Ok(*xpub)
         } else {
-            self.get_xpub(params).await
+            let result = self.get_xpub(params).await?;
+            guard.insert(der_path, result);
+            Ok(result)
         }
     }
 

@@ -136,14 +136,14 @@ impl Jade {
     }
 
     pub fn get_cached_xpub(&self, params: GetXpubParams) -> Result<Xpub> {
-        if let Some(xpub) = self
-            .cached_xpubs
-            .lock()?
-            .get(&vec_to_derivation_path(&params.path))
-        {
+        let mut guard = self.cached_xpubs.lock()?;
+        let der_path = vec_to_derivation_path(&params.path);
+        if let Some(xpub) = guard.get(&der_path) {
             Ok(*xpub)
         } else {
-            self.get_xpub(params)
+            let result = self.get_xpub(params)?;
+            guard.insert(der_path, result);
+            Ok(result)
         }
     }
 

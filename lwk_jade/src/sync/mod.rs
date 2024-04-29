@@ -41,6 +41,9 @@ pub struct Jade {
 
     /// Cached xpubs
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
+
+    /// Cached multisigs details
+    multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
 
 impl Jade {
@@ -49,6 +52,7 @@ impl Jade {
             conn: Mutex::new(conn),
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
+            multisigs_details: Mutex::new(None),
         }
     }
 

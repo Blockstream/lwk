@@ -17,6 +17,8 @@ use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;
 
+mod sign_pset;
+
 #[derive(Debug)]
 pub struct Jade<S: Stream> {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)

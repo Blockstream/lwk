@@ -125,6 +125,7 @@ impl Jade {
     }
 
     pub fn register_multisig(&self, params: RegisterMultisigParams) -> Result<bool> {
+        self.invalidate_registered_multisigs()?;
         self.send(Request::RegisterMultisig(params))
     }
 

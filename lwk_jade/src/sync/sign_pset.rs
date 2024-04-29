@@ -16,7 +16,6 @@ use crate::{
     derivation_path_to_vec,
     get_receive_address::{SingleOrMulti, Variant},
     protocol::GetSignatureParams,
-    register_multisig::GetRegisteredMultisigParams,
     sign_liquid_tx::{
         AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, TxInputParams,
     },
@@ -39,8 +38,7 @@ impl Jade {
         let my_fingerprint = self.fingerprint()?;
 
         let burn_script = burn_script();
-        let mut got_registered_multisigs = false;
-        let mut multisigs_details = vec![];
+        let multisigs_details = self.get_cached_registered_multisigs()?;
         let mut asset_ids_in_tx = HashSet::new();
         let mut trusted_commitments = vec![];
         let mut changes = vec![];
@@ -114,19 +112,6 @@ impl Jade {
                         } else if output.script_pubkey.is_v0_p2wsh() {
                             if let Some(witness_script) = output.witness_script.as_ref() {
                                 if is_multisig(witness_script) {
-                                    if !got_registered_multisigs {
-                                        // Get all the registered multisigs including the signer
-                                        for (name, _) in self.get_registered_multisigs()? {
-                                            let details = self.get_registered_multisig(
-                                                GetRegisteredMultisigParams {
-                                                    multisig_name: name,
-                                                },
-                                            )?;
-                                            multisigs_details.push(details);
-                                        }
-                                        // Call get_registered_multisigs once per "sign" call
-                                        got_registered_multisigs = true;
-                                    }
                                     for details in &multisigs_details {
                                         // path has at least 2 elements
                                         let index = path[path.len() - 1];

@@ -425,6 +425,40 @@ async fn async_ping() {
     assert_eq!(result, 0);
 }
 
+#[cfg(feature = "asyncr")]
+#[tokio::test]
+async fn async_sign() {
+    use lwk_jade::protocol::DebugSetMnemonicParams;
+
+    lwk_test_util::init_logging();
+
+    let docker = clients::Cli::default();
+
+    let container = docker.run(lwk_containers::JadeEmulator);
+    let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
+    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+        .await
+        .unwrap();
+    let network = lwk_jade::Network::LocaltestLiquid;
+    let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network);
+    let params = DebugSetMnemonicParams {
+        mnemonic: TEST_MNEMONIC.to_string(),
+        passphrase: None,
+        temporary_wallet: false,
+    };
+    jade.debug_set_mnemonic(params).await.unwrap();
+
+    let result = jade.ping().await.unwrap();
+    assert_eq!(result, 0);
+
+    let pset_base64 = include_str!("../test_data/pset_to_be_signed.base64");
+    let mut pset: PartiallySignedTransaction = pset_base64.parse().unwrap();
+    assert_eq!(pset.outputs().len(), 3);
+
+    let sign = jade.sign(&mut pset).await.unwrap();
+    assert!(sign > 0);
+}
+
 fn mock_version_info() -> VersionInfoResult {
     VersionInfoResult {
         jade_version: "1".to_string(),

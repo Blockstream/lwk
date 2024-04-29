@@ -1,9 +1,10 @@
 use crate::{
     serial::{get_jade_serial, WebSerial},
-    Error, Network,
+    Error, Network, Pset,
 };
 use lwk_jade::asyncr;
 use lwk_jade::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
+use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`asyncr::Jade`]
@@ -93,6 +94,13 @@ impl Jade {
             })
             .await?;
         Ok(xpub.to_string())
+    }
+
+    /// Sign and consume the given PSET, returning the signed one
+    pub async fn sign(&self, pset: Pset) -> Result<Pset, Error> {
+        let mut pset: PartiallySignedTransaction = pset.into();
+        self.inner.sign(&mut pset).await?;
+        Ok(pset.into())
     }
 }
 

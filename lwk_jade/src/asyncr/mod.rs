@@ -27,6 +27,9 @@ pub struct Jade<S: Stream> {
 
     /// Cached master xpub
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,
+
+    /// Cached multisigs details
+    multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
 
 pub trait Stream {
@@ -64,6 +67,7 @@ impl<S: Stream> Jade<S> {
             stream,
             network,
             cached_xpubs: Mutex::new(HashMap::new()),
+            multisigs_details: Mutex::new(None),
         }
     }
 
@@ -145,6 +149,7 @@ impl<S: Stream> Jade<S> {
     }
 
     pub async fn register_multisig(&self, params: RegisterMultisigParams) -> Result<bool> {
+        self.invalidate_registered_multisigs().await;
         self.send(Request::RegisterMultisig(params)).await
     }
 
@@ -169,6 +174,35 @@ impl<S: Stream> Jade<S> {
             guard.insert(der_path, result);
             Ok(result)
         }
+    }
+
+    async fn get_cached_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
+        let mut guard = self.multisigs_details.lock().await;
+        if let Some(multisigs_details) = guard.as_ref() {
+            Ok(multisigs_details.clone())
+        } else {
+            let result = self.ask_registered_multisigs().await?;
+            *guard = Some(result.clone());
+            Ok(result)
+        }
+    }
+
+    async fn ask_registered_multisigs(&self) -> Result<Vec<RegisteredMultisigDetails>> {
+        let mut multisigs_details = Vec::new();
+        // Get all the registered multisigs including the signer
+        for (name, _) in self.get_registered_multisigs().await? {
+            let details = self
+                .get_registered_multisig(GetRegisteredMultisigParams {
+                    multisig_name: name,
+                })
+                .await?;
+            multisigs_details.push(details);
+        }
+        Ok(multisigs_details)
+    }
+
+    async fn invalidate_registered_multisigs(&self) {
+        *self.multisigs_details.lock().await = None;
     }
 
     pub async fn fingerprint(&self) -> Result<Fingerprint> {

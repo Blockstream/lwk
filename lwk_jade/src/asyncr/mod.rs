@@ -13,6 +13,7 @@ use crate::register_multisig::{
 use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Network, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
+use elements_miniscript::slip77;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;
@@ -306,6 +307,19 @@ impl<S: Stream> Jade<S> {
 
     pub fn network(&self) -> Network {
         self.network
+    }
+
+    // Should be implemented via the Signer trait, but here we are async...
+    pub async fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey> {
+        let params = GetMasterBlindingKeyParams {
+            only_if_silent: false,
+        };
+        let bytes = self.get_master_blinding_key(params).await?;
+        let array: [u8; 32] = bytes
+            .to_vec()
+            .try_into()
+            .map_err(|_| Error::Slip77MasterBlindingKeyInvalidSize)?;
+        Ok(slip77::MasterBlindingKey::from(array))
     }
 
     pub(crate) async fn send<T>(&self, request: Request) -> Result<T>

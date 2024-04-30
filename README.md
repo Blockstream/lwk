@@ -7,11 +7,11 @@
 **LWK** is a collection of Rust crates for [Liquid](https://liquid.net) Wallets.
 Its goal is to provide all the necessary building blocks for Liquid wallet development to enable a broad range of use cases on Liquid.
 
-By not following a monolithic approach but instead providing a group of functionality-specific libraries, LWK allows us to offer a modular, flexible and ergonomic toolset for Liquid development. This design lets application developers pick only what they need and focus on the relevant aspects of their use cases
+By not following a monolithic approach but instead providing a group of function-specific libraries, LWK allows us to offer a modular, flexible and ergonomic toolset for Liquid development. This design lets application developers pick only what they need and focus on the relevant aspects of their use cases.
 
-We want LWK to be a reference tool driven both by Blocksteam and Liquid participants that helps make Liquid integration frictionless, define ecosystem standards and leverage advanced Liquid capabilities such as covenants or swaps.
+We want LWK to be a reference tool driven both by Blockstream and Liquid participants that helps make Liquid integration frictionless, define ecosystem standards and leverage advanced Liquid capabilities such as covenants or swaps.
 
-While LWK is Rust native, we provide [bindnigs](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishinhg these bindings and expanding on the available options. 
+While LWK is Rust native, we provide [bindings](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishinhg these bindings and expanding the available options. 
 Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.com/SatoshiPortal/lwk-dart) bindings.  
 
 
@@ -38,6 +38,29 @@ Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.c
 ## LWK Structure
 
 LWK funtionalities are split into different component crates that might be useful independently.
+
+* [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
+* [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;
+  specify a CT descriptor, generate new addresses, get balance,
+  create PSETs and other actions.
+* [`lwk_signer`](./lwk_signer): interact with Liquid signers
+  to get your PSETs signed.
+* [`lwk_jade`](./lwk_jade): unlock Jade, get xpubs,
+  register multisig wallets, sign PSETs and more.
+* [`lwk_bindings`](./lwk_bindings): use LWK from other languages.
+* [`lwk_wasm`](./lwk_wasm): use LWK from WebAssembly.
+* and more:
+  common or ancillary components ([`lwk_common`](./lwk_common),
+  [`lwk_rpc_model`](./lwk_rpc_model), [`lwk_tiny_rpc`](./lwk_tiny_rpc),
+  [`lwk_app`](./lwk_app)),
+  future improvements ([`lwk_hwi`](./lwk_hwi)),
+  testing infrastructure ([`lwk_test_util`](./lwk_test_util),
+  [`lwk_containers`](./lwk_containers))
+
+For instance, mobile app devs might be interested mainly in
+`lwk_bindings`, `lwk_wollet` and `lwk_signer`.
+While backend developers might want to directly use `lwk_cli`
+in their systems.
 
 Internal crate dependencies are shown in this diagram, where an arrow indicates "depends on":
 
@@ -69,29 +92,6 @@ Internal crate dependencies are shown in this diagram, where an arrow indicates 
       test_util-->containers
 ```
 
-* [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
-* [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;
-  specify a CT descriptor, generate new addresses, get balance,
-  create PSETs and other actions.
-* [`lwk_signer`](./lwk_signer): interact with Liquid signers
-  to get your PSETs signed.
-* [`lwk_jade`](./lwk_jade): unlock Jade, get xpubs,
-  register multisig wallets, sign PSETs and more.
-* [`lwk_bindings`](./lwk_bindings): use LWK from other languages.
-* [`lwk_wasm`](./lwk_wasm): use LWK from WebAssembly.
-* and more:
-  common or ancillary components ([`lwk_common`](./lwk_common),
-  [`lwk_rpc_model`](./lwk_rpc_model), [`lwk_tiny_rpc`](./lwk_tiny_rpc),
-  [`lwk_app`](./lwk_app)),
-  future improvements ([`lwk_hwi`](./lwk_hwi)),
-  testing infrastructure ([`lwk_test_util`](./lwk_test_util),
-  [`lwk_containers`](./lwk_containers))
-
-For instance, mobile app devs might be interested mainly in
-`lwk_bindings`, `lwk_wollet` and `lwk_signer`.
-While backend developers might want to directly use `lwk_cli`
-in their systems.
-
 ## Getting started with LWK Development
 
 ### Rust
@@ -111,8 +111,15 @@ cargo build -p lwk_wollet
 #### Rust Examples
 
 * [Create a testnet watch-only wallet from a CT wallet descriptor and get list of transactions](./lwk_wollet/examples/list_transactions.rs)
+* Documentation for all Rust crates is available at [docs.rs](https://docs.rs/releases/search?query=lwk)
 
 ### Python
+
+#### Install from Pypi
+
+```shell
+pip install lwk
+```
 
 #### Build Python wheel
 
@@ -139,24 +146,13 @@ import lwk
 str(lwk.Network.mainnet())
 ```
 
-#### Test
-
-```shell
-cargo test -p lwk_bindings --features foreign_bindings --test bindings -- py
-```
-
-Live environment
-
-```shell
-just python-env-bindings
-```
-
 #### Python Examples
 
-* [List transactions](./tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
-* [Send transaction](./tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
-* [Send asset](./tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
-* [Custom persister](./tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
+* [List transactions](./lwk_bindings/tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
+* [Send transaction](./lwk_bindings/tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
+* [Send asset](./lwk_bindings/tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
+* [Issue a Liquid asset](./lwk_bindings/tests/bindings/issue_asset.py)
+* [Custom persister](./lwk_bindings/tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
 
 ### Kotlin
 
@@ -176,13 +172,13 @@ just android
 
 #### Kotlin Examples
 
-* [List transactions](./tests/bindings/list_transactions.kts) of a wpkh/slip77 wallet
+* [List transactions](./lwk_bindings/tests/bindings/list_transactions.kts) of a wpkh/slip77 wallet
 
 ### Swift
 
 #### Swift Examples
 
-* [List transactions](./tests/bindings/list_transactions.swift) of a wpkh/slip77 wallet
+* [List transactions](./lwk_bindings/tests/bindings/list_transactions.swift) of a wpkh/slip77 wallet
 
 ### WASM
 
@@ -267,20 +263,21 @@ Probe connected Jades and promt user to unlock it to get identifiers needed to l
 ```sh
 $ lwk_cli signer jade-id
 ```
-load Jade using returned ID
+Load Jade using returned ID
 
 ```sh
-$ lwk_cli signer load-jade --signer <NAME_FOR_THIS_JADE> --id <ID>
+$ lwk_cli signer load-jade --signer <SET_A_NAME_FOR_THIS_JADE> --id <ID>
 ```
+Get xpub from loaded Jade
 
+```sh
+$ lwk_cli signer xpub --signer <NAME_OF_THIS_JADE> --kind <bip84, bip49 or bip87>
+```
 
 When you're done, stop the rpc server.
 ```sh
 $ lwk_cli server stop
 ```
-
-
-
 
 ## Tests
 

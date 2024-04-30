@@ -21,7 +21,7 @@ impl Jade {
     /// When filter is true, it will filter available serial with Blockstream released chips, use
     /// false if you don't see your DYI jade
     #[wasm_bindgen(constructor)]
-    pub async fn from_serial(network: Network, filter: bool) -> Result<Jade, Error> {
+    pub async fn from_serial(network: &Network, filter: bool) -> Result<Jade, Error> {
         let port = get_jade_serial(filter).await?;
         let web_serial = WebSerial::new(&port)?;
 

@@ -1,4 +1,4 @@
-use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor};
+use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use wasm_bindgen::prelude::*;
 
@@ -37,6 +37,11 @@ impl Signer {
 
         WolletDescriptor::new(&desc_str)
     }
+
+    #[wasm_bindgen(js_name = getMasterXpub)]
+    pub fn get_master_xpub(&self) -> Result<Xpub, Error> {
+        Ok(self.inner.xpub().into())
+    }
 }
 
 #[cfg(test)]
@@ -73,5 +78,7 @@ mod tests {
         let signed_pset = signer.sign(pset.clone()).unwrap();
 
         assert_ne!(pset, signed_pset);
+
+        assert_eq!(signer.get_master_xpub().unwrap().fingerprint(), "73c5da0a");
     }
 }

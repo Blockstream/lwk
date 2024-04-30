@@ -70,6 +70,10 @@ impl Wollet {
         let details = self.inner.get_details(&pset)?;
         Ok(details.into())
     }
+
+    pub fn descriptor(&self) -> Result<WolletDescriptor, Error> {
+        Ok(self.inner.wollet_descriptor().into())
+    }
 }
 
 #[cfg(test)]
@@ -93,6 +97,7 @@ mod tests {
             wollet.address(Some(0)).unwrap().address().to_string(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
         );
+        assert_eq!(wollet.descriptor().unwrap().to_string(), "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f");
     }
 
     #[ignore = "requires internet connection and takes a while"]

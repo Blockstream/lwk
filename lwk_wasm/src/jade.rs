@@ -1,6 +1,6 @@
 use crate::{
     serial::{get_jade_serial, WebSerial},
-    Error, Network, Pset,
+    Error, Network, Pset, Xpub,
 };
 use lwk_jade::asyncr;
 use lwk_jade::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
@@ -36,10 +36,10 @@ impl Jade {
     }
 
     #[wasm_bindgen(js_name = getMasterXpub)]
-    pub async fn get_master_xpub(&self) -> Result<String, Error> {
+    pub async fn get_master_xpub(&self) -> Result<Xpub, Error> {
         self.inner.unlock().await?;
         let xpub = self.inner.get_master_xpub().await?;
-        Ok(xpub.to_string())
+        Ok(xpub.into())
     }
 
     /// Return a single sig address with the given `variant` and `path` derivation

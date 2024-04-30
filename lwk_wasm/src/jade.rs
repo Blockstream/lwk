@@ -1,6 +1,6 @@
 use crate::{
     serial::{get_jade_serial, WebSerial},
-    Error, Network, Pset, Xpub,
+    Error, Network, Pset, WolletDescriptor, Xpub,
 };
 use lwk_jade::asyncr;
 use lwk_jade::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
@@ -102,6 +102,30 @@ impl Jade {
         self.inner.sign(&mut pset).await?;
         Ok(pset.into())
     }
+
+    pub async fn wpkh(&self) -> Result<WolletDescriptor, Error> {
+        self.inner.unlock().await?;
+        let xpub = self.inner.get_master_xpub().await?.to_string();
+        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
+
+        desc(SingleVariant::Wpkh, &xpub, &slip77_key)
+    }
+
+    pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
+        self.inner.unlock().await?;
+        let xpub = self.inner.get_master_xpub().await?.to_string();
+        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
+
+        desc(SingleVariant::Wpkh, &xpub, &slip77_key)
+    }
+}
+
+fn desc(variant: SingleVariant, xpub: &str, slip77_key: &str) -> Result<WolletDescriptor, Error> {
+    let desc_str = match variant {
+        SingleVariant::Wpkh => format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub),
+        SingleVariant::ShWpkh => format!("ct(slip77({}),elsh(wpkh({}/*)))", slip77_key, xpub),
+    };
+    WolletDescriptor::new(&desc_str)
 }
 
 #[wasm_bindgen]

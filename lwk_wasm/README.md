@@ -4,6 +4,8 @@
 This is only a proof of concept at the moment but we want to show our commitment to have the 
 Liquid Wallet Kit working in the WASM environment.
 
+[Available](https://www.npmjs.com/package/lwk_wasm) as npm package.
+
 Example is [live](https://blockstream.github.io/lwk/)
 
 ## For LWK library consumers (front-end developers)

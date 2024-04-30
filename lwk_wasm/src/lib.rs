@@ -18,6 +18,7 @@ mod signer;
 mod tx_builder;
 mod update;
 mod wollet;
+mod xpub;
 
 pub use blockdata::address::{Address, AddressResult};
 pub use blockdata::asset_id::AssetId;
@@ -41,6 +42,7 @@ pub use signer::Signer;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
 pub use wollet::Wollet;
+pub use xpub::Xpub;
 
 #[cfg(test)]
 mod tests {

@@ -33,6 +33,9 @@ pub enum Error {
     Bip39(#[from] lwk_signer::bip39::Error),
 
     #[error(transparent)]
+    Bip32(#[from] lwk_wollet::bitcoin::bip32::Error),
+
+    #[error(transparent)]
     Sign(#[from] lwk_signer::SignError),
 
     #[error(transparent)]

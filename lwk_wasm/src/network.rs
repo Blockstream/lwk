@@ -95,6 +95,16 @@ impl Network {
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
     }
+
+    #[wasm_bindgen(js_name = defaultExplorerUrl)]
+    pub fn default_explorer_url(&self) -> String {
+        let url = match &self.inner {
+            lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/",
+            lwk_wollet::ElementsNetwork::LiquidTestnet => "https://blockstream.info/liquidtestnet/",
+            lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
+        };
+        url.to_string()
+    }
 }
 
 #[cfg(test)]

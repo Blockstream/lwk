@@ -1,10 +1,17 @@
+use std::{collections::HashMap, str::FromStr};
+
 use crate::{
     serial::{get_jade_serial, WebSerial},
+    signer::FakeSigner,
     Error, Network, Pset, WolletDescriptor, Xpub,
 };
-use lwk_jade::asyncr;
-use lwk_jade::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
-use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_common::DescriptorBlindingKey;
+use lwk_jade::{asyncr, protocol::GetXpubParams};
+use lwk_jade::{
+    derivation_path_to_vec,
+    get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
+};
+use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`asyncr::Jade`]
@@ -46,7 +53,7 @@ impl Jade {
     #[wasm_bindgen(js_name = getReceiveAddressSingle)]
     pub async fn get_receive_address_single(
         &self,
-        variant: SingleVariant,
+        variant: Singlesig,
         path: Vec<u32>,
     ) -> Result<String, Error> {
         let network = self.inner.network();
@@ -104,53 +111,78 @@ impl Jade {
     }
 
     pub async fn wpkh(&self) -> Result<WolletDescriptor, Error> {
-        self.inner.unlock().await?;
-        let xpub = self.inner.get_master_xpub().await?.to_string();
-        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
-
-        desc(SingleVariant::Wpkh, &xpub, &slip77_key)
+        self.desc(lwk_common::Singlesig::Wpkh).await
     }
 
     pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
-        self.inner.unlock().await?;
-        let xpub = self.inner.get_master_xpub().await?.to_string();
-        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
+        self.desc(lwk_common::Singlesig::ShWpkh).await
+    }
 
-        desc(SingleVariant::Wpkh, &xpub, &slip77_key)
+    // Asks all possible derivation needed for standard singlesig wallets (fist account)
+    async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
+        let network = self.inner.network();
+        self.inner.unlock().await?;
+        let mut paths = HashMap::new();
+
+        for purpose in [49, 84] {
+            for coin_type in [1, 1776] {
+                let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
+                let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
+                let path = derivation_path_to_vec(&derivation_path);
+                let params = GetXpubParams { network, path };
+                let xpub = self.inner.get_cached_xpub(params).await?;
+                paths.insert(derivation_path, xpub);
+            }
+        }
+        let xpub = self.inner.get_master_xpub().await?;
+        paths.insert(DerivationPath::master(), xpub);
+        let slip77 = self.inner.slip77_master_blinding_key().await?;
+
+        Ok(FakeSigner { paths, slip77 })
+    }
+
+    async fn desc(&self, script_variant: lwk_common::Singlesig) -> Result<WolletDescriptor, Error> {
+        let signer = self.create_fake_signer().await?;
+        let is_mainnet = matches!(self.inner.network(), lwk_jade::Network::Liquid);
+
+        let desc_str = lwk_common::singlesig_desc(
+            &signer,
+            script_variant,
+            DescriptorBlindingKey::Slip77,
+            is_mainnet,
+        )
+        .map_err(|s| Error::Generic(s))?;
+        WolletDescriptor::new(&desc_str)
     }
 }
 
-fn desc(variant: SingleVariant, xpub: &str, slip77_key: &str) -> Result<WolletDescriptor, Error> {
-    let desc_str = match variant {
-        SingleVariant::Wpkh => format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub),
-        SingleVariant::ShWpkh => format!("ct(slip77({}),elsh(wpkh({}/*)))", slip77_key, xpub),
-    };
-    WolletDescriptor::new(&desc_str)
-}
-
 #[wasm_bindgen]
-pub enum SingleVariant {
-    /// Witness Public Key Hash or native segwit
-    Wpkh,
-
-    /// Script Hash Witness Public Key Hash or wrapped segwit
-    ShWpkh,
+pub struct Singlesig {
+    inner: lwk_common::Singlesig,
 }
 
-impl From<SingleVariant> for Variant {
-    fn from(v: SingleVariant) -> Self {
-        match v {
-            SingleVariant::Wpkh => Variant::Wpkh,
-            SingleVariant::ShWpkh => Variant::ShWpkh,
+impl From<Singlesig> for Variant {
+    fn from(v: Singlesig) -> Self {
+        match v.inner {
+            lwk_common::Singlesig::Wpkh => Variant::Wpkh,
+            lwk_common::Singlesig::ShWpkh => Variant::ShWpkh,
         }
     }
 }
 
-impl From<Variant> for SingleVariant {
-    fn from(v: Variant) -> Self {
-        match v {
-            Variant::Wpkh => SingleVariant::Wpkh,
-            Variant::ShWpkh => SingleVariant::ShWpkh,
+#[wasm_bindgen]
+impl Singlesig {
+    pub fn from(variant: &str) -> Result<Singlesig, Error> {
+        match variant {
+            "Wpkh" => Ok(Singlesig {
+                inner: lwk_common::Singlesig::Wpkh,
+            }),
+            "ShWpkh" => Ok(Singlesig {
+                inner: lwk_common::Singlesig::ShWpkh,
+            }),
+            _ => Err(Error::Generic(
+                "Unsupported variant, possible values are: Wpkh and ShWpkh".to_string(),
+            )),
         }
     }
 }

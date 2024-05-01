@@ -1,5 +1,7 @@
 use crate::{AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WolletDescriptor};
+use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_wollet::elements_miniscript::ForEachKey;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::Wollet`]
@@ -34,9 +36,28 @@ impl Wollet {
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
-        // TODO return AddressResult
         let address_result = self.inner.address(index)?;
         Ok(address_result.into())
+    }
+
+    #[wasm_bindgen(js_name = addressFullPath)]
+    pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
+        // TODO we should add the full path to lwk_wollet::AddressResult
+
+        let definite_desc = self
+            .inner
+            .wollet_descriptor()
+            .definite_descriptor(lwk_wollet::Chain::External, index)?;
+        let mut full_path: Vec<u32> = vec![];
+        definite_desc.for_each_key(|k| {
+            if let Some(path) = k.full_derivation_path() {
+                full_path = derivation_path_to_vec(&path);
+            }
+
+            true
+        });
+
+        Ok(full_path)
     }
 
     #[wasm_bindgen(js_name = applyUpdate)]

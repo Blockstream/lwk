@@ -1,5 +1,9 @@
+use std::collections::HashMap;
+
 use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
-use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_wollet::{
+    bitcoin::bip32, elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
+};
 use wasm_bindgen::prelude::*;
 
 /// A Software signer, wrapper of [`lwk_signer::SwSigner`]
@@ -41,6 +45,31 @@ impl Signer {
     #[wasm_bindgen(js_name = getMasterXpub)]
     pub fn get_master_xpub(&self) -> Result<Xpub, Error> {
         Ok(self.inner.xpub().into())
+    }
+}
+
+// Used internally to emulate a sync signer for some methods
+pub(crate) struct FakeSigner {
+    pub(crate) paths: HashMap<bip32::DerivationPath, bip32::Xpub>,
+    pub(crate) slip77: slip77::MasterBlindingKey,
+}
+
+impl lwk_common::Signer for FakeSigner {
+    type Error = String;
+
+    fn sign(&self, _pset: &mut PartiallySignedTransaction) -> Result<u32, Self::Error> {
+        unimplemented!()
+    }
+
+    fn derive_xpub(&self, path: &bip32::DerivationPath) -> Result<bip32::Xpub, Self::Error> {
+        self.paths
+            .get(path)
+            .cloned()
+            .ok_or("Should contain all needed derivations".to_string())
+    }
+
+    fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {
+        Ok(self.slip77)
     }
 }
 

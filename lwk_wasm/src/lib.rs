@@ -33,7 +33,7 @@ pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
 pub use esplora::EsploraClient;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
-pub use jade::Jade;
+pub use jade::{Jade, Singlesig};
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use pset::Pset;

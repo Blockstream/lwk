@@ -69,7 +69,7 @@ impl lwk_common::Signer for FakeSigner {
     }
 
     fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {
-        Ok(self.slip77.clone())
+        Ok(self.slip77)
     }
 }
 

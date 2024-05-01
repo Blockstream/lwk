@@ -1,10 +1,17 @@
+use std::{collections::HashMap, str::FromStr};
+
 use crate::{
     serial::{get_jade_serial, WebSerial},
+    signer::FakeSigner,
     Error, Network, Pset, WolletDescriptor, Xpub,
 };
-use lwk_jade::asyncr;
-use lwk_jade::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
-use lwk_wollet::elements::pset::PartiallySignedTransaction;
+use lwk_common::DescriptorBlindingKey;
+use lwk_jade::{asyncr, protocol::GetXpubParams};
+use lwk_jade::{
+    derivation_path_to_vec,
+    get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
+};
+use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`asyncr::Jade`]
@@ -104,34 +111,49 @@ impl Jade {
     }
 
     pub async fn wpkh(&self) -> Result<WolletDescriptor, Error> {
-        self.inner.unlock().await?;
-        let xpub = self.inner.get_master_xpub().await?.to_string();
-        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
-
-        desc(lwk_common::Singlesig::Wpkh, &xpub, &slip77_key)
+        self.desc(lwk_common::Singlesig::Wpkh).await
     }
 
     pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
-        self.inner.unlock().await?;
-        let xpub = self.inner.get_master_xpub().await?.to_string();
-        let slip77_key = self.inner.slip77_master_blinding_key().await?.to_string();
-
-        desc(lwk_common::Singlesig::ShWpkh, &xpub, &slip77_key)
+        self.desc(lwk_common::Singlesig::ShWpkh).await
     }
-}
 
-fn desc(
-    variant: lwk_common::Singlesig,
-    xpub: &str,
-    slip77_key: &str,
-) -> Result<WolletDescriptor, Error> {
-    let desc_str = match variant {
-        lwk_common::Singlesig::Wpkh => format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub),
-        lwk_common::Singlesig::ShWpkh => {
-            format!("ct(slip77({}),elsh(wpkh({}/*)))", slip77_key, xpub)
+    // Asks all possible derivation needed for standard singlesig wallets (fist account)
+    async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
+        let network = self.inner.network();
+        self.inner.unlock().await?;
+        let mut paths = HashMap::new();
+
+        for purpose in [49, 84] {
+            for coin_type in [1, 1776] {
+                let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
+                let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
+                let path = derivation_path_to_vec(&derivation_path);
+                let params = GetXpubParams { network, path };
+                let xpub = self.inner.get_cached_xpub(params).await?;
+                paths.insert(derivation_path, xpub);
+            }
         }
-    };
-    WolletDescriptor::new(&desc_str)
+        let xpub = self.inner.get_master_xpub().await?;
+        paths.insert(DerivationPath::master(), xpub);
+        let slip77 = self.inner.slip77_master_blinding_key().await?;
+
+        Ok(FakeSigner { paths, slip77 })
+    }
+
+    async fn desc(&self, script_variant: lwk_common::Singlesig) -> Result<WolletDescriptor, Error> {
+        let signer = self.create_fake_signer().await?;
+        let is_mainnet = matches!(self.inner.network(), lwk_jade::Network::Liquid);
+
+        let desc_str = lwk_common::singlesig_desc(
+            &signer,
+            script_variant,
+            DescriptorBlindingKey::Slip77,
+            is_mainnet,
+        )
+        .map_err(|s| Error::Generic(s))?;
+        WolletDescriptor::new(&desc_str)
+    }
 }
 
 #[wasm_bindgen]

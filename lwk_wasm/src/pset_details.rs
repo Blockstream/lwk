@@ -38,6 +38,8 @@ impl PsetDetails {
     pub fn balance(&self) -> PsetBalance {
         self.inner.balance.clone().into()
     }
+
+    /// For each input existing or missing signatures
     pub fn signatures(&self) -> Vec<PsetSignatures> {
         self.inner
             .sig_details

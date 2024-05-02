@@ -28,9 +28,9 @@ impl From<TxBuilder> for lwk_wollet::TxBuilder {
 impl TxBuilder {
     /// Creates a transaction builder
     #[wasm_bindgen(constructor)]
-    pub fn new(network: Network) -> TxBuilder {
+    pub fn new(network: &Network) -> TxBuilder {
         TxBuilder {
-            inner: lwk_wollet::TxBuilder::new(network.into()),
+            inner: lwk_wollet::TxBuilder::new((*network).into()),
         }
     }
 
@@ -158,7 +158,7 @@ mod tests {
         let network = Network::mainnet();
         let policy = network.policy_asset();
 
-        let mut builder = TxBuilder::new(network);
+        let mut builder = TxBuilder::new(&network);
         assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, issuance_request: None }");
 
         builder = builder.fee_rate(Some(200.0));

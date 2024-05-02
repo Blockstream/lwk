@@ -61,13 +61,9 @@ impl EsploraWasmClient {
         &self,
         tx: &elements::Transaction,
     ) -> Result<elements::Txid, crate::Error> {
-        let tx_bytes = tx.serialize();
+        let tx_hex = tx.serialize().to_hex();
         let client = reqwest::Client::new();
-        let response = client
-            .post(&self.broadcast_url)
-            .body(tx_bytes)
-            .send()
-            .await?;
+        let response = client.post(&self.broadcast_url).body(tx_hex).send().await?;
         let txid = elements::Txid::from_str(&response.text().await?)?;
         Ok(txid)
     }

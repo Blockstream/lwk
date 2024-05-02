@@ -114,6 +114,7 @@ impl Jade {
         self.desc(lwk_common::Singlesig::Wpkh).await
     }
 
+    #[wasm_bindgen(js_name = shWpkh)]
     pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
         self.desc(lwk_common::Singlesig::ShWpkh).await
     }

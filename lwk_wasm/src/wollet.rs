@@ -86,6 +86,7 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    #[wasm_bindgen(js_name = psetDetails)]
     pub fn pset_details(&self, pset: &Pset) -> Result<PsetDetails, Error> {
         let pset: PartiallySignedTransaction = pset.clone().into();
         let details = self.inner.get_details(&pset)?;

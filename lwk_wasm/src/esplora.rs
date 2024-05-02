@@ -1,4 +1,4 @@
-use crate::{Error, Update, Wollet};
+use crate::{Error, Pset, Txid, Update, Wollet};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::EsploraWasmClient`]
@@ -20,6 +20,12 @@ impl EsploraClient {
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let update: Option<lwk_wollet::Update> = self.inner.full_scan(wollet.as_ref()).await?;
         Ok(update.map(Into::into))
+    }
+
+    pub async fn broadcast(&mut self, pset: &Pset) -> Result<Txid, Error> {
+        let tx = pset.extract_tx()?;
+        let txid = self.inner.broadcast(&(tx.into())).await?;
+        Ok(txid.into())
     }
 }
 

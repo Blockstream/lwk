@@ -1,7 +1,7 @@
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
-use crate::{AssetId, EsploraClient};
+use crate::{AssetId, EsploraClient, TxBuilder};
 
 /// Wrapper of [`lwk_wollet::ElementsNetwork`]
 #[wasm_bindgen]
@@ -94,6 +94,11 @@ impl Network {
     #[wasm_bindgen(js_name = policyAsset)]
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
+    }
+
+    #[wasm_bindgen(js_name = txBuilder)]
+    pub fn tx_builder(&self) -> TxBuilder {
+        TxBuilder::new(self)
     }
 
     #[wasm_bindgen(js_name = defaultExplorerUrl)]

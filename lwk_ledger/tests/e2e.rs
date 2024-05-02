@@ -10,5 +10,5 @@ fn test_ledger_version() {
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
     let client = new(port);
     let (_name, version, _flags) = client.get_version().unwrap();
-    assert_eq!(version, "1.33.7");
+    assert_eq!(version, "2.0.4");
 }

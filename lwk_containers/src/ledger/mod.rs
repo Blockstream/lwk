@@ -16,7 +16,7 @@ pub struct SpeculosArgs;
 impl ImageArgs for SpeculosArgs {
     fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
         let args = vec![
-            "apps/btc.elf".to_string(),
+            "apps/app.elf".to_string(),
             "-m".to_string(),
             "nanos".to_string(),
             "--display".to_string(),

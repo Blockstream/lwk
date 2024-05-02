@@ -13,6 +13,7 @@ use crate::{
     command,
     error::LiquidClientError,
     interpreter::ClientCommandInterpreter,
+    wallet::WalletPolicy,
 };
 
 /// LiquidClient calls and interprets commands with the Ledger Device.
@@ -125,6 +126,45 @@ impl<T: Transport> LiquidClient<T> {
                 }
             })
         })
+    }
+
+    /// Registers the given wallet policy, returns the wallet ID and HMAC.
+    #[allow(clippy::type_complexity)]
+    pub fn register_wallet(
+        &self,
+        wallet: &WalletPolicy,
+    ) -> Result<([u8; 32], [u8; 32]), LiquidClientError<T::Error>> {
+        let cmd = command::register_wallet(wallet);
+        let mut intpr = ClientCommandInterpreter::new();
+        intpr.add_known_preimage(wallet.serialize());
+        let keys: Vec<String> = wallet.keys.iter().map(|k| k.to_string()).collect();
+        intpr.add_known_list(&keys);
+        // necessary for version 1 of the protocol (introduced in version 2.1.0)
+        intpr.add_known_preimage(wallet.descriptor_template.as_bytes().to_vec());
+        let (id, hmac) = self.make_request(&cmd, Some(&mut intpr)).and_then(|data| {
+            if data.len() < 64 {
+                Err(LiquidClientError::UnexpectedResult {
+                    command: cmd.ins,
+                    data,
+                })
+            } else {
+                let mut id = [0x00; 32];
+                id.copy_from_slice(&data[0..32]);
+                let mut hmac = [0x00; 32];
+                hmac.copy_from_slice(&data[32..64]);
+                Ok((id, hmac))
+            }
+        })?;
+
+        /*
+        #[cfg(feature = "paranoid_client")]
+        {
+            let device_addr = self.get_wallet_address(wallet, Some(&hmac), false, 0, false)?;
+            self.check_address(wallet, false, 0, &device_addr)?;
+        }
+         * */
+
+        Ok((id, hmac))
     }
 
     /// Sign a message with the key derived with the given derivation path.

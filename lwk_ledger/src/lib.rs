@@ -12,7 +12,7 @@ mod wallet;
 use crate::client::LiquidClient;
 use transport::TransportTcp;
 
-pub use wallet::{Version, WalletPolicy, WalletPubKey};
+pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 pub fn new(port: u16) -> LiquidClient<TransportTcp> {
     LiquidClient::new(TransportTcp::new(port).expect("TODO"))

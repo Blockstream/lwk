@@ -6,7 +6,10 @@ use bitcoin::{
 };
 use core::default::Default;
 
-use super::apdu::{self, APDUCommand};
+use super::{
+    apdu::{self, APDUCommand},
+    wallet::WalletPolicy,
+};
 
 /// Creates the APDU Command to retrieve the app's name, version and state flags.
 pub fn get_version() -> APDUCommand {
@@ -43,6 +46,19 @@ pub fn get_extended_pubkey(path: &DerivationPath, display: bool) -> APDUCommand 
     APDUCommand {
         cla: apdu::Cla::Bitcoin as u8,
         ins: apdu::LiquidCommandCode::GetExtendedPubkey as u8,
+        data,
+        ..Default::default()
+    }
+}
+
+/// Creates the APDU command required to register the given wallet policy.
+pub fn register_wallet(policy: &WalletPolicy) -> APDUCommand {
+    let bytes = policy.serialize();
+    let mut data = encode::serialize(&VarInt(bytes.len() as u64));
+    data.extend(bytes);
+    APDUCommand {
+        cla: apdu::Cla::Bitcoin as u8,
+        ins: apdu::LiquidCommandCode::RegisterWallet as u8,
         data,
         ..Default::default()
     }

@@ -151,8 +151,8 @@ impl WalletPolicy {
 
         // For every "/<M;N>" expression, replace with M if not change, or with N if change
         while let Some(start) = desc.find("/<") {
-            if let Some(end) = desc.find(">") {
-                let nums: Vec<&str> = desc[start + 2..end].split(";").collect();
+            if let Some(end) = desc.find('>') {
+                let nums: Vec<&str> = desc[start + 2..end].split(';').collect();
                 if nums.len() == 2 {
                     let replacement = if change { nums[1] } else { nums[0] };
                     desc = format!("{}{}{}", &desc[..start + 1], replacement, &desc[end + 1..]);

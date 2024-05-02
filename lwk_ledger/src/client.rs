@@ -6,6 +6,7 @@ use bitcoin::{
     consensus::encode::deserialize_partial,
     secp256k1::ecdsa,
 };
+use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::{
     apdu::{APDUCommand, StatusWord},
@@ -147,6 +148,25 @@ impl<T: Transport> LiquidClient<T> {
                     }
                 })?,
             ))
+        })
+    }
+
+    /// Retrieve the SLIP77 master blinding key.
+    pub fn get_master_blinding_key(
+        &self,
+    ) -> Result<MasterBlindingKey, LiquidClientError<T::Error>> {
+        let cmd = command::get_master_blinding_key();
+        self.make_request(&cmd, None).and_then(|data| {
+            if data.len() != 32 {
+                Err(LiquidClientError::UnexpectedResult {
+                    command: cmd.ins,
+                    data,
+                })
+            } else {
+                let mut fg = [0x00; 32];
+                fg.copy_from_slice(&data[0..32]);
+                Ok(MasterBlindingKey::from(fg))
+            }
         })
     }
 }

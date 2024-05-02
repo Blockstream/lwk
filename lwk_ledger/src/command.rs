@@ -73,6 +73,15 @@ pub fn sign_message(
     }
 }
 
+/// Creates the APDU Command to retrieve the master blinding key.
+pub fn get_master_blinding_key() -> APDUCommand {
+    APDUCommand {
+        cla: apdu::Cla::Bitcoin as u8,
+        ins: apdu::LiquidCommandCode::LiquidGetMasterBlindingKey as u8,
+        ..Default::default()
+    }
+}
+
 /// Creates the APDU command to CONTINUE.
 pub fn continue_interrupted(data: Vec<u8>) -> APDUCommand {
     APDUCommand {

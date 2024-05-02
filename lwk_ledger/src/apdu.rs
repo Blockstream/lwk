@@ -22,6 +22,8 @@ pub enum LiquidCommandCode {
     // SignPSBT = 0x04,
     GetMasterFingerprint = 0x05,
     SignMessage = 0x10,
+    // Liquid commands
+    LiquidGetMasterBlindingKey = 0xe1,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

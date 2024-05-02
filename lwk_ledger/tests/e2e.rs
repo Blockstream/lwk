@@ -28,4 +28,10 @@ fn test_ledger_commands() {
     assert_eq!(prefix, 27+4);
     assert_eq!(sig.to_string(), "TODO");
      * */
+
+    let master_blinding_key = client.get_master_blinding_key().unwrap();
+    assert_eq!(
+        master_blinding_key.to_string(),
+        "0c11648c2c6df4f9dacdb4c8d35d6166d94cea2b9ad37833a82210bb7c9f5fb4"
+    );
 }

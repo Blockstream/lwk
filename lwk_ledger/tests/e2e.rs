@@ -11,4 +11,6 @@ fn test_ledger_version() {
     let client = new(port);
     let (_name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.0.4");
+    let fingerprint = client.get_master_fingerprint().unwrap();
+    assert_eq!(fingerprint.to_string(), "f5acc2fd");
 }

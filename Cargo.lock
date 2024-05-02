@@ -185,17 +185,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.79"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a507401cad91ec6a857ed5513a2073c82a9b9048762b885bb98655b306964681"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.58",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -281,7 +270,6 @@ dependencies = [
  "bech32",
  "bitcoin-internals",
  "bitcoin_hashes 0.13.0",
- "core2",
  "hex-conservative",
  "hex_lit",
  "secp256k1 0.28.2",
@@ -316,7 +304,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1930a4dabfebb8d7d9992db18ebe3ae2876f0a305fab206fd168df931ede293b"
 dependencies = [
  "bitcoin-internals",
- "core2",
  "hex-conservative",
  "serde",
 ]
@@ -574,15 +561,6 @@ name = "core-foundation-sys"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
-
-[[package]]
-name = "core2"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239fa3ae9b63c2dc74bd3fa852d4792b8b305ae64eeede946265b6af62f1fff3"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "cpufeatures"
@@ -1037,9 +1015,6 @@ name = "hex-conservative"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30ed443af458ccb6d81c1e7e661545f94d3176752fb1df2f543b902a1e0f51e2"
-dependencies = [
- "core2",
-]
 
 [[package]]
 name = "hex_lit"
@@ -1307,17 +1282,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ledger_bitcoin_client"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8606a9c7375fb139e68fc1ca7cf9c6709566eeca448ff33e37632d8a4302eefe"
-dependencies = [
- "async-trait",
- "bitcoin",
- "miniscript",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.153"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1482,8 +1446,8 @@ dependencies = [
 name = "lwk_ledger"
 version = "0.2.0"
 dependencies = [
+ "bitcoin",
  "ledger-apdu",
- "ledger_bitcoin_client",
  "lwk_containers",
 ]
 

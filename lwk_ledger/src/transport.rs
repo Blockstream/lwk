@@ -7,11 +7,11 @@ use std::net::TcpStream;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Mutex;
 
-use ledger_apdu::APDUAnswer;
-use ledger_bitcoin_client::{
+use crate::{
     apdu::{APDUCommand, StatusWord},
     client::Transport,
 };
+use ledger_apdu::APDUAnswer;
 
 /// Transport to communicate with the Ledger Speculos simulator.
 pub struct TransportTcp {

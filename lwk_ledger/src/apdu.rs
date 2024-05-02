@@ -14,8 +14,9 @@ pub enum Cla {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
+#[allow(clippy::enum_variant_names)]
 pub enum LiquidCommandCode {
-    // GetExtendedPubkey = 0x00,
+    GetExtendedPubkey = 0x00,
     GetVersion = 0x01,
     // RegisterWallet = 0x02,
     // GetWalletAddress = 0x03,

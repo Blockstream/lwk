@@ -1,6 +1,10 @@
 use core::fmt::Debug;
+use std::str::FromStr;
 
-use bitcoin::{bip32::Fingerprint, consensus::encode::deserialize_partial};
+use bitcoin::{
+    bip32::{DerivationPath, Fingerprint, Xpub},
+    consensus::encode::deserialize_partial,
+};
 
 use crate::{
     apdu::{APDUCommand, StatusWord},
@@ -100,6 +104,24 @@ impl<T: Transport> LiquidClient<T> {
                 fg.copy_from_slice(&data[0..4]);
                 Ok(Fingerprint::from(fg))
             }
+        })
+    }
+
+    /// Retrieve the bip32 extended pubkey derived with the given path
+    /// and optionally display it on screen
+    pub fn get_extended_pubkey(
+        &self,
+        path: &DerivationPath,
+        display: bool,
+    ) -> Result<Xpub, LiquidClientError<T::Error>> {
+        let cmd = command::get_extended_pubkey(path, display);
+        self.make_request(&cmd, None).and_then(|data| {
+            Xpub::from_str(&String::from_utf8_lossy(&data)).map_err(|_| {
+                LiquidClientError::UnexpectedResult {
+                    command: cmd.ins,
+                    data,
+                }
+            })
         })
     }
 }

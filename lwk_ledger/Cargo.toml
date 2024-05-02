@@ -9,6 +9,7 @@ documentation = "https://docs.rs/lwk_jade"
 [dependencies]
 ledger-apdu = "0.10"
 bitcoin = "0.31"
+elements-miniscript = "0.3"
 
 [dev-dependencies]
 lwk_containers = { version = "0.2.0" }

@@ -20,14 +20,15 @@ fn test_ledger_commands() {
     let xpub = client.get_extended_pubkey(&path, false).unwrap();
     assert_eq!(xpub.to_string(), "tpubDCwYjpDhUdPGP5rS3wgNg13mTrrjBuG8V9VpWbyptX6TRPbNoZVXsoVUSkCjmQ8jJycjuDKBb9eataSymXakTTaGifxR6kmVsfFehH1ZgJT");
 
-    // TODO: uncomment this once something can confirm on the ledger emulator
-    //       (it seems that --display headless does not work...)
-    /*
-    let message = [0u8];
+    let path: DerivationPath = "m/44h/1h/0h/0/0".parse().unwrap();
+    let message = [3u8; 32];
     let (prefix, sig) = client.sign_message(&message, &path).unwrap();
-    assert_eq!(prefix, 27+4);
-    assert_eq!(sig.to_string(), "TODO");
-     * */
+    assert_eq!(prefix, 27 + 4);
+    assert_eq!(
+        sig.to_string(),
+        "3044022031e78eaebca6af2157bff0ddf9ed40498c8b9d4b184bfb0ff893959beb6d794c022033e0ecd424b5d4a31e946e29f06d2da185c2ae5c7d3d63a71dd6115ec5516464",
+    );
+    // TODO: verify
 
     let master_blinding_key = client.get_master_blinding_key().unwrap();
     assert_eq!(

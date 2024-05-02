@@ -21,6 +21,8 @@ impl ImageArgs for SpeculosArgs {
             "nanos".to_string(),
             "--display".to_string(),
             "headless".to_string(),
+            "--automation".to_string(),
+            "file:apps/speculos-automation.json".to_string(),
         ];
         Box::new(args.into_iter())
     }

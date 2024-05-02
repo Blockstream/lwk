@@ -9,8 +9,9 @@ fn test_ledger_commands() {
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
     let client = new(port);
-    let (_name, version, _flags) = client.get_version().unwrap();
+    let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.0.4");
+    assert_eq!(name, "Liquid Regtest");
     let fingerprint = client.get_master_fingerprint().unwrap();
     assert_eq!(fingerprint.to_string(), "f5acc2fd");
 }

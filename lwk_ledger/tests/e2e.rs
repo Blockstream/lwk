@@ -3,7 +3,7 @@ use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 use lwk_ledger::*;
 
 #[test]
-fn test_ledger_version() {
+fn test_ledger_commands() {
     let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);

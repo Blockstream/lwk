@@ -4,6 +4,7 @@ use std::str::FromStr;
 use bitcoin::{
     bip32::{DerivationPath, Fingerprint, Xpub},
     consensus::encode::deserialize_partial,
+    secp256k1::ecdsa,
 };
 
 use crate::{
@@ -122,6 +123,30 @@ impl<T: Transport> LiquidClient<T> {
                     data,
                 }
             })
+        })
+    }
+
+    /// Sign a message with the key derived with the given derivation path.
+    /// Result is the header byte (31-34: P2PKH compressed) and the ecdsa signature.
+    pub fn sign_message(
+        &self,
+        message: &[u8],
+        path: &DerivationPath,
+    ) -> Result<(u8, ecdsa::Signature), LiquidClientError<T::Error>> {
+        let chunks: Vec<&[u8]> = message.chunks(64).collect();
+        let mut intpr = ClientCommandInterpreter::new();
+        let message_commitment_root = intpr.add_known_list(&chunks);
+        let cmd = command::sign_message(message.len(), &message_commitment_root, path);
+        self.make_request(&cmd, Some(&mut intpr)).and_then(|data| {
+            Ok((
+                data[0],
+                ecdsa::Signature::from_compact(&data[1..]).map_err(|_| {
+                    LiquidClientError::UnexpectedResult {
+                        command: cmd.ins,
+                        data: data.to_vec(),
+                    }
+                })?,
+            ))
         })
     }
 }

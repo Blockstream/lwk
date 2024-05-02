@@ -1,6 +1,9 @@
 /// APDU commands  for the Bitcoin application.
 ///
-use bitcoin::bip32::{ChildNumber, DerivationPath};
+use bitcoin::{
+    bip32::{ChildNumber, DerivationPath},
+    consensus::encode::{self, VarInt},
+};
 use core::default::Default;
 
 use super::apdu::{self, APDUCommand};
@@ -40,6 +43,31 @@ pub fn get_extended_pubkey(path: &DerivationPath, display: bool) -> APDUCommand 
     APDUCommand {
         cla: apdu::Cla::Bitcoin as u8,
         ins: apdu::LiquidCommandCode::GetExtendedPubkey as u8,
+        data,
+        ..Default::default()
+    }
+}
+
+/// Creates the APDU Command to sign a message.
+pub fn sign_message(
+    message_length: usize,
+    message_commitment_root: &[u8; 32],
+    path: &DerivationPath,
+) -> APDUCommand {
+    let child_numbers: &[ChildNumber] = path.as_ref();
+    let mut data: Vec<u8> =
+        child_numbers
+            .iter()
+            .fold(vec![child_numbers.len() as u8], |mut acc, &x| {
+                acc.extend_from_slice(&u32::from(x).to_be_bytes());
+                acc
+            });
+    data.extend(encode::serialize(&VarInt(message_length as u64)));
+    data.extend_from_slice(message_commitment_root);
+
+    APDUCommand {
+        cla: apdu::Cla::Bitcoin as u8,
+        ins: apdu::LiquidCommandCode::SignMessage as u8,
         data,
         ..Default::default()
     }

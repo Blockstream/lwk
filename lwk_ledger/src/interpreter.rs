@@ -28,7 +28,6 @@ pub struct ClientCommandInterpreter {
 }
 
 impl ClientCommandInterpreter {
-    #[allow(unused)]
     pub fn new() -> Self {
         Self {
             yielded: Vec::new(),
@@ -57,7 +56,6 @@ impl ClientCommandInterpreter {
     /// client command is sent with `sha256(b'\0' + el)`.
     /// Moreover, the commands GET_MERKLE_LEAF_INDEX and GET_MERKLE_LEAF_PROOF must correctly answer
     /// queries relative to the Merkle whose root is `mt_root`.
-    #[allow(unused)]
     pub fn add_known_list(&mut self, elements: &[impl AsRef<[u8]>]) -> [u8; 32] {
         let mut leaves = Vec::with_capacity(elements.len());
         for element in elements {

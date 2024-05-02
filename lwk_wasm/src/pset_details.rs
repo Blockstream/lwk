@@ -48,6 +48,7 @@ impl PsetDetails {
     }
 
     /// Return an element for every input that could possibly be a issuance or a reissuance
+    #[wasm_bindgen(js_name = inputsIssuances)]
     pub fn inputs_issuances(&self) -> Vec<Issuance> {
         // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
@@ -82,10 +83,13 @@ impl PsetBalance {
 
 #[wasm_bindgen]
 impl PsetSignatures {
-    ///Vec<(PublicKey, KeySource)>
+    /// Returns `Vec<(PublicKey, KeySource)>`
+    #[wasm_bindgen(js_name = hasSignature)]
     pub fn has_signature(&self) -> JsValue {
         convert(&self.inner.has_signature)
     }
+
+    #[wasm_bindgen(js_name = missingSignature)]
     pub fn missing_signature(&self) -> JsValue {
         convert(&self.inner.missing_signature)
     }
@@ -105,18 +109,27 @@ impl Issuance {
     pub fn asset(&self) -> Option<AssetId> {
         self.inner.asset().map(Into::into)
     }
+
     pub fn token(&self) -> Option<AssetId> {
         self.inner.token().map(Into::into)
     }
+
+    #[wasm_bindgen(js_name = prevVout)]
     pub fn prev_vout(&self) -> Option<u32> {
         self.inner.prev_vout().map(Into::into)
     }
+
+    #[wasm_bindgen(js_name = prevTxid)]
     pub fn prev_txid(&self) -> Option<Txid> {
         self.inner.prev_txid().map(Into::into)
     }
+
+    #[wasm_bindgen(js_name = isIssuance)]
     pub fn is_issuance(&self) -> bool {
         self.inner.is_issuance()
     }
+
+    #[wasm_bindgen(js_name = isReissuance)]
     pub fn is_reissuance(&self) -> bool {
         self.inner.is_reissuance()
     }

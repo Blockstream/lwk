@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+
+## 0.4.0
+
 At startup if you had existing signers, wallets or assets,
 you might incur in some errors.
 To upgrade the state, if the error involves:

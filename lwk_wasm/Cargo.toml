@@ -15,7 +15,7 @@ serial = ["web-sys"]
 
 [dependencies]
 wasm-bindgen = "0.2.84"
-lwk_wollet = { version = "0.3.0", default-features = false, features = [
+lwk_wollet = { version = "0.4.0", default-features = false, features = [
     "esplora_wasm",
 ] }
 lwk_signer = { version = "0.4.0", default-features = false }

@@ -23,7 +23,6 @@ lwk_app = { path = "lwk_app" }
 lwk_rpc_model = { path = "lwk_rpc_model" }
 lwk_test_util = { path = "lwk_test_util" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
-lwk_wollet = { path = "lwk_wollet" }
 
 [profile.release-smaller]
 inherits = "release"

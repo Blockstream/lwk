@@ -1341,7 +1341,7 @@ dependencies = [
  "lwk_rpc_model",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_tiny_jrpc",
- "lwk_wollet",
+ "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "reqwest",
  "schemars",
@@ -1361,7 +1361,7 @@ dependencies = [
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
- "lwk_wollet",
+ "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json",
  "thiserror",
  "uniffi",
@@ -1550,7 +1550,7 @@ dependencies = [
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet",
+ "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pulldown-cmark",
  "rand",
  "serde_json",
@@ -1583,7 +1583,7 @@ dependencies = [
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet",
+ "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "serde",
  "serde-wasm-bindgen",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aes-gcm-siv",
  "bip39",
@@ -1619,6 +1619,34 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "lwk_wollet"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2a4d72c41a67584ebe62a7708e06704e8d084fff16764d646be015d1c9737ca"
+dependencies = [
+ "aes-gcm-siv",
+ "bip39",
+ "electrum-client",
+ "elements",
+ "elements-miniscript",
+ "idna 0.4.0",
+ "js-sys",
+ "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "once_cell",
+ "rand",
+ "regex-lite",
+ "reqwest",
+ "serde",
+ "serde_cbor",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",

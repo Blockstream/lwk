@@ -53,5 +53,7 @@ fn test_ledger_commands() {
         false,
     )
     .unwrap();
-    let (_id, _hmac) = client.register_wallet(&wallet_policy).unwrap();
+    let (id, _hmac) = client.register_wallet(&wallet_policy).unwrap();
+
+    assert_eq!(id, wallet_policy.id());
 }

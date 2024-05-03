@@ -1340,7 +1340,7 @@ dependencies = [
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_rpc_model",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_tiny_jrpc",
+ "lwk_tiny_jrpc 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "reqwest",
@@ -1561,7 +1561,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_tiny_jrpc"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "jsonrpc 0.17.0",
@@ -1570,6 +1570,22 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "tempfile",
+ "thiserror",
+ "tiny_http",
+ "tracing",
+]
+
+[[package]]
+name = "lwk_tiny_jrpc"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4165b2d73c11c0aa082a13f6d4e1a123c9653db83459ac106db78705f363f253"
+dependencies = [
+ "anyhow",
+ "jsonrpc 0.17.0",
+ "serde",
+ "serde_derive",
+ "serde_json",
  "thiserror",
  "tiny_http",
  "tracing",

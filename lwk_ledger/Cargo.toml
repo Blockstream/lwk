@@ -12,4 +12,4 @@ bitcoin = "0.31"
 elements-miniscript = "0.3"
 
 [dev-dependencies]
-lwk_containers = { version = "0.2.0" }
+lwk_containers = { version = "0.3.0" }

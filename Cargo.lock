@@ -1377,7 +1377,7 @@ dependencies = [
  "ctrlc",
  "elements",
  "lwk_app",
- "lwk_containers",
+ "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_rpc_model",
  "lwk_test_util",
  "serde_json",
@@ -1419,7 +1419,19 @@ dependencies = [
 
 [[package]]
 name = "lwk_containers"
-version = "0.2.0"
+version = "0.3.0"
+dependencies = [
+ "bitcoin",
+ "rand",
+ "tempfile",
+ "testcontainers",
+]
+
+[[package]]
+name = "lwk_containers"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c1c23d0a39adb2a75a9d57fce115eadf26030139dd37989d1cf809d3aa747b1"
 dependencies = [
  "bitcoin",
  "rand",
@@ -1440,7 +1452,7 @@ dependencies = [
  "elements-miniscript",
  "hex",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers",
+ "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
  "rand",
  "reqwest",
@@ -1464,7 +1476,7 @@ dependencies = [
  "bitcoin",
  "elements-miniscript",
  "ledger-apdu",
- "lwk_containers",
+ "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1497,7 +1509,7 @@ dependencies = [
  "electrsd",
  "elements",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers",
+ "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade",
  "lwk_signer",
  "lwk_wollet",
@@ -1557,7 +1569,7 @@ dependencies = [
  "idna 0.4.0",
  "js-sys",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers",
+ "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade",
  "lwk_signer",
  "lwk_test_util",

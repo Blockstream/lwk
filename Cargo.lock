@@ -1337,7 +1337,7 @@ dependencies = [
  "home",
  "jsonrpc 0.17.0",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_rpc_model",
  "lwk_signer",
  "lwk_tiny_jrpc",
@@ -1445,7 +1445,7 @@ version = "0.1.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64 0.21.7",
  "elements",
@@ -1466,6 +1466,29 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "wasm-timer",
+]
+
+[[package]]
+name = "lwk_jade"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb883e6971605fd9ceb5e58c8b2218bc3959cd26001ab1c3833eba86fb999c9c"
+dependencies = [
+ "elements",
+ "elements-miniscript",
+ "hex",
+ "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "serde_json",
+ "serialport",
+ "thiserror",
+ "tokio",
+ "tracing",
  "wasm-timer",
 ]
 
@@ -1497,7 +1520,7 @@ dependencies = [
  "elements",
  "elements-miniscript",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
  "thiserror",
 ]
@@ -1510,7 +1533,7 @@ dependencies = [
  "elements",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer",
  "lwk_wollet",
  "pulldown-cmark",
@@ -1543,7 +1566,7 @@ version = "0.4.6"
 dependencies = [
  "console_error_panic_hook",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer",
  "lwk_wollet",
  "reqwest",
@@ -1570,7 +1593,7 @@ dependencies = [
  "js-sys",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer",
  "lwk_test_util",
  "once_cell",

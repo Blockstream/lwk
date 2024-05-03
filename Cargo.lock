@@ -1338,7 +1338,7 @@ dependencies = [
  "jsonrpc 0.17.0",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_rpc_model",
+ "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_tiny_jrpc 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1378,7 +1378,7 @@ dependencies = [
  "elements",
  "lwk_app",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_rpc_model",
+ "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
  "serde_json",
  "shellwords",
@@ -1504,11 +1504,21 @@ dependencies = [
 
 [[package]]
 name = "lwk_rpc_model"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "schemars",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "lwk_rpc_model"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e783d199e22d2626a52c3c92bcf71d06fcd98a47d30e18da7ec376281e28cf84"
+dependencies = [
+ "schemars",
+ "serde",
 ]
 
 [[package]]

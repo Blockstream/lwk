@@ -64,6 +64,28 @@ pub fn register_wallet(policy: &WalletPolicy) -> APDUCommand {
     }
 }
 
+/// Creates the APDU command required to retrieve an address for the given wallet.
+pub fn get_wallet_address(
+    policy: &WalletPolicy,
+    hmac: Option<&[u8; 32]>,
+    change: bool,
+    address_index: u32,
+    display: bool,
+) -> APDUCommand {
+    let mut data: Vec<u8> = Vec::with_capacity(70);
+    data.push(if display { 1_u8 } else { b'\0' });
+    data.extend_from_slice(&policy.id());
+    data.extend_from_slice(hmac.unwrap_or(&[b'\0'; 32]));
+    data.push(if change { 1_u8 } else { b'\0' });
+    data.extend_from_slice(&address_index.to_be_bytes());
+    APDUCommand {
+        cla: apdu::Cla::Bitcoin as u8,
+        ins: apdu::LiquidCommandCode::GetWalletAddress as u8,
+        data,
+        ..Default::default()
+    }
+}
+
 /// Creates the APDU Command to sign a message.
 pub fn sign_message(
     message_length: usize,

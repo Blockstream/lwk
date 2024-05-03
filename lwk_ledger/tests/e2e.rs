@@ -1,4 +1,5 @@
 use bitcoin::bip32::DerivationPath;
+use elements_miniscript::elements::AddressParams;
 use lwk_containers::testcontainers::clients;
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 use lwk_ledger::*;
@@ -53,7 +54,20 @@ fn test_ledger_commands() {
         false,
     )
     .unwrap();
-    let (id, _hmac) = client.register_wallet(&wallet_policy).unwrap();
+    let (id, hmac) = client.register_wallet(&wallet_policy).unwrap();
 
     assert_eq!(id, wallet_policy.id());
+
+    let params = &AddressParams::ELEMENTS;
+    let address = client
+        .get_wallet_address(
+            &wallet_policy,
+            Some(&hmac),
+            false, // change
+            0,     // address index
+            false, // display
+            params,
+        )
+        .unwrap();
+    assert_eq!(address.to_string(), "XKNirRkUxuqSuS1t9jhrEVL7LmLvrbxWAo");
 }

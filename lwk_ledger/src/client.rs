@@ -6,6 +6,7 @@ use bitcoin::{
     consensus::encode::deserialize_partial,
     secp256k1::ecdsa,
 };
+use elements_miniscript::elements::{Address, AddressParams};
 use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::{
@@ -165,6 +166,44 @@ impl<T: Transport> LiquidClient<T> {
          * */
 
         Ok((id, hmac))
+    }
+
+    /// For a given wallet that was already registered on the device (or a standard wallet that does not need registration),
+    /// returns the address for a certain `change`/`address_index` combination.
+    pub fn get_wallet_address(
+        &self,
+        wallet: &WalletPolicy,
+        wallet_hmac: Option<&[u8; 32]>,
+        change: bool,
+        address_index: u32,
+        display: bool,
+        // TODO: move to self?
+        params: &'static AddressParams,
+    ) -> Result<Address, LiquidClientError<T::Error>> {
+        let mut intpr = ClientCommandInterpreter::new();
+        intpr.add_known_preimage(wallet.serialize());
+        let keys: Vec<String> = wallet.keys.iter().map(|k| k.to_string()).collect();
+        intpr.add_known_list(&keys);
+        // necessary for version 1 of the protocol (introduced in version 2.1.0)
+        intpr.add_known_preimage(wallet.descriptor_template.as_bytes().to_vec());
+        let cmd = command::get_wallet_address(wallet, wallet_hmac, change, address_index, display);
+        let address = self.make_request(&cmd, Some(&mut intpr)).and_then(|data| {
+            Address::parse_with_params(&String::from_utf8_lossy(&data), params).map_err(|_| {
+                LiquidClientError::UnexpectedResult {
+                    command: cmd.ins,
+                    data,
+                }
+            })
+        })?;
+
+        /*
+        #[cfg(feature = "paranoid_client")]
+        {
+            self.check_address(wallet, change, address_index, &address)?;
+        }
+         * */
+
+        Ok(address)
     }
 
     /// Sign a message with the key derived with the given derivation path.

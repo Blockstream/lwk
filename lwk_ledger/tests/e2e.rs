@@ -52,6 +52,7 @@ fn test_ledger_commands() {
         2,
         keys,
         false,
+        Some(format!("slip77({master_blinding_key})")),
     )
     .unwrap();
     let (id, hmac) = client.register_wallet(&wallet_policy).unwrap();
@@ -69,5 +70,8 @@ fn test_ledger_commands() {
             params,
         )
         .unwrap();
-    assert_eq!(address.to_string(), "XKNirRkUxuqSuS1t9jhrEVL7LmLvrbxWAo");
+    assert_eq!(
+        address.to_string(),
+        "AzpwDWqFZA5sMX2TK33kiNrn115ChnERKd2G2J4rffpRPcAnhnZ4EpYyJdjJ234ErsWrEF5bwtoyjpXx"
+    );
 }

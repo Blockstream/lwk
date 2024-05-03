@@ -67,6 +67,8 @@ impl WalletPolicy {
         threshold: usize,
         keys: impl IntoIterator<Item = T>,
         sorted: bool,
+        // TODO: use better type
+        descriptor_blinding_key: Option<String>,
     ) -> Result<Self, WalletError> {
         let keys: Vec<WalletPubKey> = keys.into_iter().map(|k| k.into()).collect();
         if threshold < 1 || threshold > keys.len() {
@@ -82,7 +84,7 @@ impl WalletPolicy {
             .collect::<Vec<String>>()
             .join(",");
 
-        let descriptor_template = match address_type {
+        let mut descriptor_template = match address_type {
             AddressType::Legacy => format!("sh({}({},{}))", multisig_op, threshold, keys_str),
             AddressType::NativeSegwit => {
                 format!("wsh({}({},{}))", multisig_op, threshold, keys_str)
@@ -92,6 +94,10 @@ impl WalletPolicy {
             }
             _ => return Err(WalletError::UnsupportedAddressType),
         };
+
+        if let Some(descriptor_blinding_key) = descriptor_blinding_key {
+            descriptor_template = format!("ct({descriptor_blinding_key},{descriptor_template})");
+        }
 
         Ok(Self {
             name,

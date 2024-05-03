@@ -12,7 +12,7 @@ elements-miniscript = "0.3"
 thiserror = "1.0.48"
 base64 = "0.13.0"
 
-lwk_common = { version = "0.3.0" }
+lwk_common = { version = "0.4.0" }
 lwk_jade = { version = "0.3.0", optional = true }
 
 # explicitly needed because without jade the dep is taken without the feature and elements-miniscript

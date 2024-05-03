@@ -22,7 +22,7 @@ elements-miniscript = { version = "0.3", features = ["serde"] }
 thiserror = "1.0.48"
 once_cell = "1.18.0"
 elements = { version = "0.24.0", features = ["base64"] }
-lwk_common = { version = "0.3.0" }
+lwk_common = { version = "0.4.0" }
 
 # wasm
 reqwest = { version = "0.12", optional = true, default-features = false, features = [

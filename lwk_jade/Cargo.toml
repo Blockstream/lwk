@@ -23,7 +23,7 @@ tracing = "0.1"
 
 elements-miniscript = "0.3"
 
-lwk_common = { version = "0.3.0" }
+lwk_common = { version = "0.4.0" }
 reqwest = { version = "0.12", default-features = false, features = [
     "charset",
     "http2",

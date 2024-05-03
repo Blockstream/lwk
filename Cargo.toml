@@ -19,7 +19,6 @@ members = [
 resolver = "2"
 
 [patch.crates-io]
-lwk_app = { path = "lwk_app" }
 lwk_test_util = { path = "lwk_test_util" }
 
 [profile.release-smaller]

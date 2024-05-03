@@ -1331,7 +1331,7 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "lwk_app"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "enum-iterator",
  "home",
@@ -1349,6 +1349,30 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "lwk_app"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "149fd0e400e822bb211bcb880c5f5d309e234e1642c6cf3eba453bcc47774c23"
+dependencies = [
+ "home",
+ "jsonrpc 0.17.0",
+ "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_tiny_jrpc 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand",
+ "reqwest",
+ "schemars",
+ "secp256k1 0.27.0",
+ "serde",
+ "serde_json",
  "thiserror",
  "tracing",
 ]
@@ -1376,7 +1400,7 @@ dependencies = [
  "clap_complete",
  "ctrlc",
  "elements",
- "lwk_app",
+ "lwk_app 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",

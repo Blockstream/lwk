@@ -1339,7 +1339,7 @@ dependencies = [
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_rpc_model",
- "lwk_signer",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_tiny_jrpc",
  "lwk_wollet",
  "rand",
@@ -1359,7 +1359,7 @@ version = "0.2.0"
 dependencies = [
  "elements",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
  "lwk_wollet",
  "serde_json",
@@ -1513,7 +1513,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64 0.13.1",
  "bip39",
@@ -1526,6 +1526,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lwk_signer"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13626b025e0ddb5cbc0c8bac14b22218e310a7a26e234f3a09aab892790ff2c1"
+dependencies = [
+ "base64 0.13.1",
+ "bip39",
+ "elements",
+ "elements-miniscript",
+ "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+]
+
+[[package]]
 name = "lwk_test_util"
 version = "0.2.0"
 dependencies = [
@@ -1534,7 +1549,7 @@ dependencies = [
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_wollet",
  "pulldown-cmark",
  "rand",
@@ -1567,7 +1582,7 @@ dependencies = [
  "console_error_panic_hook",
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_wollet",
  "reqwest",
  "serde",
@@ -1594,7 +1609,7 @@ dependencies = [
  "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer",
+ "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lwk_test_util",
  "once_cell",
  "rand",

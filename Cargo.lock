@@ -1336,12 +1336,12 @@ dependencies = [
  "enum-iterator",
  "home",
  "jsonrpc 0.17.0",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_tiny_jrpc 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_jade",
+ "lwk_rpc_model",
+ "lwk_signer",
+ "lwk_tiny_jrpc",
+ "lwk_wollet",
  "rand",
  "reqwest",
  "schemars",
@@ -1354,38 +1354,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_app"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "149fd0e400e822bb211bcb880c5f5d309e234e1642c6cf3eba453bcc47774c23"
-dependencies = [
- "home",
- "jsonrpc 0.17.0",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_tiny_jrpc 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand",
- "reqwest",
- "schemars",
- "secp256k1 0.27.0",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
-]
-
-[[package]]
 name = "lwk_bindings"
 version = "0.3.0"
 dependencies = [
  "elements",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_signer",
  "lwk_test_util",
- "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_wollet",
  "serde_json",
  "thiserror",
  "uniffi",
@@ -1400,9 +1376,9 @@ dependencies = [
  "clap_complete",
  "ctrlc",
  "elements",
- "lwk_app 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_rpc_model 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_app",
+ "lwk_containers",
+ "lwk_rpc_model",
  "lwk_test_util",
  "serde_json",
  "shellwords",
@@ -1427,35 +1403,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_common"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6dd33b4c28e609a7ddfe1bb53e267a528668341520e6f20e36491eacc9cdadd"
-dependencies = [
- "base64 0.21.7",
- "elements",
- "elements-miniscript",
- "getrandom",
- "qr_code",
- "rand",
- "thiserror",
-]
-
-[[package]]
 name = "lwk_containers"
 version = "0.3.0"
-dependencies = [
- "bitcoin",
- "rand",
- "tempfile",
- "testcontainers",
-]
-
-[[package]]
-name = "lwk_containers"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c1c23d0a39adb2a75a9d57fce115eadf26030139dd37989d1cf809d3aa747b1"
 dependencies = [
  "bitcoin",
  "rand",
@@ -1475,8 +1424,8 @@ dependencies = [
  "elements",
  "elements-miniscript",
  "hex",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_containers",
  "lwk_test_util",
  "rand",
  "reqwest",
@@ -1494,36 +1443,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_jade"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb883e6971605fd9ceb5e58c8b2218bc3959cd26001ab1c3833eba86fb999c9c"
-dependencies = [
- "elements",
- "elements-miniscript",
- "hex",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand",
- "reqwest",
- "serde",
- "serde_bytes",
- "serde_cbor",
- "serde_json",
- "serialport",
- "thiserror",
- "tokio",
- "tracing",
- "wasm-timer",
-]
-
-[[package]]
 name = "lwk_ledger"
 version = "0.2.0"
 dependencies = [
  "bitcoin",
  "elements-miniscript",
  "ledger-apdu",
- "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_containers",
 ]
 
 [[package]]
@@ -1536,16 +1462,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_rpc_model"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e783d199e22d2626a52c3c92bcf71d06fcd98a47d30e18da7ec376281e28cf84"
-dependencies = [
- "schemars",
- "serde",
-]
-
-[[package]]
 name = "lwk_signer"
 version = "0.4.0"
 dependencies = [
@@ -1553,24 +1469,9 @@ dependencies = [
  "bip39",
  "elements",
  "elements-miniscript",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_jade",
  "lwk_test_util",
- "thiserror",
-]
-
-[[package]]
-name = "lwk_signer"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13626b025e0ddb5cbc0c8bac14b22218e310a7a26e234f3a09aab892790ff2c1"
-dependencies = [
- "base64 0.13.1",
- "bip39",
- "elements",
- "elements-miniscript",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
 ]
 
@@ -1580,11 +1481,11 @@ version = "0.3.0"
 dependencies = [
  "electrsd",
  "elements",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_containers",
+ "lwk_jade",
+ "lwk_signer",
+ "lwk_wollet",
  "pulldown-cmark",
  "rand",
  "serde_json",
@@ -1610,30 +1511,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "lwk_tiny_jrpc"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4165b2d73c11c0aa082a13f6d4e1a123c9653db83459ac106db78705f363f253"
-dependencies = [
- "anyhow",
- "jsonrpc 0.17.0",
- "serde",
- "serde_derive",
- "serde_json",
- "thiserror",
- "tiny_http",
- "tracing",
-]
-
-[[package]]
 name = "lwk_wasm"
 version = "0.5.0"
 dependencies = [
  "console_error_panic_hook",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_wollet 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_jade",
+ "lwk_signer",
+ "lwk_wollet",
  "reqwest",
  "serde",
  "serde-wasm-bindgen",
@@ -1656,10 +1541,10 @@ dependencies = [
  "elements-miniscript",
  "idna 0.4.0",
  "js-sys",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_containers 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_jade 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lwk_signer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lwk_common",
+ "lwk_containers",
+ "lwk_jade",
+ "lwk_signer",
  "lwk_test_util",
  "once_cell",
  "rand",
@@ -1669,34 +1554,6 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "lwk_wollet"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2a4d72c41a67584ebe62a7708e06704e8d084fff16764d646be015d1c9737ca"
-dependencies = [
- "aes-gcm-siv",
- "bip39",
- "electrum-client",
- "elements",
- "elements-miniscript",
- "idna 0.4.0",
- "js-sys",
- "lwk_common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "once_cell",
- "rand",
- "regex-lite",
- "reqwest",
- "serde",
- "serde_cbor",
- "serde_json",
  "thiserror",
  "tokio",
  "tracing",

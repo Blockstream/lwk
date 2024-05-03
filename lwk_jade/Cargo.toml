@@ -57,7 +57,7 @@ lwk_containers = { version = "0.3.0" }
 base64 = "0.21.4"
 serde_json = "1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-lwk_test_util = { version = "0.2.0" }
+lwk_test_util = { version = "0.3.0" }
 
 [package.metadata.docs.rs]
 all-features = true

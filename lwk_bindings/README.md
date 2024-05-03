@@ -55,6 +55,17 @@ import lwk
 str(lwk.Network.mainnet())
 ```
 
+### Publish Python wheel
+
+Download artifacts from CI:
+
+ - github ci for windows and mac
+ - gitlab ci for linux
+
+```sh
+$ twine upload *.whl
+```
+
 ### Test
 
 ```shell

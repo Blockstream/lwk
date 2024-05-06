@@ -86,6 +86,32 @@ pub fn get_wallet_address(
     }
 }
 
+/// Creates the APDU command required to sign a psbt.
+pub fn sign_psbt(
+    global_mapping_commitment: &[u8],
+    inputs_number: usize,
+    input_commitments_root: &[u8; 32],
+    outputs_number: usize,
+    output_commitments_root: &[u8; 32],
+    policy: &WalletPolicy,
+    hmac: Option<&[u8; 32]>,
+) -> APDUCommand {
+    let mut data: Vec<u8> = Vec::new();
+    data.extend_from_slice(global_mapping_commitment);
+    data.extend(encode::serialize(&VarInt(inputs_number as u64)));
+    data.extend_from_slice(input_commitments_root);
+    data.extend(encode::serialize(&VarInt(outputs_number as u64)));
+    data.extend_from_slice(output_commitments_root);
+    data.extend_from_slice(&policy.id());
+    data.extend_from_slice(hmac.unwrap_or(&[b'\0'; 32]));
+    APDUCommand {
+        cla: apdu::Cla::Bitcoin as u8,
+        ins: apdu::LiquidCommandCode::SignPSBT as u8,
+        data,
+        ..Default::default()
+    }
+}
+
 /// Creates the APDU Command to sign a message.
 pub fn sign_message(
     message_length: usize,

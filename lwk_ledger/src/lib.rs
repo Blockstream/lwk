@@ -4,6 +4,7 @@ mod command;
 mod error;
 mod interpreter;
 mod merkle;
+mod psbt;
 mod transport;
 mod wallet;
 

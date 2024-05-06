@@ -19,7 +19,7 @@ pub enum LiquidCommandCode {
     GetVersion = 0x01,
     RegisterWallet = 0x02,
     GetWalletAddress = 0x03,
-    // SignPSBT = 0x04,
+    SignPSBT = 0x04,
     GetMasterFingerprint = 0x05,
     SignMessage = 0x10,
     // Liquid commands

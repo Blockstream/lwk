@@ -418,7 +418,7 @@ mod test {
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update};
+    use crate::{update::DownloadTxResult, Chain, Update, WolletDescriptor};
 
     use super::EncodableTxOutSecrets;
 
@@ -505,5 +505,14 @@ mod test {
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_decription() {
+        let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
+        let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes();
+        let update_from_enc = Update::deserialize_decrypted(&enc_bytes, &desc).unwrap();
+        assert_eq!(update, update_from_enc);
     }
 }

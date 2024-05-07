@@ -8,7 +8,7 @@ use std::{
 };
 
 use aes_gcm_siv::{
-    aead::{generic_array::GenericArray, AeadInPlace, NewAead},
+    aead::{generic_array::GenericArray, AeadInPlace},
     Aes256GcmSiv,
 };
 use elements::{bitcoin::hashes::Hash, hashes::sha256t_hash_newtype};
@@ -36,15 +36,6 @@ pub trait Persister {
     ///
     /// Implementors are encouraged to coalesce consequent updates with `update.only_tip() == true`
     fn push(&self, update: Update) -> Result<(), PersistError>;
-}
-
-sha256t_hash_newtype! {
-    /// The tag of the hash
-    pub struct EncryptionKeyTag = hash_str("LWK-FS-Encryption-Key/1.0");
-
-    /// A tagged hash to generate the key for encryption in the encrypted file system persister
-    #[hash_newtype(forward)]
-    pub struct EncryptionKeyHash(_);
 }
 
 sha256t_hash_newtype! {
@@ -123,9 +114,8 @@ impl FsPersister {
                 }
             }
         }
-        let key_bytes = EncryptionKeyHash::hash(desc.to_string().as_bytes()).to_byte_array();
-        let key = GenericArray::from_slice(&key_bytes);
-        let cipher = Aes256GcmSiv::new(key);
+
+        let cipher = desc.cipher();
 
         Ok(Arc::new(Self {
             inner: Mutex::new(FsPersisterInner { path, next, cipher }),

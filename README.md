@@ -201,7 +201,7 @@ $ cargo install lwk_cli
 or if you want to connect Jade over serial:
 
 ```sh
-$ cargo install lwk_cli --features-serial 
+$ cargo install lwk_cli --features serial 
 ``` 
 
 ### Building LWK_CLI from source

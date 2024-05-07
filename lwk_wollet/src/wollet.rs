@@ -38,6 +38,14 @@ impl std::fmt::Debug for Wollet {
     }
 }
 
+impl std::hash::Hash for Wollet {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.config.hash(state);
+        self.store.hash(state);
+        self.descriptor.hash(state);
+    }
+}
+
 impl Wollet {
     /// Create a new  wallet
     pub fn new(
@@ -548,6 +556,8 @@ fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Op
 
 #[cfg(test)]
 mod tests {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     use std::str::FromStr;
 
     use super::*;
@@ -716,5 +726,24 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_wollet_hash() {
+        let bytes = lwk_test_util::update_test_vector_bytes();
+
+        let update = crate::Update::deserialize(&bytes[..]).unwrap();
+        let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))";
+        let mut wollet = new_wollet(exp);
+
+        let mut hasher = DefaultHasher::new();
+        wollet.hash(&mut hasher);
+        assert_eq!(12092173119280468224, hasher.finish());
+
+        wollet.apply_update(update).unwrap();
+
+        let mut hasher = DefaultHasher::new();
+        wollet.hash(&mut hasher);
+        assert_eq!(5372789003087276099, hasher.finish());
     }
 }

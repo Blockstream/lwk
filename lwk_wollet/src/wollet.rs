@@ -20,7 +20,9 @@ use elements_miniscript::{
 };
 use lwk_common::{burn_script, pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{atomic, Arc};
 
@@ -461,6 +463,14 @@ impl Wollet {
         }
         Ok(updates)
     }
+
+    /// A deterministic value derived from the descriptor, the config and the content of this wollet,
+    /// including what's in the wallet store (transactions etc)
+    pub fn status(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        std::hash::Hash::hash(&self, &mut hasher);
+        hasher.finish()
+    }
 }
 
 fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {
@@ -745,5 +755,7 @@ mod tests {
         let mut hasher = DefaultHasher::new();
         wollet.hash(&mut hasher);
         assert_eq!(5372789003087276099, hasher.finish());
+
+        assert_eq!(5372789003087276099, wollet.status());
     }
 }

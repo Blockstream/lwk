@@ -6,7 +6,7 @@ use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::{Descriptor, DescriptorPublicKey};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
@@ -60,7 +60,45 @@ impl Default for RawCache {
     }
 }
 
-#[derive(Default)]
+impl std::hash::Hash for RawCache {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let mut vec: Vec<_> = self.all_txs.iter().collect();
+        vec.sort();
+        vec.hash(state);
+
+        let mut vec: Vec<_> = self.paths.iter().collect();
+        vec.sort();
+        vec.hash(state);
+
+        let mut vec: Vec<_> = self.scripts.iter().collect();
+        vec.sort();
+        vec.hash(state);
+
+        let mut vec: Vec<_> = self.heights.iter().collect();
+        vec.sort();
+        vec.hash(state);
+
+        let mut vec: Vec<_> = self.unblinded.iter().collect();
+        vec.sort_by_key(|kv| kv.0);
+        vec.hash(state);
+
+        self.tip.hash(state);
+
+        let mut vec: Vec<_> = self.timestamps.iter().collect();
+        vec.sort();
+        vec.hash(state);
+
+        self.last_unused_external
+            .load(Ordering::Relaxed)
+            .hash(state);
+
+        self.last_unused_internal
+            .load(Ordering::Relaxed)
+            .hash(state);
+    }
+}
+
+#[derive(Default, Hash)]
 pub struct Store {
     pub cache: RawCache,
 }
@@ -114,8 +152,14 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use crate::{store::Store, WolletDescriptor};
+    use elements::Txid;
     use elements_miniscript::ConfidentialDescriptor;
-    use std::{convert::TryInto, str::FromStr};
+    use std::{
+        collections::hash_map::DefaultHasher,
+        convert::TryInto,
+        hash::{Hash, Hasher},
+        str::FromStr,
+    };
     use tempfile::TempDir;
 
     #[test]
@@ -141,5 +185,23 @@ mod tests {
             .unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }))");
         assert_ne!(x.value[0], x.value[1]);
+    }
+
+    #[test]
+    fn test_store_hash() {
+        let mut store = Store::default();
+        let mut hasher = DefaultHasher::new();
+        store.hash(&mut hasher);
+        assert_eq!(11565483422739161174, hasher.finish());
+
+        store
+            .cache
+            .heights
+            .insert(<Txid as elements::hashes::Hash>::all_zeros(), None);
+        let mut hasher = DefaultHasher::new();
+        store.hash(&mut hasher);
+        assert_eq!(12004253425667158821, hasher.finish());
+
+        // TODO test other fields change the hash
     }
 }

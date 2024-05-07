@@ -7,12 +7,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aes_gcm_siv::{
-    aead::{generic_array::GenericArray, AeadInPlace},
-    Aes256GcmSiv,
-};
+use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace};
 use elements::{bitcoin::hashes::Hash, hashes::sha256t_hash_newtype};
-use rand::{thread_rng, Rng};
 
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 
@@ -73,8 +69,8 @@ struct FsPersisterInner {
     /// Next free position to write an update
     next: Counter,
 
-    /// Cipher used to encrypt data
-    cipher: Aes256GcmSiv,
+    /// used to create the cipher to encrypt data
+    desc: WolletDescriptor,
 }
 
 /// A file system persister that writes encrypted incremental updates
@@ -115,10 +111,12 @@ impl FsPersister {
             }
         }
 
-        let cipher = desc.cipher();
-
         Ok(Arc::new(Self {
-            inner: Mutex::new(FsPersisterInner { path, next, cipher }),
+            inner: Mutex::new(FsPersisterInner {
+                path,
+                next,
+                desc: desc.clone(),
+            }),
         }))
     }
 }
@@ -148,7 +146,8 @@ impl FsPersisterInner {
 
             let nonce = GenericArray::from_slice(nonce_bytes);
 
-            self.cipher
+            self.desc
+                .cipher()
                 .decrypt_in_place(nonce, b"", &mut ciphertext)
                 .map_err(to_other)?;
             let plaintext = ciphertext;
@@ -182,23 +181,11 @@ impl Persister for FsPersister {
             }
         }
         let path = inner.path(&inner.next);
-        let mut plaintext = update.serialize()?;
+        let ciphertext = update
+            .serialize_encrypted(&inner.desc)
+            .map_err(|e| PersistError::Other(e.to_string()))?;
 
-        let mut nonce_bytes = [0u8; 12];
-        thread_rng().fill(&mut nonce_bytes);
-        let nonce = GenericArray::from_slice(&nonce_bytes);
-
-        inner
-            .cipher
-            .encrypt_in_place(nonce, b"", &mut plaintext)
-            .map_err(to_other)?;
-        let ciphertext = plaintext;
-
-        let mut file_content = vec![];
-        file_content.extend(nonce_bytes);
-        file_content.extend(ciphertext);
-
-        fs::write(path, &file_content)?;
+        fs::write(path, ciphertext)?;
         inner.next = inner.next.clone() + 1;
         Ok(())
     }
@@ -302,7 +289,7 @@ mod test {
         assert!(persister.get(2).unwrap().is_none());
     }
 
-    pub fn wollet_descriptor_test_vector() -> WolletDescriptor {
+    fn wollet_descriptor_test_vector() -> WolletDescriptor {
         let exp = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";
         WolletDescriptor::from_str(exp).unwrap()
     }

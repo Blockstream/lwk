@@ -2,11 +2,14 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
-use crate::Wollet;
+use crate::{Wollet, WolletDescriptor};
+use aes_gcm_siv::aead::generic_array::GenericArray;
+use aes_gcm_siv::aead::AeadMutInPlace;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
 use elements::BlockHeader;
+use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
@@ -49,6 +52,23 @@ impl Update {
     }
     pub fn deserialize(bytes: &[u8]) -> Result<Update, elements::encode::Error> {
         Update::consensus_decode(bytes)
+    }
+
+    pub fn serialize_encrypted(&self, desc: &WolletDescriptor) -> Result<Vec<u8>, Error> {
+        let mut plaintext = self.serialize()?;
+
+        let mut nonce_bytes = [0u8; 12];
+        thread_rng().fill(&mut nonce_bytes);
+        let nonce = GenericArray::from_slice(&nonce_bytes);
+
+        desc.cipher().encrypt_in_place(nonce, b"", &mut plaintext)?;
+        let ciphertext = plaintext;
+
+        let mut result = Vec::with_capacity(ciphertext.len() + 12);
+        result.extend(nonce.as_slice());
+        result.extend(&ciphertext);
+
+        Ok(result)
     }
 }
 

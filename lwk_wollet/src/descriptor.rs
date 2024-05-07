@@ -19,6 +19,12 @@ impl Display for WolletDescriptor {
     }
 }
 
+impl std::hash::Hash for WolletDescriptor {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.to_string().hash(state);
+    }
+}
+
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     type Error = crate::error::Error;
 
@@ -186,5 +192,25 @@ impl WolletDescriptor {
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     fn as_ref(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
+    use crate::WolletDescriptor;
+
+    #[test]
+    fn test_wollet_hash() {
+        let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+        assert_eq!(desc_str, desc.to_string());
+        let mut hasher = DefaultHasher::new();
+        desc.hash(&mut hasher);
+        assert_eq!(12055616352728229988, hasher.finish());
     }
 }

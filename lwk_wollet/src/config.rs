@@ -7,7 +7,7 @@ const LIQUID_POLICY_ASSET_STR: &str =
 const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
     "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,
@@ -49,7 +49,7 @@ impl ElementsNetwork {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct Config {
     network: ElementsNetwork,
 }
@@ -69,5 +69,23 @@ impl Config {
 
     pub fn network(&self) -> ElementsNetwork {
         self.network
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
+    use super::Config;
+
+    #[test]
+    fn test_config_hash() {
+        let config = Config::new(crate::ElementsNetwork::Liquid).unwrap();
+        let mut hasher = DefaultHasher::new();
+        config.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
     }
 }

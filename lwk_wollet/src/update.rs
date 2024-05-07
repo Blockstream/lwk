@@ -70,6 +70,19 @@ impl Update {
 
         Ok(result)
     }
+
+    pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
+        let nonce_bytes = &bytes[..12];
+        let mut ciphertext = bytes[12..].to_vec();
+
+        let nonce = GenericArray::from_slice(nonce_bytes);
+
+        desc.cipher()
+            .decrypt_in_place(nonce, b"", &mut ciphertext)?;
+        let plaintext = ciphertext;
+
+        Ok(Update::deserialize(&plaintext)?)
+    }
 }
 
 impl Wollet {

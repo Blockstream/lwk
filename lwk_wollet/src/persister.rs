@@ -7,7 +7,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aes_gcm_siv::aead::{generic_array::GenericArray, AeadInPlace};
 use elements::{bitcoin::hashes::Hash, hashes::sha256t_hash_newtype};
 
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
@@ -141,18 +140,10 @@ impl FsPersisterInner {
             let path = self.path(&Counter::from(index));
             let bytes = fs::read(path)?;
 
-            let nonce_bytes = &bytes[..12];
-            let mut ciphertext = bytes[12..].to_vec();
-
-            let nonce = GenericArray::from_slice(nonce_bytes);
-
-            self.desc
-                .cipher()
-                .decrypt_in_place(nonce, b"", &mut ciphertext)
-                .map_err(to_other)?;
-            let plaintext = ciphertext;
-
-            Ok(Some(Update::deserialize(&plaintext)?))
+            Ok(Some(
+                Update::deserialize_decrypted(&bytes, &self.desc)
+                    .map_err(|e| PersistError::Other(e.to_string()))?,
+            ))
         } else {
             Ok(None)
         }

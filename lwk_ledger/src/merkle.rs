@@ -1,4 +1,4 @@
-use bitcoin::hashes::{sha256, Hash, HashEngine};
+use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash, HashEngine};
 
 /// MerkleTree is containing a merkle tree generated from a list of items.
 pub struct MerkleTree {
@@ -161,7 +161,7 @@ fn largest_power_of_2_less_than(n: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitcoin::hashes::{sha256, Hash, HashEngine};
+    use elements_miniscript::elements::bitcoin::hashes::{sha256, Hash, HashEngine};
 
     #[test]
     fn test_merkle_tree() {

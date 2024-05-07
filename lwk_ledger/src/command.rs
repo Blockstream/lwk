@@ -1,10 +1,10 @@
+use core::default::Default;
 /// APDU commands  for the Bitcoin application.
 ///
-use bitcoin::{
+use elements_miniscript::elements::bitcoin::{
     bip32::{ChildNumber, DerivationPath},
     consensus::encode::{self, VarInt},
 };
-use core::default::Default;
 
 use super::{
     apdu::{self, APDUCommand},

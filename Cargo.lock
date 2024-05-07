@@ -1446,7 +1446,6 @@ dependencies = [
 name = "lwk_ledger"
 version = "0.2.0"
 dependencies = [
- "bitcoin",
  "elements-miniscript",
  "ledger-apdu",
  "lwk_containers",

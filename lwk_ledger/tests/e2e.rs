@@ -1,4 +1,4 @@
-use bitcoin::bip32::DerivationPath;
+use elements_miniscript::elements::bitcoin::bip32::DerivationPath;
 use elements_miniscript::elements::AddressParams;
 use lwk_containers::testcontainers::clients;
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};

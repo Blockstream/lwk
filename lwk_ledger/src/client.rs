@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 use std::str::FromStr;
 
-use bitcoin::{
+use elements_miniscript::elements::bitcoin::{
     bip32::{DerivationPath, Fingerprint, Xpub},
     consensus::encode::deserialize_partial,
     secp256k1::ecdsa,

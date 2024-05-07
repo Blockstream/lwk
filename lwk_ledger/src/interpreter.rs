@@ -1,7 +1,7 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 
-use bitcoin::{
+use elements_miniscript::elements::bitcoin::{
     consensus::encode::{self, VarInt},
     hashes::{sha256, Hash, HashEngine},
 };

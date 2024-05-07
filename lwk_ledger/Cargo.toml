@@ -8,7 +8,6 @@ documentation = "https://docs.rs/lwk_jade"
 
 [dependencies]
 ledger-apdu = "0.10"
-bitcoin = "0.31"
 elements-miniscript = { version = "0.3", features = ["serde"] }
 
 [dev-dependencies]

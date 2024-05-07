@@ -2,7 +2,7 @@ use core::convert::From;
 use core::iter::IntoIterator;
 use core::str::FromStr;
 
-use bitcoin::{
+use elements_miniscript::elements::bitcoin::{
     bip32::{DerivationPath, Error, Fingerprint, KeySource, Xpub},
     consensus::encode::{self, VarInt},
     hashes::{sha256, Hash, HashEngine},
@@ -288,8 +288,8 @@ impl core::fmt::Display for WalletPubKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitcoin::hashes::hex::FromHex;
     use core::str::FromStr;
+    use elements_miniscript::elements::bitcoin::hashes::hex::FromHex;
 
     const MASTER_KEY_EXAMPLE: &str = "[5c9e228d]tpubDEGquuorgFNb8bjh5kNZQMPtABJzoWwNm78FUmeoPkfRtoPF7JLrtoZeT3J3ybq1HmC3Rn1Q8wFQ8J5usanzups5rj7PJoQLNyvq8QbJruW/**";
     const KEY_EXAMPLE: &str = "[5c9e228d/48'/1'/0'/0']tpubDEGquuorgFNb8bjh5kNZQMPtABJzoWwNm78FUmeoPkfRtoPF7JLrtoZeT3J3ybq1HmC3Rn1Q8wFQ8J5usanzups5rj7PJoQLNyvq8QbJruW/**";

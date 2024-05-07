@@ -11,7 +11,7 @@ use elements_miniscript::elements::{
     bitcoin::key::Error as KeyError,
     bitcoin::secp256k1::{self, XOnlyPublicKey},
     bitcoin::taproot::{self, TapLeafHash},
-    bitcoin::{ecdsa, PublicKey},
+    bitcoin::{self, ecdsa, PublicKey},
     hashes::Hash,
     pset::raw,
 };

@@ -294,15 +294,21 @@ mod test {
 
     #[test]
     fn test_pset_details() {
-        let pset_str = include_str!("../test_data/pset_details/pset.base64");
-        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let asset_id_str = "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5";
+        let asset_id: AssetId = asset_id_str.parse().unwrap();
         let desc_str = include_str!("../test_data/pset_details/descriptor");
         let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc_str.parse().unwrap();
 
+        let pset_str = include_str!("../test_data/pset_details/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc).unwrap();
-        let asset_id_str = "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5";
-        let asset_id: AssetId = asset_id_str.parse().unwrap();
         let v = balance.balances.get(&asset_id).unwrap();
-        // assert_eq!(*v, 1); // TODO should be 1 but it's 0
+        assert_eq!(*v, 0); // it's correct the balance of this asset 0 because it's a redeposit
+
+        let pset_str = include_str!("../test_data/pset_details/pset2.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let balance = pset_balance(&pset, &desc).unwrap();
+        let v = balance.balances.get(&asset_id).unwrap();
+        assert_eq!(*v, -1);
     }
 }

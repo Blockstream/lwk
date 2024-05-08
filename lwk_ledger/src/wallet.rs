@@ -29,6 +29,7 @@ pub enum AddressType {
 }
 
 /// Represents a wallet stored with a wallet policy.
+#[derive(Clone)]
 pub struct WalletPolicy {
     /// wallet name (ASCII string, max 64 bytes)
     pub name: String,
@@ -185,7 +186,7 @@ pub enum WalletError {
     InvalidPolicy,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct WalletPubKey {
     pub inner: Xpub,
     pub source: Option<KeySource>,

@@ -95,4 +95,20 @@ fn test_ledger_commands() {
         .unwrap();
     let expected = "el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3";
     assert_eq!(address.to_string(), expected);
+
+    let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+    let desc = format!("ct({view_key},wpkh(@0))");
+    let mut ss_view = ss.clone();
+    ss_view.descriptor_template = desc;
+    let address = client
+        .get_wallet_address(
+            &ss_view, None,  // hmac
+            false, // change
+            0,     // address index
+            false, // display
+            params,
+        )
+        .unwrap();
+    let expected = "el1qq2fk6wmtxd49cymtpprte3ue5x4elp99s5zltzhy8pwjf0pqw7qeyy68aq4qx76ahvuvlrz8t8ey9v04clsf503tn8tvv859j";
+    assert_eq!(address.to_string(), expected);
 }

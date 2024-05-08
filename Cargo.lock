@@ -1534,6 +1534,7 @@ name = "lwk_wollet"
 version = "0.4.0"
 dependencies = [
  "aes-gcm-siv",
+ "base64 0.21.7",
  "bip39",
  "electrum-client",
  "elements",

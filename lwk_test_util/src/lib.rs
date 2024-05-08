@@ -975,6 +975,10 @@ pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {
     .unwrap()
 }
 
+pub fn update_test_vector_encrypted_base64() -> String {
+    include_str!("../test_data/update_test_vector/update.base64").to_string()
+}
+
 pub fn update_test_vector_encrypted_bytes2() -> Vec<u8> {
     include_bytes!("../test_data/update_test_vector/000000000000").to_vec()
 }
@@ -984,7 +988,7 @@ pub fn wollet_descriptor_string2() -> String {
 }
 
 pub fn wollet_descriptor_string() -> String {
-    "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp".to_string()
+    include_str!("../test_data/update_test_vector/desc2").to_string()
 }
 
 #[cfg(test)]

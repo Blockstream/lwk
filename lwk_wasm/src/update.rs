@@ -78,7 +78,7 @@ mod tests {
 
         let base64 = include_str!("../test_data/update.base64");
         let desc_str = include_str!("../test_data/desc");
-        let desc = WolletDescriptor::new(&desc_str).unwrap();
+        let desc = WolletDescriptor::new(desc_str).unwrap();
         assert_eq!(desc_str, desc.to_string());
         let update = Update::deserialize_decrypted_base64(base64, &desc).unwrap();
         let base64_back = update.serialize_encrypted_base64(&desc).unwrap();

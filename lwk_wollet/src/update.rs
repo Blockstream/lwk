@@ -74,7 +74,7 @@ impl Update {
 
     pub fn serialize_encrypted_base64(&self, desc: &WolletDescriptor) -> Result<String, Error> {
         let vec = self.serialize_encrypted(desc)?;
-        Ok(BASE64_STANDARD.encode(&vec))
+        Ok(BASE64_STANDARD.encode(vec))
     }
 
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {

@@ -5,6 +5,7 @@ use crate::store::{Height, Timestamp};
 use crate::{Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
+use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
@@ -71,6 +72,11 @@ impl Update {
         Ok(result)
     }
 
+    pub fn serialize_encrypted_base64(&self, desc: &WolletDescriptor) -> Result<String, Error> {
+        let vec = self.serialize_encrypted(desc)?;
+        Ok(BASE64_STANDARD.encode(&vec))
+    }
+
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
         let nonce_bytes = &bytes[..12];
         let mut ciphertext = bytes[12..].to_vec();
@@ -82,6 +88,16 @@ impl Update {
         let plaintext = ciphertext;
 
         Ok(Update::deserialize(&plaintext)?)
+    }
+
+    pub fn deserialize_decrypted_base64(
+        base64: &str,
+        desc: &WolletDescriptor,
+    ) -> Result<Update, Error> {
+        let vec = BASE64_STANDARD
+            .decode(base64)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Self::deserialize_decrypted(&vec, desc)
     }
 }
 
@@ -518,5 +534,18 @@ mod test {
         let enc_bytes2 = lwk_test_util::update_test_vector_encrypted_bytes2();
         let desc2: WolletDescriptor = lwk_test_util::wollet_descriptor_string2().parse().unwrap();
         Update::deserialize_decrypted(&enc_bytes2, &desc2).unwrap();
+    }
+
+    #[test]
+    fn test_update_base64() {
+        let base64 = lwk_test_util::update_test_vector_encrypted_base64();
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
+
+        let update = Update::deserialize_decrypted_base64(&base64, &desc).unwrap();
+        let update_ser = update.serialize_encrypted_base64(&desc).unwrap();
+        assert_ne!(base64, update_ser); // decrypted content is the same, but enryption is not deterministic
+
+        let back = Update::deserialize_decrypted_base64(&update_ser, &desc).unwrap();
+        assert_eq!(update, back)
     }
 }

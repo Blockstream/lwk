@@ -45,10 +45,12 @@ impl Update {
         Ok(self.inner.serialize()?)
     }
 
+    #[wasm_bindgen(js_name = serializeEncryptedBase64)]
     pub fn serialize_encrypted_base64(&self, desc: &WolletDescriptor) -> Result<String, Error> {
         Ok(self.inner.serialize_encrypted_base64(desc.as_ref())?)
     }
 
+    #[wasm_bindgen(js_name = deserializeDecryptedBase64)]
     pub fn deserialize_decrypted_base64(
         base64: &str,
         desc: &WolletDescriptor,

@@ -74,4 +74,25 @@ fn test_ledger_commands() {
         address.to_string(),
         "AzpwDWqFZA5sMX2TK33kiNrn115ChnERKd2G2J4rffpRPcAnhnZ4EpYyJdjJ234ErsWrEF5bwtoyjpXx"
     );
+
+    // Single sig, no need to register the wallet
+    let version = Version::V1;
+    let path: DerivationPath = "m/84h/1h/0h".parse().unwrap();
+    let xpub = client.get_extended_pubkey(&path, false).unwrap();
+    let mut wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
+    wpk0.multipath = Some("/**".to_string());
+    let ss_keys = vec![wpk0];
+    let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0))");
+    let ss = WalletPolicy::new("ss".to_string(), version, desc, ss_keys);
+    let address = client
+        .get_wallet_address(
+            &ss, None,  // hmac
+            false, // change
+            0,     // address index
+            false, // display
+            params,
+        )
+        .unwrap();
+    let expected = "el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3";
+    assert_eq!(address.to_string(), expected);
 }

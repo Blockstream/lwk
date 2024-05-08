@@ -1,10 +1,10 @@
 use wasm_bindgen::prelude::*;
 
-use crate::Error;
+use crate::{Error, WolletDescriptor};
 
 /// Wrapper of [`lwk_wollet::Update`]
 #[wasm_bindgen]
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
     inner: lwk_wollet::Update,
 }
@@ -44,12 +44,25 @@ impl Update {
     pub fn serialize(&self) -> Result<Vec<u8>, Error> {
         Ok(self.inner.serialize()?)
     }
+
+    pub fn serialize_encrypted_base64(&self, desc: &WolletDescriptor) -> Result<String, Error> {
+        Ok(self.inner.serialize_encrypted_base64(desc.as_ref())?)
+    }
+
+    pub fn deserialize_decrypted_base64(
+        base64: &str,
+        desc: &WolletDescriptor,
+    ) -> Result<Update, Error> {
+        Ok(lwk_wollet::Update::deserialize_decrypted_base64(base64, desc.as_ref())?.into())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use lwk_wollet::hashes::hex::FromHex;
     use wasm_bindgen_test::*;
+
+    use crate::{Update, WolletDescriptor};
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -62,5 +75,14 @@ mod tests {
         let bytes = update_test_vector_bytes();
         let update = crate::Update::new(&bytes).unwrap();
         assert_eq!(update.serialize().unwrap(), bytes);
+
+        let base64 = include_str!("../test_data/update.base64");
+        let desc_str = include_str!("../test_data/desc");
+        let desc = WolletDescriptor::new(&desc_str).unwrap();
+        assert_eq!(desc_str, desc.to_string());
+        let update = Update::deserialize_decrypted_base64(base64, &desc).unwrap();
+        let base64_back = update.serialize_encrypted_base64(&desc).unwrap();
+        let update_back = Update::deserialize_decrypted_base64(&base64_back, &desc).unwrap();
+        assert_eq!(update, update_back);
     }
 }

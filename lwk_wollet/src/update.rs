@@ -514,5 +514,9 @@ mod test {
         let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes();
         let update_from_enc = Update::deserialize_decrypted(&enc_bytes, &desc).unwrap();
         assert_eq!(update, update_from_enc);
+
+        let enc_bytes2 = lwk_test_util::update_test_vector_encrypted_bytes2();
+        let desc2: WolletDescriptor = lwk_test_util::wollet_descriptor_string2().parse().unwrap();
+        Update::deserialize_decrypted(&enc_bytes2, &desc2).unwrap();
     }
 }

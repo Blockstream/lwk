@@ -1,6 +1,10 @@
 use std::{fmt::Display, str::FromStr};
 
+use aes_gcm_siv::aead::generic_array::GenericArray;
+use aes_gcm_siv::aead::NewAead;
+use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
+use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{Address, AddressParams};
 use elements_miniscript::{
     confidential::Key,
@@ -8,6 +12,15 @@ use elements_miniscript::{
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
 use serde::{Deserialize, Serialize};
+
+sha256t_hash_newtype! {
+    /// The tag of the hash
+    pub struct EncryptionKeyTag = hash_str("LWK-FS-Encryption-Key/1.0");
+
+    /// A tagged hash to generate the key for encryption in the encrypted file system persister
+    #[hash_newtype(forward)]
+    pub struct EncryptionKeyHash(_);
+}
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
@@ -155,6 +168,12 @@ impl WolletDescriptor {
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
         self.inner_address(index, params, Chain::Internal)
+    }
+
+    pub fn cipher(&self) -> Aes256GcmSiv {
+        let key_bytes = EncryptionKeyHash::hash(self.to_string().as_bytes()).to_byte_array();
+        let key = GenericArray::from_slice(&key_bytes);
+        Aes256GcmSiv::new(key)
     }
 
     pub fn address(

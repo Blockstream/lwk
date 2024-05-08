@@ -2,11 +2,14 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
-use crate::Wollet;
+use crate::{Wollet, WolletDescriptor};
+use aes_gcm_siv::aead::generic_array::GenericArray;
+use aes_gcm_siv::aead::AeadMutInPlace;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
 use elements::BlockHeader;
+use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
@@ -49,6 +52,36 @@ impl Update {
     }
     pub fn deserialize(bytes: &[u8]) -> Result<Update, elements::encode::Error> {
         Update::consensus_decode(bytes)
+    }
+
+    pub fn serialize_encrypted(&self, desc: &WolletDescriptor) -> Result<Vec<u8>, Error> {
+        let mut plaintext = self.serialize()?;
+
+        let mut nonce_bytes = [0u8; 12];
+        thread_rng().fill(&mut nonce_bytes);
+        let nonce = GenericArray::from_slice(&nonce_bytes);
+
+        desc.cipher().encrypt_in_place(nonce, b"", &mut plaintext)?;
+        let ciphertext = plaintext;
+
+        let mut result = Vec::with_capacity(ciphertext.len() + 12);
+        result.extend(nonce.as_slice());
+        result.extend(&ciphertext);
+
+        Ok(result)
+    }
+
+    pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
+        let nonce_bytes = &bytes[..12];
+        let mut ciphertext = bytes[12..].to_vec();
+
+        let nonce = GenericArray::from_slice(nonce_bytes);
+
+        desc.cipher()
+            .decrypt_in_place(nonce, b"", &mut ciphertext)?;
+        let plaintext = ciphertext;
+
+        Ok(Update::deserialize(&plaintext)?)
     }
 }
 
@@ -385,7 +418,7 @@ mod test {
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update};
+    use crate::{update::DownloadTxResult, Chain, Update, WolletDescriptor};
 
     use super::EncodableTxOutSecrets;
 
@@ -472,5 +505,18 @@ mod test {
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_decription() {
+        let update = Update::deserialize(&lwk_test_util::update_test_vector_bytes()).unwrap();
+        let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
+        let enc_bytes = lwk_test_util::update_test_vector_encrypted_bytes();
+        let update_from_enc = Update::deserialize_decrypted(&enc_bytes, &desc).unwrap();
+        assert_eq!(update, update_from_enc);
+
+        let enc_bytes2 = lwk_test_util::update_test_vector_encrypted_bytes2();
+        let desc2: WolletDescriptor = lwk_test_util::wollet_descriptor_string2().parse().unwrap();
+        Update::deserialize_decrypted(&enc_bytes2, &desc2).unwrap();
     }
 }

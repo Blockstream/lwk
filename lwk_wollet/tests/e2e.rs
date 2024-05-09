@@ -902,24 +902,29 @@ async fn test_esplora_wasm_client() {
     let address = wollet.address(None).unwrap();
     let txid = server.node_sendtoaddress(address.address(), 10000, None);
 
-    let update = wait_update(&mut client, &wollet).await;
+    let update = wait_update_with_txs(&mut client, &wollet).await;
+    dbg!(&update);
     wollet.apply_update(update).unwrap();
     let tx = wollet.transaction(&txid).unwrap().unwrap();
     assert!(tx.height.is_none());
+    assert!(wollet.tip().timestamp().is_some());
 
     server.generate(1);
-    let update = wait_update(&mut client, &wollet).await;
+    let update = wait_update_with_txs(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
     let tx = wollet.transaction(&txid).unwrap().unwrap();
     assert!(tx.height.is_some());
+    assert!(wollet.tip().timestamp().is_some());
 }
 
 #[cfg(feature = "esplora_wasm")]
-async fn wait_update(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update {
+async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update {
     for _ in 0..50 {
         let update = client.full_scan(wollet).await.unwrap();
         if let Some(update) = update {
-            return update;
+            if !update.only_tip() {
+                return update;
+            }
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
     }

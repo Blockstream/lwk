@@ -349,6 +349,10 @@ impl TestWollet {
         self.wollet.policy_asset()
     }
 
+    pub fn tip(&self) -> Tip {
+        self.wollet.tip().unwrap()
+    }
+
     pub fn sync(&mut self) {
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
         full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
@@ -818,6 +822,18 @@ impl TestWollet {
 
     pub fn network(&self) -> ElementsNetwork {
         self.wollet.network()
+    }
+
+    pub fn wait_height(&mut self, height: u32) {
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        for _ in 0..120 {
+            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+            if self.wollet.tip().unwrap().height() == height {
+                return;
+            }
+            thread::sleep(Duration::from_millis(500));
+        }
+        panic!("Wait for height {height} failed");
     }
 }
 

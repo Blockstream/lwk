@@ -35,7 +35,7 @@ pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::Update;
 pub use crate::util::EC;
-pub use crate::wollet::Wollet;
+pub use crate::wollet::{Tip, Wollet};
 
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_with_electrum_client;

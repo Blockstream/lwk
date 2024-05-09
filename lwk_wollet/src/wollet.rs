@@ -122,8 +122,9 @@ impl Wollet {
     }
 
     /// Get the blockchain tip
-    pub fn tip(&self) -> Result<(u32, BlockHash), Error> {
-        Ok(self.store.cache.tip)
+    pub fn tip(&self) -> Result<Tip, Error> {
+        let (height, hash) = self.store.cache.tip;
+        Ok(Tip { height, hash })
     }
 
     /// Get a wallet address
@@ -562,6 +563,20 @@ fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Op
     (0..(tx.output.len() as u32))
         .map(|idx| txos.get(&OutPoint::new(tx.txid(), idx)).cloned())
         .collect()
+}
+
+pub struct Tip {
+    height: Height,
+    hash: BlockHash,
+}
+
+impl Tip {
+    pub fn height(&self) -> Height {
+        self.height
+    }
+    pub fn hash(&self) -> BlockHash {
+        self.hash
+    }
 }
 
 #[cfg(test)]

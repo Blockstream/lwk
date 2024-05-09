@@ -925,3 +925,14 @@ async fn wait_update(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update 
     }
     panic!("update didn't arrive");
 }
+
+#[test]
+fn test_tip() {
+    let server = setup(false);
+    let mut w = TestWollet::with_test_desc(&server.electrs.electrum_url);
+    w.wait_height(101); // node mines 101 blocks on start
+    assert_eq!(w.tip().height(), 101);
+    server.generate(1);
+    w.wait_height(102);
+    assert_eq!(w.tip().height(), 102);
+}

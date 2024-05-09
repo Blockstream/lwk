@@ -932,7 +932,9 @@ fn test_tip() {
     let mut w = TestWollet::with_test_desc(&server.electrs.electrum_url);
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
+    assert!(w.tip().timestamp().is_some());
     server.generate(1);
     w.wait_height(102);
     assert_eq!(w.tip().height(), 102);
+    assert!(w.tip().timestamp().is_some());
 }

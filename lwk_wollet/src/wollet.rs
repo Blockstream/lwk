@@ -8,7 +8,7 @@ use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
-use crate::store::Store;
+use crate::store::{Height, Store, Timestamp};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
@@ -124,7 +124,12 @@ impl Wollet {
     /// Get the blockchain tip
     pub fn tip(&self) -> Result<Tip, Error> {
         let (height, hash) = self.store.cache.tip;
-        Ok(Tip { height, hash })
+        let timestamp = self.store.cache.timestamps.get(&height).cloned();
+        Ok(Tip {
+            height,
+            hash,
+            timestamp,
+        })
     }
 
     /// Get a wallet address
@@ -568,6 +573,7 @@ fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Op
 pub struct Tip {
     height: Height,
     hash: BlockHash,
+    timestamp: Option<Timestamp>,
 }
 
 impl Tip {
@@ -576,6 +582,9 @@ impl Tip {
     }
     pub fn hash(&self) -> BlockHash {
         self.hash
+    }
+    pub fn timestamp(&self) -> Option<Timestamp> {
+        self.timestamp.clone()
     }
 }
 

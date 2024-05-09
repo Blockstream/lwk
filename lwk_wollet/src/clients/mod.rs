@@ -100,11 +100,17 @@ pub trait BlockchainBackend {
             }
         }
 
+        let tip = self.tip()?;
+
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
         let new_txs = self.download_txs(&history_txs_id, &scripts, store, &descriptor)?;
-        let history_txs_heights: HashSet<Height> =
-            txid_height.values().filter_map(|e| *e).collect();
-        let timestamps = self.download_headers(&history_txs_heights, &height_blockhash, store)?;
+        let history_txs_heights_plus_tip: HashSet<Height> = txid_height
+            .values()
+            .filter_map(|e| *e)
+            .chain(std::iter::once(tip.height))
+            .collect();
+        let timestamps =
+            self.download_headers(&history_txs_heights_plus_tip, &height_blockhash, store)?;
 
         let store_last_unused_external = store
             .cache
@@ -114,8 +120,6 @@ pub trait BlockchainBackend {
             .cache
             .last_unused_internal
             .load(atomic::Ordering::Relaxed);
-
-        let tip = self.tip()?;
 
         let last_unused_changed = store_last_unused_external != last_unused_external
             || store_last_unused_internal != last_unused_internal;
@@ -219,14 +223,14 @@ pub trait BlockchainBackend {
 
     fn download_headers(
         &self,
-        history_txs_heights: &HashSet<Height>,
+        history_txs_heights_plus_tip: &HashSet<Height>,
         height_blockhash: &HashMap<Height, BlockHash>,
         store: &Store,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
         let heights_in_db: HashSet<Height> =
             store.cache.heights.iter().filter_map(|(_, h)| *h).collect();
-        let heights_to_download: Vec<Height> = history_txs_heights
+        let heights_to_download: Vec<Height> = history_txs_heights_plus_tip
             .difference(&heights_in_db)
             .cloned()
             .collect();

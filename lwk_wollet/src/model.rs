@@ -230,7 +230,7 @@ impl WalletTx {
         format!(
             "{}tx/{}#blinded={}",
             explorer_url,
-            &self.tx.txid(),
+            &self.txid,
             DisplayWalletTxInputOutputs(self)
         )
     }

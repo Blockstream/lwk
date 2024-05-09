@@ -279,7 +279,7 @@ impl Wollet {
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(tx, &txos);
+            let outputs = tx_outputs(**txid, tx, &txos);
             txs.push(WalletTx {
                 tx: tx.clone(),
                 txid: **txid,
@@ -309,7 +309,7 @@ impl Wollet {
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(tx, &txos);
+            let outputs = tx_outputs(*txid, tx, &txos);
 
             Ok(Some(WalletTx {
                 tx: tx.clone(),
@@ -556,9 +556,15 @@ fn tx_inputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Opt
         .collect()
 }
 
-fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Option<WalletTxOut>> {
+fn tx_outputs(
+    txid: Txid, // passed to avoid expensive re-computation
+    tx: &Transaction,
+    txos: &HashMap<OutPoint, WalletTxOut>,
+) -> Vec<Option<WalletTxOut>> {
+    debug_assert_eq!(txid, tx.txid());
+
     (0..(tx.output.len() as u32))
-        .map(|idx| txos.get(&OutPoint::new(tx.txid(), idx)).cloned())
+        .map(|idx| txos.get(&OutPoint::new(txid, idx)).cloned())
         .collect()
 }
 

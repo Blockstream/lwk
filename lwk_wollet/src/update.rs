@@ -43,7 +43,6 @@ impl Update {
         self.new_txs.is_empty()
             && self.txid_height_new.is_empty()
             && self.txid_height_delete.is_empty()
-            && self.timestamps.is_empty()
             && self.scripts.is_empty()
     }
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
@@ -463,7 +462,9 @@ mod test {
             tip,
         };
         assert!(update.only_tip());
-        update.timestamps.push((0, 0));
+        update
+            .txid_height_delete
+            .push(<elements::Txid as elements::hashes::Hash>::all_zeros());
         assert!(!update.only_tip());
     }
 

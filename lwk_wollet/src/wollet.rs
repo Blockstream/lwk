@@ -584,7 +584,7 @@ impl Tip {
         self.hash
     }
     pub fn timestamp(&self) -> Option<Timestamp> {
-        self.timestamp.clone()
+        self.timestamp
     }
 }
 

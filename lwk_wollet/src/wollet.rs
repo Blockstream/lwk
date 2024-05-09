@@ -183,37 +183,35 @@ impl Wollet {
                 .all_txs
                 .get(tx_id)
                 .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
-            let tx_txos: Vec<WalletTxOut> = {
-                tx.output
-                    .clone()
-                    .into_iter()
-                    .enumerate()
-                    .map(|(vout, output)| {
-                        (
-                            OutPoint {
-                                txid: tx.txid(),
-                                vout: vout as u32,
-                            },
-                            output,
-                        )
-                    })
-                    .filter(|(outpoint, _)| !spent.contains(outpoint))
-                    .filter_map(|(outpoint, output)| {
-                        if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
-                            let index = self.index(&output.script_pubkey).ok()?;
-                            return Some(WalletTxOut {
-                                outpoint,
-                                script_pubkey: output.script_pubkey,
-                                height: *height,
-                                unblinded: *unblinded,
-                                wildcard_index: index.1,
-                                ext_int: index.0,
-                            });
-                        }
-                        None
-                    })
-                    .collect()
-            };
+            let tx_txos = tx
+                .output
+                .clone()
+                .into_iter()
+                .enumerate()
+                .map(|(vout, output)| {
+                    (
+                        OutPoint {
+                            txid: tx.txid(),
+                            vout: vout as u32,
+                        },
+                        output,
+                    )
+                })
+                .filter(|(outpoint, _)| !spent.contains(outpoint))
+                .filter_map(|(outpoint, output)| {
+                    if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
+                        let index = self.index(&output.script_pubkey).ok()?;
+                        return Some(WalletTxOut {
+                            outpoint,
+                            script_pubkey: output.script_pubkey,
+                            height: *height,
+                            unblinded: *unblinded,
+                            wildcard_index: index.1,
+                            ext_int: index.0,
+                        });
+                    }
+                    None
+                });
             txos.extend(tx_txos);
         }
         txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));

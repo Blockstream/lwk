@@ -213,14 +213,15 @@ impl Wollet {
                 });
             txos.extend(tx_txos);
         }
-        txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
     }
 
     /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
-        self.txos_inner(true)
+        let mut utxos = self.txos_inner(true)?;
+        utxos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
+        Ok(utxos)
     }
 
     fn txos(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {

@@ -122,14 +122,14 @@ impl Wollet {
     }
 
     /// Get the blockchain tip
-    pub fn tip(&self) -> Result<Tip, Error> {
+    pub fn tip(&self) -> Tip {
         let (height, hash) = self.store.cache.tip;
         let timestamp = self.store.cache.timestamps.get(&height).cloned();
-        Ok(Tip {
+        Tip {
             height,
             hash,
             timestamp,
-        })
+        }
     }
 
     /// Get a wallet address

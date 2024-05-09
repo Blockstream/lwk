@@ -350,7 +350,7 @@ impl TestWollet {
     }
 
     pub fn tip(&self) -> Tip {
-        self.wollet.tip().unwrap()
+        self.wollet.tip()
     }
 
     pub fn sync(&mut self) {
@@ -828,7 +828,7 @@ impl TestWollet {
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
         for _ in 0..120 {
             full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
-            if self.wollet.tip().unwrap().height() == height {
+            if self.wollet.tip().height() == height {
                 return;
             }
             thread::sleep(Duration::from_millis(500));

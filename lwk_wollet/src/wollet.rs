@@ -190,7 +190,7 @@ impl Wollet {
                 .map(|(vout, output)| {
                     (
                         OutPoint {
-                            txid: tx.txid(),
+                            txid: *tx_id,
                             vout: vout as u32,
                         },
                         output,

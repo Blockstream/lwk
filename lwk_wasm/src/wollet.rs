@@ -100,6 +100,35 @@ impl Wollet {
     pub fn status(&self) -> u64 {
         self.inner.status()
     }
+
+    pub fn tip(&self) -> Tip {
+        self.inner.tip().into()
+    }
+}
+
+/// Wrapper of [`lwk_wollet::Tip`]
+#[wasm_bindgen]
+pub struct Tip {
+    inner: lwk_wollet::Tip,
+}
+
+impl From<lwk_wollet::Tip> for Tip {
+    fn from(inner: lwk_wollet::Tip) -> Self {
+        Self { inner }
+    }
+}
+
+#[wasm_bindgen]
+impl Tip {
+    pub fn height(&self) -> u32 {
+        self.inner.height()
+    }
+    pub fn hash(&self) -> String {
+        self.inner.hash().to_string()
+    }
+    pub fn timestamp(&self) -> Option<u32> {
+        self.inner.timestamp()
+    }
 }
 
 #[cfg(test)]

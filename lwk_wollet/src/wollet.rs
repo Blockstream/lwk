@@ -185,8 +185,7 @@ impl Wollet {
                 .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
             let tx_txos = tx
                 .output
-                .clone()
-                .into_iter()
+                .iter()
                 .enumerate()
                 .map(|(vout, output)| {
                     (
@@ -203,7 +202,7 @@ impl Wollet {
                         let index = self.index(&output.script_pubkey).ok()?;
                         return Some(WalletTxOut {
                             outpoint,
-                            script_pubkey: output.script_pubkey,
+                            script_pubkey: output.script_pubkey.clone(),
                             height: *height,
                             unblinded: *unblinded,
                             wildcard_index: index.1,

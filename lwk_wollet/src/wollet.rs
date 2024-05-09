@@ -273,7 +273,7 @@ impl Wollet {
                 .get(*txid)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", txid)))?;
 
-            let balance = tx_balance(tx, &txos);
+            let balance = tx_balance(**txid, tx, &txos);
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
@@ -303,7 +303,7 @@ impl Wollet {
         if let (Some(height), Some(tx)) = (height, tx) {
             let txos = self.txos()?;
 
-            let balance = tx_balance(tx, &txos);
+            let balance = tx_balance(*txid, tx, &txos);
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
@@ -471,9 +471,14 @@ impl Wollet {
     }
 }
 
-fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {
+fn tx_balance(
+    txid: Txid,
+    tx: &Transaction,
+    txos: &HashMap<OutPoint, WalletTxOut>,
+) -> HashMap<AssetId, i64> {
+    debug_assert_eq!(txid, tx.txid());
     let mut balance = HashMap::new();
-    let txid = tx.txid();
+
     for out_idx in 0..tx.output.len() {
         if let Some(txout) = txos.get(&OutPoint::new(txid, out_idx as u32)) {
             *balance.entry(txout.unblinded.asset).or_default() += txout.unblinded.value as i64;

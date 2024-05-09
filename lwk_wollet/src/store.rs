@@ -140,12 +140,13 @@ impl Store {
     }
 
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
-        let mut result = HashSet::new();
-        for tx in self.cache.all_txs.values() {
-            let outpoints: Vec<OutPoint> = tx.input.iter().map(|i| i.previous_output).collect();
-            result.extend(outpoints.into_iter());
-        }
-        Ok(result)
+        Ok(self
+            .cache
+            .all_txs
+            .values()
+            .flat_map(|tx| tx.input.iter())
+            .map(|i| i.previous_output)
+            .collect())
     }
 }
 

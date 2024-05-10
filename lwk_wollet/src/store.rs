@@ -62,7 +62,7 @@ impl Default for RawCache {
 
 impl std::hash::Hash for RawCache {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let mut vec: Vec<_> = self.all_txs.iter().collect();
+        let mut vec: Vec<_> = self.all_txs.keys().collect();
         vec.sort();
         vec.hash(state);
 

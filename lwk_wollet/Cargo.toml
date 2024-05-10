@@ -46,6 +46,7 @@ idna = "0.4.0"
 regex-lite = "0.1.5"
 
 tracing = "0.1"
+fxhash = "0.2.1"
 
 [dev-dependencies]
 tempfile = "3.8.0"

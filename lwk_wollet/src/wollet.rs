@@ -18,9 +18,9 @@ use elements_miniscript::{psbt, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
+use fxhash::FxHasher;
 use lwk_common::{burn_script, pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
@@ -470,8 +470,12 @@ impl Wollet {
 
     /// A deterministic value derived from the descriptor, the config and the content of this wollet,
     /// including what's in the wallet store (transactions etc)
+    ///
+    /// In this case, we don't need cryptographic assurance guaranteed by the std default hasher (siphash)
+    /// And we can use a much faster hasher, which is used also in the rust compiler.
+    /// ([source](https://nnethercote.github.io/2021/12/08/a-brutally-effective-hash-function-in-rust.html))
     pub fn status(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = FxHasher::default();
         std::hash::Hash::hash(&self, &mut hasher);
         hasher.finish()
     }
@@ -792,10 +796,10 @@ mod tests {
         wollet.apply_update(update).unwrap();
         assert!(!wollet.never_scanned());
 
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = FxHasher::default();
         wollet.hash(&mut hasher);
-        assert_eq!(5372789003087276099, hasher.finish());
+        assert_eq!(16997737043419915973, hasher.finish());
 
-        assert_eq!(5372789003087276099, wollet.status());
+        assert_eq!(16997737043419915973, wollet.status());
     }
 }

@@ -471,6 +471,11 @@ impl Wollet {
         std::hash::Hash::hash(&self, &mut hasher);
         hasher.finish()
     }
+
+    /// Returns true if this wollet has never received an updated applyed to it
+    pub fn never_scanned(&self) -> bool {
+        self.store.cache.tip == (0, BlockHash::all_zeros())
+    }
 }
 
 fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {

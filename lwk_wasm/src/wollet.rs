@@ -100,6 +100,12 @@ impl Wollet {
     pub fn status(&self) -> u64 {
         self.inner.status()
     }
+
+    /// wraps [lwk_wollet::Wollet::never_scanned()]
+    #[wasm_bindgen(js_name = neverScanned)]
+    pub fn never_scanned(&self) -> bool {
+        self.inner.never_scanned()
+    }
 }
 
 #[cfg(test)]

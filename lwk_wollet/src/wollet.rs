@@ -744,7 +744,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wollet_hash() {
+    fn test_wollet_status() {
         let bytes = lwk_test_util::update_test_vector_bytes();
 
         let update = crate::Update::deserialize(&bytes[..]).unwrap();
@@ -755,7 +755,9 @@ mod tests {
         wollet.hash(&mut hasher);
         assert_eq!(12092173119280468224, hasher.finish());
 
+        assert!(wollet.never_scanned());
         wollet.apply_update(update).unwrap();
+        assert!(!wollet.never_scanned());
 
         let mut hasher = DefaultHasher::new();
         wollet.hash(&mut hasher);

@@ -18,3 +18,9 @@ pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 pub fn new(port: u16) -> LiquidClient<TransportTcp> {
     LiquidClient::new(TransportTcp::new(port).expect("TODO"))
 }
+
+#[derive(Debug)]
+pub struct Ledger {
+    /// Ledger Liquid Client
+    pub client: LiquidClient<TransportTcp>,
+}

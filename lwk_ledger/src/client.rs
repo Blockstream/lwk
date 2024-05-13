@@ -21,6 +21,7 @@ use crate::{
 };
 
 /// LiquidClient calls and interprets commands with the Ledger Device.
+#[derive(Debug)]
 pub struct LiquidClient<T: Transport> {
     transport: T,
 }

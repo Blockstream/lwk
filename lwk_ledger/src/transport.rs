@@ -14,6 +14,7 @@ use crate::{
 use ledger_apdu::APDUAnswer;
 
 /// Transport to communicate with the Ledger Speculos simulator.
+#[derive(Debug)]
 pub struct TransportTcp {
     connection: Mutex<TcpStream>,
 }

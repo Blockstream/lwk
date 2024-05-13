@@ -104,6 +104,12 @@ impl Wollet {
     pub fn tip(&self) -> Tip {
         self.inner.tip().into()
     }
+
+    /// wraps [lwk_wollet::Wollet::never_scanned()]
+    #[wasm_bindgen(js_name = neverScanned)]
+    pub fn never_scanned(&self) -> bool {
+        self.inner.never_scanned()
+    }
 }
 
 /// Wrapper of [`lwk_wollet::Tip`]

@@ -109,6 +109,8 @@ impl AppSigner {
             AppSignerInner::JadeId(_, _) => "jade-id".into(),
             AppSignerInner::AvailableSigner(AnySigner::Software(_)) => "software".into(),
             AppSignerInner::AvailableSigner(AnySigner::Jade(_, _)) => "jade".into(),
+            #[allow(unreachable_patterns)]
+            _ => todo!(),
         }
     }
 }
@@ -703,6 +705,8 @@ impl State {
                         };
                         (serde_json::to_value(params)?, Method::SignerLoadJade)
                     }
+                    #[allow(unreachable_patterns)]
+                    _ => todo!(),
                 },
                 AppSignerInner::ExternalSigner(f) => {
                     let params = request::SignerLoadExternal {

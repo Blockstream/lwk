@@ -155,6 +155,13 @@ impl Jade {
         .map_err(|s| Error::Generic(s))?;
         WolletDescriptor::new(&desc_str)
     }
+
+    #[wasm_bindgen(js_name = getRegisteredMultisigs)]
+    pub async fn get_registered_multisigs(&self) -> Result<JsValue, Error> {
+        let wallets = self.inner.get_registered_multisigs().await?;
+        let wallets_str: Vec<_> = wallets.keys().collect();
+        Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
+    }
 }
 
 #[wasm_bindgen]

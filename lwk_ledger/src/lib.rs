@@ -10,16 +10,19 @@ mod wallet;
 
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
-pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 pub use client::LiquidClient;
 pub use transport::TransportTcp;
-
-pub fn new(port: u16) -> LiquidClient<TransportTcp> {
-    LiquidClient::new(TransportTcp::new(port).expect("TODO"))
-}
+pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 #[derive(Debug)]
 pub struct Ledger {
     /// Ledger Liquid Client
     pub client: LiquidClient<TransportTcp>,
+}
+
+impl Ledger {
+    pub fn new(port: u16) -> Self {
+        let client = LiquidClient::new(TransportTcp::new(port).expect("TODO"));
+        Self { client }
+    }
 }

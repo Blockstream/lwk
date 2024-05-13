@@ -10,7 +10,7 @@ fn test_ledger_commands() {
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-    let client = new(port);
+    let client = Ledger::new(port).client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(version, "2.0.4");
     assert_eq!(name, "Liquid Regtest");

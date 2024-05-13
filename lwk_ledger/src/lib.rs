@@ -53,7 +53,8 @@ impl Signer for &Ledger {
     fn slip77_master_blinding_key(
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
-        todo!();
+        let r = self.client.get_master_blinding_key().expect("FIXME");
+        Ok(r)
     }
 }
 

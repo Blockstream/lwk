@@ -23,6 +23,7 @@ lwk_app = { path = "lwk_app" }
 lwk_common = { path = "lwk_common" }
 lwk_containers = { path = "lwk_containers" }
 lwk_jade = { path = "lwk_jade" }
+lwk_ledger = { path = "lwk_ledger" }
 lwk_rpc_model = { path = "lwk_rpc_model" }
 lwk_signer = { path = "lwk_signer" }
 lwk_test_util = { path = "lwk_test_util" }

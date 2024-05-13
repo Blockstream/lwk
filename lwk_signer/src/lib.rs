@@ -36,6 +36,12 @@ pub enum AnySigner {
 
     #[cfg(feature = "jade")]
     Jade(lwk_jade::Jade, elements_miniscript::bitcoin::XKeyIdentifier),
+
+    #[cfg(feature = "ledger")]
+    Ledger(
+        lwk_ledger::Ledger,
+        elements_miniscript::bitcoin::XKeyIdentifier,
+    ),
 }
 
 impl Signer for AnySigner {
@@ -65,6 +71,9 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "jade")]
             AnySigner::Jade(signer, _) => signer.sign(pset)?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(_signer, _) => todo!(),
         })
     }
 
@@ -74,6 +83,9 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "jade")]
             AnySigner::Jade(s, _) => s.derive_xpub(path)?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(_signer, _) => todo!(),
         })
     }
 
@@ -85,6 +97,9 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "jade")]
             AnySigner::Jade(s, _) => s.slip77_master_blinding_key()?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(_signer, _) => todo!(),
         })
     }
 }

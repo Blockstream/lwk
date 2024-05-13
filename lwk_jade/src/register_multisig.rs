@@ -117,7 +117,7 @@ impl TryFrom<&JadeDescriptor> for ConfidentialDescriptor<DescriptorPublicKey> {
         let xpubs = desc
             .signers
             .iter()
-            .map(|s| s.keyorigin_xpub())
+            .map(|s| s.keyorigin_xpub_multi())
             .collect::<Vec<_>>()
             .join(",");
         let desc = format!("ct(slip77({slip77}),elwsh({sorted}multi({threshold},{xpubs})))");
@@ -189,13 +189,17 @@ fn path_to_string(path: &[u32]) -> String {
 }
 
 impl MultisigSigner {
-    pub fn keyorigin_xpub(&self) -> String {
+    pub fn keyorigin_xpub_multi(&self) -> String {
         let keyorigin = if self.derivation.is_empty() {
             "".to_string()
         } else {
             format!("[{}{}]", self.fingerprint, path_to_string(&self.derivation))
         };
-        format!("{keyorigin}{}{}/*", self.xpub, path_to_string(&self.path))
+        format!(
+            "{keyorigin}{}{}/<0;1>/*",
+            self.xpub,
+            path_to_string(&self.path)
+        )
     }
 }
 
@@ -247,13 +251,14 @@ mod test {
     #[test]
     fn from_desc_to_jade_desc() {
         let a= "tpubDDCNstnPhbdd4vwbw5UWK3vRQSF1WXQkvBHpNXpKJAkwFYjwu735EH3GVf53qwbWimzewDUv68MUmRDgYtQ1AU8FRCPkazfuaBp7LaEaohG";
-        let b: &str = "tpubDDExQpZg2tziZ7ACSBCYsY3rYxAZtTRBgWwioRLYqgNBguH6rMHN1D8epTxUQUB5kM5nxkEtr2SNic6PJLPubcGMR6S2fmDZTzL9dHpU7ka";
+        let b  = "tpubDDExQpZg2tziZ7ACSBCYsY3rYxAZtTRBgWwioRLYqgNBguH6rMHN1D8epTxUQUB5kM5nxkEtr2SNic6PJLPubcGMR6S2fmDZTzL9dHpU7ka";
         let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let kind = ["sortedmulti", "multi"];
         for t in 1..=2 {
             for k in kind {
                 // TODO add keyorigin
-                let desc = format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/*,{b}/*)))");
+                let desc =
+                    format!("ct(slip77({slip77_key}),elwsh({k}({t},{a}/<0;1>/*,{b}/<0;1>/*)))");
                 let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
 
                 let jade_desc: JadeDescriptor = (&desc).try_into().unwrap();

@@ -10,7 +10,7 @@ mod software;
 pub use crate::software::{NewError, SignError, SwSigner};
 pub use bip39;
 
-use elements_miniscript::bitcoin::bip32::DerivationPath;
+use elements_miniscript::bitcoin::bip32::{self, DerivationPath};
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use lwk_common::Signer;
@@ -26,7 +26,7 @@ pub enum SignerError {
     JadeError(#[from] lwk_jade::error::Error),
 
     #[error(transparent)]
-    Bip32Error(#[from] elements::bitcoin::bip32::Error),
+    Bip32Error(#[from] bip32::Error),
 }
 
 /// A signer that can be a software signer [`SwSigner`] or a [`lwk_jade::Jade`]

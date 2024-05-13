@@ -119,6 +119,15 @@ impl Jade {
         self.desc(lwk_common::Singlesig::ShWpkh).await
     }
 
+    #[wasm_bindgen(js_name = getRegisteredMultisigs)]
+    pub async fn get_registered_multisigs(&self) -> Result<JsValue, Error> {
+        let wallets = self.inner.get_registered_multisigs().await?;
+        let wallets_str: Vec<_> = wallets.keys().collect();
+        Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
+    }
+}
+
+impl Jade {
     // Asks all possible derivation needed for standard singlesig wallets (fist account)
     async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
         let network = self.inner.network();
@@ -154,13 +163,6 @@ impl Jade {
         )
         .map_err(|s| Error::Generic(s))?;
         WolletDescriptor::new(&desc_str)
-    }
-
-    #[wasm_bindgen(js_name = getRegisteredMultisigs)]
-    pub async fn get_registered_multisigs(&self) -> Result<JsValue, Error> {
-        let wallets = self.inner.get_registered_multisigs().await?;
-        let wallets_str: Vec<_> = wallets.keys().collect();
-        Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
     }
 }
 

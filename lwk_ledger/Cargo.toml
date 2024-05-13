@@ -1,6 +1,6 @@
 [package]
 name = "lwk_ledger"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Interact with Ledger Hardware Wallet"
 license = "MIT OR BSD-2-Clause"

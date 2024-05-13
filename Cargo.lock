@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "elements-miniscript",
  "ledger-apdu",
@@ -1478,6 +1478,7 @@ dependencies = [
  "elements-miniscript",
  "lwk_common",
  "lwk_jade",
+ "lwk_ledger",
  "lwk_test_util",
  "thiserror",
 ]

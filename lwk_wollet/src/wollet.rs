@@ -189,47 +189,45 @@ impl Wollet {
                 .all_txs
                 .get(tx_id)
                 .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
-            let tx_txos: Vec<WalletTxOut> = {
-                tx.output
-                    .clone()
-                    .into_iter()
-                    .enumerate()
-                    .map(|(vout, output)| {
-                        (
-                            OutPoint {
-                                txid: tx.txid(),
-                                vout: vout as u32,
-                            },
-                            output,
-                        )
-                    })
-                    .filter(|(outpoint, _)| !spent.contains(outpoint))
-                    .filter_map(|(outpoint, output)| {
-                        if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
-                            let index = self.index(&output.script_pubkey).ok()?;
-                            return Some(WalletTxOut {
-                                outpoint,
-                                script_pubkey: output.script_pubkey,
-                                height: *height,
-                                unblinded: *unblinded,
-                                wildcard_index: index.1,
-                                ext_int: index.0,
-                            });
-                        }
-                        None
-                    })
-                    .collect()
-            };
+            let tx_txos = tx
+                .output
+                .iter()
+                .enumerate()
+                .map(|(vout, output)| {
+                    (
+                        OutPoint {
+                            txid: *tx_id,
+                            vout: vout as u32,
+                        },
+                        output,
+                    )
+                })
+                .filter(|(outpoint, _)| !spent.contains(outpoint))
+                .filter_map(|(outpoint, output)| {
+                    if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
+                        let index = self.index(&output.script_pubkey).ok()?;
+                        return Some(WalletTxOut {
+                            outpoint,
+                            script_pubkey: output.script_pubkey.clone(),
+                            height: *height,
+                            unblinded: *unblinded,
+                            wildcard_index: index.1,
+                            ext_int: index.0,
+                        });
+                    }
+                    None
+                });
             txos.extend(tx_txos);
         }
-        txos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
 
         Ok(txos)
     }
 
     /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
-        self.txos_inner(true)
+        let mut utxos = self.txos_inner(true)?;
+        utxos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
+        Ok(utxos)
     }
 
     fn txos(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
@@ -281,13 +279,13 @@ impl Wollet {
                 .get(*txid)
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", txid)))?;
 
-            let balance = tx_balance(tx, &txos);
+            let balance = tx_balance(**txid, tx, &txos);
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(tx, &txos);
+            let outputs = tx_outputs(**txid, tx, &txos);
             txs.push(WalletTx {
                 tx: tx.clone(),
                 txid: **txid,
@@ -311,13 +309,13 @@ impl Wollet {
         if let (Some(height), Some(tx)) = (height, tx) {
             let txos = self.txos()?;
 
-            let balance = tx_balance(tx, &txos);
+            let balance = tx_balance(*txid, tx, &txos);
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
             let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
-            let outputs = tx_outputs(tx, &txos);
+            let outputs = tx_outputs(*txid, tx, &txos);
 
             Ok(Some(WalletTx {
                 tx: tx.clone(),
@@ -479,9 +477,14 @@ impl Wollet {
     }
 }
 
-fn tx_balance(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> HashMap<AssetId, i64> {
+fn tx_balance(
+    txid: Txid,
+    tx: &Transaction,
+    txos: &HashMap<OutPoint, WalletTxOut>,
+) -> HashMap<AssetId, i64> {
+    debug_assert_eq!(txid, tx.txid());
     let mut balance = HashMap::new();
-    let txid = tx.txid();
+
     for out_idx in 0..tx.output.len() {
         if let Some(txout) = txos.get(&OutPoint::new(txid, out_idx as u32)) {
             *balance.entry(txout.unblinded.asset).or_default() += txout.unblinded.value as i64;
@@ -564,9 +567,15 @@ fn tx_inputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Opt
         .collect()
 }
 
-fn tx_outputs(tx: &Transaction, txos: &HashMap<OutPoint, WalletTxOut>) -> Vec<Option<WalletTxOut>> {
+fn tx_outputs(
+    txid: Txid, // passed to avoid expensive re-computation
+    tx: &Transaction,
+    txos: &HashMap<OutPoint, WalletTxOut>,
+) -> Vec<Option<WalletTxOut>> {
+    debug_assert_eq!(txid, tx.txid());
+
     (0..(tx.output.len() as u32))
-        .map(|idx| txos.get(&OutPoint::new(tx.txid(), idx)).cloned())
+        .map(|idx| txos.get(&OutPoint::new(txid, idx)).cloned())
         .collect()
 }
 

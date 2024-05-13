@@ -38,7 +38,7 @@ impl WalletTx {
     }
 
     pub fn txid(&self) -> Txid {
-        self.inner.tx.txid().into()
+        self.inner.txid.into()
     }
 
     pub fn fee(&self) -> u64 {

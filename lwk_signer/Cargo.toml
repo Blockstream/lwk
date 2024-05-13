@@ -14,6 +14,7 @@ base64 = "0.13.0"
 
 lwk_common = { version = "0.4.0" }
 lwk_jade = { version = "0.4.0", optional = true }
+lwk_ledger = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 lwk_test_util = { version = "0.3.0" }
@@ -21,6 +22,7 @@ lwk_test_util = { version = "0.3.0" }
 [features]
 default = ["jade"]
 jade = ["lwk_jade"]
+ledger = ["lwk_ledger"]
 
 [package.metadata.docs.rs]
 all-features = true

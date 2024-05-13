@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Fix ELIP-151 computation, note that ELIP151 wallets will generate
+different addresses.
 
 ## 0.4.0
 

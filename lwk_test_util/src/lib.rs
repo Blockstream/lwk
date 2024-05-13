@@ -17,8 +17,11 @@ use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
-use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
+use lwk_jade::register_multisig::{
+    GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams,
+};
 use lwk_signer::*;
+use lwk_wollet::elements_miniscript::ConfidentialDescriptor;
 use lwk_wollet::*;
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
@@ -926,17 +929,27 @@ pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
 
 pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
     // Register a multisig descriptor on each *jade* signer
-    let desc: WolletDescriptor = desc.parse().unwrap();
-    let desc: JadeDescriptor = desc.as_ref().try_into().unwrap();
+    let desc_orig: WolletDescriptor = desc.parse().unwrap();
+    let desc: JadeDescriptor = desc_orig.as_ref().try_into().unwrap();
     let params = RegisterMultisigParams {
         network: lwk_jade::Network::LocaltestLiquid,
         multisig_name: name.into(),
         descriptor: desc,
     };
 
+    let params_get = GetRegisteredMultisigParams {
+        multisig_name: name.into(),
+    };
+
     for signer in signers {
         if let AnySigner::Jade(s, _) = signer {
             s.register_multisig(params.clone()).unwrap();
+
+            let r = s.get_registered_multisig(params_get.clone()).unwrap();
+            let desc_elements =
+                ConfidentialDescriptor::<DescriptorPublicKey>::try_from(&r.descriptor).unwrap();
+            let desc_wollet = WolletDescriptor::try_from(desc_elements).unwrap();
+            assert_eq!(desc_orig.to_string(), desc_wollet.to_string());
         }
     }
 }

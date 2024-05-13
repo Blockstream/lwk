@@ -45,8 +45,9 @@ impl Signer for &Ledger {
         todo!();
     }
 
-    fn derive_xpub(&self, _path: &DerivationPath) -> std::result::Result<Xpub, Self::Error> {
-        todo!();
+    fn derive_xpub(&self, path: &DerivationPath) -> std::result::Result<Xpub, Self::Error> {
+        let r = self.client.get_extended_pubkey(path, false).expect("FIXME");
+        Ok(r)
     }
 
     fn slip77_master_blinding_key(

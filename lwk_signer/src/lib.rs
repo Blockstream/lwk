@@ -25,6 +25,10 @@ pub enum SignerError {
     #[error(transparent)]
     JadeError(#[from] lwk_jade::error::Error),
 
+    #[cfg(feature = "ledger")]
+    #[error(transparent)]
+    LedgerError(#[from] lwk_ledger::Error),
+
     #[error(transparent)]
     Bip32Error(#[from] bip32::Error),
 }
@@ -73,7 +77,7 @@ impl Signer for &AnySigner {
             AnySigner::Jade(signer, _) => signer.sign(pset)?,
 
             #[cfg(feature = "ledger")]
-            AnySigner::Ledger(_signer, _) => todo!(),
+            AnySigner::Ledger(signer, _) => signer.sign(pset)?,
         })
     }
 
@@ -85,7 +89,7 @@ impl Signer for &AnySigner {
             AnySigner::Jade(s, _) => s.derive_xpub(path)?,
 
             #[cfg(feature = "ledger")]
-            AnySigner::Ledger(_signer, _) => todo!(),
+            AnySigner::Ledger(s, _) => s.derive_xpub(path)?,
         })
     }
 
@@ -99,7 +103,7 @@ impl Signer for &AnySigner {
             AnySigner::Jade(s, _) => s.slip77_master_blinding_key()?,
 
             #[cfg(feature = "ledger")]
-            AnySigner::Ledger(_signer, _) => todo!(),
+            AnySigner::Ledger(s, _) => s.slip77_master_blinding_key()?,
         })
     }
 }

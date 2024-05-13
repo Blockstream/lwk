@@ -736,17 +736,17 @@ mod tests {
     fn fixed_addresses_test() {
         let expected = [
             "lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv", //  network: Liquid variant: Wpkh blinding_variant: Slip77
-            "lq1qq06m2c4adfqzjqa4euuk26nd8e0dg3qvt9a9v7pg25vzztxu8xsywfe0247rp5h4yzmdftsahhw64uy8pzfe7mut7x5nry3gj", // network: Liquid variant: Wpkh blinding_variant: Elip151
+            "lq1qqtmf5e3g4ats3yexwdfn6kfhp9sl68kdl47g75k58rvw2w33zuarwfe0247rp5h4yzmdftsahhw64uy8pzfe7k9s63c7cku58", // network: Liquid variant: Wpkh blinding_variant: Elip151
             "VJLCQwwG8s7qUGhpJkQpkf7wLoK785TcK2cPqka8675FeJB7NEHLto5MUJyhJURGJCbFHA6sb6rgTwbh", // network: Liquid variant: ShWpkh blinding_variant: Slip77
-            "VJL5wDQqSCXZKiA2YpdTu8Rs2ZarbBcHsLrUDfAB6znaA6YfRmZi1xFw5zu8Q4CeNgZzpWqMEWvkvPQY", // network: Liquid variant: ShWpkh blinding_variant: Elip151
+            "VJLD3sfRNBrKyQkJp9KpLqSVtD9YWswXctqzdFhsctaDCwLoUcSato1DfspVSGMbk28avytesWFhiv37", // network: Liquid variant: ShWpkh blinding_variant: Elip151
             "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn", // network: LiquidTestnet variant: Wpkh blinding_variant: Slip77
-            "tlq1qqfsazyw6w9gf8ng86gzd90dadrzefcnytjrvhka70vg6mepz8alf85xy50hsn6vhkm5euwt72x878eq6zxx2zqcv5x2cyah2z", // network: LiquidTestnet variant: Wpkh blinding_variant: Elip151 i:5
+            "tlq1qqv74shw44vxlpdhtmwqc2zfr5365hm8p6rg8cjnu77w57000dmuc05xy50hsn6vhkm5euwt72x878eq6zxx2z4zm4jus26k72", // network: LiquidTestnet variant: Wpkh blinding_variant: Elip151 i:5
             "vjTwLVioiKrDJ7zZZn9iQQrxP6RPpcvpHBhzZrbdZKKVZE29FuXSnkXdKcxK3qD5t1rYsdxcm9KYRMji", // network: LiquidTestnet variant: ShWpkh blinding_variant: Slip77
-            "vjTyyMTiuqe2moi5MwampWbyS2AdCargHrwmSBjD5MPuGJPo7CB5S15UWnvhLt6Pdj2kV15Wjm57JN1W", // network: LiquidTestnet variant: ShWpkh blinding_variant: Elip151 i:7
+            "vjU3guCqyPrnKFXsUhpKPhUyduT6Zjr3b2ukPhE9BpiW4LpehTRvw4FHKxkMw7TRAzE7KhtsnkZ4rPth", // network: LiquidTestnet variant: ShWpkh blinding_variant: Elip151 i:7
             "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Slip77
-            "el1qqfsazyw6w9gf8ng86gzd90dadrzefcnytjrvhka70vg6mepz8alf85xy50hsn6vhkm5euwt72x878eq6zxx2zmap8zngf0y83", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Elip151 i:9
+            "el1qqv74shw44vxlpdhtmwqc2zfr5365hm8p6rg8cjnu77w57000dmuc05xy50hsn6vhkm5euwt72x878eq6zxx2zw8kxk9q8g9ne", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: Wpkh blinding_variant: Elip151 i:9
             "AzpmUtw4GMrEsfz6GKx5SKT1DV3qLS3xtSGdKG351rMjGxoUwS6Vsbu3zu2opBiPtjWs1GnE48uMFFnb", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: ShWpkh blinding_variant: Slip77
-            "Azpp7kfyTse4MMhc4VP8rRC2GQo4iPypu7WQBbAeXtS8z3B8nik8WrSuC51C7EbheSh4cdu82kYjWNce", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: ShWpkh blinding_variant: Elip151 i:11
+            "AzpsqJR6XRrotoXQBFcgRc52UJ5Y5YyCCHUP96faeMkjn5bzNyzz1uci1EprhTxjBhtRTLiV5k6sWP7j", // network: ElementsRegtest { policy_asset: 0000000000000000000000000000000000000000000000000000000000000000 } variant: ShWpkh blinding_variant: Elip151 i:11
             ];
         let mut i = 0usize;
         let mnemonic = lwk_test_util::TEST_MNEMONIC;

@@ -11,5 +11,7 @@ ledger-apdu = "0.10"
 elements-miniscript = { version = "0.3", features = ["serde"] }
 lwk_common = "0.4"
 
+thiserror = "1"
+
 [dev-dependencies]
 lwk_containers = { version = "0.3.0" }

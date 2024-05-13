@@ -1459,6 +1459,7 @@ dependencies = [
  "ledger-apdu",
  "lwk_common",
  "lwk_containers",
+ "thiserror",
 ]
 
 [[package]]

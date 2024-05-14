@@ -1,24 +1,24 @@
 [package]
 name = "lwk_app"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Liquid Wallet Kit - RPC server App"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
-lwk_jade = { version = "0.4.0" }
+lwk_jade = { version = "0.5" }
 jsonrpc = { version = "0.17.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 secp256k1 = "0.27"
-lwk_signer = { version = "0.4.0" }
-lwk_tiny_jrpc = { version = "0.4.0" }
+lwk_signer = { version = "0.5" }
+lwk_tiny_jrpc = { version = "0.4" }
 thiserror = "1"
 tracing = "0.1"
-lwk_common = { version = "0.4.0" }
-lwk_rpc_model = { version = "0.4.0" }
-lwk_wollet = { version = "0.4.0" }
+lwk_common = { version = "0.5" }
+lwk_rpc_model = { version = "0.4" }
+lwk_wollet = { version = "0.5" }
 rand = "0.8.5"
 schemars = "0.8.16"
 home = "0.5.5"

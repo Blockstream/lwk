@@ -1,6 +1,6 @@
 [package]
 name = "lwk_test_util"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Test utilities"
 license = "MIT OR BSD-2-Clause"
@@ -12,10 +12,10 @@ elements = "0.24.0"
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-lwk_common = { version = "0.4.0" }
-lwk_signer = { version = "0.4.0" }
-lwk_wollet = { version = "0.4.0" }
-lwk_jade = { version = "0.4.0" }
+lwk_common = { version = "0.5" }
+lwk_signer = { version = "0.5" }
+lwk_wollet = { version = "0.5" }
+lwk_jade = { version = "0.5" }
 lwk_containers = { version = "0.3.0" }
 rand = "0.8.5"
 tempfile = "3.8.0"

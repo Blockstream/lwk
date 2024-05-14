@@ -1,6 +1,6 @@
 [package]
 name = "lwk_signer"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Signers for PSETs (Partially Signed Elements Transactions)"
 license = "MIT OR BSD-2-Clause"
@@ -12,12 +12,12 @@ elements-miniscript = { version = "0.3.1", features = ["base64"] }
 thiserror = "1.0.48"
 base64 = "0.13.0"
 
-lwk_common = { version = "0.4.0" }
-lwk_jade = { version = "0.4.0", optional = true }
-lwk_ledger = { version = "0.1.0", optional = true }
+lwk_common = { version = "0.5" }
+lwk_jade = { version = "0.5", optional = true }
+lwk_ledger = { version = "0.3", optional = true }
 
 [dev-dependencies]
-lwk_test_util = { version = "0.3.0" }
+# lwk_test_util = { version = "0.4" }
 
 [features]
 default = ["jade"]

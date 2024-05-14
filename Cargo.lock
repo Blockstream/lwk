@@ -1340,7 +1340,7 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "lwk_app"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "enum-iterator",
  "home",
@@ -1364,7 +1364,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "elements",
  "lwk_common",
@@ -1378,7 +1378,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "base64 0.21.7",
  "elements",
@@ -1427,7 +1427,7 @@ version = "0.1.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64 0.21.7",
  "elements",
@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "elements-miniscript",
  "ledger-apdu",
@@ -1473,7 +1473,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64 0.13.1",
  "bip39",
@@ -1487,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_test_util"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "electrsd",
  "elements",
@@ -1522,7 +1522,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "console_error_panic_hook",
  "lwk_common",
@@ -1542,7 +1542,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",

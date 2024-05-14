@@ -53,11 +53,11 @@ path = "tests/e2e.rs"
 
 [dev-dependencies]
 tempfile = "3.8.0"
-# lwk_containers = { version = "0.3" }
+lwk_containers = { version = "0.3" }
 base64 = "0.21.4"
 serde_json = "1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-# lwk_test_util = { version = "0.4" }
+lwk_test_util = { version = "0.4" }
 
 [package.metadata.docs.rs]
 all-features = true

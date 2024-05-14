@@ -10,6 +10,7 @@ use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
+    register_multisig::RegisteredMultisigDetails,
 };
 use lwk_wollet::elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
@@ -121,10 +122,7 @@ impl Jade {
     }
 
     pub async fn multi(&self, name: &str) -> Result<WolletDescriptor, Error> {
-        let param = lwk_jade::register_multisig::GetRegisteredMultisigParams {
-            multisig_name: name.to_string(),
-        };
-        let r = self.inner.get_registered_multisig(param).await?;
+        let r = self.get_registered_multisig(name).await?;
         let desc: ConfidentialDescriptor<DescriptorPublicKey> = (&r.descriptor)
             .try_into()
             .map_err(|s| Error::Generic(format!("{:?}", s)))?;
@@ -178,6 +176,17 @@ impl Jade {
         )
         .map_err(|s| Error::Generic(s))?;
         WolletDescriptor::new(&desc_str)
+    }
+
+    async fn get_registered_multisig(
+        &self,
+        name: &str,
+    ) -> Result<RegisteredMultisigDetails, Error> {
+        let param = lwk_jade::register_multisig::GetRegisteredMultisigParams {
+            multisig_name: name.to_string(),
+        };
+        let r = self.inner.get_registered_multisig(param).await?;
+        Ok(r)
     }
 }
 

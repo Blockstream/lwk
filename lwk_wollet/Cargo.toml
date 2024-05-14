@@ -58,7 +58,7 @@ tokio = { version = "1.36.0", features = ["rt", "macros"] }
 
 [features]
 default = ["esplora", "electrum"]
-serial = ["lwk_jade/serial"]
+serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest/blocking"]
 electrum = ["electrum-client"]
 esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "tokio"]

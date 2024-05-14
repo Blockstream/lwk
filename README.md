@@ -76,9 +76,11 @@ Internal crate dependencies are shown in this diagram, where an arrow indicates 
       app-->rpc_model;
 
       jade-->common;
+      ledger-->common;
 
       signer-->common;
       signer-->jade;
+      signer-->ledger;
 
       wollet-->common;
       

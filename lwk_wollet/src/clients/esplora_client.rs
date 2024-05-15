@@ -125,7 +125,9 @@ fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
         response.content_length(),
     );
 
-    if response.status() == 429 {
+    // 429 Too many requests
+    // 503 Service Temporarily Unavailable
+    if response.status() == 429 || response.status() == 503 {
         if attempt > 6 {
             return Err(Error::Generic("Too many retry".to_string()));
         }

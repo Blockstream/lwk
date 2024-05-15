@@ -21,7 +21,7 @@ use elements_miniscript::{
 use fxhash::FxHasher;
 use lwk_common::{burn_script, pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{atomic, Arc};
@@ -241,8 +241,8 @@ impl Wollet {
     pub(crate) fn balance_from_utxos(
         &self,
         utxos: &[WalletTxOut],
-    ) -> Result<HashMap<AssetId, u64>, Error> {
-        let mut r = HashMap::new();
+    ) -> Result<BTreeMap<AssetId, u64>, Error> {
+        let mut r = BTreeMap::new();
         r.entry(self.policy_asset()).or_insert(0);
         for u in utxos.iter() {
             *r.entry(u.unblinded.asset).or_default() += u.unblinded.value;
@@ -251,7 +251,7 @@ impl Wollet {
     }
 
     /// Get the wallet balance
-    pub fn balance(&self) -> Result<HashMap<AssetId, u64>, Error> {
+    pub fn balance(&self) -> Result<BTreeMap<AssetId, u64>, Error> {
         let utxos = self.utxos()?;
         self.balance_from_utxos(&utxos)
     }

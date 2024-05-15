@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
 use wasm_bindgen::prelude::*;
 
@@ -72,14 +70,7 @@ impl PsetBalance {
 
     /// The net balance for every asset with respect of the wallet asking the pset details
     pub fn balances(&self) -> JsValue {
-        serde_wasm_bindgen::to_value(
-            &self
-                .inner
-                .balances
-                .iter()
-                .collect::<HashMap<&elements::AssetId, &i64>>(),
-        )
-        .expect("should map")
+        serde_wasm_bindgen::to_value(&self.inner.balances).expect("should map")
     }
 }
 

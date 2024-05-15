@@ -42,7 +42,6 @@ use elements_miniscript::elements::{
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::btree_map::BTreeMap;
-use std::collections::HashMap;
 
 pub fn derive_script_pubkey(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
@@ -120,7 +119,7 @@ pub fn pset_balance(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
 ) -> Result<PsetBalance, Error> {
     let secp = Secp256k1::new();
-    let mut balances: HashMap<AssetId, i64> = HashMap::new();
+    let mut balances: BTreeMap<AssetId, i64> = BTreeMap::new();
     let mut fee: Option<u64> = None;
     for (idx, input) in pset.inputs().iter().enumerate() {
         match input.witness_utxo.as_ref() {

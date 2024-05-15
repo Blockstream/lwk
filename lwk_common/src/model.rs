@@ -5,12 +5,12 @@ use elements_miniscript::elements::bitcoin::{
 use elements_miniscript::elements::pset::Input;
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
     pub fee: u64,
-    pub balances: HashMap<AssetId, i64>,
+    pub balances: BTreeMap<AssetId, i64>,
 }
 
 #[derive(Debug, Clone)]
@@ -94,8 +94,8 @@ pub struct PsetDetails {
 
 impl PsetDetails {
     /// Set of fingerprints for which the PSET has a signature
-    pub fn fingerprints_has(&self) -> HashSet<Fingerprint> {
-        let mut r = HashSet::new();
+    pub fn fingerprints_has(&self) -> BTreeSet<Fingerprint> {
+        let mut r = BTreeSet::new();
         for sigs in &self.sig_details {
             for (_, (fingerprint, _)) in &sigs.has_signature {
                 r.insert(*fingerprint);
@@ -105,8 +105,8 @@ impl PsetDetails {
     }
 
     /// Set of fingerprints for which the PSET is missing a signature
-    pub fn fingerprints_missing(&self) -> HashSet<Fingerprint> {
-        let mut r = HashSet::new();
+    pub fn fingerprints_missing(&self) -> BTreeSet<Fingerprint> {
+        let mut r = BTreeSet::new();
         for sigs in &self.sig_details {
             for (_, (fingerprint, _)) in &sigs.missing_signature {
                 r.insert(*fingerprint);

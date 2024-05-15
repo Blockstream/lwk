@@ -47,6 +47,24 @@ impl PsetDetails {
             .collect()
     }
 
+    #[wasm_bindgen(js_name = fingerprintsMissing)]
+    pub fn fingerprints_missing(&self) -> Vec<String> {
+        self.inner
+            .fingerprints_missing()
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    #[wasm_bindgen(js_name = fingerprintsHas)]
+    pub fn fingerprints_has(&self) -> Vec<String> {
+        self.inner
+            .fingerprints_has()
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
     /// Return an element for every input that could possibly be a issuance or a reissuance
     #[wasm_bindgen(js_name = inputsIssuances)]
     pub fn inputs_issuances(&self) -> Vec<Issuance> {

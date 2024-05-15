@@ -10,6 +10,7 @@ use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
+    register_multisig::RegisteredMultisigDetails,
 };
 use lwk_wollet::elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
@@ -81,12 +82,13 @@ impl Jade {
     #[wasm_bindgen(js_name = getReceiveAddressMulti)]
     pub async fn get_receive_address_multi(
         &self,
-        multisig_name: String,
+        multisig_name: &str,
         path: Vec<u32>,
-        path_n: u32,
     ) -> Result<String, Error> {
         let network = self.inner.network();
         self.inner.unlock().await?;
+        let multi_details = self.get_registered_multisig(multisig_name).await?;
+        let path_n = multi_details.descriptor.signers.len();
         let mut paths = vec![];
         for _ in 0..path_n {
             paths.push(path.clone());
@@ -96,7 +98,7 @@ impl Jade {
             .get_receive_address(GetReceiveAddressParams {
                 network,
                 address: SingleOrMulti::Multi {
-                    multisig_name,
+                    multisig_name: multisig_name.to_string(),
                     paths,
                 },
             })
@@ -121,10 +123,7 @@ impl Jade {
     }
 
     pub async fn multi(&self, name: &str) -> Result<WolletDescriptor, Error> {
-        let param = lwk_jade::register_multisig::GetRegisteredMultisigParams {
-            multisig_name: name.to_string(),
-        };
-        let r = self.inner.get_registered_multisig(param).await?;
+        let r = self.get_registered_multisig(name).await?;
         let desc: ConfidentialDescriptor<DescriptorPublicKey> = (&r.descriptor)
             .try_into()
             .map_err(|s| Error::Generic(format!("{:?}", s)))?;
@@ -178,6 +177,18 @@ impl Jade {
         )
         .map_err(|s| Error::Generic(s))?;
         WolletDescriptor::new(&desc_str)
+    }
+
+    async fn get_registered_multisig(
+        &self,
+        name: &str,
+    ) -> Result<RegisteredMultisigDetails, Error> {
+        // TODO should call a cached methods to minimize roundtrip on serial
+        let param = lwk_jade::register_multisig::GetRegisteredMultisigParams {
+            multisig_name: name.to_string(),
+        };
+        let r = self.inner.get_registered_multisig(param).await?;
+        Ok(r)
     }
 }
 

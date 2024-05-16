@@ -6,7 +6,7 @@ use lwk_ledger::Ledger;
 /// A struct for Ledger testing with emulator
 pub struct TestLedgerEmulator<'a> {
     pub ledger: Ledger,
-    // Keep the containers and temp dir so they are not dropped.
+    // Keep the containers so it's not dropped.
     _ledger_emul: Container<'a, LedgerEmulator>,
 }
 

@@ -5,7 +5,7 @@ use crate::{
     signer::FakeSigner,
     Error, Network, Pset, WolletDescriptor, Xpub,
 };
-use lwk_common::DescriptorBlindingKey;
+use lwk_common::{Bip, DescriptorBlindingKey, Signer};
 use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
@@ -139,16 +139,28 @@ impl Jade {
         let wallets_str: Vec<_> = wallets.keys().collect();
         Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
     }
+
+    #[wasm_bindgen(js_name = keyoriginXpubBip87)]
+    pub async fn keyorigin_xpub_bip87(&self) -> Result<String, Error> {
+        let signer = self.create_fake_signer().await?;
+        let is_mainnet = self.inner.network().is_mainnet();
+
+        Ok(signer
+            .keyorigin_xpub(Bip::Bip87, is_mainnet)
+            .map_err(Error::Generic)?)
+    }
 }
 
 impl Jade {
-    // Asks all possible derivation needed for standard singlesig wallets (fist account)
+    // Asks all possible derivation needed for standard singlesig wallets (first account)
+    // TODO get_cached_xpub is faster after first, but we should cache the fake signer as field in Jade
+    // so that we are not asking the master blinding every time
     async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
         let network = self.inner.network();
         self.inner.unlock().await?;
         let mut paths = HashMap::new();
 
-        for purpose in [49, 84] {
+        for purpose in [49, 84, 87] {
             for coin_type in [1, 1776] {
                 let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
                 let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
@@ -167,15 +179,14 @@ impl Jade {
 
     async fn desc(&self, script_variant: lwk_common::Singlesig) -> Result<WolletDescriptor, Error> {
         let signer = self.create_fake_signer().await?;
-        let is_mainnet = matches!(self.inner.network(), lwk_jade::Network::Liquid);
 
         let desc_str = lwk_common::singlesig_desc(
             &signer,
             script_variant,
             DescriptorBlindingKey::Slip77,
-            is_mainnet,
+            self.inner.network().is_mainnet(),
         )
-        .map_err(|s| Error::Generic(s))?;
+        .map_err(Error::Generic)?;
         WolletDescriptor::new(&desc_str)
     }
 

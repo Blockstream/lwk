@@ -1,4 +1,5 @@
 mod test_jade;
+mod test_ledger;
 
 use crate::test_jade::jade_setup;
 use electrum_client::ScriptStatus;

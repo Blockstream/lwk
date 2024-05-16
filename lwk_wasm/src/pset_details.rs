@@ -47,6 +47,24 @@ impl PsetDetails {
             .collect()
     }
 
+    #[wasm_bindgen(js_name = fingerprintsMissing)]
+    pub fn fingerprints_missing(&self) -> Vec<String> {
+        self.inner
+            .fingerprints_missing()
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    #[wasm_bindgen(js_name = fingerprintsHas)]
+    pub fn fingerprints_has(&self) -> Vec<String> {
+        self.inner
+            .fingerprints_has()
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
     /// Return an element for every input that could possibly be a issuance or a reissuance
     #[wasm_bindgen(js_name = inputsIssuances)]
     pub fn inputs_issuances(&self) -> Vec<Issuance> {
@@ -91,7 +109,7 @@ fn convert(data: &[(elements::bitcoin::PublicKey, KeySource)]) -> JsValue {
     serde_wasm_bindgen::to_value(
         &data
             .iter()
-            .map(|(a, b)| (a.to_string(), b.0.to_string())) // TODO include derivation path
+            .map(|(a, b)| (a.to_string(), b.0.to_string(), b.1.to_string())) // TODO include derivation path
             .collect::<Vec<_>>(),
     )
     .expect("should map")
@@ -212,8 +230,8 @@ mod tests {
         let signatures = details.signatures();
         assert_eq!(signatures.len(), 1);
 
-        assert_eq!(format!("{:?}", signatures[0].has_signature()), "JsValue([[\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\", \"6e055509\"]])");
-        assert_eq!(format!("{:?}", signatures[0].missing_signature()), "JsValue([[\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\", \"281e2239\"]])");
+        assert_eq!(format!("{:?}", signatures[0].has_signature()), "JsValue([[\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\", \"6e055509\", \"m/87'/1'/0'/0/0\"]])");
+        assert_eq!(format!("{:?}", signatures[0].missing_signature()), "JsValue([[\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\", \"281e2239\", \"m/87'/1'/0'/0/0\"]])");
 
         let issuances = details.inputs_issuances();
         assert_eq!(issuances.len(), 1);

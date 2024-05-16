@@ -10,7 +10,7 @@ mod software;
 pub use crate::software::{NewError, SignError, SwSigner};
 pub use bip39;
 
-use elements_miniscript::bitcoin::bip32::{self, DerivationPath};
+use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use lwk_common::Signer;
@@ -64,6 +64,10 @@ impl Signer for AnySigner {
     ) -> Result<elements_miniscript::slip77::MasterBlindingKey, Self::Error> {
         Signer::slip77_master_blinding_key(&self)
     }
+
+    fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
+        Signer::fingerprint(&self)
+    }
 }
 
 impl Signer for &AnySigner {
@@ -104,6 +108,18 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "ledger")]
             AnySigner::Ledger(s, _) => s.slip77_master_blinding_key()?,
+        })
+    }
+
+    fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
+        Ok(match self {
+            AnySigner::Software(s) => s.fingerprint(),
+
+            #[cfg(feature = "jade")]
+            AnySigner::Jade(s, _) => s.fingerprint()?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(s, _) => s.fingerprint()?,
         })
     }
 }

@@ -15,7 +15,7 @@ pub use transport::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 use elements_miniscript::confidential::slip77;
-use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, Xpub};
+use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 
 use lwk_common::Signer;
@@ -56,6 +56,11 @@ impl Signer for &Ledger {
         let r = self.client.get_master_blinding_key().expect("FIXME");
         Ok(r)
     }
+
+    fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
+        let r = self.client.get_master_fingerprint().expect("FIXME");
+        Ok(r)
+    }
 }
 
 impl Signer for Ledger {
@@ -73,5 +78,9 @@ impl Signer for Ledger {
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
         Signer::slip77_master_blinding_key(&self)
+    }
+
+    fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
+        Signer::fingerprint(&self)
     }
 }

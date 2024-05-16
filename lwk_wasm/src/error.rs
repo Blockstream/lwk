@@ -47,6 +47,9 @@ pub enum Error {
     #[error(transparent)]
     Qr(#[from] lwk_common::QrError),
 
+    #[error(transparent)]
+    Keyorigin(#[from] lwk_common::InvalidKeyOriginXpub),
+
     #[error("{0}")]
     Generic(String),
 }

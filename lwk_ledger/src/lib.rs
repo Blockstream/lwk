@@ -38,11 +38,58 @@ pub type Error = error::LiquidClientError<TransportTcp>;
 impl Signer for &Ledger {
     type Error = crate::Error;
 
-    fn sign(
-        &self,
-        _pset: &mut PartiallySignedTransaction,
-    ) -> std::result::Result<u32, Self::Error> {
-        todo!();
+    fn sign(&self, pset: &mut PartiallySignedTransaction) -> std::result::Result<u32, Self::Error> {
+        let mut wallets = vec![];
+        let mut n_sigs = 0;
+        let master_fp = self.fingerprint()?;
+
+        // Figure out which wallets are signing
+        for input in pset.inputs() {
+            let script_pubkey = &input.witness_utxo.as_ref().expect("FIXME").script_pubkey;
+            if !script_pubkey.is_v0_p2wpkh() {
+                // TODO: add support for other scripts
+                continue;
+            }
+            for (_pubkey, (fp, path)) in input.bip32_derivation.iter() {
+                if fp == &master_fp {
+                    // TODO: check path
+                    // path has len 3
+                    // path has all hardened
+                    // path has purpose matching address type
+                    // path has correct coin type
+
+                    // Do we care about the descriptor blinding key here?
+                    let name = "todo".to_string();
+                    let version = Version::V1;
+                    let desc = "wpkh(@0)".to_string();
+                    // TODO: cache xpubs
+                    let xpub = self.client.get_extended_pubkey(path, false).expect("FIXME");
+                    let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
+                    key.multipath = Some("/**".to_string());
+                    let keys = vec![key];
+                    let wallet_policy = WalletPolicy::new(name, version, desc, keys);
+                    wallets.push(wallet_policy);
+                }
+            }
+        }
+
+        // For each wallet, sign
+        for wallet_policy in wallets {
+            let partial_sigs = self
+                .client
+                .sign_psbt(
+                    pset,
+                    &wallet_policy,
+                    None, // hmac
+                )
+                .expect("FIXME");
+            n_sigs += partial_sigs.len();
+
+            // Add sigs to pset
+            // TODO
+        }
+
+        Ok(n_sigs as u32)
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> std::result::Result<Xpub, Self::Error> {

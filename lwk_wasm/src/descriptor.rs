@@ -1,4 +1,5 @@
 use crate::Error;
+use lwk_common::{multisig_desc, DescriptorBlindingKey, Multisig};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
@@ -44,6 +45,27 @@ impl WolletDescriptor {
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
+    }
+
+    #[wasm_bindgen(js_name = newMultiWshSlip77)]
+    pub fn new_multi_wsh_slip77(
+        threshold: u32,
+        participants: Vec<String>,
+    ) -> Result<WolletDescriptor, Error> {
+        let xpubs: Vec<_> = participants
+            .iter()
+            .map(|s| lwk_common::keyorigin_xpub_from_str(s))
+            .collect::<Result<_, _>>()?;
+
+        let desc = multisig_desc(
+            threshold,
+            xpubs,
+            Multisig::Wsh,
+            DescriptorBlindingKey::Slip77Rand,
+        )
+        .map_err(Error::Generic)?;
+        let desc = lwk_wollet::WolletDescriptor::from_str(&desc)?;
+        Ok(desc.into())
     }
 }
 

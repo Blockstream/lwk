@@ -10,7 +10,7 @@ use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
-    register_multisig::RegisteredMultisigDetails,
+    register_multisig::{JadeDescriptor, RegisterMultisigParams, RegisteredMultisigDetails},
 };
 use lwk_wollet::elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
@@ -148,6 +148,25 @@ impl Jade {
         Ok(signer
             .keyorigin_xpub(Bip::Bip87, is_mainnet)
             .map_err(Error::Generic)?)
+    }
+
+    #[wasm_bindgen(js_name = registerDescriptor)]
+    pub async fn register_descriptor(
+        &self,
+        name: &str,
+        desc: &WolletDescriptor,
+    ) -> Result<bool, Error> {
+        let descriptor: JadeDescriptor = desc.as_ref().as_ref().try_into().unwrap();
+        let network = self.inner.network();
+        let result = self
+            .inner
+            .register_multisig(RegisterMultisigParams {
+                descriptor,
+                multisig_name: name.to_string(),
+                network,
+            })
+            .await?;
+        Ok(result)
     }
 }
 

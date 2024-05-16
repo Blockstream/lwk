@@ -21,10 +21,7 @@ pub fn singlesig_desc<S: Signer>(
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
     };
 
-    let master = signer
-        .derive_xpub(&DerivationPath::master())
-        .map_err(|e| format!("{:?}", e))?;
-    let fingerprint = master.fingerprint();
+    let fingerprint = signer.fingerprint().map_err(|e| format!("{:?}", e))?;
 
     let xpub = signer
         .derive_xpub(

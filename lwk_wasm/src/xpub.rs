@@ -43,6 +43,12 @@ impl Xpub {
     pub fn fingerprint(&self) -> String {
         self.inner.fingerprint().to_string()
     }
+
+    /// Returns true if the passed string is a valid xpub with a valid keyorigin if present
+    #[wasm_bindgen(js_name = isValidWithKeyOrigin)]
+    pub fn is_valid_with_keyorigin(s: &str) -> bool {
+        lwk_common::keyorigin_xpub_from_str(s).is_ok()
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 use elements_miniscript::elements::bitcoin::bip32::DerivationPath;
+use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::AddressParams;
 use lwk_containers::testcontainers::clients;
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
@@ -111,4 +112,13 @@ fn test_ledger_commands() {
         .unwrap();
     let expected = "el1qq2fk6wmtxd49cymtpprte3ue5x4elp99s5zltzhy8pwjf0pqw7qeyy68aq4qx76ahvuvlrz8t8ey9v04clsf503tn8tvv859j";
     assert_eq!(address.to_string(), expected);
+
+    let pset_b64 = include_str!("../tests/data/pset_ledger.base64");
+    let pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
+
+    let _partial_sigs = client
+        .sign_psbt(
+            &pset, &ss_view, None, // hmac
+        )
+        .unwrap();
 }

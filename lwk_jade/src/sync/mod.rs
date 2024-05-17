@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Mutex;
 use std::{collections::HashMap, io::ErrorKind};
@@ -129,7 +130,7 @@ impl Jade {
         self.send(Request::RegisterMultisig(params))
     }
 
-    pub fn get_registered_multisigs(&self) -> Result<HashMap<String, RegisteredMultisig>> {
+    pub fn get_registered_multisigs(&self) -> Result<BTreeMap<String, RegisteredMultisig>> {
         self.send(Request::GetRegisteredMultisigs)
     }
 

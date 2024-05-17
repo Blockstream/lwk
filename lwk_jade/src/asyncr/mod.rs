@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::{collections::HashMap, io::ErrorKind};
 
 use crate::get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant};
@@ -156,7 +157,7 @@ impl<S: Stream> Jade<S> {
         self.send(Request::RegisterMultisig(params)).await
     }
 
-    pub async fn get_registered_multisigs(&self) -> Result<HashMap<String, RegisteredMultisig>> {
+    pub async fn get_registered_multisigs(&self) -> Result<BTreeMap<String, RegisteredMultisig>> {
         self.send(Request::GetRegisteredMultisigs).await
     }
 

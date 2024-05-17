@@ -66,6 +66,8 @@ pub struct TxBuilder {
     recipients: Vec<Recipient>,
     fee_rate: f32,
     issuance_request: IssuanceRequest,
+    drain_lbtc: bool,
+    drain_to: Option<Address>,
 }
 
 impl TxBuilder {
@@ -76,6 +78,8 @@ impl TxBuilder {
             recipients: vec![],
             fee_rate: 100.0,
             issuance_request: IssuanceRequest::None,
+            drain_lbtc: false,
+            drain_to: None,
         }
     }
 
@@ -216,6 +220,18 @@ impl TxBuilder {
             issuance_tx,
         );
         Ok(self)
+    }
+
+    /// Select all available L-BTC inputs
+    pub fn drain_lbtc_wallet(mut self) -> Self {
+        self.drain_lbtc = true;
+        self
+    }
+
+    /// Sets the address to drain excess L-BTC to
+    pub fn drain_lbtc_to(mut self, address: Address) -> Self {
+        self.drain_to = Some(address);
+        self
     }
 
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
@@ -384,11 +400,15 @@ impl TxBuilder {
             return Err(Error::InsufficientFunds);
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
-        let addressee = wollet.addressee_change(
-            satoshi_change,
-            wollet.policy_asset(),
-            &mut last_unused_internal,
-        )?;
+        let addressee = if let Some(address) = self.drain_to {
+            Recipient::from_address(satoshi_change, &address, wollet.policy_asset())
+        } else {
+            wollet.addressee_change(
+                satoshi_change,
+                wollet.policy_asset(),
+                &mut last_unused_internal,
+            )?
+        };
         wollet.add_output(&mut pset, &addressee)?;
         let fee_output =
             Output::new_explicit(Script::default(), temp_fee, wollet.policy_asset(), None);
@@ -554,5 +574,21 @@ impl<'a> WolletTxBuilder<'a> {
                 issuance_tx,
             )?,
         })
+    }
+
+    /// Wrapper of [`TxBuilder::drain_lbtc_wallet()`]
+    pub fn drain_lbtc_wallet(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.drain_lbtc_wallet(),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::drain_lbtc_to()`]
+    pub fn drain_lbtc_to(self, address: Address) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.drain_lbtc_to(address),
+        }
     }
 }

@@ -944,3 +944,51 @@ fn test_tip() {
     assert_eq!(w.tip().height(), 102);
     assert!(w.tip().timestamp().is_some());
 }
+
+#[test]
+fn drain() {
+    // Send all funds from a wallet
+    let server = setup(false);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let signers = [&AnySigner::Software(signer)];
+
+    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    wallet.fund_btc(&server);
+    let lbtc = wallet.policy_asset();
+
+    // One utxo L-BTC
+    let node_address = server.node_getnewaddress();
+    // TODO: move to send all fn
+    let balance_before = wallet.balance(&lbtc);
+
+    let mut pset = wallet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(node_address)
+        .finish()
+        .unwrap();
+
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fee as i64;
+    assert!(fee > 0);
+    assert_eq!(
+        *details.balance.balances.get(&lbtc).unwrap(),
+        -(balance_before as i64)
+    );
+
+    for signer in signers {
+        wallet.sign(signer, &mut pset);
+    }
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    let electrum_client = ElectrumClient::new(&wallet.electrum_url).unwrap();
+    let _txid = electrum_client.broadcast(&tx).unwrap();
+    wallet.sync();
+    let balance_after = wallet.balance(&lbtc);
+    assert_eq!(balance_after, 0);
+    let txs = wallet.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    // FIXME: should be 2, txs with no outputs belonging to the wallet are not in the list, but
+    // they should.
+}

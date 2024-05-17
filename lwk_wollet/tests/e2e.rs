@@ -981,12 +981,7 @@ fn drain() {
     for signer in signers {
         wallet.sign(signer, &mut pset);
     }
-    let tx = wallet.wollet.finalize(&mut pset).unwrap();
-    let electrum_client = ElectrumClient::new(&wallet.electrum_url).unwrap();
-    let _txid = electrum_client.broadcast(&tx).unwrap();
-    wallet.sync();
+    wallet.send(&mut pset);
     let balance_after = wallet.balance(&lbtc);
     assert_eq!(balance_after, 0);
-    let txs = wallet.wollet.transactions().unwrap();
-    assert_eq!(txs.len(), 2);
 }

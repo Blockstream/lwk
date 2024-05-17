@@ -131,9 +131,18 @@ impl Wollet {
         }
 
         store.cache.tip = (tip.height, tip.block_hash());
-        store.cache.all_txs.extend(new_txs.txs);
         store.cache.unblinded.extend(new_txs.unblinds);
-        let txids_unblinded: HashSet<Txid> = store.cache.unblinded.keys().map(|o| o.txid).collect();
+        let mut txids_unblinded: HashSet<Txid> =
+            store.cache.unblinded.keys().map(|o| o.txid).collect();
+        // Handle outgoing txs with no change output
+        for (txid, tx) in &new_txs.txs {
+            for i in &tx.input {
+                if store.cache.unblinded.contains_key(&i.previous_output) {
+                    txids_unblinded.insert(*txid);
+                }
+            }
+        }
+        store.cache.all_txs.extend(new_txs.txs);
         let txid_height: Vec<_> = txid_height_new
             .iter()
             .filter(|(txid, _)| txids_unblinded.contains(txid))

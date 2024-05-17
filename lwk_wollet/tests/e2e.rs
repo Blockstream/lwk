@@ -988,7 +988,5 @@ fn drain() {
     let balance_after = wallet.balance(&lbtc);
     assert_eq!(balance_after, 0);
     let txs = wallet.wollet.transactions().unwrap();
-    assert_eq!(txs.len(), 1);
-    // FIXME: should be 2, txs with no outputs belonging to the wallet are not in the list, but
-    // they should.
+    assert_eq!(txs.len(), 2);
 }

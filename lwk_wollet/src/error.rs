@@ -50,9 +50,6 @@ pub enum Error {
     HexToArrayError(#[from] crate::hashes::hex::HexToArrayError),
 
     #[error(transparent)]
-    SerdeCbor(#[from] serde_cbor::Error),
-
-    #[error(transparent)]
     ElementsMiniscript(#[from] elements_miniscript::Error),
 
     #[error(transparent)]

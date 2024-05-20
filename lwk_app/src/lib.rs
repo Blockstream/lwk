@@ -522,6 +522,27 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
+        Method::WalletDrain => {
+            let r: request::WalletDrain = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
+
+            let address = Address::from_str(&r.address)?;
+            let mut tx = wollet
+                .tx_builder()
+                .drain_lbtc_wallet()
+                .drain_lbtc_to(address)
+                .fee_rate(r.fee_rate)
+                .finish()?;
+
+            add_contracts(&mut tx, s.assets.iter());
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Pset {
+                    pset: tx.to_string(),
+                })?,
+            )
+        }
         Method::SignerSinglesigDescriptor => {
             let r: request::SignerSinglesigDescriptor = serde_json::from_value(params)?;
             let mut s = state.lock()?;

@@ -485,6 +485,21 @@ pub enum WalletCommand {
         fee_rate: Option<f32>,
     },
 
+    /// Drain the wallet of the policy asset
+    Drain {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// The address receiving the funds
+        #[arg(long)]
+        address: String,
+
+        /// Fee rate to use
+        #[arg(long)]
+        fee_rate: Option<f32>,
+    },
+
     /// Issue an asset
     Issue {
         /// Wallet name

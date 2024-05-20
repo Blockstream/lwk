@@ -154,6 +154,20 @@ impl Client {
         self.make_request(Method::WalletSendMany, Some(req))
     }
 
+    pub fn wallet_drain(
+        &self,
+        name: String,
+        address: String,
+        fee_rate: Option<f32>,
+    ) -> Result<response::Pset, Error> {
+        let req = request::WalletDrain {
+            address,
+            fee_rate,
+            name,
+        };
+        self.make_request(Method::WalletDrain, Some(req))
+    }
+
     pub fn signer_singlesig_descriptor(
         &self,
         name: String,

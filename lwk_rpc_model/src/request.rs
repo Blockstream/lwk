@@ -159,6 +159,19 @@ pub struct UnvalidatedAddressee {
     pub asset: String,
 }
 
+/// Drain a wallet
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletDrain {
+    /// The wallet name creating the transaction
+    pub name: String,
+
+    /// Recipient addresse
+    pub address: String,
+
+    /// Optional fee rate in sat/vb
+    pub fee_rate: Option<f32>,
+}
+
 /// A request containing information to create a single signature descriptor wallet
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignerSinglesigDescriptor {

@@ -39,16 +39,27 @@ pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort,
 
     let serial = navigator.serial();
 
-    let promise = if filter {
-        let mut options = web_sys::SerialPortRequestOptions::new();
-        populate_filters(&mut options);
-        serial.request_port_with_options(&options)
-    } else {
-        serial.request_port()
-    };
-    let result = wasm_bindgen_futures::JsFuture::from(promise)
+    // Check if we already have ports with permission granted
+    let result = wasm_bindgen_futures::JsFuture::from(serial.get_ports())
         .await
         .map_err(Error::JsVal)?;
+    let serials: web_sys::js_sys::Array = result.dyn_into().map_err(Error::JsVal)?;
+    let result = if serials.length() > 0 {
+        // TODO should check getPortInfo to see if it has right JADE_DEVICE_IDS
+        serials.get(0)
+    } else {
+        let promise = if filter {
+            let mut options = web_sys::SerialPortRequestOptions::new();
+            populate_filters(&mut options);
+            serial.request_port_with_options(&options)
+        } else {
+            serial.request_port()
+        };
+
+        wasm_bindgen_futures::JsFuture::from(promise)
+            .await
+            .map_err(Error::JsVal)?
+    };
 
     let serial: web_sys::SerialPort = result.dyn_into().map_err(Error::JsVal)?;
 

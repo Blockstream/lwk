@@ -969,4 +969,11 @@ fn drain() {
     let node_address = server.node_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
+    // Drain ignores assets, since their change handling and coin selection is cosiderably easier
+    wallet.fund_btc(&server);
+    let (asset, token) = wallet.issueasset(&signers, 10, 1, None, None);
+    let node_address = server.node_getnewaddress();
+    wallet.send_all_btc(&signers, None, node_address);
+    assert!(wallet.balance(&asset) > 0);
+    assert!(wallet.balance(&token) > 0);
 }

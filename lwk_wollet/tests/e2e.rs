@@ -961,5 +961,12 @@ fn drain() {
     let node_address = server.node_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
+    // Multiple utxos
+    wallet.fund_btc(&server);
+    wallet.fund_btc(&server);
+    let utxos = wallet.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 2);
+    let node_address = server.node_getnewaddress();
+    wallet.send_all_btc(&signers, None, node_address);
 
 }

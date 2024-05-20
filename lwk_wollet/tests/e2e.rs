@@ -955,33 +955,11 @@ fn drain() {
     let signers = [&AnySigner::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
-    wallet.fund_btc(&server);
-    let lbtc = wallet.policy_asset();
 
     // One utxo L-BTC
+    wallet.fund_btc(&server);
     let node_address = server.node_getnewaddress();
-    // TODO: move to send all fn
-    let balance_before = wallet.balance(&lbtc);
+    wallet.send_all_btc(&signers, None, node_address);
 
-    let mut pset = wallet
-        .tx_builder()
-        .drain_lbtc_wallet()
-        .drain_lbtc_to(node_address)
-        .finish()
-        .unwrap();
 
-    let details = wallet.wollet.get_details(&pset).unwrap();
-    let fee = details.balance.fee as i64;
-    assert!(fee > 0);
-    assert_eq!(
-        *details.balance.balances.get(&lbtc).unwrap(),
-        -(balance_before as i64)
-    );
-
-    for signer in signers {
-        wallet.sign(signer, &mut pset);
-    }
-    wallet.send(&mut pset);
-    let balance_after = wallet.balance(&lbtc);
-    assert_eq!(balance_after, 0);
 }

@@ -51,7 +51,7 @@ pub enum Error {
     #[error("Jade authentication returned a response without a usable url")]
     NoUsableUrl,
 
-    #[error("The handshake complete call to the pin server failed")]
+    #[error("Wrong Pin")]
     HandshakeFailed,
 
     #[error("Jade not initialized")]

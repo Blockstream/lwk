@@ -48,22 +48,18 @@ pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort,
     };
     let result = wasm_bindgen_futures::JsFuture::from(promise)
         .await
-        .map_err(generic_err)?;
+        .map_err(Error::JsVal)?;
 
-    let serial: web_sys::SerialPort = result.dyn_into().map_err(generic_err)?;
+    let serial: web_sys::SerialPort = result.dyn_into().map_err(Error::JsVal)?;
 
     let serial_options = web_sys::SerialOptions::new(115_200);
 
     let promise = serial.open(&serial_options);
     wasm_bindgen_futures::JsFuture::from(promise)
         .await
-        .map_err(generic_err)?;
+        .map_err(Error::JsVal)?;
 
     Ok(serial)
-}
-
-fn generic_err(val: JsValue) -> Error {
-    Error::Generic(format!("{:?}", val))
 }
 
 pub struct WebSerial {
@@ -74,8 +70,8 @@ impl WebSerial {
     pub fn new(serial_port: &web_sys::SerialPort) -> Result<Self, Error> {
         Ok(Self {
             reader: web_sys::ReadableStreamDefaultReader::new(&serial_port.readable())
-                .map_err(generic_err)?,
-            writer: serial_port.writable().get_writer().map_err(generic_err)?,
+                .map_err(Error::JsVal)?,
+            writer: serial_port.writable().get_writer().map_err(Error::JsVal)?,
         })
     }
 }

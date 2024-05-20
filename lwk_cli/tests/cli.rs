@@ -1439,3 +1439,25 @@ fn test_start_errors() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_send_all() {
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+
+    sw_signer(&cli, "sw");
+    singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
+    let signers = &["sw"];
+
+    fund(&server, &cli, "w1", 1_000_000);
+
+    let node_address = server.node_getnewaddress();
+    let r = sh(&format!(
+        "{cli} wallet drain -w w1 --address {node_address}"
+    ));
+    complete(&cli, "w1", get_str(&r, "pset"), signers);
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    assert_eq!(get_balance(&cli, "w1", policy_asset), 0);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

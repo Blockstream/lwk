@@ -499,6 +499,39 @@ impl TestWollet {
         });
     }
 
+    /// Send all L-BTC
+    pub fn send_all_btc(
+        &mut self,
+        signers: &[&AnySigner],
+        fee_rate: Option<f32>,
+        address: Address,
+    ) {
+        let balance_before = self.balance_btc();
+
+        let mut pset = self
+            .tx_builder()
+            .drain_lbtc_wallet()
+            .drain_lbtc_to(address)
+            .fee_rate(fee_rate)
+            .finish()
+            .unwrap();
+
+        let details = self.wollet.get_details(&pset).unwrap();
+        let fee = details.balance.fee as i64;
+        assert!(fee > 0);
+        assert_eq!(
+            *details.balance.balances.get(&self.policy_asset()).unwrap(),
+            -(balance_before as i64)
+        );
+
+        for signer in signers {
+            self.sign(signer, &mut pset);
+        }
+        self.send(&mut pset);
+        let balance_after = self.balance_btc();
+        assert_eq!(balance_after, 0);
+    }
+
     pub fn send_asset(
         &mut self,
         signers: &[&AnySigner],

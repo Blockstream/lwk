@@ -588,6 +588,7 @@ fn tx_outputs(
         .collect()
 }
 
+/// Blockchain tip
 pub struct Tip {
     height: Height,
     hash: BlockHash,

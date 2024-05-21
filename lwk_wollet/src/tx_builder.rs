@@ -87,6 +87,7 @@ impl TxBuilder {
         self.network
     }
 
+    /// Add recipient to the internal list
     pub fn add_recipient(
         self,
         address: &Address,
@@ -101,6 +102,7 @@ impl TxBuilder {
         self.add_unvalidated_recipient(&rec)
     }
 
+    /// Add unvalidated recipient to the internal list
     pub fn add_unvalidated_recipient(
         mut self,
         recipient: &UnvalidatedRecipient,
@@ -110,6 +112,7 @@ impl TxBuilder {
         Ok(self)
     }
 
+    /// Add validated recipient to the internal list
     pub fn add_validated_recipient(mut self, recipient: Recipient) -> Self {
         self.recipients.push(recipient);
         self
@@ -127,16 +130,19 @@ impl TxBuilder {
         Ok(self)
     }
 
+    /// Add L-BTC recipient to the internal list
     pub fn add_lbtc_recipient(self, address: &Address, satoshi: u64) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);
         self.add_unvalidated_recipient(&rec)
     }
 
+    /// Add burn output the internal list
     pub fn add_burn(self, satoshi: u64, asset_id: AssetId) -> Result<Self, Error> {
         let rec = UnvalidatedRecipient::burn(asset_id.to_string(), satoshi);
         self.add_unvalidated_recipient(&rec)
     }
 
+    /// Set custom fee rate
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate
@@ -234,6 +240,7 @@ impl TxBuilder {
         self
     }
 
+    /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();

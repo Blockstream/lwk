@@ -14,4 +14,4 @@ lwk_common = "0.5"
 thiserror = "1"
 
 [dev-dependencies]
-# lwk_containers = { version = "0.3" }
+lwk_containers = { version = "0.3" }

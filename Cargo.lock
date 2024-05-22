@@ -762,9 +762,9 @@ dependencies = [
 
 [[package]]
 name = "enum-iterator-derive"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03cdc46ec28bd728e67540c528013c6a10eb69a02eb31078a1bda695438cbfb8"
+checksum = "a1ab991c1362ac86c61ab6f556cff143daa22e5a15e4e189df818b2fd19fe65b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1340,7 +1340,7 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "lwk_app"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "enum-iterator",
  "home",
@@ -1378,7 +1378,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "base64 0.21.7",
  "elements",
@@ -1427,7 +1427,7 @@ version = "0.1.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "base64 0.21.7",
  "elements",
@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "elements-miniscript",
  "ledger-apdu",
@@ -1464,7 +1464,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_rpc_model"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "schemars",
  "serde",
@@ -1473,7 +1473,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "base64 0.13.1",
  "bip39",
@@ -1487,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_test_util"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "electrsd",
  "elements",
@@ -1523,7 +1523,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "console_error_panic_hook",
  "lwk_common",
@@ -1543,7 +1543,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",

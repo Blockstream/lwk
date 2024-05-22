@@ -17,7 +17,7 @@ lwk_jade = { version = "0.5", optional = true }
 lwk_ledger = { version = "0.3", optional = true }
 
 [dev-dependencies]
-# lwk_test_util = { version = "0.4" }
+lwk_test_util = { version = "0.4" }
 
 [features]
 default = ["jade"]

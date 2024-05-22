@@ -1,6 +1,6 @@
 [package]
 name = "lwk_wollet"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Watch-only wallet based on CT Descriptors"
@@ -49,16 +49,16 @@ fxhash = "0.2.1"
 
 [dev-dependencies]
 tempfile = "3.8.0"
-lwk_signer = { version = "0.5", features = ["jade", "ledger"] }
-lwk_jade = { version = "0.5" }
-lwk_ledger = { version = "0.3" }
-lwk_containers = { version = "0.3" }
-lwk_test_util = { version = "0.4" }
+# lwk_signer = { version = "0.5", features = ["jade", "ledger"] }
+# lwk_jade = { version = "0.5" }
+# lwk_ledger = { version = "0.3" }
+# lwk_containers = { version = "0.3" }
+# lwk_test_util = { version = "0.4" }
 tokio = { version = "1.36.0", features = ["rt", "macros"] }
 
 [features]
 default = ["esplora", "electrum"]
-serial = ["lwk_jade/serial"]                                                     # this is a dev-dep feature
+# serial = ["lwk_jade/serial"]                                                     # this is a dev-dep feature
 esplora = ["reqwest/blocking"]
 electrum = ["electrum-client"]
 esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "tokio"]

@@ -1,6 +1,6 @@
 [package]
 name = "lwk_ledger"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 description = "Liquid Wallet Kit - Interact with Ledger Hardware Wallet"
 license = "MIT OR BSD-2-Clause"
@@ -14,4 +14,4 @@ lwk_common = "0.5"
 thiserror = "1"
 
 [dev-dependencies]
-lwk_containers = { version = "0.3" }
+# lwk_containers = { version = "0.3" }

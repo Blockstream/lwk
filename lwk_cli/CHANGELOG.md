@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.1
+
+Add wallet drain (send all) support for L-BTC.
+
+## 0.5.0
+
 Fix ELIP-151 computation, note that ELIP151 wallets will generate
 different addresses.
 

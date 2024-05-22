@@ -1,5 +1,5 @@
 use crate::{Error, Script};
-use lwk_wollet::elements;
+use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`elements::Address`]
@@ -57,6 +57,11 @@ impl Address {
     #[wasm_bindgen(js_name = isBlinded)]
     pub fn is_blinded(&self) -> bool {
         self.inner.is_blinded()
+    }
+
+    #[wasm_bindgen(js_name = isMainnet)]
+    pub fn is_mainnet(&self) -> bool {
+        self.inner.params == &AddressParams::LIQUID
     }
 
     #[wasm_bindgen(js_name = toUnconfidential)]

@@ -51,7 +51,9 @@ pub enum Error {
     #[error("Jade authentication returned a response without a usable url")]
     NoUsableUrl,
 
-    #[error("The handshake complete call to the pin server failed")]
+    // TODO: this error description is useful in web UI when the PIN is wrong.
+    // However, it may be related to other cases other than the wrong PIN
+    #[error("Wrong Pin")]
     HandshakeFailed,
 
     #[error("Jade not initialized")]

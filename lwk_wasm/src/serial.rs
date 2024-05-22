@@ -39,31 +39,38 @@ pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort,
 
     let serial = navigator.serial();
 
-    let promise = if filter {
-        let mut options = web_sys::SerialPortRequestOptions::new();
-        populate_filters(&mut options);
-        serial.request_port_with_options(&options)
-    } else {
-        serial.request_port()
-    };
-    let result = wasm_bindgen_futures::JsFuture::from(promise)
+    // Check if we already have ports with permission granted
+    let result = wasm_bindgen_futures::JsFuture::from(serial.get_ports())
         .await
-        .map_err(generic_err)?;
+        .map_err(Error::JsVal)?;
+    let serials: web_sys::js_sys::Array = result.dyn_into().map_err(Error::JsVal)?;
+    let result = if serials.length() > 0 {
+        // TODO should check getPortInfo to see if it has right JADE_DEVICE_IDS
+        serials.get(0)
+    } else {
+        let promise = if filter {
+            let mut options = web_sys::SerialPortRequestOptions::new();
+            populate_filters(&mut options);
+            serial.request_port_with_options(&options)
+        } else {
+            serial.request_port()
+        };
 
-    let serial: web_sys::SerialPort = result.dyn_into().map_err(generic_err)?;
+        wasm_bindgen_futures::JsFuture::from(promise)
+            .await
+            .map_err(Error::JsVal)?
+    };
+
+    let serial: web_sys::SerialPort = result.dyn_into().map_err(Error::JsVal)?;
 
     let serial_options = web_sys::SerialOptions::new(115_200);
 
     let promise = serial.open(&serial_options);
     wasm_bindgen_futures::JsFuture::from(promise)
         .await
-        .map_err(generic_err)?;
+        .map_err(Error::JsVal)?;
 
     Ok(serial)
-}
-
-fn generic_err(val: JsValue) -> Error {
-    Error::Generic(format!("{:?}", val))
 }
 
 pub struct WebSerial {
@@ -74,8 +81,8 @@ impl WebSerial {
     pub fn new(serial_port: &web_sys::SerialPort) -> Result<Self, Error> {
         Ok(Self {
             reader: web_sys::ReadableStreamDefaultReader::new(&serial_port.readable())
-                .map_err(generic_err)?,
-            writer: serial_port.writable().get_writer().map_err(generic_err)?,
+                .map_err(Error::JsVal)?,
+            writer: serial_port.writable().get_writer().map_err(Error::JsVal)?,
         })
     }
 }

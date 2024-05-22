@@ -52,10 +52,17 @@ pub enum Error {
 
     #[error("{0}")]
     Generic(String),
+
+    #[error("{0:?}")]
+    JsVal(JsValue),
 }
 
 impl From<Error> for JsValue {
     fn from(val: Error) -> JsValue {
-        format!("{val:?}").into()
+        if let Error::JsVal(e) = val {
+            e
+        } else {
+            format!("{}", val).into()
+        }
     }
 }

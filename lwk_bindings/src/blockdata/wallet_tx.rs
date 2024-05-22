@@ -72,7 +72,7 @@ impl WalletTx {
 mod tests {
     use crate::WalletTx;
     use elements::{hex::FromHex, pset::serialize::Deserialize};
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, HashMap};
 
     #[test]
     fn wallet_tx() {
@@ -99,7 +99,7 @@ mod tests {
             tx: tx.clone(),
             txid: tx.txid(),
             height: Some(4),
-            balance: HashMap::new(),
+            balance: BTreeMap::new(),
             fee: 23,
             type_: "type".to_string(),
             timestamp: Some(124),

@@ -490,9 +490,9 @@ fn tx_balance(
     txid: Txid,
     tx: &Transaction,
     txos: &HashMap<OutPoint, WalletTxOut>,
-) -> HashMap<AssetId, i64> {
+) -> BTreeMap<AssetId, i64> {
     debug_assert_eq!(txid, tx.txid());
-    let mut balance = HashMap::new();
+    let mut balance = BTreeMap::new();
 
     for out_idx in 0..tx.output.len() {
         if let Some(txout) = txos.get(&OutPoint::new(txid, out_idx as u32)) {
@@ -537,7 +537,7 @@ fn tx_fee(tx: &Transaction) -> u64 {
 fn tx_type(
     tx: &Transaction,
     policy_asset: &AssetId,
-    balance: &HashMap<AssetId, i64>,
+    balance: &BTreeMap<AssetId, i64>,
     fee: u64,
 ) -> String {
     let burn_script = burn_script();

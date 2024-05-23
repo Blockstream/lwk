@@ -45,6 +45,18 @@ impl TxBuilder {
         self.inner.fee_rate(fee_rate).into()
     }
 
+    /// Select all available L-BTC inputs
+    #[wasm_bindgen(js_name = drainLbtcWallet)]
+    pub fn drain_lbtc_wallet(self) -> TxBuilder {
+        self.inner.drain_lbtc_wallet().into()
+    }
+
+    /// Sets the address to drain excess L-BTC to
+    #[wasm_bindgen(js_name = drainLbtcTo)]
+    pub fn drain_lbtc_to(self, address: Address) -> TxBuilder {
+        self.inner.drain_lbtc_to(address.into()).into()
+    }
+
     /// Add a recipient receiving L-BTC
     ///
     /// Errors if address's network is incompatible

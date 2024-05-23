@@ -60,6 +60,22 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Select all available L-BTC inputs
+    pub fn drain_lbtc_wallet(&self) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock = Some(inner.drain_lbtc_wallet());
+        Ok(())
+    }
+
+    /// Sets the address to drain excess L-BTC to
+    pub fn drain_lbtc_to(&self, address: &Address) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock = Some(inner.drain_lbtc_to(address.into()));
+        Ok(())
+    }
+
     /// Add a recipient receiving L-BTC
     pub fn add_lbtc_recipient(&self, address: &Address, satoshi: u64) -> Result<(), LwkError> {
         let unvalidated_recipient = UnvalidatedRecipient::lbtc(address.to_string(), satoshi);

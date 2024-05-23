@@ -247,15 +247,15 @@ pub trait BlockchainBackend {
 }
 
 pub struct History {
-    txid: Txid,
+    pub txid: Txid,
 
     /// Confirmation height of txid
     ///
     /// -1 means unconfirmed with unconfirmed parents
     ///  0 means unconfirmed with confirmed parents
-    height: i32,
+    pub height: i32,
 
-    block_hash: Option<BlockHash>,
+    pub block_hash: Option<BlockHash>,
 }
 
 pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {

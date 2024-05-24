@@ -23,7 +23,7 @@ mod update;
 mod util;
 mod wollet;
 
-pub use crate::clients::BlockchainBackend;
+pub use crate::clients::{BlockchainBackend, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;

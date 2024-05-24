@@ -246,7 +246,9 @@ pub trait BlockchainBackend {
     }
 }
 
+/// Position of a transaction involving a certain script
 pub struct History {
+    /// Transaction ID
     pub txid: Txid,
 
     /// Confirmation height of txid
@@ -255,6 +257,7 @@ pub struct History {
     ///  0 means unconfirmed with confirmed parents
     pub height: i32,
 
+    /// The block hash of the block including the transaction, if available
     pub block_hash: Option<BlockHash>,
 }
 

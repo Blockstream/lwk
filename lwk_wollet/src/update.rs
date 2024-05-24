@@ -14,9 +14,13 @@ use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
+/// Transactions downloaded and unblinded
 #[derive(Default, Clone, PartialEq, Eq, Debug)]
 pub struct DownloadTxResult {
+    /// Transactions downloaded
     pub txs: Vec<(Txid, Transaction)>,
+
+    /// Unblinded outputs of the downloaded transactions
     pub unblinds: Vec<(OutPoint, TxOutSecrets)>,
 }
 

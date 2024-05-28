@@ -1,7 +1,9 @@
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
-use crate::{AssetId, Txid};
+use crate::{AssetId, Error, Txid};
 
 /// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetDetails`]
 #[wasm_bindgen]
@@ -87,8 +89,9 @@ impl PsetBalance {
     }
 
     /// The net balance for every asset with respect of the wallet asking the pset details
-    pub fn balances(&self) -> JsValue {
-        serde_wasm_bindgen::to_value(&self.inner.balances).expect("should map")
+    pub fn balances(&self) -> Result<JsValue, Error> {
+        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
+        Ok(self.inner.balances.serialize(&serializer)?)
     }
 }
 
@@ -221,7 +224,7 @@ mod tests {
         let details = wollet.pset_details(&pset).unwrap();
         assert_eq!(details.balance().fee(), 254);
         let balance: HashMap<lwk_wollet::elements::AssetId, i64> =
-            serde_wasm_bindgen::from_value(details.balance().balances()).unwrap();
+            serde_wasm_bindgen::from_value(details.balance().balances().unwrap()).unwrap();
         assert_eq!(
             format!("{:?}", balance),
             "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1254}"

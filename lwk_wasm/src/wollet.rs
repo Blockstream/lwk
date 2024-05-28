@@ -138,6 +138,17 @@ impl Tip {
 }
 
 #[cfg(test)]
+#[wasm_bindgen]
+pub fn big_number() -> Result<JsValue, Error> {
+    use serde::Serialize;
+    use serde_wasm_bindgen::Serializer;
+
+    let big = 11988790300000000u64;
+    let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
+    Ok(big.serialize(&serializer)?)
+}
+
+#[cfg(test)]
 mod tests {
 
     use crate::{Network, Wollet, WolletDescriptor};
@@ -148,6 +159,11 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     const DESCRIPTOR: &str = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
+
+    #[wasm_bindgen_test]
+    fn test_big_number() {
+        super::big_number().unwrap();
+    }
 
     #[wasm_bindgen_test]
     fn test_wollet_address() {

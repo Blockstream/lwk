@@ -1,6 +1,6 @@
-use crate::{OptionWalletTxOut, Transaction, Txid};
-use lwk_wollet::elements;
-use std::collections::HashMap;
+use crate::{Error, OptionWalletTxOut, Transaction, Txid};
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::WalletTx`]
@@ -26,15 +26,9 @@ impl WalletTx {
         self.inner.height
     }
 
-    pub fn balance(&self) -> JsValue {
-        serde_wasm_bindgen::to_value(
-            &self
-                .inner
-                .balance
-                .iter()
-                .collect::<HashMap<&elements::AssetId, &i64>>(),
-        )
-        .expect("should map")
+    pub fn balance(&self) -> Result<JsValue, Error> {
+        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
+        Ok(self.inner.balance.serialize(&serializer)?)
     }
 
     pub fn txid(&self) -> Txid {
@@ -126,7 +120,7 @@ mod tests {
         assert_eq!(wallet_tx.height(), Some(4));
 
         let balance: HashMap<elements::AssetId, i64> =
-            serde_wasm_bindgen::from_value(wallet_tx.balance()).unwrap();
+            serde_wasm_bindgen::from_value(wallet_tx.balance().unwrap()).unwrap();
         assert_eq!(balance.get(&a), Some(&10));
 
         assert_eq!(wallet_tx.fee(), 23);

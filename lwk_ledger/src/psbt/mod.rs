@@ -14,6 +14,7 @@ use elements_miniscript::elements::{
     bitcoin::{self, ecdsa, PublicKey},
     hashes::Hash,
     pset::raw,
+    encode::{serialize, deserialize},
 };
 // get_pairs functions are not exposed
 pub use global::get_v2_global_pairs;
@@ -21,10 +22,10 @@ pub use input::get_v2_input_pairs;
 pub use output::get_v2_output_pairs;
 
 pub fn deserialize_pair(pair: raw::Pair) -> (Vec<u8>, Vec<u8>) {
-    let mut key = vec![];
-    use elements_miniscript::elements::encode::Encodable;
-    pair.key.consensus_encode(&mut key).unwrap();
-    (key, pair.value)
+    (
+        deserialize(&serialize(&pair.key)).unwrap(),
+        pair.value,
+    )
 }
 
 pub enum PartialSignature {

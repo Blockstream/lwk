@@ -2,6 +2,8 @@ use crate::{AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, 
 use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements_miniscript::ForEachKey;
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::Wollet`]
@@ -67,7 +69,8 @@ impl Wollet {
 
     pub fn balance(&self) -> Result<JsValue, Error> {
         let balance = self.inner.balance()?;
-        Ok(serde_wasm_bindgen::to_value(&balance)?)
+        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
+        Ok(balance.serialize(&serializer)?)
     }
 
     pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {

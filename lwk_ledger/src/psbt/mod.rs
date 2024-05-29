@@ -12,9 +12,9 @@ use elements_miniscript::elements::{
     bitcoin::secp256k1::{self, XOnlyPublicKey},
     bitcoin::taproot::{self, TapLeafHash},
     bitcoin::{self, ecdsa, PublicKey},
+    encode::{deserialize, serialize},
     hashes::Hash,
     pset::raw,
-    encode::{serialize, deserialize},
 };
 // get_pairs functions are not exposed
 pub use global::get_v2_global_pairs;
@@ -22,12 +22,10 @@ pub use input::get_v2_input_pairs;
 pub use output::get_v2_output_pairs;
 
 pub fn deserialize_pair(pair: raw::Pair) -> (Vec<u8>, Vec<u8>) {
-    (
-        deserialize(&serialize(&pair.key)).unwrap(),
-        pair.value,
-    )
+    (deserialize(&serialize(&pair.key)).unwrap(), pair.value)
 }
 
+#[allow(unused)]
 pub enum PartialSignature {
     /// signature stored in pbst.partial_sigs
     Sig(PublicKey, ecdsa::Signature),
@@ -36,6 +34,7 @@ pub enum PartialSignature {
 }
 
 impl PartialSignature {
+    #[allow(unused)]
     pub fn from_slice(slice: &[u8]) -> Result<Self, PartialSignatureError> {
         let key_augment_byte = slice
             .first()
@@ -68,6 +67,7 @@ impl PartialSignature {
     }
 }
 
+#[allow(unused)]
 pub enum PartialSignatureError {
     BadKeyAugmentLength,
     XOnlyPubKey(secp256k1::Error),

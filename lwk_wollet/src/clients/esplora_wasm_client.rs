@@ -33,6 +33,20 @@ pub struct EsploraWasmClient {
     waterfall: bool,
 }
 
+struct LastUnused {
+    internal: u32,
+    external: u32,
+}
+
+impl Default for LastUnused {
+    fn default() -> Self {
+        Self {
+            internal: 0,
+            external: 0,
+        }
+    }
+}
+
 impl EsploraWasmClient {
     /// Creates a new esplora client using the given `url` as endpoint.
     ///
@@ -141,8 +155,7 @@ impl EsploraWasmClient {
         let mut txid_height = HashMap::new();
         let mut scripts = HashMap::new();
 
-        let mut last_unused_external = 0;
-        let mut last_unused_internal = 0;
+        let mut last_unused = LastUnused::default();
         let mut height_blockhash = HashMap::new();
 
         for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
@@ -165,10 +178,10 @@ impl EsploraWasmClient {
                 if let Some(max) = max {
                     match chain {
                         Chain::External => {
-                            last_unused_external = 1 + max + batch_count * BATCH_SIZE
+                            last_unused.external = 1 + max + batch_count * BATCH_SIZE
                         }
                         Chain::Internal => {
-                            last_unused_internal = 1 + max + batch_count * BATCH_SIZE
+                            last_unused.internal = 1 + max + batch_count * BATCH_SIZE
                         }
                     }
                 };
@@ -223,8 +236,8 @@ impl EsploraWasmClient {
             .last_unused_internal
             .load(atomic::Ordering::Relaxed);
 
-        let last_unused_changed = store_last_unused_external != last_unused_external
-            || store_last_unused_internal != last_unused_internal;
+        let last_unused_changed = store_last_unused_external != last_unused.external
+            || store_last_unused_internal != last_unused.internal;
 
         let changed = !new_txs.txs.is_empty()
             || last_unused_changed

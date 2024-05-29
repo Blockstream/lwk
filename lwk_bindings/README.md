@@ -38,7 +38,7 @@ First, create a virtual env, skip the step if you already created it.
 cd lwk/lwk_bindings
 virtualenv venv
 source venv/bin/activate
-pip install maturin maturin[patchelf] uniffi-bindgen
+pip install maturin maturin[patchelf] uniffi-bindgen==0.26.1
 ```
 
 Then build the wheel

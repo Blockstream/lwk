@@ -12,7 +12,7 @@ impl EsploraClient {
     /// Creates an `EsploraClient`
     #[wasm_bindgen(constructor)]
     pub fn new(url: &str) -> Self {
-        let inner = lwk_wollet::EsploraWasmClient::new(url);
+        let inner = lwk_wollet::EsploraWasmClient::new(url, false);
         Self { inner }
     }
 

@@ -30,14 +30,24 @@ pub struct EsploraWasmClient {
     base_url: String,
     tip_hash_url: String,
     broadcast_url: String,
+    waterfall: bool,
 }
 
 impl EsploraWasmClient {
-    pub fn new(url: &str) -> Self {
+    /// Creates a new esplora client using the given `url` as endpoint.
+    ///
+    /// If `waterfall` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
+    /// during the scan and for this reason is much faster. To achieve so the "bitcoin descriptor" part is shared with
+    /// the server. All of the address are shared with the server anyway even without the waterfall sync, but in
+    /// separate calls, and in this case future addresses cannot be derived.
+    /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
+    /// assets and amount exchanged due to the nature of confidential transactions.
+    pub fn new(url: &str, waterfall: bool) -> Self {
         Self {
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
+            waterfall,
         }
     }
 

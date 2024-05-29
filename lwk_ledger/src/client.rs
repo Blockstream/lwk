@@ -2,6 +2,7 @@ use core::fmt::Debug;
 use std::str::FromStr;
 
 use elements_miniscript::elements::bitcoin::{
+    self,
     bip32::{DerivationPath, Fingerprint, Xpub},
     consensus::encode::deserialize_partial,
     secp256k1::ecdsa,
@@ -218,7 +219,7 @@ impl<T: Transport> LiquidClient<T> {
         psbt: &Psbt,
         wallet: &WalletPolicy,
         wallet_hmac: Option<&[u8; 32]>,
-    ) -> Result<Vec<(usize, PartialSignature)>, LiquidClientError<T::Error>> {
+    ) -> Result<Vec<(usize, bitcoin::ecdsa::Signature)>, LiquidClientError<T::Error>> {
         let mut intpr = ClientCommandInterpreter::new();
         intpr.add_known_preimage(wallet.serialize());
         let keys: Vec<String> = wallet.keys.iter().map(|k| k.to_string()).collect();
@@ -300,7 +301,9 @@ impl<T: Transport> LiquidClient<T> {
 
             signatures.push((
                 input_index.0 as usize,
-                PartialSignature::from_slice(&result[i..]).map_err(|_| {
+                // TODO: consider updating with latest Ledger Bitcoin App version
+                // PartialSignature::from_slice(&result[i..]).map_err(|_| {
+                bitcoin::ecdsa::Signature::from_slice(&result[i..]).map_err(|_| {
                     LiquidClientError::UnexpectedResult {
                         command: cmd.ins,
                         data: result.clone(),

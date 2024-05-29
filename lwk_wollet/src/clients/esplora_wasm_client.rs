@@ -47,6 +47,24 @@ impl Default for LastUnused {
     }
 }
 
+struct Data {
+    txid_height: HashMap<Txid, Option<u32>>,
+    scripts: HashMap<Script, (Chain, ChildNumber)>,
+    last_unused: LastUnused,
+    height_blockhash: HashMap<u32, BlockHash>,
+}
+
+impl Default for Data {
+    fn default() -> Self {
+        Self {
+            txid_height: Default::default(),
+            scripts: Default::default(),
+            last_unused: Default::default(),
+            height_blockhash: Default::default(),
+        }
+    }
+}
+
 impl EsploraWasmClient {
     /// Creates a new esplora client using the given `url` as endpoint.
     ///
@@ -152,65 +170,13 @@ impl EsploraWasmClient {
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
         let store = &wollet.store;
-        let mut txid_height = HashMap::new();
-        let mut scripts = HashMap::new();
 
-        let mut last_unused = LastUnused::default();
-        let mut height_blockhash = HashMap::new();
-
-        for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
-            let mut batch_count = 0;
-            let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
-            loop {
-                let batch = store.get_script_batch(batch_count, &descriptor)?;
-
-                let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
-                let result: Vec<Vec<History>> = self.get_scripts_history(&s).await?;
-                if !batch.cached {
-                    scripts.extend(batch.value);
-                }
-                let max = result
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, v)| !v.is_empty())
-                    .map(|(i, _)| i as u32)
-                    .max();
-                if let Some(max) = max {
-                    match chain {
-                        Chain::External => {
-                            last_unused.external = 1 + max + batch_count * BATCH_SIZE
-                        }
-                        Chain::Internal => {
-                            last_unused.internal = 1 + max + batch_count * BATCH_SIZE
-                        }
-                    }
-                };
-
-                let flattened: Vec<History> = result.into_iter().flatten().collect();
-
-                if flattened.is_empty() {
-                    break;
-                }
-
-                for el in flattened {
-                    // el.height = -1 means unconfirmed with unconfirmed parents
-                    // el.height =  0 means unconfirmed with confirmed parents
-                    // but we threat those tx the same
-                    let height = el.height.max(0);
-                    let txid = el.txid;
-                    if height == 0 {
-                        txid_height.insert(txid, None);
-                    } else {
-                        txid_height.insert(txid, Some(height as u32));
-                        if let Some(block_hash) = el.block_hash {
-                            height_blockhash.insert(height as u32, block_hash);
-                        }
-                    }
-                }
-
-                batch_count += 1;
-            }
-        }
+        let Data {
+            txid_height,
+            scripts,
+            last_unused,
+            height_blockhash,
+        } = self.get_history(&descriptor, store).await?;
 
         let tip = self.tip().await?;
 
@@ -276,6 +242,68 @@ impl EsploraWasmClient {
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_history(
+        &mut self,
+        descriptor: &WolletDescriptor,
+        store: &Store,
+    ) -> Result<Data, Error> {
+        let mut data = Data::default();
+        for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
+            let mut batch_count = 0;
+            let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
+            loop {
+                let batch = store.get_script_batch(batch_count, &descriptor)?;
+
+                let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
+                let result: Vec<Vec<History>> = self.get_scripts_history(&s).await?;
+                if !batch.cached {
+                    data.scripts.extend(batch.value);
+                }
+                let max = result
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| !v.is_empty())
+                    .map(|(i, _)| i as u32)
+                    .max();
+                if let Some(max) = max {
+                    match chain {
+                        Chain::External => {
+                            data.last_unused.external = 1 + max + batch_count * BATCH_SIZE
+                        }
+                        Chain::Internal => {
+                            data.last_unused.internal = 1 + max + batch_count * BATCH_SIZE
+                        }
+                    }
+                };
+
+                let flattened: Vec<History> = result.into_iter().flatten().collect();
+
+                if flattened.is_empty() {
+                    break;
+                }
+
+                for el in flattened {
+                    // el.height = -1 means unconfirmed with unconfirmed parents
+                    // el.height =  0 means unconfirmed with confirmed parents
+                    // but we threat those tx the same
+                    let height = el.height.max(0);
+                    let txid = el.txid;
+                    if height == 0 {
+                        data.txid_height.insert(txid, None);
+                    } else {
+                        data.txid_height.insert(txid, Some(height as u32));
+                        if let Some(block_hash) = el.block_hash {
+                            data.height_blockhash.insert(height as u32, block_hash);
+                        }
+                    }
+                }
+
+                batch_count += 1;
+            }
+        }
+        Ok(data)
     }
 
     async fn download_txs(

@@ -116,9 +116,15 @@ fn test_ledger_commands() {
     let pset_b64 = include_str!("../tests/data/pset_ledger.base64");
     let pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
 
-    let _partial_sigs = client
+    let sigs = client
         .sign_psbt(
             &pset, &ss_view, None, // hmac
         )
         .unwrap();
+    assert_eq!(sigs.len(), 1);
+    // Signed the first input
+    assert_eq!(sigs[0].0, 0);
+    // From the Liquid Ledger App test vectors
+    let expected = elements_miniscript::bitcoin::ecdsa::Signature::from_str("30450221008af8893a6abab7ee5b62075093e4fc517d1872b848779badb6a7a30a9081b6a002203866ea2e5194e8e3228f2df749cfb53dc98c561142bc6c0fe61c9645df9193fe01").unwrap();
+    assert_eq!(sigs[0].1, expected);
 }

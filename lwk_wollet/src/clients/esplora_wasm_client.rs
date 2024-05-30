@@ -19,6 +19,7 @@ use reqwest::Response;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
+    ops::{Index, IndexMut},
     str::FromStr,
     sync::atomic,
 };
@@ -33,6 +34,7 @@ pub struct EsploraWasmClient {
     waterfall: bool,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 struct LastUnused {
     internal: u32,
     external: u32,
@@ -47,6 +49,27 @@ impl Default for LastUnused {
     }
 }
 
+impl Index<Chain> for LastUnused {
+    type Output = u32;
+
+    fn index(&self, index: Chain) -> &Self::Output {
+        match index {
+            Chain::External => &self.external,
+            Chain::Internal => &self.internal,
+        }
+    }
+}
+
+impl IndexMut<Chain> for LastUnused {
+    fn index_mut(&mut self, index: Chain) -> &mut Self::Output {
+        match index {
+            Chain::External => &mut self.external,
+            Chain::Internal => &mut self.internal,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 struct Data {
     txid_height: HashMap<Txid, Option<u32>>,
     scripts: HashMap<Script, (Chain, ChildNumber)>,

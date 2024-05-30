@@ -125,18 +125,31 @@ impl Store {
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
-            let opt_script = self.cache.scripts.get(&(ext_int, child));
-            let script = match opt_script {
-                Some(script) => script.clone(),
-                None => {
-                    result.cached = false;
-                    descriptor.at_derivation_index(j)?.script_pubkey()
-                }
-            };
+            let (script, cached) = self.get_or_derive(ext_int, child, descriptor)?;
+            result.cached = cached;
             result.value.push((script, (ext_int, child)));
         }
 
         Ok(result)
+    }
+
+    pub(crate) fn get_or_derive(
+        &self,
+        ext_int: Chain,
+        child: ChildNumber,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, bool), Error> {
+        let opt_script = self.cache.scripts.get(&(ext_int, child));
+        let (script, cached) = match opt_script {
+            Some(script) => (script.clone(), true),
+            None => (
+                descriptor
+                    .at_derivation_index(child.into())?
+                    .script_pubkey(),
+                false,
+            ),
+        };
+        Ok((script, cached))
     }
 
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {

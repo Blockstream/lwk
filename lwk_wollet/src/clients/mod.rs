@@ -10,6 +10,7 @@ use elements::{
 };
 use elements::{BlockHash, BlockHeader, Transaction, Txid};
 use lwk_common::derive_blinding_key;
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
 
@@ -258,6 +259,7 @@ pub trait BlockchainBackend {
     }
 }
 
+#[derive(Deserialize)]
 /// Position of a transaction involving a certain script
 pub struct History {
     /// Transaction ID

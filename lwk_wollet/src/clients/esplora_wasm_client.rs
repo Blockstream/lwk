@@ -35,19 +35,10 @@ pub struct EsploraWasmClient {
     waterfall: bool,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 struct LastUnused {
     internal: u32,
     external: u32,
-}
-
-impl Default for LastUnused {
-    fn default() -> Self {
-        Self {
-            internal: 0,
-            external: 0,
-        }
-    }
 }
 
 impl Index<Chain> for LastUnused {
@@ -70,23 +61,12 @@ impl IndexMut<Chain> for LastUnused {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 struct Data {
     txid_height: HashMap<Txid, Option<u32>>,
     scripts: HashMap<Script, (Chain, ChildNumber)>,
     last_unused: LastUnused,
     height_blockhash: HashMap<u32, BlockHash>,
-}
-
-impl Default for Data {
-    fn default() -> Self {
-        Self {
-            txid_height: Default::default(),
-            scripts: Default::default(),
-            last_unused: Default::default(),
-            height_blockhash: Default::default(),
-        }
-    }
 }
 
 impl EsploraWasmClient {
@@ -452,12 +432,7 @@ impl EsploraWasmClient {
         store: &Store,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
-        let heights_in_db: HashSet<Height> = store
-            .cache
-            .timestamps
-            .iter()
-            .filter_map(|(h, _)| Some(*h))
-            .collect();
+        let heights_in_db: HashSet<Height> = store.cache.timestamps.keys().cloned().collect();
         let heights_to_download: Vec<Height> = history_txs_heights_plus_tip
             .difference(&heights_in_db)
             .cloned()

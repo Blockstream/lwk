@@ -946,7 +946,7 @@ async fn test_esplora_wasm_waterfall() {
     for waterfall in [true, false] {
         let start = Instant::now();
         let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
-        let mut client = EsploraWasmClient::new(&url, waterfall);
+        let mut client = EsploraWasmClient::new(url, waterfall);
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
         let first_scan = start.elapsed();

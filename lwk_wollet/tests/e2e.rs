@@ -887,7 +887,7 @@ fn wait_status_change(
 async fn test_esplora_wasm_client() {
     let server = setup(true);
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let mut client = EsploraWasmClient::new(&url);
+    let mut client = EsploraWasmClient::new(&url, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());

@@ -15,6 +15,7 @@ use elements::{
     pset::serialize::Serialize,
     BlockHash, Script, Txid,
 };
+use elements_miniscript::DescriptorPublicKey;
 use reqwest::Response;
 use serde::Deserialize;
 use std::{
@@ -199,7 +200,11 @@ impl EsploraWasmClient {
             scripts,
             last_unused,
             height_blockhash,
-        } = self.get_history(&descriptor, store).await?;
+        } = if self.waterfall {
+            self.get_history_waterfall(&descriptor, store).await?
+        } else {
+            self.get_history(&descriptor, store).await?
+        };
 
         let tip = self.tip().await?;
 
@@ -326,6 +331,59 @@ impl EsploraWasmClient {
                 batch_count += 1;
             }
         }
+        Ok(data)
+    }
+
+    async fn get_history_waterfall(
+        &mut self,
+        descriptor: &WolletDescriptor,
+        store: &Store,
+    ) -> Result<Data, Error> {
+        let client = reqwest::Client::new();
+        let descriptor_url = format!("{}/descriptor", self.base_url);
+        // TODO refuse for elip151
+        let desc = descriptor.descriptor().to_string(); // TODO remove unneeded key origin for privacy improvement
+        let response = client.post(&descriptor_url).body(desc).send().await?;
+        let body = response.text().await?;
+        let history: HashMap<String, Vec<Vec<History>>> = serde_json::from_str(&body)?;
+        let mut data = Data::default();
+
+        for (desc, chain_history) in history {
+            let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
+            let chain: Chain = (&desc)
+                .try_into()
+                .map_err(|_| Error::Generic("Cannot determine chain from desc".into()))?;
+            let max = chain_history
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| !v.is_empty())
+                .map(|(i, _)| i as u32)
+                .max();
+            if let Some(max) = max {
+                data.last_unused[chain] = max + 1;
+            }
+            for (i, script_history) in chain_history.iter().enumerate() {
+                let child = ChildNumber::from(i as u32);
+                let (script, cached) = store.get_or_derive(chain, child, &desc)?;
+                if !cached {
+                    data.scripts.insert(script, (chain, child));
+                }
+                for tx_seen in script_history {
+                    let height = if tx_seen.height > 0 {
+                        Some(tx_seen.height as u32)
+                    } else {
+                        None
+                    };
+                    if let Some(block_hash) = tx_seen.block_hash.as_ref() {
+                        if let Some(height) = height.as_ref() {
+                            data.height_blockhash.insert(*height, *block_hash);
+                        }
+                    }
+                    data.txid_height.insert(tx_seen.txid, height);
+                }
+            }
+        }
+
         Ok(data)
     }
 
@@ -526,9 +584,7 @@ mod tests {
     }
 
     async fn test_esplora_url(esplora_url: &str) {
-        println!("{}", esplora_url);
-
-        let mut client = EsploraWasmClient::new(esplora_url);
+        let mut client = EsploraWasmClient::new(esplora_url, false);
         let header = client.tip().await.unwrap();
         assert!(header.height > 100);
 

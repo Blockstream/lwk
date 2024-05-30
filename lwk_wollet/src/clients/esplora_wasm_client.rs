@@ -394,8 +394,12 @@ impl EsploraWasmClient {
         store: &Store,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
-        let heights_in_db: HashSet<Height> =
-            store.cache.heights.iter().filter_map(|(_, h)| *h).collect();
+        let heights_in_db: HashSet<Height> = store
+            .cache
+            .timestamps
+            .iter()
+            .filter_map(|(h, _)| Some(*h))
+            .collect();
         let heights_to_download: Vec<Height> = history_txs_heights_plus_tip
             .difference(&heights_in_db)
             .cloned()

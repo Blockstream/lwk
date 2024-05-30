@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use std::str::FromStr;
 
 /// Details of a wallet transaction output used in [`WalletTx`]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WalletTxOut {
     pub outpoint: OutPoint,
     pub script_pubkey: Script,
@@ -23,7 +23,7 @@ pub struct WalletTxOut {
 
 /// Value returned by [`crate::Wollet::transactions()`] containing details about a transaction
 /// from the perspective of the wallet, for example the net-balance of the wallet.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WalletTx {
     pub tx: Transaction,
     pub txid: Txid,

@@ -932,6 +932,42 @@ async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -
     panic!("update didn't arrive");
 }
 
+#[ignore = "require network calls"]
+#[cfg(feature = "esplora_wasm")]
+#[tokio::test]
+async fn test_esplora_wasm_waterfall() {
+    use std::time::Instant;
+
+    let url = "https://waterfall.liquidwebwallet.org/liquid/api";
+    let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#3axrmm5c";
+    let desc = WolletDescriptor::from_str(desc).unwrap();
+
+    let mut wollets = vec![];
+    for waterfall in [true, false] {
+        let start = Instant::now();
+        let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
+        let mut client = EsploraWasmClient::new(&url, waterfall);
+        let update = client.full_scan(&wollet).await.unwrap().unwrap();
+        wollet.apply_update(update).unwrap();
+        let first_scan = start.elapsed();
+        client.full_scan(&wollet).await.unwrap();
+        let second_scan = start.elapsed() - first_scan;
+
+        println!(
+            "waterfall:{waterfall} first_scan: {}ms second_scan: {}ms",
+            first_scan.as_millis(),
+            second_scan.as_millis()
+        );
+        wollets.push(wollet);
+    }
+
+    assert_eq!(wollets[0].balance().unwrap(), wollets[1].balance().unwrap());
+    assert_eq!(
+        wollets[0].transactions().unwrap(),
+        wollets[1].transactions().unwrap()
+    );
+}
+
 #[test]
 fn test_tip() {
     let server = setup(false);

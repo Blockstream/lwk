@@ -1046,4 +1046,16 @@ fn few_lbtc() {
         .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+
+    // Send an asset to the wallet and check that we have the same error
+    let asset = wallet.fund_asset(&server);
+    assert!(wallet.balance(&asset) > 0);
+
+    let err = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 1)
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 }

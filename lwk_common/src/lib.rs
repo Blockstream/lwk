@@ -13,6 +13,7 @@ mod descriptor;
 mod error;
 mod keyorigin_xpub;
 mod model;
+pub mod precision;
 mod qr;
 mod signer;
 

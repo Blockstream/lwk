@@ -403,7 +403,7 @@ impl TxBuilder {
         // Add a temporary fee, and always add a change or drain output,
         // then we'll tweak those values to match the given fee rate.
         let temp_fee = 1000;
-        if satoshi_in < (satoshi_out + temp_fee) {
+        if satoshi_in <= (satoshi_out + temp_fee) {
             return Err(Error::InsufficientFunds);
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
@@ -430,7 +430,7 @@ impl TxBuilder {
 
         let vsize = (weight + 4 - 1) / 4;
         let fee = (vsize as f32 * self.fee_rate / 1000.0).ceil() as u64;
-        if satoshi_in < (satoshi_out + fee) {
+        if satoshi_in <= (satoshi_out + fee) {
             return Err(Error::InsufficientFunds);
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;

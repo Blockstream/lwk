@@ -1058,4 +1058,10 @@ fn few_lbtc() {
         .finish()
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+
+    // Send some more lbtc and we can send the asset and lbtc
+    let address = wallet.address();
+    wallet.fund(&server, 1000, Some(address), None);
+    wallet.send_asset(&signers, &node_address, &asset, None);
+    wallet.send_btc(&signers, None, Some((node_address, 1)));
 }

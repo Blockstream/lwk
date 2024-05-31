@@ -1030,4 +1030,20 @@ fn few_lbtc() {
 
     let node_address = server.node_getnewaddress();
     wallet.send_btc(&signers, None, Some((node_address, 1)));
+
+    // Drain the wallet and fund it with a single utxo insufficient to pay for the fee
+    let node_address = server.node_getnewaddress();
+    wallet.send_all_btc(&signers, None, node_address);
+
+    let address = wallet.address();
+    wallet.fund(&server, 10, Some(address), None);
+
+    let node_address = server.node_getnewaddress();
+    let err = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 1)
+        .unwrap()
+        .finish()
+        .unwrap_err();
+    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
 }

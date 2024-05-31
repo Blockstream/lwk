@@ -13,6 +13,9 @@ pub enum Error {
 
     #[error(transparent)]
     From(#[from] TryFromIntError),
+
+    #[error("Our precision is {our}, given a string with {given}")]
+    StringTooPrecise { our: u8, given: u8 },
 }
 
 /// Helper to convert satoshi values of an asset to the value with the given precision and viceversa.
@@ -67,13 +70,20 @@ impl Precision {
     pub fn string_to_sats(&self, val: &str) -> Result<i64, Error> {
         match val.find('.') {
             Some(idx) => {
+                let right_idx: u8 = (val.len() - idx - 1).try_into()?;
+                if right_idx > self.0 {
+                    return Err(Error::StringTooPrecise {
+                        our: self.0,
+                        given: right_idx,
+                    });
+                }
+
                 let without_dot = val.replacen('.', "", 1);
 
                 // We want this function to roundtrip every value accepted by sats_to_string which are i64.
                 // Thus, we use i128 because the conversion of this value with the multiplication of the precision
                 // may momentarily overflow i64, but return in a valid range with the following division
                 let parsed_without_dot = self.inner_convert(&without_dot)?;
-                let right_idx = val.len() - idx - 1;
                 let pow = 10i128.pow(right_idx as u32);
                 Ok((parsed_without_dot / pow).try_into()?)
             }
@@ -100,6 +110,11 @@ mod test {
         assert_eq!(prec.sats_to_string(sats), expected);
     }
 
+    fn check_str_to_sat(prec: u8, str: &str, expected: i64) {
+        let prec = Precision::new(prec).unwrap();
+        assert_eq!(prec.string_to_sats(str).unwrap(), expected);
+    }
+
     #[test]
     fn test_fixed() {
         check_sat_to_str(2, 100, "1.00");
@@ -109,6 +124,13 @@ mod test {
         check_sat_to_str(8, 100, "0.00000100");
         check_sat_to_str(8, 100_000_000, "1.00000000");
         check_sat_to_str(8, -100_000_000, "-1.00000000");
+
+        check_str_to_sat(8, ".1", 10_000_000);
+        check_str_to_sat(8, "0.1", 10_000_000);
+        check_str_to_sat(8, "0.0", 0);
+        check_str_to_sat(8, "01", 100_000_000);
+        check_str_to_sat(8, "1.00000000", 100_000_000);
+        check_str_to_sat(8, "1.00000001", 100_000_001);
     }
 
     #[test]
@@ -131,6 +153,10 @@ mod test {
 
         let exp = "invalid digit found in string";
         assert_eq!(exp, p.string_to_sats("0.1 ").unwrap_err().to_string());
+
+        let p = Precision::new(1).unwrap();
+        let exp = "Our precision is 1, given a string with 2";
+        assert_eq!(exp, p.string_to_sats("0.01").unwrap_err().to_string());
     }
 
     #[test]

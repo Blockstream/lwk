@@ -1013,3 +1013,22 @@ fn drain() {
     assert!(wallet.balance(&asset) > 0);
     assert!(wallet.balance(&token) > 0);
 }
+
+#[test]
+fn few_lbtc() {
+    // Send from a wallet with few lbtc
+    let server = setup(false);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let _signers = [&AnySigner::Software(signer)];
+
+    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+
+    let address = wallet.address();
+    wallet.fund(&server, 1000, Some(address), None);
+
+    // FIXME: this returns insufficient funds although we have enough of them
+    // let node_address = server.node_getnewaddress();
+    // wallet.send_btc(&signers, None, Some((node_address, 1)));
+}

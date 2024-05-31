@@ -50,6 +50,9 @@ pub enum Error {
     #[error(transparent)]
     Keyorigin(#[from] lwk_common::InvalidKeyOriginXpub),
 
+    #[error(transparent)]
+    Precision(#[from] lwk_common::precision::Error),
+
     #[error("{0}")]
     Generic(String),
 

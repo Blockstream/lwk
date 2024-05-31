@@ -10,6 +10,7 @@ mod esplora;
 mod jade;
 mod mnemonic;
 mod network;
+mod precision;
 mod pset;
 mod pset_details;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
@@ -36,6 +37,7 @@ pub use esplora::EsploraClient;
 pub use jade::{Jade, Singlesig};
 pub use mnemonic::Mnemonic;
 pub use network::Network;
+pub use precision::Precision;
 pub use pset::Pset;
 pub use pset_details::PsetDetails;
 pub use signer::Signer;

@@ -1021,14 +1021,13 @@ fn few_lbtc() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let _signers = [&AnySigner::Software(signer)];
+    let signers = [&AnySigner::Software(signer)];
 
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
 
     let address = wallet.address();
     wallet.fund(&server, 1000, Some(address), None);
 
-    // FIXME: this returns insufficient funds although we have enough of them
-    // let node_address = server.node_getnewaddress();
-    // wallet.send_btc(&signers, None, Some((node_address, 1)));
+    let node_address = server.node_getnewaddress();
+    wallet.send_btc(&signers, None, Some((node_address, 1)));
 }

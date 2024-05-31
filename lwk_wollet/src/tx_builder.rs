@@ -400,7 +400,7 @@ impl TxBuilder {
             }
         }
 
-        // Add a temporary fee, and always add a change output,
+        // Add a temporary fee, and always add a change or drain output,
         // then we'll tweak those values to match the given fee rate.
         let temp_fee = 1000;
         if satoshi_in < (satoshi_out + temp_fee) {

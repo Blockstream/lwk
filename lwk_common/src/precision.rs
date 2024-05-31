@@ -131,6 +131,7 @@ mod test {
         check_str_to_sat(8, "01", 100_000_000);
         check_str_to_sat(8, "1.00000000", 100_000_000);
         check_str_to_sat(8, "1.00000001", 100_000_001);
+        check_str_to_sat(8, "-1.00000001", -100_000_001);
     }
 
     #[test]

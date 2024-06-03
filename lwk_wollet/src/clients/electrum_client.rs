@@ -42,7 +42,7 @@ impl ElectrumUrl {
             false => ElectrumUrl::Plaintext(electrum_url.into()),
         }
     }
-    pub fn build_client(&self, options: &Options) -> Result<Client, Error> {
+    pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
             ElectrumUrl::Tls(url, validate) => {
@@ -64,18 +64,18 @@ impl Debug for ElectrumClient {
 }
 
 #[derive(Default)]
-pub struct Options {
+pub struct ElectrumOptions {
     timeout: Option<u8>,
 }
 
 impl ElectrumClient {
     /// Creates an Electrum client with default options
     pub fn new(url: &ElectrumUrl) -> Result<Self, Error> {
-        Self::with_options(url, Options::default())
+        Self::with_options(url, ElectrumOptions::default())
     }
 
     /// Creates an Electrum client specifying non default options like timeout
-    pub fn with_options(url: &ElectrumUrl, options: Options) -> Result<Self, Error> {
+    pub fn with_options(url: &ElectrumUrl, options: ElectrumOptions) -> Result<Self, Error> {
         let client = url.build_client(&options)?;
         let header = client.block_headers_subscribe_raw()?;
         let tip: BlockHeader = elements_deserialize(&header.header)?;

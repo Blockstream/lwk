@@ -57,6 +57,11 @@ impl Pset {
     pub fn issuance_token(&self, index: u32) -> Option<AssetId> {
         self.issuances_ids(index).map(|e| e.1)
     }
+
+    pub fn combine(&mut self, other: Pset) -> Result<(), Error> {
+        self.inner.merge(other.into())?;
+        Ok(())
+    }
 }
 
 impl Pset {

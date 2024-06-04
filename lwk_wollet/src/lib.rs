@@ -1,12 +1,13 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
-//! # Wollet
+//! LWK is a collection of libraries for Liquid wallets.
+//! `lwk_wollet` is the library for Watch-Only Wallets.
 //!
-//! An elements and liquid Watch-Only Wallet defined by a
-//! [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki).
+//! A wallet is defined by a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
+//! which consists in a Bitcoin descriptor plus the descriptor blinding key.
 //!
-//! For an entry point see [`Wollet::new()`]
+//! From a wallet you can generate addresses, sync wallet data from the blockchain and create transactions, inclunding issuances, reissuances and burn.
 
 mod clients;
 mod config;

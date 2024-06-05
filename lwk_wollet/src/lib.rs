@@ -55,6 +55,32 @@
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! ### Create transaction
+//! ```rust,no_run
+//! # use lwk_wollet::{WolletDescriptor, Wollet, ElementsNetwork, UnvalidatedRecipient};
+//! # fn main() -> Result<(), lwk_wollet::Error> {
+//! # let desc = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+//! # let descriptor: WolletDescriptor = desc.parse()?;
+//! # let mut wollet = Wollet::without_persist(
+//! #    ElementsNetwork::LiquidTestnet,
+//! #    descriptor,
+//! # )?;
+//! // Create a transaction
+//! let recipient = UnvalidatedRecipient {
+//!     satoshi: 1000,
+//!     address: "tlq1qqgpjea0jcel4tqeln5kyxlrgqx2eh4vw67ecswm54476mddy3n0klrlmty5gn0wsdw4045rtl2y2wdtr4rdu6v93zds6zn8xd".to_string(),
+//!     asset: "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49".to_string(),
+//! };
+//! let pset = wollet
+//!     .tx_builder()
+//!     .add_unvalidated_recipient(&recipient)?
+//!     .finish()?;
+//!
+//! // Then pass the PSET to the signer(s) for them to sign.
+//! # Ok(())
+//! # }
+//! ```
 
 mod clients;
 mod config;

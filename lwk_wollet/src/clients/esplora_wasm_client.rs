@@ -120,15 +120,12 @@ impl EsploraWasmClient {
         Ok(txid)
     }
 
-    async fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<elements::Transaction>, Error> {
-        let mut result = vec![];
-        for txid in txids.iter() {
-            let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-            let response = get_with_retry(&tx_url).await?;
-            let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
-            result.push(tx);
-        }
-        Ok(result)
+    async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
+        let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
+        let response = get_with_retry(&tx_url).await?;
+        let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
+
+        Ok(tx)
     }
 
     async fn get_headers(
@@ -391,10 +388,9 @@ impl EsploraWasmClient {
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
-        let txs_downloaded = self.get_transactions(&txs_to_download).await?;
+        for txid in txs_to_download {
+            let tx = self.get_transaction(txid).await?;
 
-        for tx in txs_downloaded.into_iter() {
-            let txid = tx.txid();
             txs_in_db.insert(txid);
 
             for (i, output) in tx.output.iter().enumerate() {
@@ -403,10 +399,7 @@ impl EsploraWasmClient {
                     || scripts.contains_key(&output.script_pubkey)
                 {
                     let vout = i as u32;
-                    let outpoint = OutPoint {
-                        txid: tx.txid(),
-                        vout,
-                    };
+                    let outpoint = OutPoint { txid, vout };
 
                     match try_unblind(output.clone(), descriptor) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
@@ -569,9 +562,9 @@ mod tests {
         let genesis_tx = &genesis_block.txdata[0];
 
         let txid = genesis_tx.txid();
-        let txs = client.get_transactions(&[txid]).await.unwrap();
+        let tx = client.get_transaction(txid).await.unwrap();
 
-        assert_eq!(txs[0].txid(), txid);
+        assert_eq!(tx.txid(), txid);
 
         let existing_script = &genesis_tx.output[0].script_pubkey;
 

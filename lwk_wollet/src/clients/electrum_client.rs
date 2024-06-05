@@ -181,6 +181,7 @@ impl From<GetHistoryRes> for History {
             txid: Txid::from_raw_hash(value.tx_hash.to_raw_hash()),
             height: value.height,
             block_hash: None,
+            block_timestamp: None,
         }
     }
 }

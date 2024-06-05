@@ -63,10 +63,11 @@ impl IndexMut<Chain> for LastUnused {
 
 #[derive(Debug, PartialEq, Eq, Default)]
 struct Data {
-    txid_height: HashMap<Txid, Option<u32>>,
+    txid_height: HashMap<Txid, Option<Height>>,
     scripts: HashMap<Script, (Chain, ChildNumber)>,
     last_unused: LastUnused,
-    height_blockhash: HashMap<u32, BlockHash>,
+    height_blockhash: HashMap<Height, BlockHash>,
+    height_timestamp: HashMap<Height, Timestamp>,
 }
 
 #[derive(Deserialize)]
@@ -183,6 +184,7 @@ impl EsploraWasmClient {
             scripts,
             last_unused,
             height_blockhash,
+            height_timestamp,
         } = if self.waterfall {
             self.get_history_waterfall(&descriptor, store).await?
         } else {
@@ -199,10 +201,12 @@ impl EsploraWasmClient {
             .values()
             .filter_map(|e| *e)
             .chain(std::iter::once(tip.height))
+            .filter(|e| !height_timestamp.contains_key(e))
             .collect();
-        let timestamps = self
+        let mut timestamps = self
             .download_headers(&history_txs_heights_plus_tip, &height_blockhash, store)
             .await?;
+        timestamps.extend(height_timestamp);
 
         let store_last_unused_external = store
             .cache
@@ -362,11 +366,15 @@ impl EsploraWasmClient {
                     } else {
                         None
                     };
-                    if let Some(block_hash) = tx_seen.block_hash.as_ref() {
-                        if let Some(height) = height.as_ref() {
+                    if let Some(height) = height.as_ref() {
+                        if let Some(block_hash) = tx_seen.block_hash.as_ref() {
                             data.height_blockhash.insert(*height, *block_hash);
                         }
+                        if let Some(ts) = tx_seen.block_timestamp.as_ref() {
+                            data.height_timestamp.insert(*height, *ts);
+                        }
                     }
+
                     data.txid_height.insert(tx_seen.txid, height);
                 }
             }
@@ -496,6 +504,7 @@ impl From<EsploraTx> for History {
             txid: value.txid,
             height: value.status.block_height.unwrap_or(-1),
             block_hash: value.status.block_hash,
+            block_timestamp: None,
         }
     }
 }

@@ -69,6 +69,12 @@ struct Data {
     height_blockhash: HashMap<u32, BlockHash>,
 }
 
+#[derive(Deserialize)]
+struct WaterfallResult {
+    txs_seen: HashMap<String, Vec<Vec<History>>>,
+    page: u16,
+}
+
 impl EsploraWasmClient {
     /// Creates a new esplora client using the given `url` as endpoint.
     ///
@@ -320,15 +326,19 @@ impl EsploraWasmClient {
         store: &Store,
     ) -> Result<Data, Error> {
         let client = reqwest::Client::new();
-        let descriptor_url = format!("{}/descriptor", self.base_url);
+        let descriptor_url = format!("{}/v1/waterfall", self.base_url);
         // TODO refuse for elip151
         let desc = descriptor.descriptor().to_string(); // TODO remove unneeded key origin for privacy improvement
-        let response = client.post(&descriptor_url).body(desc).send().await?;
+        let response = client
+            .get(&descriptor_url)
+            .query(&[("descriptor", desc)])
+            .send()
+            .await?;
         let body = response.text().await?;
-        let history: HashMap<String, Vec<Vec<History>>> = serde_json::from_str(&body)?;
+        let waterfall_result: WaterfallResult = serde_json::from_str(&body)?;
         let mut data = Data::default();
 
-        for (desc, chain_history) in history {
+        for (desc, chain_history) in waterfall_result.txs_seen.iter() {
             let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
             let chain: Chain = (&desc)
                 .try_into()
@@ -343,7 +353,8 @@ impl EsploraWasmClient {
                 data.last_unused[chain] = max + 1;
             }
             for (i, script_history) in chain_history.iter().enumerate() {
-                let child = ChildNumber::from(i as u32);
+                // TODO handle paging by asking following pages if there are more than 1000 results
+                let child = ChildNumber::from(waterfall_result.page as u32 * 1000 + i as u32);
                 let (script, cached) = store.get_or_derive(chain, child, &desc)?;
                 if !cached {
                     data.scripts.insert(script, (chain, child));

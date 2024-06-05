@@ -382,7 +382,6 @@ impl EsploraWasmClient {
         if !txs_to_download.is_empty() {
             let txs_downloaded = self.get_transactions(&txs_to_download).await?;
 
-            let previous_txs_to_download = HashSet::new();
             for tx in txs_downloaded.into_iter() {
                 let txid = tx.txid();
                 txs_in_db.insert(txid);
@@ -410,15 +409,6 @@ impl EsploraWasmClient {
                 txs.push((txid, tx));
             }
 
-            let txs_to_download: Vec<Txid> = previous_txs_to_download
-                .difference(&txs_in_db)
-                .cloned()
-                .collect();
-            if !txs_to_download.is_empty() {
-                for tx in self.get_transactions(&txs_to_download).await? {
-                    txs.push((tx.txid(), tx));
-                }
-            }
             Ok(DownloadTxResult { txs, unblinds })
         } else {
             Ok(DownloadTxResult::default())

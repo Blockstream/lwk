@@ -390,40 +390,37 @@ impl EsploraWasmClient {
 
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
-        if !txs_to_download.is_empty() {
-            let txs_downloaded = self.get_transactions(&txs_to_download).await?;
 
-            for tx in txs_downloaded.into_iter() {
-                let txid = tx.txid();
-                txs_in_db.insert(txid);
+        let txs_downloaded = self.get_transactions(&txs_to_download).await?;
 
-                for (i, output) in tx.output.iter().enumerate() {
-                    // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
-                    if store.cache.paths.contains_key(&output.script_pubkey)
-                        || scripts.contains_key(&output.script_pubkey)
-                    {
-                        let vout = i as u32;
-                        let outpoint = OutPoint {
-                            txid: tx.txid(),
-                            vout,
-                        };
+        for tx in txs_downloaded.into_iter() {
+            let txid = tx.txid();
+            txs_in_db.insert(txid);
 
-                        match try_unblind(output.clone(), descriptor) {
+            for (i, output) in tx.output.iter().enumerate() {
+                // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
+                if store.cache.paths.contains_key(&output.script_pubkey)
+                    || scripts.contains_key(&output.script_pubkey)
+                {
+                    let vout = i as u32;
+                    let outpoint = OutPoint {
+                        txid: tx.txid(),
+                        vout,
+                    };
+
+                    match try_unblind(output.clone(), descriptor) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
                             Err(_) => tracing::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
-                    }
                 }
-
-                // FIXME: If no output is unblinded we should ignore this transaction,
-                // also we should not insert this in `heights`.
-                txs.push((txid, tx));
             }
 
-            Ok(DownloadTxResult { txs, unblinds })
-        } else {
-            Ok(DownloadTxResult::default())
+            // FIXME: If no output is unblinded we should ignore this transaction,
+            // also we should not insert this in `heights`.
+            txs.push((txid, tx));
         }
+
+        Ok(DownloadTxResult { txs, unblinds })
     }
 
     async fn download_headers(

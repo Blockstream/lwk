@@ -419,8 +419,6 @@ impl EsploraWasmClient {
                 }
             }
 
-            // FIXME: If no output is unblinded we should ignore this transaction,
-            // also we should not insert this in `heights`.
             txs.push((txid, tx));
         }
 

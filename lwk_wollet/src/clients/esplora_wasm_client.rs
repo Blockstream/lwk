@@ -201,12 +201,15 @@ impl EsploraWasmClient {
             .values()
             .filter_map(|e| *e)
             .chain(std::iter::once(tip.height))
-            .filter(|e| !height_timestamp.contains_key(e))
             .collect();
-        let mut timestamps = self
-            .download_headers(&history_txs_heights_plus_tip, &height_blockhash, store)
+        let timestamps = self
+            .download_headers(
+                &history_txs_heights_plus_tip,
+                &height_blockhash,
+                &height_timestamp,
+                store,
+            )
             .await?;
-        timestamps.extend(height_timestamp);
 
         let store_last_unused_external = store
             .cache
@@ -428,12 +431,17 @@ impl EsploraWasmClient {
         &self,
         history_txs_heights_plus_tip: &HashSet<Height>,
         height_blockhash: &HashMap<Height, BlockHash>,
+        height_timestamp: &HashMap<Height, Timestamp>,
         store: &Store,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
         let heights_in_db: HashSet<Height> = store.cache.timestamps.keys().cloned().collect();
+        let heights_in_response: HashSet<Height> = height_timestamp.keys().cloned().collect();
+        let heights_in_both: HashSet<Height> =
+            heights_in_db.union(&heights_in_response).cloned().collect();
+
         let heights_to_download: Vec<Height> = history_txs_heights_plus_tip
-            .difference(&heights_in_db)
+            .difference(&heights_in_both)
             .cloned()
             .collect();
         if !heights_to_download.is_empty() {
@@ -446,6 +454,12 @@ impl EsploraWasmClient {
 
             tracing::debug!("{} headers_downloaded", heights_to_download.len());
         }
+
+        let heights_to_insert = height_timestamp
+            .iter()
+            .filter(|e| !heights_in_db.contains(e.0))
+            .map(|(h, t)| (*h, *t));
+        result.extend(heights_to_insert);
 
         Ok(result)
     }

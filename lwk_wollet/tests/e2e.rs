@@ -1014,6 +1014,20 @@ fn drain() {
     assert!(wallet.balance(&token) > 0);
 }
 
+fn wait_tx_update(wallet: &mut TestWollet) {
+    let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
+    for _ in 0..50 {
+        if let Some(update) = client.full_scan(&wallet.wollet).unwrap() {
+            if !update.only_tip() {
+                wallet.wollet.apply_update(update).unwrap();
+                return;
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("update didn't arrive");
+}
+
 #[test]
 fn few_lbtc() {
     // Send from a wallet with few lbtc

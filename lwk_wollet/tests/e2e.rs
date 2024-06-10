@@ -1012,6 +1012,16 @@ fn drain() {
     wallet.send_all_btc(&signers, None, node_address);
     assert!(wallet.balance(&asset) > 0);
     assert!(wallet.balance(&token) > 0);
+
+    // Confirm the transactions
+    server.generate(1);
+    wait_tx_update(&mut wallet);
+    let txs = wallet.wollet.transactions().unwrap();
+    for _tx in txs {
+        // FIXME: send all transaction do not update their timestamp
+        // assert!(tx.height.is_some());
+        // assert!(tx.timestamp.is_some());
+    }
 }
 
 fn wait_tx_update(wallet: &mut TestWollet) {

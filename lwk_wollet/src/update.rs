@@ -165,9 +165,17 @@ impl Wollet {
         store.cache.paths.extend(scripts);
         let mut last_used_internal = None;
         let mut last_used_external = None;
-        for (txid, _) in txid_height {
+        for (txid, _) in txid_height_new {
             if let Some(tx) = store.cache.all_txs.get(&txid) {
-                for output in &tx.output {
+                for (vout, output) in tx.output.iter().enumerate() {
+                    if !store
+                        .cache
+                        .unblinded
+                        .contains_key(&OutPoint::new(txid, vout as u32))
+                    {
+                        // Output cannot be unblinded by wallet
+                        continue;
+                    }
                     if let Some((ext_int, ChildNumber::Normal { index })) =
                         store.cache.paths.get(&output.script_pubkey)
                     {

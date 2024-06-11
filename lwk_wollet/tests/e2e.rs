@@ -337,6 +337,26 @@ fn different_blinding_keys() {
     assert_eq!(wallet2.address_result(None).index(), 0);
     wallet2.fund_btc(&server);
     assert_eq!(wallet2.address_result(None).index(), 1);
+
+    // Both wallets have 1 tx in the tx list,
+    // but since they have the same script pubkey,
+    // this case is slightly special and
+    // you can get the tx of the other wallet if you query for that specific txid
+    wallet1.sync();
+    let txs1 = wallet1.wollet.transactions().unwrap();
+    assert_eq!(txs1.len(), 1);
+    let txid1 = txs1[0].txid;
+
+    let txs2 = wallet2.wollet.transactions().unwrap();
+    assert_eq!(txs2.len(), 1);
+    let txid2 = txs2[0].txid;
+
+    let tx1_from_w2 = wallet2.wollet.transaction(&txid1).unwrap().unwrap();
+    let tx2_from_w1 = wallet1.wollet.transaction(&txid2).unwrap().unwrap();
+    assert!(tx1_from_w2.balance.is_empty());
+    assert!(tx2_from_w1.balance.is_empty());
+    assert_eq!(tx2_from_w1.type_, "unknown");
+    assert_eq!(tx1_from_w2.type_, "unknown");
 }
 
 #[test]

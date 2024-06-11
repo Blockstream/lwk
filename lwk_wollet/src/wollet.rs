@@ -256,7 +256,7 @@ impl Wollet {
         self.balance_from_utxos(&utxos)
     }
 
-    /// Get the wallet transactions with their heights (if confirmed)
+    /// Get the wallet transactions
     pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
         let mut txs = vec![];
         let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();

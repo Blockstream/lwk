@@ -280,6 +280,11 @@ impl Wollet {
                 .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", txid)))?;
 
             let balance = tx_balance(**txid, tx, &txos);
+            if balance.is_empty() {
+                // Transaction has no output or input that the wollet can unblind,
+                // ignore this transaction
+                continue;
+            }
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);

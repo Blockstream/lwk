@@ -1017,10 +1017,9 @@ fn drain() {
     server.generate(1);
     wait_tx_update(&mut wallet);
     let txs = wallet.wollet.transactions().unwrap();
-    for _tx in txs {
-        // FIXME: send all transaction do not update their timestamp
-        // assert!(tx.height.is_some());
-        // assert!(tx.timestamp.is_some());
+    for tx in txs {
+        assert!(tx.height.is_some());
+        assert!(tx.timestamp.is_some());
     }
 }
 

@@ -11,7 +11,7 @@ use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
 use elements::BlockHeader;
 use rand::{thread_rng, Rng};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::atomic;
 
 /// Transactions downloaded and unblinded
@@ -136,27 +136,12 @@ impl Wollet {
 
         store.cache.tip = (tip.height, tip.block_hash());
         store.cache.unblinded.extend(new_txs.unblinds);
-        let mut txids_unblinded: HashSet<Txid> =
-            store.cache.unblinded.keys().map(|o| o.txid).collect();
-        // Handle outgoing txs with no change output
-        for (txid, tx) in &new_txs.txs {
-            for i in &tx.input {
-                if store.cache.unblinded.contains_key(&i.previous_output) {
-                    txids_unblinded.insert(*txid);
-                }
-            }
-        }
         store.cache.all_txs.extend(new_txs.txs);
-        let txid_height: Vec<_> = txid_height_new
-            .iter()
-            .filter(|(txid, _)| txids_unblinded.contains(txid))
-            .cloned()
-            .collect();
         store
             .cache
             .heights
             .retain(|k, _| !txid_height_delete.contains(k));
-        store.cache.heights.extend(txid_height.clone());
+        store.cache.heights.extend(txid_height_new.clone());
         store.cache.timestamps.extend(timestamps);
         store
             .cache

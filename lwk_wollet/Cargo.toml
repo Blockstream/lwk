@@ -54,6 +54,9 @@ lwk_ledger = { version = "0.3" }
 lwk_signer = { version = "0.5", features = ["jade", "ledger"] }
 lwk_containers = { version = "0.3" }
 lwk_test_util = { version = "0.4" }
+waterfall = { git = "https://github.com/RCasatta/waterfall", default-features = false, features = [
+    "test_env",
+] }
 
 tempfile = "3.8.0"
 tokio = { version = "1.36.0", features = ["rt", "macros"] }

@@ -125,6 +125,6 @@ fn test_ledger_commands() {
     // Signed the first input
     assert_eq!(sigs[0].0, 0);
     // From the Liquid Ledger App test vectors
-    let expected = elements_miniscript::bitcoin::ecdsa::Signature::from_str("30450221008af8893a6abab7ee5b62075093e4fc517d1872b848779badb6a7a30a9081b6a002203866ea2e5194e8e3228f2df749cfb53dc98c561142bc6c0fe61c9645df9193fe01").unwrap();
+    let expected = elements_miniscript::bitcoin::ecdsa::Signature::from_str("3044022071965f8315a264773d8e635fb5bb8dfdb425b849b7aaafa8f1dcf1356e87947a02202eae7f9bdb1f00af3d1662a10b8efc82f9e7ecb1fc4f76a0b7905dab4fc6358801").unwrap();
     assert_eq!(sigs[0].1, expected);
 }

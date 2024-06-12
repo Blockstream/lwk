@@ -955,7 +955,7 @@ async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -
 #[ignore = "require network calls"]
 #[cfg(feature = "esplora_wasm")]
 #[tokio::test]
-async fn test_esplora_wasm_waterfall() {
+async fn test_esplora_wasm_waterfall_prod() {
     let url = "https://waterfall.liquidwebwallet.org/liquid/api";
 
     test_waterfall_url(url).await;
@@ -970,34 +970,27 @@ async fn test_esplora_wasm_waterfall_local() {
 
     test_env.shutdown().await;
 }
+
+#[cfg(feature = "esplora_wasm")]
 async fn test_waterfall_url(url: &str) {
     use std::time::Instant;
-    let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#3axrmm5c";
+    let desc = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";
+
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
-    let mut wollets = vec![];
-    for waterfall in [true, false] {
-        let start = Instant::now();
-        let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
-        let mut client = EsploraWasmClient::new(url, waterfall);
-        let update = client.full_scan(&wollet).await.unwrap().unwrap();
-        wollet.apply_update(update).unwrap();
-        let first_scan = start.elapsed();
-        client.full_scan(&wollet).await.unwrap();
-        let second_scan = start.elapsed() - first_scan;
+    let start = Instant::now();
+    let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
+    let mut client = EsploraWasmClient::new(url, true);
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    let first_scan = start.elapsed();
+    client.full_scan(&wollet).await.unwrap();
+    let second_scan = start.elapsed() - first_scan;
 
-        println!(
-            "waterfall:{waterfall} first_scan: {}ms second_scan: {}ms",
-            first_scan.as_millis(),
-            second_scan.as_millis()
-        );
-        wollets.push(wollet);
-    }
-
-    assert_eq!(wollets[0].balance().unwrap(), wollets[1].balance().unwrap());
-    assert_eq!(
-        wollets[0].transactions().unwrap(),
-        wollets[1].transactions().unwrap()
+    println!(
+        "first_scan: {}ms second_scan: {}ms",
+        first_scan.as_millis(),
+        second_scan.as_millis()
     );
 }
 

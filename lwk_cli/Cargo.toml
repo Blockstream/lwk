@@ -12,14 +12,14 @@ lwk_app = { version = "0.5" }
 lwk_rpc_model = { version = "0.4" }
 
 anyhow = "1.0.75"
-clap = { version = "~4.4", features = ["derive", "env"] }
+clap = { version = "~4.5", features = ["derive", "env"] }
 # config = "0.13.3"
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ctrlc = { version = "3.4.1", features = ["termination"] }
 serde_json = "1"
-clap_complete = "~4.4"
+clap_complete = "~4.5"
 uniffi = { version = "0.26.1", features = ["cli"], optional = true }
 
 [dev-dependencies]

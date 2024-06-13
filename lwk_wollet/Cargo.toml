@@ -47,6 +47,10 @@ regex-lite = "0.1.5"
 
 tracing = "0.1"
 fxhash = "0.2.1"
+waterfall = { git = "https://github.com/RCasatta/waterfall", default-features = false, features = [
+    "test_env",
+] }
+
 
 [dev-dependencies]
 lwk_jade = { version = "0.5" }

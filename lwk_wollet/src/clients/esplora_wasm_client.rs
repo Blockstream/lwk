@@ -338,7 +338,12 @@ impl EsploraWasmClient {
             .query(&[("descriptor", desc)])
             .send()
             .await?;
+        let status = response.status().as_u16();
         let body = response.text().await?;
+
+        if status != 200 {
+            return Err(Error::Generic(body));
+        }
         let waterfall_result: WaterfallResult = serde_json::from_str(&body)?;
         let mut data = Data::default();
 

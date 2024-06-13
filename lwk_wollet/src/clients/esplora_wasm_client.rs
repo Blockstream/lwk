@@ -344,6 +344,7 @@ impl EsploraWasmClient {
         if status != 200 {
             return Err(Error::Generic(body));
         }
+        println!("{body}");
         let waterfall_result: WaterfallResult = serde_json::from_str(&body)?;
         let mut data = Data::default();
 

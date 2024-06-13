@@ -988,6 +988,45 @@ async fn test_esplora_wasm_waterfall() {
     );
 }
 
+#[cfg(feature = "esplora_wasm")]
+#[tokio::test]
+async fn test_esplora_wasm_local_waterfall() {
+    init_logging();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = waterfall::test_env::launch(exe).await;
+
+    let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
+    let desc = WolletDescriptor::from_str(desc).unwrap();
+
+    let mut wollet = Wollet::without_persist(network_regtest(), desc.clone()).unwrap();
+    let mut client = EsploraWasmClient::new(test_env.base_url(), true);
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    client.full_scan(&wollet).await.unwrap();
+
+    assert_eq!(
+        format!("{:?}", wollet.balance().unwrap()),
+        "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 0}"
+    );
+
+    let address = wollet.address(None).unwrap();
+    dbg!(address.address().script_pubkey());
+    let txid = test_env.send_to(address.address(), 1_000_000);
+
+    test_env.node_generate(1).await; // TODO why this is required and mempool seems to not work
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    client.full_scan(&wollet).await.unwrap();
+
+    assert_eq!(
+        format!("{:?}", wollet.balance().unwrap()),
+        "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 1000000}"
+    );
+    assert!(wollet.transaction(&txid).unwrap().is_some())
+}
+
 #[test]
 fn test_tip() {
     let server = setup(false);

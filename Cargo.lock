@@ -3604,7 +3604,6 @@ dependencies = [
 [[package]]
 name = "waterfall"
 version = "0.1.0"
-source = "git+https://github.com/RCasatta/waterfall#629c8d19e388e390b4e4fbbdd4e611b7c1bb63a8"
 dependencies = [
  "anyhow",
  "bitcoind 0.36.0",

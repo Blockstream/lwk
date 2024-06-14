@@ -47,9 +47,6 @@ regex-lite = "0.1.5"
 
 tracing = "0.1"
 fxhash = "0.2.1"
-waterfalls = { version = "0.1", default-features = false, features = [
-    "test_env",
-] }
 
 
 [dev-dependencies]
@@ -61,6 +58,10 @@ lwk_test_util = { version = "0.4" }
 
 tempfile = "3.8.0"
 tokio = { version = "1.36.0", features = ["rt", "macros"] }
+
+waterfalls = { version = "0.1", default-features = false, features = [
+    "test_env",
+] }
 
 [features]
 default = ["esplora", "electrum"]

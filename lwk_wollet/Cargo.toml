@@ -47,7 +47,7 @@ regex-lite = "0.1.5"
 
 tracing = "0.1"
 fxhash = "0.2.1"
-waterfall = { path = "../../waterfall", default-features = false, features = [
+waterfalls = { version = "0.1", default-features = false, features = [
     "test_env",
 ] }
 

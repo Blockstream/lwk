@@ -11,8 +11,8 @@ pub struct EsploraClient {
 impl EsploraClient {
     /// Creates a client, wrapper of [`lwk_wollet::EsploraWasmClient`]
     #[wasm_bindgen(constructor)]
-    pub fn new(url: &str, waterfall: bool) -> Self {
-        let inner = lwk_wollet::EsploraWasmClient::new(url, waterfall);
+    pub fn new(url: &str, waterfalls: bool) -> Self {
+        let inner = lwk_wollet::EsploraWasmClient::new(url, waterfalls);
         Self { inner }
     }
 

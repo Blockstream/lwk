@@ -1772,7 +1772,7 @@ dependencies = [
  "tokio",
  "tracing",
  "wasm-bindgen-futures",
- "waterfall",
+ "waterfalls",
  "web-sys",
 ]
 
@@ -2541,7 +2541,7 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e0cc0f1cf93f4969faf3ea1c7d8a9faed25918d96affa959720823dfe86d4f3"
 dependencies = [
- "bitcoin_hashes 0.13.0",
+ "bitcoin_hashes 0.14.0",
  "rand",
  "secp256k1-sys 0.10.0",
  "serde",
@@ -3602,8 +3602,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "waterfall"
+name = "waterfalls"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d68453563766db68e86facad99ce4f198c519bb6a0bbe5136bdb023cd146275d"
 dependencies = [
  "anyhow",
  "bitcoind 0.36.0",

@@ -32,7 +32,7 @@ pub struct EsploraWasmClient {
     base_url: String,
     tip_hash_url: String,
     broadcast_url: String,
-    waterfall: bool,
+    waterfalls: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -79,18 +79,18 @@ struct WaterfallResult {
 impl EsploraWasmClient {
     /// Creates a new esplora client using the given `url` as endpoint.
     ///
-    /// If `waterfall` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
+    /// If `waterfalls` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
     /// during the scan and for this reason is much faster. To achieve so the "bitcoin descriptor" part is shared with
-    /// the server. All of the address are shared with the server anyway even without the waterfall sync, but in
+    /// the server. All of the address are shared with the server anyway even without the waterfalls scan, but in
     /// separate calls, and in this case future addresses cannot be derived.
     /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
     /// assets and amount exchanged due to the nature of confidential transactions.
-    pub fn new(url: &str, waterfall: bool) -> Self {
+    pub fn new(url: &str, waterfalls: bool) -> Self {
         Self {
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
-            waterfall,
+            waterfalls,
         }
     }
 
@@ -185,8 +185,8 @@ impl EsploraWasmClient {
             last_unused,
             height_blockhash,
             height_timestamp,
-        } = if self.waterfall {
-            self.get_history_waterfall(&descriptor, store).await?
+        } = if self.waterfalls {
+            self.get_history_waterfalls(&descriptor, store).await?
         } else {
             self.get_history(&descriptor, store).await?
         };
@@ -324,13 +324,13 @@ impl EsploraWasmClient {
         Ok(data)
     }
 
-    async fn get_history_waterfall(
+    async fn get_history_waterfalls(
         &mut self,
         descriptor: &WolletDescriptor,
         store: &Store,
     ) -> Result<Data, Error> {
         let client = reqwest::Client::new();
-        let descriptor_url = format!("{}/v1/waterfall", self.base_url);
+        let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
         // TODO refuse for elip151
         let desc = descriptor.descriptor().to_string(); // TODO remove unneeded key origin for privacy improvement
         let response = client
@@ -345,10 +345,10 @@ impl EsploraWasmClient {
             return Err(Error::Generic(body));
         }
         println!("{body}");
-        let waterfall_result: WaterfallResult = serde_json::from_str(&body)?;
+        let waterfalls_result: WaterfallResult = serde_json::from_str(&body)?;
         let mut data = Data::default();
 
-        for (desc, chain_history) in waterfall_result.txs_seen.iter() {
+        for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
             let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
             let chain: Chain = (&desc)
                 .try_into()
@@ -364,7 +364,7 @@ impl EsploraWasmClient {
             }
             for (i, script_history) in chain_history.iter().enumerate() {
                 // TODO handle paging by asking following pages if there are more than 1000 results
-                let child = ChildNumber::from(waterfall_result.page as u32 * 1000 + i as u32);
+                let child = ChildNumber::from(waterfalls_result.page as u32 * 1000 + i as u32);
                 let (script, cached) = store.get_or_derive(chain, child, &desc)?;
                 if !cached {
                     data.scripts.insert(script, (chain, child));

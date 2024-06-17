@@ -1003,13 +1003,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "elements"
+version = "0.24.1"
+source = "git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2#487f31b8d70d26689b48b81ee8f27d6803f84af2"
+dependencies = [
+ "bitcoin 0.31.2",
+ "secp256k1-zkp",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "elements-miniscript"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd2c9c3a0acd5a30061dc5f1859b816ef01d320da66d074d9e23aad40e7a7eba"
 dependencies = [
  "bitcoin 0.31.2",
- "elements",
+ "elements 0.24.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "miniscript",
+]
+
+[[package]]
+name = "elements-miniscript"
+version = "0.3.1"
+source = "git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6#383e58782695652f359623f97da1d56f9ee076a6"
+dependencies = [
+ "bitcoin 0.31.2",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
  "miniscript",
  "serde",
 ]
@@ -1897,7 +1918,7 @@ dependencies = [
 name = "lwk_bindings"
 version = "0.7.0"
 dependencies = [
- "elements",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",
@@ -1915,7 +1936,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "ctrlc",
- "elements",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
  "lwk_app",
  "lwk_containers",
  "lwk_rpc_model",
@@ -1934,8 +1955,8 @@ name = "lwk_common"
 version = "0.7.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
- "elements-miniscript",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "getrandom",
  "qr_code",
  "rand",
@@ -1961,8 +1982,8 @@ name = "lwk_jade"
 version = "0.7.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
- "elements-miniscript",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "hex",
  "lwk_common",
  "lwk_containers",
@@ -1986,7 +2007,7 @@ dependencies = [
 name = "lwk_ledger"
 version = "0.7.0"
 dependencies = [
- "elements-miniscript",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "ledger-apdu",
  "lwk_common",
  "lwk_containers",
@@ -2008,7 +2029,7 @@ version = "0.7.0"
 dependencies = [
  "base64 0.13.1",
  "bip39",
- "elements-miniscript",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "lwk_common",
  "lwk_jade",
  "lwk_ledger",
@@ -2022,7 +2043,7 @@ version = "0.7.0"
 dependencies = [
  "bip39",
  "electrsd",
- "elements-miniscript",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "lwk_common",
  "lwk_containers",
  "pulldown-cmark",
@@ -2078,8 +2099,8 @@ dependencies = [
  "base64 0.21.7",
  "bip39",
  "electrum-client",
- "elements",
- "elements-miniscript",
+ "elements 0.24.1 (git+https://github.com/ElementsProject/rust-elements?rev=487f31b8d70d26689b48b81ee8f27d6803f84af2)",
+ "elements-miniscript 0.3.1 (git+https://github.com/LeoComandini/elements-miniscript?rev=383e58782695652f359623f97da1d56f9ee076a6)",
  "fxhash",
  "idna 0.4.0",
  "js-sys",
@@ -4219,8 +4240,8 @@ dependencies = [
  "base64 0.21.7",
  "bitcoind 0.36.0",
  "clap",
- "elements",
- "elements-miniscript",
+ "elements 0.24.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "elements-miniscript 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger",
  "form_urlencoded",
  "fxhash",

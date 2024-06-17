@@ -8,8 +8,10 @@ documentation = "https://docs.rs/lwk_common"
 
 [dependencies]
 base64 = "0.21.4"
-elements = { version = "0.24.0", features = ["base64"] }
-elements-miniscript = "0.3"
+#elements = { version = "0.24.0", features = ["base64"] }
+#elements-miniscript = "0.3"
+elements = { git = "https://github.com/ElementsProject/rust-elements", rev = "487f31b8d70d26689b48b81ee8f27d6803f84af2", features = ["base64"] } 
+elements-miniscript = { git = "https://github.com/LeoComandini/elements-miniscript", rev = "383e58782695652f359623f97da1d56f9ee076a6" }
 qr_code = { version = "2.0.0", features = ["bmp"] }
 rand = "0.8"
 thiserror = "1.0.48"

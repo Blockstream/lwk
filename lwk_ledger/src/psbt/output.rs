@@ -54,7 +54,7 @@ const PSBT_ELEMENTS_OUT_BLIND_VALUE_PROOF: u8 = 0x09;
 /// be provided too.
 const PSBT_ELEMENTS_OUT_BLIND_ASSET_PROOF: u8 = 0x0a;
 /// The 32 byte asset blinding factor for this output.
-//const PSBT_ELEMENTS_OUT_ASSET_BLINDING_FACTOR: u8 = 0x0b;
+const PSBT_ELEMENTS_OUT_ASSET_BLINDING_FACTOR: u8 = 0x0b;
 
 pub fn get_v2_output_pairs(output: &Output, _txout: &TxOut) -> Vec<raw::Pair> {
     let mut rv: Vec<raw::Pair> = Default::default();
@@ -138,11 +138,9 @@ pub fn get_v2_output_pairs(output: &Output, _txout: &TxOut) -> Vec<raw::Pair> {
         rv.push_prop(output.blind_asset_proof as <PSBT_ELEMENTS_OUT_BLIND_ASSET_PROOF, _>)
     }
 
-    /*
     impl_pset_get_pair! {
         rv.push_prop(output.asset_blinding_factor as <PSBT_ELEMENTS_OUT_ASSET_BLINDING_FACTOR, _>)
     }
-     * */
 
     for (key, value) in output.proprietary.iter() {
         rv.push(raw::Pair {

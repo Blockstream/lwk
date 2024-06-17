@@ -157,7 +157,7 @@ impl WolletDescriptor {
                 if c == ']' {
                     skip = false;
                 }
-            } else if c == '[' {
+            } else if c == '[' || c == '#' {
                 skip = true;
             } else {
                 result.push(c)
@@ -278,7 +278,7 @@ mod test {
     fn test_strip() {
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
         let desc: WolletDescriptor = desc_str.parse().unwrap();
-        let expected = "elwpkh(tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*)#h8arpn9r";
+        let expected = "elwpkh(tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*)";
         assert_eq!(expected, desc.bitcoin_descriptor_without_key_origin());
     }
 }

@@ -1024,7 +1024,16 @@ async fn test_esplora_wasm_local_waterfalls() {
         format!("{:?}", wollet.balance().unwrap()),
         "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 1000000}"
     );
-    assert!(wollet.transaction(&txid).unwrap().is_some())
+    let tx = wollet.transaction(&txid).unwrap().unwrap();
+
+    assert!(tx.height.is_none());
+    test_env.node_generate(1).await;
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    client.full_scan(&wollet).await.unwrap();
+    let tx = wollet.transaction(&txid).unwrap().unwrap();
+    assert_eq!(tx.height.unwrap(), 3);
 }
 
 #[test]

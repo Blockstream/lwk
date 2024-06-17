@@ -1014,7 +1014,7 @@ async fn test_esplora_wasm_local_waterfalls() {
     dbg!(address.address().script_pubkey());
     let txid = test_env.send_to(address.address(), 1_000_000);
 
-    test_env.node_generate(1).await; // TODO why this is required and mempool seems to not work
+    async_sleep(2_000).await;
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();

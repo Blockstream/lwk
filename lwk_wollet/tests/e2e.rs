@@ -1003,7 +1003,6 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();
-    client.full_scan(&wollet).await.unwrap();
 
     assert_eq!(
         format!("{:?}", wollet.balance().unwrap()),
@@ -1018,7 +1017,6 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();
-    client.full_scan(&wollet).await.unwrap();
 
     assert_eq!(
         format!("{:?}", wollet.balance().unwrap()),
@@ -1031,7 +1029,7 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();
-    client.full_scan(&wollet).await.unwrap();
+
     let tx = wollet.transaction(&txid).unwrap().unwrap();
     assert_eq!(tx.height.unwrap(), 3);
 }

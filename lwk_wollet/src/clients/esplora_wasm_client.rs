@@ -186,7 +186,13 @@ impl EsploraWasmClient {
             height_blockhash,
             height_timestamp,
         } = if self.waterfalls {
-            self.get_history_waterfalls(&descriptor, store).await?
+            match self.get_history_waterfalls(&descriptor, store).await {
+                Ok(d) => d,
+                Err(Error::UsingWaterfallsWithElip151) => {
+                    self.get_history(&descriptor, store).await?
+                }
+                Err(e) => return Err(e),
+            }
         } else {
             self.get_history(&descriptor, store).await?
         };
@@ -331,7 +337,9 @@ impl EsploraWasmClient {
     ) -> Result<Data, Error> {
         let client = reqwest::Client::new();
         let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
-        // TODO refuse for elip151
+        if descriptor.is_elip151() {
+            return Err(Error::UsingWaterfallsWithElip151);
+        }
         let desc = descriptor.bitcoin_descriptor_without_key_origin();
         let response = client
             .get(&descriptor_url)

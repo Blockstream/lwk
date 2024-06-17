@@ -156,6 +156,9 @@ pub enum Error {
 
     #[error("An issuance has already being set on this tx builder")]
     IssuanceAlreadySet,
+
+    #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
+    UsingWaterfallsWithElip151,
 }
 
 // cannot derive automatically with this error because of trait bound

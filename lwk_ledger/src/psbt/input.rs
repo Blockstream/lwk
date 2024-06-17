@@ -115,26 +115,26 @@ const PSBT_ELEMENTS_IN_ISSUANCE_BLIND_VALUE_PROOF: u8 = 0x0f;
 const PSBT_ELEMENTS_IN_ISSUANCE_BLIND_INFLATION_KEYS_PROOF: u8 = 0x10;
 /// The explicit value for the input being spent. If provided,
 /// PSBT_ELEMENTS_IN_VALUE_PROOF must be provided too.
-//const PSBT_ELEMENTS_IN_EXPLICIT_VALUE: u8 = 0x11;
+const PSBT_ELEMENTS_IN_EXPLICIT_VALUE: u8 = 0x11;
 /// An explicit value rangeproof that proves that the value commitment in this
 /// input's UTXO matches the explicit value in PSBT_ELEMENTS_IN_EXPLICIT_VALUE.
 /// If provided, PSBT_ELEMENTS_IN_EXPLICIT_VALUE must be provided too.
-//const PSBT_ELEMENTS_IN_VALUE_PROOF: u8 = 0x12;
+const PSBT_ELEMENTS_IN_VALUE_PROOF: u8 = 0x12;
 /// The explicit asset for the input being spent. If provided,
 /// PSBT_ELEMENTS_IN_ASSET_PROOF must be provided too.
-//const PSBT_ELEMENTS_IN_EXPLICIT_ASSET: u8 = 0x13;
+const PSBT_ELEMENTS_IN_EXPLICIT_ASSET: u8 = 0x13;
 /// An asset surjection proof with this input's asset as the only asset in the
 /// input set in order to prove that the asset commitment in the UTXO matches
 /// the explicit asset in PSBT_ELEMENTS_IN_EXPLICIT_ASSET. If provided,
 /// PSBT_ELEMENTS_IN_EXPLICIT_ASSET must be provided too.
-//const PSBT_ELEMENTS_IN_ASSET_PROOF: u8 = 0x14;
+const PSBT_ELEMENTS_IN_ASSET_PROOF: u8 = 0x14;
 /// A boolean flag. 0x00 indicates the issuance should not be blinded,
 /// 0x01 indicates it should be. If not specified, assumed to be 0x01.
 /// Note that this does not indicate actual blinding status,
 /// but rather the expected blinding status prior to signing.
-//const PSBT_ELEMENTS_IN_BLINDED_ISSUANCE: u8 = 0x15;
+const PSBT_ELEMENTS_IN_BLINDED_ISSUANCE: u8 = 0x15;
 /// The 32 byte asset blinding factor for the input being spent.
-//const PSBT_ELEMENTS_IN_ASSET_BLINDING_FACTOR: u8 = 0x16;
+const PSBT_ELEMENTS_IN_ASSET_BLINDING_FACTOR: u8 = 0x16;
 
 pub fn get_v2_input_pairs(input: &Input, _txin: &TxIn) -> Vec<raw::Pair> {
     let mut rv: Vec<raw::Pair> = Default::default();
@@ -314,7 +314,6 @@ pub fn get_v2_input_pairs(input: &Input, _txin: &TxIn) -> Vec<raw::Pair> {
         rv.push_prop(input.in_issuance_blind_inflation_keys_proof as <PSBT_ELEMENTS_IN_ISSUANCE_BLIND_INFLATION_KEYS_PROOF, _>)
     }
 
-    /*
     impl_pset_get_pair! {
         rv.push_prop(input.amount as <PSBT_ELEMENTS_IN_EXPLICIT_VALUE, _>)
     }
@@ -338,7 +337,6 @@ pub fn get_v2_input_pairs(input: &Input, _txin: &TxIn) -> Vec<raw::Pair> {
     impl_pset_get_pair! {
         rv.push_prop(input.asset_blinding_factor as <PSBT_ELEMENTS_IN_ASSET_BLINDING_FACTOR, _>)
     }
-     * */
 
     for (key, value) in input.proprietary.iter() {
         rv.push(raw::Pair {

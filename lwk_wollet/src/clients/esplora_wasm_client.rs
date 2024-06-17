@@ -71,7 +71,7 @@ struct Data {
 }
 
 #[derive(Deserialize)]
-struct WaterfallResult {
+struct WaterfallsResult {
     txs_seen: HashMap<String, Vec<Vec<History>>>,
     page: u16,
 }
@@ -332,7 +332,7 @@ impl EsploraWasmClient {
         let client = reqwest::Client::new();
         let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
         // TODO refuse for elip151
-        let desc = descriptor.descriptor().to_string(); // TODO remove unneeded key origin for privacy improvement
+        let desc = descriptor.bitcoin_descriptor_without_key_origin();
         let response = client
             .get(&descriptor_url)
             .query(&[("descriptor", desc)])
@@ -344,8 +344,8 @@ impl EsploraWasmClient {
         if status != 200 {
             return Err(Error::Generic(body));
         }
-        println!("{body}");
-        let waterfalls_result: WaterfallResult = serde_json::from_str(&body)?;
+
+        let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
         let mut data = Data::default();
 
         for (desc, chain_history) in waterfalls_result.txs_seen.iter() {

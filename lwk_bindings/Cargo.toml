@@ -12,7 +12,8 @@ lwk_signer = { version = "0.5" }
 lwk_wollet = { version = "0.5" }
 lwk_test_util = { version = "0.4" }
 
-elements = "0.24.0"
+#elements = "0.24.0"
+elements = { git = "https://github.com/ElementsProject/rust-elements", rev = "487f31b8d70d26689b48b81ee8f27d6803f84af2" }
 thiserror = "1.0.50"
 uniffi = { version = "0.26.1", features = ["bindgen-tests"] }
 serde_json = "1"

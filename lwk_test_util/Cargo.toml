@@ -11,7 +11,8 @@ lwk_common = { version = "0.5" }
 lwk_containers = { version = "0.3" }
 
 electrsd = { version = "0.27.2", features = ["legacy"] }
-elements-miniscript = "0.3.1"
+#elements-miniscript = "0.3.1"
+elements-miniscript = { git = "https://github.com/LeoComandini/elements-miniscript", rev = "383e58782695652f359623f97da1d56f9ee076a6" }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

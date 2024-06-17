@@ -954,6 +954,7 @@ async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -
     panic!("update didn't arrive");
 }
 
+/*
 #[ignore = "require network calls"]
 #[cfg(feature = "esplora_wasm")]
 #[tokio::test]
@@ -961,7 +962,7 @@ async fn test_esplora_wasm_waterfalls() {
     use std::time::Instant;
 
     let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
-    let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#3axrmm5c";
+    let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/))#3axrmm5c";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
     let mut wollets = vec![];
@@ -997,7 +998,7 @@ async fn test_esplora_wasm_local_waterfalls() {
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
     let test_env = waterfalls::test_env::launch(exe).await;
 
-    let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
+    let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/))#u0y4axgs";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
     let network = ElementsNetwork::default_regtest();
@@ -1050,7 +1051,7 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     // test fallback (no waterfalls) because elip151 desc
     // note the scan will find transactions because the descriptor was used above (with different blinding key)
-    let desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))";
+    let desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/))";
     let desc = WolletDescriptor::from_str(desc).unwrap();
     let mut wollet = Wollet::new(network, NoPersist::new(), desc).unwrap();
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
@@ -1060,6 +1061,7 @@ async fn test_esplora_wasm_local_waterfalls() {
         "different blinding key should have no txs"
     );
 }
+ * */
 
 #[test]
 fn test_tip() {

@@ -76,6 +76,8 @@ impl Wollet {
     ) -> Result<usize, Error> {
         let mut input = Input::from_prevout(utxo.outpoint);
         let mut txout = self.get_txout(&utxo.outpoint)?;
+        let value_comm = txout.value.commitment().expect("TODO");
+        let asset_gen = txout.asset.commitment().expect("TODO");
         // This field is used by stateless blinders or signers to
         // learn the blinding factors and unblinded values of this input.
         // We need this since the output witness, which includes the
@@ -84,6 +86,34 @@ impl Wollet {
         // relying on its presence.
         input.in_utxo_rangeproof = txout.witness.rangeproof.take();
         input.witness_utxo = Some(txout);
+        // Needed by ledger
+        let mut rng = rand::thread_rng();
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
+        use elements::secp256k1_zkp::{RangeProof, SurjectionProof};
+        use elements::{BlindAssetProofs, BlindValueProofs};
+
+        input.asset = Some(utxo.unblinded.asset);
+        input.blind_asset_proof = Some(Box::new(
+            SurjectionProof::blind_asset_proof(
+                &mut rng,
+                &secp,
+                utxo.unblinded.asset,
+                utxo.unblinded.asset_bf,
+            )
+            .expect("TODO"),
+        ));
+        input.amount = Some(utxo.unblinded.value);
+        input.blind_value_proof = Some(Box::new(
+            RangeProof::blind_value_proof(
+                &mut rng,
+                &secp,
+                utxo.unblinded.value,
+                value_comm,
+                asset_gen,
+                utxo.unblinded.value_bf,
+            )
+            .expect("TODO"),
+        ));
 
         pset.add_input(input);
         let idx = pset.inputs().len() - 1;

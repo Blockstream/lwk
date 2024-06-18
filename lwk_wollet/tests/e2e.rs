@@ -14,7 +14,7 @@ use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
-use test_wollet::TestWollet;
+use test_wollet::{generate_signer, TestWollet};
 
 #[test]
 fn liquid_send_jade_signer() {

@@ -1,7 +1,7 @@
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
-use elements::bitcoin::bip32::{DerivationPath, Xpriv};
+use elements::bitcoin::bip32::Xpriv;
 use elements::bitcoin::{Amount, Network};
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
@@ -10,8 +10,6 @@ use elements::pset::PartiallySignedTransaction;
 use elements::{Address, AssetId, TxOutWitness, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
-use lwk_common::Signer;
-use lwk_signer::{AnySigner, SwSigner};
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
@@ -300,7 +298,7 @@ pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransac
     pset
 }
 
-fn generate_mnemonic() -> String {
+pub fn generate_mnemonic() -> String {
     let mut bytes = [0u8; 16];
     thread_rng().fill(&mut bytes);
     bip39::Mnemonic::from_entropy(&bytes).unwrap().to_string()
@@ -322,28 +320,6 @@ pub fn generate_xprv() -> Xpriv {
     let mut seed = [0u8; 16];
     thread_rng().fill(&mut seed);
     Xpriv::new_master(Network::Regtest, &seed).unwrap()
-}
-
-pub fn generate_signer() -> SwSigner {
-    let mnemonic = generate_mnemonic();
-    SwSigner::new(&mnemonic, false).unwrap()
-}
-
-pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
-    assert!(threshold <= signers.len());
-    let xpubs = signers
-        .iter()
-        .map(|s| {
-            let fingerprint = s.fingerprint().unwrap();
-            let path_str = "/84h/0h/0h";
-            let path = DerivationPath::from_str(&format!("m{path_str}")).unwrap();
-            let xpub = s.derive_xpub(&path).unwrap();
-            format!("[{fingerprint}{path_str}]{xpub}/<0;1>/*",)
-        })
-        .collect::<Vec<_>>()
-        .join(",");
-    let slip77 = generate_slip77();
-    format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
 }
 
 pub fn n_issuances(details: &lwk_common::PsetDetails) -> usize {

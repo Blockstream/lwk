@@ -1,5 +1,6 @@
 use std::{str::FromStr, thread, time::Duration};
 
+use elements::bitcoin::bip32::DerivationPath;
 use elements::{
     hashes::Hash, pset::PartiallySignedTransaction, Address, AssetId, ContractHash, OutPoint, Txid,
 };
@@ -7,10 +8,12 @@ use elements_miniscript::DescriptorPublicKey;
 use elements_miniscript::ForEachKey;
 use lwk_common::Signer;
 use lwk_signer::AnySigner;
+use lwk_signer::SwSigner;
 use lwk_test_util::{
     add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt,
     TestElectrumServer, TEST_DESCRIPTOR,
 };
+use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::ElementsNetwork;
 use lwk_wollet::Tip;
 use lwk_wollet::{
@@ -601,4 +604,26 @@ impl TestWollet {
         }
         panic!("Wait for height {height} failed");
     }
+}
+
+pub fn generate_signer() -> SwSigner {
+    let mnemonic = generate_mnemonic();
+    SwSigner::new(&mnemonic, false).unwrap()
+}
+
+pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
+    assert!(threshold <= signers.len());
+    let xpubs = signers
+        .iter()
+        .map(|s| {
+            let fingerprint = s.fingerprint().unwrap();
+            let path_str = "/84h/0h/0h";
+            let path = DerivationPath::from_str(&format!("m{path_str}")).unwrap();
+            let xpub = s.derive_xpub(&path).unwrap();
+            format!("[{fingerprint}{path_str}]{xpub}/<0;1>/*",)
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let slip77 = generate_slip77();
+    format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
 }

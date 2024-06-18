@@ -1695,7 +1695,6 @@ dependencies = [
  "elements-miniscript",
  "lwk_common",
  "lwk_containers",
- "lwk_jade",
  "lwk_ledger",
  "lwk_signer",
  "lwk_wollet",

@@ -13,12 +13,8 @@ use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_common::Signer;
-use lwk_jade::register_multisig::{
-    GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams,
-};
 use lwk_signer::bip39::Mnemonic;
 use lwk_signer::{AnySigner, SwSigner};
-use lwk_wollet::elements_miniscript::ConfidentialDescriptor;
 use lwk_wollet::{
     full_scan_with_electrum_client, AddressResult, BlockchainBackend, Contract, ElectrumClient,
     ElectrumUrl, ElementsNetwork, Tip, UnvalidatedRecipient, WalletTx, Wollet, WolletDescriptor,
@@ -959,33 +955,6 @@ pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
         .join(",");
     let slip77 = generate_slip77();
     format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
-}
-
-pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
-    // Register a multisig descriptor on each *jade* signer
-    let desc_orig: WolletDescriptor = desc.parse().unwrap();
-    let desc: JadeDescriptor = desc_orig.as_ref().try_into().unwrap();
-    let params = RegisterMultisigParams {
-        network: lwk_jade::Network::LocaltestLiquid,
-        multisig_name: name.into(),
-        descriptor: desc,
-    };
-
-    let params_get = GetRegisteredMultisigParams {
-        multisig_name: name.into(),
-    };
-
-    for signer in signers {
-        if let AnySigner::Jade(s, _) = signer {
-            s.register_multisig(params.clone()).unwrap();
-
-            let r = s.get_registered_multisig(params_get.clone()).unwrap();
-            let desc_elements =
-                ConfidentialDescriptor::<DescriptorPublicKey>::try_from(&r.descriptor).unwrap();
-            let desc_wollet = WolletDescriptor::try_from(desc_elements).unwrap();
-            assert_eq!(desc_orig.to_string(), desc_wollet.to_string());
-        }
-    }
 }
 
 fn n_issuances(details: &lwk_common::PsetDetails) -> usize {

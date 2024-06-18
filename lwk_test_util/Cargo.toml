@@ -8,7 +8,6 @@ documentation = "https://docs.rs/lwk_test_util"
 
 [dependencies]
 lwk_common = { version = "0.5" }
-lwk_jade = { version = "0.5" }
 lwk_ledger = { version = "0.3" }
 lwk_signer = { version = "0.5" }
 lwk_wollet = { version = "0.5" }

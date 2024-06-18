@@ -1,11 +1,16 @@
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
-use lwk_jade::TestJadeEmulator;
+use lwk_jade::{
+    register_multisig::{GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams},
+    TestJadeEmulator,
+};
 use lwk_signer::AnySigner;
 use lwk_test_util::{
-    generate_signer, init_logging, multisig_desc, register_multisig, setup, TestElectrumServer,
-    TestWollet, TEST_MNEMONIC,
+    generate_signer, init_logging, multisig_desc, setup, TestElectrumServer, TestWollet,
+    TEST_MNEMONIC,
 };
+use lwk_wollet::WolletDescriptor;
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
@@ -207,5 +212,32 @@ mod serial {
         let id = jade.identifier().unwrap();
         let jade_signer = AnySigner::Jade(jade, id);
         multi_multisig(&server, &jade_signer);
+    }
+}
+
+pub fn register_multisig(signers: &[&AnySigner], name: &str, desc: &str) {
+    // Register a multisig descriptor on each *jade* signer
+    let desc_orig: WolletDescriptor = desc.parse().unwrap();
+    let desc: JadeDescriptor = desc_orig.as_ref().try_into().unwrap();
+    let params = RegisterMultisigParams {
+        network: lwk_jade::Network::LocaltestLiquid,
+        multisig_name: name.into(),
+        descriptor: desc,
+    };
+
+    let params_get = GetRegisteredMultisigParams {
+        multisig_name: name.into(),
+    };
+
+    for signer in signers {
+        if let AnySigner::Jade(s, _) = signer {
+            s.register_multisig(params.clone()).unwrap();
+
+            let r = s.get_registered_multisig(params_get.clone()).unwrap();
+            let desc_elements =
+                ConfidentialDescriptor::<DescriptorPublicKey>::try_from(&r.descriptor).unwrap();
+            let desc_wollet = WolletDescriptor::try_from(desc_elements).unwrap();
+            assert_eq!(desc_orig.to_string(), desc_wollet.to_string());
+        }
     }
 }

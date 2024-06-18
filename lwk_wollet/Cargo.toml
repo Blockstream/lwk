@@ -51,7 +51,7 @@ fxhash = "0.2.1"
 
 [dev-dependencies]
 lwk_jade = { version = "0.5", features = ["test_emulator"] }
-lwk_ledger = { version = "0.3" }
+lwk_ledger = { version = "0.3", features = ["test_emulator"] }
 lwk_signer = { version = "0.5", features = ["jade", "ledger"] }
 lwk_containers = { version = "0.3" }
 lwk_test_util = { version = "0.4" }

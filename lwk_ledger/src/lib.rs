@@ -8,6 +8,12 @@ mod psbt;
 mod transport;
 mod wallet;
 
+#[cfg(feature = "test_emulator")]
+mod ledger_emulator;
+
+#[cfg(feature = "test_emulator")]
+pub use ledger_emulator::TestLedgerEmulator;
+
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;

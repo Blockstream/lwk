@@ -31,8 +31,6 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tracing::metadata::LevelFilter;
 
-pub mod ledger;
-
 const DEFAULT_FEE_RATE: f32 = 100.0;
 
 static TRACING_INIT: Once = Once::new();

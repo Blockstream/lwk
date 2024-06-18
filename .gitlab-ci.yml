@@ -170,3 +170,4 @@ nix:
   script:
     - nix $EXP_FEAT $CACHE build .
     - nix $EXP_FEAT $CACHE develop . -c cargo test -p lwk_cli --features registry -- registry_publish
+    - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . | grep -cv ERROR # fails when circular deps with dev deps are found

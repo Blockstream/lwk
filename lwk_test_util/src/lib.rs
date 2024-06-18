@@ -1,18 +1,14 @@
-extern crate lwk_wollet;
-
-use crate::bitcoin::amount::Denomination;
-use crate::bitcoin::bip32::{DerivationPath, Xpriv};
-use crate::bitcoin::{Amount, Network};
-use crate::elements::hashes::Hash;
-use crate::elements::hex::ToHex;
-use crate::elements::pset::PartiallySignedTransaction;
-use crate::elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Txid};
-use bip39::Mnemonic;
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
+use elements::bitcoin::amount::Denomination;
+use elements::bitcoin::bip32::{DerivationPath, Xpriv};
+use elements::bitcoin::{Amount, Network};
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
-use elements::hex::FromHex;
+use elements::hashes::Hash;
+use elements::hex::{FromHex, ToHex};
+use elements::pset::PartiallySignedTransaction;
+use elements::{Address, AssetId, ContractHash, OutPoint, TxOutWitness, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use elements_miniscript::{DescriptorPublicKey, ForEachKey};
@@ -20,9 +16,14 @@ use lwk_common::Signer;
 use lwk_jade::register_multisig::{
     GetRegisteredMultisigParams, JadeDescriptor, RegisterMultisigParams,
 };
-use lwk_signer::*;
+use lwk_signer::bip39::Mnemonic;
+use lwk_signer::{AnySigner, SwSigner};
 use lwk_wollet::elements_miniscript::ConfidentialDescriptor;
-use lwk_wollet::*;
+use lwk_wollet::{
+    full_scan_with_electrum_client, AddressResult, BlockchainBackend, Contract, ElectrumClient,
+    ElectrumUrl, ElementsNetwork, Tip, UnvalidatedRecipient, WalletTx, Wollet, WolletDescriptor,
+    WolletTxBuilder,
+};
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
@@ -285,7 +286,7 @@ pub fn network_regtest() -> ElementsNetwork {
     ElementsNetwork::ElementsRegtest { policy_asset }
 }
 
-pub fn new_unsupported_wallet(desc: &str, expected: Error) {
+pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
     let r: Result<WolletDescriptor, _> = add_checksum(desc).parse();
 
     match r {

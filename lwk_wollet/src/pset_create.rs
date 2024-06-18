@@ -114,6 +114,7 @@ impl Wollet {
             None => ContractHash::from_slice(&[0u8; 32]).expect("static"),
         };
         input.issuance_asset_entropy = Some(contract_hash.to_byte_array());
+        input.blinded_issuance = Some(0x00);
 
         let (asset, token) = input.issuance_ids();
 
@@ -142,6 +143,7 @@ impl Wollet {
         let nonce = token_asset_bf.into_inner();
         input.issuance_blinding_nonce = Some(nonce);
         input.issuance_asset_entropy = Some(*entropy);
+        input.blinded_issuance = Some(0x00);
         Ok(())
     }
 

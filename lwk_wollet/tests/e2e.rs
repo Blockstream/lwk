@@ -1157,3 +1157,12 @@ fn few_lbtc() {
     wallet.send_asset(&signers, &node_address, &asset, None);
     wallet.send_btc(&signers, None, Some((node_address, 1)));
 }
+
+pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
+    let r: Result<WolletDescriptor, _> = add_checksum(desc).parse();
+
+    match r {
+        Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
+        Err(err) => assert_eq!(err.to_string(), expected.to_string()),
+    }
+}

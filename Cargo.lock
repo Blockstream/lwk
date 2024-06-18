@@ -1696,7 +1696,6 @@ dependencies = [
  "lwk_common",
  "lwk_containers",
  "lwk_signer",
- "lwk_wollet",
  "pulldown-cmark",
  "rand",
  "serde_json",

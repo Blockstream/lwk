@@ -2,7 +2,9 @@ use lwk_common::{singlesig_desc, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_ledger::TestLedgerEmulator;
 use lwk_signer::AnySigner;
-use lwk_test_util::{setup, TestWollet};
+use lwk_test_util::setup;
+
+use crate::test_wollet::TestWollet;
 
 #[test]
 fn emul_roundtrip_wpkh() {

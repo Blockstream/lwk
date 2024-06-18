@@ -48,6 +48,8 @@ regex-lite = "0.1.5"
 tracing = "0.1"
 fxhash = "0.2.1"
 
+lwk_signer = { version = "0.5", features = ["jade", "ledger"], optional = true }
+
 
 [dev-dependencies]
 lwk_jade = { version = "0.5", features = ["test_emulator"] }
@@ -70,6 +72,7 @@ esplora = ["reqwest/blocking"]
 electrum = ["electrum-client"]
 esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "tokio"]
 bindings = []
+test_wallet = ["lwk_signer"]
 
 [[test]]
 name = "e2e"

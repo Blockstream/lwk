@@ -1,5 +1,6 @@
 mod test_jade;
 mod test_ledger;
+mod test_wollet;
 
 use crate::test_jade::jade_setup;
 use electrum_client::ScriptStatus;
@@ -13,6 +14,7 @@ use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
+use test_wollet::TestWollet;
 
 #[test]
 fn liquid_send_jade_signer() {

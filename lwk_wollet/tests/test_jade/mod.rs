@@ -7,10 +7,11 @@ use lwk_jade::{
 };
 use lwk_signer::AnySigner;
 use lwk_test_util::{
-    generate_signer, init_logging, multisig_desc, setup, TestElectrumServer, TestWollet,
-    TEST_MNEMONIC,
+    generate_signer, init_logging, multisig_desc, setup, TestElectrumServer, TEST_MNEMONIC,
 };
 use lwk_wollet::WolletDescriptor;
+
+use crate::test_wollet::TestWollet;
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);

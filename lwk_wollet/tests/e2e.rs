@@ -913,7 +913,7 @@ async fn test_esplora_wasm_client() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let network = network_regtest();
+    let network = ElementsNetwork::default_regtest();
 
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
 
@@ -1000,7 +1000,8 @@ async fn test_esplora_wasm_local_waterfalls() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
-    let mut wollet = Wollet::without_persist(network_regtest(), desc.clone()).unwrap();
+    let mut wollet =
+        Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
     let mut client = EsploraWasmClient::new(test_env.base_url(), true);
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();

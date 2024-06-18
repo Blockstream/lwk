@@ -41,13 +41,15 @@ impl Signer {
 
 #[cfg(test)]
 mod tests {
+    use lwk_wollet::ElementsNetwork;
+
     use crate::{Mnemonic, Pset, Signer};
 
     #[test]
     fn signer() {
         let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
-        let network: crate::Network = lwk_test_util::network_regtest().into();
+        let network: crate::Network = ElementsNetwork::default_regtest().into();
 
         let signer = Signer::new(&mnemonic, &network).unwrap();
 

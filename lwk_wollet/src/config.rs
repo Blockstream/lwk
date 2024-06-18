@@ -43,6 +43,14 @@ impl ElementsNetwork {
         }
     }
 
+    pub fn default_regtest() -> ElementsNetwork {
+        let policy_asset =
+            AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
+                .expect("static");
+
+        ElementsNetwork::ElementsRegtest { policy_asset }
+    }
+
     #[cfg(feature = "bindings")]
     pub fn tx_builder(&self) -> crate::TxBuilder {
         crate::TxBuilder::new(*self)

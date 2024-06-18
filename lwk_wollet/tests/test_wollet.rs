@@ -8,9 +8,10 @@ use elements_miniscript::ForEachKey;
 use lwk_common::Signer;
 use lwk_signer::AnySigner;
 use lwk_test_util::{
-    add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, network_regtest,
-    pset_rt, TestElectrumServer, TEST_DESCRIPTOR,
+    add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt,
+    TestElectrumServer, TEST_DESCRIPTOR,
 };
+use lwk_wollet::ElementsNetwork;
 use lwk_wollet::Tip;
 use lwk_wollet::{
     AddressResult, BlockchainBackend, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx,
@@ -40,7 +41,7 @@ impl TestWollet {
         let tls = false;
         let validate_domain = false;
 
-        let network = network_regtest();
+        let network = ElementsNetwork::default_regtest();
         let descriptor = add_checksum(desc);
 
         let desc: WolletDescriptor = descriptor.parse().unwrap();
@@ -575,7 +576,7 @@ impl TestWollet {
         let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();
         let db_root_dir = wollet.db_root_dir();
-        let network = network_regtest();
+        let network = ElementsNetwork::default_regtest();
 
         for _ in 0..2 {
             let wollet =

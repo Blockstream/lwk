@@ -13,7 +13,7 @@ use elements_miniscript::descriptor::checksum::desc_checksum;
 use lwk_common::Signer;
 use lwk_signer::bip39::Mnemonic;
 use lwk_signer::{AnySigner, SwSigner};
-use lwk_wollet::{ElementsNetwork, WolletDescriptor};
+use lwk_wollet::WolletDescriptor;
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
@@ -257,13 +257,8 @@ impl TestElectrumServer {
     }
 }
 
-pub fn regtest_policy_asset() -> AssetId {
+fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
-}
-
-pub fn network_regtest() -> ElementsNetwork {
-    let policy_asset = regtest_policy_asset();
-    ElementsNetwork::ElementsRegtest { policy_asset }
 }
 
 pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {

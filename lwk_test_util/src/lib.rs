@@ -11,7 +11,6 @@ use elements::{Address, AssetId, TxOutWitness, Txid};
 use elements::{Block, TxOutSecrets};
 use elements_miniscript::descriptor::checksum::desc_checksum;
 use lwk_common::Signer;
-use lwk_signer::bip39::Mnemonic;
 use lwk_signer::{AnySigner, SwSigner};
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
@@ -304,7 +303,7 @@ pub fn prune_proofs(pset: &PartiallySignedTransaction) -> PartiallySignedTransac
 fn generate_mnemonic() -> String {
     let mut bytes = [0u8; 16];
     thread_rng().fill(&mut bytes);
-    Mnemonic::from_entropy(&bytes).unwrap().to_string()
+    bip39::Mnemonic::from_entropy(&bytes).unwrap().to_string()
 }
 
 pub fn generate_slip77() -> String {

@@ -20,3 +20,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rand = "0.8.5"
 tempfile = "3.8.0"
 pulldown-cmark = "0.9.3"
+bip39 = "2.0.0"

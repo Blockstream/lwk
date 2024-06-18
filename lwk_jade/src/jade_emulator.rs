@@ -1,10 +1,11 @@
-use crate::init_logging;
-use lwk_containers::testcontainers::{clients::Cli, Container};
-use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
-use lwk_jade::{
+#![allow(clippy::unwrap_used)]
+
+use crate::{
     protocol::{DebugSetMnemonicParams, UpdatePinserverParams},
     Jade, Network,
 };
+use lwk_containers::testcontainers::{clients::Cli, Container};
+use lwk_containers::{JadeEmulator, PinServer, EMULATOR_PORT, PIN_SERVER_PORT};
 use tempfile::TempDir;
 
 /// A struct for Jade testing with emulator
@@ -19,7 +20,6 @@ pub struct TestJadeEmulator<'a> {
 impl<'a> TestJadeEmulator<'a> {
     /// Jade with emulator
     pub fn new(docker: &'a Cli) -> Self {
-        init_logging();
         let container = docker.run(JadeEmulator);
         let port = container.get_host_port_ipv4(EMULATOR_PORT);
         let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();

@@ -13,6 +13,12 @@ pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
 
+#[cfg(feature = "test_emulator")]
+mod jade_emulator;
+
+#[cfg(feature = "test_emulator")]
+pub use jade_emulator::TestJadeEmulator;
+
 #[cfg(feature = "sync")]
 mod sync;
 

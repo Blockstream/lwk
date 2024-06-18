@@ -35,7 +35,6 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tracing::metadata::LevelFilter;
 
-pub mod jade;
 pub mod ledger;
 
 const DEFAULT_FEE_RATE: f32 = 100.0;

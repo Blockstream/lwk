@@ -22,8 +22,9 @@ use lwk_jade::{
     register_multisig::{
         GetRegisteredMultisigParams, JadeDescriptor, MultisigSigner, RegisterMultisigParams,
     },
+    TestJadeEmulator,
 };
-use lwk_test_util::{jade::TestJadeEmulator, TEST_MNEMONIC};
+use lwk_test_util::TEST_MNEMONIC;
 use std::{str::FromStr, time::UNIX_EPOCH, vec};
 
 #[test]

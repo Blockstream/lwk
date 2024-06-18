@@ -1,9 +1,10 @@
 use lwk_common::{singlesig_desc, Signer, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
+use lwk_jade::TestJadeEmulator;
 use lwk_signer::AnySigner;
 use lwk_test_util::{
-    generate_signer, init_logging, jade::TestJadeEmulator, multisig_desc, register_multisig, setup,
-    TestElectrumServer, TestWollet, TEST_MNEMONIC,
+    generate_signer, init_logging, multisig_desc, register_multisig, setup, TestElectrumServer,
+    TestWollet, TEST_MNEMONIC,
 };
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {

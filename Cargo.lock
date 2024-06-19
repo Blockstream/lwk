@@ -1722,7 +1722,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "console_error_panic_hook",
  "lwk_common",

@@ -6,7 +6,9 @@ Liquid Wallet Kit working in the WASM environment.
 
 [Available](https://www.npmjs.com/package/lwk_wasm) as npm package.
 
-Example is [live](https://blockstream.github.io/lwk/)
+Examples:
+* Basic [example](https://blockstream.github.io/lwk/) integrating the npm package in a web app.
+* Basic working liquid [wallet](https://liquidwebwallet.org/). Works as CT descriptor watch-only wallet or connected to a Jade.
 
 ## For LWK library consumers (front-end developers)
 

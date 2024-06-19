@@ -32,7 +32,7 @@ Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.c
   Issued Assets with your hardware signer, using singlesig or multisig
   wallets (currently [**Jade**](https://blockstream.com/jade/) only, with more coming soon).
 * **Native bindings** [PoC support](./lwk_bindings#readme) for Python, Kotlin and Swift, with many other language available soon using [uniffi](https://mozilla.github.io/uniffi-rs/)
-* **WASM** preliminary support with [`lwk_wasm`](./lwk_wasm) crate, see it [live](https://blockstream.github.io/lwk/).
+* **WASM** preliminary support with [`lwk_wasm`](./lwk_wasm) crate, see it in the [demo app](https://blockstream.github.io/lwk/) or in the working [liquid web wallet](https://liquidwebwallet.org/).
 * **JSON-RPC Server** support: all functions are exposed via JSON-RPC Server, making it easier to build your own frontend, GUI, or integration.
 
 ## LWK Structure

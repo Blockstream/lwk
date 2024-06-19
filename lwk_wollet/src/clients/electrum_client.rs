@@ -118,9 +118,21 @@ impl super::BlockchainBackend for ElectrumClient {
             popped_header = Some(header)
         }
 
-        if let Some(popped_header) = popped_header {
-            let tip: BlockHeader = elements_deserialize(&popped_header.header)?;
-            self.tip = tip;
+        match popped_header {
+            Some(header) => {
+                let tip: BlockHeader = elements_deserialize(&header.header)?;
+                self.tip = tip;
+            }
+            None => {
+                // https://github.com/bitcoindevkit/rust-electrum-client/issues/124
+                // It might be that the client has reconnected and subscriptions don't persist
+                // across connections. Calling `client.ping()` won't help here because the
+                // successful retry will prevent us knowing about the reconnect.
+                if let Ok(header) = self.client.block_headers_subscribe_raw() {
+                    let tip: BlockHeader = elements_deserialize(&header.header)?;
+                    self.tip = tip;
+                }
+            }
         }
 
         Ok(self.tip.clone())

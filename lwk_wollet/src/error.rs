@@ -159,6 +159,12 @@ pub enum Error {
 
     #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
     UsingWaterfallsWithElip151,
+
+    #[error("Cannot encrypt")]
+    CannotEncrypt,
+
+    #[error("Cannot parse server recipient key")]
+    CannotParseRecipientKey,
 }
 
 // cannot derive automatically with this error because of trait bound

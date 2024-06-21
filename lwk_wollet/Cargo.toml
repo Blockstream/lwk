@@ -49,6 +49,7 @@ tracing = "0.1"
 fxhash = "0.2.1"
 
 lwk_signer = { version = "0.5", features = ["jade", "ledger"], optional = true }
+age = { version = "0.10.0", optional = true }
 
 
 [dev-dependencies]
@@ -61,16 +62,23 @@ lwk_test_util = { version = "0.4" }
 tempfile = "3.8.0"
 tokio = { version = "1.36.0", features = ["rt", "macros"] }
 
-waterfalls = { version = "0.1", default-features = false, features = [
+waterfalls = { version = "0.2", default-features = false, features = [
     "test_env",
 ] }
 
 [features]
 default = ["esplora", "electrum"]
-serial = ["lwk_jade/serial"]                                                     # this is a dev-dep feature
+serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest/blocking"]
 electrum = ["electrum-client"]
-esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "tokio"]
+esplora_wasm = [
+    "reqwest",
+    "wasm-bindgen-futures",
+    "web-sys",
+    "js-sys",
+    "tokio",
+    "age",
+]
 bindings = []
 test_wallet = ["lwk_signer"]
 

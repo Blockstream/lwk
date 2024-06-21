@@ -575,7 +575,7 @@ pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
         .map_err(|_| Error::CannotEncrypt)?;
     writer.write_all(plaintext.as_ref())?;
     writer.finish()?;
-    let result = base64::prelude::BASE64_STANDARD.encode(encrypted);
+    let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
     Ok(result)
 }
 

@@ -573,8 +573,8 @@ pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
     let mut writer = encryptor
         .wrap_output(&mut encrypted)
         .map_err(|_| Error::CannotEncrypt)?;
-    writer.write_all(plaintext.as_ref()).unwrap();
-    writer.finish().map_err(|_| Error::CannotEncrypt)?;
+    writer.write_all(plaintext.as_ref())?;
+    writer.finish()?;
     let result = base64::prelude::BASE64_STANDARD.encode(encrypted);
     Ok(result)
 }

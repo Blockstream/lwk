@@ -367,6 +367,8 @@ impl EsploraWasmClient {
         }
         let desc = descriptor.bitcoin_descriptor_without_key_origin();
         let recipient = self.waterfalls_server_recipient().await?;
+
+        // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
         let desc = encrypt(&desc, recipient)?;
 
         let response = client

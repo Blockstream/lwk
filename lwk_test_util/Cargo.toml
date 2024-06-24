@@ -9,6 +9,7 @@ documentation = "https://docs.rs/lwk_test_util"
 [dependencies]
 lwk_common = { version = "0.5" }
 lwk_containers = { version = "0.3" }
+lwk_wollet = { path = "../lwk_wollet" }
 
 electrsd = { version = "0.27.2", features = ["legacy"] }
 elements = "0.24.0"

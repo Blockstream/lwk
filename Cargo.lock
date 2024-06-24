@@ -1696,6 +1696,7 @@ dependencies = [
  "elements-miniscript",
  "lwk_common",
  "lwk_containers",
+ "lwk_wollet",
  "pulldown-cmark",
  "rand",
  "serde_json",

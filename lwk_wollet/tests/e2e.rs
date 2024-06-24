@@ -1035,6 +1035,14 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     let tx = wollet.transaction(&txid).unwrap().unwrap();
     assert_eq!(tx.height.unwrap(), 3);
+    let balance = wollet.balance().unwrap();
+
+    let mut wollet =
+        Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
+    client.avoid_encryption();
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    assert_eq!(balance, wollet.balance().unwrap());
 }
 
 #[test]

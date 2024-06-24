@@ -37,6 +37,9 @@ pub struct EsploraWasmClient {
     broadcast_url: String,
     waterfalls: bool,
     waterfalls_server_recipient: Option<Recipient>,
+
+    /// Avoid encrypting the descriptor field
+    waterfalls_avoid_encryption: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -96,6 +99,7 @@ impl EsploraWasmClient {
             broadcast_url: format!("{url}/tx"),
             waterfalls,
             waterfalls_server_recipient: None,
+            waterfalls_avoid_encryption: false,
         }
     }
 
@@ -366,10 +370,14 @@ impl EsploraWasmClient {
             return Err(Error::UsingWaterfallsWithElip151);
         }
         let desc = descriptor.bitcoin_descriptor_without_key_origin();
-        let recipient = self.waterfalls_server_recipient().await?;
+        let desc = if self.waterfalls_avoid_encryption {
+            desc
+        } else {
+            let recipient = self.waterfalls_server_recipient().await?;
 
-        // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
-        let desc = encrypt(&desc, recipient)?;
+            // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
+            encrypt(&desc, recipient)?
+        };
 
         let response = client
             .get(&descriptor_url)
@@ -428,6 +436,10 @@ impl EsploraWasmClient {
         }
 
         Ok(data)
+    }
+
+    pub fn avoid_encryption(&mut self) {
+        self.waterfalls_avoid_encryption = true;
     }
 
     async fn download_txs(

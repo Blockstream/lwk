@@ -116,6 +116,10 @@ impl SwSigner {
     pub fn fingerprint(&self) -> Fingerprint {
         self.xprv.fingerprint(&self.secp)
     }
+
+    pub fn derive_xprv(&self, path: &DerivationPath) -> Result<Xpriv, SignError> {
+        Ok(self.xprv.derive_priv(&self.secp, path)?)
+    }
 }
 
 impl Signer for SwSigner {

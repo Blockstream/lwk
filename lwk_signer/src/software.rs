@@ -207,6 +207,12 @@ mod tests {
             slip77.as_bytes().to_hex(),
             lwk_test_util::TEST_MNEMONIC_SLIP77
         );
+
+        let path: DerivationPath = "m/0'".parse().unwrap();
+        let xprv = signer.derive_xprv(&path).unwrap();
+        let xpub = signer.derive_xpub(&path).unwrap();
+        let secp = Secp256k1::new();
+        assert_eq!(xpub, Xpub::from_priv(&secp, &xprv));
     }
 
     #[test]

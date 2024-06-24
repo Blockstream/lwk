@@ -7,6 +7,8 @@ use crate::{
     update::DownloadTxResult,
     Chain, Error, Update, Wollet, WolletDescriptor,
 };
+use age::x25519::Recipient;
+use base64::Engine;
 use elements::{bitcoin::bip32::ChildNumber, OutPoint};
 use elements::{
     encode::Decodable,
@@ -20,6 +22,7 @@ use reqwest::Response;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
+    io::Write,
     ops::{Index, IndexMut},
     str::FromStr,
     sync::atomic,
@@ -33,6 +36,10 @@ pub struct EsploraWasmClient {
     tip_hash_url: String,
     broadcast_url: String,
     waterfalls: bool,
+    waterfalls_server_recipient: Option<Recipient>,
+
+    /// Avoid encrypting the descriptor field
+    waterfalls_avoid_encryption: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -91,6 +98,8 @@ impl EsploraWasmClient {
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
             waterfalls,
+            waterfalls_server_recipient: None,
+            waterfalls_avoid_encryption: false,
         }
     }
 
@@ -330,6 +339,26 @@ impl EsploraWasmClient {
         Ok(data)
     }
 
+    /// Returns the waterfall server recipient key using a cached value or by asking the server its key
+    async fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
+        match self.waterfalls_server_recipient.as_ref() {
+            Some(r) => Ok(r.clone()),
+            None => {
+                let client = reqwest::Client::new(); // TODO put the client in EsploraWasmClient!
+                let url = format!("{}/v1/server_recipient", self.base_url);
+                let response = client.get(&url).send().await?;
+                let status = response.status().as_u16();
+                let body = response.text().await?;
+                if status != 200 {
+                    return Err(Error::Generic(body));
+                }
+                let rec = Recipient::from_str(&body).map_err(|_| Error::CannotParseRecipientKey)?;
+                self.waterfalls_server_recipient = Some(rec.clone());
+                Ok(rec)
+            }
+        }
+    }
+
     async fn get_history_waterfalls(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -341,6 +370,15 @@ impl EsploraWasmClient {
             return Err(Error::UsingWaterfallsWithElip151);
         }
         let desc = descriptor.bitcoin_descriptor_without_key_origin();
+        let desc = if self.waterfalls_avoid_encryption {
+            desc
+        } else {
+            let recipient = self.waterfalls_server_recipient().await?;
+
+            // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
+            encrypt(&desc, recipient)?
+        };
+
         let response = client
             .get(&descriptor_url)
             .query(&[("descriptor", desc)])
@@ -398,6 +436,10 @@ impl EsploraWasmClient {
         }
 
         Ok(data)
+    }
+
+    pub fn avoid_encryption(&mut self) {
+        self.waterfalls_avoid_encryption = true;
     }
 
     async fn download_txs(
@@ -533,6 +575,20 @@ impl From<EsploraTx> for History {
             block_timestamp: None,
         }
     }
+}
+
+pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
+    let encryptor = age::Encryptor::with_recipients(vec![Box::new(recipient)])
+        .expect("we provided a recipient");
+
+    let mut encrypted = vec![];
+    let mut writer = encryptor
+        .wrap_output(&mut encrypted)
+        .map_err(|_| Error::CannotEncrypt)?;
+    writer.write_all(plaintext.as_ref())?;
+    writer.finish()?;
+    let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
+    Ok(result)
 }
 
 #[derive(Deserialize)]

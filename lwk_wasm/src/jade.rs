@@ -23,6 +23,7 @@ pub struct Jade {
     _port: web_sys::SerialPort,
 }
 
+// NOTE: Every exposed method (`pub async`) needs to try to unlock the jade as first step.
 #[wasm_bindgen]
 impl Jade {
     /// Creates a Jade from Web Serial for the given network
@@ -58,8 +59,8 @@ impl Jade {
         variant: Singlesig,
         path: Vec<u32>,
     ) -> Result<String, Error> {
-        let network = self.inner.network();
         self.inner.unlock().await?;
+        let network = self.inner.network();
         let xpub = self
             .inner
             .get_receive_address(GetReceiveAddressParams {
@@ -85,8 +86,8 @@ impl Jade {
         multisig_name: &str,
         path: Vec<u32>,
     ) -> Result<String, Error> {
-        let network = self.inner.network();
         self.inner.unlock().await?;
+        let network = self.inner.network();
         let multi_details = self.get_registered_multisig(multisig_name).await?;
         let path_n = multi_details.descriptor.signers.len();
         let mut paths = vec![];
@@ -108,21 +109,25 @@ impl Jade {
 
     /// Sign and consume the given PSET, returning the signed one
     pub async fn sign(&self, pset: Pset) -> Result<Pset, Error> {
+        self.inner.unlock().await?;
         let mut pset: PartiallySignedTransaction = pset.into();
         self.inner.sign(&mut pset).await?;
         Ok(pset.into())
     }
 
     pub async fn wpkh(&self) -> Result<WolletDescriptor, Error> {
+        self.inner.unlock().await?;
         self.desc(lwk_common::Singlesig::Wpkh).await
     }
 
     #[wasm_bindgen(js_name = shWpkh)]
     pub async fn sh_wpkh(&self) -> Result<WolletDescriptor, Error> {
+        self.inner.unlock().await?;
         self.desc(lwk_common::Singlesig::ShWpkh).await
     }
 
     pub async fn multi(&self, name: &str) -> Result<WolletDescriptor, Error> {
+        self.inner.unlock().await?;
         let r = self.get_registered_multisig(name).await?;
         let desc: ConfidentialDescriptor<DescriptorPublicKey> = (&r.descriptor)
             .try_into()
@@ -135,6 +140,7 @@ impl Jade {
 
     #[wasm_bindgen(js_name = getRegisteredMultisigs)]
     pub async fn get_registered_multisigs(&self) -> Result<JsValue, Error> {
+        self.inner.unlock().await?;
         let wallets = self.inner.get_registered_multisigs().await?;
         let wallets_str: Vec<_> = wallets.keys().collect();
         Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
@@ -142,6 +148,7 @@ impl Jade {
 
     #[wasm_bindgen(js_name = keyoriginXpubBip87)]
     pub async fn keyorigin_xpub_bip87(&self) -> Result<String, Error> {
+        self.inner.unlock().await?;
         let signer = self.create_fake_signer().await?;
         let is_mainnet = self.inner.network().is_mainnet();
 
@@ -156,6 +163,7 @@ impl Jade {
         name: &str,
         desc: &WolletDescriptor,
     ) -> Result<bool, Error> {
+        self.inner.unlock().await?;
         let descriptor: JadeDescriptor = desc.as_ref().as_ref().try_into().unwrap();
         let network = self.inner.network();
         let result = self
@@ -170,13 +178,13 @@ impl Jade {
     }
 }
 
+// Inner methods don't try to unlock, they are supposed to operate on an already unlocked Jade,
 impl Jade {
     // Asks all possible derivation needed for standard singlesig wallets (first account)
     // TODO get_cached_xpub is faster after first, but we should cache the fake signer as field in Jade
     // so that we are not asking the master blinding every time
     async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
         let network = self.inner.network();
-        self.inner.unlock().await?;
         let mut paths = HashMap::new();
 
         for purpose in [49, 84, 87] {

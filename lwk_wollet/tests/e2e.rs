@@ -1000,8 +1000,8 @@ async fn test_esplora_wasm_local_waterfalls() {
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
-    let mut wollet =
-        Wollet::without_persist(ElementsNetwork::default_regtest(), desc.clone()).unwrap();
+    let network = ElementsNetwork::default_regtest();
+    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
     let mut client = EsploraWasmClient::new(
         ElementsNetwork::default_regtest(),
         test_env.base_url(),
@@ -1047,6 +1047,18 @@ async fn test_esplora_wasm_local_waterfalls() {
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();
     assert_eq!(balance, wollet.balance().unwrap());
+
+    // test fallback (no waterfalls) because elip151 desc
+    // note the scan will find transactions because the descriptor was used above (with different blinding key)
+    let desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))";
+    let desc = WolletDescriptor::from_str(desc).unwrap();
+    let mut wollet = Wollet::new(network, NoPersist::new(), desc).unwrap();
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    assert!(
+        wollet.transactions().unwrap().is_empty(),
+        "different blinding key should have no txs"
+    );
 }
 
 #[test]

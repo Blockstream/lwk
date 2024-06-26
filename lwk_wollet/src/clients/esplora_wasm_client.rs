@@ -9,13 +9,10 @@ use crate::{
 };
 use age::x25519::Recipient;
 use base64::Engine;
-use elements::{bitcoin::bip32::ChildNumber, OutPoint};
+use elements::{bitcoin::bip32::ChildNumber, Address, OutPoint};
 use elements::{
-    encode::Decodable,
-    hashes::{hex::FromHex, sha256, Hash},
-    hex::ToHex,
-    pset::serialize::Serialize,
-    BlockHash, Script, Txid,
+    encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
+    Script, Txid,
 };
 use elements_miniscript::DescriptorPublicKey;
 use reqwest::Response;
@@ -41,7 +38,6 @@ pub struct EsploraWasmClient {
     /// Avoid encrypting the descriptor field
     waterfalls_avoid_encryption: bool,
 
-    #[allow(unused)] // TODO use it and remove it
     network: ElementsNetwork,
 }
 
@@ -175,9 +171,10 @@ impl EsploraWasmClient {
     async fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
         let mut result: Vec<_> = vec![];
         for script in scripts.iter() {
-            let script = elements::bitcoin::Script::from_bytes(script.as_bytes());
-            let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
-            let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
+            let address = Address::from_script(script, None, self.network.address_params()).ok_or(
+                Error::Generic("script generated is not a known template".to_owned()),
+            )?;
+            let url = format!("{}/address/{}/txs", self.base_url, address);
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
             let response = get_with_retry(&url).await?;
             let json: Vec<EsploraTx> = serde_json::from_str(&response.text().await?)?;

@@ -5,7 +5,7 @@ use super::{try_unblind, History};
 use crate::{
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
-    Chain, Error, Update, Wollet, WolletDescriptor,
+    Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
 };
 use age::x25519::Recipient;
 use base64::Engine;
@@ -40,6 +40,9 @@ pub struct EsploraWasmClient {
 
     /// Avoid encrypting the descriptor field
     waterfalls_avoid_encryption: bool,
+
+    #[allow(unused)] // TODO use it and remove it
+    network: ElementsNetwork,
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -92,7 +95,7 @@ impl EsploraWasmClient {
     /// separate calls, and in this case future addresses cannot be derived.
     /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
     /// assets and amount exchanged due to the nature of confidential transactions.
-    pub fn new(url: &str, waterfalls: bool) -> Self {
+    pub fn new(network: ElementsNetwork, url: &str, waterfalls: bool) -> Self {
         Self {
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
@@ -100,6 +103,7 @@ impl EsploraWasmClient {
             waterfalls,
             waterfalls_server_recipient: None,
             waterfalls_avoid_encryption: false,
+            network,
         }
     }
 
@@ -609,6 +613,8 @@ struct Status {
 mod tests {
     use std::collections::HashMap;
 
+    use crate::ElementsNetwork;
+
     use super::EsploraWasmClient;
     use elements::{encode::Decodable, BlockHash};
 
@@ -641,7 +647,14 @@ mod tests {
     }
 
     async fn test_esplora_url(esplora_url: &str) {
-        let mut client = EsploraWasmClient::new(esplora_url, false);
+        let network = if esplora_url.contains("liquidtestnet") {
+            ElementsNetwork::LiquidTestnet
+        } else if esplora_url.contains("liquid") {
+            ElementsNetwork::Liquid
+        } else {
+            ElementsNetwork::default_regtest()
+        };
+        let mut client = EsploraWasmClient::new(network, esplora_url, false);
         let header = client.tip().await.unwrap();
         assert!(header.height > 100);
 

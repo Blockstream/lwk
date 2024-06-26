@@ -1,4 +1,4 @@
-use crate::{Error, Pset, Txid, Update, Wollet};
+use crate::{Error, Network, Pset, Txid, Update, Wollet};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::EsploraWasmClient`]
@@ -11,8 +11,8 @@ pub struct EsploraClient {
 impl EsploraClient {
     /// Creates a client, wrapper of [`lwk_wollet::EsploraWasmClient`]
     #[wasm_bindgen(constructor)]
-    pub fn new(url: &str, waterfalls: bool) -> Self {
-        let inner = lwk_wollet::EsploraWasmClient::new(url, waterfalls);
+    pub fn new(network: Network, url: &str, waterfalls: bool) -> Self {
+        let inner = lwk_wollet::EsploraWasmClient::new(network.into(), url, waterfalls);
         Self { inner }
     }
 

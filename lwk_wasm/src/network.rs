@@ -78,7 +78,7 @@ impl Network {
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
         };
 
-        EsploraClient::new(*self, url, false)
+        EsploraClient::new(self, url, false)
     }
 
     #[wasm_bindgen(js_name = isMainnet)]

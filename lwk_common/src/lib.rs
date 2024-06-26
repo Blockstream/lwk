@@ -25,6 +25,7 @@ pub use crate::descriptor::{
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
+pub use crate::precision::Precision;
 pub use crate::qr::*;
 pub use crate::signer::Signer;
 

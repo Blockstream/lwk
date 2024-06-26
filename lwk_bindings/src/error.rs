@@ -127,3 +127,11 @@ impl<T> From<PoisonError<MutexGuard<'_, T>>> for LwkError {
         LwkError::PoisonError { msg: e.to_string() }
     }
 }
+
+impl From<lwk_common::precision::Error> for LwkError {
+    fn from(value: lwk_common::precision::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}

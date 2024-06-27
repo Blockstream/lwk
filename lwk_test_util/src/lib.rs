@@ -369,6 +369,10 @@ pub fn update_test_vector_bytes() -> Vec<u8> {
     Vec::<u8>::from_hex(include_str!("../test_data/update_test_vector.hex")).unwrap()
 }
 
+pub fn update_test_vector_2_bytes() -> Vec<u8> {
+    include_bytes!("../test_data/update_test_vector.bin").to_vec()
+}
+
 pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {
     Vec::<u8>::from_hex(include_str!(
         "../test_data/update_test_vector_encrypted.hex"

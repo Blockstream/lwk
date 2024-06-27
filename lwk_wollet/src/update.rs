@@ -570,4 +570,19 @@ mod test {
         let back = Update::deserialize_decrypted_base64(&update_ser, &desc).unwrap();
         assert_eq!(update, back)
     }
+
+    #[test]
+    fn test_update_prune() {
+        let update_bytes = lwk_test_util::update_test_vector_2_bytes();
+        let update = Update::deserialize(&update_bytes).unwrap();
+        assert_eq!(update.serialize().unwrap().len(), 18436);
+        let update_pruned = {
+            let mut u = update.clone();
+            u.prune();
+            u
+        };
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1106); // not always this level, usually about 10x
+        assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
+        assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
+    }
 }

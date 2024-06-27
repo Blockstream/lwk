@@ -587,7 +587,6 @@ impl TestWollet {
                     .unwrap();
 
             let balance = wollet.balance().unwrap();
-            dbg!(&balance);
             assert_eq!(expected, balance);
             assert_eq!(expected_updates, wollet.updates().unwrap());
         }

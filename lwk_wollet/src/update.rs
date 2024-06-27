@@ -7,9 +7,9 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
-use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+use elements::confidential::{self, AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
-use elements::BlockHeader;
+use elements::{BlockHeader, TxInWitness, TxOutWitness};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -27,6 +27,28 @@ pub struct DownloadTxResult {
 impl DownloadTxResult {
     fn is_empty(&self) -> bool {
         self.txs.is_empty() && self.unblinds.is_empty()
+    }
+
+    fn prune(&mut self) {
+        let unblinds: HashMap<_, _> = self.unblinds.clone().into_iter().collect();
+        for (txid, tx) in self.txs.iter_mut() {
+            // dbg!(&tx);
+
+            for input in tx.input.iter_mut() {
+                input.witness = TxInWitness::empty();
+            }
+
+            for (i, output) in tx.output.iter_mut().enumerate() {
+                output.witness = TxOutWitness::empty();
+
+                // the following changes tx id and thus have other implication
+                // let outpoint = OutPoint::new(*txid, i as u32);
+                // if let Some(tx_out) = unblinds.get(&outpoint) {
+                //     output.asset = confidential::Asset::Explicit(tx_out.asset);
+                //     output.value = confidential::Value::Explicit(tx_out.value);
+                // }
+            }
+        }
     }
 }
 
@@ -48,6 +70,9 @@ impl Update {
             && self.txid_height_new.is_empty()
             && self.txid_height_delete.is_empty()
             && self.scripts.is_empty()
+    }
+    pub fn prune(&mut self) {
+        self.new_txs.prune();
     }
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
         let mut vec = vec![];
@@ -113,7 +138,7 @@ impl Wollet {
         self.apply_update_inner(update, false)
     }
 
-    fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
+    fn apply_update_inner(&mut self, mut update: Update, do_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
 
         let store = &mut self.store;
@@ -194,6 +219,8 @@ impl Wollet {
         }
 
         if do_persist {
+            // TEST
+            update.prune();
             self.persister.push(update)?;
         }
 
@@ -553,6 +580,6 @@ mod test {
         assert_ne!(base64, update_ser); // decrypted content is the same, but enryption is not deterministic
 
         let back = Update::deserialize_decrypted_base64(&update_ser, &desc).unwrap();
-        assert_eq!(update, back)
+        assert_eq!(update, back);
     }
 }

@@ -521,6 +521,16 @@ pub fn full_scan_with_electrum_client(
 
     let update = electrum_client.full_scan(wollet)?;
     if let Some(update) = update {
+        // TODO remove only test
+        if !update.only_tip() {
+            let update_size = update.serialize().unwrap().len();
+            let mut update_clone = update.clone();
+            update_clone.prune();
+            let update_clone_size = update_clone.serialize().unwrap().len();
+            let txs_len = update.new_txs.txs.len();
+            println!("before:{update_size} after:{update_clone_size} txs:{txs_len}");
+        }
+
         wollet.apply_update(update)?
     }
 

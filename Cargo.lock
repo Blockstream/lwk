@@ -2022,7 +2022,6 @@ version = "0.4.1"
 dependencies = [
  "bip39",
  "electrsd",
- "elements",
  "elements-miniscript",
  "lwk_common",
  "lwk_containers",

@@ -11,7 +11,6 @@ lwk_common = { version = "0.5" }
 lwk_containers = { version = "0.3" }
 
 electrsd = { version = "0.27.2", features = ["legacy"] }
-elements = "0.24.0"
 elements-miniscript = "0.3.1"
 serde_json = "1"
 tracing = "0.1"

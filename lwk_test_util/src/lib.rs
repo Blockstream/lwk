@@ -1,3 +1,5 @@
+use elements_miniscript::elements;
+
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;

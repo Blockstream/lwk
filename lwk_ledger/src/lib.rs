@@ -100,7 +100,12 @@ impl Signer for &Ledger {
             n_sigs += partial_sigs.len();
 
             // Add sigs to pset
-            // TODO
+            for (input_idx, sig) in partial_sigs {
+                let input = &mut pset.inputs_mut()[input_idx];
+                // FIXME: how to associate a signature to the corresponding pubkey?
+                let public_key = *input.bip32_derivation.keys().nth(0).expect("FIXME");
+                input.partial_sigs.insert(public_key, sig.to_vec());
+            }
         }
 
         Ok(n_sigs as u32)

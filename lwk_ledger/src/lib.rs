@@ -47,6 +47,12 @@ impl Signer for &Ledger {
     type Error = crate::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> std::result::Result<u32, Self::Error> {
+        // Set the default values some fields that Ledger requires
+        if pset.global.tx_data.fallback_locktime.is_none() {
+            pset.global.tx_data.fallback_locktime =
+                Some(elements_miniscript::elements::LockTime::ZERO);
+        }
+
         let mut wallets = vec![];
         let mut n_sigs = 0;
         let master_fp = self.fingerprint()?;

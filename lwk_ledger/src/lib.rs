@@ -52,6 +52,11 @@ impl Signer for &Ledger {
             pset.global.tx_data.fallback_locktime =
                 Some(elements_miniscript::elements::LockTime::ZERO);
         }
+        for input in pset.inputs_mut() {
+            if input.sequence.is_none() {
+                input.sequence = Some(elements_miniscript::elements::Sequence::default());
+            }
+        }
 
         let mut wallets = vec![];
         let mut n_sigs = 0;

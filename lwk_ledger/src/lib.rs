@@ -21,7 +21,9 @@ pub use transport::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 use elements_miniscript::confidential::slip77;
-use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
+use elements_miniscript::elements::bitcoin::bip32::{
+    ChildNumber, DerivationPath, Fingerprint, Xpub,
+};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 
 use lwk_common::Signer;
@@ -63,13 +65,19 @@ impl Signer for &Ledger {
                     // path has all hardened
                     // path has purpose matching address type
                     // path has correct coin type
+                    let mut v: Vec<ChildNumber> = path.clone().into();
+                    v.truncate(3);
+                    let path: DerivationPath = v.into();
 
                     // Do we care about the descriptor blinding key here?
                     let name = "todo".to_string();
                     let version = Version::V1;
                     let desc = "wpkh(@0)".to_string();
                     // TODO: cache xpubs
-                    let xpub = self.client.get_extended_pubkey(path, false).expect("FIXME");
+                    let xpub = self
+                        .client
+                        .get_extended_pubkey(&path, false)
+                        .expect("FIXME");
                     let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
                     key.multipath = Some("/**".to_string());
                     let keys = vec![key];

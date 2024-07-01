@@ -17,7 +17,7 @@ use std::num::NonZeroU8;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
+use std::thread::{sleep, JoinHandle};
 use std::time::Duration;
 
 use lwk_common::{
@@ -40,7 +40,7 @@ use lwk_wollet::elements::{Address, AssetId, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::{full_scan_with_electrum_client, Wollet};
+use lwk_wollet::Wollet;
 use lwk_wollet::{BlockchainBackend, WolletDescriptor};
 use serde_json::Value;
 
@@ -171,17 +171,45 @@ impl App {
                 interval = interval.saturating_sub(stop_interval);
             }
 
-            if let Ok(mut s) = state_scanning.lock() {
-                s.interrupt_wait = false;
-                s.scan_loops_started += 1;
-                if let Ok(mut electrum_client) = s.config.electrum_client() {
-                    for (_name, wollet) in s.wollets.iter_mut() {
-                        // TODO: release lock when doing network calls
-                        let _ = full_scan_with_electrum_client(wollet, &mut electrum_client);
+            let mut s = state_scanning.lock().expect("state lock poison");
+            s.interrupt_wait = false;
+            s.scan_loops_started += 1;
+            let wollets_to_scan: Vec<_> = s.wollets.iter().map(|e| e.0.to_owned()).collect();
+            let config = s.config.clone();
+            drop(s);
+
+            let mut electrum_client = loop {
+                match config.electrum_client() {
+                    Ok(c) => break c,
+                    Err(_) => sleep(Duration::from_secs(1)),
+                };
+            };
+
+            for name in wollets_to_scan {
+                let state = match state_scanning
+                    .lock()
+                    .expect("state lock poison")
+                    .wollets
+                    .get(&name)
+                {
+                    Ok(w) => w.state(),
+                    Err(_) => continue,
+                };
+
+                match electrum_client.full_scan(&state) {
+                    Ok(Some(update)) => {
+                        let mut state = state_scanning.lock().expect("state lock poison");
+                        let _ = match state.wollets.get_mut(&name) {
+                            Ok(wollet) => wollet.apply_update(update),
+                            Err(_) => continue,
+                        };
                     }
+                    Ok(None) => (),
+                    Err(_) => continue,
                 }
-                s.scan_loops_completed += 1;
             }
+            let mut s = state_scanning.lock().expect("state lock poison");
+            s.scan_loops_completed += 1;
         });
         self.scanning_handle = Some(scanning_handle);
 

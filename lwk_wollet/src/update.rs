@@ -9,7 +9,7 @@ use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
-use elements::BlockHeader;
+use elements::{BlockHeader, TxInWitness, TxOutWitness};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -27,6 +27,18 @@ pub struct DownloadTxResult {
 impl DownloadTxResult {
     fn is_empty(&self) -> bool {
         self.txs.is_empty() && self.unblinds.is_empty()
+    }
+
+    fn prune(&mut self) {
+        for (_, tx) in self.txs.iter_mut() {
+            for input in tx.input.iter_mut() {
+                input.witness = TxInWitness::empty();
+            }
+
+            for output in tx.output.iter_mut() {
+                output.witness = TxOutWitness::empty();
+            }
+        }
     }
 }
 
@@ -48,6 +60,9 @@ impl Update {
             && self.txid_height_new.is_empty()
             && self.txid_height_delete.is_empty()
             && self.scripts.is_empty()
+    }
+    pub fn prune(&mut self) {
+        self.new_txs.prune();
     }
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
         let mut vec = vec![];
@@ -554,5 +569,20 @@ mod test {
 
         let back = Update::deserialize_decrypted_base64(&update_ser, &desc).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_prune() {
+        let update_bytes = lwk_test_util::update_test_vector_2_bytes();
+        let update = Update::deserialize(&update_bytes).unwrap();
+        assert_eq!(update.serialize().unwrap().len(), 18436);
+        let update_pruned = {
+            let mut u = update.clone();
+            u.prune();
+            u
+        };
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1106); // not always this level, usually about 10x
+        assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
+        assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }
 }

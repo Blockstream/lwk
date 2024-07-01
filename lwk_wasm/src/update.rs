@@ -62,6 +62,10 @@ impl Update {
     pub fn only_tip(&self) -> bool {
         self.inner.only_tip()
     }
+
+    pub fn prune(&mut self) {
+        self.inner.prune();
+    }
 }
 
 #[cfg(test)]

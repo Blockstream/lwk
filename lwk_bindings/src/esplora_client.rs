@@ -27,7 +27,7 @@ impl EsploraClient {
 
     pub fn full_scan(&self, wollet: &Wollet) -> Result<Option<Arc<Update>>, LwkError> {
         let wollet = wollet.inner_wollet()?;
-        let update: Option<lwk_wollet::Update> = self.inner.lock()?.full_scan(&wollet)?;
+        let update: Option<lwk_wollet::Update> = self.inner.lock()?.full_scan(&wollet.state())?;
         Ok(update.map(Into::into).map(Arc::new))
     }
 }

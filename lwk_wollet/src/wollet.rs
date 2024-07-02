@@ -1,4 +1,5 @@
 use crate::bitcoin::bip32::Fingerprint;
+use crate::clients::LastUnused;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::pset::PartiallySignedTransaction;
@@ -8,7 +9,7 @@ use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
-use crate::store::{Height, Store, Timestamp};
+use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
@@ -32,6 +33,65 @@ pub struct Wollet {
     pub(crate) store: Store,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     descriptor: WolletDescriptor,
+}
+
+/// A coincise state of the wallet, in particular having only transactions ids instead of full
+/// transactions and missing other things not strictly needed for a scan.
+/// By using this instead of a borrow of the wallet we can release locks
+pub struct WolletState {
+    pub status: u64,
+    pub descriptor: WolletDescriptor,
+    pub txs: HashSet<Txid>,
+    pub paths: HashMap<Script, (Chain, ChildNumber)>,
+    pub scripts: HashMap<(Chain, ChildNumber), Script>,
+    pub heights: HashMap<Txid, Option<Height>>,
+    pub tip: (Height, BlockHash),
+    pub last_unused: LastUnused,
+}
+
+impl WolletState {
+    // TODO duplicated from Wollet
+    pub fn get_script_batch(
+        &self,
+        batch: u32,
+        descriptor: &Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+    ) -> Result<ScriptBatch, Error> {
+        let mut result = ScriptBatch {
+            cached: true,
+            ..Default::default()
+        };
+
+        let start = batch * BATCH_SIZE;
+        let end = start + BATCH_SIZE;
+        let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
+        for j in start..end {
+            let child = ChildNumber::from_normal_idx(j)?;
+            let (script, cached) = self.get_or_derive(ext_int, child, descriptor)?;
+            result.cached = cached;
+            result.value.push((script, (ext_int, child)));
+        }
+
+        Ok(result)
+    }
+
+    pub(crate) fn get_or_derive(
+        &self,
+        ext_int: Chain,
+        child: ChildNumber,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, bool), Error> {
+        let opt_script = self.scripts.get(&(ext_int, child));
+        let (script, cached) = match opt_script {
+            Some(script) => (script.clone(), true),
+            None => (
+                descriptor
+                    .at_derivation_index(child.into())?
+                    .script_pubkey(),
+                false,
+            ),
+        };
+        Ok((script, cached))
+    }
 }
 
 impl std::fmt::Debug for Wollet {
@@ -73,6 +133,23 @@ impl Wollet {
         }
 
         Ok(wollet)
+    }
+
+    pub fn state(&self) -> WolletState {
+        let cache = &self.store.cache;
+        WolletState {
+            status: self.status(),
+            descriptor: self.wollet_descriptor(),
+            txs: cache.all_txs.keys().cloned().collect(),
+            paths: cache.paths.clone(),
+            scripts: cache.scripts.clone(),
+            heights: cache.heights.clone(),
+            tip: cache.tip.clone(),
+            last_unused: LastUnused {
+                internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),
+                external: cache.last_unused_external.load(atomic::Ordering::Relaxed),
+            },
+        }
     }
 
     /// Create a new wallet persisting on file system
@@ -519,7 +596,7 @@ pub fn full_scan_with_electrum_client(
 ) -> Result<(), Error> {
     use crate::BlockchainBackend;
 
-    let update = electrum_client.full_scan(wollet)?;
+    let update = electrum_client.full_scan(&wollet.state())?;
     if let Some(update) = update {
         wollet.apply_update(update)?
     }

@@ -11,8 +11,11 @@ use elements::{
 use elements::{BlockHash, BlockHeader, Transaction, Txid};
 use lwk_common::derive_blinding_key;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
+use std::{
+    collections::{HashMap, HashSet},
+    ops::{Index, IndexMut},
+    sync::atomic,
+};
 
 #[cfg(feature = "esplora")]
 pub(crate) mod esplora_client;
@@ -22,6 +25,33 @@ pub(crate) mod electrum_client;
 
 #[cfg(feature = "esplora_wasm")]
 pub(crate) mod esplora_wasm_client;
+
+// TODO move upper
+#[derive(Debug, PartialEq, Eq, Default)]
+pub struct LastUnused {
+    internal: u32,
+    external: u32,
+}
+
+impl Index<Chain> for LastUnused {
+    type Output = u32;
+
+    fn index(&self, index: Chain) -> &Self::Output {
+        match index {
+            Chain::External => &self.external,
+            Chain::Internal => &self.internal,
+        }
+    }
+}
+
+impl IndexMut<Chain> for LastUnused {
+    fn index_mut(&mut self, index: Chain) -> &mut Self::Output {
+        match index {
+            Chain::External => &mut self.external,
+            Chain::Internal => &mut self.internal,
+        }
+    }
+}
 
 /// Trait implemented by types that can fetch data from a blockchain data source.
 pub trait BlockchainBackend {

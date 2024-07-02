@@ -1,7 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use super::{try_unblind, History};
+use super::{try_unblind, History, LastUnused};
 use crate::{
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
@@ -20,7 +20,6 @@ use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
-    ops::{Index, IndexMut},
     str::FromStr,
     sync::atomic,
 };
@@ -39,32 +38,6 @@ pub struct EsploraWasmClient {
     waterfalls_avoid_encryption: bool,
 
     network: ElementsNetwork,
-}
-
-#[derive(Debug, PartialEq, Eq, Default)]
-struct LastUnused {
-    internal: u32,
-    external: u32,
-}
-
-impl Index<Chain> for LastUnused {
-    type Output = u32;
-
-    fn index(&self, index: Chain) -> &Self::Output {
-        match index {
-            Chain::External => &self.external,
-            Chain::Internal => &self.internal,
-        }
-    }
-}
-
-impl IndexMut<Chain> for LastUnused {
-    fn index_mut(&mut self, index: Chain) -> &mut Self::Output {
-        match index {
-            Chain::External => &mut self.external,
-            Chain::Internal => &mut self.internal,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]

@@ -143,14 +143,14 @@ pub trait BlockchainBackend {
         let tip = self.tip()?;
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self.download_txs(&history_txs_id, &scripts, &state, &descriptor)?;
+        let new_txs = self.download_txs(&history_txs_id, &scripts, state, descriptor)?;
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()
             .filter_map(|e| *e)
             .chain(std::iter::once(tip.height))
             .collect();
         let timestamps =
-            self.download_headers(&history_txs_heights_plus_tip, &height_blockhash, &state)?;
+            self.download_headers(&history_txs_heights_plus_tip, &height_blockhash, state)?;
 
         let store_last_unused_external = state.last_unused[Chain::External];
         let store_last_unused_internal = state.last_unused[Chain::Internal];

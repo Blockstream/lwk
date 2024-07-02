@@ -144,7 +144,7 @@ impl Wollet {
             paths: cache.paths.clone(),
             scripts: cache.scripts.clone(),
             heights: cache.heights.clone(),
-            tip: cache.tip.clone(),
+            tip: cache.tip,
             last_unused: LastUnused {
                 internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),
                 external: cache.last_unused_external.load(atomic::Ordering::Relaxed),

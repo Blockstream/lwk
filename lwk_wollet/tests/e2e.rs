@@ -1190,3 +1190,44 @@ pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
     }
 }
+
+#[test]
+fn test_prune() {
+    let server = setup(false);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+
+    let address = wallet.address();
+    let _ = server.node_sendtoaddress(&address, 100_000, None);
+
+    let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
+    let mut attempts = 50;
+    let mut update = loop {
+        if let Some(u) = client.full_scan(&wallet.wollet).unwrap() {
+            if !u.only_tip() {
+                break u;
+            }
+        }
+        attempts -= 1;
+        if attempts == 0 {
+            panic!("didn't receive an update")
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    };
+    let size_before = update.serialize().unwrap().len();
+    update.prune();
+    let size_after = update.serialize().unwrap().len();
+    assert!(size_after < size_before);
+    wallet.wollet.apply_update(update).unwrap();
+
+    let _pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    // let details = wallet.wollet.get_details(&pset).unwrap();
+}

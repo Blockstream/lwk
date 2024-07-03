@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{Error, WolletDescriptor};
+use crate::{Error, Wollet, WolletDescriptor};
 
 /// Wrapper of [`lwk_wollet::Update`]
 #[wasm_bindgen]
@@ -63,8 +63,8 @@ impl Update {
         self.inner.only_tip()
     }
 
-    pub fn prune(&mut self) {
-        self.inner.prune();
+    pub fn prune(&mut self, wollet: &Wollet) {
+        self.inner.prune(wollet.as_ref());
     }
 }
 

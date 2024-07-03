@@ -1223,11 +1223,14 @@ fn test_prune() {
     assert!(size_after < size_before);
     wallet.wollet.apply_update(update).unwrap();
 
-    let pset = wallet
+    let mut pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&address, 10_000)
         .unwrap()
         .finish()
         .unwrap();
     let _details = wallet.wollet.get_details(&pset).unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    wallet.send(&mut pset);
 }

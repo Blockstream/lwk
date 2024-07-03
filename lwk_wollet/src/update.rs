@@ -9,7 +9,7 @@ use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
-use elements::{BlockHeader, TxInWitness, TxOutWitness};
+use elements::{BlockHeader, TxInWitness};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -36,7 +36,8 @@ impl DownloadTxResult {
             }
 
             for output in tx.output.iter_mut() {
-                output.witness = TxOutWitness::empty();
+                // we are keeping the rangeproof because it's needed for pset details
+                output.witness.surjection_proof = None;
             }
         }
     }
@@ -581,7 +582,7 @@ mod test {
             u.prune();
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 1106); // not always this level, usually about 10x
+        assert_eq!(update_pruned.serialize().unwrap().len(), 17828); // without pruning outputs the savings are very limited
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

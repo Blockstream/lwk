@@ -9,7 +9,7 @@ use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
-use elements::{BlockHeader, TxInWitness};
+use elements::{BlockHeader, TxInWitness, TxOutWitness};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -29,15 +29,19 @@ impl DownloadTxResult {
         self.txs.is_empty() && self.unblinds.is_empty()
     }
 
-    fn prune(&mut self) {
+    fn prune(&mut self, scripts: &HashMap<Script, (Chain, ChildNumber)>) {
         for (_, tx) in self.txs.iter_mut() {
             for input in tx.input.iter_mut() {
                 input.witness = TxInWitness::empty();
             }
 
             for output in tx.output.iter_mut() {
-                // we are keeping the rangeproof because it's needed for pset details
-                output.witness.surjection_proof = None;
+                if scripts.contains_key(&output.script_pubkey) {
+                    // we are keeping the rangeproof because it's needed for pset details
+                    output.witness.surjection_proof = None;
+                } else {
+                    output.witness = TxOutWitness::empty();
+                }
             }
         }
     }
@@ -63,7 +67,7 @@ impl Update {
             && self.scripts.is_empty()
     }
     pub fn prune(&mut self) {
-        self.new_txs.prune();
+        self.new_txs.prune(&self.scripts);
     }
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
         let mut vec = vec![];
@@ -582,7 +586,7 @@ mod test {
             u.prune();
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 17828); // without pruning outputs the savings are very limited
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

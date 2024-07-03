@@ -1218,16 +1218,16 @@ fn test_prune() {
         std::thread::sleep(std::time::Duration::from_millis(200));
     };
     let size_before = update.serialize().unwrap().len();
-    update.prune();
+    update.prune(&wallet.wollet);
     let size_after = update.serialize().unwrap().len();
     assert!(size_after < size_before);
     wallet.wollet.apply_update(update).unwrap();
 
-    let _pset = wallet
+    let pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&address, 10_000)
         .unwrap()
         .finish()
         .unwrap();
-    // let details = wallet.wollet.get_details(&pset).unwrap();
+    let _details = wallet.wollet.get_details(&pset).unwrap();
 }

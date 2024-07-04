@@ -39,14 +39,14 @@ pub struct Wollet {
 /// transactions and missing other things not strictly needed for a scan.
 /// By using this instead of a borrow of the wallet we can release locks
 pub struct WolletState {
-    pub status: u64,
-    pub descriptor: WolletDescriptor,
-    pub txs: HashSet<Txid>,
-    pub paths: HashMap<Script, (Chain, ChildNumber)>,
-    pub scripts: HashMap<(Chain, ChildNumber), Script>,
-    pub heights: HashMap<Txid, Option<Height>>,
-    pub tip: (Height, BlockHash),
-    pub last_unused: LastUnused,
+    _status: u64,
+    descriptor: WolletDescriptor,
+    txs: HashSet<Txid>,
+    paths: HashMap<Script, (Chain, ChildNumber)>,
+    scripts: HashMap<(Chain, ChildNumber), Script>,
+    heights: HashMap<Txid, Option<Height>>,
+    tip: (Height, BlockHash),
+    last_unused: LastUnused,
 }
 
 impl WolletState {
@@ -91,6 +91,30 @@ impl WolletState {
             ),
         };
         Ok((script, cached))
+    }
+
+    pub(crate) fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+        &self.heights
+    }
+
+    pub(crate) fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
+        &self.paths
+    }
+
+    pub(crate) fn txs(&self) -> &HashSet<Txid> {
+        &self.txs
+    }
+
+    pub(crate) fn tip(&self) -> (Height, BlockHash) {
+        self.tip
+    }
+
+    pub(crate) fn last_unused(&self) -> &LastUnused {
+        &self.last_unused
+    }
+
+    pub(crate) fn descriptor(&self) -> &WolletDescriptor {
+        &self.descriptor
     }
 }
 
@@ -138,7 +162,7 @@ impl Wollet {
     pub fn state(&self) -> WolletState {
         let cache = &self.store.cache;
         WolletState {
-            status: self.status(),
+            _status: self.status(),
             descriptor: self.wollet_descriptor(),
             txs: cache.all_txs.keys().cloned().collect(),
             paths: cache.paths.clone(),

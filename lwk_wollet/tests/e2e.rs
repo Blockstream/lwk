@@ -1206,7 +1206,7 @@ fn test_prune() {
     let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
     let mut attempts = 50;
     let mut update = loop {
-        if let Some(u) = client.full_scan(&wallet.wollet).unwrap() {
+        if let Some(u) = client.full_scan(&wallet.wollet.state()).unwrap() {
             if !u.only_tip() {
                 break u;
             }

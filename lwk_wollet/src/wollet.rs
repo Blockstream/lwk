@@ -144,6 +144,49 @@ impl std::fmt::Debug for Wollet {
     }
 }
 
+impl WolletStateTrait for Wollet {
+    fn get_script_batch(
+        &self,
+        batch: u32,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<ScriptBatch, Error> {
+        todo!()
+    }
+
+    fn get_or_derive(
+        &self,
+        ext_int: Chain,
+        child: ChildNumber,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, bool), Error> {
+        todo!()
+    }
+
+    fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+        todo!()
+    }
+
+    fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
+        todo!()
+    }
+
+    fn txs(&self) -> &HashSet<Txid> {
+        todo!()
+    }
+
+    fn tip(&self) -> (Height, BlockHash) {
+        todo!()
+    }
+
+    fn last_unused(&self) -> &LastUnused {
+        todo!()
+    }
+
+    fn descriptor(&self) -> &WolletDescriptor {
+        todo!()
+    }
+}
+
 impl std::hash::Hash for Wollet {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.config.hash(state);

@@ -49,9 +49,29 @@ pub struct WolletState {
     last_unused: LastUnused,
 }
 
-impl WolletState {
+pub trait WolletStateTrait {
+    fn get_script_batch(
+        &self,
+        batch: u32,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<ScriptBatch, Error>;
+    fn get_or_derive(
+        &self,
+        ext_int: Chain,
+        child: ChildNumber,
+        descriptor: &Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, bool), Error>;
+    fn heights(&self) -> &HashMap<Txid, Option<Height>>;
+    fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
+    fn txs(&self) -> &HashSet<Txid>;
+    fn tip(&self) -> (Height, BlockHash);
+    fn last_unused(&self) -> &LastUnused;
+    fn descriptor(&self) -> &WolletDescriptor;
+}
+
+impl WolletStateTrait for WolletState {
     // TODO duplicated from Wollet
-    pub fn get_script_batch(
+    fn get_script_batch(
         &self,
         batch: u32,
         descriptor: &Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
@@ -74,7 +94,7 @@ impl WolletState {
         Ok(result)
     }
 
-    pub(crate) fn get_or_derive(
+    fn get_or_derive(
         &self,
         ext_int: Chain,
         child: ChildNumber,
@@ -93,27 +113,27 @@ impl WolletState {
         Ok((script, cached))
     }
 
-    pub(crate) fn heights(&self) -> &HashMap<Txid, Option<Height>> {
+    fn heights(&self) -> &HashMap<Txid, Option<Height>> {
         &self.heights
     }
 
-    pub(crate) fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
+    fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
         &self.paths
     }
 
-    pub(crate) fn txs(&self) -> &HashSet<Txid> {
+    fn txs(&self) -> &HashSet<Txid> {
         &self.txs
     }
 
-    pub(crate) fn tip(&self) -> (Height, BlockHash) {
+    fn tip(&self) -> (Height, BlockHash) {
         self.tip
     }
 
-    pub(crate) fn last_unused(&self) -> &LastUnused {
+    fn last_unused(&self) -> &LastUnused {
         &self.last_unused
     }
 
-    pub(crate) fn descriptor(&self) -> &WolletDescriptor {
+    fn descriptor(&self) -> &WolletDescriptor {
         &self.descriptor
     }
 }

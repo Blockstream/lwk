@@ -1,7 +1,7 @@
 use crate::{
     store::{Height, Timestamp, BATCH_SIZE},
     update::{DownloadTxResult, Update},
-    wollet::WolletState,
+    wollet::{WolletState, WolletStateTrait},
     Chain, Error, WolletDescriptor, EC,
 };
 use elements::{

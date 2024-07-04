@@ -63,10 +63,10 @@ pub trait WolletStateTrait {
     ) -> Result<(Script, bool), Error>;
     fn heights(&self) -> &HashMap<Txid, Option<Height>>;
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
-    fn txs(&self) -> &HashSet<Txid>;
+    fn txs(&self) -> HashSet<Txid>;
     fn tip(&self) -> (Height, BlockHash);
-    fn last_unused(&self) -> &LastUnused;
-    fn descriptor(&self) -> &WolletDescriptor;
+    fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
+    fn descriptor(&self) -> WolletDescriptor;
 }
 
 impl WolletStateTrait for WolletState {
@@ -121,20 +121,20 @@ impl WolletStateTrait for WolletState {
         &self.paths
     }
 
-    fn txs(&self) -> &HashSet<Txid> {
-        &self.txs
+    fn txs(&self) -> HashSet<Txid> {
+        self.txs.clone()
     }
 
     fn tip(&self) -> (Height, BlockHash) {
         self.tip
     }
 
-    fn last_unused(&self) -> &LastUnused {
-        &self.last_unused
+    fn last_unused(&self) -> LastUnused {
+        self.last_unused.clone()
     }
 
-    fn descriptor(&self) -> &WolletDescriptor {
-        &self.descriptor
+    fn descriptor(&self) -> WolletDescriptor {
+        self.descriptor.clone()
     }
 }
 
@@ -150,7 +150,7 @@ impl WolletStateTrait for Wollet {
         batch: u32,
         descriptor: &Descriptor<DescriptorPublicKey>,
     ) -> Result<ScriptBatch, Error> {
-        Wollet::get_script_batch(&self, batch, descriptor)
+        self.store.get_script_batch(batch, descriptor)
     }
 
     fn get_or_derive(
@@ -159,7 +159,7 @@ impl WolletStateTrait for Wollet {
         child: ChildNumber,
         descriptor: &Descriptor<DescriptorPublicKey>,
     ) -> Result<(Script, bool), Error> {
-        Wollet::get_or_derive(&self, ext_int, child, descriptor)
+        self.store.get_or_derive(ext_int, child, descriptor)
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
@@ -170,17 +170,17 @@ impl WolletStateTrait for Wollet {
         &self.store.cache.paths
     }
 
-    fn txs(&self) -> &HashSet<Txid> {
-        todo!()
+    fn txs(&self) -> HashSet<Txid> {
+        self.store.cache.all_txs.keys().cloned().collect()
     }
 
     fn tip(&self) -> (Height, BlockHash) {
         self.store.cache.tip
     }
 
-    fn last_unused(&self) -> &LastUnused {
+    fn last_unused(&self) -> LastUnused {
         // TODO use LastUnused internally in Wollet
-        &LastUnused {
+        LastUnused {
             internal: self
                 .store
                 .cache
@@ -194,8 +194,8 @@ impl WolletStateTrait for Wollet {
         }
     }
 
-    fn descriptor(&self) -> &WolletDescriptor {
-        todo!()
+    fn descriptor(&self) -> WolletDescriptor {
+        self.wollet_descriptor()
     }
 }
 

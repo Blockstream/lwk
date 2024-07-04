@@ -1,7 +1,7 @@
 use crate::{
     store::{Height, Timestamp, BATCH_SIZE},
     update::{DownloadTxResult, Update},
-    wollet::{WolletState, WolletStateTrait},
+    wollet::WolletStateTrait,
     Chain, Error, WolletDescriptor, EC,
 };
 use elements::{
@@ -26,8 +26,7 @@ pub(crate) mod electrum_client;
 #[cfg(feature = "esplora_wasm")]
 pub(crate) mod esplora_wasm_client;
 
-// TODO move upper
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LastUnused {
     pub internal: u32,
     pub external: u32,
@@ -143,7 +142,7 @@ pub trait BlockchainBackend {
         let tip = self.tip()?;
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self.download_txs(&history_txs_id, &scripts, state, descriptor)?;
+        let new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()
             .filter_map(|e| *e)
@@ -302,12 +301,12 @@ pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOut
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
+    // use std::time::Instant;
 
-    use crate::{
-        clients::esplora_client::EsploraClient, BlockchainBackend, ElectrumClient, ElectrumUrl,
-        ElementsNetwork,
-    };
+    // use crate::{
+    //     clients::esplora_client::EsploraClient, BlockchainBackend, ElectrumClient, ElectrumUrl,
+    //     ElementsNetwork,
+    // };
 
     // #[test]
     // #[ignore = "test with prod servers"]

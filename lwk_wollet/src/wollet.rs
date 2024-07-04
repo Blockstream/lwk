@@ -683,7 +683,7 @@ pub fn full_scan_with_electrum_client(
 ) -> Result<(), Error> {
     use crate::BlockchainBackend;
 
-    let update = electrum_client.full_scan(&wollet.state())?;
+    let update = electrum_client.full_scan(wollet)?;
     if let Some(update) = update {
         wollet.apply_update(update)?
     }

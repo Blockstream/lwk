@@ -150,7 +150,7 @@ impl WolletStateTrait for Wollet {
         batch: u32,
         descriptor: &Descriptor<DescriptorPublicKey>,
     ) -> Result<ScriptBatch, Error> {
-        todo!()
+        Wollet::get_script_batch(&self, batch, descriptor)
     }
 
     fn get_or_derive(
@@ -159,15 +159,15 @@ impl WolletStateTrait for Wollet {
         child: ChildNumber,
         descriptor: &Descriptor<DescriptorPublicKey>,
     ) -> Result<(Script, bool), Error> {
-        todo!()
+        Wollet::get_or_derive(&self, ext_int, child, descriptor)
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
-        todo!()
+        &self.store.cache.heights
     }
 
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
-        todo!()
+        &self.store.cache.paths
     }
 
     fn txs(&self) -> &HashSet<Txid> {
@@ -175,11 +175,23 @@ impl WolletStateTrait for Wollet {
     }
 
     fn tip(&self) -> (Height, BlockHash) {
-        todo!()
+        self.store.cache.tip
     }
 
     fn last_unused(&self) -> &LastUnused {
-        todo!()
+        // TODO use LastUnused internally in Wollet
+        &LastUnused {
+            internal: self
+                .store
+                .cache
+                .last_unused_internal
+                .load(atomic::Ordering::Relaxed),
+            external: self
+                .store
+                .cache
+                .last_unused_external
+                .load(atomic::Ordering::Relaxed),
+        }
     }
 
     fn descriptor(&self) -> &WolletDescriptor {

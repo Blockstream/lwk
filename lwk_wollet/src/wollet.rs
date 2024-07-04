@@ -38,7 +38,7 @@ pub struct Wollet {
 /// A coincise state of the wallet, in particular having only transactions ids instead of full
 /// transactions and missing other things not strictly needed for a scan.
 /// By using this instead of a borrow of the wallet we can release locks
-pub struct WolletState {
+pub struct WolletStateOnly {
     _status: u64,
     descriptor: WolletDescriptor,
     txs: HashSet<Txid>,
@@ -49,7 +49,7 @@ pub struct WolletState {
     last_unused: LastUnused,
 }
 
-pub trait WolletStateTrait {
+pub trait WolletState {
     fn get_script_batch(
         &self,
         batch: u32,
@@ -69,7 +69,7 @@ pub trait WolletStateTrait {
     fn descriptor(&self) -> WolletDescriptor;
 }
 
-impl WolletStateTrait for WolletState {
+impl WolletState for WolletStateOnly {
     // TODO duplicated from Wollet
     fn get_script_batch(
         &self,
@@ -144,7 +144,7 @@ impl std::fmt::Debug for Wollet {
     }
 }
 
-impl WolletStateTrait for Wollet {
+impl WolletState for Wollet {
     fn get_script_batch(
         &self,
         batch: u32,
@@ -234,9 +234,9 @@ impl Wollet {
         Ok(wollet)
     }
 
-    pub fn state(&self) -> WolletState {
+    pub fn state(&self) -> WolletStateOnly {
         let cache = &self.store.cache;
-        WolletState {
+        WolletStateOnly {
             _status: self.status(),
             descriptor: self.wollet_descriptor(),
             txs: cache.all_txs.keys().cloned().collect(),

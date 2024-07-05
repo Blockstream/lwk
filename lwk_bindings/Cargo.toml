@@ -1,16 +1,16 @@
 [package]
 name = "lwk_bindings"
-version = "0.4.1"
+version = "0.7.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Bindings for other languages"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_bindings"
 
 [dependencies]
-lwk_common = { version = "0.5" }
-lwk_signer = { version = "0.5" }
-lwk_wollet = { version = "0.5" }
-lwk_test_util = { version = "0.4" }
+lwk_common = { version = "0.7" }
+lwk_signer = { version = "0.7" }
+lwk_wollet = { version = "0.7" }
+lwk_test_util = { version = "0.7" }
 
 elements = "0.24.0"
 thiserror = "1.0.50"

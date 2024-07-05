@@ -1,16 +1,16 @@
 [package]
 name = "lwk_app"
-version = "0.5.1"
+version = "0.7.0"
 edition = "2021"
 description = "Liquid Wallet Kit - RPC server App"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
-lwk_common = { version = "0.5" }
-lwk_jade = { version = "0.5" }
-lwk_signer = { version = "0.5" }
-lwk_wollet = { version = "0.5" }
+lwk_common = { version = "0.7" }
+lwk_jade = { version = "0.7" }
+lwk_signer = { version = "0.7" }
+lwk_wollet = { version = "0.7" }
 lwk_rpc_model = { version = "0.4" }
 lwk_tiny_jrpc = { version = "0.4" }
 

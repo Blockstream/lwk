@@ -1,14 +1,14 @@
 [package]
 name = "lwk_ledger"
-version = "0.3.1"
+version = "0.7.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Interact with Ledger Hardware Wallet"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_jade"
 
 [dependencies]
-lwk_common = "0.5"
-lwk_containers = { version = "0.3", optional = true }
+lwk_common = "0.7"
+lwk_containers = { version = "0.7", optional = true }
 
 ledger-apdu = "0.10"
 elements-miniscript = { version = "0.3", features = ["serde"] }
@@ -16,7 +16,7 @@ elements-miniscript = { version = "0.3", features = ["serde"] }
 thiserror = "1"
 
 [dev-dependencies]
-lwk_containers = { version = "0.3" }
+lwk_containers = { version = "0.7" }
 
 [features]
 default = ["test_emulator"]

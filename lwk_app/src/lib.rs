@@ -171,21 +171,26 @@ impl App {
                 interval = interval.saturating_sub(stop_interval);
             }
 
-            let mut s = state_scanning.lock().expect("state lock poison");
-            s.interrupt_wait = false;
-            s.scan_loops_started += 1;
-            let wollets_to_scan: Vec<_> = s.wollets.iter().map(|e| e.0.to_owned()).collect();
-            let config = s.config.clone();
-            drop(s);
+            let (wollets_names, config) = {
+                let mut s = state_scanning.lock().expect("state lock poison");
+                s.interrupt_wait = false;
+                s.scan_loops_started += 1;
+                let wollets_names: Vec<_> = s.wollets.iter().map(|e| e.0.to_owned()).collect();
+                let config = s.config.clone();
+                (wollets_names, config)
+            };
 
             let mut electrum_client = loop {
                 match config.electrum_client() {
                     Ok(c) => break c,
-                    Err(_) => sleep(Duration::from_secs(1)),
+                    Err(_) => {
+                        tracing::info!("Cannot create an electrum client, are we conected? Retrying in one sec");
+                        sleep(Duration::from_secs(1))
+                    }
                 };
             };
 
-            for name in wollets_to_scan {
+            for name in wollets_names {
                 let state = match state_scanning
                     .lock()
                     .expect("state lock poison")
@@ -198,8 +203,8 @@ impl App {
 
                 match electrum_client.full_scan(&state) {
                     Ok(Some(update)) => {
-                        let mut state = state_scanning.lock().expect("state lock poison");
-                        let _ = match state.wollets.get_mut(&name) {
+                        let mut s = state_scanning.lock().expect("state lock poison");
+                        let _ = match s.wollets.get_mut(&name) {
                             Ok(wollet) => wollet.apply_update(update),
                             Err(_) => continue,
                         };

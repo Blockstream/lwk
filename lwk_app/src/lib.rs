@@ -180,39 +180,40 @@ impl App {
                 (wollets_names, config)
             };
 
-            let mut electrum_client = loop {
-                match config.electrum_client() {
-                    Ok(c) => break c,
-                    Err(_) => {
-                        tracing::info!("Cannot create an electrum client, are we conected? Retrying in one sec");
-                        sleep(Duration::from_secs(1))
-                    }
-                };
-            };
-
-            for name in wollets_names {
-                let state = match state_scanning
-                    .lock()
-                    .expect("state lock poison")
-                    .wollets
-                    .get(&name)
-                {
-                    Ok(w) => w.state(),
-                    Err(_) => continue,
-                };
-
-                match electrum_client.full_scan(&state) {
-                    Ok(Some(update)) => {
-                        let mut s = state_scanning.lock().expect("state lock poison");
-                        let _ = match s.wollets.get_mut(&name) {
-                            Ok(wollet) => wollet.apply_update(update),
+            match config.electrum_client() {
+                Ok(mut electrum_client) => {
+                    for name in wollets_names {
+                        let state = match state_scanning
+                            .lock()
+                            .expect("state lock poison")
+                            .wollets
+                            .get(&name)
+                        {
+                            Ok(w) => w.state(),
                             Err(_) => continue,
                         };
+
+                        match electrum_client.full_scan(&state) {
+                            Ok(Some(update)) => {
+                                let mut s = state_scanning.lock().expect("state lock poison");
+                                let _ = match s.wollets.get_mut(&name) {
+                                    Ok(wollet) => wollet.apply_update(update),
+                                    Err(_) => continue,
+                                };
+                            }
+                            Ok(None) => (),
+                            Err(_) => continue,
+                        }
                     }
-                    Ok(None) => (),
-                    Err(_) => continue,
                 }
-            }
+                Err(_) => {
+                    tracing::info!(
+                        "Cannot create an electrum client, are we conected? Retrying in one sec"
+                    );
+                    sleep(Duration::from_secs(1))
+                }
+            };
+
             let mut s = state_scanning.lock().expect("state lock poison");
             s.scan_loops_completed += 1;
         });

@@ -142,7 +142,8 @@ impl TxBuilder {
         self.add_unvalidated_recipient(&rec)
     }
 
-    /// Set custom fee rate
+    /// Fee rate in sats/kvb
+    /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate

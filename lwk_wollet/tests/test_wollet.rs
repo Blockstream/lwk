@@ -603,6 +603,17 @@ impl TestWollet {
         }
         panic!("Wait for height {height} failed");
     }
+
+    pub fn make_external(&mut self, utxo: &lwk_wollet::WalletTxOut) -> lwk_wollet::ExternalUtxo {
+        let tx = self.get_tx(&utxo.outpoint.txid).tx;
+        let txout = tx.output.get(utxo.outpoint.vout as usize).unwrap().clone();
+        lwk_wollet::ExternalUtxo {
+            outpoint: utxo.outpoint,
+            txout,
+            unblinded: utxo.unblinded,
+            max_weight_to_satisfy: 100, // TODO
+        }
+    }
 }
 
 pub fn generate_signer() -> SwSigner {

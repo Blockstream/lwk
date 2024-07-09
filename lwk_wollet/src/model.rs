@@ -21,6 +21,22 @@ pub struct WalletTxOut {
     pub ext_int: Chain,
 }
 
+/// A UTXO owned by another wallet
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ExternalUtxo {
+    /// The outpoint of the UTXO
+    pub outpoint: elements::OutPoint,
+
+    /// The transaction output
+    pub txout: elements::TxOut,
+
+    /// The unblinded values
+    pub unblinded: elements::TxOutSecrets,
+
+    /// Max weight to satisfy
+    pub max_weight_to_satisfy: usize,
+}
+
 /// Value returned by [`crate::Wollet::transactions()`] containing details about a transaction
 /// from the perspective of the wallet, for example the net-balance of the wallet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

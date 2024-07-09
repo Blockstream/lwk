@@ -11,7 +11,7 @@ use rand::thread_rng;
 
 use crate::{
     hashes::Hash,
-    model::{IssuanceDetails, Recipient},
+    model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest},
     Contract, ElementsNetwork, Error, UnvalidatedRecipient, Wollet, EC,
 };
@@ -50,6 +50,30 @@ pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
     r
 }
 
+/// "Clone" of Wollet.add_input
+fn add_external_input(
+    pset: &mut PartiallySignedTransaction,
+    inp_txout_sec: &mut HashMap<usize, elements::TxOutSecrets>,
+    inp_weight: &mut usize,
+    utxo: &ExternalUtxo,
+) {
+    let mut input = elements::pset::Input::from_prevout(utxo.outpoint);
+    let mut txout = utxo.txout.clone();
+    // This field is used by stateless blinders or signers to
+    // learn the blinding factors and unblinded values of this input.
+    // We need this since the output witness, which includes the
+    // rangeproof, is not serialized.
+    // Note that we explicitly remove the txout rangeproof to avoid
+    // relying on its presence.
+    input.in_utxo_rangeproof = txout.witness.rangeproof.take();
+    input.witness_utxo = Some(txout);
+
+    pset.add_input(input);
+    let idx = pset.inputs().len() - 1;
+    inp_txout_sec.insert(idx, utxo.unblinded);
+    *inp_weight += utxo.max_weight_to_satisfy;
+}
+
 /// A transaction builder
 ///
 /// See [`WolletTxBuilder`] for usage from rust.
@@ -68,6 +92,7 @@ pub struct TxBuilder {
     issuance_request: IssuanceRequest,
     drain_lbtc: bool,
     drain_to: Option<Address>,
+    external_utxos: Vec<ExternalUtxo>,
 }
 
 impl TxBuilder {
@@ -80,6 +105,7 @@ impl TxBuilder {
             issuance_request: IssuanceRequest::None,
             drain_lbtc: false,
             drain_to: None,
+            external_utxos: vec![],
         }
     }
 
@@ -241,6 +267,22 @@ impl TxBuilder {
         self
     }
 
+    /// Adds external UTXOs
+    ///
+    /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
+    pub fn add_external_utxos(mut self, utxos: Vec<ExternalUtxo>) -> Result<Self, Error> {
+        // TODO: allow for non L-BTC utxos
+        let policy_asset = self.network().policy_asset();
+        for utxo in &utxos {
+            if utxo.unblinded.asset != policy_asset {
+                return Err(Error::Generic("External utxos must be L-BTC".to_string()));
+            }
+        }
+
+        self.external_utxos.extend(utxos);
+        Ok(self)
+    }
+
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         // Init PSET
@@ -294,6 +336,15 @@ impl TxBuilder {
         for addressee in addressees_lbtc {
             wollet.add_output(&mut pset, &addressee)?;
             satoshi_out += addressee.satoshi;
+        }
+
+        // Add all external L-BTC utxos
+        for utxo in &self.external_utxos {
+            if utxo.unblinded.asset != policy_asset {
+                continue;
+            }
+            add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
+            satoshi_in += utxo.unblinded.value;
         }
 
         // FIXME: For implementation simplicity now we always add all L-BTC inputs
@@ -598,5 +649,13 @@ impl<'a> WolletTxBuilder<'a> {
             wollet: self.wollet,
             inner: self.inner.drain_lbtc_to(address),
         }
+    }
+
+    /// Wrapper of [`TxBuilder::add_external_utxos()`]
+    pub fn add_external_utxos(self, utxos: Vec<ExternalUtxo>) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self.inner.add_external_utxos(utxos)?,
+        })
     }
 }

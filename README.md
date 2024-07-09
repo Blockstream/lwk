@@ -62,37 +62,11 @@ For instance, mobile app devs might be interested mainly in
 While backend developers might want to directly use `lwk_cli`
 in their systems.
 
-Internal crate dependencies are shown in this diagram, where an arrow indicates "depends on":
+Internal crate dependencies are shown in this diagram: an arrow indicates "depends on" (when dotted the dependency is feature-activated, when blue is a dev-dependency):
 
-```mermaid
-  graph TD;
-      cli-->app;
-      cli-->rpc_model;
+![Dep tree](docs/dep-tree.svg)
 
-      app-->common;
-      app-->wollet;
-      app-->signer;
-      app-->tiny_jrpc;
-      app-->rpc_model;
-
-      jade-->common;
-      ledger-->common;
-
-      signer-->common;
-      signer-->jade;
-      signer-->ledger;
-
-      wollet-->common;
-      
-      bindings-->signer;
-      bindings-->wollet;
-      bindings-->test_util;
-
-      wasm-->signer;
-      wasm-->wollet;
-
-      test_util-->containers
-```
+(generated with `cargo depgraph --workspace-only --dev-deps`)
 
 ## Getting started with LWK Development
 

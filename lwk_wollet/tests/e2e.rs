@@ -1291,4 +1291,16 @@ fn test_external_utxo() {
     let balance = w1.balance(&policy_asset);
     // utxo w1, utxo w2, sent to node, fee
     assert_eq!(balance, 100_000 + 100_000 - 110_000 - fee);
+
+    // External UTXO cannot be asset UTXOs
+    w2.sync();
+    w2.fund_asset(&server);
+    let utxo = &w2.wollet.utxos().unwrap()[0];
+    let external_utxo = w2.make_external(utxo);
+
+    let err = w1
+        .tx_builder()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap_err();
+    assert_eq!(err.to_string(), "External utxos must be L-BTC");
 }

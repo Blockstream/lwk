@@ -445,14 +445,11 @@ impl Wollet {
                         o.value.explicit().expect("explicit"),
                         ValueBlindingFactor::zero(),
                     );
-                    // TODO: this is constant per wallet, compute it once
-                    let desc = self.definite_descriptor(&o.script_pubkey)?;
-                    let max_weight_to_satisfy = desc.max_weight_to_satisfy()?;
                     utxos.push(ExternalUtxo {
                         outpoint,
                         txout: o.clone(),
                         unblinded,
-                        max_weight_to_satisfy,
+                        max_weight_to_satisfy: self.max_weight_to_satisfy,
                     });
                 }
             }

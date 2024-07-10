@@ -2,12 +2,13 @@ use crate::bitcoin::bip32::Fingerprint;
 use crate::clients::LastUnused;
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
+use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use crate::elements::pset::PartiallySignedTransaction;
 use crate::elements::secp256k1_zkp::ZERO_TWEAK;
-use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, Txid};
+use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
-use crate::model::{AddressResult, IssuanceDetails, WalletTx, WalletTxOut};
+use crate::model::{AddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut};
 use crate::persister::PersistError;
 use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
@@ -412,6 +413,40 @@ impl Wollet {
             .iter()
             .map(|txo| (txo.outpoint, txo.clone()))
             .collect())
+    }
+
+    /// Get the explicit UTXOs sent to script pubkeys owned by the wallet
+    ///
+    /// They can be spent as external utxos.
+    pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
+        let mut utxos = vec![];
+        for (txid, tx) in self.store.cache.all_txs.iter() {
+            for (vout, o) in tx.output.iter().enumerate() {
+                if !o.script_pubkey.is_empty()
+                    && o.asset.is_explicit()
+                    && o.value.is_explicit()
+                    && self.store.cache.paths.contains_key(&o.script_pubkey)
+                {
+                    let outpoint = OutPoint::new(*txid, vout as u32);
+                    let unblinded = TxOutSecrets::new(
+                        o.asset.explicit().expect("explicit"),
+                        AssetBlindingFactor::zero(),
+                        o.value.explicit().expect("explicit"),
+                        ValueBlindingFactor::zero(),
+                    );
+                    // TODO: this is constant per wallet, compute it once
+                    let desc = self.definite_descriptor(&o.script_pubkey)?;
+                    let max_weight_to_satisfy = desc.max_weight_to_satisfy()?;
+                    utxos.push(ExternalUtxo {
+                        outpoint,
+                        txout: o.clone(),
+                        unblinded,
+                        max_weight_to_satisfy,
+                    });
+                }
+            }
+        }
+        Ok(utxos)
     }
 
     pub(crate) fn balance_from_utxos(

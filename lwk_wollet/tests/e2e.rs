@@ -1337,28 +1337,7 @@ fn test_unblinded_utxo() {
 
     assert_eq!(w.balance(&policy_asset), 0);
 
-    // TODO: expose a better way to fetch these utxos
-    let tx = w.wollet.transaction(&txid).unwrap().unwrap();
-    let vout = tx
-        .tx
-        .output
-        .iter()
-        .position(|o| o.script_pubkey == address.script_pubkey())
-        .unwrap();
-    let txout = tx.tx.output[vout].clone();
-    let outpoint = elements::OutPoint::new(tx.txid, vout as u32);
-    let unblinded = elements::TxOutSecrets::new(
-        policy_asset,
-        elements::confidential::AssetBlindingFactor::zero(),
-        satoshi,
-        elements::confidential::ValueBlindingFactor::zero(),
-    );
-    let external_utxo = lwk_wollet::ExternalUtxo {
-        outpoint,
-        txout,
-        unblinded,
-        max_weight_to_satisfy: 200, // TODO
-    };
+    let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
 
     // FIXME: this should be failing, transaction cannot be blinded
     /*

@@ -34,6 +34,8 @@ pub struct Wollet {
     pub(crate) store: Store,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     descriptor: WolletDescriptor,
+    // cached value
+    max_weight_to_satisfy: usize,
 }
 
 /// A coincise state of the wallet, in particular having only transactions ids instead of full
@@ -218,11 +220,15 @@ impl Wollet {
         let config = Config::new(network)?;
 
         let store = Store::default();
+        let max_weight_to_satisfy = descriptor
+            .definite_descriptor(Chain::External, 0)?
+            .max_weight_to_satisfy()?;
         let mut wollet = Wollet {
             store,
             config,
             descriptor,
             persister,
+            max_weight_to_satisfy,
         };
 
         for i in 0.. {
@@ -233,6 +239,11 @@ impl Wollet {
         }
 
         Ok(wollet)
+    }
+
+    /// Max weight to satisfy for inputs belonging to this wallet
+    pub fn max_weight_to_satisfy(&self) -> usize {
+        self.max_weight_to_satisfy
     }
 
     pub fn state(&self) -> WolletConciseState {

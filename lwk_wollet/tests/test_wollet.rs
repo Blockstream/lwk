@@ -611,7 +611,7 @@ impl TestWollet {
             outpoint: utxo.outpoint,
             txout,
             unblinded: utxo.unblinded,
-            max_weight_to_satisfy: 100, // TODO
+            max_weight_to_satisfy: self.wollet.max_weight_to_satisfy(),
         }
     }
 }

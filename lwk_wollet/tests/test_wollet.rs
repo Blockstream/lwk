@@ -120,6 +120,21 @@ impl TestWollet {
         panic!("Wallet does not have {} in its list", txid);
     }
 
+    /// Wait until the wallet has the transaction, although it might not be in the tx list
+    ///
+    /// This might be useful for explicit outputs or blinded outputs that cannot be unblinded.
+    fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
+        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        for _ in 0..120 {
+            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+            if self.wollet.transaction(txid).unwrap().is_some() {
+                return;
+            }
+            thread::sleep(Duration::from_millis(500));
+        }
+        panic!("Wallet does not have {} in its list", txid);
+    }
+
     /// asset balance in satoshi
     pub fn balance(&mut self, asset: &AssetId) -> u64 {
         let balance = self.wollet.balance().unwrap();
@@ -171,6 +186,25 @@ impl TestWollet {
         let asset = server.node_issueasset(satoshi);
         self.fund(server, satoshi, Some(self.address()), Some(asset));
         asset
+    }
+
+    pub fn fund_explicit(
+        &mut self,
+        server: &TestElectrumServer,
+        satoshi: u64,
+        address: Option<Address>,
+        asset: Option<AssetId>,
+    ) {
+        let explicit_utxos_before = self.wollet.explicit_utxos().unwrap().len();
+
+        let address = address
+            .unwrap_or_else(|| self.address())
+            .to_unconfidential();
+        let txid = server.node_sendtoaddress(&address, satoshi, asset);
+        self.wait_for_tx_outside_list(&txid);
+
+        let explicit_utxos_after = self.wollet.explicit_utxos().unwrap().len();
+        assert_eq!(explicit_utxos_after, explicit_utxos_before + 1);
     }
 
     /// Send 10_000 satoshi to self with default fee rate.

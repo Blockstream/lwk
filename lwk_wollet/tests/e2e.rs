@@ -1319,21 +1319,8 @@ fn test_unblinded_utxo() {
     let policy_asset = w.policy_asset();
 
     // Fund the wallet with an unblinded UTXO
-    let address = w.address().to_unconfidential();
     let satoshi = 100_000;
-    let txid = server.node_sendtoaddress(&address, satoshi, None);
-    // Wait for the transaction
-    let mut found = false;
-    let mut electrum_client: ElectrumClient = ElectrumClient::new(&w.electrum_url).unwrap();
-    for _ in 0..120 {
-        full_scan_with_electrum_client(&mut w.wollet, &mut electrum_client).unwrap();
-        if w.wollet.transaction(&txid).unwrap().is_some() {
-            found = true;
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(500));
-    }
-    assert!(found, "Wallet have not received {}", txid);
+    w.fund_explicit(&server, satoshi, None, None);
 
     assert_eq!(w.balance(&policy_asset), 0);
 

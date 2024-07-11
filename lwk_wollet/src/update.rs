@@ -51,6 +51,11 @@ impl DownloadTxResult {
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
+    /// The status of the wallet this update is generated from
+    ///
+    /// If 0 means it has been deserialized from a V0 version
+    pub wollet_status: u64,
+
     pub new_txs: DownloadTxResult,
     pub txid_height_new: Vec<(Txid, Option<Height>)>,
     pub txid_height_delete: Vec<Txid>,
@@ -138,6 +143,7 @@ impl Wollet {
 
         let store = &mut self.store;
         let Update {
+            wollet_status: _,
             new_txs,
             txid_height_new,
             txid_height_delete,
@@ -380,9 +386,14 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version != 0 {
+        if version > 1 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
+        let wollet_status = if version == 1 {
+            u64::consensus_decode(&mut d)?
+        } else {
+            0
+        };
 
         let new_txs = DownloadTxResult::consensus_decode(&mut d)?;
 
@@ -439,6 +450,7 @@ impl Decodable for Update {
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
         Ok(Self {
+            wollet_status,
             new_txs,
             txid_height_new,
             txid_height_delete,

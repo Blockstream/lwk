@@ -254,4 +254,31 @@ mod tests {
         assert!(signer.mnemonic().is_none());
         assert!(signer.seed().is_none());
     }
+
+    #[test]
+    fn signer_ecdsa_opt() {
+        // Sign with the default option (low R) and then with the "no grind" option
+        let mut signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let b64 = include_str!("../../lwk_jade/test_data/pset_to_be_signed.base64");
+        let mut pset_low_r: PartiallySignedTransaction = b64.parse().unwrap();
+        let sig_added = signer.sign(&mut pset_low_r).unwrap();
+        assert_eq!(sig_added, 1);
+
+        signer.set_ecdsa_sign_no_grind();
+        let mut pset_no_grind: PartiallySignedTransaction = b64.parse().unwrap();
+        let sig_added = signer.sign(&mut pset_no_grind).unwrap();
+        assert_eq!(sig_added, 1);
+
+        // In the case the signatures are different, but in general signatures might not
+        // differ, since the grinding for low R might not be necessary.
+        assert_ne!(pset_no_grind, pset_low_r);
+        let sig_no_grind = pset_no_grind.inputs()[0]
+            .partial_sigs
+            .values()
+            .next()
+            .unwrap();
+        let sig_low_r = pset_low_r.inputs()[0].partial_sigs.values().next().unwrap();
+        assert_ne!(sig_low_r, sig_no_grind);
+        assert!(sig_low_r.len() < sig_no_grind.len());
+    }
 }

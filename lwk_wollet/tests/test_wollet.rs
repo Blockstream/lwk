@@ -608,6 +608,15 @@ impl TestWollet {
         txid
     }
 
+    pub fn send_outside_list(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
+        *pset = pset_rt(pset);
+        let tx = self.wollet.finalize(pset).unwrap();
+        let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
+        let txid = electrum_client.broadcast(&tx).unwrap();
+        self.wait_for_tx_outside_list(&txid);
+        txid
+    }
+
     pub fn check_persistence(wollet: TestWollet) {
         let descriptor = wollet.wollet.descriptor().to_string();
         let expected_updates = wollet.wollet.updates().unwrap();

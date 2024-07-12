@@ -1368,4 +1368,26 @@ fn test_unblinded_utxo() {
 
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
     assert_eq!(explicit_utxos.len(), 1);
+    let external_utxo = explicit_utxos.last().unwrap().clone();
+
+    // Send all funds
+    let mut pset = w
+        .tx_builder()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(node_address)
+        .finish()
+        .unwrap();
+
+    // 1 blinded input, 1 unblinded input
+    assert_eq!(pset.inputs().len(), 2);
+
+    for signer in signers {
+        w.sign(signer, &mut pset);
+    }
+
+    w.send(&mut pset);
+
+    assert_eq!(w.balance(&policy_asset), 0);
 }

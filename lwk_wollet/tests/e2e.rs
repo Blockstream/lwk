@@ -1363,5 +1363,9 @@ fn test_unblinded_utxo() {
     // Received the change output
     assert!(w.balance(&policy_asset) > 0);
 
-    // TODO: more cases
+    // Fund the wallet with another unblinded UTXO
+    w.fund_explicit(&server, satoshi, None, None);
+
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1);
 }

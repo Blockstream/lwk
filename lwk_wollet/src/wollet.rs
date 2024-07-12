@@ -430,15 +430,17 @@ impl Wollet {
     ///
     /// They can be spent as external utxos.
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
+        let spent = self.store.spent()?;
         let mut utxos = vec![];
         for (txid, tx) in self.store.cache.all_txs.iter() {
             for (vout, o) in tx.output.iter().enumerate() {
+                let outpoint = OutPoint::new(*txid, vout as u32);
                 if !o.script_pubkey.is_empty()
                     && o.asset.is_explicit()
                     && o.value.is_explicit()
                     && self.store.cache.paths.contains_key(&o.script_pubkey)
+                    && !spent.contains(&outpoint)
                 {
-                    let outpoint = OutPoint::new(*txid, vout as u32);
                     let unblinded = TxOutSecrets::new(
                         o.asset.explicit().expect("explicit"),
                         AssetBlindingFactor::zero(),

@@ -1326,18 +1326,6 @@ fn test_unblinded_utxo() {
 
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
 
-    // FIXME: this should be failing, transaction cannot be blinded
-    /*
-    let err = w
-        .tx_builder()
-        .add_external_utxos(vec![external_utxo.clone()])
-        .unwrap()
-        .drain_lbtc_wallet()
-        .finish()
-        .unwrap_err();
-    assert_eq!(err.to_string(), "FIXME");
-     * */
-
     // Create tx sending the unblinded utxo
     let node_address = server.node_getnewaddress();
 
@@ -1388,6 +1376,31 @@ fn test_unblinded_utxo() {
     }
 
     w.send(&mut pset);
+
+    assert_eq!(w.balance(&policy_asset), 0);
+
+    // 1 unblinded input, 1 blinded output: we can still blind the transaction
+    w.fund_explicit(&server, satoshi, None, None);
+
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    let external_utxo = explicit_utxos.last().unwrap().clone();
+
+    // Send all funds
+    let node_address = server.node_getnewaddress();
+    let mut pset = w
+        .tx_builder()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(node_address)
+        .finish()
+        .unwrap();
+
+    for signer in signers {
+        w.sign(signer, &mut pset);
+    }
+
+    w.send_outside_list(&mut pset);
 
     assert_eq!(w.balance(&policy_asset), 0);
 }

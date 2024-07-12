@@ -49,12 +49,24 @@ pub enum NewError {
     Bip32(#[from] bip32::Error),
 }
 
+/// Options for ECDSA signing
+#[derive(Clone, Debug, Default)]
+enum EcdsaSignOpt {
+    /// Create signature with low r
+    #[default]
+    LowR,
+
+    /// Create signatures without grinding the nonce
+    NoGrind,
+}
+
 /// A software signer
 #[derive(Clone)]
 pub struct SwSigner {
     pub(crate) xprv: Xpriv,
     pub(crate) secp: Secp256k1<All>, // could be sign only, but it is likely the caller already has the All context.
     pub(crate) mnemonic: Option<Mnemonic>,
+    ecdsa_sign_opt: EcdsaSignOpt,
 }
 
 impl core::fmt::Debug for SwSigner {
@@ -85,6 +97,7 @@ impl SwSigner {
             xprv,
             secp,
             mnemonic: Some(mnemonic),
+            ecdsa_sign_opt: EcdsaSignOpt::default(),
         })
     }
 
@@ -98,7 +111,18 @@ impl SwSigner {
             xprv,
             secp: Secp256k1::new(),
             mnemonic: None,
+            ecdsa_sign_opt: EcdsaSignOpt::default(),
         }
+    }
+
+    /// Produce "low R" ECDSA signatures (default and recommended option)
+    pub fn set_ecdsa_sign_low_r(&mut self) {
+        self.ecdsa_sign_opt = EcdsaSignOpt::LowR;
+    }
+
+    /// Produce no grind "R" in ECDSA signatures
+    pub fn set_ecdsa_sign_no_grind(&mut self) {
+        self.ecdsa_sign_opt = EcdsaSignOpt::NoGrind;
     }
 
     pub fn xpub(&self) -> Xpub {
@@ -154,7 +178,12 @@ impl Signer for SwSigner {
                     let public_key = private_key.public_key(&self.secp);
                     if want_public_key == &public_key {
                         // fixme: for taproot use schnorr
-                        let sig = self.secp.sign_ecdsa_low_r(&msg, &private_key.inner);
+                        let sig = match self.ecdsa_sign_opt {
+                            EcdsaSignOpt::LowR => {
+                                self.secp.sign_ecdsa_low_r(&msg, &private_key.inner)
+                            }
+                            EcdsaSignOpt::NoGrind => self.secp.sign_ecdsa(&msg, &private_key.inner),
+                        };
                         let sig = elementssig_to_rawsig(&(sig, hash_ty));
 
                         let inserted = input.partial_sigs.insert(public_key, sig);

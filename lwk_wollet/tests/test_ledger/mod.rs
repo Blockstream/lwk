@@ -29,4 +29,8 @@ fn emul_roundtrip_wpkh() {
 
     let node_address = server.elementsd_getnewaddress();
     wallet.send_btc(signers, None, Some((node_address, 10_000)));
+
+    let (asset, _token) = wallet.issueasset(signers, 10, 1, None, None);
+    wallet.reissueasset(signers, 10, &asset, None);
+    wallet.burnasset(signers, 5, &asset, None);
 }

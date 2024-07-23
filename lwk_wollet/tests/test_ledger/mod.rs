@@ -6,8 +6,7 @@ use lwk_test_util::setup;
 
 use crate::test_wollet::TestWollet;
 
-#[test]
-fn emul_roundtrip_wpkh() {
+fn emul_roundtrip(singlesig_type: Singlesig) {
     let server = setup(false);
     let docker = Cli::default();
     let ledger = TestLedgerEmulator::new(&docker);
@@ -18,7 +17,7 @@ fn emul_roundtrip_wpkh() {
 
     let desc_str = singlesig_desc(
         signers[0],
-        Singlesig::Wpkh,
+        singlesig_type,
         lwk_common::DescriptorBlindingKey::Slip77,
         false,
     )
@@ -33,4 +32,14 @@ fn emul_roundtrip_wpkh() {
     let (asset, _token) = wallet.issueasset(signers, 10, 1, None, None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 5, &asset, None);
+}
+
+#[test]
+fn emul_roundtrip_wpkh() {
+    emul_roundtrip(Singlesig::Wpkh);
+}
+
+#[test]
+fn emul_roundtrip_shwpkh() {
+    emul_roundtrip(Singlesig::ShWpkh);
 }

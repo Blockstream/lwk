@@ -4,7 +4,7 @@
     "build": "webpack --config webpack.config.js"
   },
   "dependencies": {
-    "lwk_wasm": "file:../pkg"
+    "lwk_wasm": "^0.7.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",

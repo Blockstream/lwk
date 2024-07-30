@@ -1121,7 +1121,11 @@ fn wait_tx_update(wallet: &mut TestWollet) {
     for _ in 0..50 {
         if let Some(update) = client.full_scan(&wallet.wollet).unwrap() {
             if !update.only_tip() {
-                wallet.wollet.apply_update(update).unwrap();
+                wallet.wollet.apply_update(update.clone()).unwrap();
+
+                let err = wallet.wollet.apply_update(update).unwrap_err().to_string();
+                assert!(err.starts_with("Update created on a wallet with status"));
+
                 return;
             }
         }

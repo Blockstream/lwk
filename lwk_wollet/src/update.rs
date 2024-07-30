@@ -2,6 +2,7 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
+use crate::wollet::WolletState;
 use crate::{Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
@@ -140,6 +141,16 @@ impl Wollet {
 
     fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
+
+        if update.wollet_status != 0 {
+            // wollet status 0 means the update has been created before saving the status (v0) and we can't check
+            if self.wollet_status() != update.wollet_status {
+                return Err(Error::UpdateOnDifferentStatus {
+                    wollet_status: self.wollet_status(),
+                    update_status: update.wollet_status,
+                });
+            }
+        }
 
         let store = &mut self.store;
         let Update {

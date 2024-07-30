@@ -338,7 +338,9 @@ impl Encodable for Update {
         let mut bytes_written = 0;
 
         bytes_written += UPDATE_MAGIC_BYTES.consensus_encode(&mut w)?; // Magic bytes
-        bytes_written += 0u8.consensus_encode(&mut w)?; // Version
+        bytes_written += 1u8.consensus_encode(&mut w)?; // Version
+
+        bytes_written += self.wollet_status.consensus_encode(&mut w)?;
 
         bytes_written += self.new_txs.consensus_encode(&mut w)?;
 
@@ -468,6 +470,7 @@ mod test {
 
     use elements::{
         encode::{Decodable, Encodable},
+        hex::ToHex,
         Script,
     };
 
@@ -498,6 +501,7 @@ mod test {
             timestamps: Default::default(),
             scripts: Default::default(),
             tip,
+            wollet_status: 1,
         };
         assert!(update.only_tip());
         update
@@ -550,16 +554,33 @@ mod test {
             timestamps: vec![(12, 44), (12, 44)],
             scripts,
             tip,
+            wollet_status: 1,
         };
 
         let mut vec = vec![];
         let len = update.consensus_encode(&mut vec).unwrap();
-        assert_eq!(vec, lwk_test_util::update_test_vector_bytes());
-        assert_eq!(len, 2842);
+        std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap();
+        let exp_vec = lwk_test_util::update_test_vector_v1_bytes();
+        assert_eq!(vec, exp_vec);
+        assert_eq!(len, 2850);
         assert_eq!(vec.len(), len);
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_backward_comp() {
+        // Update can be deserialize from v0 or v1 blob, but in the first case the wallet_status will be 0.
+        let v0 = lwk_test_util::update_test_vector_bytes();
+        let v1 = lwk_test_util::update_test_vector_v1_bytes();
+
+        let upd_from_v0 = Update::deserialize(&v0).unwrap();
+
+        let mut upd_from_v1 = Update::deserialize(&v1).unwrap();
+        assert_ne!(upd_from_v0, upd_from_v1);
+        upd_from_v1.wollet_status = 0;
+        assert_eq!(upd_from_v0, upd_from_v1);
     }
 
     #[test]
@@ -594,13 +615,13 @@ mod test {
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let wollet = Wollet::without_persist(crate::ElementsNetwork::LiquidTestnet, desc).unwrap();
-        assert_eq!(update.serialize().unwrap().len(), 18436);
+        assert_eq!(update.serialize().unwrap().len(), 18444);
         let update_pruned = {
             let mut u = update.clone();
             u.prune(&wollet);
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1114);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

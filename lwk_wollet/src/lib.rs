@@ -2,7 +2,7 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! LWK is a collection of libraries for Liquid wallets.
-//! `lwk_wollet` is the library for Watch-Only Wallets.
+//! `lwk_wollet` is the library for Watch-Only Wallets, the `wollet` spelling is not a typo but highlights the fact it is Watch-Only.
 //!
 //! A wallet is defined by a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
 //! which consists in a Bitcoin descriptor plus the descriptor blinding key.

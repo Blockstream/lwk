@@ -670,7 +670,7 @@ pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
         .iter()
         .map(|s| {
             let fingerprint = s.fingerprint().unwrap();
-            let path_str = "/84h/0h/0h";
+            let path_str = "/84h/1h/0h";
             let path = DerivationPath::from_str(&format!("m{path_str}")).unwrap();
             let xpub = s.derive_xpub(&path).unwrap();
             format!("[{fingerprint}{path_str}]{xpub}/<0;1>/*",)

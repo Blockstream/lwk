@@ -80,12 +80,26 @@ impl Signer for &Ledger {
                     .as_ref()
                     .map(|x| x.is_v0_p2wpkh())
                     .unwrap_or(false);
+            let is_p2wsh = script_pubkey.is_v0_p2wsh();
             let desc = if is_p2wpkh {
-                "wpkh(@0)"
+                "wpkh(@0)".to_string()
             } else if is_p2shwpkh {
-                "sh(wpkh(@0))"
+                "sh(wpkh(@0))".to_string()
+            } else if is_p2wsh {
+                if let Some(s) = input.witness_script.as_ref() {
+                    if let Some((n, m)) = is_multisig(s) {
+                        // FIXME: order, multi
+                        let v: Vec<String> = (0..m).map(|i| format!("@{}", i)).collect();
+                        let keys = v.join(",");
+                        format!("wsh(multi({},{}))", n, keys)
+                    } else {
+                        "".to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
             } else {
-                ""
+                "".to_string()
             };
             if desc.is_empty() {
                 // TODO: add support for other scripts
@@ -187,7 +201,7 @@ impl Signer for Ledger {
 // taken and adapted from:
 // https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
 // TODO remove once it's released
-fn is_multisig(script: &Script) -> bool {
+fn is_multisig(script: &Script) -> Option<(u32, u32)> {
     fn decode_pushnum(op: All) -> Option<u8> {
         let start: u8 = OP_PUSHNUM_1.into_u8();
         let end: u8 = OP_PUSHNUM_16.into_u8();
@@ -205,10 +219,10 @@ fn is_multisig(script: &Script) -> bool {
         if let Some(pushnum) = decode_pushnum(op) {
             required_sigs = pushnum;
         } else {
-            return false;
+            return None;
         }
     } else {
-        return false;
+        return None;
     }
 
     let mut num_pubkeys: u8 = 0;
@@ -220,7 +234,7 @@ fn is_multisig(script: &Script) -> bool {
             Instruction::Op(op) => {
                 if let Some(pushnum) = decode_pushnum(op) {
                     if pushnum != num_pubkeys {
-                        return false;
+                        return None;
                     }
                 }
                 break;
@@ -229,16 +243,20 @@ fn is_multisig(script: &Script) -> bool {
     }
 
     if required_sigs > num_pubkeys {
-        return false;
+        return None;
     }
 
     if let Some(Ok(Instruction::Op(op))) = instructions.next() {
         if op != OP_CHECKMULTISIG {
-            return false;
+            return None;
         }
     } else {
-        return false;
+        return None;
     }
 
-    instructions.next().is_none()
+    if instructions.next().is_none() {
+        Some((required_sigs.into(), num_pubkeys.into()))
+    } else {
+        None
+    }
 }

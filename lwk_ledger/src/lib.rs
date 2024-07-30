@@ -25,6 +25,14 @@ use elements_miniscript::elements::bitcoin::bip32::{
     ChildNumber, DerivationPath, Fingerprint, Xpub,
 };
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
+use elements_miniscript::elements::{
+    opcodes::{
+        all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
+        All,
+    },
+    script::Instruction,
+    Script,
+};
 
 use lwk_common::Signer;
 
@@ -173,4 +181,64 @@ impl Signer for Ledger {
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
     }
+}
+
+// duplicated from Jade
+// taken and adapted from:
+// https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
+// TODO remove once it's released
+fn is_multisig(script: &Script) -> bool {
+    fn decode_pushnum(op: All) -> Option<u8> {
+        let start: u8 = OP_PUSHNUM_1.into_u8();
+        let end: u8 = OP_PUSHNUM_16.into_u8();
+        if start < op.into_u8() && end >= op.into_u8() {
+            Some(op.into_u8() - start + 1)
+        } else {
+            None
+        }
+    }
+
+    let required_sigs;
+
+    let mut instructions = script.instructions();
+    if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+        if let Some(pushnum) = decode_pushnum(op) {
+            required_sigs = pushnum;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    let mut num_pubkeys: u8 = 0;
+    while let Some(Ok(instruction)) = instructions.next() {
+        match instruction {
+            Instruction::PushBytes(_) => {
+                num_pubkeys += 1;
+            }
+            Instruction::Op(op) => {
+                if let Some(pushnum) = decode_pushnum(op) {
+                    if pushnum != num_pubkeys {
+                        return false;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    if required_sigs > num_pubkeys {
+        return false;
+    }
+
+    if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+        if op != OP_CHECKMULTISIG {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    instructions.next().is_none()
 }

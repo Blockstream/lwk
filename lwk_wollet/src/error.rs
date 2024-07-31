@@ -154,6 +154,12 @@ pub enum Error {
         store_tip_height: u32,
     },
 
+    #[error("Update created on a wallet with status {update_status} while current wallet has {wollet_status}")]
+    UpdateOnDifferentStatus {
+        wollet_status: u64,
+        update_status: u64,
+    },
+
     #[error("An issuance has already being set on this tx builder")]
     IssuanceAlreadySet,
 

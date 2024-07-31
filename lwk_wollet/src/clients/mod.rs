@@ -180,8 +180,10 @@ pub trait BlockchainBackend {
                 .filter(|k| txid_height.get(*k).is_none())
                 .cloned()
                 .collect();
+            let wollet_status = state.wollet_status();
 
             let update = Update {
+                wollet_status,
                 new_txs,
                 txid_height_new,
                 txid_height_delete,

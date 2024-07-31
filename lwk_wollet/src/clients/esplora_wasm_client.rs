@@ -236,8 +236,10 @@ impl EsploraWasmClient {
                 .filter(|k| txid_height.get(*k).is_none())
                 .cloned()
                 .collect();
+            let wollet_status = wollet.status();
 
             let update = Update {
+                wollet_status,
                 new_txs,
                 txid_height_new,
                 txid_height_delete,

@@ -42,7 +42,7 @@ pub struct Wollet {
 /// transactions and missing other things not strictly needed for a scan.
 /// By using this instead of a borrow of the wallet we can release locks
 pub struct WolletConciseState {
-    _status: u64,
+    wollet_status: u64,
     descriptor: WolletDescriptor,
     txs: HashSet<Txid>,
     paths: HashMap<Script, (Chain, ChildNumber)>,
@@ -70,6 +70,7 @@ pub trait WolletState {
     fn tip(&self) -> (Height, BlockHash);
     fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
     fn descriptor(&self) -> WolletDescriptor;
+    fn wollet_status(&self) -> u64;
 }
 
 impl WolletState for WolletConciseState {
@@ -139,6 +140,10 @@ impl WolletState for WolletConciseState {
     fn descriptor(&self) -> WolletDescriptor {
         self.descriptor.clone()
     }
+
+    fn wollet_status(&self) -> u64 {
+        self.wollet_status
+    }
 }
 
 impl std::fmt::Debug for Wollet {
@@ -200,6 +205,10 @@ impl WolletState for Wollet {
     fn descriptor(&self) -> WolletDescriptor {
         self.wollet_descriptor()
     }
+
+    fn wollet_status(&self) -> u64 {
+        self.status()
+    }
 }
 
 impl std::hash::Hash for Wollet {
@@ -249,7 +258,7 @@ impl Wollet {
     pub fn state(&self) -> WolletConciseState {
         let cache = &self.store.cache;
         WolletConciseState {
-            _status: self.status(),
+            wollet_status: self.status(),
             descriptor: self.wollet_descriptor(),
             txs: cache.all_txs.keys().cloned().collect(),
             paths: cache.paths.clone(),

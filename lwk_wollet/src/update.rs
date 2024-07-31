@@ -2,6 +2,7 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
+use crate::wollet::WolletState;
 use crate::{Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
@@ -51,6 +52,11 @@ impl DownloadTxResult {
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
+    /// The status of the wallet this update is generated from
+    ///
+    /// If 0 means it has been deserialized from a V0 version
+    pub wollet_status: u64,
+
     pub new_txs: DownloadTxResult,
     pub txid_height_new: Vec<(Txid, Option<Height>)>,
     pub txid_height_delete: Vec<Txid>,
@@ -136,8 +142,19 @@ impl Wollet {
     fn apply_update_inner(&mut self, update: Update, do_persist: bool) -> Result<(), Error> {
         // TODO should accept &Update
 
+        if update.wollet_status != 0 {
+            // wollet status 0 means the update has been created before saving the status (v0) and we can't check
+            if self.wollet_status() != update.wollet_status {
+                return Err(Error::UpdateOnDifferentStatus {
+                    wollet_status: self.wollet_status(),
+                    update_status: update.wollet_status,
+                });
+            }
+        }
+
         let store = &mut self.store;
         let Update {
+            wollet_status: _,
             new_txs,
             txid_height_new,
             txid_height_delete,
@@ -332,7 +349,9 @@ impl Encodable for Update {
         let mut bytes_written = 0;
 
         bytes_written += UPDATE_MAGIC_BYTES.consensus_encode(&mut w)?; // Magic bytes
-        bytes_written += 0u8.consensus_encode(&mut w)?; // Version
+        bytes_written += 1u8.consensus_encode(&mut w)?; // Version
+
+        bytes_written += self.wollet_status.consensus_encode(&mut w)?;
 
         bytes_written += self.new_txs.consensus_encode(&mut w)?;
 
@@ -380,9 +399,14 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version != 0 {
+        if version > 1 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
+        let wollet_status = if version == 1 {
+            u64::consensus_decode(&mut d)?
+        } else {
+            0
+        };
 
         let new_txs = DownloadTxResult::consensus_decode(&mut d)?;
 
@@ -439,6 +463,7 @@ impl Decodable for Update {
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
         Ok(Self {
+            wollet_status,
             new_txs,
             txid_height_new,
             txid_height_delete,
@@ -456,6 +481,7 @@ mod test {
 
     use elements::{
         encode::{Decodable, Encodable},
+        hex::ToHex,
         Script,
     };
 
@@ -486,6 +512,7 @@ mod test {
             timestamps: Default::default(),
             scripts: Default::default(),
             tip,
+            wollet_status: 1,
         };
         assert!(update.only_tip());
         update
@@ -538,16 +565,33 @@ mod test {
             timestamps: vec![(12, 44), (12, 44)],
             scripts,
             tip,
+            wollet_status: 1,
         };
 
         let mut vec = vec![];
         let len = update.consensus_encode(&mut vec).unwrap();
-        assert_eq!(vec, lwk_test_util::update_test_vector_bytes());
-        assert_eq!(len, 2842);
+        std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap();
+        let exp_vec = lwk_test_util::update_test_vector_v1_bytes();
+        assert_eq!(vec, exp_vec);
+        assert_eq!(len, 2850);
         assert_eq!(vec.len(), len);
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
         assert_eq!(update, back)
+    }
+
+    #[test]
+    fn test_update_backward_comp() {
+        // Update can be deserialize from v0 or v1 blob, but in the first case the wallet_status will be 0.
+        let v0 = lwk_test_util::update_test_vector_bytes();
+        let v1 = lwk_test_util::update_test_vector_v1_bytes();
+
+        let upd_from_v0 = Update::deserialize(&v0).unwrap();
+
+        let mut upd_from_v1 = Update::deserialize(&v1).unwrap();
+        assert_ne!(upd_from_v0, upd_from_v1);
+        upd_from_v1.wollet_status = 0;
+        assert_eq!(upd_from_v0, upd_from_v1);
     }
 
     #[test]
@@ -582,13 +626,13 @@ mod test {
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let wollet = Wollet::without_persist(crate::ElementsNetwork::LiquidTestnet, desc).unwrap();
-        assert_eq!(update.serialize().unwrap().len(), 18436);
+        assert_eq!(update.serialize().unwrap().len(), 18444);
         let update_pruned = {
             let mut u = update.clone();
             u.prune(&wollet);
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1114);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

@@ -73,7 +73,7 @@ impl Signer for &Ledger {
         let master_fp = self.fingerprint()?;
 
         // Figure out which wallets are signing
-        for input in pset.inputs() {
+        'outer: for input in pset.inputs() {
             let is_p2wpkh = input
                 .witness_utxo
                 .as_ref()
@@ -122,6 +122,60 @@ impl Signer for &Ledger {
                         };
                         let wallet_policy =
                             WalletPolicy::new(name, version, desc.to_string(), keys);
+                        let is_change = false;
+                        if let Ok(d) = wallet_policy.get_descriptor(is_change) {
+                            wallets.insert(d, wallet_policy);
+                        }
+                    }
+                }
+            } else {
+                let is_p2wsh = input
+                    .witness_utxo
+                    .as_ref()
+                    .map(|u| u.script_pubkey.is_v0_p2wsh())
+                    .unwrap_or(false);
+                let details = input.witness_script.as_ref().and_then(parse_multisig);
+                // Multisig
+                if is_p2wsh {
+                    if let Some((threshold, pubkeys)) = details {
+                        let mut keys: Vec<WalletPubKey> = vec![];
+                        for pubkey in pubkeys {
+                            if let Some((fp, path)) = input.bip32_derivation.get(&pubkey) {
+                                let mut v: Vec<ChildNumber> = path.clone().into();
+                                v.truncate(3);
+                                let path: DerivationPath = v.into();
+                                let keysource = (*fp, path);
+                                if let Some(xpub) = pset.global.xpub.iter().find_map(|(x, ks)| {
+                                    if ks == &keysource {
+                                        Some(x)
+                                    } else {
+                                        None
+                                    }
+                                }) {
+                                    let mut key = WalletPubKey::from((keysource, *xpub));
+                                    key.multipath = Some("/**".to_string());
+                                    keys.push(key);
+                                } else {
+                                    // Global xpub not available, cannot reconstruct the script
+                                    continue 'outer;
+                                }
+                            } else {
+                                // No keysource for pubkey in script
+                                // Either the script is not ours or data is missing
+                                continue 'outer;
+                            }
+                        }
+                        let sorted = false;
+                        let wallet_policy = WalletPolicy::new_multisig(
+                            "todo".to_string(),
+                            Version::V1,
+                            AddressType::NativeSegwit,
+                            threshold as usize,
+                            keys,
+                            sorted,
+                            None,
+                        )
+                        .expect("FIXME");
                         let is_change = false;
                         if let Ok(d) = wallet_policy.get_descriptor(is_change) {
                             wallets.insert(d, wallet_policy);

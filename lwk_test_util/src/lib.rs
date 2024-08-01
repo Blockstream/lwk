@@ -155,7 +155,8 @@ impl TestElectrumServer {
 
         init_logging();
 
-        let bitcoind = validate_pegin.map(|bitcoind_exec| electrsd::bitcoind::BitcoinD::new(bitcoind_exec).unwrap());
+        let bitcoind = validate_pegin
+            .map(|bitcoind_exec| electrsd::bitcoind::BitcoinD::new(bitcoind_exec).unwrap());
 
         let view_stdout = filter == LevelFilter::TRACE;
 

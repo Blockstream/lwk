@@ -64,49 +64,57 @@ impl Signer for &Ledger {
 
         // Figure out which wallets are signing
         for input in pset.inputs() {
-            let script_pubkey = &input.witness_utxo.as_ref().expect("FIXME").script_pubkey;
-            let is_p2wpkh = script_pubkey.is_v0_p2wpkh();
-            let is_p2shwpkh = script_pubkey.is_p2sh()
+            let is_p2wpkh = input
+                .witness_utxo
+                .as_ref()
+                .map(|u| u.script_pubkey.is_v0_p2wpkh())
+                .unwrap_or(false);
+            let is_p2sh = input
+                .witness_utxo
+                .as_ref()
+                .map(|u| u.script_pubkey.is_p2sh())
+                .unwrap_or(false);
+            let is_p2shwpkh = is_p2sh
                 && input
                     .redeem_script
                     .as_ref()
                     .map(|x| x.is_v0_p2wpkh())
                     .unwrap_or(false);
-            let desc = if is_p2wpkh {
-                "wpkh(@0)"
-            } else if is_p2shwpkh {
-                "sh(wpkh(@0))"
-            } else {
-                ""
-            };
-            if desc.is_empty() {
-                // TODO: add support for other scripts
-                continue;
-            }
-            for (_pubkey, (fp, path)) in input.bip32_derivation.iter() {
-                if fp == &master_fp {
-                    // TODO: check path
-                    // path has len 3
-                    // path has all hardened
-                    // path has purpose matching address type
-                    // path has correct coin type
-                    let mut v: Vec<ChildNumber> = path.clone().into();
-                    v.truncate(3);
-                    let path: DerivationPath = v.into();
+            // Singlesig
+            if is_p2wpkh || is_p2shwpkh {
+                // We expect exactly one element
+                if let Some((fp, path)) = input.bip32_derivation.values().next() {
+                    if fp == &master_fp {
+                        // TODO: check path
+                        // path has len 3
+                        // path has all hardened
+                        // path has purpose matching address type
+                        // path has correct coin type
+                        let mut v: Vec<ChildNumber> = path.clone().into();
+                        v.truncate(3);
+                        let path: DerivationPath = v.into();
 
-                    // Do we care about the descriptor blinding key here?
-                    let name = "todo".to_string();
-                    let version = Version::V1;
-                    // TODO: cache xpubs
-                    let xpub = self
-                        .client
-                        .get_extended_pubkey(&path, false)
-                        .expect("FIXME");
-                    let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
-                    key.multipath = Some("/**".to_string());
-                    let keys = vec![key];
-                    let wallet_policy = WalletPolicy::new(name, version, desc.to_string(), keys);
-                    wallets.push(wallet_policy);
+                        // Do we care about the descriptor blinding key here?
+                        let name = "todo".to_string();
+                        let version = Version::V1;
+                        // TODO: cache xpubs
+                        let xpub = self
+                            .client
+                            .get_extended_pubkey(&path, false)
+                            .expect("FIXME");
+                        let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
+                        key.multipath = Some("/**".to_string());
+                        let keys = vec![key];
+                        let desc = if is_p2wpkh {
+                            "wpkh(@0)"
+                        } else {
+                            "sh(wpkh(@0))"
+                        };
+                        let wallet_policy =
+                            WalletPolicy::new(name, version, desc.to_string(), keys);
+                        // TODO; add wallets once
+                        wallets.push(wallet_policy);
+                    }
                 }
             }
         }

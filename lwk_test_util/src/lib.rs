@@ -122,6 +122,8 @@ pub fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction 
 pub struct TestElectrumServer {
     node: electrsd::bitcoind::BitcoinD,
     pub electrs: electrsd::ElectrsD,
+
+    _bitcoind: Option<electrsd::bitcoind::BitcoinD>,
 }
 
 impl TestElectrumServer {
@@ -129,22 +131,46 @@ impl TestElectrumServer {
         electrs_exec: String,
         node_exec: String,
         enable_esplora_http: bool,
-        _validate_pegin: Option<String>, // if some contains bitcoind exec path
+        validate_pegin: Option<String>, // if some contains bitcoind exec path
     ) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
             .unwrap_or(LevelFilter::OFF);
 
         init_logging();
 
+        let bitcoind = if let Some(bitcoind_exec) = validate_pegin {
+            Some(electrsd::bitcoind::BitcoinD::new(&bitcoind_exec).unwrap())
+        } else {
+            None
+        };
+
         let view_stdout = filter == LevelFilter::TRACE;
 
-        let args = vec![
+        let mut args = vec![
             "-fallbackfee=0.0001",
             "-dustrelayfee=0.00000001",
             "-chain=liquidregtest",
             "-initialfreecoins=2100000000",
-            "-validatepegin=0",
         ];
+        if let Some(bitcoind) = bitcoind.as_ref() {
+            args.push("-validatepegin=1");
+
+            args.push(string_to_static_str(format!(
+                "-mainchainrpccookiefile={}",
+                bitcoind.params.cookie_file.display()
+            )));
+            args.push(string_to_static_str(format!(
+                "-mainchainrpchost={}",
+                bitcoind.params.rpc_socket.ip()
+            )));
+            args.push(string_to_static_str(format!(
+                "-mainchainrpcport={}",
+                bitcoind.params.rpc_socket.port()
+            )));
+        } else {
+            args.push("-validatepegin=0");
+        };
+
         let network = "liquidregtest";
 
         let mut conf = electrsd::bitcoind::Conf::default();
@@ -194,7 +220,11 @@ impl TestElectrumServer {
             thread::sleep(Duration::from_millis(500));
         }
 
-        Self { node, electrs }
+        Self {
+            node,
+            electrs,
+            _bitcoind: bitcoind,
+        }
     }
 
     pub fn generate(&self, blocks: u32) {
@@ -264,10 +294,15 @@ fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
 }
 
-pub fn setup(enable_esplora_http: bool, _validate_pegin: bool) -> TestElectrumServer {
+pub fn setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
-    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http, None)
+    let bitcoind_exec = if validate_pegin {
+        Some(env::var("BITCOIND_EXEC").expect("set ELEMENTSD_EXEC"))
+    } else {
+        None
+    };
+    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http, bitcoind_exec)
 }
 
 pub fn init_logging() {
@@ -405,6 +440,11 @@ pub fn wollet_descriptor_string2() -> String {
 
 pub fn wollet_descriptor_string() -> String {
     include_str!("../test_data/update_test_vector/desc2").to_string()
+}
+
+//TODO remove this bad code once Conf::args is not Vec<&str>
+fn string_to_static_str(s: String) -> &'static str {
+    Box::leak(s.into_boxed_str())
 }
 
 #[cfg(test)]

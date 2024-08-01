@@ -1135,6 +1135,13 @@ fn wait_tx_update(wallet: &mut TestWollet) {
 }
 
 #[test]
+fn claim_pegin() {
+    let _server = setup(false, true);
+
+    // TODO
+}
+
+#[test]
 fn few_lbtc() {
     // Send from a wallet with few lbtc
     let server = setup(false, false);

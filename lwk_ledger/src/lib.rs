@@ -149,9 +149,13 @@ impl Signer for &Ledger {
             // Add sigs to pset
             for (input_idx, sig) in partial_sigs {
                 let input = &mut pset.inputs_mut()[input_idx];
-                // FIXME: how to associate a signature to the corresponding pubkey?
-                let public_key = *input.bip32_derivation.keys().nth(0).expect("FIXME");
-                input.partial_sigs.insert(public_key, sig.to_vec());
+                for (public_key, (fp, _origin)) in &input.bip32_derivation {
+                    if fp == &master_fp {
+                        input.partial_sigs.insert(*public_key, sig.to_vec());
+                        // FIXME: handle cases where we have multiple pubkeys with master fingerprint
+                        break;
+                    }
+                }
             }
         }
 

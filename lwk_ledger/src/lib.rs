@@ -133,13 +133,16 @@ impl Signer for &Ledger {
 
         // For each wallet, sign
         for wallet_policy in wallets.values() {
+            let hmac = if wallet_policy.threshold.is_some() {
+                // Register multisig wallets
+                let (_id, hmac) = self.client.register_wallet(wallet_policy).expect("FIXME");
+                Some(hmac)
+            } else {
+                None
+            };
             let partial_sigs = self
                 .client
-                .sign_psbt(
-                    pset,
-                    wallet_policy,
-                    None, // hmac
-                )
+                .sign_psbt(pset, wallet_policy, hmac.as_ref())
                 .expect("FIXME");
             n_sigs += partial_sigs.len();
 

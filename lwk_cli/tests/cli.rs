@@ -76,7 +76,7 @@ fn setup_cli(
     TestElectrumServer,
     Option<RegistryProc>,
 ) {
-    let server = setup(true);
+    let server = setup(true, false);
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
 
@@ -298,7 +298,7 @@ fn send(
 
 #[test]
 fn test_state_regression() {
-    let server = setup(false);
+    let server = setup(false, false);
     let electrum_url = &server.electrs.electrum_url;
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();

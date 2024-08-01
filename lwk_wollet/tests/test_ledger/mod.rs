@@ -8,7 +8,7 @@ use crate::test_wollet::TestWollet;
 
 #[test]
 fn emul_roundtrip_wpkh() {
-    let server = setup(false);
+    let server = setup(false, false);
     let docker = Cli::default();
     let ledger = TestLedgerEmulator::new(&docker);
     // TODO

@@ -49,7 +49,7 @@ fn liquid_issue_software_signer() {
 }
 
 fn liquid_send(signers: &[&AnySigner]) {
-    let server = setup(false);
+    let server = setup(false, false);
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
         "ct(slip77({}),elwpkh({}/*))",
@@ -80,7 +80,7 @@ fn liquid_send(signers: &[&AnySigner]) {
 }
 
 fn liquid_issue(signers: &[&AnySigner]) {
-    let server = setup(false);
+    let server = setup(false, false);
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
         "ct(slip77({}),elwpkh({}/*))",
@@ -100,7 +100,7 @@ fn liquid_issue(signers: &[&AnySigner]) {
 
 #[test]
 fn view() {
-    let server = setup(false);
+    let server = setup(false, false);
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let descriptor_blinding_key =
@@ -121,7 +121,7 @@ fn view() {
 
 #[test]
 fn origin() {
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let fingerprint = signer.fingerprint();
     let path = "84h/1776h/0h";
@@ -143,7 +143,7 @@ fn origin() {
 
 #[test]
 fn roundtrip() {
-    let server = setup(false);
+    let server = setup(false, false);
 
     let signer1 = generate_signer();
     let slip77_key = generate_slip77();
@@ -277,7 +277,7 @@ fn unsupported_descriptor() {
 
 #[test]
 fn address() {
-    let server = setup(false);
+    let server = setup(false, false);
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -320,7 +320,7 @@ fn address() {
 #[test]
 fn different_blinding_keys() {
     // Two wallet with same "bitcoin" descriptor but different blinding keys
-    let server = setup(false);
+    let server = setup(false, false);
 
     let signer = generate_signer();
     let view_key1 = generate_view_key();
@@ -366,7 +366,7 @@ fn fee_rate() {
     // Use a fee rate different from the default one
     let fee_rate = Some(200.0);
 
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -397,7 +397,7 @@ fn contract() {
     // Issue an asset with a contract
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -433,7 +433,7 @@ fn contract() {
 fn multiple_descriptors() {
     // Use a different descriptors for the asset and the reissuance token
 
-    let server = setup(false);
+    let server = setup(false, false);
     // Asset descriptor and signers
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
@@ -570,7 +570,7 @@ fn multiple_descriptors() {
 
 #[test]
 fn create_pset_error() {
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -726,7 +726,7 @@ fn create_pset_error() {
 #[test]
 fn multisig_flow() {
     // Simulate a multisig workflow
-    let server = setup(false);
+    let server = setup(false, false);
 
     // * Multisig Setup: Start
     // We have 2 signers
@@ -797,7 +797,7 @@ fn multisig_flow() {
 }
 #[test]
 fn jade_sign_wollet_pset() {
-    let server = setup(false);
+    let server = setup(false, false);
     let mnemonic = TEST_MNEMONIC;
     let signer = SwSigner::new(mnemonic, false).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
@@ -835,7 +835,7 @@ fn jade_sign_wollet_pset() {
 
 #[test]
 fn jade_single_sig() {
-    let server = setup(false);
+    let server = setup(false, false);
     let mnemonic = TEST_MNEMONIC;
     let docker = Cli::default();
     let jade_init = jade_setup(&docker, mnemonic);
@@ -869,7 +869,7 @@ fn jade_single_sig() {
 
 #[test]
 fn address_status() {
-    let server = setup(false);
+    let server = setup(false, false);
     let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false);
     let mut client = ElectrumClient::new(&electrum_url).unwrap();
     let address = server.node_getnewaddress();
@@ -907,7 +907,7 @@ fn wait_status_change(
 #[cfg(feature = "esplora_wasm")]
 #[tokio::test]
 async fn test_esplora_wasm_client() {
-    let server = setup(true);
+    let server = setup(true, false);
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
     let mut client = EsploraWasmClient::new(ElementsNetwork::default_regtest(), &url, false);
     let signer = generate_signer();
@@ -1063,7 +1063,7 @@ async fn test_esplora_wasm_local_waterfalls() {
 
 #[test]
 fn test_tip() {
-    let server = setup(false);
+    let server = setup(false, false);
     let mut w = TestWollet::with_test_desc(&server.electrs.electrum_url);
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
@@ -1077,7 +1077,7 @@ fn test_tip() {
 #[test]
 fn drain() {
     // Send all funds from a wallet
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -1137,7 +1137,7 @@ fn wait_tx_update(wallet: &mut TestWollet) {
 #[test]
 fn few_lbtc() {
     // Send from a wallet with few lbtc
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -1197,7 +1197,7 @@ pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
 
 #[test]
 fn test_prune() {
-    let server = setup(false);
+    let server = setup(false, false);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -1242,7 +1242,7 @@ fn test_prune() {
 #[test]
 fn test_external_utxo() {
     // Send tx with external utxos
-    let server = setup(false);
+    let server = setup(false, false);
 
     let signer1 = generate_signer();
     let view_key1 = generate_view_key();
@@ -1312,7 +1312,7 @@ fn test_external_utxo() {
 #[test]
 fn test_unblinded_utxo() {
     // Receive unblinded utxo and spend it
-    let server = setup(false);
+    let server = setup(false, false);
 
     let signer = generate_signer();
     let view_key = generate_view_key();

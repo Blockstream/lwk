@@ -9,7 +9,7 @@ fn test_lwk_flow() {
     let network: Network = ElementsNetwork::default_regtest().into();
     let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
 
-    let server = lwk_test_util::setup(false);
+    let server = lwk_test_util::setup(false, false);
 
     let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 

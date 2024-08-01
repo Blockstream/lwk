@@ -15,7 +15,7 @@ impl TestEnv {
     #[uniffi::constructor]
     pub fn new() -> TestEnv {
         TestEnv {
-            inner: lwk_test_util::setup(true),
+            inner: lwk_test_util::setup(true, false),
         }
     }
 

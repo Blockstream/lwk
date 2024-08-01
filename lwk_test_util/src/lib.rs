@@ -125,7 +125,12 @@ pub struct TestElectrumServer {
 }
 
 impl TestElectrumServer {
-    pub fn new(electrs_exec: String, node_exec: String, enable_esplora_http: bool) -> Self {
+    pub fn new(
+        electrs_exec: String,
+        node_exec: String,
+        enable_esplora_http: bool,
+        _validate_pegin: Option<String>, // if some contains bitcoind exec path
+    ) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
             .unwrap_or(LevelFilter::OFF);
 
@@ -259,10 +264,10 @@ fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
 }
 
-pub fn setup(enable_esplora_http: bool) -> TestElectrumServer {
+pub fn setup(enable_esplora_http: bool, _validate_pegin: bool) -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
-    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http)
+    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http, None)
 }
 
 pub fn init_logging() {

@@ -63,7 +63,7 @@ fn roundtrip(
 }
 
 fn emul_roundtrip_singlesig(variant: Singlesig) {
-    let server = setup(false);
+    let server = setup(false, false);
     let docker = Cli::default();
     let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let xpub_identifier = jade_init.jade.identifier().unwrap();
@@ -72,7 +72,7 @@ fn emul_roundtrip_singlesig(variant: Singlesig) {
 }
 
 fn emul_roundtrip_multisig(threshold: usize) {
-    let server = setup(false);
+    let server = setup(false, false);
     let docker = Cli::default();
     let jade_init = jade_setup(&docker, TEST_MNEMONIC);
     let sw_signer = generate_signer();
@@ -166,7 +166,7 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
 #[test]
 fn emul_multi_multisig() {
     init_logging();
-    let server = setup(false);
+    let server = setup(false, false);
     let docker = Cli::default();
     let jade = jade_setup(&docker, TEST_MNEMONIC);
     let id = jade.jade.identifier().unwrap();
@@ -182,7 +182,7 @@ mod serial {
     #[test]
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_roundtrip() {
-        let server = setup(false);
+        let server = setup(false, false);
         let network = Network::LocaltestLiquid;
         let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;
@@ -203,7 +203,7 @@ mod serial {
     #[ignore = "requires hardware jade: initialized with localtest network, connected via usb/serial"]
     fn jade_multi_multisig() {
         init_logging();
-        let server = setup(false);
+        let server = setup(false, false);
         let network = Network::LocaltestLiquid;
         let ports = Jade::available_ports_with_jade();
         let port_name = &ports.first().unwrap().port_name;

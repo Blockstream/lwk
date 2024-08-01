@@ -13,6 +13,9 @@ chmod +x $FNAME
 # elementsd
 curl -Ls https://github.com/ElementsProject/elements/releases/download/elements-22.1.1/elements-22.1.1-x86_64-linux-gnu.tar.gz | tar -xz
 
+# bitcoind
+curl -Ls https://bitcoincore.org/bin/bitcoin-core-26.0/bitcoin-26.0-x86_64-linux-gnu.tar.gz | tar -xz
+
 
 # Binaries for testing kotling bindings
 wget https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar

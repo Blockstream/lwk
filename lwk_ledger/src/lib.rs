@@ -58,7 +58,8 @@ impl Signer for &Ledger {
             }
         }
 
-        let mut wallets = vec![];
+        // Use a map to avoid inserting a wallet twice
+        let mut wallets = std::collections::HashMap::<String, WalletPolicy>::new();
         let mut n_sigs = 0;
         let master_fp = self.fingerprint()?;
 
@@ -112,20 +113,22 @@ impl Signer for &Ledger {
                         };
                         let wallet_policy =
                             WalletPolicy::new(name, version, desc.to_string(), keys);
-                        // TODO; add wallets once
-                        wallets.push(wallet_policy);
+                        let is_change = false;
+                        if let Ok(d) = wallet_policy.get_descriptor(is_change) {
+                            wallets.insert(d, wallet_policy);
+                        }
                     }
                 }
             }
         }
 
         // For each wallet, sign
-        for wallet_policy in wallets {
+        for wallet_policy in wallets.values() {
             let partial_sigs = self
                 .client
                 .sign_psbt(
                     pset,
-                    &wallet_policy,
+                    wallet_policy,
                     None, // hmac
                 )
                 .expect("FIXME");

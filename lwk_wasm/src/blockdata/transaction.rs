@@ -113,7 +113,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_tx_id() {
-        let expected = "HexToArray(InvalidLength(64, 2))";
+        let expected = "HexToArray(InvalidLength(2, 64))";
         let hex = "xx";
         assert_eq!(expected, format!("{:?}", Txid::new(hex).unwrap_err()));
 

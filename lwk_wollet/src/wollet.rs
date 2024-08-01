@@ -649,10 +649,18 @@ impl Wollet {
 
         // Set PSET xpub origin
         self.descriptor().descriptor.for_each_key(|k| {
-            if let DescriptorPublicKey::XPub(x) = k {
-                if let Some(origin) = &x.origin {
-                    pset.global.xpub.insert(x.xkey, origin.clone());
+            match k {
+                DescriptorPublicKey::XPub(x) => {
+                    if let Some(origin) = &x.origin {
+                        pset.global.xpub.insert(x.xkey, origin.clone());
+                    }
                 }
+                DescriptorPublicKey::MultiXPub(x) => {
+                    if let Some(origin) = &x.origin {
+                        pset.global.xpub.insert(x.xkey, origin.clone());
+                    }
+                }
+                _ => {}
             }
             true
         });

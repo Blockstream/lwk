@@ -32,6 +32,7 @@ use elements_miniscript::elements::{
     },
     script::Instruction,
     Script,
+    bitcoin::key::PublicKey,
 };
 
 use lwk_common::Signer;
@@ -87,8 +88,9 @@ impl Signer for &Ledger {
                 "sh(wpkh(@0))".to_string()
             } else if is_p2wsh {
                 if let Some(s) = input.witness_script.as_ref() {
-                    if let Some((n, m)) = is_multisig(s) {
+                    if let Some((n, pubkeys)) = parse_multisig(s) {
                         // FIXME: order, multi
+                        let m = pubkeys.len();
                         let v: Vec<String> = (0..m).map(|i| format!("@{}", i)).collect();
                         let keys = v.join(",");
                         format!("wsh(multi({},{}))", n, keys)
@@ -105,42 +107,64 @@ impl Signer for &Ledger {
                 // TODO: add support for other scripts
                 continue;
             }
-            for (_pubkey, (fp, path)) in input.bip32_derivation.iter() {
-                if fp == &master_fp {
-                    // TODO: check path
-                    // path has len 3
-                    // path has all hardened
-                    // path has purpose matching address type
-                    // path has correct coin type
-                    let mut v: Vec<ChildNumber> = path.clone().into();
-                    v.truncate(3);
-                    let path: DerivationPath = v.into();
-
-                    // Do we care about the descriptor blinding key here?
-                    let name = "todo".to_string();
-                    let version = Version::V1;
-                    // TODO: cache xpubs
-                    let xpub = self
-                        .client
-                        .get_extended_pubkey(&path, false)
-                        .expect("FIXME");
-                    let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
+            if desc.contains("multi") {
+                // TODO: check input is ours
+                let name = "todo".to_string();
+                let version = Version::V1;
+                let mut keys = vec![];
+                for (xpub, origin) in &pset.global.xpub {
+                    let mut key = WalletPubKey::from((origin.clone(), xpub.clone()));
                     key.multipath = Some("/**".to_string());
-                    let keys = vec![key];
-                    let wallet_policy = WalletPolicy::new(name, version, desc.to_string(), keys);
-                    wallets.push(wallet_policy);
+                    keys.push(key);
+                }
+                let mut wallet_policy = WalletPolicy::new(name, version, desc.to_string(), keys);
+                wallet_policy.threshold = Some(2);
+                wallets.push(wallet_policy);
+            } else {
+                for (_pubkey, (fp, path)) in input.bip32_derivation.iter() {
+                    if fp == &master_fp {
+                        // TODO: check path
+                        // path has len 3
+                        // path has all hardened
+                        // path has purpose matching address type
+                        // path has correct coin type
+                        let mut v: Vec<ChildNumber> = path.clone().into();
+                        v.truncate(3);
+                        let path: DerivationPath = v.into();
+
+                        // Do we care about the descriptor blinding key here?
+                        let name = "todo".to_string();
+                        let version = Version::V1;
+                        // TODO: cache xpubs
+                        let xpub = self
+                            .client
+                            .get_extended_pubkey(&path, false)
+                            .expect("FIXME");
+                        let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
+                        key.multipath = Some("/**".to_string());
+                        let keys = vec![key];
+                        let wallet_policy = WalletPolicy::new(name, version, desc.to_string(), keys);
+                        wallets.push(wallet_policy);
+                    }
                 }
             }
         }
 
         // For each wallet, sign
         for wallet_policy in wallets {
+            let hmac = if wallet_policy.threshold.is_some() {
+                // Register multisig wallets
+                let (_id, hmac) = self.client.register_wallet(&wallet_policy).expect("FIXME");
+                Some(hmac)
+            } else {
+                None
+            };
             let partial_sigs = self
                 .client
                 .sign_psbt(
                     pset,
                     &wallet_policy,
-                    None, // hmac
+                    hmac.as_ref(),
                 )
                 .expect("FIXME");
             n_sigs += partial_sigs.len();
@@ -197,11 +221,10 @@ impl Signer for Ledger {
     }
 }
 
-// duplicated from Jade
+// "duplicated" from Jade
 // taken and adapted from:
 // https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
-// TODO remove once it's released
-fn is_multisig(script: &Script) -> Option<(u32, u32)> {
+fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
     fn decode_pushnum(op: All) -> Option<u8> {
         let start: u8 = OP_PUSHNUM_1.into_u8();
         let end: u8 = OP_PUSHNUM_16.into_u8();
@@ -226,9 +249,12 @@ fn is_multisig(script: &Script) -> Option<(u32, u32)> {
     }
 
     let mut num_pubkeys: u8 = 0;
+    let mut pubkeys = vec![];
     while let Some(Ok(instruction)) = instructions.next() {
         match instruction {
-            Instruction::PushBytes(_) => {
+            Instruction::PushBytes(pubkey) => {
+                let pk = PublicKey::from_slice(pubkey).expect("FIXME");
+                pubkeys.push(pk);
                 num_pubkeys += 1;
             }
             Instruction::Op(op) => {
@@ -255,7 +281,7 @@ fn is_multisig(script: &Script) -> Option<(u32, u32)> {
     }
 
     if instructions.next().is_none() {
-        Some((required_sigs.into(), num_pubkeys.into()))
+        Some((required_sigs.into(), pubkeys))
     } else {
         None
     }

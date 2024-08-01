@@ -59,7 +59,6 @@ fn emul_roundtrip_ledger_multisig() {
     ];
 
     let desc_str = multisig_desc(signers, 2);
-    println!("LEOO {}", desc_str);
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
 
     wallet.fund_btc(&server);

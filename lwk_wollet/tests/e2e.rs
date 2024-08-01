@@ -1136,7 +1136,11 @@ fn wait_tx_update(wallet: &mut TestWollet) {
 
 #[test]
 fn claim_pegin() {
-    let _server = setup(false, true);
+    let server = setup(false, true);
+
+    server.bitcoind_generate(101);
+    let (mainchain_address, _claim_script) = server.node_getpeginaddress();
+    let _txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
 
     // TODO
 }

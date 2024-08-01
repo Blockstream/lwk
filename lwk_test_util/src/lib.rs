@@ -4,7 +4,7 @@ use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
 use elements::bitcoin::amount::Denomination;
 use elements::bitcoin::bip32::Xpriv;
-use elements::bitcoin::{Amount, Network};
+use elements::bitcoin::{self, Amount, Network};
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::Decodable;
 use elements::hex::{FromHex, ToHex};
@@ -79,6 +79,23 @@ fn node_generate(client: &Client, block_num: u32) {
         .unwrap();
 }
 
+fn bitcoind_getnewaddress(client: &Client, kind: Option<&str>) -> bitcoin::Address {
+    let kind = kind.unwrap_or("p2sh-segwit");
+    let addr: Value = client
+        .call("getnewaddress", &["label".into(), kind.into()])
+        .unwrap();
+    bitcoin::Address::from_str(addr.as_str().unwrap())
+        .unwrap()
+        .assume_checked()
+}
+
+fn bitcoind_generate(client: &Client, block_num: u32) {
+    let address = bitcoind_getnewaddress(client, None).to_string();
+    client
+        .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
+        .unwrap();
+}
+
 pub fn parse_code_from_markdown(markdown_input: &str, code_kind: &str) -> Vec<String> {
     let parser = pulldown_cmark::Parser::new(markdown_input);
     let mut result = vec![];
@@ -123,7 +140,7 @@ pub struct TestElectrumServer {
     node: electrsd::bitcoind::BitcoinD,
     pub electrs: electrsd::ElectrsD,
 
-    _bitcoind: Option<electrsd::bitcoind::BitcoinD>,
+    bitcoind: Option<electrsd::bitcoind::BitcoinD>,
 }
 
 impl TestElectrumServer {
@@ -223,12 +240,20 @@ impl TestElectrumServer {
         Self {
             node,
             electrs,
-            _bitcoind: bitcoind,
+            bitcoind,
         }
+    }
+
+    pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {
+        self.bitcoind.as_ref().unwrap()
     }
 
     pub fn generate(&self, blocks: u32) {
         node_generate(&self.node.client, blocks);
+    }
+
+    pub fn bitcoind_generate(&self, blocks: u32) {
+        bitcoind_generate(&self.bitcoind().client, blocks)
     }
 
     pub fn node_sendtoaddress(
@@ -268,6 +293,20 @@ impl TestElectrumServer {
         Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 
+    pub fn bitcoind_sendtoaddress(
+        &self,
+        address: &bitcoin::Address,
+        satoshi: u64,
+    ) -> bitcoin::Txid {
+        let amount = Amount::from_sat(satoshi);
+        let btc = amount.to_string_in(Denomination::Bitcoin);
+        let r = self
+            .bitcoind()
+            .client
+            .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
+            .unwrap();
+        bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
+    }
     pub fn node_issueasset(&self, satoshi: u64) -> AssetId {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);
@@ -287,6 +326,19 @@ impl TestElectrumServer {
     pub fn node_height(&self) -> u64 {
         let raw: serde_json::Value = self.node.client.call("getblockchaininfo", &[]).unwrap();
         raw.get("blocks").unwrap().as_u64().unwrap()
+    }
+
+    pub fn node_getpeginaddress(&self) -> (bitcoin::Address, String) {
+        let value: serde_json::Value = self.node.client.call("getpeginaddress", &[]).unwrap();
+
+        let mainchain_address = value.get("mainchain_address").unwrap();
+        let mainchain_address = bitcoin::Address::from_str(mainchain_address.as_str().unwrap())
+            .unwrap()
+            .assume_checked();
+        let claim_script = value.get("claim_script").unwrap();
+        let claim_script = claim_script.as_str().unwrap().to_string();
+
+        (mainchain_address, claim_script)
     }
 }
 

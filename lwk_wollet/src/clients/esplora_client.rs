@@ -183,7 +183,7 @@ mod tests {
     #[ignore = "Should be integration test, but it is testing private function"]
     #[test]
     fn esplora_local() {
-        let server = lwk_test_util::setup(true, false);
+        let server = lwk_test_util::setup_with_esplora();
 
         let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
         test_esplora_url(&esplora_url);

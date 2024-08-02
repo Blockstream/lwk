@@ -1142,7 +1142,8 @@ fn claim_pegin() {
 
     server.bitcoind_generate(101);
     let (mainchain_address, _claim_script) = server.elementsd_getpeginaddress();
-    let _txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
+    let txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
+    let _tx = server.bitcoind_getrawtransaction(txid);
 
     // TODO
 }

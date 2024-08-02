@@ -335,7 +335,19 @@ fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
 }
 
-pub fn setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumServer {
+pub fn setup() -> TestElectrumServer {
+    inner_setup(false, false)
+}
+
+pub fn setup_with_esplora() -> TestElectrumServer {
+    inner_setup(true, false)
+}
+
+pub fn setup_with_bitcoind() -> TestElectrumServer {
+    inner_setup(false, true)
+}
+
+fn inner_setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let elementsd_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     let bitcoind_exec = if validate_pegin {

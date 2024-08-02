@@ -18,7 +18,7 @@ use lwk_cli::{
     inner_main, AssetSubCommandsEnum, Cli, ServerSubCommandsEnum, SignerSubCommandsEnum,
     WalletSubCommandsEnum,
 };
-use lwk_test_util::{setup, TestElectrumServer};
+use lwk_test_util::TestElectrumServer;
 use tempfile::TempDir;
 
 /// Returns a non-used local port if available.
@@ -76,7 +76,7 @@ fn setup_cli(
     TestElectrumServer,
     Option<RegistryProc>,
 ) {
-    let server = setup(true, false);
+    let server = lwk_test_util::setup_with_esplora();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
 
@@ -300,7 +300,7 @@ fn send(
 
 #[test]
 fn test_state_regression() {
-    let server = setup(false, false);
+    let server = lwk_test_util::setup();
     let electrum_url = &server.electrs.electrum_url;
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();

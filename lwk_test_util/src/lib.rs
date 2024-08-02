@@ -148,14 +148,14 @@ impl TestElectrumServer {
         electrs_exec: String,
         node_exec: String,
         enable_esplora_http: bool,
-        validate_pegin: Option<String>, // if some contains bitcoind exec path
+        bitcoind_exec: Option<String>,
     ) -> Self {
         let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
             .unwrap_or(LevelFilter::OFF);
 
         init_logging();
 
-        let bitcoind = validate_pegin
+        let bitcoind = bitcoind_exec
             .map(|bitcoind_exec| electrsd::bitcoind::BitcoinD::new(bitcoind_exec).unwrap());
 
         let view_stdout = filter == LevelFilter::TRACE;
@@ -304,6 +304,7 @@ impl TestElectrumServer {
             .unwrap();
         bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
     }
+
     pub fn node_issueasset(&self, satoshi: u64) -> AssetId {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);

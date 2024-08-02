@@ -79,23 +79,6 @@ fn elementsd_generate(client: &Client, block_num: u32) {
         .unwrap();
 }
 
-fn bitcoind_getnewaddress(client: &Client, kind: Option<&str>) -> bitcoin::Address {
-    let kind = kind.unwrap_or("p2sh-segwit");
-    let addr: Value = client
-        .call("getnewaddress", &["label".into(), kind.into()])
-        .unwrap();
-    bitcoin::Address::from_str(addr.as_str().unwrap())
-        .unwrap()
-        .assume_checked()
-}
-
-fn bitcoind_generate(client: &Client, block_num: u32) {
-    let address = bitcoind_getnewaddress(client, None).to_string();
-    client
-        .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
-        .unwrap();
-}
-
 pub fn parse_code_from_markdown(markdown_input: &str, code_kind: &str) -> Vec<String> {
     let parser = pulldown_cmark::Parser::new(markdown_input);
     let mut result = vec![];
@@ -241,16 +224,10 @@ impl TestElectrumServer {
         }
     }
 
-    pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {
-        self.bitcoind.as_ref().unwrap()
-    }
+    // methods on elementsd
 
     pub fn elementsd_generate(&self, blocks: u32) {
         elementsd_generate(&self.elementsd.client, blocks);
-    }
-
-    pub fn bitcoind_generate(&self, blocks: u32) {
-        bitcoind_generate(&self.bitcoind().client, blocks)
     }
 
     pub fn elementsd_sendtoaddress(
@@ -290,21 +267,6 @@ impl TestElectrumServer {
         Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 
-    pub fn bitcoind_sendtoaddress(
-        &self,
-        address: &bitcoin::Address,
-        satoshi: u64,
-    ) -> bitcoin::Txid {
-        let amount = Amount::from_sat(satoshi);
-        let btc = amount.to_string_in(Denomination::Bitcoin);
-        let r = self
-            .bitcoind()
-            .client
-            .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
-            .unwrap();
-        bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
-    }
-
     pub fn elementsd_issueasset(&self, satoshi: u64) -> AssetId {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);
@@ -341,6 +303,31 @@ impl TestElectrumServer {
         let claim_script = claim_script.as_str().unwrap().to_string();
 
         (mainchain_address, claim_script)
+    }
+
+    // methods on bitcoind
+
+    pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {
+        self.bitcoind.as_ref().unwrap()
+    }
+
+    pub fn bitcoind_generate(&self, blocks: u32) {
+        bitcoind_generate(&self.bitcoind().client, blocks)
+    }
+
+    pub fn bitcoind_sendtoaddress(
+        &self,
+        address: &bitcoin::Address,
+        satoshi: u64,
+    ) -> bitcoin::Txid {
+        let amount = Amount::from_sat(satoshi);
+        let btc = amount.to_string_in(Denomination::Bitcoin);
+        let r = self
+            .bitcoind()
+            .client
+            .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
+            .unwrap();
+        bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 }
 
@@ -504,6 +491,23 @@ pub fn wollet_descriptor_string() -> String {
 //TODO remove this bad code once Conf::args is not Vec<&str>
 fn string_to_static_str(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
+}
+
+fn bitcoind_getnewaddress(client: &Client, kind: Option<&str>) -> bitcoin::Address {
+    let kind = kind.unwrap_or("p2sh-segwit");
+    let addr: Value = client
+        .call("getnewaddress", &["label".into(), kind.into()])
+        .unwrap();
+    bitcoin::Address::from_str(addr.as_str().unwrap())
+        .unwrap()
+        .assume_checked()
+}
+
+fn bitcoind_generate(client: &Client, block_num: u32) {
+    let address = bitcoind_getnewaddress(client, None).to_string();
+    client
+        .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
+        .unwrap();
 }
 
 #[cfg(test)]

@@ -329,6 +329,17 @@ impl TestElectrumServer {
             .unwrap();
         bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
     }
+
+    pub fn bitcoind_getrawtransaction(&self, txid: bitcoin::Txid) -> bitcoin::Transaction {
+        let r = self
+            .bitcoind()
+            .client
+            .call::<Value>("getrawtransaction", &[txid.to_string().into()])
+            .unwrap();
+        let hex = r.as_str().unwrap();
+        let bytes = Vec::<u8>::from_hex(hex).unwrap();
+        bitcoin::Transaction::consensus_decode(&bytes[..]).unwrap()
+    }
 }
 
 fn regtest_policy_asset() -> AssetId {

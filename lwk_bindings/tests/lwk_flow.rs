@@ -21,7 +21,7 @@ fn test_lwk_flow() {
     let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
     assert_eq!(expected_address_0, address_0.address().to_string());
 
-    let txid = server.node_sendtoaddress(
+    let txid = server.elementsd_sendtoaddress(
         &elements::Address::from_str(expected_address_0).unwrap(),
         100000000,
         None,
@@ -66,8 +66,9 @@ fn test_lwk_flow() {
         .unwrap();
     println!("BROADCASTED TX!\nTXID: {:?}", txid);
 
-    let asset = server.node_issueasset(10000000);
-    let txid = server.node_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
+    let asset = server.elementsd_issueasset(10000000);
+    let txid =
+        server.elementsd_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
     let txid = Txid::from_str(&txid.to_string()).unwrap();
     let _tx = wollet.wait_for_tx(&txid, &electrum_client).unwrap();
 

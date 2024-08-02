@@ -60,13 +60,13 @@ fn liquid_send(signers: &[&AnySigner]) {
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
-    server.generate(1);
+    server.elementsd_generate(1);
 
     wallet.send_btc(signers, None, None);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
-    let node_address1 = server.node_getnewaddress();
-    let node_address2 = server.node_getnewaddress();
+    let node_address1 = server.elementsd_getnewaddress();
+    let node_address2 = server.elementsd_getnewaddress();
     wallet.send_many(
         signers,
         &node_address1,
@@ -135,7 +135,7 @@ fn origin() {
 
     let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
 
-    let address = server.node_getnewaddress();
+    let address = server.elementsd_getnewaddress();
 
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, None, Some((address, 10_000)));
@@ -208,13 +208,13 @@ fn roundtrip() {
 
 fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&AnySigner]) {
     wallet.fund_btc(server);
-    server.generate(1);
+    server.elementsd_generate(1);
     wallet.send_btc(signers, None, None);
     let (asset, _token) = wallet.issueasset(signers, 100_000, 1, None, None);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
-    let node_address1 = server.node_getnewaddress();
-    let node_address2 = server.node_getnewaddress();
+    let node_address1 = server.elementsd_getnewaddress();
+    let node_address2 = server.elementsd_getnewaddress();
     wallet.send_many(
         signers,
         &node_address1,
@@ -225,7 +225,7 @@ fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers:
     );
     wallet.reissueasset(signers, 10_000, &asset, None);
     wallet.burnasset(signers, 5_000, &asset, None);
-    server.generate(2);
+    server.elementsd_generate(2);
 }
 
 #[test]
@@ -376,10 +376,10 @@ fn fee_rate() {
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, fee_rate, None);
     let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None, fee_rate);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_asset(&signers, &node_address, &asset, fee_rate);
-    let node_address1 = server.node_getnewaddress();
-    let node_address2 = server.node_getnewaddress();
+    let node_address1 = server.elementsd_getnewaddress();
+    let node_address2 = server.elementsd_getnewaddress();
     wallet.send_many(
         &signers,
         &node_address1,
@@ -762,7 +762,7 @@ fn multisig_flow() {
     wallet.fund_btc(&server);
     // Create a simple PSET
     let satoshi = 1_000;
-    let node_addr = server.node_getnewaddress();
+    let node_addr = server.elementsd_getnewaddress();
     let pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&node_addr, satoshi)
@@ -854,7 +854,7 @@ fn jade_single_sig() {
     wallet.fund_btc(&server);
 
     let satoshi = satoshi_utxo1 + 1;
-    let node_addr = server.node_getnewaddress();
+    let node_addr = server.elementsd_getnewaddress();
 
     let mut pset = wallet
         .tx_builder()
@@ -872,15 +872,15 @@ fn address_status() {
     let server = setup(false, false);
     let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false);
     let mut client = ElectrumClient::new(&electrum_url).unwrap();
-    let address = server.node_getnewaddress();
+    let address = server.elementsd_getnewaddress();
     let initial_status = client.address_status(&address).unwrap();
     assert_eq!(initial_status, None);
 
-    server.node_sendtoaddress(&address, 10000, None);
+    server.elementsd_sendtoaddress(&address, 10000, None);
 
     let new_status = wait_status_change(&mut client, &address, initial_status);
 
-    server.generate(1);
+    server.elementsd_generate(1);
 
     let last_status = wait_status_change(&mut client, &address, new_status);
 
@@ -923,7 +923,7 @@ async fn test_esplora_wasm_client() {
     wollet.apply_update(update).unwrap();
 
     let address = wollet.address(None).unwrap();
-    let txid = server.node_sendtoaddress(address.address(), 10000, None);
+    let txid = server.elementsd_sendtoaddress(address.address(), 10000, None);
 
     let update = wait_update_with_txs(&mut client, &wollet).await;
     dbg!(&update);
@@ -932,7 +932,7 @@ async fn test_esplora_wasm_client() {
     assert!(tx.height.is_none());
     assert!(wollet.tip().timestamp().is_some());
 
-    server.generate(1);
+    server.elementsd_generate(1);
     let update = wait_update_with_txs(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
     let tx = wollet.transaction(&txid).unwrap().unwrap();
@@ -1068,7 +1068,7 @@ fn test_tip() {
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
     assert!(w.tip().timestamp().is_some());
-    server.generate(1);
+    server.elementsd_generate(1);
     w.wait_height(102);
     assert_eq!(w.tip().height(), 102);
     assert!(w.tip().timestamp().is_some());
@@ -1087,7 +1087,7 @@ fn drain() {
 
     // One utxo L-BTC
     wallet.fund_btc(&server);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
     // Multiple utxos
@@ -1095,19 +1095,19 @@ fn drain() {
     wallet.fund_btc(&server);
     let utxos = wallet.wollet.utxos().unwrap();
     assert_eq!(utxos.len(), 2);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
     // Drain ignores assets, since their change handling and coin selection is cosiderably easier
     wallet.fund_btc(&server);
     let (asset, token) = wallet.issueasset(&signers, 10, 1, None, None);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
     assert!(wallet.balance(&asset) > 0);
     assert!(wallet.balance(&token) > 0);
 
     // Confirm the transactions
-    server.generate(1);
+    server.elementsd_generate(1);
     wait_tx_update(&mut wallet);
     let txs = wallet.wollet.transactions().unwrap();
     for tx in txs {
@@ -1139,7 +1139,7 @@ fn claim_pegin() {
     let server = setup(false, true);
 
     server.bitcoind_generate(101);
-    let (mainchain_address, _claim_script) = server.node_getpeginaddress();
+    let (mainchain_address, _claim_script) = server.elementsd_getpeginaddress();
     let _txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
 
     // TODO
@@ -1159,17 +1159,17 @@ fn few_lbtc() {
     let address = wallet.address();
     wallet.fund(&server, 1000, Some(address), None);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_btc(&signers, None, Some((node_address, 1)));
 
     // Drain the wallet and fund it with a single utxo insufficient to pay for the fee
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
     let address = wallet.address();
     wallet.fund(&server, 10, Some(address), None);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let err = wallet
         .tx_builder()
         .add_lbtc_recipient(&node_address, 1)
@@ -1216,7 +1216,7 @@ fn test_prune() {
     let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
 
     let address = wallet.address();
-    let _ = server.node_sendtoaddress(&address, 100_000, None);
+    let _ = server.elementsd_sendtoaddress(&address, 100_000, None);
 
     let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
     let mut attempts = 50;
@@ -1276,7 +1276,7 @@ fn test_external_utxo() {
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
@@ -1342,7 +1342,7 @@ fn test_unblinded_utxo() {
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
 
     // Create tx sending the unblinded utxo
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
 
     let mut pset = w
         .tx_builder()
@@ -1401,7 +1401,7 @@ fn test_unblinded_utxo() {
     let external_utxo = explicit_utxos.last().unwrap().clone();
 
     // Send all funds
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let mut pset = w
         .tx_builder()
         .add_external_utxos(vec![external_utxo])

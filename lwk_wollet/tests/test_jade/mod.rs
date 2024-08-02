@@ -41,17 +41,17 @@ fn roundtrip(
 
     wallet.fund_btc(server);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_btc(signers, None, Some((node_address, 10_000)));
 
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":2,\"ticker\":\"TEST\",\"version\":0}";
     let (asset, _token) = wallet.issueasset(signers, 10_000, 1, Some(contract), None);
     wallet.reissueasset(signers, 10, &asset, None);
     wallet.burnasset(signers, 10, &asset, None);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
-    let node_address1 = server.node_getnewaddress();
-    let node_address2 = server.node_getnewaddress();
+    let node_address1 = server.elementsd_getnewaddress();
+    let node_address2 = server.elementsd_getnewaddress();
     wallet.send_many(
         signers,
         &node_address1,
@@ -136,7 +136,7 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     w1.fund_btc(server);
 
     // Spend from multi1 (with change)
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     w1.send_btc(signers_m1, None, Some((node_address, 10_000)));
 
     // Spend from multi1 to a change address of multi2 (with change)
@@ -159,7 +159,7 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     assert!(w2.balance(&w2.policy_asset()) > 0);
 
     // Spend from multi2
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     w2.send_btc(signers_m2, None, Some((node_address, 1_000)));
 }
 

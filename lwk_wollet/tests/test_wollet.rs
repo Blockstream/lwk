@@ -160,7 +160,7 @@ impl TestWollet {
         let balance_before = self.balance(&asset.unwrap_or(self.policy_asset()));
 
         let address = address.unwrap_or_else(|| self.address());
-        let txid = server.node_sendtoaddress(&address, satoshi, asset);
+        let txid = server.elementsd_sendtoaddress(&address, satoshi, asset);
         self.wait_for_tx(&txid);
         let tx = self.get_tx(&txid);
         // We only received, all balances are positive
@@ -183,7 +183,7 @@ impl TestWollet {
 
     pub fn fund_asset(&mut self, server: &TestElectrumServer) -> AssetId {
         let satoshi = 10_000;
-        let asset = server.node_issueasset(satoshi);
+        let asset = server.elementsd_issueasset(satoshi);
         self.fund(server, satoshi, Some(self.address()), Some(asset));
         asset
     }
@@ -200,7 +200,7 @@ impl TestWollet {
         let address = address
             .unwrap_or_else(|| self.address())
             .to_unconfidential();
-        let txid = server.node_sendtoaddress(&address, satoshi, asset);
+        let txid = server.elementsd_sendtoaddress(&address, satoshi, asset);
         self.wait_for_tx_outside_list(&txid);
 
         let explicit_utxos_after = self.wollet.explicit_utxos().unwrap().len();

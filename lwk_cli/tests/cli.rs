@@ -249,9 +249,11 @@ fn asset_ids_from_issuance_pset(cli: &str, wallet: &str, pset: &str) -> (String,
 fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
-    let txid = server.node_sendtoaddress(&addr, sats, None).to_string();
+    let txid = server
+        .elementsd_sendtoaddress(&addr, sats, None)
+        .to_string();
     // Only 2 blocks are necessary to make coinbase spendable
-    server.generate(2);
+    server.elementsd_generate(2);
     wait_tx(cli, wallet, &txid);
 }
 
@@ -765,7 +767,7 @@ fn test_broadcast() {
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     assert_eq!(1_000_000, get_balance(&cli, "w1", policy_asset));
-    let addr = server.node_getnewaddress().to_string();
+    let addr = server.elementsd_getnewaddress().to_string();
     send(&cli, "w1", &addr, policy_asset, 1000, &["s1"]);
     assert!(1_000_000 > get_balance(&cli, "w1", policy_asset));
 
@@ -864,7 +866,7 @@ fn test_issue() {
     assert_eq!(get_len(&r, "assets"), 2);
 
     let asset_balance_pre = get_balance(&cli, "w1", asset);
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
     // TODO: add PSET introspection verifying there are asset metadata
@@ -912,7 +914,7 @@ fn test_issue() {
         assert!(url.contains(policy_asset));
     }
 
-    server.generate(1);
+    server.elementsd_generate(1);
     sh(&format!("{cli} server scan"));
 
     let r = sh(&format!("{cli} wallet txs --wallet w1 --with-tickers"));
@@ -1123,7 +1125,7 @@ fn test_multisig() {
 
     fund(&server, &cli, "multi", 1_000_000);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let satoshi = 1000;
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let recipient = format!("{node_address}:{satoshi}:{policy_asset}");
@@ -1304,7 +1306,7 @@ fn test_registry_publish() {
         "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
 
-    server.generate(2);
+    server.elementsd_generate(2);
     wait_ms(6_000); // otherwise registry may find the issuance tx unconfirmed, wait_tx is not enough
 
     sh(&format!("{cli} server scan"));
@@ -1450,7 +1452,7 @@ fn test_send_all() {
 
     fund(&server, &cli, "w1", 1_000_000);
 
-    let node_address = server.node_getnewaddress();
+    let node_address = server.elementsd_getnewaddress();
     let r = sh(&format!(
         "{cli} wallet drain -w w1 --address {node_address}"
     ));

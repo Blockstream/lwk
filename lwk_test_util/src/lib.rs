@@ -64,7 +64,7 @@ pub fn assert_fee_rate(fee_rate: f32, expected: Option<f32>) {
     assert!(fee_rate < expected * (1.0 + toll));
 }
 
-fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
+fn elementsd_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client
         .call("getnewaddress", &["label".into(), kind.into()])
@@ -72,8 +72,8 @@ fn node_getnewaddress(client: &Client, kind: Option<&str>) -> Address {
     Address::from_str(addr.as_str().unwrap()).unwrap()
 }
 
-fn node_generate(client: &Client, block_num: u32) {
-    let address = node_getnewaddress(client, None).to_string();
+fn elementsd_generate(client: &Client, block_num: u32) {
+    let address = elementsd_getnewaddress(client, None).to_string();
     client
         .call::<Value>("generatetoaddress", &[block_num.into(), address.into()])
         .unwrap();
@@ -137,7 +137,7 @@ pub fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction 
 }
 
 pub struct TestElectrumServer {
-    node: electrsd::bitcoind::BitcoinD,
+    elementsd: electrsd::bitcoind::BitcoinD,
     pub electrs: electrsd::ElectrsD,
 
     bitcoind: Option<electrsd::bitcoind::BitcoinD>,
@@ -146,7 +146,7 @@ pub struct TestElectrumServer {
 impl TestElectrumServer {
     pub fn new(
         electrs_exec: String,
-        node_exec: String,
+        elementsd_exec: String,
         enable_esplora_http: bool,
         bitcoind_exec: Option<String>,
     ) -> Self {
@@ -193,12 +193,12 @@ impl TestElectrumServer {
         conf.p2p = electrsd::bitcoind::P2P::Yes;
         conf.network = network;
 
-        let node = electrsd::bitcoind::BitcoinD::with_conf(node_exec, &conf).unwrap();
+        let node = electrsd::bitcoind::BitcoinD::with_conf(elementsd_exec, &conf).unwrap();
 
-        node_generate(&node.client, 1);
+        elementsd_generate(&node.client, 1);
         node.client.call::<Value>("rescanblockchain", &[]).unwrap();
         // send initialfreecoins to the node wallet
-        let address = node_getnewaddress(&node.client, None);
+        let address = elementsd_getnewaddress(&node.client, None);
         node.client
             .call::<Value>(
                 "sendtoaddress",
@@ -220,7 +220,7 @@ impl TestElectrumServer {
         conf.network = network;
         let electrs = electrsd::ElectrsD::with_conf(electrs_exec, &node, &conf).unwrap();
 
-        node_generate(&node.client, 100);
+        elementsd_generate(&node.client, 100);
         electrs.trigger().unwrap();
 
         let mut i = 120;
@@ -235,7 +235,7 @@ impl TestElectrumServer {
         }
 
         Self {
-            node,
+            elementsd: node,
             electrs,
             bitcoind,
         }
@@ -245,15 +245,15 @@ impl TestElectrumServer {
         self.bitcoind.as_ref().unwrap()
     }
 
-    pub fn generate(&self, blocks: u32) {
-        node_generate(&self.node.client, blocks);
+    pub fn elementsd_generate(&self, blocks: u32) {
+        elementsd_generate(&self.elementsd.client, blocks);
     }
 
     pub fn bitcoind_generate(&self, blocks: u32) {
         bitcoind_generate(&self.bitcoind().client, blocks)
     }
 
-    pub fn node_sendtoaddress(
+    pub fn elementsd_sendtoaddress(
         &self,
         address: &Address,
         satoshi: u64,
@@ -263,7 +263,7 @@ impl TestElectrumServer {
         let btc = amount.to_string_in(Denomination::Bitcoin);
         let r = match asset {
             Some(asset) => self
-                .node
+                .elementsd
                 .client
                 .call::<Value>(
                     "sendtoaddress",
@@ -282,7 +282,7 @@ impl TestElectrumServer {
                 )
                 .unwrap(),
             None => self
-                .node
+                .elementsd
                 .client
                 .call::<Value>("sendtoaddress", &[address.to_string().into(), btc.into()])
                 .unwrap(),
@@ -305,11 +305,11 @@ impl TestElectrumServer {
         bitcoin::Txid::from_str(r.as_str().unwrap()).unwrap()
     }
 
-    pub fn node_issueasset(&self, satoshi: u64) -> AssetId {
+    pub fn elementsd_issueasset(&self, satoshi: u64) -> AssetId {
         let amount = Amount::from_sat(satoshi);
         let btc = amount.to_string_in(Denomination::Bitcoin);
         let r = self
-            .node
+            .elementsd
             .client
             .call::<Value>("issueasset", &[btc.into(), 0.into()])
             .unwrap();
@@ -317,17 +317,21 @@ impl TestElectrumServer {
         AssetId::from_str(&asset).unwrap()
     }
 
-    pub fn node_getnewaddress(&self) -> Address {
-        node_getnewaddress(&self.node.client, None)
+    pub fn elementsd_getnewaddress(&self) -> Address {
+        elementsd_getnewaddress(&self.elementsd.client, None)
     }
 
-    pub fn node_height(&self) -> u64 {
-        let raw: serde_json::Value = self.node.client.call("getblockchaininfo", &[]).unwrap();
+    pub fn elementsd_height(&self) -> u64 {
+        let raw: serde_json::Value = self
+            .elementsd
+            .client
+            .call("getblockchaininfo", &[])
+            .unwrap();
         raw.get("blocks").unwrap().as_u64().unwrap()
     }
 
-    pub fn node_getpeginaddress(&self) -> (bitcoin::Address, String) {
-        let value: serde_json::Value = self.node.client.call("getpeginaddress", &[]).unwrap();
+    pub fn elementsd_getpeginaddress(&self) -> (bitcoin::Address, String) {
+        let value: serde_json::Value = self.elementsd.client.call("getpeginaddress", &[]).unwrap();
 
         let mainchain_address = value.get("mainchain_address").unwrap();
         let mainchain_address = bitcoin::Address::from_str(mainchain_address.as_str().unwrap())
@@ -346,13 +350,18 @@ fn regtest_policy_asset() -> AssetId {
 
 pub fn setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumServer {
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
-    let node_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
+    let elementsd_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     let bitcoind_exec = if validate_pegin {
         Some(env::var("BITCOIND_EXEC").expect("set ELEMENTSD_EXEC"))
     } else {
         None
     };
-    TestElectrumServer::new(electrs_exec, node_exec, enable_esplora_http, bitcoind_exec)
+    TestElectrumServer::new(
+        electrs_exec,
+        elementsd_exec,
+        enable_esplora_http,
+        bitcoind_exec,
+    )
 }
 
 pub fn init_logging() {

@@ -62,6 +62,17 @@ impl ElementsNetwork {
         }
     }
 
+    /// Return the dynamic epoch length of this network
+    pub fn total_valid_epochs(&self) -> u64 {
+        // taken from elements chainparams.cpp
+        // TODO upstream to rust elements
+        match self {
+            ElementsNetwork::Liquid => 2,
+            ElementsNetwork::LiquidTestnet => 0,
+            ElementsNetwork::ElementsRegtest { policy_asset: _ } => 0,
+        }
+    }
+
     #[cfg(feature = "bindings")]
     pub fn tx_builder(&self) -> crate::TxBuilder {
         crate::TxBuilder::new(*self)

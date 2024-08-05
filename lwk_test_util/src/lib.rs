@@ -315,6 +315,15 @@ impl TestElectrumServer {
         psbt.as_str().unwrap().to_string()
     }
 
+    pub fn elementsd_expected_next(&self, base64: &str) -> String {
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("analyzepsbt", &[base64.into()])
+            .unwrap();
+        value.get("next").unwrap().as_str().unwrap().to_string()
+    }
+
     // methods on bitcoind
 
     pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {

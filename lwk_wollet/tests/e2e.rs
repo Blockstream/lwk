@@ -1165,7 +1165,9 @@ fn claim_pegin() {
         {"fee": "0.1" }
     ]);
 
-    let _psbt = server.elementsd_raw_createpsbt(inputs, outputs);
+    let psbt = server.elementsd_raw_createpsbt(inputs, outputs);
+
+    assert_eq!(server.elementsd_expected_next(&psbt), "updater");
 
     // TODO
 }

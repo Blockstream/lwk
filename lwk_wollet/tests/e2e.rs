@@ -1136,6 +1136,8 @@ fn wait_tx_update(wallet: &mut TestWollet) {
 
 #[test]
 fn claim_pegin() {
+    // TODO this test makes a pegin using the node as a reference implementation to implement the pegin
+    // in the lwk wallet
     let server = setup_with_bitcoind();
 
     server.bitcoind_generate(101);

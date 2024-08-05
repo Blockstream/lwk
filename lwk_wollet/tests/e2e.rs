@@ -1170,8 +1170,8 @@ fn claim_pegin() {
     assert_eq!(server.elementsd_expected_next(&psbt), "updater");
     let psbt = server.elementsd_walletprocesspsbt(&psbt);
     assert_eq!(server.elementsd_expected_next(&psbt), "extractor");
-
-    // TODO
+    let tx_hex = server.elementsd_finalizepsbt(&psbt);
+    let _txid = server.elementsd_sendrawtransaction(&tx_hex);
 }
 
 #[test]

@@ -333,6 +333,25 @@ impl TestElectrumServer {
         value.get("psbt").unwrap().as_str().unwrap().to_string()
     }
 
+    pub fn elementsd_finalizepsbt(&self, psbt: &str) -> String {
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("finalizepsbt", &[psbt.into()])
+            .unwrap();
+        assert!(value.get("complete").unwrap().as_bool().unwrap());
+        value.get("hex").unwrap().as_str().unwrap().to_string()
+    }
+
+    pub fn elementsd_sendrawtransaction(&self, tx: &str) -> String {
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("sendrawtransaction", &[tx.into()])
+            .unwrap();
+        value.as_str().unwrap().to_string()
+    }
+
     // methods on bitcoind
 
     pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {

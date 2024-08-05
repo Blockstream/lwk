@@ -6,7 +6,7 @@ use crate::test_jade::jade_setup;
 use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::deserialize;
-use elements::hex::FromHex;
+use elements::hex::{FromHex, ToHex};
 use elements::Transaction;
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -1141,20 +1141,31 @@ fn claim_pegin() {
     let server = setup_with_bitcoind();
 
     server.bitcoind_generate(101);
-    let (mainchain_address, _claim_script) = server.elementsd_getpeginaddress();
+    let (mainchain_address, claim_script) = server.elementsd_getpeginaddress();
     let txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
     let tx = server.bitcoind_getrawtransaction(txid);
+    let tx_bytes = bitcoin::consensus::serialize(&tx);
 
-    let _pegin_vout = tx
+    let pegin_vout = tx
         .output
         .iter()
         .position(|o| o.script_pubkey == mainchain_address.script_pubkey())
         .unwrap();
 
     server.bitcoind_generate(101);
-    let _proof = server.bitcoind_gettxoutproof(txid);
+    let proof = server.bitcoind_gettxoutproof(txid);
 
     server.elementsd_generate(2);
+
+    let address_lbtc = server.elementsd_getnewaddress().to_string();
+
+    let inputs = serde_json::json!([ {"txid":txid, "vout": pegin_vout,"pegin_bitcoin_tx": tx_bytes.to_hex(), "pegin_txout_proof": proof, "pegin_claim_script": claim_script } ]);
+    let outputs = serde_json::json!([
+        {address_lbtc: "0.9", "blinder_index": 0},
+        {"fee": "0.1" }
+    ]);
+
+    let _psbt = server.elementsd_raw_createpsbt(inputs, outputs);
 
     // TODO
 }

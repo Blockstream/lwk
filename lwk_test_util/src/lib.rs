@@ -1,3 +1,4 @@
+use electrsd::bitcoind::BitcoinD;
 use elements_miniscript::elements;
 
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
@@ -120,10 +121,10 @@ pub fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction 
 }
 
 pub struct TestElectrumServer {
-    elementsd: electrsd::bitcoind::BitcoinD,
+    elementsd: BitcoinD,
     pub electrs: electrsd::ElectrsD,
 
-    bitcoind: Option<electrsd::bitcoind::BitcoinD>,
+    bitcoind: Option<BitcoinD>,
 }
 
 impl TestElectrumServer {
@@ -303,6 +304,15 @@ impl TestElectrumServer {
         let claim_script = claim_script.as_str().unwrap().to_string();
 
         (mainchain_address, claim_script)
+    }
+
+    pub fn elementsd_raw_createpsbt(&self, inputs: Value, outputs: Value) -> String {
+        let psbt: serde_json::Value = self
+            .elementsd
+            .client
+            .call("createpsbt", &[inputs, outputs, 0.into(), false.into()])
+            .unwrap();
+        psbt.as_str().unwrap().to_string()
     }
 
     // methods on bitcoind

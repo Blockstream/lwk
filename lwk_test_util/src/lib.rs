@@ -324,6 +324,15 @@ impl TestElectrumServer {
         value.get("next").unwrap().as_str().unwrap().to_string()
     }
 
+    pub fn elementsd_walletprocesspsbt(&self, psbt: &str) -> String {
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("walletprocesspsbt", &[psbt.into()])
+            .unwrap();
+        value.get("psbt").unwrap().as_str().unwrap().to_string()
+    }
+
     // methods on bitcoind
 
     pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {

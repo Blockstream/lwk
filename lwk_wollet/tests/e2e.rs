@@ -1168,6 +1168,8 @@ fn claim_pegin() {
     let psbt = server.elementsd_raw_createpsbt(inputs, outputs);
 
     assert_eq!(server.elementsd_expected_next(&psbt), "updater");
+    let psbt = server.elementsd_walletprocesspsbt(&psbt);
+    assert_eq!(server.elementsd_expected_next(&psbt), "extractor");
 
     // TODO
 }

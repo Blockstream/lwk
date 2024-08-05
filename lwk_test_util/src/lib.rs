@@ -340,6 +340,16 @@ impl TestElectrumServer {
         let bytes = Vec::<u8>::from_hex(hex).unwrap();
         bitcoin::Transaction::consensus_decode(&bytes[..]).unwrap()
     }
+
+    pub fn bitcoind_gettxoutproof(&self, txid: bitcoin::Txid) -> String {
+        let arr = vec![txid.to_string()];
+        let r = self
+            .bitcoind()
+            .client
+            .call::<Value>("gettxoutproof", &[arr.into()])
+            .unwrap();
+        r.as_str().unwrap().to_string()
+    }
 }
 
 fn regtest_policy_asset() -> AssetId {

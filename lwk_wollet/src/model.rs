@@ -38,7 +38,8 @@ pub struct ExternalUtxo {
 }
 
 /// Value returned by [`crate::Wollet::transactions()`] containing details about a transaction
-/// from the perspective of the wallet, for example the net-balance of the wallet.
+/// from the perspective of the wallet, for example the net-balance of the transaction for the
+/// wallet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WalletTx {
     pub tx: Transaction,

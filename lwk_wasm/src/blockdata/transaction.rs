@@ -11,6 +11,9 @@ use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
 /// A Liquid transaction, wrapper of [`elements::Transaction`]
+///
+/// See [`crate::WalletTx`] for the transaction as seen from the perspective of the wallet
+/// where you can actually see unblinded amounts and tx net-balance.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
 pub struct Transaction {

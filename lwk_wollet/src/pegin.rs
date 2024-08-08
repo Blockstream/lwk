@@ -5,12 +5,14 @@ use crate::ElementsNetwork;
 /// Returns the height of the block containing full federation parameters
 ///
 /// For example in liquid only headers with `(height % 20160) == 0` contains full parameters
+#[allow(dead_code)]
 fn height_with_fed_peg_script(network: ElementsNetwork, current_tip: u32) -> u32 {
     // GetValidFedpegScripts # function in elements codebase for valid pegin scripts
 
     (current_tip / network.dynamic_epoch_length()) * network.dynamic_epoch_length()
 }
 
+#[allow(dead_code)]
 fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
     match &header.ext {
         elements::BlockExtData::Proof { .. } => None,

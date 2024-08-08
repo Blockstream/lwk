@@ -29,6 +29,7 @@ lwk_signer = { path = "lwk_signer" }
 lwk_test_util = { path = "lwk_test_util" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
+elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript", rev = "9898534a34b87ef62aabb6f6717ef79495a0226d" }
 
 [profile.release-smaller]
 inherits = "release"

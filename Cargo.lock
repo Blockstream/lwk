@@ -1012,8 +1012,7 @@ dependencies = [
 [[package]]
 name = "elements-miniscript"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd2c9c3a0acd5a30061dc5f1859b816ef01d320da66d074d9e23aad40e7a7eba"
+source = "git+https://github.com/ElementsProject/elements-miniscript?rev=9898534a34b87ef62aabb6f6717ef79495a0226d#9898534a34b87ef62aabb6f6717ef79495a0226d"
 dependencies = [
  "bitcoin 0.31.2",
  "elements",

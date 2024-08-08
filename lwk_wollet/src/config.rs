@@ -52,7 +52,7 @@ impl ElementsNetwork {
     }
 
     /// Return the dynamic epoch length of this network
-    pub fn dynamic_epoch_length(&self) -> u64 {
+    pub fn dynamic_epoch_length(&self) -> u32 {
         // taken from elements chainparams.cpp
         // TODO upstream to rust elements
         match self {
@@ -63,7 +63,7 @@ impl ElementsNetwork {
     }
 
     /// Return the dynamic epoch length of this network
-    pub fn total_valid_epochs(&self) -> u64 {
+    pub fn total_valid_epochs(&self) -> u32 {
         // taken from elements chainparams.cpp
         // TODO upstream to rust elements
         match self {

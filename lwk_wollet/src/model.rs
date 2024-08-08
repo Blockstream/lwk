@@ -4,6 +4,7 @@ use crate::pset_create::validate_address;
 use crate::secp256k1::PublicKey;
 use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
+use elements::bitcoin;
 use lwk_common::burn_script;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -185,6 +186,31 @@ impl AddressResult {
 
     pub fn index(&self) -> u32 {
         self.index
+    }
+}
+
+/// Value returned from [`crate::Wollet::pegin_address()`], containing the bitcoin address
+/// and the derivation index used to derive the elements script pubkey used to create the commit for the pegin address
+#[derive(Debug, Clone)]
+pub struct BitcoinAddressResult {
+    address: bitcoin::Address,
+    tweak_index: u32,
+}
+
+impl BitcoinAddressResult {
+    pub fn new(address: bitcoin::Address, index: u32) -> Self {
+        Self {
+            address,
+            tweak_index: index,
+        }
+    }
+
+    pub fn address(&self) -> &bitcoin::Address {
+        &self.address
+    }
+
+    pub fn tweak_index(&self) -> u32 {
+        self.tweak_index
     }
 }
 

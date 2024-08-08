@@ -1175,6 +1175,40 @@ fn claim_pegin() {
 }
 
 #[test]
+fn test_fetch_full_header_regtest() {
+    let server = setup();
+    let url = &server.electrs.electrum_url;
+    let electrum_url = ElectrumUrl::new(url, false, false);
+    let client = ElectrumClient::new(&electrum_url).unwrap();
+
+    test_fetch_last_full_header(client, ElementsNetwork::default_regtest());
+}
+
+#[test]
+fn test_fetch_full_header_mainnet() {
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true);
+    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    test_fetch_last_full_header(electrum_client, ElementsNetwork::Liquid);
+}
+
+#[test]
+fn test_fetch_full_header_testnet() {
+    let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true);
+    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    test_fetch_last_full_header(electrum_client, ElementsNetwork::LiquidTestnet);
+}
+
+fn test_fetch_last_full_header(mut client: ElectrumClient, network: ElementsNetwork) {
+    let current_tip = client.tip().unwrap().height;
+    dbg!(current_tip);
+    let header = fetch_last_full_header(&client, network, current_tip).unwrap();
+
+    let fed_peg_script = fed_peg_script(&header);
+    assert!(fed_peg_script.is_some());
+    dbg!(&fed_peg_script);
+}
+
+#[test]
 fn few_lbtc() {
     // Send from a wallet with few lbtc
     let server = setup();

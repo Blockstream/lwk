@@ -1,25 +1,38 @@
+use std::collections::HashMap;
+
 use elements::{bitcoin, BlockHeader};
 
-use crate::ElementsNetwork;
+use crate::{BlockchainBackend, ElementsNetwork, Error};
 
 /// Returns the height of the block containing full federation parameters
 ///
 /// For example in liquid only headers with `(height % 20160) == 0` contains full parameters
-#[allow(dead_code)]
 fn height_with_fed_peg_script(network: ElementsNetwork, current_tip: u32) -> u32 {
     // GetValidFedpegScripts # function in elements codebase for valid pegin scripts
 
     (current_tip / network.dynamic_epoch_length()) * network.dynamic_epoch_length()
 }
 
-#[allow(dead_code)]
-fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
+pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
     match &header.ext {
         elements::BlockExtData::Proof { .. } => None,
         elements::BlockExtData::Dynafed { current, .. } => current
             .fedpegscript()
             .map(|e| bitcoin::ScriptBuf::from_bytes(e.clone())),
     }
+}
+
+pub fn fetch_last_full_header<B: BlockchainBackend>(
+    client: &B,
+    network: ElementsNetwork,
+    current_tip: u32,
+) -> Result<BlockHeader, Error> {
+    let height = height_with_fed_peg_script(network, current_tip);
+    dbg!(height);
+    let mut headers = client.get_headers(&[height], &HashMap::new())?;
+    headers
+        .pop()
+        .ok_or(Error::Generic("No headers returned".to_string()))
 }
 
 #[cfg(test)]

@@ -5,7 +5,9 @@ use aes_gcm_siv::aead::NewAead;
 use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
-use elements::{Address, AddressParams, Script};
+use elements::secp256k1_zkp::Secp256k1;
+use elements::{bitcoin, Address, AddressParams, Script};
+use elements_miniscript::BtcDescriptor;
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
@@ -276,6 +278,23 @@ impl WolletDescriptor {
             DescriptorPublicKey::Single(_) => true,
         })
     }
+
+    /// Return a bitcoin pegin address, btc sent to this address can be redeemed as lbtc
+    pub fn pegin_address(
+        &self,
+        index: u32,
+        network: bitcoin::Network,
+        fed_desc: BtcDescriptor<bitcoin::PublicKey>,
+    ) -> Result<bitcoin::Address, crate::error::Error> {
+        let secp = Secp256k1::new();
+        let our_desc = self
+            .definite_descriptor(Chain::External, index)?
+            .derived_descriptor(&secp)?;
+        let pegin = elements_miniscript::descriptor::pegin::Pegin::new(fed_desc, our_desc);
+        let pegin_script = pegin.bitcoin_witness_script(&secp)?;
+        let pegin_address = bitcoin::Address::p2wsh(&pegin_script, network);
+        Ok(pegin_address)
+    }
 }
 
 // try to parse as multiline descriptor as exported in green
@@ -478,22 +497,24 @@ mod test {
     #[test]
     fn get_pegin_address() {
         let secp = Secp256k1::new();
-        let d = BtcDescriptor::<bitcoin::PublicKey>::from_str(FEDPEGDESC).unwrap();
+        let d: BtcDescriptor<bitcoin::PublicKey> =
+            BtcDescriptor::<bitcoin::PublicKey>::from_str(FEDPEGDESC).unwrap();
 
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
         let desc: WolletDescriptor = desc_str.parse().unwrap();
 
         let desc_vec = desc.descriptor().clone().into_single_descriptors().unwrap();
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
-            d,
+            d.clone(),
             desc_vec[0].derived_descriptor(&secp, 0).unwrap(),
         );
         let pegin_script = pegin.bitcoin_witness_script(&secp).unwrap();
         let pegin_address = bitcoin::Address::p2wsh(&pegin_script, bitcoin::Network::Testnet);
 
-        assert_eq!(
-            pegin_address.to_string(),
-            "tb1qqkq6czql4zqwsylgrfzttjrn5wjeqmwfq5yn80p39amxtnkng9lsyjwm6v"
-        );
+        let expected = "tb1qqkq6czql4zqwsylgrfzttjrn5wjeqmwfq5yn80p39amxtnkng9lsyjwm6v";
+        assert_eq!(pegin_address.to_string(), expected);
+
+        let pegin_address_api = desc.pegin_address(0, bitcoin::Network::Testnet, d).unwrap();
+        assert_eq!(pegin_address_api.to_string(), expected);
     }
 }

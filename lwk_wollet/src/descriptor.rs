@@ -392,6 +392,7 @@ mod test {
         assert!(WolletDescriptor::from_str_relaxed(&fail_more_lines).is_err());
     }
 
+    #[test]
     fn get_pegin_address() {
         let secp = Secp256k1::new();
         let d: BtcDescriptor<bitcoin::PublicKey> =

@@ -8,15 +8,18 @@ use crate::elements::secp256k1_zkp::ZERO_TWEAK;
 use crate::elements::{AssetId, BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
-use crate::model::{AddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut};
+use crate::model::{
+    AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
+};
 use crate::persister::PersistError;
 use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
+use elements::bitcoin;
 use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::psbt::PsbtExt;
-use elements_miniscript::{psbt, ForEachKey};
+use elements_miniscript::{psbt, BtcDescriptor, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
@@ -334,19 +337,48 @@ impl Wollet {
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
-        let index = match index {
+        let index = self.unwrap_or_last_unused(index);
+
+        let address = self
+            .descriptor
+            .address(index, self.config.address_params())?;
+        Ok(AddressResult::new(address, index))
+    }
+
+    /// Get a wallet pegin address
+    ///
+    /// A pegin address is a bitcoin address, funds sent to this address are
+    /// converted to liquid bitcoins.
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
+    pub fn pegin_address(
+        &self,
+        index: Option<u32>,
+        fed_desc: BtcDescriptor<bitcoin::PublicKey>,
+    ) -> Result<BitcoinAddressResult, Error> {
+        let index = self.unwrap_or_last_unused(index);
+        let network = match self.network() {
+            ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
+            ElementsNetwork::LiquidTestnet => bitcoin::Network::Testnet,
+            ElementsNetwork::ElementsRegtest { policy_asset: _ } => bitcoin::Network::Regtest,
+        };
+
+        let address = self.descriptor.pegin_address(index, network, fed_desc)?;
+        Ok(BitcoinAddressResult::new(address, index))
+    }
+
+    /// Returns the given `index` unwrapped if Some, otherwise
+    /// takes the last unused external index of the wallet
+    fn unwrap_or_last_unused(&self, index: Option<u32>) -> u32 {
+        match index {
             Some(i) => i,
             None => self
                 .store
                 .cache
                 .last_unused_external
                 .load(atomic::Ordering::Relaxed),
-        };
-
-        let address = self
-            .descriptor
-            .address(index, self.config.address_params())?;
-        Ok(AddressResult::new(address, index))
+        }
     }
 
     /// Get a wallet change address

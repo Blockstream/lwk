@@ -324,9 +324,10 @@ mod test {
     use std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},
+        str::FromStr,
     };
 
-    use elements::bitcoin;
+    use elements::{bitcoin, secp256k1_zkp::Secp256k1};
     use elements_miniscript::{BtcDescriptor, BtcMiniscript, BtcSegwitv0};
 
     use crate::{descriptor::remove_checksum_if_any, Chain, WolletDescriptor};
@@ -472,5 +473,27 @@ mod test {
         let a = d.change(2, params).unwrap().script_pubkey();
         let s = d.script_pubkey(Chain::Internal, 2).unwrap();
         assert_eq!(a, s);
+    }
+
+    #[test]
+    fn get_pegin_address() {
+        let secp = Secp256k1::new();
+        let d = BtcDescriptor::<bitcoin::PublicKey>::from_str(FEDPEGDESC).unwrap();
+
+        let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+        let desc: WolletDescriptor = desc_str.parse().unwrap();
+
+        let desc_vec = desc.descriptor().clone().into_single_descriptors().unwrap();
+        let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
+            d,
+            desc_vec[0].derived_descriptor(&secp, 0).unwrap(),
+        );
+        let pegin_script = pegin.bitcoin_witness_script(&secp).unwrap();
+        let pegin_address = bitcoin::Address::p2wsh(&pegin_script, bitcoin::Network::Testnet);
+
+        assert_eq!(
+            pegin_address.to_string(),
+            "tb1qqkq6czql4zqwsylgrfzttjrn5wjeqmwfq5yn80p39amxtnkng9lsyjwm6v"
+        );
     }
 }

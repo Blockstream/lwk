@@ -1,5 +1,5 @@
 use electrsd::bitcoind::BitcoinD;
-use elements_miniscript::elements;
+use elements_miniscript::elements::{self, BlockHeader};
 
 use electrsd::bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use electrsd::electrum_client::ElectrumApi;
@@ -42,6 +42,12 @@ pub fn liquid_block_1() -> Block {
         "../test_data/afafbbdfc52a45e51a3b634f391f952f6bdfd14ef74b34925954b4e20d0ad639.raw"
     );
     Block::consensus_decode(&raw[..]).unwrap()
+}
+
+pub fn liquid_block_header_2_963_520() -> BlockHeader {
+    let hex = include_str!("../test_data/block_header_2_963_520.hex");
+    let bytes = Vec::<u8>::from_hex(hex).unwrap();
+    BlockHeader::consensus_decode(&bytes[..]).unwrap()
 }
 
 pub fn add_checksum(desc: &str) -> String {

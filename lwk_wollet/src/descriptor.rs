@@ -234,6 +234,38 @@ impl WolletDescriptor {
         let desc = self.inner_descriptor_if_available(ext_int);
         Ok(desc.descriptor().at_derivation_index(index)?)
     }
+
+    /// Try also to parse it as a non-multipath descriptor specified on 2 lines,
+    /// like the format exported by the Green Wallet
+    pub fn from_str_relaxed(desc: &str) -> Result<WolletDescriptor, crate::Error> {
+        match WolletDescriptor::from_str(desc) {
+            Ok(d) => Ok(d),
+            Err(e) => parse_multiline(desc).ok_or(e),
+        }
+    }
+}
+
+// try to parse as multiline descriptor as exported in green
+fn parse_multiline(desc: &str) -> Option<WolletDescriptor> {
+    let lines: Vec<_> = desc.trim().split('\n').collect();
+    if lines.len() != 2 {
+        return None;
+    }
+    let first_str = lines[0].trim();
+    let second_str = lines[1].trim();
+    let first = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(first_str);
+    let second = ConfidentialDescriptor::<DescriptorPublicKey>::from_str(second_str);
+    if first.is_err() || second.is_err() {
+        return None;
+    }
+    let remove_checksum = |e: &str| e.split('#').next().map(|e| e.to_string()).unwrap();
+    let first_no_chk = remove_checksum(first_str);
+    let second_no_chk = remove_checksum(second_str);
+    if first_no_chk.replace("/0/*", "/1/*") != second_no_chk {
+        return None;
+    }
+    let combined = first_no_chk.replace("/0/*", "/<0;1>/*");
+    WolletDescriptor::from_str(&combined).ok()
 }
 
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
@@ -305,5 +337,26 @@ mod test {
         // TODO verify it's right
         let expected ="elwsh(or_d(multi(11,020e0338c96a8870479f2396c373cc7696ba124e8635d41b0ea581112b67817261,02675333a4e4b8fb51d9d4e22fa5a8eaced3fdac8a8cbf9be8c030f75712e6af99,02896807d54bc55c24981f24a453c60ad3e8993d693732288068a23df3d9f50d48,029e51a5ef5db3137051de8323b001749932f2ff0d34c82e96a2c2461de96ae56c,02a4e1a9638d46923272c266631d94d36bdb03a64ee0e14c7518e49d2f29bc4010,031c41fdbcebe17bec8d49816e00ca1b5ac34766b91c9f2ac37d39c63e5e008afb,03079e252e85abffd3c401a69b087e590a9b86f33f574f08129ccbd3521ecf516b,03111cf405b627e22135b3b3733a4a34aa5723fb0f58379a16d32861bf576b0ec2,0318f331b3e5d38156da6633b31929c5b220349859cc9ca3d33fb4e68aa0840174,03230dae6b4ac93480aeab26d000841298e3b8f6157028e47b0897c1e025165de1,035abff4281ff00660f99ab27bb53e6b33689c2cd8dcd364bc3c90ca5aea0d71a6,03bd45cddfacf2083b14310ae4a84e25de61e451637346325222747b157446614c,03cc297026b06c71cbfa52089149157b5ff23de027ac5ab781800a578192d17546,03d3bde5d63bdb3a6379b461be64dad45eabff42f758543a9645afd42f6d424828,03ed1e8d5109c9ed66f7941bc53cc71137baa76d50d274bda8d5e8ffbd6e61fe9a),and_v(v:older(4032),multi(2,03aab896d53a8e7d6433137bbba940f9c521e085dd07e60994579b64a6d992cf79,0291b7d0b1b692f8f524516ed950872e5da10fb1b808b5a526dedc6fed1cf29807,0386aa9372fbab374593466bc5451dc59954e90787f08060964d95c87ef34ca5bb))))#gvzs86zz";
         assert_eq!(&d.to_string(), expected);
+    }
+
+    #[test]
+    fn test_parse_multiline() {
+        // from green wallet
+        let first = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/0/*))#srt8g93f";
+        let second = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/1/*))#9z93s6yk";
+        let both = format!("{first}\n{second}");
+        let desc_parsed = WolletDescriptor::from_str_relaxed(&both).unwrap();
+        let expected = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/<0;1>/*))#gj65e6vr";
+        assert_eq!(desc_parsed.to_string(), expected);
+
+        let fail_first_desc = format!("{first}X\n{second}");
+        assert!(WolletDescriptor::from_str_relaxed(&fail_first_desc).is_err());
+
+        let fail_more_lines = format!("{first}\n{second}\nciao");
+        assert!(WolletDescriptor::from_str_relaxed(&fail_more_lines).is_err());
+
+        let second_non_canonical = second.replace("/1/*", "/2/*");
+        let fail_more_lines = format!("{first}\n{second_non_canonical}");
+        assert!(WolletDescriptor::from_str_relaxed(&fail_more_lines).is_err());
     }
 }

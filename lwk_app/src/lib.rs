@@ -1275,7 +1275,6 @@ mod tests {
         let mut app = app_random_port();
         let addr = app.addr();
         let url = addr.to_string();
-        dbg!(&url);
 
         let client = jsonrpc::Client::simple_http(&url, None, None).unwrap();
         let request = client.build_request("version", None);

@@ -28,7 +28,6 @@ pub fn fetch_last_full_header<B: BlockchainBackend>(
     current_tip: u32,
 ) -> Result<BlockHeader, Error> {
     let height = height_with_fed_peg_script(network, current_tip);
-    dbg!(height);
     let mut headers = client.get_headers(&[height], &HashMap::new())?;
     headers
         .pop()

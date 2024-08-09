@@ -376,7 +376,6 @@ impl Jade {
                 }
                 Err(e) => {
                     if e.kind() != ErrorKind::Interrupted {
-                        dbg!(&e);
                         return Err(Error::IoError(e));
                     }
                 }

@@ -47,7 +47,6 @@ fn sh_result(command: &str) -> anyhow::Result<Value> {
 
 #[track_caller]
 pub fn sh(command: &str) -> Value {
-    dbg!(command);
     sh_result(command).unwrap()
 }
 

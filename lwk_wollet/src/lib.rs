@@ -106,6 +106,7 @@ pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,
 };
+pub use crate::pegin::{fed_peg_script, fetch_last_full_header};
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};

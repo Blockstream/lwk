@@ -926,7 +926,6 @@ async fn test_esplora_wasm_client() {
     let txid = server.elementsd_sendtoaddress(address.address(), 10000, None);
 
     let update = wait_update_with_txs(&mut client, &wollet).await;
-    dbg!(&update);
     wollet.apply_update(update).unwrap();
     let tx = wollet.transaction(&txid).unwrap().unwrap();
     assert!(tx.height.is_none());
@@ -1017,7 +1016,6 @@ async fn test_esplora_wasm_local_waterfalls() {
     );
 
     let address = wollet.address(None).unwrap();
-    dbg!(address.address().script_pubkey());
     let txid = test_env.send_to(address.address(), 1_000_000);
 
     async_sleep(2_000).await;
@@ -1172,6 +1170,38 @@ fn claim_pegin() {
     assert_eq!(server.elementsd_expected_next(&psbt), "extractor");
     let tx_hex = server.elementsd_finalizepsbt(&psbt);
     let _txid = server.elementsd_sendrawtransaction(&tx_hex);
+}
+
+#[test]
+fn test_fetch_full_header_regtest() {
+    let server = setup();
+    let url = &server.electrs.electrum_url;
+    let electrum_url = ElectrumUrl::new(url, false, false);
+    let client = ElectrumClient::new(&electrum_url).unwrap();
+
+    test_fetch_last_full_header(client, ElementsNetwork::default_regtest());
+}
+
+#[test]
+fn test_fetch_full_header_mainnet() {
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true);
+    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    test_fetch_last_full_header(electrum_client, ElementsNetwork::Liquid);
+}
+
+#[test]
+fn test_fetch_full_header_testnet() {
+    let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true);
+    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    test_fetch_last_full_header(electrum_client, ElementsNetwork::LiquidTestnet);
+}
+
+fn test_fetch_last_full_header(mut client: ElectrumClient, network: ElementsNetwork) {
+    let current_tip = client.tip().unwrap().height;
+    let header = fetch_last_full_header(&client, network, current_tip).unwrap();
+
+    let fed_peg_script = fed_peg_script(&header);
+    assert!(fed_peg_script.is_some());
 }
 
 #[test]

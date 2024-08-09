@@ -258,14 +258,20 @@ fn parse_multiline(desc: &str) -> Option<WolletDescriptor> {
     if first.is_err() || second.is_err() {
         return None;
     }
-    let remove_checksum = |e: &str| e.split('#').next().map(|e| e.to_string()).unwrap();
-    let first_no_chk = remove_checksum(first_str);
-    let second_no_chk = remove_checksum(second_str);
+    let first_no_chk = remove_checksum_if_any(first_str);
+    let second_no_chk = remove_checksum_if_any(second_str);
     if first_no_chk.replace("/0/*", "/1/*") != second_no_chk {
         return None;
     }
     let combined = first_no_chk.replace("/0/*", "/<0;1>/*");
     WolletDescriptor::from_str(&combined).ok()
+}
+
+fn remove_checksum_if_any(s: &str) -> String {
+    s.split('#')
+        .next()
+        .map(|e| e.to_string())
+        .expect("even if '#' is not there we always have one element")
 }
 
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
@@ -285,7 +291,7 @@ mod test {
     use elements::bitcoin;
     use elements_miniscript::Descriptor;
 
-    use crate::WolletDescriptor;
+    use crate::{descriptor::remove_checksum_if_any, WolletDescriptor};
 
     #[test]
     fn test_wollet_hash() {
@@ -346,8 +352,16 @@ mod test {
         let second = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/1/*))#9z93s6yk";
         let both = format!("{first}\n{second}");
         let desc_parsed = WolletDescriptor::from_str_relaxed(&both).unwrap();
-        let expected = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/<0;1>/*))#gj65e6vr";
-        assert_eq!(desc_parsed.to_string(), expected);
+        let expected_multi_path = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/<0;1>/*))#gj65e6vr";
+        assert_eq!(desc_parsed.to_string(), expected_multi_path);
+
+        let first_no_cks = remove_checksum_if_any(first);
+        let second_no_cks = remove_checksum_if_any(second);
+        let first_no_cks_exp = "ct(slip77(460830d85d4b299a9406c5899748354937c81b6fdb94f110f8729c9ba2994412),elwpkh([28b3f14e/84'/1'/0']tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu/0/*))";
+        assert_eq!(first_no_cks, first_no_cks_exp);
+        let both_no_checksum = format!("{first_no_cks}\n{second_no_cks}");
+        let desc_parsed = WolletDescriptor::from_str_relaxed(&both_no_checksum).unwrap();
+        assert_eq!(desc_parsed.to_string(), expected_multi_path);
 
         let fail_first_desc = format!("{first}X\n{second}");
         assert!(WolletDescriptor::from_str_relaxed(&fail_first_desc).is_err());

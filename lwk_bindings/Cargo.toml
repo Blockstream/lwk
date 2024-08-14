@@ -21,7 +21,7 @@ serde_json = "1"
 uniffi = { version = "0.26.1", features = ["build"] }
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
 name = "lwk"
 
 [features]

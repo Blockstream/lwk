@@ -4,3 +4,6 @@ package_name = "lwk"
 [bindings.python]
 cdylib_name = "lwk"
 
+[bindings.swift]
+module_name = "LiquidWalletKit"
+cdylib_name = "lwk"

@@ -36,3 +36,25 @@ i686-linux-android:
 
 x86_64-linux-android:
 	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
+
+swift: ios ios-sim
+    cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/liblwk.a --language swift --out-dir ./target/swift
+    mkdir -p ./target/swift/include
+    mv target/swift/LiquidWalletKitFFI.h target/swift/include
+    mv target/swift/LiquidWalletKitFFI.modulemap  target/swift/include/module.modulemap
+    xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output lwk.xcframework
+
+ios: aarch64-apple-ios
+
+ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
+    mkdir -p target/lipo-ios-sim/release
+    lipo target/aarch64-apple-ios-sim/release/liblwk.a target/x86_64-apple-ios/release/liblwk.a -create -output target/lipo-ios-sim/release/liblwk.a
+
+x86_64-apple-ios:
+    cargo build --features bindings --release --target x86_64-apple-ios
+
+aarch64-apple-ios:
+    cargo build --features bindings --release --target aarch64-apple-ios
+
+aarch64-apple-ios-sim:
+    cargo build --features bindings --release --target aarch64-apple-ios-sim

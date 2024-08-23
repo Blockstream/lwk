@@ -51,10 +51,10 @@ ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
     lipo target/aarch64-apple-ios-sim/release/liblwk.a target/x86_64-apple-ios/release/liblwk.a -create -output target/lipo-ios-sim/release/liblwk.a
 
 x86_64-apple-ios:
-    cargo build --features bindings --release --target x86_64-apple-ios
+    cargo build --release --target x86_64-apple-ios -p lwk_bindings
 
 aarch64-apple-ios:
-    cargo build --features bindings --release --target aarch64-apple-ios
+    cargo build --release --target aarch64-apple-ios -p lwk_bindings
 
 aarch64-apple-ios-sim:
-    cargo build --features bindings --release --target aarch64-apple-ios-sim
+    cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings

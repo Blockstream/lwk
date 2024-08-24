@@ -19,11 +19,11 @@ jobs:
         with:
           just-version: 1.5.0  # optional semver specification, otherwise latest
       - run: just swift
-      - run: mkdir lwk.xcframework  && mv target/lwk.xcframework lwk.xcframework
+      - run: mkdir lwkFFI.xcframework  && mv target/lwkFFI.xcframework lwkFFI.xcframework
       - uses: actions/upload-artifact@v4
         with:
-          name: lwk.xcframework
-          path: lwk.xcframework
+          name: lwkFFI.xcframework
+          path: lwkFFI.xcframework
       - uses: actions/upload-artifact@v4
         with:
           name: interface 

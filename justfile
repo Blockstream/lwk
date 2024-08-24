@@ -40,9 +40,9 @@ x86_64-linux-android:
 swift: ios ios-sim
     cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/liblwk.a --language swift --out-dir ./target/swift
     mkdir -p ./target/swift/include
-    mv target/swift/LiquidWalletKitFFI.h target/swift/include
-    mv target/swift/LiquidWalletKitFFI.modulemap  target/swift/include/module.modulemap
-    xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwk.xcframework
+    mv target/swift/lwkFFI.h target/swift/include
+    mv target/swift/lwkFFI.modulemap  target/swift/include/module.modulemap
+    xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwkFFI.xcframework
 
 ios: aarch64-apple-ios
 

@@ -8,6 +8,8 @@ use elements::Address;
 use elements::{bitcoin, BlockHash, BlockHeader, Script, Transaction, Txid};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::net::IpAddr;
+use std::str::FromStr;
 
 use super::History;
 
@@ -20,10 +22,39 @@ pub struct ElectrumClient {
     script_status: HashMap<Script, ScriptStatus>,
 }
 
-#[derive(Debug, Clone)]
+/// An electrum url in the following form: `tcp://example.com:50001` or `ssl://example.com:50002`
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElectrumUrl {
     Tls(String, bool), // the bool value indicates if the domain name should be validated
     Plaintext(String),
+}
+
+impl FromStr for ElectrumUrl {
+    type Err = UrlError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let url: url::Url = s.parse()?;
+        let ssl = url.scheme() == "ssl";
+        if !(ssl || url.scheme() == "tcp") {
+            return Err(UrlError::Schema(url.scheme().to_string()));
+        }
+        if url.port().is_none() {
+            return Err(UrlError::MissingPort);
+        }
+        match url.domain() {
+            Some(domain) => match domain.parse::<IpAddr>() {
+                Ok(_) => {
+                    if ssl {
+                        Err(UrlError::SslWithoutDomain)
+                    } else {
+                        Ok(ElectrumUrl::new(&s[6..], false, false))
+                    }
+                }
+                Err(_) => Ok(ElectrumUrl::new(&s[6..], ssl, true)),
+            },
+            None => Err(UrlError::MissingDomain),
+        }
+    }
 }
 
 impl std::fmt::Display for ElectrumUrl {
@@ -195,5 +226,70 @@ impl From<GetHistoryRes> for History {
             block_hash: None,
             block_timestamp: None,
         }
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum UrlError {
+    #[error(transparent)]
+    Url(#[from] url::ParseError),
+
+    #[error("Invalid schema `{0}` supported ones are `ssl` or `tcp`")]
+    Schema(String),
+
+    #[error("Port is missing")]
+    MissingPort,
+
+    #[error("Domain is missing")]
+    MissingDomain,
+
+    #[error("Cannot specify `ssl` scheme without a domain")]
+    SslWithoutDomain,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ElectrumUrl, UrlError};
+
+    #[test]
+    fn test_electrum_url() {
+        let url: ElectrumUrl = "ssl://blockstream.info:666".parse().unwrap();
+        let url_from_new = ElectrumUrl::new("blockstream.info:666", true, true);
+        assert_eq!(url, url_from_new);
+
+        let url: ElectrumUrl = "tcp://blockstream.info:666".parse().unwrap();
+        let url_from_new = ElectrumUrl::new("blockstream.info:666", false, false);
+        assert_eq!(url, url_from_new);
+
+        let url: ElectrumUrl = "tcp://1.1.1.1:666".parse().unwrap();
+        let url_from_new = ElectrumUrl::new("1.1.1.1:666", false, false);
+        assert_eq!(url, url_from_new);
+
+        let url_result: Result<ElectrumUrl, UrlError> = "ssl://1.1.1.1:666".parse();
+        assert_eq!(
+            url_result.unwrap_err().to_string(),
+            "Cannot specify `ssl` scheme without a domain"
+        );
+
+        let url_result: Result<ElectrumUrl, UrlError> = "http://blockstream.info".parse();
+        assert_eq!(
+            url_result.unwrap_err().to_string(),
+            "Invalid schema `http` supported ones are `ssl` or `tcp`"
+        );
+
+        let url_result: Result<ElectrumUrl, UrlError> = "tcp://blockstream.info".parse();
+        assert_eq!(url_result.unwrap_err().to_string(), "Port is missing");
+
+        let url_result: Result<ElectrumUrl, UrlError> = "mailto:rms@example.net".parse();
+        assert_eq!(
+            url_result.unwrap_err().to_string(),
+            "Invalid schema `mailto` supported ones are `ssl` or `tcp`"
+        );
+
+        let url_result: Result<ElectrumUrl, UrlError> = "xxx".parse();
+        assert_eq!(
+            url_result.unwrap_err().to_string(),
+            "relative URL without a base"
+        );
     }
 }

@@ -50,6 +50,7 @@ fxhash = "0.2.1"
 
 lwk_signer = { version = "0.7", features = ["jade", "ledger"], optional = true }
 age = { version = "0.10.0", optional = true }
+url = "2.5.2"
 
 
 [dev-dependencies]

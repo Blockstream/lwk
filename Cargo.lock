@@ -2113,6 +2113,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "url",
  "wasm-bindgen-futures",
  "waterfalls",
  "web-sys",

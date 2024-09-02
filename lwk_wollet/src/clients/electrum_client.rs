@@ -62,8 +62,8 @@ impl FromStr for ElectrumUrl {
 impl std::fmt::Display for ElectrumUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ElectrumUrl::Tls(s, _) => write!(f, "{}", s),
-            ElectrumUrl::Plaintext(s) => write!(f, "{}", s),
+            ElectrumUrl::Tls(s, _) => write!(f, "ssl://{}", s),
+            ElectrumUrl::Plaintext(s) => write!(f, "tcp://{}", s),
         }
     }
 }

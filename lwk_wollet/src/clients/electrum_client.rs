@@ -84,12 +84,10 @@ impl ElectrumUrl {
 
         if tls {
             Ok(ElectrumUrl::Tls(host_port.into(), validate_domain))
+        } else if validate_domain {
+            Err(UrlError::ValidateWithoutTls)
         } else {
-            if validate_domain {
-                Err(UrlError::ValidateWithoutTls)
-            } else {
-                Ok(ElectrumUrl::Plaintext(host_port.into()))
-            }
+            Ok(ElectrumUrl::Plaintext(host_port.into()))
         }
     }
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {

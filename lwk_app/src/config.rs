@@ -122,7 +122,7 @@ impl Config {
     fn electrum_url(&self) -> Result<lwk_wollet::ElectrumUrl, Error> {
         Ok(
             lwk_wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
-                .map_err(|e| lwk_wollet::Error::Url(e))?,
+                .map_err(lwk_wollet::Error::Url)?,
         )
     }
 

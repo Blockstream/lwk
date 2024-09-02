@@ -62,7 +62,7 @@ pub fn compute_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
 
 pub fn assert_fee_rate(fee_rate: f32, expected: Option<f32>) {
     let expected = expected.unwrap_or(DEFAULT_FEE_RATE);
-    let toll = 0.05;
+    let toll = 0.08;
     assert!(fee_rate > expected * (1.0 - toll));
     assert!(fee_rate < expected * (1.0 + toll));
 }

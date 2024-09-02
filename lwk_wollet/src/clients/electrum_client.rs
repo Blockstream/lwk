@@ -67,10 +67,18 @@ impl std::fmt::Display for ElectrumUrl {
 }
 
 impl ElectrumUrl {
+    /// Create an electrum url to create an [`ElectrumClient::new()`]
+    ///
+    /// Note you cannote validate domain without TLS, at the moment the function panics in this case.
     pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
         match tls {
             true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => ElectrumUrl::Plaintext(electrum_url.into()),
+            false => {
+                if validate_domain {
+                    panic!("Cannot validate domain without tls"); // TODO make error
+                }
+                ElectrumUrl::Plaintext(electrum_url.into())
+            }
         }
     }
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {

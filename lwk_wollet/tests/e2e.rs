@@ -1159,6 +1159,77 @@ fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
 }
 
 #[test]
+fn ct_discount() {
+    // Send transactions with ELIP200 discounted fees for Confidential Transactions
+    let server = setup();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let signer = AnySigner::Software(signer);
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    wallet.fund_btc(&server);
+    let node_address = server.elementsd_getnewaddress();
+
+    // Send without CT discount
+    let mut pset = wallet
+        .tx_builder()
+        .disable_ct_discount()
+        .add_lbtc_recipient(&node_address, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee_no_discount = details.balance.fee;
+    wallet.send(&mut pset);
+    assert_fee_rate(compute_fee_rate(&pset), None);
+
+    // Send with CT discount
+    let mut pset = wallet
+        .tx_builder()
+        .enable_ct_discount()
+        .add_lbtc_recipient(&node_address, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee_with_discount = details.balance.fee;
+    wallet.send(&mut pset);
+    assert_fee_rate(compute_discount_ct_fee_rate(&pset), None);
+
+    // Confirm the transactions
+    server.elementsd_generate(1);
+    wait_tx_update(&mut wallet);
+    let txs = wallet.wollet.transactions().unwrap();
+    for tx in txs {
+        assert!(tx.height.is_some());
+        assert!(tx.timestamp.is_some());
+    }
+
+    // Check fees
+    assert!(fee_no_discount > fee_with_discount);
+
+    // Default has CT discount disabled
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee_default = details.balance.fee;
+    assert_eq!(fee_no_discount, fee_default);
+}
+
+#[test]
 fn claim_pegin() {
     // TODO this test makes a pegin using the node as a reference implementation to implement the pegin
     // in the lwk wallet

@@ -71,23 +71,24 @@ impl std::fmt::Display for ElectrumUrl {
 impl ElectrumUrl {
     /// Create an electrum url to create an [`ElectrumClient`]
     ///
-    /// The given `electrum_url` is a domain name or an ip without the scheme, eg. `example.com`
+    /// The given `host_port` is a domain name or an ip with the port and without the scheme,
+    /// eg. `example.com:50001` or `127.0.0.1:50001`
     ///
-    /// Note: you cannot validate domain without TLS, at the moment the function panics in this case.
-    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Result<Self, UrlError> {
+    /// Note: you cannot validate domain without TLS, an error is thrown in this case.
+    pub fn new(host_port: &str, tls: bool, validate_domain: bool) -> Result<Self, UrlError> {
         // We are not checking all possible scheme, however, these two seems to be the most common
         // since they are used in the electrum protocol
-        if electrum_url.starts_with("tcp://") || electrum_url.starts_with("ssl://") {
+        if host_port.starts_with("tcp://") || host_port.starts_with("ssl://") {
             return Err(UrlError::NoScheme);
         }
 
         if tls {
-            Ok(ElectrumUrl::Tls(electrum_url.into(), validate_domain))
+            Ok(ElectrumUrl::Tls(host_port.into(), validate_domain))
         } else {
             if validate_domain {
                 Err(UrlError::ValidateWithoutTls)
             } else {
-                Ok(ElectrumUrl::Plaintext(electrum_url.into()))
+                Ok(ElectrumUrl::Plaintext(host_port.into()))
             }
         }
     }

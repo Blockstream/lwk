@@ -50,7 +50,7 @@ impl FromStr for ElectrumUrl {
                         Ok(ElectrumUrl::new(&s[6..], false, false))
                     }
                 }
-                Err(_) => Ok(ElectrumUrl::new(&s[6..], ssl, true)),
+                Err(_) => Ok(ElectrumUrl::new(&s[6..], ssl, ssl)),
             },
             None => Err(UrlError::MissingDomain),
         }

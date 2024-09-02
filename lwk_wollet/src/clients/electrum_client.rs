@@ -24,7 +24,7 @@ pub struct ElectrumClient {
 
 /// An electrum url parsable from string in the following form: `tcp://example.com:50001` or `ssl://example.com:50002`
 ///
-/// To specify to use tls without validating domain use the constructor [`ElectrumUrl::new()`]
+/// If you need to use tls without validating the domain, use the constructor [`ElectrumUrl`]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElectrumUrl {
     Tls(String, bool), // the bool value indicates if the domain name should be validated
@@ -71,7 +71,7 @@ impl std::fmt::Display for ElectrumUrl {
 impl ElectrumUrl {
     /// Create an electrum url to create an [`ElectrumClient::new()`]
     ///
-    /// Note you cannote validate domain without TLS, at the moment the function panics in this case.
+    /// Note: you cannot validate domain without TLS, at the moment the function panics in this case.
     pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
         match tls {
             true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),

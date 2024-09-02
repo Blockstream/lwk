@@ -1,8 +1,8 @@
 extern crate lwk_wollet;
 
 use lwk_wollet::{
-    full_scan_with_electrum_client, ElectrumClient, ElectrumUrl, ElementsNetwork, NoPersist,
-    Wollet, WolletDescriptor,
+    full_scan_with_electrum_client, ElectrumClient, ElementsNetwork, NoPersist, Wollet,
+    WolletDescriptor,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

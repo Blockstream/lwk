@@ -870,7 +870,7 @@ fn jade_single_sig() {
 #[test]
 fn address_status() {
     let server = setup();
-    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false);
+    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
     let mut client = ElectrumClient::new(&electrum_url).unwrap();
     let address = server.elementsd_getnewaddress();
     let initial_status = client.address_status(&address).unwrap();
@@ -1176,7 +1176,7 @@ fn claim_pegin() {
 fn test_fetch_full_header_regtest() {
     let server = setup();
     let url = &server.electrs.electrum_url;
-    let electrum_url = ElectrumUrl::new(url, false, false);
+    let electrum_url = ElectrumUrl::new(url, false, false).unwrap();
     let client = ElectrumClient::new(&electrum_url).unwrap();
 
     test_fetch_last_full_header(client, ElementsNetwork::default_regtest());
@@ -1184,14 +1184,14 @@ fn test_fetch_full_header_regtest() {
 
 #[test]
 fn test_fetch_full_header_mainnet() {
-    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true);
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     test_fetch_last_full_header(electrum_client, ElementsNetwork::Liquid);
 }
 
 #[test]
 fn test_fetch_full_header_testnet() {
-    let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true);
+    let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     test_fetch_last_full_header(electrum_client, ElementsNetwork::LiquidTestnet);
 }

@@ -119,12 +119,15 @@ impl Config {
         matches!(self.network, ElementsNetwork::Liquid)
     }
 
-    fn electrum_url(&self) -> lwk_wollet::ElectrumUrl {
-        lwk_wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
+    fn electrum_url(&self) -> Result<lwk_wollet::ElectrumUrl, Error> {
+        Ok(
+            lwk_wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
+                .map_err(|e| lwk_wollet::Error::Url(e))?,
+        )
     }
 
     pub fn electrum_client(&self) -> Result<lwk_wollet::ElectrumClient, Error> {
         // TODO cache it instead of recreating every time
-        Ok(lwk_wollet::ElectrumClient::new(&self.electrum_url())?)
+        Ok(lwk_wollet::ElectrumClient::new(&self.electrum_url()?)?)
     }
 }

@@ -171,6 +171,10 @@ pub enum Error {
 
     #[error("Cannot parse server recipient key")]
     CannotParseRecipientKey,
+
+    #[cfg(feature = "electrum")]
+    #[error(transparent)]
+    Url(#[from] crate::clients::electrum_client::UrlError),
 }
 
 // cannot derive automatically with this error because of trait bound

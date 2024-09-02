@@ -49,10 +49,10 @@ impl FromStr for ElectrumUrl {
                     if ssl {
                         Err(UrlError::SslWithoutDomain)
                     } else {
-                        Ok(ElectrumUrl::new(&s[6..], false, false))
+                        ElectrumUrl::new(&s[6..], false, false)
                     }
                 }
-                Err(_) => Ok(ElectrumUrl::new(&s[6..], ssl, ssl)),
+                Err(_) => ElectrumUrl::new(&s[6..], ssl, ssl),
             },
             None => Err(UrlError::MissingDomain),
         }
@@ -69,17 +69,25 @@ impl std::fmt::Display for ElectrumUrl {
 }
 
 impl ElectrumUrl {
-    /// Create an electrum url to create an [`ElectrumClient::new()`]
+    /// Create an electrum url to create an [`ElectrumClient`]
+    ///
+    /// The given `electrum_url` is a domain name or an ip without the scheme, eg. `example.com`
     ///
     /// Note: you cannot validate domain without TLS, at the moment the function panics in this case.
-    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
-        match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => {
-                if validate_domain {
-                    panic!("Cannot validate domain without tls"); // TODO make error
-                }
-                ElectrumUrl::Plaintext(electrum_url.into())
+    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Result<Self, UrlError> {
+        // We are not checking all possible scheme, however, these two seems to be the most common
+        // since they are used in the electrum protocol
+        if electrum_url.starts_with("tcp://") || electrum_url.starts_with("ssl://") {
+            return Err(UrlError::NoScheme);
+        }
+
+        if tls {
+            Ok(ElectrumUrl::Tls(electrum_url.into(), validate_domain))
+        } else {
+            if validate_domain {
+                Err(UrlError::ValidateWithoutTls)
+            } else {
+                Ok(ElectrumUrl::Plaintext(electrum_url.into()))
             }
         }
     }
@@ -255,6 +263,12 @@ pub enum UrlError {
 
     #[error("Cannot specify `ssl` scheme without a domain")]
     SslWithoutDomain,
+
+    #[error("Cannot validate the domain without tls")]
+    ValidateWithoutTls,
+
+    #[error("Don't specify the scheme in the url")]
+    NoScheme,
 }
 
 #[cfg(test)]
@@ -263,7 +277,7 @@ mod tests {
 
     fn check_url(url: &str, url_no_scheme: &str, tls: bool, validate_domain: bool) {
         let electrum_url: ElectrumUrl = url.parse().unwrap();
-        let url_from_new = ElectrumUrl::new(url_no_scheme, tls, validate_domain);
+        let url_from_new = ElectrumUrl::new(url_no_scheme, tls, validate_domain).unwrap();
         assert_eq!(electrum_url, url_from_new);
         assert_eq!(electrum_url.to_string(), url);
     }
@@ -319,5 +333,18 @@ mod tests {
             url_result.unwrap_err().to_string(),
             "relative URL without a base"
         );
+    }
+
+    #[test]
+    fn test_electrum_url_new() {
+        let err = ElectrumUrl::new("example.com", false, true)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "Cannot validate the domain without tls");
+
+        let err = ElectrumUrl::new("ssl://example.com", false, false)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "Don't specify the scheme in the url");
     }
 }

@@ -620,6 +620,22 @@ impl<'a> WolletTxBuilder<'a> {
         }
     }
 
+    /// Wrapper of [`TxBuilder::enable_ct_discount()`]
+    pub fn enable_ct_discount(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.enable_ct_discount(),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::disable_ct_discount()`]
+    pub fn disable_ct_discount(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.disable_ct_discount(),
+        }
+    }
+
     /// Wrapper of [`TxBuilder::issue_asset()`]
     pub fn issue_asset(
         self,

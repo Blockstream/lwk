@@ -89,6 +89,7 @@ pub struct TxBuilder {
     network: ElementsNetwork,
     recipients: Vec<Recipient>,
     fee_rate: f32,
+    ct_discount: bool,
     issuance_request: IssuanceRequest,
     drain_lbtc: bool,
     drain_to: Option<Address>,
@@ -102,6 +103,7 @@ impl TxBuilder {
             network,
             recipients: vec![],
             fee_rate: 100.0,
+            ct_discount: false,
             issuance_request: IssuanceRequest::None,
             drain_lbtc: false,
             drain_to: None,
@@ -174,6 +176,21 @@ impl TxBuilder {
         if let Some(fee_rate) = fee_rate {
             self.fee_rate = fee_rate
         }
+        self
+    }
+
+    /// Use ELIP200 discounted fees for Confidential Transactions
+    ///
+    /// Note: if ELIP200 was not activated by miners and nodes relaying transactions, using
+    /// this feature might cause the transaction to be rejected.
+    pub fn enable_ct_discount(mut self) -> Self {
+        self.ct_discount = true;
+        self
+    }
+
+    /// Do not use ELIP200 discounted fees for Confidential Transactions
+    pub fn disable_ct_discount(mut self) -> Self {
+        self.ct_discount = false;
         self
     }
 
@@ -477,7 +494,15 @@ impl TxBuilder {
             let mut rng = thread_rng();
             let mut temp_pset = pset.clone();
             temp_pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-            inp_weight + temp_pset.extract_tx()?.weight()
+            let tx_weight = {
+                let tx = temp_pset.extract_tx()?;
+                if self.ct_discount {
+                    tx.discount_weight()
+                } else {
+                    tx.weight()
+                }
+            };
+            inp_weight + tx_weight
         };
 
         let vsize = (weight + 4 - 1) / 4;

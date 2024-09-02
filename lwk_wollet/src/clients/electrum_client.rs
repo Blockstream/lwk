@@ -261,30 +261,36 @@ pub enum UrlError {
 mod tests {
     use super::{ElectrumUrl, UrlError};
 
+    fn check_url(url: &str, url_no_scheme: &str, tls: bool, validate_domain: bool) {
+        let url: ElectrumUrl = url.parse().unwrap();
+        let url_from_new = ElectrumUrl::new(url_no_scheme, tls, validate_domain);
+        assert_eq!(url, url_from_new);
+    }
+
     #[test]
     fn test_electrum_url() {
-        let url: ElectrumUrl = "ssl://blockstream.info:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("blockstream.info:666", true, true);
-        assert_eq!(url, url_from_new);
+        check_url(
+            "ssl://blockstream.info:666",
+            "blockstream.info:666",
+            true,
+            true,
+        );
 
-        let url: ElectrumUrl = "tcp://blockstream.info:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("blockstream.info:666", false, false);
-        assert_eq!(url, url_from_new);
+        check_url(
+            "tcp://blockstream.info:666",
+            "blockstream.info:666",
+            false,
+            false,
+        );
 
-        let url: ElectrumUrl = "tcp://1.1.1.1:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("1.1.1.1:666", false, false);
-        assert_eq!(url, url_from_new);
+        check_url("tcp://1.1.1.1:666", "1.1.1.1:666", false, false);
 
-        let url: ElectrumUrl =
-            "tcp://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666"
-                .parse()
-                .unwrap();
-        let url_from_new = ElectrumUrl::new(
+        check_url(
+            "tcp://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666",
             "mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666",
             false,
             false,
         );
-        assert_eq!(url, url_from_new);
 
         let url_result: Result<ElectrumUrl, UrlError> = "ssl://1.1.1.1:666".parse();
         assert_eq!(

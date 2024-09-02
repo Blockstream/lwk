@@ -148,6 +148,7 @@ impl TestElectrumServer {
             "-dustrelayfee=0.00000001",
             "-chain=liquidregtest",
             "-initialfreecoins=2100000000",
+            "-acceptdiscountct=1",
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
             args.push("-validatepegin=1");

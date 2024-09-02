@@ -262,9 +262,10 @@ mod tests {
     use super::{ElectrumUrl, UrlError};
 
     fn check_url(url: &str, url_no_scheme: &str, tls: bool, validate_domain: bool) {
-        let url: ElectrumUrl = url.parse().unwrap();
+        let electrum_url: ElectrumUrl = url.parse().unwrap();
         let url_from_new = ElectrumUrl::new(url_no_scheme, tls, validate_domain);
-        assert_eq!(url, url_from_new);
+        assert_eq!(electrum_url, url_from_new);
+        assert_eq!(electrum_url.to_string(), url);
     }
 
     #[test]

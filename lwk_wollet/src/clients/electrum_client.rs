@@ -265,6 +265,17 @@ mod tests {
         let url_from_new = ElectrumUrl::new("1.1.1.1:666", false, false);
         assert_eq!(url, url_from_new);
 
+        let url: ElectrumUrl =
+            "tcp://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666"
+                .parse()
+                .unwrap();
+        let url_from_new = ElectrumUrl::new(
+            "mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666",
+            false,
+            false,
+        );
+        assert_eq!(url, url_from_new);
+
         let url_result: Result<ElectrumUrl, UrlError> = "ssl://1.1.1.1:666".parse();
         assert_eq!(
             url_result.unwrap_err().to_string(),

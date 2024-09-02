@@ -22,7 +22,9 @@ pub struct ElectrumClient {
     script_status: HashMap<Script, ScriptStatus>,
 }
 
-/// An electrum url in the following form: `tcp://example.com:50001` or `ssl://example.com:50002`
+/// An electrum url parsable from string in the following form: `tcp://example.com:50001` or `ssl://example.com:50002`
+///
+/// To specify to use tls without validating domain use the constructor [`ElectrumUrl::new()`]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElectrumUrl {
     Tls(String, bool), // the bool value indicates if the domain name should be validated

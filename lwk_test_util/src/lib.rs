@@ -60,6 +60,12 @@ pub fn compute_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
     1000.0 * (fee_satoshi as f32 / vsize as f32)
 }
 
+pub fn compute_discount_ct_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
+    let vsize = pset.extract_tx().unwrap().discount_vsize();
+    let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
+    1000.0 * (fee_satoshi as f32 / vsize as f32)
+}
+
 pub fn assert_fee_rate(fee_rate: f32, expected: Option<f32>) {
     let expected = expected.unwrap_or(DEFAULT_FEE_RATE);
     let toll = 0.08;

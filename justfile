@@ -1,6 +1,8 @@
 default:
     just --list
 
+# Build python bindings
+# Mac users should either run env.sh or manually set LIB_EXT=dylib
 python-build-bindings:
     LIBNAME=liblwk.${LIB_EXT:=so} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
 
@@ -18,6 +20,8 @@ docker-push: docker-build
 
 kotlin-android: kotlin android
 
+# Build kotlin interface file `lwk.kt` for bindings
+# Mac users should either run env.sh or manually set LIB_EXT=dylib
 kotlin:
     LIBNAME=liblwk.${LIB_EXT:=so} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
 

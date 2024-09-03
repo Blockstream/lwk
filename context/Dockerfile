@@ -14,6 +14,7 @@ RUN rustup component add rustfmt
 RUN rustup component add clippy
 RUN rustup component add llvm-tools-preview
 RUN rustup target add wasm32-unknown-unknown
+RUN rustup install nightly # for docs building
 
 RUN cargo install cargo-audit
 RUN cargo install cargo-nextest
@@ -32,4 +33,3 @@ RUN sh ./get-docker.sh
 
 # move following layers up once upper layers needs modification
 
-RUN rustup install nightly # for docs building

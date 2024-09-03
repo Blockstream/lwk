@@ -1,6 +1,6 @@
 #!/bin/sh
 export ELECTRS_LIQUID_EXEC="$PWD/bin/electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid"
-export ELEMENTSD_EXEC="$PWD/bin/elements-22.1.1/bin/elementsd"
+export ELEMENTSD_EXEC="$PWD/bin/elements-23.2.2/bin/elementsd"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
 export JADE_EMULATOR_IMAGE_NAME=xenoky/local-jade-emulator
 export JADE_EMULATOR_IMAGE_VERSION="1.0.27"

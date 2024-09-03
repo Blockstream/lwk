@@ -19,7 +19,7 @@ docker-push: docker-build
 kotlin-android: kotlin android
 
 kotlin:
-    LIBNAME=liblwk_bindings.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
+    LIBNAME=liblwk.${LIB_EXT} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
 
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     cp -a target/release/kotlin/jniLibs lwk_bindings/android_bindings/lib/src/main

@@ -9,3 +9,5 @@ components = [
   "rustc",
   "rustfmt"
 ]
+targets = [ "wasm32-unknown-unknown" ]
+

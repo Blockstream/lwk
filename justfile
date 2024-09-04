@@ -24,10 +24,10 @@ kotlin-android: kotlin android
 # Mac users should either run env.sh or manually set LIB_EXT=dylib
 kotlin:
     LIBNAME=liblwk.${LIB_EXT:=so} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
+    cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/main/kotlin
 
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     cp -a target/release/kotlin/jniLibs lwk_bindings/android_bindings/lib/src/main
-    cp -a target/release/kotlin/lwk_bindings lwk_bindings/android_bindings/lib/src/main/kotlin
 
 aarch64-linux-android:
 	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings

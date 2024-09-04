@@ -1,0 +1,45 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+name: Build framework for Kotlin library
+
+jobs:
+
+  framework:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "Show default version of NDK"
+        run: echo $ANDROID_NDK_ROOT
+
+      - name: "Check out PR branch"
+        uses: actions/checkout@v3
+
+      - name: "Set up JDK"
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: dtolnay/rust-toolchain@1.75.0
+        with:
+          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android
+
+      - uses: extractions/setup-just@v1
+        with:
+          just-version: 1.5.0  # optional semver specification, otherwise latest
+      
+      - name: "Install NDK"
+        run: |
+          cargo install cargo-ndk
+  
+      - name: "Build Android bindings"
+        run: |
+          just kotlin-android
+      
+      - name: "Build Android library"
+        run: |
+          cd lwk_bindings/android_bindings
+          ./gradlew build --console=plain

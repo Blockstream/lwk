@@ -1,15 +1,14 @@
 on:
-    push:
-      # Pattern matched against refs/tags
-      tags:        
-        - '*'           # Push events to every tag not containing /
-    workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request: {}
 
 name: Build & Publish framework for Kotlin library
 
 jobs:
 
-  framework:
+  build:
     runs-on: ubuntu-20.04
     steps:
       - name: "Show default version of NDK"
@@ -44,7 +43,12 @@ jobs:
         working-directory: lwk_bindings/android_bindings
         run: |
           ./gradlew build --console=plain
-        
+
+  publish:
+    runs-on: ubuntu-20.04
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/bindings_')
+    steps:
       - name: Publish artifacts
         working-directory: lwk_bindings/android_bindings
         env:

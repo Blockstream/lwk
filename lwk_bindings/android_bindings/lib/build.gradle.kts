@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("org.gradle.maven-publish")
 }
 
 android {
@@ -35,7 +36,12 @@ android {
         abortOnError = false
         checkReleaseBuilds =  false
     }
-
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
@@ -50,4 +56,36 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+}
+
+val libraryVersion: String by project
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.blockstream"
+            artifactId = "lwk"
+            version = libraryVersion
+
+            afterEvaluate {
+                from(components["release"])
+            }
+
+            pom {
+                name.set("LWK")
+                description.set("Liquid Wallet Kit for android.")
+                url.set("https://blockstream.com")
+                licenses {
+                    license {
+                        name.set("BSD-MIT")
+                        url.set("https://github.com/blockstream/lwk/blob/main/LICENSE")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:github.com/blockstream/lwk.git")
+                    developerConnection.set("scm:git:ssh://github.com/blockstream/lwk.git")
+                    url.set("https://github.com/blockstream/lwk")
+                }
+            }
+        }
+    }
 }

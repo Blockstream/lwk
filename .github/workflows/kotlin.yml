@@ -1,10 +1,11 @@
 on:
-  push:
-    branches:
-      - master
-  pull_request: {}
+    push:
+      # Pattern matched against refs/tags
+      tags:        
+        - '*'           # Push events to every tag not containing /
+    workflow_dispatch:
 
-name: Build framework for Kotlin library
+name: Build & Publish framework for Kotlin library
 
 jobs:
 
@@ -40,6 +41,13 @@ jobs:
           just kotlin-android
       
       - name: "Build Android library"
+        working-directory: lwk_bindings/android_bindings
         run: |
-          cd lwk_bindings/android_bindings
           ./gradlew build --console=plain
+        
+      - name: Publish artifacts
+        working-directory: lwk_bindings/android_bindings
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./gradlew publish -PlibraryVersion=${{ inputs.package-version }}

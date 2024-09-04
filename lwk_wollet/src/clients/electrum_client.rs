@@ -49,10 +49,10 @@ impl FromStr for ElectrumUrl {
                     if ssl {
                         Err(UrlError::SslWithoutDomain)
                     } else {
-                        Ok(ElectrumUrl::new(&s[6..], false, false))
+                        ElectrumUrl::new(&s[6..], false, false)
                     }
                 }
-                Err(_) => Ok(ElectrumUrl::new(&s[6..], ssl, ssl)),
+                Err(_) => ElectrumUrl::new(&s[6..], ssl, ssl),
             },
             None => Err(UrlError::MissingDomain),
         }
@@ -62,25 +62,32 @@ impl FromStr for ElectrumUrl {
 impl std::fmt::Display for ElectrumUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ElectrumUrl::Tls(s, _) => write!(f, "{}", s),
-            ElectrumUrl::Plaintext(s) => write!(f, "{}", s),
+            ElectrumUrl::Tls(s, _) => write!(f, "ssl://{}", s),
+            ElectrumUrl::Plaintext(s) => write!(f, "tcp://{}", s),
         }
     }
 }
 
 impl ElectrumUrl {
-    /// Create an electrum url to create an [`ElectrumClient::new()`]
+    /// Create an electrum url to create an [`ElectrumClient`]
     ///
-    /// Note: you cannot validate domain without TLS, at the moment the function panics in this case.
-    pub fn new(electrum_url: &str, tls: bool, validate_domain: bool) -> Self {
-        match tls {
-            true => ElectrumUrl::Tls(electrum_url.into(), validate_domain),
-            false => {
-                if validate_domain {
-                    panic!("Cannot validate domain without tls"); // TODO make error
-                }
-                ElectrumUrl::Plaintext(electrum_url.into())
-            }
+    /// The given `host_port` is a domain name or an ip with the port and without the scheme,
+    /// eg. `example.com:50001` or `127.0.0.1:50001`
+    ///
+    /// Note: you cannot validate domain without TLS, an error is thrown in this case.
+    pub fn new(host_port: &str, tls: bool, validate_domain: bool) -> Result<Self, UrlError> {
+        // We are not checking all possible scheme, however, these two seems to be the most common
+        // since they are used in the electrum protocol
+        if host_port.starts_with("tcp://") || host_port.starts_with("ssl://") {
+            return Err(UrlError::NoScheme);
+        }
+
+        if tls {
+            Ok(ElectrumUrl::Tls(host_port.into(), validate_domain))
+        } else if validate_domain {
+            Err(UrlError::ValidateWithoutTls)
+        } else {
+            Ok(ElectrumUrl::Plaintext(host_port.into()))
         }
     }
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {
@@ -255,36 +262,49 @@ pub enum UrlError {
 
     #[error("Cannot specify `ssl` scheme without a domain")]
     SslWithoutDomain,
+
+    #[error("Cannot validate the domain without tls")]
+    ValidateWithoutTls,
+
+    #[error("Don't specify the scheme in the url")]
+    NoScheme,
 }
 
 #[cfg(test)]
 mod tests {
     use super::{ElectrumUrl, UrlError};
 
+    fn check_url(url: &str, url_no_scheme: &str, tls: bool, validate_domain: bool) {
+        let electrum_url: ElectrumUrl = url.parse().unwrap();
+        let url_from_new = ElectrumUrl::new(url_no_scheme, tls, validate_domain).unwrap();
+        assert_eq!(electrum_url, url_from_new);
+        assert_eq!(electrum_url.to_string(), url);
+    }
+
     #[test]
     fn test_electrum_url() {
-        let url: ElectrumUrl = "ssl://blockstream.info:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("blockstream.info:666", true, true);
-        assert_eq!(url, url_from_new);
+        check_url(
+            "ssl://blockstream.info:666",
+            "blockstream.info:666",
+            true,
+            true,
+        );
 
-        let url: ElectrumUrl = "tcp://blockstream.info:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("blockstream.info:666", false, false);
-        assert_eq!(url, url_from_new);
+        check_url(
+            "tcp://blockstream.info:666",
+            "blockstream.info:666",
+            false,
+            false,
+        );
 
-        let url: ElectrumUrl = "tcp://1.1.1.1:666".parse().unwrap();
-        let url_from_new = ElectrumUrl::new("1.1.1.1:666", false, false);
-        assert_eq!(url, url_from_new);
+        check_url("tcp://1.1.1.1:666", "1.1.1.1:666", false, false);
 
-        let url: ElectrumUrl =
-            "tcp://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666"
-                .parse()
-                .unwrap();
-        let url_from_new = ElectrumUrl::new(
+        check_url(
+            "tcp://mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666",
             "mrrxtq6tjpbnbm7vh5jt6mpjctn7ggyfy5wegvbeff3x7jrznqawlmid.onion:666",
             false,
             false,
         );
-        assert_eq!(url, url_from_new);
 
         let url_result: Result<ElectrumUrl, UrlError> = "ssl://1.1.1.1:666".parse();
         assert_eq!(
@@ -312,5 +332,18 @@ mod tests {
             url_result.unwrap_err().to_string(),
             "relative URL without a base"
         );
+    }
+
+    #[test]
+    fn test_electrum_url_new() {
+        let err = ElectrumUrl::new("example.com", false, true)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "Cannot validate the domain without tls");
+
+        let err = ElectrumUrl::new("ssl://example.com", false, false)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "Don't specify the scheme in the url");
     }
 }

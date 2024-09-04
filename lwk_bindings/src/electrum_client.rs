@@ -19,7 +19,8 @@ impl ElectrumClient {
         tls: bool,
         validate_domain: bool,
     ) -> Result<Arc<Self>, LwkError> {
-        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain);
+        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
+            .map_err(lwk_wollet::Error::Url)?;
         let client = lwk_wollet::ElectrumClient::new(&url)?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),

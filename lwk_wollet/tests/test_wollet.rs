@@ -50,7 +50,7 @@ impl TestWollet {
         let desc: WolletDescriptor = descriptor.parse().unwrap();
         let mut wollet = Wollet::with_fs_persist(network, desc, &db_root_dir).unwrap();
 
-        let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain);
+        let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain).unwrap();
 
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&electrum_url).unwrap();
         full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();

@@ -44,7 +44,7 @@
 //! #    descriptor,
 //! # )?;
 //! // Use an Electrum server
-//! let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true);
+//! let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true)?;
 //! let mut electrum_client = ElectrumClient::new(&electrum_url)?;
 //! full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
 //!

@@ -2,6 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.gradle.maven-publish")
+    id("maven-publish")
 }
 
 android {
@@ -60,10 +61,20 @@ dependencies {
 
 val libraryVersion: String by project
 publishing {
+    repositories {
+        maven {
+            name = "lwkGitHubPackages"
+            url = uri("https://maven.pkg.github.com/blockstream/lwk")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.blockstream"
-            artifactId = "lwk"
+            artifactId = "lwk_bindings"
             version = libraryVersion
 
             afterEvaluate {

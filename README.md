@@ -1,5 +1,7 @@
 # Liquid Wallet Kit
 
+![LWK logo](docs/LWK_logo_white_on_dark_rgb.png)
+
 **NOTE: LWK is in public beta and still undergoing significant development. Use it at your own risk.**
 
 ## What is Liquid Wallet Kit (LWK)?

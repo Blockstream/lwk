@@ -8,7 +8,7 @@ use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::deserialize;
 use elements::hex::{FromHex, ToHex};
 use elements::Transaction;
-use lwk_common::electrum_ssl::LIQUID_SOCKET;
+use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::*;
@@ -1192,7 +1192,7 @@ fn test_fetch_full_header_mainnet() {
 
 #[test]
 fn test_fetch_full_header_testnet() {
-    let electrum_url = ElectrumUrl::new("blockstream.info:465", true, true).unwrap();
+    let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
     test_fetch_last_full_header(electrum_client, ElementsNetwork::LiquidTestnet);
 }

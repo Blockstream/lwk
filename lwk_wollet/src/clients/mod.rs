@@ -319,7 +319,7 @@ mod tests {
         let desc_str = lwk_test_util::TEST_DESCRIPTOR;
 
         let urls = [
-            "blockstream.info:465",
+            LIQUID_TESTNET_SOCKET,
             "https://blockstream.info/liquidtestnet/api",
             "https://liquid.network/liquidtestnet/api",
         ];

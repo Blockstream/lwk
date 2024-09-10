@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Sync the wallet using an Electrum client
-    let electrum_url = "ssl://blockstream.info:465".parse()?;
+    let electrum_url = "ssl://elements-testnet.blockstream.info:50002".parse()?;
     let mut electrum_client = ElectrumClient::new(&electrum_url)?;
     full_scan_with_electrum_client(&mut wollet, &mut electrum_client)?;
 

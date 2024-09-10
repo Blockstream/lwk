@@ -1,5 +1,7 @@
 use std::{fmt::Display, sync::Arc};
 
+use lwk_common::electrum_ssl::LIQUID_SOCKET;
+
 use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
 /// Wrapper over [`lwk_wollet::ElementsNetwork`]
@@ -57,7 +59,7 @@ impl Network {
 
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
-            lwk_wollet::ElementsNetwork::Liquid => ("blockstream.info:995", true, true),
+            lwk_wollet::ElementsNetwork::Liquid => (LIQUID_SOCKET, true, true),
             lwk_wollet::ElementsNetwork::LiquidTestnet => ("blockstream.info:465", true, true),
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => {
                 ("127.0.0.1:50002", false, false)

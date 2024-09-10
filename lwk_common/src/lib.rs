@@ -45,6 +45,10 @@ use elements_miniscript::elements::{
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::btree_map::BTreeMap;
 
+pub mod electrum_ssl {
+    pub const LIQUID_SOCKET: &str = "blockstream.info:995";
+}
+
 pub fn derive_script_pubkey(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,

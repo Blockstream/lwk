@@ -1,3 +1,4 @@
+use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_jade::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::elements::AssetId;
@@ -51,7 +52,7 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: "blockstream.info:995".into(),
+            electrum_url: LIQUID_SOCKET.into(),
             network: ElementsNetwork::Liquid,
             tls: true,
             validate_domain: true,

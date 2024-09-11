@@ -13,8 +13,8 @@ By not following a monolithic approach but instead providing a group of function
 
 We want LWK to be a reference tool driven both by Blockstream and Liquid participants that helps make Liquid integration frictionless, define ecosystem standards and leverage advanced Liquid capabilities such as covenants or swaps.
 
-While LWK is Rust native, we provide [bindings](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishinhg these bindings and expanding the available options. 
-Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.com/SatoshiPortal/lwk-dart) bindings.  
+While LWK is Rust native, we provide [bindings](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishing these bindings and expanding the available options.
+Additionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.com/SatoshiPortal/lwk-dart) bindings.
 
 
 ## Main Features
@@ -39,7 +39,7 @@ Aditionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.c
 
 ## LWK Structure
 
-LWK funtionalities are split into different component crates that might be useful independently.
+LWK functionalities are split into different component crates that might be useful independently.
 
 * [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
 * [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;
@@ -93,7 +93,7 @@ cargo build -p lwk_wollet
 
 ### Python
 
-#### Install from Pypi
+#### Install from PyPI
 
 ```shell
 pip install lwk
@@ -160,27 +160,27 @@ just android
 
 ### WASM
 
-We currently provide preliminary support but are commited to continue working on this to have a fully featured LWK working on WASM enviroments.
+We currently provide preliminary support but are committed to continue working on this to have a fully featured LWK working on WASM environments.
 [See these instructions to try out LWK on WASM](./lwk_wasm)
 
 ## See what LWK is capable of by using the command line tool (LWK_CLI)
 
 All LWK functions are exposed via a local JSON-RPC server that communicates with a CLI tool so you can see LWK in action.
 
-This JSON-RPC Server also makes it easier to build your own frontend, GUI, or integration. 
+This JSON-RPC Server also makes it easier to build your own frontend, GUI, or integration.
 
 If you want to see an overview of LWK and a demo with the CLI tool check out this [video](https://community.liquid.net/c/videos/demo-liquid-wallet-kit-lwk)
 
 ### Installing LWK_CLI from crates.io
 
 ```sh
-$ cargo install lwk_cli 
+$ cargo install lwk_cli
 ```
 or if you want to connect Jade over serial:
 
 ```sh
-$ cargo install lwk_cli --features serial 
-``` 
+$ cargo install lwk_cli --features serial
+```
 
 ### Building LWK_CLI from source
 
@@ -190,7 +190,7 @@ then you can build from source:
 ```sh
 $ git clone git@github.com:Blockstream/lwk.git
 $ cd lwk
-$ cargo install --path ./lwk_cli/ 
+$ cargo install --path ./lwk_cli/
 ```
 
 Or
@@ -212,7 +212,7 @@ and put it in background
 ```sh
 $ lwk_cli server start
 ```
-Every command requires the server running so open a new shell to run the client. 
+Every command requires the server running so open a new shell to run the client.
 
 Create new BIP39 mnemonic for a software signer
 ```sh
@@ -236,7 +236,7 @@ $ lwk_cli wallet balance -w ss
 If you have a Jade, you can plug it in and use it to create a
 wallet and sign its transactions.
 
-Probe connected Jades and promt user to unlock it to get identifiers needed to load Jade on LWK
+Probe connected Jades and prompt user to unlock it to get identifiers needed to load Jade on LWK
 
 ```sh
 $ lwk_cli signer jade-id
@@ -321,7 +321,7 @@ RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features --no-deps --open
 ## Nix
 
 We provide a flake for a dev environment and for running the `lwk_cli`.
-If you use direnv and allow the `.envrc` the dev environment is automatically loaded 
+If you use direnv and allow the `.envrc` the dev environment is automatically loaded
 as soon as you enter the directory, otherwise you can run:
 
 ```

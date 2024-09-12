@@ -70,6 +70,15 @@ impl Signer {
 
         WolletDescriptor::new(&desc_str)
     }
+
+    pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, LwkError> {
+        let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
+        Ok(lwk_common::Signer::keyorigin_xpub(
+            &self.inner,
+            bip.inner,
+            is_mainnet,
+        )?)
+    }
 }
 
 #[cfg(test)]

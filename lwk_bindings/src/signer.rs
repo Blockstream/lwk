@@ -79,6 +79,14 @@ impl Signer {
             is_mainnet,
         )?)
     }
+
+    pub fn mnemonic(&self) -> Result<Arc<Mnemonic>, LwkError> {
+        Ok(Arc::new(self.inner.mnemonic().map(Into::into).ok_or_else(
+            || LwkError::Generic {
+                msg: "Mnemonic not available".to_string(),
+            },
+        )?))
+    }
 }
 
 #[cfg(test)]
@@ -114,5 +122,7 @@ mod tests {
         let xpub = signer.keyorigin_xpub(&Bip::new_bip87()).unwrap();
         let expected = "[73c5da0a/87h/1h/0h]tpubDCChhoz5Qdrkn7Z7KXawq6Ad6r3A4MUkCoVTqeWxfTkA6bHNJ3CHUEtALQdkNeixNz4446PcAmw4WKcj3mV2vb29H7sg9EPzbyCU1y2merw";
         assert_eq!(xpub, expected);
+
+        assert_eq!(signer.mnemonic().unwrap(), mnemonic);
     }
 }

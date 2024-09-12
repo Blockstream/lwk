@@ -27,6 +27,10 @@ impl ElectrumClient {
         }))
     }
 
+    pub fn ping(&self) -> Result<(), LwkError> {
+        Ok(self.inner.lock()?.ping()?)
+    }
+
     pub fn broadcast(&self, tx: &Transaction) -> Result<Arc<Txid>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.broadcast(tx.as_ref())?.into()))
     }

@@ -49,6 +49,13 @@ impl Signer {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Generate a new random software signer
+    #[uniffi::constructor]
+    pub fn random(network: &Network) -> Result<Arc<Self>, LwkError> {
+        let (inner, _mnemonic) = lwk_signer::SwSigner::random(network.is_mainnet())?;
+        Ok(Arc::new(Self { inner }))
+    }
+
     /// Sign the given `pset`
     ///
     /// Note from an API perspective it would be better to consume the `pset` parameter so it would

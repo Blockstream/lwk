@@ -39,3 +39,20 @@ txid = client.broadcast(tx)
 wollet.wait_for_tx(txid, client)
 expected_balance = funded_satoshi- sent_satoshi - tx.fee(policy_asset)
 assert(wollet.balance()[policy_asset] == expected_balance)
+
+# Create a new wallet
+signer2 = Signer.random(network)
+assert str(signer2.mnemonic()) != str(mnemonic)
+
+desc2 = signer2.wpkh_slip77_descriptor()
+wollet2 = Wollet(network, desc2, datadir=None)
+address2 = wollet2.address(None).address()
+
+builder = network.tx_builder()
+builder.add_lbtc_recipient(address2, funded_satoshi + 1)
+try:
+    builder.finish(wollet)
+except LwkError as e:
+    assert "InsufficientFunds" in str(e), str(e)
+else:
+    assert False, "Should have thrown error"

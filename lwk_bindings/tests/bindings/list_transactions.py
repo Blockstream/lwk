@@ -5,6 +5,7 @@ network = Network.testnet()
 assert(str(network) == "LiquidTestnet")
 
 client = network.default_electrum_client()
+client.ping()
 
 signer = Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()

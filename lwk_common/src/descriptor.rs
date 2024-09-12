@@ -169,9 +169,13 @@ impl FromStr for DescriptorBlindingKey {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Bip {
+    /// For P2WPKH wallets
     Bip84,
+    /// For P2SH-P2WPKH wallets
     Bip49,
+    /// For multisig wallets
     Bip87,
 }
 

@@ -85,7 +85,7 @@ impl Signer {
 mod tests {
     use lwk_wollet::ElementsNetwork;
 
-    use crate::{Mnemonic, Pset, Signer};
+    use crate::{Bip, Mnemonic, Pset, Signer};
 
     #[test]
     fn signer() {
@@ -102,5 +102,17 @@ mod tests {
         let signed_pset = signer.sign(&pset).unwrap();
 
         assert_ne!(pset, signed_pset);
+
+        let xpub = signer.keyorigin_xpub(&Bip::new_bip49()).unwrap();
+        let expected = "[73c5da0a/49h/1h/0h]tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
+        assert_eq!(xpub, expected);
+
+        let xpub = signer.keyorigin_xpub(&Bip::new_bip84()).unwrap();
+        let expected = "[73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M";
+        assert_eq!(xpub, expected);
+
+        let xpub = signer.keyorigin_xpub(&Bip::new_bip87()).unwrap();
+        let expected = "[73c5da0a/87h/1h/0h]tpubDCChhoz5Qdrkn7Z7KXawq6Ad6r3A4MUkCoVTqeWxfTkA6bHNJ3CHUEtALQdkNeixNz4446PcAmw4WKcj3mV2vb29H7sg9EPzbyCU1y2merw";
+        assert_eq!(xpub, expected);
     }
 }

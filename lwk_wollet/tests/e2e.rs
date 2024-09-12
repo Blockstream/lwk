@@ -873,6 +873,7 @@ fn address_status() {
     let server = setup();
     let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
     let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    client.ping().unwrap();
     let address = server.elementsd_getnewaddress();
     let initial_status = client.address_status(&address).unwrap();
     assert_eq!(initial_status, None);

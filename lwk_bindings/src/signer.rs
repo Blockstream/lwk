@@ -1,6 +1,39 @@
 use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
+/// wrapper over [`lwk_common::Bip`]
+#[derive(uniffi::Object)]
+pub struct Bip {
+    inner: lwk_common::Bip,
+}
+
+#[uniffi::export]
+impl Bip {
+    /// For P2SH-P2WPKH wallets
+    #[uniffi::constructor]
+    pub fn new_bip49() -> Self {
+        Self {
+            inner: lwk_common::Bip::Bip49,
+        }
+    }
+
+    /// For P2WPKH wallets
+    #[uniffi::constructor]
+    pub fn new_bip84() -> Self {
+        Self {
+            inner: lwk_common::Bip::Bip84,
+        }
+    }
+
+    /// For multisig wallets
+    #[uniffi::constructor]
+    pub fn new_bip87() -> Self {
+        Self {
+            inner: lwk_common::Bip::Bip87,
+        }
+    }
+}
+
 /// A Software signer, wrapper over [`lwk_signer::SwSigner`]
 #[derive(uniffi::Object)]
 pub struct Signer {

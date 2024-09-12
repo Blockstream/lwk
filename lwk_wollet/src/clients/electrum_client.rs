@@ -158,6 +158,11 @@ impl ElectrumClient {
         }
         Ok(self.script_status.get(&elements_script).cloned())
     }
+
+    /// Ping the Electrum server
+    pub fn ping(&self) -> Result<(), Error> {
+        Ok(self.client.ping()?)
+    }
 }
 impl super::BlockchainBackend for ElectrumClient {
     fn tip(&mut self) -> Result<BlockHeader, Error> {

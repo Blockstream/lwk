@@ -239,6 +239,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 wallet,
                 recipient,
                 fee_rate,
+                enable_ct_discount,
             } => {
                 let mut addressees = vec![];
                 for rec in recipient {
@@ -248,7 +249,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     );
                 }
 
-                let r = client.wallet_send_many(wallet, addressees, fee_rate)?;
+                let r =
+                    client.wallet_send_many(wallet, addressees, fee_rate, enable_ct_discount)?;
                 serde_json::to_value(r)?
             }
             WalletCommand::Drain {

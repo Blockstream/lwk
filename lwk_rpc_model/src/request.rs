@@ -140,6 +140,11 @@ pub struct WalletSendMany {
 
     /// Optional fee rate in sat/kvB
     pub fee_rate: Option<f32>,
+
+    /// Enable ELIP200 discounted fees for Confidential Transactions
+    ///
+    /// Note: this field will be removed once discounted CT will be enabled on all networks.
+    pub enable_ct_discount: bool,
 }
 
 ///  An addressee which has yet to be validated

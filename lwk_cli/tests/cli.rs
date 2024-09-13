@@ -1468,3 +1468,41 @@ fn test_send_all() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_ct_discount() {
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+
+    sw_signer(&cli, "sw");
+    singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
+    let signers = &["sw"];
+
+    fund(&server, &cli, "w1", 1_000_000);
+
+    let address = server.elementsd_getnewaddress();
+    let sats = 1_000;
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    let recipient = format!(" --recipient {address}:{sats}:{policy_asset}");
+
+    // Without CT discount
+    let r = sh(&format!("{cli} wallet send -w w1 {recipient}"));
+    let pset = get_str(&r, "pset");
+    complete(&cli, "w1", pset, signers);
+    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    let fee_no_ct_discount = r.get("fee").unwrap().as_u64().unwrap();
+
+    // With CT discount
+    let r = sh(&format!(
+        "{cli} wallet send -w w1 {recipient} --enable-ct-discount"
+    ));
+    let pset = get_str(&r, "pset");
+    complete(&cli, "w1", pset, signers);
+    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    let fee_ct_discount = r.get("fee").unwrap().as_u64().unwrap();
+
+    assert_eq!(fee_no_ct_discount, 250);
+    assert_eq!(fee_ct_discount, 35);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

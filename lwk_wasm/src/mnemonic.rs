@@ -35,6 +35,13 @@ impl Mnemonic {
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
+
+    /// Creates a Mnemonic from entropy, at least 16 bytes are needed.
+    #[wasm_bindgen(js_name = fromEntropy)]
+    pub fn from_entropy(b: &[u8]) -> Result<Mnemonic, Error> {
+        let inner = bip39::Mnemonic::from_entropy(b)?;
+        Ok(inner.into())
+    }
 }
 
 #[cfg(test)]
@@ -54,5 +61,19 @@ mod tests {
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
         assert_eq!(mnemonic_str, mnemonic.to_string());
         assert_eq!(from_bip39, mnemonic);
+
+        let mnemonic_entropy = Mnemonic::from_entropy(&[1u8; 32]).unwrap();
+        assert_eq!(mnemonic_entropy.to_string(), "absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter advice comic");
+        let mnemonic_entropy = Mnemonic::from_entropy(&[1u8; 16]).unwrap();
+        assert_eq!(
+            mnemonic_entropy.to_string(),
+            "absurd amount doctor acoustic avoid letter advice cage absurd amount doctor adjust"
+        );
+
+        let err = Mnemonic::from_entropy(&[1u8; 15]).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "entropy was not between 128-256 bits or not a multiple of 32 bits: 120 bits"
+        );
     }
 }

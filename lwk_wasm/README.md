@@ -85,6 +85,11 @@ $ cd lwk_wasm/
 $ RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial
 ```
 
+```shell
+$ cd pkg
+$ npm publish
+```
+
 ### Build wasm lib for profiling
 
 To analyze the generated wasm file to optimize for size, we want to follow the same optimization

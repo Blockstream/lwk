@@ -554,6 +554,12 @@ fn test_wallet_load_unload_list() {
     let r = sh(&format!("{cli} wallet list"));
     assert_eq!(get_len(&r, "wallets"), 0);
 
+    let desc_mainnet = "ct(1111111111111111111111111111111111111111111111111111111111111111,elwpkh(xpub661MyMwAqRbcH4oCG7tpubMCYWM3pHRZbhBQgi7uVZGcu1EuuomWqwB5gGHXk4VykarKGVA2jKtT4esCXspWW45mzwAzZEsi3U5j94gCKXc/*))";
+    let err = sh_err(&format!(
+        "{cli} wallet load --wallet main -d {desc_mainnet}"
+    ));
+    assert!(err.contains("Descriptor is for the wrong network"));
+
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

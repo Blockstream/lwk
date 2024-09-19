@@ -314,6 +314,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             // TODO recognize different name same descriptor?
 
             let desc: WolletDescriptor = r.descriptor.parse()?;
+            if desc.is_mainnet() != s.config.is_mainnet() {
+                return Err(Error::Generic("Descriptor is for the wrong network".into()));
+            }
             let wollet = Wollet::with_fs_persist(s.config.network, desc, &s.config.datadir)?;
             s.wollets.insert(&r.name, wollet)?;
 

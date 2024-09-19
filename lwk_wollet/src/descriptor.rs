@@ -384,4 +384,32 @@ mod test {
         let fail_more_lines = format!("{first}\n{second_non_canonical}");
         assert!(WolletDescriptor::from_str_relaxed(&fail_more_lines).is_err());
     }
+
+    #[test]
+    fn test_is_mainnet() {
+        let tpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let xpub = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
+        let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+
+        // testnet/regtest
+        for d in [
+            format!("ct({view_key},elwpkh({tpub}/*))"),
+            format!("ct({view_key},elwpkh({tpub}/<0;1>/*))"),
+            format!("ct({view_key},elwsh(multi(2,{tpub}/*,{tpub}/*)))"),
+            format!("ct({view_key},elwsh(multi(2,{tpub}/<0;1>/*,{tpub}/<0;1>/*)))"),
+            format!("ct({view_key},elwsh(multi(2,{tpub}/*,{xpub}/*)))"),
+        ] {
+            assert!(!WolletDescriptor::from_str(&d).unwrap().is_mainnet());
+        }
+
+        // mainnet
+        for d in [
+            format!("ct({view_key},elwpkh({xpub}/*))"),
+            format!("ct({view_key},elwpkh({xpub}/<0;1>/*))"),
+            format!("ct({view_key},elwsh(multi(2,{xpub}/*,{xpub}/*)))"),
+            format!("ct({view_key},elwsh(multi(2,{xpub}/<0;1>/*,{xpub}/<0;1>/*)))"),
+        ] {
+            assert!(WolletDescriptor::from_str(&d).unwrap().is_mainnet());
+        }
+    }
 }

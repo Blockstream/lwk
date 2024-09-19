@@ -34,6 +34,10 @@ impl WolletDescriptor {
         let inner = lwk_wollet::WolletDescriptor::from_str(descriptor)?;
         Ok(Arc::new(WolletDescriptor { inner }))
     }
+
+    pub fn is_mainnet(&self) -> bool {
+        self.inner.is_mainnet()
+    }
 }
 
 impl fmt::Display for WolletDescriptor {
@@ -62,5 +66,7 @@ mod tests {
         let wollet_desc = lwk_wollet::WolletDescriptor::from_str(exp).unwrap();
         let desc: WolletDescriptor = wollet_desc.into();
         assert_eq!(desc.to_string(), exp);
+
+        assert!(!desc.is_mainnet());
     }
 }

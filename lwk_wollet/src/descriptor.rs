@@ -243,6 +243,17 @@ impl WolletDescriptor {
             Err(e) => parse_multiline(desc).ok_or(e),
         }
     }
+
+    /// Returns true if all the xpubs in the descriptors are for mainnet
+    pub fn is_mainnet(&self) -> bool {
+        self.descriptor().for_each_key(|k| match k {
+            DescriptorPublicKey::XPub(x) => x.xkey.network == elements::bitcoin::Network::Bitcoin,
+            DescriptorPublicKey::MultiXPub(x) => {
+                x.xkey.network == elements::bitcoin::Network::Bitcoin
+            }
+            DescriptorPublicKey::Single(_) => true,
+        })
+    }
 }
 
 // try to parse as multiline descriptor as exported in green

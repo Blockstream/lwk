@@ -67,6 +67,11 @@ impl WolletDescriptor {
         let desc = lwk_wollet::WolletDescriptor::from_str(&desc)?;
         Ok(desc.into())
     }
+
+    #[wasm_bindgen(js_name = isMainnet)]
+    pub fn is_mainnet(&self) -> bool {
+        self.inner.is_mainnet()
+    }
 }
 
 impl std::fmt::Display for WolletDescriptor {
@@ -93,5 +98,7 @@ mod tests {
         let second = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/1/*)))";
         let both = format!("{first}\n{second}");
         assert_eq!(desc, WolletDescriptor::new(&both).unwrap().to_string());
+
+        assert!(WolletDescriptor::new(desc).unwrap().is_mainnet());
     }
 }

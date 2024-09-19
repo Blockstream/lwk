@@ -391,6 +391,10 @@ mod test {
         let xpub = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
         let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
 
+        // An xpub might contain the tpub string and viceversa
+        let xpub_t = "xpub661MyMwAqRbcH4oCG7tpubMCYWM3pHRZbhBQgi7uVZGcu1EuuomWqwB5gGHXk4VykarKGVA2jKtT4esCXspWW45mzwAzZEsi3U5j94gCKXc";
+        let tpub_x = "tpubDC2Q4xK4XH72Gjagbdie6QxG9NpNbgBFzcKBmDL8218u8TSn7WWTBpYPJxpubXVHiLyS8qxPqLCVdu6WGiSDruERaZxusx37LDX5sSkLtrm";
+
         // testnet/regtest
         for d in [
             format!("ct({view_key},elwpkh({tpub}/*))"),
@@ -398,6 +402,7 @@ mod test {
             format!("ct({view_key},elwsh(multi(2,{tpub}/*,{tpub}/*)))"),
             format!("ct({view_key},elwsh(multi(2,{tpub}/<0;1>/*,{tpub}/<0;1>/*)))"),
             format!("ct({view_key},elwsh(multi(2,{tpub}/*,{xpub}/*)))"),
+            format!("ct({view_key},elwpkh({tpub_x}/*))"),
         ] {
             assert!(!WolletDescriptor::from_str(&d).unwrap().is_mainnet());
         }
@@ -408,6 +413,7 @@ mod test {
             format!("ct({view_key},elwpkh({xpub}/<0;1>/*))"),
             format!("ct({view_key},elwsh(multi(2,{xpub}/*,{xpub}/*)))"),
             format!("ct({view_key},elwsh(multi(2,{xpub}/<0;1>/*,{xpub}/<0;1>/*)))"),
+            format!("ct({view_key},elwpkh({xpub_t}/*))"),
         ] {
             assert!(WolletDescriptor::from_str(&d).unwrap().is_mainnet());
         }

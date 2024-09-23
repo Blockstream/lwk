@@ -28,6 +28,14 @@ pub enum Error {
     #[error(transparent)]
     ClientError(#[from] electrum_client::Error),
 
+    #[cfg(feature = "elements_rpc")]
+    #[error(transparent)]
+    ElementsRpcError(#[from] bitcoincore_rpc::Error),
+
+    #[cfg(feature = "elements_rpc")]
+    #[error("Elements RPC returned an unexpected value for call {0}")]
+    ElementsRpcUnexpectedReturn(String),
+
     #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
 

@@ -131,6 +131,9 @@ pub use clients::esplora_wasm_client::async_sleep;
 #[cfg(feature = "esplora_wasm")]
 pub use age;
 
+#[cfg(feature = "elements_rpc")]
+pub use clients::elements_rpc_client::ElementsRpcClient;
+
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

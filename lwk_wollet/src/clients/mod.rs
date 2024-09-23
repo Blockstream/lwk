@@ -26,6 +26,9 @@ pub(crate) mod electrum_client;
 #[cfg(feature = "esplora_wasm")]
 pub(crate) mod esplora_wasm_client;
 
+#[cfg(feature = "elements_rpc")]
+pub(crate) mod elements_rpc_client;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LastUnused {
     pub internal: u32,

@@ -403,6 +403,17 @@ impl TestElectrumServer {
             .unwrap();
         r.as_str().unwrap().to_string()
     }
+
+    // Functions for Elements RPC client
+
+    pub fn elements_rpc_url(&self) -> String {
+        self.elementsd.rpc_url()
+    }
+
+    pub fn elements_rpc_credentials(&self) -> (String, String) {
+        let cookie_values = self.elementsd.params.get_cookie_values().unwrap().unwrap();
+        (cookie_values.user, cookie_values.password)
+    }
 }
 
 fn regtest_policy_asset() -> AssetId {

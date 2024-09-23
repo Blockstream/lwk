@@ -1480,3 +1480,14 @@ fn test_unblinded_utxo() {
 
     assert_eq!(w.balance(&policy_asset), 0);
 }
+
+#[cfg(feature = "elements_rpc")]
+#[test]
+fn test_elements_rpc() {
+    let server = setup();
+    assert_eq!(server.elementsd_height(), 101);
+    let url = server.elements_rpc_url();
+    let (user, pass) = server.elements_rpc_credentials();
+    let elements_rpc_client = ElementsRpcClient::new_from_credentials(&url, &user, &pass).unwrap();
+    assert_eq!(elements_rpc_client.height().unwrap(), 101);
+}

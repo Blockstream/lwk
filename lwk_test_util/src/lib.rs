@@ -127,7 +127,7 @@ pub fn pset_rt(pset: &PartiallySignedTransaction) -> PartiallySignedTransaction 
 }
 
 pub struct TestElectrumServer {
-    elementsd: BitcoinD,
+    pub elementsd: BitcoinD,
     pub electrs: electrsd::ElectrsD,
 
     bitcoind: Option<BitcoinD>,
@@ -356,6 +356,28 @@ impl TestElectrumServer {
             .call("sendrawtransaction", &[tx.into()])
             .unwrap();
         value.as_str().unwrap().to_string()
+    }
+
+    pub fn elementsd_scantxoutset(&self, desc: &str, range: u32) -> String {
+        /*
+        #[derive(serde_json::serde::Serialize)]
+        struct Obj {
+            desc: String,
+            range: u32,
+        }
+        let obj = Obj {
+            desc: desc.to_string(),
+            range,
+        };
+         * */
+        let obj = serde_json::json!([{"desc": desc, "range": range}]);
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("scantxoutset", &["start".into(), obj])
+            .unwrap();
+        value.to_string()
+        //value.as_str().unwrap().to_string()
     }
 
     // methods on bitcoind

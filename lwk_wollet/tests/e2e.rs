@@ -1490,4 +1490,34 @@ fn test_elements_rpc() {
     let (user, pass) = server.elements_rpc_credentials();
     let elements_rpc_client = ElementsRpcClient::new_from_credentials(&url, &user, &pass).unwrap();
     assert_eq!(elements_rpc_client.height().unwrap(), 101);
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let _signers = [&AnySigner::Software(signer)];
+
+    let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let desc = wallet
+        .wollet
+        .wollet_descriptor()
+        .bitcoin_descriptor_without_key_origin();
+    let desc = &desc[2..].to_string();
+    println!("{}", desc);
+
+    /*
+    #[derive(serde::Serialize)]
+    struct Obj {
+        desc: String,
+        range: u32,
+    }
+    let obj = Obj{
+        desc: desc,
+        range: 20,
+    };
+    use bitcoincore_rpc::RpcApi;
+    let r = server.elementsd.client.call::<serde_json::Value>("scantxoutset", &["start".into(), obj.into()]).unwrap();
+    println!("{:?}", r)
+     *d*/
+    let r = server.elementsd_scantxoutset(&desc, 20);
+    println!("{:?}", r)
 }

@@ -190,6 +190,18 @@ impl WolletDescriptor {
         })
     }
 
+    pub fn single_bitcoin_descriptors(&self) -> Vec<String> {
+        let d = self.inner_descriptor_if_available(Chain::External);
+        let d = to_bitcoin_descriptor(&d.descriptor().to_string());
+        let mut v = vec![d];
+        if self.0.descriptor.is_multipath() {
+            let d = self.inner_descriptor_if_available(Chain::Internal);
+            let d = to_bitcoin_descriptor(&d.descriptor().to_string());
+            v.push(d);
+        }
+        v
+    }
+
     pub fn change(
         &self,
         index: u32,
@@ -283,6 +295,12 @@ fn remove_checksum_if_any(s: &str) -> String {
         .next()
         .map(|e| e.to_string())
         .expect("even if '#' is not there we always have one element")
+}
+
+fn to_bitcoin_descriptor(s: &str) -> String {
+    let s = remove_checksum_if_any(&s[2..]);
+    let c = elements_miniscript::descriptor::checksum::desc_checksum(&s).unwrap_or("".into());
+    format!("{}#{}", s, c)
 }
 
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
@@ -417,5 +435,16 @@ mod test {
         ] {
             assert!(WolletDescriptor::from_str(&d).unwrap().is_mainnet());
         }
+    }
+
+    #[test]
+    fn test_btc_desc() {
+        let keyorigin = "[28b3f14e/84'/1'/0']";
+        let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let d = format!("ct(elip151,elwpkh({keyorigin}{xpub}/<0;1>/*))");
+        let d = WolletDescriptor::from_str(&d).unwrap();
+        let ds = d.single_bitcoin_descriptors();
+        assert_eq!(ds[0], format!("wpkh({keyorigin}{xpub}/0/*)#vgjcw353"));
+        assert_eq!(ds[1], format!("wpkh({keyorigin}{xpub}/1/*)#auhenyyf"));
     }
 }

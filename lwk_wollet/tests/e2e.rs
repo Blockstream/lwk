@@ -1488,6 +1488,8 @@ fn test_elements_rpc() {
     assert_eq!(server.elementsd_height(), 101);
     let url = server.elements_rpc_url();
     let (user, pass) = server.elements_rpc_credentials();
-    let elements_rpc_client = ElementsRpcClient::new_from_credentials(&url, &user, &pass).unwrap();
+    let network = ElementsNetwork::default_regtest();
+    let elements_rpc_client =
+        ElementsRpcClient::new_from_credentials(network, &url, &user, &pass).unwrap();
     assert_eq!(elements_rpc_client.height().unwrap(), 101);
 }

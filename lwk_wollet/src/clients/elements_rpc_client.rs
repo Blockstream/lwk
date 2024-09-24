@@ -1,3 +1,4 @@
+use crate::ElementsNetwork;
 use crate::Error;
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
@@ -5,14 +6,21 @@ use bitcoincore_rpc::{Auth, Client, RpcApi};
 /// A client to issue RPCs to a Elements node
 pub struct ElementsRpcClient {
     inner: Client,
+    #[allow(unused)]
+    network: ElementsNetwork,
 }
 
 impl ElementsRpcClient {
     /// Create a new Elements RPC client
-    pub fn new_from_credentials(url: &str, user: &str, pass: &str) -> Result<Self, Error> {
+    pub fn new_from_credentials(
+        network: ElementsNetwork,
+        url: &str,
+        user: &str,
+        pass: &str,
+    ) -> Result<Self, Error> {
         let auth = Auth::UserPass(user.to_string(), pass.to_string());
         let inner = Client::new(url, auth)?;
-        Ok(Self { inner })
+        Ok(Self { inner, network })
     }
 
     /// Get the blockchain height

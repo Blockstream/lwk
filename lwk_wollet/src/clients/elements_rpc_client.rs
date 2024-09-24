@@ -1,4 +1,5 @@
 use crate::Error;
+use crate::{WalletTxOut, WolletDescriptor};
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 
@@ -21,5 +22,23 @@ impl ElementsRpcClient {
             .call::<serde_json::Value>("getblockcount", &[])?
             .as_u64()
             .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("getblockcount".into()))
+    }
+
+    /// Get the wallet utxos
+    pub fn utxos(&self, _desc: &WolletDescriptor, _start: u32, _end: u32) -> Result<Vec<WalletTxOut>, Error> {
+        // TODO: handle multipath
+        // TODO: WolletDescriptor::to_single_descriptors()
+        // TODO: convert to "bitcoin" descriptor
+        // call scantxoutset
+        // get transactions
+        // TODO: unblind 
+        // super::try_unblind
+        //
+        // txid
+        // vout
+        // scriptPubKey
+        // desc
+        // height
+        todo!();
     }
 }

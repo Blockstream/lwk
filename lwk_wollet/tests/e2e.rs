@@ -1496,4 +1496,19 @@ fn test_elements_rpc() {
     let auth = bitcoincore_rpc::Auth::UserPass(user, pass);
     let elements_rpc_client2 = ElementsRpcClient::new(network, &url, auth).unwrap();
     assert_eq!(elements_rpc_client2.height().unwrap(), 101);
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let wd = wallet.wollet.wollet_descriptor();
+    let ts = 0;
+    let wallet_client = elements_rpc_client.setup_wallet("w", &wd, ts).unwrap();
+    assert_eq!(wallet_client.height().unwrap(), 101);
+
+    // Wallet in listwallets
+    let _ = elements_rpc_client.setup_wallet("w", &wd, ts).unwrap();
+
+    // FIXME: test for inner loadwallet
 }

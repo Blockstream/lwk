@@ -12,6 +12,12 @@ pub struct ElementsRpcClient {
 
 impl ElementsRpcClient {
     /// Create a new Elements RPC client
+    pub fn new(network: ElementsNetwork, url: &str, auth: Auth) -> Result<Self, Error> {
+        let inner = Client::new(url, auth)?;
+        Ok(Self { inner, network })
+    }
+
+    /// Create a new Elements RPC client from credentials
     pub fn new_from_credentials(
         network: ElementsNetwork,
         url: &str,
@@ -19,8 +25,7 @@ impl ElementsRpcClient {
         pass: &str,
     ) -> Result<Self, Error> {
         let auth = Auth::UserPass(user.to_string(), pass.to_string());
-        let inner = Client::new(url, auth)?;
-        Ok(Self { inner, network })
+        Self::new(network, url, auth)
     }
 
     /// Get the blockchain height

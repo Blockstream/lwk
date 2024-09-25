@@ -116,6 +116,13 @@ impl ElementsRpcClient {
 
         Ok(wallet_client)
     }
+
+    /// Unload a wallet
+    pub fn unloadwallet(&self, name: &str) -> Result<(), Error> {
+        self.inner
+            .call::<serde_json::Value>("unloadwallet", &[name.into()])?;
+        Ok(())
+    }
 }
 
 #[derive(serde::Serialize)]

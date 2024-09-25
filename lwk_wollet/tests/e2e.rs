@@ -1510,5 +1510,7 @@ fn test_elements_rpc() {
     // Wallet in listwallets
     let _ = elements_rpc_client.setup_wallet("w", &wd, ts).unwrap();
 
-    // FIXME: test for inner loadwallet
+    // Wallet can be loaded
+    elements_rpc_client.unloadwallet("w").unwrap();
+    let _ = elements_rpc_client.setup_wallet("w", &wd, ts).unwrap();
 }

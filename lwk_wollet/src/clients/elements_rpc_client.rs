@@ -8,9 +8,7 @@ pub struct ElementsRpcClient {
     inner: Client,
     #[allow(unused)]
     network: ElementsNetwork,
-    #[allow(unused)]
     auth: Auth,
-    #[allow(unused)]
     url: String,
 }
 

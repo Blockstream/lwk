@@ -134,6 +134,9 @@ pub use age;
 #[cfg(feature = "elements_rpc")]
 pub use clients::elements_rpc_client::ElementsRpcClient;
 
+#[cfg(feature = "elements_rpc")]
+pub use bitcoincore_rpc;
+
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

@@ -8,13 +8,22 @@ pub struct ElementsRpcClient {
     inner: Client,
     #[allow(unused)]
     network: ElementsNetwork,
+    #[allow(unused)]
+    auth: Auth,
+    #[allow(unused)]
+    url: String,
 }
 
 impl ElementsRpcClient {
     /// Create a new Elements RPC client
     pub fn new(network: ElementsNetwork, url: &str, auth: Auth) -> Result<Self, Error> {
-        let inner = Client::new(url, auth)?;
-        Ok(Self { inner, network })
+        let inner = Client::new(url, auth.clone())?;
+        Ok(Self {
+            inner,
+            network,
+            auth,
+            url: url.to_string(),
+        })
     }
 
     /// Create a new Elements RPC client from credentials

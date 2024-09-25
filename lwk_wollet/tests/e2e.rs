@@ -1492,4 +1492,8 @@ fn test_elements_rpc() {
     let elements_rpc_client =
         ElementsRpcClient::new_from_credentials(network, &url, &user, &pass).unwrap();
     assert_eq!(elements_rpc_client.height().unwrap(), 101);
+
+    let auth = bitcoincore_rpc::Auth::UserPass(user, pass);
+    let elements_rpc_client2 = ElementsRpcClient::new(network, &url, auth).unwrap();
+    assert_eq!(elements_rpc_client2.height().unwrap(), 101);
 }

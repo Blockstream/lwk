@@ -1,7 +1,10 @@
-use crate::ElementsNetwork;
-use crate::Error;
+use super::try_unblind;
+use crate::{Chain, ElementsNetwork, Error, WalletTxOut, WolletDescriptor};
+
+use std::collections::HashMap;
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
+use elements::{encode::deserialize, hex::FromHex, OutPoint, Script, Transaction, TxOut, Txid};
 
 /// A client to issue RPCs to a Elements node
 pub struct ElementsRpcClient {
@@ -44,4 +47,98 @@ impl ElementsRpcClient {
             .as_u64()
             .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("getblockcount".into()))
     }
+
+    fn get_txout(&self, outpoint: &OutPoint, height: u32) -> Result<TxOut, Error> {
+        let blockhash = self
+            .inner
+            .call::<serde_json::Value>("getblockhash", &[height.into()])?;
+
+        let method = "getrawtransaction";
+        let txid = outpoint.txid.to_string();
+        let r = self
+            .inner
+            .call::<serde_json::Value>(method, &[txid.into(), false.into(), blockhash])?;
+        let hex = r
+            .as_str()
+            .ok_or_else(|| Error::ElementsRpcUnexpectedReturn(method.into()))?;
+        let bytes = Vec::<u8>::from_hex(hex)
+            .map_err(|_| Error::ElementsRpcUnexpectedReturn(method.into()))?;
+        let tx: Transaction = deserialize(&bytes[..])
+            .map_err(|_| Error::ElementsRpcUnexpectedReturn(method.into()))?;
+        let txout = tx
+            .output
+            .get(outpoint.vout as usize)
+            .ok_or_else(|| Error::ElementsRpcUnexpectedReturn(method.into()))?
+            .clone();
+        Ok(txout)
+    }
+
+    /// Get the confirmed utxos for a descriptor
+    pub fn confirmed_utxos(
+        &self,
+        desc: &WolletDescriptor,
+        range: u32,
+    ) -> Result<Vec<WalletTxOut>, Error> {
+        let scanobjects = desc
+            .single_bitcoin_descriptors()
+            .iter()
+            .map(|d| ScanObject {
+                desc: d.to_string(),
+                range,
+            })
+            .collect::<Vec<_>>();
+        let scanobjects = serde_json::to_value(scanobjects)?;
+        let r: ScanResult = self
+            .inner
+            .call("scantxoutset", &["start".into(), scanobjects])?;
+        let mut utxos = vec![];
+
+        // TODO: make this more efficient
+        let params = self.network.address_params();
+        let mut spk_map = HashMap::new();
+        for i in 0..range {
+            let spk_ext = desc.address(i, params)?.script_pubkey();
+            let spk_int = desc.change(i, params)?.script_pubkey();
+            spk_map.insert(spk_ext, (Chain::External, i));
+            spk_map.insert(spk_int, (Chain::Internal, i));
+        }
+
+        for u in r.unspents {
+            let outpoint = OutPoint::new(u.txid, u.vout);
+            let (ext_int, wildcard_index) = *spk_map
+                .get(&u.script_pubkey)
+                .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset".into()))?;
+            let txout = self.get_txout(&outpoint, u.height)?;
+            let unblinded = try_unblind(txout, desc)?;
+            utxos.push(WalletTxOut {
+                outpoint,
+                script_pubkey: u.script_pubkey,
+                height: Some(u.height),
+                unblinded,
+                wildcard_index,
+                ext_int,
+            })
+        }
+        Ok(utxos)
+    }
+}
+
+#[derive(serde::Serialize)]
+struct ScanObject {
+    desc: String,
+    range: u32,
+}
+
+#[derive(serde::Deserialize)]
+struct Unspent {
+    txid: Txid,
+    vout: u32,
+    height: u32, // scantxoutset does not return mempool txs
+    #[serde(rename = "scriptPubKey")]
+    script_pubkey: Script,
+}
+
+#[derive(serde::Deserialize)]
+struct ScanResult {
+    unspents: Vec<Unspent>,
 }

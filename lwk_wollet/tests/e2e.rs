@@ -1496,4 +1496,19 @@ fn test_elements_rpc() {
     let auth = bitcoincore_rpc::Auth::UserPass(user, pass);
     let elements_rpc_client2 = ElementsRpcClient::new(network, &url, auth).unwrap();
     assert_eq!(elements_rpc_client2.height().unwrap(), 101);
+
+    // Create wallet fund wallet
+    let signer = generate_signer();
+    let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
+    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let wd = wallet.wollet.wollet_descriptor();
+
+    wallet.fund_btc(&server);
+    let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
+    assert_eq!(utxos.len(), 0);
+
+    // Confirm funds
+    server.elementsd_generate(1);
+    let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
+    assert_eq!(utxos.len(), 1);
 }

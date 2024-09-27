@@ -1,18 +1,28 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
+use age::x25519::Recipient;
 use elements::{
+    bitcoin::bip32::ChildNumber,
     encode::Decodable,
     hashes::{hex::FromHex, sha256, Hash},
     hex::ToHex,
     pset::serialize::Serialize,
     BlockHash, Script, Txid,
 };
+use elements_miniscript::DescriptorPublicKey;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
-use crate::{store::Height, BlockchainBackend, Error};
-
-use super::History;
+use crate::{
+    clients::waterfalls::{encrypt, WaterfallsResult},
+    clients::{Capability, Data, History},
+    store::Height,
+    wollet::WolletState,
+    BlockchainBackend, Chain, Error, WolletDescriptor,
+};
 
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
@@ -21,6 +31,10 @@ pub struct EsploraClient {
     base_url: String,
     tip_hash_url: String,
     broadcast_url: String,
+
+    waterfalls: bool,
+    waterfalls_server_recipient: Option<Recipient>,
+    waterfalls_avoid_encryption: bool,
 }
 
 impl EsploraClient {
@@ -29,12 +43,45 @@ impl EsploraClient {
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
+            waterfalls: false,
+            waterfalls_server_recipient: None,
+            waterfalls_avoid_encryption: false,
         }
     }
 
     fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
         let response = get_with_retry(&self.tip_hash_url, 0)?;
         Ok(BlockHash::from_str(&response.text()?)?)
+    }
+}
+
+/// "Waterfalls" methods
+impl EsploraClient {
+    /// Create a new Esplora client using the "waterfalls" endpoint
+    pub fn new_waterfalls(url: &str) -> Self {
+        let mut client = Self::new(url);
+        client.waterfalls = true;
+        client
+    }
+
+    /// Do not encrypt the descriptor when using the "waterfalls" endpoint
+    pub fn waterfalls_avoid_encryption(&mut self) {
+        self.waterfalls_avoid_encryption = true;
+    }
+
+    fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
+        match self.waterfalls_server_recipient.as_ref() {
+            Some(r) => Ok(r.clone()),
+            None => {
+                let client = reqwest::blocking::Client::new();
+                let url = format!("{}/v1/server_recipient", self.base_url);
+                let response = client.get(url).send()?;
+                let rec = Recipient::from_str(&response.text()?)
+                    .map_err(|_| Error::CannotParseRecipientKey)?;
+                self.waterfalls_server_recipient = Some(rec.clone());
+                Ok(rec)
+            }
+        }
     }
 }
 
@@ -113,6 +160,92 @@ impl BlockchainBackend for EsploraClient {
             result.push(history)
         }
         Ok(result)
+    }
+
+    fn capabilities(&self) -> HashSet<Capability> {
+        if self.waterfalls {
+            vec![Capability::Waterfalls].into_iter().collect()
+        } else {
+            HashSet::new()
+        }
+    }
+
+    fn get_history_waterfalls<S: WolletState>(
+        &mut self,
+        descriptor: &WolletDescriptor,
+        state: &S,
+    ) -> Result<Data, Error> {
+        let client = reqwest::blocking::Client::new();
+        let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
+        if descriptor.is_elip151() {
+            return Err(Error::UsingWaterfallsWithElip151);
+        }
+        let desc = descriptor.bitcoin_descriptor_without_key_origin();
+        let desc = if self.waterfalls_avoid_encryption {
+            desc
+        } else {
+            let recipient = self.waterfalls_server_recipient()?;
+
+            // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
+            encrypt(&desc, recipient)?
+        };
+
+        let response = client
+            .get(descriptor_url)
+            .query(&[("descriptor", desc)])
+            .send()?;
+        let status = response.status().as_u16();
+        let body = response.text()?;
+
+        if status != 200 {
+            return Err(Error::Generic(body));
+        }
+
+        let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+        let mut data = Data::default();
+
+        for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
+            let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
+            let chain: Chain = (&desc)
+                .try_into()
+                .map_err(|_| Error::Generic("Cannot determine chain from desc".into()))?;
+            let max = chain_history
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| !v.is_empty())
+                .map(|(i, _)| i as u32)
+                .max();
+            if let Some(max) = max {
+                data.last_unused[chain] = max + 1;
+            }
+            for (i, script_history) in chain_history.iter().enumerate() {
+                // TODO handle paging by asking following pages if there are more than 1000 results
+                let child = ChildNumber::from(waterfalls_result.page as u32 * 1000 + i as u32);
+                let (script, cached) = state.get_or_derive(chain, child, &desc)?;
+                if !cached {
+                    data.scripts.insert(script, (chain, child));
+                }
+                for tx_seen in script_history {
+                    let height = if tx_seen.height > 0 {
+                        Some(tx_seen.height as u32)
+                    } else {
+                        None
+                    };
+                    if let Some(height) = height.as_ref() {
+                        if let Some(block_hash) = tx_seen.block_hash.as_ref() {
+                            data.height_blockhash.insert(*height, *block_hash);
+                        }
+                        if let Some(ts) = tx_seen.block_timestamp.as_ref() {
+                            data.height_timestamp.insert(*height, *ts);
+                        }
+                    }
+
+                    data.txid_height.insert(tx_seen.txid, height);
+                }
+            }
+        }
+
+        Ok(data)
     }
 }
 

@@ -1,0 +1,45 @@
+use crate::{
+    clients::{History, LastUnused},
+    store::{Height, Timestamp},
+    Chain, Error,
+};
+use age::x25519::Recipient;
+use base64::Engine;
+use elements::bitcoin::bip32::ChildNumber;
+use elements::{BlockHash, Script, Txid};
+use serde::Deserialize;
+use std::{collections::HashMap, io::Write};
+
+/// Data processed after a "waterfalls" call
+#[derive(Debug, PartialEq, Eq, Default)]
+pub struct Data {
+    pub txid_height: HashMap<Txid, Option<Height>>,
+    pub scripts: HashMap<Script, (Chain, ChildNumber)>,
+    pub last_unused: LastUnused,
+    pub height_blockhash: HashMap<Height, BlockHash>,
+    pub height_timestamp: HashMap<Height, Timestamp>,
+}
+
+/// The result of a "waterfalls" descriptor endpoint call
+#[derive(Deserialize)]
+pub struct WaterfallsResult {
+    pub txs_seen: HashMap<String, Vec<Vec<History>>>,
+    pub page: u16,
+}
+
+/// Encrypt a plaintext using a recipient key
+///
+/// This can be used to encrypt a descriptor to share with a "waterfalls" server
+pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
+    let encryptor = age::Encryptor::with_recipients(vec![Box::new(recipient)])
+        .expect("we provided a recipient");
+
+    let mut encrypted = vec![];
+    let mut writer = encryptor
+        .wrap_output(&mut encrypted)
+        .map_err(|_| Error::CannotEncrypt)?;
+    writer.write_all(plaintext.as_ref())?;
+    writer.finish()?;
+    let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
+    Ok(result)
+}

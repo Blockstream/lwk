@@ -20,6 +20,9 @@ use std::{
 #[cfg(feature = "esplora")]
 pub(crate) mod esplora_client;
 
+#[cfg(any(feature = "esplora", feature = "esplora_wasm"))]
+pub(crate) mod waterfalls;
+
 #[cfg(feature = "electrum")]
 pub(crate) mod electrum_client;
 

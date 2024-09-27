@@ -1,14 +1,14 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use super::{try_unblind, History, LastUnused};
+use super::{try_unblind, History};
 use crate::{
+    clients::waterfalls::{encrypt, Data, WaterfallsResult},
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
 };
 use age::x25519::Recipient;
-use base64::Engine;
 use elements::{bitcoin::bip32::ChildNumber, Address, OutPoint};
 use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
@@ -19,7 +19,6 @@ use reqwest::Response;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
-    io::Write,
     str::FromStr,
     sync::atomic,
 };
@@ -38,21 +37,6 @@ pub struct EsploraWasmClient {
     waterfalls_avoid_encryption: bool,
 
     network: ElementsNetwork,
-}
-
-#[derive(Debug, PartialEq, Eq, Default)]
-struct Data {
-    txid_height: HashMap<Txid, Option<Height>>,
-    scripts: HashMap<Script, (Chain, ChildNumber)>,
-    last_unused: LastUnused,
-    height_blockhash: HashMap<Height, BlockHash>,
-    height_timestamp: HashMap<Height, Timestamp>,
-}
-
-#[derive(Deserialize)]
-struct WaterfallsResult {
-    txs_seen: HashMap<String, Vec<Vec<History>>>,
-    page: u16,
 }
 
 impl EsploraWasmClient {
@@ -551,20 +535,6 @@ impl From<EsploraTx> for History {
             block_timestamp: None,
         }
     }
-}
-
-pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
-    let encryptor = age::Encryptor::with_recipients(vec![Box::new(recipient)])
-        .expect("we provided a recipient");
-
-    let mut encrypted = vec![];
-    let mut writer = encryptor
-        .wrap_output(&mut encrypted)
-        .map_err(|_| Error::CannotEncrypt)?;
-    writer.write_all(plaintext.as_ref())?;
-    writer.finish()?;
-    let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
-    Ok(result)
 }
 
 #[derive(Deserialize)]

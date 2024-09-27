@@ -71,7 +71,7 @@ waterfalls = { version = "0.3.1", default-features = false, features = [
 [features]
 default = ["esplora", "electrum", "elements_rpc"]
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
-esplora = ["reqwest/blocking"]
+esplora = ["reqwest/blocking", "age"]
 electrum = ["electrum-client"]
 esplora_wasm = [
     "reqwest",

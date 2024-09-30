@@ -1530,3 +1530,52 @@ fn test_clients() {
     let esplora_waterfalls_client = EsploraClient::new_waterfalls(&esplora_url);
     assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
 }
+
+fn wait_esplora_tx_update(client: &mut EsploraClient, wollet: &Wollet) -> Update {
+    for _ in 0..50 {
+        let update = client.full_scan(wollet).unwrap();
+        if let Some(update) = update {
+            if !update.only_tip() {
+                return update;
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("update didn't arrive");
+}
+
+#[cfg(feature = "esplora")]
+#[test]
+fn test_waterfalls_esplora() {
+    // FIXME: add launch_sync or similar to waterfalls
+    init_logging();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    std::thread::sleep(std::time::Duration::from_millis(2000));
+
+    let url = format!("{}/blocks/tip/hash", test_env.base_url());
+    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
+
+    let mut client = EsploraClient::new_waterfalls(test_env.base_url());
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let desc = WolletDescriptor::from_str(&desc).unwrap();
+    let network = ElementsNetwork::default_regtest();
+    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+
+    let sats = 1_000;
+    let address = wollet.address(None).unwrap();
+    let _txid = test_env.send_to(address.address(), sats);
+
+    let update = wait_esplora_tx_update(&mut client, &wollet);
+    wollet.apply_update(update).unwrap();
+    let balance = wollet.balance().unwrap();
+    assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
+
+    rt.block_on(test_env.shutdown());
+}

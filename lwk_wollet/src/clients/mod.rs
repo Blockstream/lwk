@@ -58,6 +58,16 @@ impl IndexMut<Chain> for LastUnused {
     }
 }
 
+/// Data processed after a "get history" call
+#[derive(Debug, PartialEq, Eq, Default)]
+pub struct Data {
+    pub txid_height: HashMap<Txid, Option<Height>>,
+    pub scripts: HashMap<Script, (Chain, ChildNumber)>,
+    pub last_unused: LastUnused,
+    pub height_blockhash: HashMap<Height, BlockHash>,
+    pub height_timestamp: HashMap<Height, Timestamp>,
+}
+
 /// Capabilities that can be supported by a [`BlockchainBackend`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Capability {

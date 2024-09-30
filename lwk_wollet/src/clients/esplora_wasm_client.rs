@@ -3,7 +3,8 @@
 
 use super::{try_unblind, History};
 use crate::{
-    clients::waterfalls::{encrypt, Data, WaterfallsResult},
+    clients::waterfalls::{encrypt, WaterfallsResult},
+    clients::Data,
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,

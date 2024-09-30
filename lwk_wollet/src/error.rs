@@ -171,6 +171,9 @@ pub enum Error {
     #[error("An issuance has already being set on this tx builder")]
     IssuanceAlreadySet,
 
+    #[error("Blockchain backend have not implemented waterfalls method")]
+    WaterfallsUnimplemented,
+
     #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
     UsingWaterfallsWithElip151,
 

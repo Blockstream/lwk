@@ -1526,4 +1526,7 @@ fn test_clients() {
 
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
+
+    let esplora_waterfalls_client = EsploraClient::new_waterfalls(&esplora_url);
+    assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
 }

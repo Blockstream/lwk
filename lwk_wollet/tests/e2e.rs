@@ -1512,3 +1512,18 @@ fn test_elements_rpc() {
     let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
     assert_eq!(utxos.len(), 1);
 }
+
+#[cfg(feature = "esplora")]
+#[test]
+fn test_clients() {
+    let server = setup_with_esplora();
+
+    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
+    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+
+    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let esplora_client = EsploraClient::new(&esplora_url);
+
+    assert_eq!(electrum_client.capabilities().len(), 0);
+    assert_eq!(esplora_client.capabilities().len(), 0);
+}

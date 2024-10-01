@@ -26,7 +26,7 @@ use crate::{full_scan_with_electrum_client, ElectrumClient, WolletTxBuilder};
 
 pub struct TestWollet {
     pub wollet: Wollet,
-    pub electrum_url: ElectrumUrl,
+    electrum_url: ElectrumUrl,
     db_root_dir: TempDir,
 }
 

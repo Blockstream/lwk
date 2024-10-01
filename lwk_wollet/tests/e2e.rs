@@ -1279,7 +1279,8 @@ fn test_prune() {
     let address = wallet.address();
     let _ = server.elementsd_sendtoaddress(&address, 100_000, None);
 
-    let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
+    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
+    let mut client = ElectrumClient::new(&electrum_url).unwrap();
     let mut attempts = 50;
     let mut update = loop {
         if let Some(u) = client.full_scan(&wallet.wollet).unwrap() {

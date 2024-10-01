@@ -22,12 +22,19 @@ use lwk_wollet::{
 };
 use tempfile::TempDir;
 
-use crate::{full_scan_with_electrum_client, ElectrumClient, WolletTxBuilder};
+use crate::{ElectrumClient, WolletTxBuilder};
 
 pub struct TestWollet {
     pub wollet: Wollet,
     electrum_url: ElectrumUrl,
     db_root_dir: TempDir,
+}
+
+fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
+    let update = client.full_scan(wollet).unwrap();
+    if let Some(update) = update {
+        wollet.apply_update(update).unwrap();
+    }
 }
 
 impl TestWollet {
@@ -53,7 +60,7 @@ impl TestWollet {
         let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain).unwrap();
 
         let mut electrum_client: ElectrumClient = ElectrumClient::new(&electrum_url).unwrap();
-        full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();
+        sync(&mut wollet, &mut electrum_client);
 
         let mut i = 120;
         let tip = loop {
@@ -66,7 +73,7 @@ impl TestWollet {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        full_scan_with_electrum_client(&mut wollet, &mut electrum_client).unwrap();
+        sync(&mut wollet, &mut electrum_client);
 
         assert!(tip >= 101);
 
@@ -98,8 +105,8 @@ impl TestWollet {
     }
 
     pub fn sync(&mut self) {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
-        full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+        let mut electrum_client = self.client();
+        sync(&mut self.wollet, &mut electrum_client);
     }
 
     pub fn address(&self) -> Address {
@@ -112,9 +119,9 @@ impl TestWollet {
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &Txid) {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        let mut electrum_client = self.client();
         for _ in 0..120 {
-            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+            sync(&mut self.wollet, &mut electrum_client);
             let list = self.wollet.transactions().unwrap();
             if list.iter().any(|e| &e.txid == txid) {
                 return;
@@ -128,9 +135,9 @@ impl TestWollet {
     ///
     /// This might be useful for explicit outputs or blinded outputs that cannot be unblinded.
     fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        let mut electrum_client = self.client();
         for _ in 0..120 {
-            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+            sync(&mut self.wollet, &mut electrum_client);
             if self.wollet.transaction(txid).unwrap().is_some() {
                 return;
             }
@@ -606,7 +613,7 @@ impl TestWollet {
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
+        let electrum_client = self.client();
         let txid = electrum_client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid);
         txid
@@ -615,7 +622,7 @@ impl TestWollet {
     pub fn send_outside_list(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let electrum_client = ElectrumClient::new(&self.electrum_url).unwrap();
+        let electrum_client = self.client();
         let txid = electrum_client.broadcast(&tx).unwrap();
         self.wait_for_tx_outside_list(&txid);
         txid
@@ -640,9 +647,9 @@ impl TestWollet {
     }
 
     pub fn wait_height(&mut self, height: u32) {
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&self.electrum_url).unwrap();
+        let mut electrum_client = self.client();
         for _ in 0..120 {
-            full_scan_with_electrum_client(&mut self.wollet, &mut electrum_client).unwrap();
+            sync(&mut self.wollet, &mut electrum_client);
             if self.wollet.tip().height() == height {
                 return;
             }

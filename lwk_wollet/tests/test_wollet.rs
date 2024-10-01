@@ -135,9 +135,9 @@ impl TestWollet {
     ///
     /// This might be useful for explicit outputs or blinded outputs that cannot be unblinded.
     fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
-        let mut electrum_client = self.client();
+        let mut client = self.client();
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut electrum_client);
+            sync(&mut self.wollet, &mut client);
             if self.wollet.transaction(txid).unwrap().is_some() {
                 return;
             }
@@ -613,8 +613,7 @@ impl TestWollet {
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let electrum_client = self.client();
-        let txid = electrum_client.broadcast(&tx).unwrap();
+        let txid = self.client().broadcast(&tx).unwrap();
         self.wait_for_tx(&txid);
         txid
     }
@@ -622,8 +621,7 @@ impl TestWollet {
     pub fn send_outside_list(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let electrum_client = self.client();
-        let txid = electrum_client.broadcast(&tx).unwrap();
+        let txid = self.client().broadcast(&tx).unwrap();
         self.wait_for_tx_outside_list(&txid);
         txid
     }
@@ -647,9 +645,9 @@ impl TestWollet {
     }
 
     pub fn wait_height(&mut self, height: u32) {
-        let mut electrum_client = self.client();
+        let mut client = self.client();
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut electrum_client);
+            sync(&mut self.wollet, &mut client);
             if self.wollet.tip().height() == height {
                 return;
             }

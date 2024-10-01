@@ -98,9 +98,9 @@ impl BlockchainBackend for EsploraClient {
     }
 
     fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, crate::Error> {
-        let tx_bytes = tx.serialize();
+        let tx_hex = tx.serialize().to_hex();
         let client = reqwest::blocking::Client::new();
-        let response = client.post(&self.broadcast_url).body(tx_bytes).send()?;
+        let response = client.post(&self.broadcast_url).body(tx_hex).send()?;
         let txid = elements::Txid::from_str(&response.text()?)?;
         Ok(txid)
     }

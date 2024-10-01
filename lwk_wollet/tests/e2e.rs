@@ -1547,12 +1547,37 @@ fn wait_esplora_tx_update(client: &mut EsploraClient, wollet: &Wollet) -> Update
 #[cfg(feature = "esplora")]
 #[test]
 fn test_waterfalls_esplora() {
+    // TODO: use TestWollet also for EsploraClient
     // FIXME: add launch_sync or similar to waterfalls
     init_logging();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
-    std::thread::sleep(std::time::Duration::from_millis(2000));
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+
+    // Launch waterfalls with node otherwise it attempt to broadcast to the esplora testnet
+    // instance.
+    // TODO: remove bitcoind test dep
+    // let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let mut conf = bitcoind::Conf::default();
+    let args = vec![
+        "-fallbackfee=0.0001",
+        "-dustrelayfee=0.00000001",
+        "-chain=liquidregtest",
+        "-initialfreecoins=2100000000",
+        "-validatepegin=0",
+        "-txindex=1",
+        "-rest=1",
+    ];
+    conf.args = args;
+    conf.view_stdout = std::env::var("RUST_LOG").is_ok();
+    conf.network = "liquidregtest";
+
+    let elementsd = bitcoind::BitcoinD::with_conf(exe, &conf).unwrap();
+    let url = elementsd.rpc_url();
+    let cookie_values = elementsd.params.get_cookie_values().unwrap().unwrap();
+    let auth =
+        lwk_wollet::bitcoincore_rpc::Auth::UserPass(cookie_values.user, cookie_values.password);
+    let rpc = lwk_wollet::bitcoincore_rpc::Client::new(&url, auth).unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch_with_node(elementsd));
 
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
@@ -1576,6 +1601,31 @@ fn test_waterfalls_esplora() {
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
     assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
+
+    let address = test_env.get_new_address(None);
+    let mut pset = wollet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(address)
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = wollet.finalize(&mut pset).unwrap();
+    use elements::pset::serialize::Serialize;
+    use lwk_wollet::bitcoincore_rpc::RpcApi;
+    let _v: serde_json::Value = rpc
+        .call("sendrawtransaction", &[tx.serialize().to_hex().into()])
+        .unwrap();
+    // TODO: fix waterfalls to allow broadcasting through itself
+    // let _txid = client.broadcast(&tx).unwrap();
+
+    let update = wait_esplora_tx_update(&mut client, &wollet);
+    wollet.apply_update(update).unwrap();
+    let balance = wollet.balance().unwrap();
+    assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
 
     rt.block_on(test_env.shutdown());
 }

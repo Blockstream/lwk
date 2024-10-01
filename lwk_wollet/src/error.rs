@@ -76,6 +76,9 @@ pub enum Error {
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
 
+    #[error(transparent)]
+    Join(#[from] tokio::task::JoinError),
+
     #[cfg(any(feature = "esplora_wasm", feature = "esplora"))]
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),

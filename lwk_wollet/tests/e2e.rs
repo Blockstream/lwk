@@ -1117,7 +1117,7 @@ fn drain() {
 }
 
 fn wait_tx_update(wallet: &mut TestWollet) {
-    let mut client = ElectrumClient::new(&wallet.electrum_url).unwrap();
+    let mut client = wallet.client();
     for _ in 0..50 {
         if let Some(update) = client.full_scan(&wallet.wollet).unwrap() {
             if !update.only_tip() {

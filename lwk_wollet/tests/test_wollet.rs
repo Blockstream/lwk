@@ -77,6 +77,10 @@ impl TestWollet {
         }
     }
 
+    pub fn client(&self) -> ElectrumClient {
+        ElectrumClient::new(&self.electrum_url).unwrap()
+    }
+
     pub fn tx_builder(&self) -> WolletTxBuilder {
         self.wollet.tx_builder()
     }

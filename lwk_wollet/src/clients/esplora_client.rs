@@ -278,8 +278,8 @@ impl From<EsploraTx> for History {
     fn from(value: EsploraTx) -> Self {
         History {
             txid: value.txid,
-            height: value.status.block_height,
-            block_hash: Some(value.status.block_hash),
+            height: value.status.block_height.unwrap_or(-1),
+            block_hash: value.status.block_hash,
             block_timestamp: None,
         }
     }
@@ -295,8 +295,8 @@ struct EsploraTx {
 
 #[derive(Deserialize)]
 struct Status {
-    block_height: i32,
-    block_hash: BlockHash,
+    block_height: Option<i32>,
+    block_hash: Option<BlockHash>,
 }
 
 #[cfg(test)]

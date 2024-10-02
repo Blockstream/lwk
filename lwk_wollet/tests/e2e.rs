@@ -1666,45 +1666,13 @@ fn test_waterfalls_esplora() {
 fn test_esplora_client() {
     let server = setup_with_esplora();
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let mut client = EsploraClient::new(&url);
+    let client = EsploraClient::new(&url);
 
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let network = ElementsNetwork::default_regtest();
-    let descriptor: WolletDescriptor = descriptor.parse().unwrap();
-    let mut wollet = Wollet::new(network, NoPersist::new(), descriptor).unwrap();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let signers = &[&AnySigner::Software(signer)];
 
-    let update = client.full_scan(&wollet).unwrap().unwrap();
-    wollet.apply_update(update).unwrap();
-    let balance = wollet.balance().unwrap();
-    assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
-
-    let sats = 1_000;
-    let address = wollet.address(None).unwrap();
-    let _txid = server.elementsd_sendtoaddress(address.address(), sats, None);
-
-    let update = wait_esplora_tx_update(&mut client, &wollet);
-    wollet.apply_update(update).unwrap();
-    let balance = wollet.balance().unwrap();
-    assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
-
-    let address = server.elementsd_getnewaddress();
-    let mut pset = wollet
-        .tx_builder()
-        .drain_lbtc_wallet()
-        .drain_lbtc_to(address)
-        .finish()
-        .unwrap();
-
-    let sigs = signer.sign(&mut pset).unwrap();
-    assert!(sigs > 0);
-
-    let tx = wollet.finalize(&mut pset).unwrap();
-    let _txid = client.broadcast(&tx).unwrap();
-
-    let update = wait_esplora_tx_update(&mut client, &wollet);
-    wollet.apply_update(update).unwrap();
-    let balance = wollet.balance().unwrap();
-    assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
+    let wallet = TestWollet::new(client, &desc);
+    roundtrip_inner(wallet, &server, signers);
 }

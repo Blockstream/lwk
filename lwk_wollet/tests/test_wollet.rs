@@ -26,8 +26,9 @@ use crate::{ElectrumClient, WolletTxBuilder};
 
 pub struct TestWollet {
     pub wollet: Wollet,
-    electrum_url: ElectrumUrl,
+    pub client: ElectrumClient,
     db_root_dir: TempDir,
+
 }
 
 fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
@@ -79,13 +80,9 @@ impl TestWollet {
 
         Self {
             wollet,
-            electrum_url,
             db_root_dir,
+            client: electrum_client,
         }
-    }
-
-    pub fn client(&self) -> ElectrumClient {
-        ElectrumClient::new(&self.electrum_url).unwrap()
     }
 
     pub fn tx_builder(&self) -> WolletTxBuilder {
@@ -105,8 +102,7 @@ impl TestWollet {
     }
 
     pub fn sync(&mut self) {
-        let mut electrum_client = self.client();
-        sync(&mut self.wollet, &mut electrum_client);
+        sync(&mut self.wollet, &mut self.client);
     }
 
     pub fn address(&self) -> Address {
@@ -119,9 +115,8 @@ impl TestWollet {
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &Txid) {
-        let mut electrum_client = self.client();
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut electrum_client);
+            sync(&mut self.wollet, &mut self.client);
             let list = self.wollet.transactions().unwrap();
             if list.iter().any(|e| &e.txid == txid) {
                 return;
@@ -135,9 +130,8 @@ impl TestWollet {
     ///
     /// This might be useful for explicit outputs or blinded outputs that cannot be unblinded.
     fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
-        let mut client = self.client();
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut client);
+            sync(&mut self.wollet, &mut self.client);
             if self.wollet.transaction(txid).unwrap().is_some() {
                 return;
             }
@@ -613,7 +607,7 @@ impl TestWollet {
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let txid = self.client().broadcast(&tx).unwrap();
+        let txid = self.client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid);
         txid
     }
@@ -621,7 +615,7 @@ impl TestWollet {
     pub fn send_outside_list(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
         let tx = self.wollet.finalize(pset).unwrap();
-        let txid = self.client().broadcast(&tx).unwrap();
+        let txid = self.client.broadcast(&tx).unwrap();
         self.wait_for_tx_outside_list(&txid);
         txid
     }
@@ -645,9 +639,8 @@ impl TestWollet {
     }
 
     pub fn wait_height(&mut self, height: u32) {
-        let mut client = self.client();
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut client);
+            sync(&mut self.wollet, &mut self.client);
             if self.wollet.tip().height() == height {
                 return;
             }

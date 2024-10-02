@@ -1117,9 +1117,8 @@ fn drain() {
 }
 
 fn wait_tx_update(wallet: &mut TestWollet) {
-    let mut client = wallet.client();
     for _ in 0..50 {
-        if let Some(update) = client.full_scan(&wallet.wollet).unwrap() {
+        if let Some(update) = wallet.client.full_scan(&wallet.wollet).unwrap() {
             if !update.only_tip() {
                 wallet.wollet.apply_update(update.clone()).unwrap();
 

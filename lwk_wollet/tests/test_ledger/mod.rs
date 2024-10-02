@@ -3,7 +3,7 @@ use lwk_containers::testcontainers::clients::Cli;
 use lwk_ledger::TestLedgerEmulator;
 use lwk_signer::AnySigner;
 
-use crate::test_wollet::TestWollet;
+use crate::test_wollet::{test_client_electrum, TestWollet};
 
 #[test]
 fn emul_roundtrip_wpkh() {
@@ -22,7 +22,8 @@ fn emul_roundtrip_wpkh() {
         false,
     )
     .unwrap();
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
 

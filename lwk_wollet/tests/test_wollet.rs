@@ -24,9 +24,9 @@ use tempfile::TempDir;
 
 use crate::{ElectrumClient, WolletTxBuilder};
 
-pub struct TestWollet {
+pub struct TestWollet<C: BlockchainBackend> {
     pub wollet: Wollet,
-    pub client: ElectrumClient,
+    pub client: C,
     db_root_dir: TempDir,
 }
 
@@ -44,10 +44,9 @@ pub fn test_client_electrum(url: &str) -> ElectrumClient {
     ElectrumClient::new(&electrum_url).unwrap()
 }
 
-impl TestWollet {
-    pub fn new(url: &str, desc: &str) -> Self {
+impl<C: BlockchainBackend> TestWollet<C> {
+    pub fn new(mut client: C, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();
-        let mut client = test_client_electrum(url);
 
         let network = ElementsNetwork::default_regtest();
         let descriptor = add_checksum(desc);
@@ -614,7 +613,7 @@ impl TestWollet {
         txid
     }
 
-    pub fn check_persistence(wollet: TestWollet) {
+    pub fn check_persistence(wollet: TestWollet<C>) {
         let descriptor = wollet.wollet.descriptor().to_string();
         let expected_updates = wollet.wollet.updates().unwrap();
         let expected = wollet.wollet.balance().unwrap();

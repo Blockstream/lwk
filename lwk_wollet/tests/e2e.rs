@@ -15,7 +15,7 @@ use lwk_signer::*;
 use lwk_test_util::*;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
-use test_wollet::{generate_signer, TestWollet};
+use test_wollet::{generate_signer, test_client_electrum, TestWollet};
 
 #[test]
 fn liquid_send_jade_signer() {
@@ -57,7 +57,8 @@ fn liquid_send(signers: &[&AnySigner]) {
         slip77_key,
         signers[0].xpub().unwrap()
     );
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
     let asset = wallet.fund_asset(&server);
@@ -88,7 +89,8 @@ fn liquid_issue(signers: &[&AnySigner]) {
         slip77_key,
         signers[0].xpub().unwrap()
     );
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
 
@@ -107,7 +109,8 @@ fn view() {
     let descriptor_blinding_key =
         "1111111111111111111111111111111111111111111111111111111111111111";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
     let _asset = wallet.fund_asset(&server);
@@ -115,7 +118,8 @@ fn view() {
     let descriptor_blinding_key =
         "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
 }
@@ -132,7 +136,8 @@ fn origin() {
 
     let view_key = generate_view_key();
     let desc_str = format!("ct({view_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
 
@@ -199,7 +204,8 @@ fn roundtrip() {
             (&signers7[..], desc7),
         ] {
             let server = &server;
-            let wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+            let client = test_client_electrum(&server.electrs.electrum_url);
+            let wallet = TestWollet::new(client, &desc);
             s.spawn(move || {
                 roundtrip_inner(wallet, server, signers);
             });
@@ -207,7 +213,11 @@ fn roundtrip() {
     });
 }
 
-fn roundtrip_inner(mut wallet: TestWollet, server: &TestElectrumServer, signers: &[&AnySigner]) {
+fn roundtrip_inner<C: BlockchainBackend>(
+    mut wallet: TestWollet<C>,
+    server: &TestElectrumServer,
+    signers: &[&AnySigner],
+) {
     wallet.fund_btc(server);
     server.elementsd_generate(1);
     wallet.send_btc(signers, None, None);
@@ -284,7 +294,8 @@ fn address() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
 
     let gap_limit: u32 = 20;
     let addresses: Vec<_> = (0..(gap_limit + 1))
@@ -329,13 +340,15 @@ fn different_blinding_keys() {
     let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer.xpub());
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer.xpub());
 
-    let mut wallet1 = TestWollet::new(&server.electrs.electrum_url, &desc1);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet1 = TestWollet::new(client, &desc1);
     wallet1.sync();
     assert_eq!(wallet1.address_result(None).index(), 0);
     wallet1.fund_btc(&server);
     assert_eq!(wallet1.address_result(None).index(), 1);
 
-    let mut wallet2 = TestWollet::new(&server.electrs.electrum_url, &desc2);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet2 = TestWollet::new(client, &desc2);
     wallet2.sync();
     assert_eq!(wallet2.address_result(None).index(), 0);
     wallet2.fund_btc(&server);
@@ -373,7 +386,8 @@ fn fee_rate() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, fee_rate, None);
     let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None, fee_rate);
@@ -404,7 +418,8 @@ fn contract() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
     wallet.fund_btc(&server);
     wallet.send_btc(&signers, None, None);
     let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, Some(contract), None);
@@ -439,7 +454,8 @@ fn multiple_descriptors() {
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
     let desc_a = format!("ct({},elwpkh({}/*))", view_key_a, signer_a.xpub());
-    let mut wallet_a = TestWollet::new(&server.electrs.electrum_url, &desc_a);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet_a = TestWollet::new(client, &desc_a);
     // Token descriptor and signers
     let signer_t1 = generate_signer();
     let signer_t2 = generate_signer();
@@ -450,7 +466,8 @@ fn multiple_descriptors() {
         signer_t1.xpub(),
         signer_t2.xpub()
     );
-    let mut wallet_t = TestWollet::new(&server.electrs.electrum_url, &desc_t);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet_t = TestWollet::new(client, &desc_t);
 
     // Fund both wallets
     wallet_a.fund_btc(&server);
@@ -519,7 +536,8 @@ fn multiple_descriptors() {
     let signer_nt = generate_signer();
     let view_key_nt = generate_view_key();
     let desc_nt = format!("ct({},elwpkh({}/*))", view_key_nt, signer_nt.xpub());
-    let mut wallet_nt = TestWollet::new(&server.electrs.electrum_url, &desc_nt);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet_nt = TestWollet::new(client, &desc_nt);
 
     wallet_nt.fund_btc(&server);
     let address_nt = wallet_nt.address();
@@ -576,7 +594,8 @@ fn create_pset_error() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
     wallet.fund_btc(&server);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
@@ -679,7 +698,8 @@ fn create_pset_error() {
     let signer2 = generate_signer();
     let view_key2 = generate_view_key();
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
-    let wallet2 = TestWollet::new(&server.electrs.electrum_url, &desc2);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let wallet2 = TestWollet::new(client, &desc2);
 
     // Send token elsewhere
     let address = wallet2.address();
@@ -751,7 +771,8 @@ fn multisig_flow() {
         signer1.xpub(),
         signer2_xpub
     );
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     // Sharing desc_str grants watch only access to the wallet.
     // Each signer should have access to desc_str to understand how a PSET is affecting the wallet.
@@ -803,7 +824,8 @@ fn jade_sign_wollet_pset() {
     let signer = SwSigner::new(mnemonic, false).unwrap();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, signer.xpub());
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
 
@@ -848,7 +870,8 @@ fn jade_single_sig() {
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(&server);
     let satoshi_utxo1 = wallet.balance(&wallet.policy_asset());
@@ -1064,7 +1087,8 @@ async fn test_esplora_wasm_local_waterfalls() {
 #[test]
 fn test_tip() {
     let server = setup();
-    let mut w = TestWollet::new(&server.electrs.electrum_url, TEST_DESCRIPTOR);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, TEST_DESCRIPTOR);
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
     assert!(w.tip().timestamp().is_some());
@@ -1083,7 +1107,8 @@ fn drain() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
 
     // One utxo L-BTC
     wallet.fund_btc(&server);
@@ -1116,7 +1141,7 @@ fn drain() {
     }
 }
 
-fn wait_tx_update(wallet: &mut TestWollet) {
+fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
     for _ in 0..50 {
         if let Some(update) = wallet.client.full_scan(&wallet.wollet).unwrap() {
             if !update.only_tip() {
@@ -1214,7 +1239,8 @@ fn few_lbtc() {
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
 
     let address = wallet.address();
     wallet.fund(&server, 1000, Some(address), None);
@@ -1273,7 +1299,8 @@ fn test_prune() {
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
 
     let address = wallet.address();
     let _ = server.elementsd_sendtoaddress(&address, 100_000, None);
@@ -1319,12 +1346,14 @@ fn test_external_utxo() {
     let signer1 = generate_signer();
     let view_key1 = generate_view_key();
     let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer1.xpub());
-    let mut w1 = TestWollet::new(&server.electrs.electrum_url, &desc1);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w1 = TestWollet::new(client, &desc1);
 
     let signer2 = generate_signer();
     let view_key2 = generate_view_key();
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
-    let mut w2 = TestWollet::new(&server.electrs.electrum_url, &desc2);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w2 = TestWollet::new(client, &desc2);
 
     let policy_asset = w1.policy_asset();
 
@@ -1389,7 +1418,8 @@ fn test_unblinded_utxo() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let mut w = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
     let signers = [&AnySigner::Software(signer)];
 
     let policy_asset = w.policy_asset();
@@ -1500,7 +1530,8 @@ fn test_elements_rpc() {
     // Create wallet fund wallet
     let signer = generate_signer();
     let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
     let wd = wallet.wollet.wollet_descriptor();
 
     wallet.fund_btc(&server);

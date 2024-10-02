@@ -9,7 +9,7 @@ use lwk_signer::AnySigner;
 use lwk_test_util::{init_logging, TestElectrumServer, TEST_MNEMONIC};
 use lwk_wollet::WolletDescriptor;
 
-use crate::test_wollet::{generate_signer, multisig_desc, TestWollet};
+use crate::test_wollet::{generate_signer, multisig_desc, test_client_electrum, TestWollet};
 
 pub fn jade_setup<'a>(docker: &'a Cli, mnemonic: &'a str) -> TestJadeEmulator<'a> {
     let mut test_jade_emul = TestJadeEmulator::new(docker);
@@ -37,7 +37,8 @@ fn roundtrip(
             desc
         }
     };
-    let mut wallet = TestWollet::new(&server.electrs.electrum_url, &desc_str);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc(server);
 
@@ -122,13 +123,15 @@ fn multi_multisig(server: &TestElectrumServer, jade_signer: &AnySigner) {
     let signers_m1 = &[jade_signer, &sw_signer1];
     let desc = multisig_desc(signers_m1, 2);
     register_multisig(signers_m1, "multi1", &desc);
-    let mut w1 = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w1 = TestWollet::new(client, &desc);
 
     // Wallet multi2
     let signers_m2 = &[jade_signer, &sw_signer2];
     let desc = multisig_desc(signers_m2, 2);
     register_multisig(signers_m2, "multi2", &desc);
-    let mut w2 = TestWollet::new(&server.electrs.electrum_url, &desc);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w2 = TestWollet::new(client, &desc);
 
     // Jade has now 2 registered multisigs
 

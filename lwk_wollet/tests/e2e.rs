@@ -1064,7 +1064,7 @@ async fn test_esplora_wasm_local_waterfalls() {
 #[test]
 fn test_tip() {
     let server = setup();
-    let mut w = TestWollet::with_test_desc(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(&server.electrs.electrum_url, TEST_DESCRIPTOR);
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
     assert!(w.tip().timestamp().is_some());

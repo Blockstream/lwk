@@ -11,7 +11,7 @@ use lwk_signer::AnySigner;
 use lwk_signer::SwSigner;
 use lwk_test_util::{
     add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt,
-    TestElectrumServer, TEST_DESCRIPTOR,
+    TestElectrumServer,
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::ElementsNetwork;
@@ -28,7 +28,6 @@ pub struct TestWollet {
     pub wollet: Wollet,
     pub client: ElectrumClient,
     db_root_dir: TempDir,
-
 }
 
 fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
@@ -42,10 +41,6 @@ impl TestWollet {
     pub fn new(electrs_url: &str, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();
         Self::with_temp_dir(electrs_url, desc, db_root_dir)
-    }
-
-    pub fn with_test_desc(electrs_url: &str) -> Self {
-        Self::new(electrs_url, TEST_DESCRIPTOR)
     }
 
     pub fn with_temp_dir(electrs_url: &str, desc: &str, db_root_dir: TempDir) -> Self {

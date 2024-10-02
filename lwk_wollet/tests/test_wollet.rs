@@ -37,15 +37,17 @@ fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
     }
 }
 
-impl TestWollet {
-    pub fn new(electrs_url: &str, desc: &str) -> Self {
-        let db_root_dir = TempDir::new().unwrap();
-        Self::with_temp_dir(electrs_url, desc, db_root_dir)
-    }
+pub fn test_client_electrum(url: &str) -> ElectrumClient {
+    let tls = false;
+    let validate_domain = false;
+    let electrum_url = ElectrumUrl::new(url, tls, validate_domain).unwrap();
+    ElectrumClient::new(&electrum_url).unwrap()
+}
 
-    fn with_temp_dir(electrs_url: &str, desc: &str, db_root_dir: TempDir) -> Self {
-        let tls = false;
-        let validate_domain = false;
+impl TestWollet {
+    pub fn new(url: &str, desc: &str) -> Self {
+        let db_root_dir = TempDir::new().unwrap();
+        let mut client = test_client_electrum(url);
 
         let network = ElementsNetwork::default_regtest();
         let descriptor = add_checksum(desc);
@@ -53,30 +55,27 @@ impl TestWollet {
         let desc: WolletDescriptor = descriptor.parse().unwrap();
         let mut wollet = Wollet::with_fs_persist(network, desc, &db_root_dir).unwrap();
 
-        let electrum_url = ElectrumUrl::new(electrs_url, tls, validate_domain).unwrap();
-
-        let mut electrum_client: ElectrumClient = ElectrumClient::new(&electrum_url).unwrap();
-        sync(&mut wollet, &mut electrum_client);
+        sync(&mut wollet, &mut client);
 
         let mut i = 120;
         let tip = loop {
             assert!(i > 0, "1 minute without updates");
             i -= 1;
-            let height = electrum_client.tip().unwrap().height;
+            let height = client.tip().unwrap().height;
             if height >= 101 {
                 break height;
             } else {
                 thread::sleep(Duration::from_millis(500));
             }
         };
-        sync(&mut wollet, &mut electrum_client);
+        sync(&mut wollet, &mut client);
 
         assert!(tip >= 101);
 
         Self {
             wollet,
             db_root_dir,
-            client: electrum_client,
+            client,
         }
     }
 

@@ -43,7 +43,7 @@ impl TestWollet {
         Self::with_temp_dir(electrs_url, desc, db_root_dir)
     }
 
-    pub fn with_temp_dir(electrs_url: &str, desc: &str, db_root_dir: TempDir) -> Self {
+    fn with_temp_dir(electrs_url: &str, desc: &str, db_root_dir: TempDir) -> Self {
         let tls = false;
         let validate_domain = false;
 

@@ -143,3 +143,11 @@ impl From<elements::bitcoin::secp256k1::Error> for LwkError {
         }
     }
 }
+
+impl From<elements::UnblindError> for LwkError {
+    fn from(value: elements::UnblindError) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}

@@ -1,4 +1,7 @@
-use crate::{types::AssetId, Script};
+use crate::{
+    types::{AssetId, SecretKey},
+    LwkError, Script, TxOutSecrets,
+};
 use std::sync::Arc;
 
 #[derive(uniffi::Object, Debug)]
@@ -38,5 +41,14 @@ impl TxOut {
     /// If explicit returns the value, if confidential [None]
     pub fn value(&self) -> Option<u64> {
         self.inner.value.explicit().map(Into::into)
+    }
+
+    /// Unblind the output
+    pub fn unblind(&self, secret_key: &SecretKey) -> Result<TxOutSecrets, LwkError> {
+        let secp = elements::bitcoin::secp256k1::Secp256k1::new();
+        Ok(self
+            .inner
+            .unblind(&secp, secret_key.into())
+            .map(Into::into)?)
     }
 }

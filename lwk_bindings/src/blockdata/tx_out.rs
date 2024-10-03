@@ -19,4 +19,9 @@ impl TxOut {
         let spk = self.inner.script_pubkey.clone().into();
         Arc::new(spk)
     }
+
+    /// Whether or not this output is a fee output
+    pub fn is_fee(&self) -> bool {
+        self.inner.is_fee()
+    }
 }

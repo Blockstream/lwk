@@ -15,6 +15,18 @@ impl From<elements::Script> for Script {
     }
 }
 
+impl From<Script> for elements::Script {
+    fn from(script: Script) -> elements::Script {
+        script.inner
+    }
+}
+
+impl From<&Script> for elements::Script {
+    fn from(script: &Script) -> elements::Script {
+        script.inner.clone()
+    }
+}
+
 impl Display for Script {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner.to_hex())

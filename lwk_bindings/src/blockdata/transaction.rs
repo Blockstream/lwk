@@ -104,4 +104,32 @@ mod tests {
 
         assert_eq!(tx.bytes().to_hex(), tx_expected);
     }
+
+    #[test]
+    fn external_unblind() {
+        let network = crate::network::Network::regtest_default();
+        let desc = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#2e4n992d";
+        let desc = crate::WolletDescriptor::new(desc).unwrap();
+        let tx_hex = include_str!("../../tests/test_data/tx.hex").to_string();
+        let tx = Transaction::new(&tx_hex.parse().unwrap()).unwrap();
+        for output in tx.outputs() {
+            if output.is_fee() {
+                assert!(!output.is_partially_blinded());
+                assert_eq!(output.asset().unwrap(), network.policy_asset());
+                assert_eq!(output.value().unwrap(), 250);
+                assert!(output.script_pubkey().bytes().is_empty());
+            } else {
+                assert!(output.is_partially_blinded());
+                assert!(output.asset().is_none());
+                assert!(output.value().is_none());
+                let script_pubkey = output.script_pubkey();
+                assert!(!script_pubkey.bytes().is_empty());
+                let private_blinding_key = desc.derive_blinding_key(&script_pubkey).unwrap();
+                let txout_secrets = output.unblind(&private_blinding_key).unwrap();
+                assert_eq!(txout_secrets.asset(), network.policy_asset());
+            }
+        }
+        tx.outputs().iter().find(|o| o.is_fee()).unwrap();
+        tx.outputs().iter().find(|o| !o.is_fee()).unwrap();
+    }
 }

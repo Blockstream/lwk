@@ -30,15 +30,16 @@ signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 
-# TODO: "externally" unblind the PSET/transaction
-#for output in tx.outputs():
-#    script = output.script()
-#    if len(script.bytes()) == 0:
-#        # fee
-#        continue
-#    private_blinding_key = derive_blinding_key(desc, script)
-#    secrets = output.unblind(private_blinding_key)
-#    assert secrets.asset() == policy_asset
+# "externally" unblind the PSET/transaction
+for output in tx.outputs():
+    spk = output.script_pubkey()
+    if output.is_fee():
+        continue
+    private_blinding_key = desc.derive_blinding_key(spk)
+    # Roundtrip the blinding key as caller might persist it as bytes
+    private_blinding_key = SecretKey.from_bytes(private_blinding_key.bytes())
+    secrets = output.unblind(private_blinding_key)
+    assert secrets.asset() == policy_asset
 
 # Broadcast the transaction
 txid = client.broadcast(tx)

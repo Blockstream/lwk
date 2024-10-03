@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr, sync::Arc};
 
-use crate::LwkError;
+use crate::{types::SecretKey, LwkError, Script};
 
 /// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
@@ -37,6 +37,13 @@ impl WolletDescriptor {
 
     pub fn is_mainnet(&self) -> bool {
         self.inner.is_mainnet()
+    }
+
+    /// Derive the private blinding key
+    pub fn derive_blinding_key(&self, script_pubkey: &Script) -> Option<Arc<SecretKey>> {
+        lwk_common::derive_blinding_key(self.inner.as_ref(), &script_pubkey.into())
+            .map(Into::into)
+            .map(Arc::new)
     }
 }
 

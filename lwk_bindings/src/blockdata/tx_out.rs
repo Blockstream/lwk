@@ -24,4 +24,9 @@ impl TxOut {
     pub fn is_fee(&self) -> bool {
         self.inner.is_fee()
     }
+
+    /// Returns if at least some part of this output are blinded
+    pub fn is_partially_blinded(&self) -> bool {
+        self.inner.is_partially_blinded()
+    }
 }

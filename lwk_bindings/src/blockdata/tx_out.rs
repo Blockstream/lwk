@@ -45,10 +45,9 @@ impl TxOut {
 
     /// Unblind the output
     pub fn unblind(&self, secret_key: &SecretKey) -> Result<TxOutSecrets, LwkError> {
-        let secp = elements::bitcoin::secp256k1::Secp256k1::new();
         Ok(self
             .inner
-            .unblind(&secp, secret_key.into())
+            .unblind(&lwk_wollet::EC, secret_key.into())
             .map(Into::into)?)
     }
 }

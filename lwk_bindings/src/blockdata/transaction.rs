@@ -6,7 +6,7 @@ use lwk_wollet::WalletTx;
 
 use crate::{
     types::{AssetId, Hex},
-    LwkError, Txid,
+    LwkError, TxOut, Txid,
 };
 use std::{fmt::Display, sync::Arc};
 
@@ -71,6 +71,14 @@ impl Transaction {
 
     pub fn fee(&self, policy_asset: &AssetId) -> u64 {
         self.inner.fee_in((*policy_asset).into())
+    }
+
+    pub fn outputs(&self) -> Vec<Arc<TxOut>> {
+        self.inner
+            .output
+            .iter()
+            .map(|o| Arc::new(o.clone().into()))
+            .collect()
     }
 }
 

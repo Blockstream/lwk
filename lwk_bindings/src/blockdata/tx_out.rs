@@ -1,4 +1,4 @@
-use crate::Script;
+use crate::{types::AssetId, Script};
 use std::sync::Arc;
 
 #[derive(uniffi::Object, Debug)]
@@ -28,5 +28,10 @@ impl TxOut {
     /// Returns if at least some part of this output are blinded
     pub fn is_partially_blinded(&self) -> bool {
         self.inner.is_partially_blinded()
+    }
+
+    /// If explicit returns the asset, if confidential [None]
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset.explicit().map(Into::into)
     }
 }

@@ -135,3 +135,11 @@ impl From<lwk_common::precision::Error> for LwkError {
         }
     }
 }
+
+impl From<elements::bitcoin::secp256k1::Error> for LwkError {
+    fn from(value: elements::bitcoin::secp256k1::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}

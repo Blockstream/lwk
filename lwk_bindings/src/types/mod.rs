@@ -6,6 +6,8 @@
 
 mod asset_id;
 mod hex;
+mod secret_key;
 
 pub use asset_id::AssetId;
 pub use hex::Hex;
+pub use secret_key::SecretKey;

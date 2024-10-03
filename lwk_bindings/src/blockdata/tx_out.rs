@@ -34,4 +34,9 @@ impl TxOut {
     pub fn asset(&self) -> Option<AssetId> {
         self.inner.asset.explicit().map(Into::into)
     }
+
+    /// If explicit returns the value, if confidential [None]
+    pub fn value(&self) -> Option<u64> {
+        self.inner.value.explicit().map(Into::into)
+    }
 }

@@ -40,6 +40,11 @@ impl Update {
     pub fn serialize(&self) -> Result<Vec<u8>, LwkError> {
         Ok(self.inner.serialize()?)
     }
+
+    /// Whether the update only changes the tip (does not affect transactions)
+    pub fn only_tip(&self) -> bool {
+        self.inner.only_tip()
+    }
 }
 
 #[cfg(test)]

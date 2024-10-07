@@ -18,14 +18,10 @@ use rand::{thread_rng, Rng};
 use serde_json::Value;
 use std::env;
 use std::str::FromStr;
-use std::sync::Once;
 use std::thread;
 use std::time::Duration;
-use tracing::metadata::LevelFilter;
 
 const DEFAULT_FEE_RATE: f32 = 100.0;
-
-static TRACING_INIT: Once = Once::new();
 
 pub const TEST_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -140,15 +136,12 @@ impl TestElectrumServer {
         enable_esplora_http: bool,
         bitcoind_exec: Option<String>,
     ) -> Self {
-        let filter = LevelFilter::from_str(&std::env::var("RUST_LOG").unwrap_or("off".to_string()))
-            .unwrap_or(LevelFilter::OFF);
-
         init_logging();
 
         let bitcoind = bitcoind_exec
             .map(|bitcoind_exec| electrsd::bitcoind::BitcoinD::new(bitcoind_exec).unwrap());
 
-        let view_stdout = filter == LevelFilter::TRACE;
+        let view_stdout = std::env::var("RUST_LOG").is_ok();
 
         let mut args = vec![
             "-fallbackfee=0.0001",
@@ -449,16 +442,7 @@ fn inner_setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumS
 }
 
 pub fn init_logging() {
-    use tracing_subscriber::prelude::*;
-
-    TRACING_INIT.call_once(|| {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::fmt::layer())
-            .with(tracing_subscriber::EnvFilter::from_default_env())
-            .init();
-
-        tracing::info!("logging initialized");
-    });
+    let _ = env_logger::try_init();
 }
 
 #[allow(dead_code)]

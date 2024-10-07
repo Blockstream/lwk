@@ -2037,14 +2037,14 @@ dependencies = [
  "bip39",
  "electrsd",
  "elements-miniscript",
+ "env_logger",
+ "log",
  "lwk_common",
  "lwk_containers",
  "pulldown-cmark",
  "rand",
  "serde_json",
  "tempfile",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

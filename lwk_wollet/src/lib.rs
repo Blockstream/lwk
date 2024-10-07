@@ -98,7 +98,6 @@ mod update;
 mod util;
 mod wollet;
 
-pub use crate::clients::electrum_client::UrlError;
 pub use crate::clients::{BlockchainBackend, Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
@@ -137,6 +136,9 @@ pub use clients::elements_rpc_client::ElementsRpcClient;
 
 #[cfg(feature = "elements_rpc")]
 pub use bitcoincore_rpc;
+
+#[cfg(feature = "electrum")]
+pub use crate::clients::electrum_client::UrlError;
 
 pub use elements_miniscript;
 pub use elements_miniscript::elements;

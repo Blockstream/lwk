@@ -28,6 +28,7 @@ use std::{
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 pub struct EsploraWasmClient {
+    client: reqwest::Client,
     base_url: String,
     tip_hash_url: String,
     broadcast_url: String,
@@ -51,6 +52,7 @@ impl EsploraWasmClient {
     /// assets and amount exchanged due to the nature of confidential transactions.
     pub fn new(network: ElementsNetwork, url: &str, waterfalls: bool) -> Self {
         Self {
+            client: reqwest::Client::new(),
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
@@ -82,8 +84,12 @@ impl EsploraWasmClient {
         tx: &elements::Transaction,
     ) -> Result<elements::Txid, crate::Error> {
         let tx_hex = tx.serialize().to_hex();
-        let client = reqwest::Client::new();
-        let response = client.post(&self.broadcast_url).body(tx_hex).send().await?;
+        let response = self
+            .client
+            .post(&self.broadcast_url)
+            .body(tx_hex)
+            .send()
+            .await?;
         let txid = elements::Txid::from_str(&response.text().await?)?;
         Ok(txid)
     }
@@ -305,9 +311,8 @@ impl EsploraWasmClient {
         match self.waterfalls_server_recipient.as_ref() {
             Some(r) => Ok(r.clone()),
             None => {
-                let client = reqwest::Client::new(); // TODO put the client in EsploraWasmClient!
                 let url = format!("{}/v1/server_recipient", self.base_url);
-                let response = client.get(&url).send().await?;
+                let response = self.client.get(&url).send().await?;
                 let status = response.status().as_u16();
                 let body = response.text().await?;
                 if status != 200 {
@@ -325,7 +330,6 @@ impl EsploraWasmClient {
         descriptor: &WolletDescriptor,
         store: &Store,
     ) -> Result<Data, Error> {
-        let client = reqwest::Client::new();
         let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
         if descriptor.is_elip151() {
             return Err(Error::UsingWaterfallsWithElip151);
@@ -340,7 +344,8 @@ impl EsploraWasmClient {
             encrypt(&desc, recipient)?
         };
 
-        let response = client
+        let response = self
+            .client
             .get(&descriptor_url)
             .query(&[("descriptor", desc)])
             .send()

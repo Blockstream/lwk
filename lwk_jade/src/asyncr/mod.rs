@@ -252,7 +252,7 @@ impl<S: Stream> Jade<S> {
                     let url = result.url(false).ok_or(Error::NoUsableUrl)?;
                     let str = serde_json::to_string(result.data())?;
                     let value: serde_json::Value = serde_json::from_str(&str)?;
-                    tracing::debug!("POSTING to {url} data: {value}",);
+                    log::debug!("POSTING to {url} data: {value}",);
                     let resp = client.post(url).json(&value).send().await?;
                     let status_code = resp.status().as_u16();
                     if status_code != 200 {
@@ -260,7 +260,7 @@ impl<S: Stream> Jade<S> {
                     }
                     let bytes = &resp.bytes().await?;
                     let value: serde_json::Value = serde_json::from_slice(bytes.as_ref())?;
-                    tracing::debug!("RECEIVED from {url} data: {:?}", value);
+                    log::debug!("RECEIVED from {url} data: {:?}", value);
 
                     let params: serde_cbor::Value = json_to_cbor(&value)?;
 

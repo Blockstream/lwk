@@ -1978,6 +1978,7 @@ dependencies = [
  "elements",
  "elements-miniscript",
  "hex",
+ "log",
  "lwk_common",
  "lwk_containers",
  "lwk_test_util",
@@ -1991,8 +1992,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tracing",
- "tracing-subscriber",
  "wasm-timer",
 ]
 

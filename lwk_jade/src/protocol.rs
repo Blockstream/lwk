@@ -102,7 +102,7 @@ impl Request {
         };
         let mut buf = Vec::new();
         serde_cbor::to_writer(&mut buf, &req)?;
-        tracing::debug!(
+        log::debug!(
             "\n--->\t{:#?}\n\t({} bytes) {}",
             &req,
             buf.len(),

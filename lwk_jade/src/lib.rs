@@ -75,7 +75,7 @@ where
     match serde_cbor::from_reader::<protocol::Response<T>, &[u8]>(reader) {
         Ok(r) => {
             if let Some(result) = r.result {
-                tracing::debug!(
+                log::debug!(
                     "\n<---\t{:?}\n\t({} bytes) {}",
                     &result,
                     reader.len(),
@@ -92,7 +92,7 @@ where
         Err(e) => {
             let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
             if let Ok(value) = res {
-                tracing::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {:?}", value);
+                log::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {:?}", value);
                 return Some(Err(Error::SerdeCbor(e)));
             }
         }

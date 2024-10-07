@@ -224,7 +224,7 @@ impl Jade {
                     let url = result.url(false).ok_or(Error::NoUsableUrl)?;
                     let str = serde_json::to_string(result.data())?;
                     let value: serde_json::Value = serde_json::from_str(&str)?;
-                    tracing::debug!("POSTING to {url} data: {value}",);
+                    log::debug!("POSTING to {url} data: {value}",);
                     let resp = client.post(url).json(&value).send()?;
                     let status_code = resp.status().as_u16();
                     if status_code != 200 {
@@ -232,7 +232,7 @@ impl Jade {
                     }
                     let bytes = &resp.bytes()?;
                     let value: serde_json::Value = serde_json::from_slice(bytes.as_ref())?;
-                    tracing::debug!("RECEIVED from {url} data: {:?}", value);
+                    log::debug!("RECEIVED from {url} data: {:?}", value);
 
                     let params: serde_cbor::Value = json_to_cbor(&value)?;
 
@@ -257,7 +257,7 @@ impl Jade {
         port_name: &str,
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
-        tracing::info!("serial port {port_name}");
+        log::info!("serial port {port_name}");
         let timeout = timeout.unwrap_or(TIMEOUT);
         let port = serialport::new(port_name, BAUD_RATE)
             .timeout(timeout)
@@ -273,10 +273,10 @@ impl Jade {
     ) -> Vec<Result<Self>> {
         let mut result = vec![];
         let ports = Self::available_ports_with_jade();
-        tracing::debug!("available serial ports possibly with jade: {}", ports.len());
+        log::debug!("available serial ports possibly with jade: {}", ports.len());
         for port in ports {
             let jade_res = Self::from_serial(network, &port.port_name, timeout);
-            tracing::debug!("trying: {port:?} return {jade_res:?}");
+            log::debug!("trying: {port:?} return {jade_res:?}");
 
             // TODO green_qt calls also get_version_info
             result.push(jade_res);
@@ -287,7 +287,7 @@ impl Jade {
     #[cfg(feature = "serial")]
     pub fn available_ports_with_jade() -> Vec<serialport::SerialPortInfo> {
         let ports = serialport::available_ports().unwrap_or_default();
-        tracing::debug!("available serial ports: {}", ports.len());
+        log::debug!("available serial ports: {}", ports.len());
 
         ports
             .into_iter()

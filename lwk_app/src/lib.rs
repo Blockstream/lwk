@@ -76,7 +76,7 @@ pub struct App {
 
 impl App {
     pub fn new(config: Config) -> Result<App, Error> {
-        tracing::info!("Creating new app with config: {:?}", config);
+        log::info!("Creating new app with config: {:?}", config);
 
         Ok(App {
             rpc: None,
@@ -124,7 +124,7 @@ impl App {
         let path = self.config.state_path()?;
         match std::fs::read_to_string(&path) {
             Ok(string) => {
-                tracing::info!(
+                log::info!(
                     "Loading previous state, {} elements",
                     string.lines().count()
                 );
@@ -138,7 +138,7 @@ impl App {
                 }
             }
             Err(_) => {
-                tracing::info!("There is no previous state at {path:?}");
+                log::info!("There is no previous state at {path:?}");
             }
         }
         state.lock().map_err(|e| e.to_string())?.do_persist = true;
@@ -207,7 +207,7 @@ impl App {
                     }
                 }
                 Err(_) => {
-                    tracing::info!(
+                    log::info!(
                         "Cannot create an electrum client, are we conected? Retrying in one sec"
                     );
                     sleep(Duration::from_secs(1))
@@ -268,7 +268,7 @@ fn method_handler(
 }
 
 fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Response, Error> {
-    tracing::debug!(
+    log::debug!(
         "method: {} params: {:?} ",
         request.method.as_str(),
         request.params
@@ -1087,7 +1087,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let s = state.lock()?;
                 (s.config.jade_network(), Some(s.config.timeout))
             };
-            tracing::debug!("jade network: {}", network);
+            log::debug!("jade network: {}", network);
 
             let jade = match r.emulator {
                 Some(emulator) => Jade::from_socket(emulator, network)?,
@@ -1132,7 +1132,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let url = &s.config.registry_url;
                 let contract = asset.contract();
                 let data = serde_json::json!({"asset_id": asset_id, "contract": contract});
-                tracing::debug!("posting {data:?} as json to {url} ");
+                log::debug!("posting {data:?} as json to {url} ");
                 let response = client.post(url).json(&data).send()?;
                 let mut result = response.text()?;
                 if result.contains("failed verifying linked entity") {

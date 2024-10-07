@@ -18,16 +18,16 @@ pub struct RegistryData {
 
 pub fn get_registry_data(registry_url: &str, asset: &AssetId) -> Result<RegistryData, Error> {
     let url = format!("{registry_url}{asset}");
-    tracing::debug!("getting registry data {url}");
+    log::debug!("getting registry data {url}");
     let data: RegistryData = reqwest::blocking::get(url)?.json()?;
     Ok(data)
 }
 
 pub fn get_tx(esplora_api_url: &str, txid: &Txid) -> Result<Transaction, Error> {
     let url = format!("{esplora_api_url}tx/{txid}/hex");
-    tracing::debug!("getting tx {url}");
+    log::debug!("getting tx {url}");
     let tx_hex = reqwest::blocking::get(url)?.text()?;
-    tracing::debug!("got {tx_hex}");
+    log::debug!("got {tx_hex}");
     let bytes = Vec::<u8>::from_hex(&tx_hex)?;
     let tx = deserialize(&bytes)?;
     Ok(tx)

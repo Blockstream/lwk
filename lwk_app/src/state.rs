@@ -354,7 +354,7 @@ impl Signers {
         timeout: Option<Duration>,
     ) -> Result<&AnySigner, Error> {
         let app_signer = self.get(name)?;
-        tracing::debug!("get_available({}) return {:?}", name, app_signer);
+        log::debug!("get_available({}) return {:?}", name, app_signer);
         let jade = match &app_signer.inner {
             #[cfg(not(feature = "serial"))]
             AppSignerInner::JadeId(_, _) => {

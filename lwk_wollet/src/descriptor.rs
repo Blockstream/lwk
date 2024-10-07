@@ -5,7 +5,7 @@ use aes_gcm_siv::aead::NewAead;
 use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
-use elements::{Address, AddressParams};
+use elements::{Address, AddressParams, Script};
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
@@ -237,6 +237,16 @@ impl WolletDescriptor {
             .address(&crate::EC, params)?)
     }
 
+    /// Get a scriptpubkey
+    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, crate::error::Error> {
+        let v = self.0.descriptor.clone().into_single_descriptors()?;
+        let d = match ext_int {
+            Chain::External => v.first().expect("at least on descriptor"),
+            Chain::Internal => v.last().expect("at least on descriptor"),
+        };
+        Ok(d.at_derivation_index(index)?.script_pubkey())
+    }
+
     /// Get a definite descriptor
     pub fn definite_descriptor(
         &self,
@@ -320,7 +330,7 @@ mod test {
     use elements::bitcoin;
     use elements_miniscript::Descriptor;
 
-    use crate::{descriptor::remove_checksum_if_any, WolletDescriptor};
+    use crate::{descriptor::remove_checksum_if_any, Chain, WolletDescriptor};
 
     #[test]
     fn test_wollet_hash() {
@@ -446,5 +456,22 @@ mod test {
         let ds = d.single_bitcoin_descriptors();
         assert_eq!(ds[0], format!("wpkh({keyorigin}{xpub}/0/*)#vgjcw353"));
         assert_eq!(ds[1], format!("wpkh({keyorigin}{xpub}/1/*)#auhenyyf"));
+    }
+
+    #[test]
+    fn test_wollet_desc_deriv() {
+        let keyorigin = "[28b3f14e/84'/1'/0']";
+        let xpub = "tpubDC2Q4xK4XH72GM7MowNuajyWVbigRLBWKswyP5T88hpPwu5nGqJWnda8zhJEFt71av73Hm8mUMMFSz9acNVzz8b1UbdSHCDXKTbSv5eEytu";
+        let d = format!("ct(elip151,elwpkh({keyorigin}{xpub}/<0;1>/*))");
+        let d = WolletDescriptor::from_str(&d).unwrap();
+        let params = &elements::AddressParams::ELEMENTS;
+
+        let a = d.address(1, params).unwrap().script_pubkey();
+        let s = d.script_pubkey(Chain::External, 1).unwrap();
+        assert_eq!(a, s);
+
+        let a = d.change(2, params).unwrap().script_pubkey();
+        let s = d.script_pubkey(Chain::Internal, 2).unwrap();
+        assert_eq!(a, s);
     }
 }

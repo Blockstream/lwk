@@ -89,7 +89,7 @@ impl JsonRpcServer {
                         }
                         Err(err) => {
                             // not much to do if recv fails
-                            tracing::error!("recv error: {}", err);
+                            log::error!("recv error: {}", err);
                             continue;
                         }
                     };
@@ -119,7 +119,7 @@ impl JsonRpcServer {
                                 Ok(mut file) => {
                                     let mut buf = Vec::new();
                                     match file.read_to_end(&mut buf) {
-                                        Ok(n) => tracing::trace!("GET: read {} bytes", n),
+                                        Ok(n) => log::trace!("GET: read {} bytes", n),
                                         Err(e) => {
                                             let message = "500: Internal error";
                                             let response = HttpResponse::from_string(message)
@@ -197,7 +197,7 @@ impl JsonRpcServer {
                             if let Err(err) =
                                 send_jsonrpc_response(http_request, response, &config.headers)
                             {
-                                tracing::error!("send_response error: {}", err);
+                                log::error!("send_response error: {}", err);
                             }
                         }
                         other => {
@@ -247,17 +247,17 @@ where
 {
     let status = response.status_code();
     match http_request.respond(response) {
-        Ok(()) => tracing::debug!(
+        Ok(()) => log::debug!(
             "Sent response with status code: {:?} and response message: {}",
             status,
             message
         ),
-        Err(e) => tracing::error!("Error sending response: {}", e),
+        Err(e) => log::error!("Error sending response: {}", e),
     }
 }
 
 fn validate_jsonrpc_request(http_request: &mut tiny_http::Request) -> Result<Request, InnerError> {
-    tracing::debug!(
+    log::debug!(
         "received request - method: {:?}, url: {:?}, headers: {:?}",
         http_request.method(),
         http_request.url(),
@@ -316,7 +316,7 @@ where
         Ok(response) => response,
         Err(Error::Stop) => return Err(Error::Stop),
         Err(Error::Inner(err)) => {
-            tracing::error!("Error processing request: {}", err);
+            log::error!("Error processing request: {}", err);
             Response::from_error(id, err)
         }
         Err(Error::Implementation(err)) => Response::from_error(id, err),

@@ -2053,6 +2053,7 @@ version = "0.4.0"
 dependencies = [
  "anyhow",
  "jsonrpc 0.17.0",
+ "log",
  "reqwest",
  "serde",
  "serde_derive",
@@ -2060,7 +2061,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tiny_http",
- "tracing",
 ]
 
 [[package]]

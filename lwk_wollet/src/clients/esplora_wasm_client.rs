@@ -64,7 +64,7 @@ impl EsploraWasmClient {
     }
 
     async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
-        let response = get_with_retry(&self.tip_hash_url).await?;
+        let response = get_with_retry(&self.client, &self.tip_hash_url).await?;
         Ok(BlockHash::from_str(&response.text().await?)?)
     }
 
@@ -72,7 +72,7 @@ impl EsploraWasmClient {
         let last_block_hash = self.last_block_hash().await?;
 
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
-        let response = get_with_retry(&header_url).await?;
+        let response = get_with_retry(&self.client, &header_url).await?;
         let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -96,7 +96,7 @@ impl EsploraWasmClient {
 
     async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
         let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-        let response = get_with_retry(&tx_url).await?;
+        let response = get_with_retry(&self.client, &tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
 
         Ok(tx)
@@ -113,13 +113,13 @@ impl EsploraWasmClient {
                 Some(block_hash) => *block_hash,
                 None => {
                     let block_height = format!("{}/block-height/{}", self.base_url, height);
-                    let response = get_with_retry(&block_height).await?;
+                    let response = get_with_retry(&self.client, &block_height).await?;
                     BlockHash::from_str(&response.text().await?)?
                 }
             };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-            let response = get_with_retry(&block_header).await?;
+            let response = get_with_retry(&self.client, &block_header).await?;
             let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
 
             let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -140,7 +140,7 @@ impl EsploraWasmClient {
             )?;
             let url = format!("{}/address/{}/txs", self.base_url, address);
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = get_with_retry(&url).await?;
+            let response = get_with_retry(&self.client, &url).await?;
             let json: Vec<EsploraTx> = serde_json::from_str(&response.text().await?)?;
 
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
@@ -485,10 +485,10 @@ impl EsploraWasmClient {
     }
 }
 
-async fn get_with_retry(url: &str) -> Result<Response, Error> {
+async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response, Error> {
     let mut attempt = 0;
     loop {
-        let response = reqwest::get(url).await?;
+        let response = client.get(url).send().await?;
         tracing::debug!(
             "{} status_code:{} body bytes:{:?}",
             &url,
@@ -568,7 +568,8 @@ mod tests {
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{}/block/{}/raw", base_url, hash);
-        let response = super::get_with_retry(&url).await.unwrap();
+        let client = reqwest::Client::new();
+        let response = super::get_with_retry(&client, &url).await.unwrap();
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
 

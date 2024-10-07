@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr, sync::Arc};
 
-use crate::{types::SecretKey, LwkError, Script};
+use crate::{types::SecretKey, Chain, LwkError, Script};
 
 /// The output descriptors, wrapper over [`lwk_wollet::WolletDescriptor`]
 #[derive(uniffi::Object)]
@@ -45,6 +45,15 @@ impl WolletDescriptor {
             .map(Into::into)
             .map(Arc::new)
     }
+
+    /// Derive a scriptpubkey
+    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Arc<Script>, LwkError> {
+        self.inner
+            .script_pubkey(ext_int.into(), index)
+            .map_err(Into::into)
+            .map(Into::into)
+            .map(Arc::new)
+    }
 }
 
 impl fmt::Display for WolletDescriptor {
@@ -57,7 +66,7 @@ impl fmt::Display for WolletDescriptor {
 mod tests {
     use lwk_wollet::ElementsNetwork;
 
-    use crate::{Mnemonic, Signer, WolletDescriptor};
+    use crate::{Chain, Mnemonic, Signer, WolletDescriptor};
     use std::str::FromStr;
 
     #[test]
@@ -75,5 +84,15 @@ mod tests {
         assert_eq!(desc.to_string(), exp);
 
         assert!(!desc.is_mainnet());
+
+        assert_eq!(
+            desc.script_pubkey(Chain::External, 0).unwrap().to_string(),
+            "0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1"
+        );
+
+        assert_eq!(
+            desc.script_pubkey(Chain::Internal, 0).unwrap().to_string(),
+            "00142f34aa1cf00a53b055a291a03a7d45f0a6988b52"
+        );
     }
 }

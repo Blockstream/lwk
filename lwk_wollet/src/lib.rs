@@ -98,6 +98,7 @@ mod update;
 mod util;
 mod wollet;
 
+pub use crate::clients::electrum_client::UrlError;
 pub use crate::clients::{BlockchainBackend, Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};

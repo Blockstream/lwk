@@ -52,7 +52,7 @@ impl EsploraClient {
     }
 
     fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
-        let response = get_with_retry(&self.tip_hash_url, 0)?;
+        let response = get_with_retry(&self.client, &self.tip_hash_url, 0)?;
         Ok(BlockHash::from_str(&response.text()?)?)
     }
 }
@@ -91,7 +91,7 @@ impl BlockchainBackend for EsploraClient {
         let last_block_hash = self.last_block_hash()?;
 
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
-        let response = get_with_retry(&header_url, 0)?;
+        let response = get_with_retry(&self.client, &header_url, 0)?;
         let header_bytes = Vec::<u8>::from_hex(&response.text()?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -109,7 +109,7 @@ impl BlockchainBackend for EsploraClient {
         let mut result = vec![];
         for txid in txids.iter() {
             let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-            let response = get_with_retry(&tx_url, 0)?;
+            let response = get_with_retry(&self.client, &tx_url, 0)?;
             let tx = elements::Transaction::consensus_decode(&response.bytes()?[..])?;
             result.push(tx);
         }
@@ -127,13 +127,13 @@ impl BlockchainBackend for EsploraClient {
                 Some(block_hash) => *block_hash,
                 None => {
                     let block_height = format!("{}/block-height/{}", self.base_url, height);
-                    let response = get_with_retry(&block_height, 0)?;
+                    let response = get_with_retry(&self.client, &block_height, 0)?;
                     BlockHash::from_str(&response.text()?)?
                 }
             };
 
             let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-            let response = get_with_retry(&block_header, 0)?;
+            let response = get_with_retry(&self.client, &block_header, 0)?;
             let header_bytes = Vec::<u8>::from_hex(&response.text()?)?;
 
             let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -153,7 +153,7 @@ impl BlockchainBackend for EsploraClient {
             let script_hash = sha256::Hash::hash(script.as_bytes()).to_byte_array();
             let url = format!("{}/scripthash/{}/txs", self.base_url, script_hash.to_hex());
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = get_with_retry(&url, 0)?;
+            let response = get_with_retry(&self.client, &url, 0)?;
             let json: Vec<EsploraTx> = response.json()?;
 
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
@@ -249,8 +249,8 @@ impl BlockchainBackend for EsploraClient {
     }
 }
 
-fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
-    let response = reqwest::blocking::get(url)?;
+fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Result<Response, Error> {
+    let response = client.get(url).send()?;
     tracing::debug!(
         "{} status_code:{} body bytes:{:?}",
         &url,
@@ -268,7 +268,7 @@ fn get_with_retry(url: &str, attempt: usize) -> Result<Response, Error> {
 
         tracing::debug!("waiting {secs}");
         std::thread::sleep(std::time::Duration::from_secs(secs));
-        get_with_retry(url, attempt + 1)
+        get_with_retry(&client, url, attempt + 1)
     } else {
         Ok(response)
     }

@@ -46,7 +46,7 @@ tokio = { version = "1.36.0", default-features = false, features = [
 idna = "0.4.0"
 regex-lite = "0.1.5"
 
-tracing = "0.1"
+log.workspace = true
 fxhash = "0.2.1"
 
 lwk_signer = { version = "0.7", features = ["jade", "ledger"], optional = true }
@@ -67,7 +67,7 @@ tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 waterfalls = { version = "0.3.1", default-features = false, features = [
     "test_env",
 ] }
-bitcoind = { version = "0.36" }  # TODO: remove once we're able to broadcast through waterfalls
+bitcoind = { version = "0.36" } # TODO: remove once we're able to broadcast through waterfalls
 
 [features]
 default = ["esplora", "electrum", "elements_rpc"]

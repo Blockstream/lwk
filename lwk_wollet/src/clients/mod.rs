@@ -219,7 +219,7 @@ pub trait BlockchainBackend {
             || state.tip() != (tip.height, tip.block_hash());
 
         if changed {
-            tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
+            log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
             let txid_height_new: Vec<_> = txid_height
                 .iter()
@@ -285,7 +285,7 @@ pub trait BlockchainBackend {
 
                     match try_unblind(output.clone(), descriptor) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => tracing::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                            Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
                 }
             }
@@ -315,7 +315,7 @@ pub trait BlockchainBackend {
                 result.push((h.height, h.time))
             }
 
-            tracing::debug!("{} headers_downloaded", heights_to_download.len());
+            log::debug!("{} headers_downloaded", heights_to_download.len());
         }
 
         Ok(result)
@@ -405,7 +405,7 @@ mod tests {
             }
             prec = Some(balance);
 
-            tracing::info!(
+            log::info!(
                 "first run: {}: {:.2}s",
                 urls[i],
                 start.elapsed().as_secs_f64()
@@ -422,7 +422,7 @@ mod tests {
                 assert!(update.txid_height_delete.is_empty());
                 assert_ne!(update.tip, first_update.tip);
             }
-            tracing::info!(
+            log::info!(
                 "second run: {}: {:.2}s",
                 urls[i],
                 start.elapsed().as_secs_f64()

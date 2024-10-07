@@ -210,7 +210,7 @@ impl EsploraWasmClient {
             || store.cache.tip != (tip.height, tip.block_hash());
 
         if changed {
-            tracing::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
+            log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
             let txid_height_new: Vec<_> = txid_height
                 .iter()
@@ -436,7 +436,7 @@ impl EsploraWasmClient {
 
                     match try_unblind(output.clone(), descriptor) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => tracing::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                            Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }
                 }
             }
@@ -472,7 +472,7 @@ impl EsploraWasmClient {
                 result.push((h.height, h.time))
             }
 
-            tracing::debug!("{} headers_downloaded", heights_to_download.len());
+            log::debug!("{} headers_downloaded", heights_to_download.len());
         }
 
         let heights_to_insert = height_timestamp
@@ -489,7 +489,7 @@ async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response,
     let mut attempt = 0;
     loop {
         let response = client.get(url).send().await?;
-        tracing::debug!(
+        log::debug!(
             "{} status_code:{} body bytes:{:?}",
             &url,
             response.status(),
@@ -504,7 +504,7 @@ async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response,
             }
             let secs = 1 << attempt;
 
-            tracing::debug!("waiting {secs}");
+            log::debug!("waiting {secs}");
 
             async_sleep(secs * 1000).await;
             attempt += 1;

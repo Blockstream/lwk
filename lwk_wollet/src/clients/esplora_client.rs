@@ -251,7 +251,7 @@ impl BlockchainBackend for EsploraClient {
 
 fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Result<Response, Error> {
     let response = client.get(url).send()?;
-    tracing::debug!(
+    log::debug!(
         "{} status_code:{} body bytes:{:?}",
         &url,
         response.status(),
@@ -266,7 +266,7 @@ fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Resul
         }
         let secs = 1 << attempt;
 
-        tracing::debug!("waiting {secs}");
+        log::debug!("waiting {secs}");
         std::thread::sleep(std::time::Duration::from_secs(secs));
         get_with_retry(client, url, attempt + 1)
     } else {

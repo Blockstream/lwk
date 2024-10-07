@@ -13,7 +13,7 @@ use elements::{
     BlockHash, Script, Txid,
 };
 use elements_miniscript::DescriptorPublicKey;
-use reqwest::blocking::Response;
+use reqwest::blocking::{self, Response};
 use serde::Deserialize;
 
 use crate::{
@@ -28,6 +28,7 @@ use crate::{
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 pub struct EsploraClient {
+    client: blocking::Client,
     base_url: String,
     tip_hash_url: String,
     broadcast_url: String,
@@ -40,6 +41,7 @@ pub struct EsploraClient {
 impl EsploraClient {
     pub fn new(url: &str) -> Self {
         Self {
+            client: blocking::Client::new(),
             base_url: url.to_string(),
             tip_hash_url: format!("{url}/blocks/tip/hash"),
             broadcast_url: format!("{url}/tx"),
@@ -73,9 +75,8 @@ impl EsploraClient {
         match self.waterfalls_server_recipient.as_ref() {
             Some(r) => Ok(r.clone()),
             None => {
-                let client = reqwest::blocking::Client::new();
                 let url = format!("{}/v1/server_recipient", self.base_url);
-                let response = client.get(url).send()?;
+                let response = self.client.get(url).send()?;
                 let rec = Recipient::from_str(&response.text()?)
                     .map_err(|_| Error::CannotParseRecipientKey)?;
                 self.waterfalls_server_recipient = Some(rec.clone());
@@ -99,8 +100,7 @@ impl BlockchainBackend for EsploraClient {
 
     fn broadcast(&self, tx: &elements::Transaction) -> Result<elements::Txid, crate::Error> {
         let tx_hex = tx.serialize().to_hex();
-        let client = reqwest::blocking::Client::new();
-        let response = client.post(&self.broadcast_url).body(tx_hex).send()?;
+        let response = self.client.post(&self.broadcast_url).body(tx_hex).send()?;
         let txid = elements::Txid::from_str(&response.text()?)?;
         Ok(txid)
     }
@@ -175,7 +175,6 @@ impl BlockchainBackend for EsploraClient {
         descriptor: &WolletDescriptor,
         state: &S,
     ) -> Result<Data, Error> {
-        let client = reqwest::blocking::Client::new();
         let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
         if descriptor.is_elip151() {
             return Err(Error::UsingWaterfallsWithElip151);
@@ -190,7 +189,8 @@ impl BlockchainBackend for EsploraClient {
             encrypt(&desc, recipient)?
         };
 
-        let response = client
+        let response = self
+            .client
             .get(descriptor_url)
             .query(&[("descriptor", desc)])
             .send()?;

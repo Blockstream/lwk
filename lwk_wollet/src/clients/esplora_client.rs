@@ -268,7 +268,7 @@ fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Resul
 
         tracing::debug!("waiting {secs}");
         std::thread::sleep(std::time::Duration::from_secs(secs));
-        get_with_retry(&client, url, attempt + 1)
+        get_with_retry(client, url, attempt + 1)
     } else {
         Ok(response)
     }

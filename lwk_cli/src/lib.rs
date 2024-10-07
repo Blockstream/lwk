@@ -9,6 +9,7 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use clap::CommandFactory;
+use env_logger::Env;
 use lwk_app::Config;
 use serde_json::Value;
 
@@ -23,7 +24,17 @@ mod args;
 mod schema;
 
 pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
-    match env_logger::try_init() {
+    let directive = if let CliCommand::Server(args::ServerArgs {
+        command: ServerCommand::Start { .. },
+    }) = args.command
+    {
+        "info"
+    } else {
+        "warn"
+    };
+    let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or(directive));
+
+    match builder.try_init() {
         Ok(_) => log::info!("logging initialized"),
         Err(_) => log::debug!("logging already initialized"),
     }

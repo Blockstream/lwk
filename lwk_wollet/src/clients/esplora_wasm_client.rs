@@ -489,8 +489,15 @@ async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response,
     let mut attempt = 0;
     loop {
         let response = client.get(url).send().await?;
-        log::debug!(
-            "{} status_code:{} body bytes:{:?}",
+
+        let level = if response.status() == 200 {
+            log::Level::Trace
+        } else {
+            log::Level::Info
+        };
+        log::log!(
+            level,
+            "{} status_code:{} - body bytes:{:?}",
             &url,
             response.status(),
             response.content_length(),
@@ -500,11 +507,12 @@ async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response,
         // 503 Service Temporarily Unavailable
         if response.status() == 429 || response.status() == 503 {
             if attempt > 6 {
+                log::warn!("{url} tried 6 times, failing");
                 return Err(Error::Generic("Too many retry".to_string()));
             }
             let secs = 1 << attempt;
 
-            log::debug!("waiting {secs}");
+            log::debug!("{url} waiting {secs}");
 
             async_sleep(secs * 1000).await;
             attempt += 1;

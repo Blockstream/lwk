@@ -251,8 +251,15 @@ impl BlockchainBackend for EsploraClient {
 
 fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Result<Response, Error> {
     let response = client.get(url).send()?;
-    log::debug!(
-        "{} status_code:{} body bytes:{:?}",
+
+    let level = if response.status() == 200 {
+        log::Level::Trace
+    } else {
+        log::Level::Info
+    };
+    log::log!(
+        level,
+        "{} status_code:{} - body bytes:{:?}",
         &url,
         response.status(),
         response.content_length(),
@@ -262,11 +269,13 @@ fn get_with_retry(client: &blocking::Client, url: &str, attempt: usize) -> Resul
     // 503 Service Temporarily Unavailable
     if response.status() == 429 || response.status() == 503 {
         if attempt > 6 {
+            log::warn!("{url} tried 6 times, failing");
             return Err(Error::Generic("Too many retry".to_string()));
         }
         let secs = 1 << attempt;
 
-        log::debug!("waiting {secs}");
+        log::debug!("{url} waiting {secs}");
+
         std::thread::sleep(std::time::Duration::from_secs(secs));
         get_with_retry(client, url, attempt + 1)
     } else {

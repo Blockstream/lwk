@@ -17,3 +17,12 @@ impl From<lwk_wollet::Chain> for Chain {
         }
     }
 }
+
+impl From<Chain> for lwk_wollet::Chain {
+    fn from(value: Chain) -> Self {
+        match value {
+            Chain::External => lwk_wollet::Chain::External,
+            Chain::Internal => lwk_wollet::Chain::Internal,
+        }
+    }
+}

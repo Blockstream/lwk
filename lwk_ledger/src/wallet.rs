@@ -265,23 +265,33 @@ impl FromStr for WalletPubKey {
 
 impl core::fmt::Display for WalletPubKey {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        if self.source.is_none() {
-            write!(f, "{}", self.inner)
-        } else {
-            write!(
+        match &self.source {
+            None => write!(
                 f,
-                "[{}{}]{}{}",
-                self.source.as_ref().unwrap().0,
-                self.source
-                    .as_ref()
-                    .unwrap()
-                    .1
-                    .to_string()
-                    .strip_prefix('m')
-                    .unwrap_or(""),
+                "{}{}",
                 self.inner,
                 self.multipath.as_ref().unwrap_or(&"".to_string())
-            )
+            ),
+            Some((fg, path)) => {
+                if path.is_master() {
+                    write!(
+                        f,
+                        "[{}]{}{}",
+                        fg,
+                        self.inner,
+                        self.multipath.as_ref().unwrap_or(&"".to_string())
+                    )
+                } else {
+                    write!(
+                        f,
+                        "[{}/{}]{}{}",
+                        fg,
+                        path,
+                        self.inner,
+                        self.multipath.as_ref().unwrap_or(&"".to_string())
+                    )
+                }
+            }
         }
     }
 }

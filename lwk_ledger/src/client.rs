@@ -6,9 +6,10 @@ use elements_miniscript::elements::bitcoin::{
     bip32::{DerivationPath, Fingerprint, Xpub},
     consensus::encode::deserialize_partial,
     secp256k1::ecdsa,
+    VarInt,
 };
 use elements_miniscript::elements::{
-    pset::PartiallySignedTransaction as Psbt, Address, AddressParams, VarInt,
+    pset::PartiallySignedTransaction as Psbt, Address, AddressParams,
 };
 use elements_miniscript::slip77::MasterBlindingKey;
 

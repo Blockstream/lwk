@@ -1,6 +1,6 @@
 use super::macros::u32_to_array_le;
 use elements_miniscript::elements::{
-    pset, pset::raw, pset::GlobalTxData, pset::PartiallySignedTransaction as Psbt, VarInt,
+    encode::VarInt, pset, pset::raw, pset::GlobalTxData, pset::PartiallySignedTransaction as Psbt,
 };
 
 // (Not used in pset) Type: Unsigned Transaction PSET_GLOBAL_UNSIGNED_TX = 0x00

@@ -8,7 +8,7 @@ mod input;
 mod output;
 
 use elements_miniscript::elements::{
-    bitcoin::key::Error as KeyError,
+    bitcoin::key::FromSliceError as KeyError,
     bitcoin::secp256k1::{self, XOnlyPublicKey},
     bitcoin::taproot::{self, TapLeafHash},
     bitcoin::{self, ecdsa, PublicKey},

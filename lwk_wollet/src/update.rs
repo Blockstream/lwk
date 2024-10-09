@@ -246,14 +246,14 @@ impl Encodable for DownloadTxResult {
         let mut bytes_written = 0;
 
         let txs_len = self.txs.len();
-        bytes_written += elements::VarInt(txs_len as u64).consensus_encode(&mut w)?;
+        bytes_written += elements::encode::VarInt(txs_len as u64).consensus_encode(&mut w)?;
         for (_txid, tx) in self.txs.iter() {
             // Avoid serializing Txid since are re-computable from the tx
             bytes_written += tx.consensus_encode(&mut w)?;
         }
 
         let unblinds_len = self.unblinds.len();
-        bytes_written += elements::VarInt(unblinds_len as u64).consensus_encode(&mut w)?;
+        bytes_written += elements::encode::VarInt(unblinds_len as u64).consensus_encode(&mut w)?;
         for (out_point, tx_out_secrets) in self.unblinds.iter() {
             bytes_written += out_point.consensus_encode(&mut w)?;
 
@@ -271,14 +271,14 @@ impl Encodable for DownloadTxResult {
 impl Decodable for DownloadTxResult {
     fn consensus_decode<D: std::io::Read>(mut d: D) -> Result<Self, elements::encode::Error> {
         let mut txs = vec![];
-        let txs_len = elements::VarInt::consensus_decode(&mut d)?.0;
+        let txs_len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
         for _ in 0..txs_len {
             let tx = Transaction::consensus_decode(&mut d)?;
             txs.push((tx.txid(), tx));
         }
 
         let mut unblinds = vec![];
-        let unblinds_len = elements::VarInt::consensus_decode(&mut d)?.0;
+        let unblinds_len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
         for _ in 0..unblinds_len {
             let out_point = OutPoint::consensus_decode(&mut d)?;
             let encodable_tx_out_secrets = EncodableTxOutSecrets::consensus_decode(&mut d)?;
@@ -356,25 +356,27 @@ impl Encodable for Update {
         bytes_written += self.new_txs.consensus_encode(&mut w)?;
 
         bytes_written +=
-            elements::VarInt(self.txid_height_new.len() as u64).consensus_encode(&mut w)?;
+            elements::encode::VarInt(self.txid_height_new.len() as u64).consensus_encode(&mut w)?;
         for (txid, height) in self.txid_height_new.iter() {
             bytes_written += txid.consensus_encode(&mut w)?;
             bytes_written += height.unwrap_or(u32::MAX).consensus_encode(&mut w)?;
         }
 
-        bytes_written +=
-            elements::VarInt(self.txid_height_delete.len() as u64).consensus_encode(&mut w)?;
+        bytes_written += elements::encode::VarInt(self.txid_height_delete.len() as u64)
+            .consensus_encode(&mut w)?;
         for txid in self.txid_height_delete.iter() {
             bytes_written += txid.consensus_encode(&mut w)?;
         }
 
-        bytes_written += elements::VarInt(self.timestamps.len() as u64).consensus_encode(&mut w)?;
+        bytes_written +=
+            elements::encode::VarInt(self.timestamps.len() as u64).consensus_encode(&mut w)?;
         for (height, timestamp) in self.timestamps.iter() {
             bytes_written += height.consensus_encode(&mut w)?;
             bytes_written += timestamp.consensus_encode(&mut w)?;
         }
 
-        bytes_written += elements::VarInt(self.scripts.len() as u64).consensus_encode(&mut w)?;
+        bytes_written +=
+            elements::encode::VarInt(self.scripts.len() as u64).consensus_encode(&mut w)?;
         for (script, (chain, child_number)) in self.scripts.iter() {
             bytes_written += script.consensus_encode(&mut w)?;
             bytes_written += match chain {
@@ -411,7 +413,7 @@ impl Decodable for Update {
         let new_txs = DownloadTxResult::consensus_decode(&mut d)?;
 
         let txid_height_new = {
-            let len = elements::VarInt::consensus_decode(&mut d)?.0;
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 let txid = Txid::consensus_decode(&mut d)?;
@@ -425,7 +427,7 @@ impl Decodable for Update {
         };
 
         let txid_height_delete = {
-            let len = elements::VarInt::consensus_decode(&mut d)?.0;
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 vec.push(Txid::consensus_decode(&mut d)?);
@@ -434,7 +436,7 @@ impl Decodable for Update {
         };
 
         let timestamps = {
-            let len = elements::VarInt::consensus_decode(&mut d)?.0;
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 let h = u32::consensus_decode(&mut d)?;
@@ -445,7 +447,7 @@ impl Decodable for Update {
         };
 
         let scripts = {
-            let len = elements::VarInt::consensus_decode(&mut d)?.0;
+            let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
             let mut map = HashMap::with_capacity(len as usize);
             for _ in 0..len {
                 let script = Script::consensus_decode(&mut d)?;

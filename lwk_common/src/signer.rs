@@ -58,6 +58,6 @@ pub trait Signer {
     }
 
     fn is_mainnet(&self) -> Result<bool, Self::Error> {
-        Ok(matches!(self.xpub()?.network, bitcoin::Network::Bitcoin))
+        Ok(matches!(self.xpub()?.network, bitcoin::NetworkKind::Main))
     }
 }

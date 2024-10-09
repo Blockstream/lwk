@@ -7,7 +7,7 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_containers"
 
 [dependencies]
-bitcoin = "0.31"
+bitcoin = "0.32"
 rand = "0.8.5"
 tempfile = "3.8.0"
 testcontainers = "0.14.0"

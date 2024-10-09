@@ -269,9 +269,9 @@ impl WolletDescriptor {
     /// Returns true if all the xpubs in the descriptors are for mainnet
     pub fn is_mainnet(&self) -> bool {
         self.descriptor().for_each_key(|k| match k {
-            DescriptorPublicKey::XPub(x) => x.xkey.network == elements::bitcoin::Network::Bitcoin,
+            DescriptorPublicKey::XPub(x) => x.xkey.network == elements::bitcoin::NetworkKind::Main,
             DescriptorPublicKey::MultiXPub(x) => {
-                x.xkey.network == elements::bitcoin::Network::Bitcoin
+                x.xkey.network == elements::bitcoin::NetworkKind::Main
             }
             DescriptorPublicKey::Single(_) => true,
         })

@@ -131,7 +131,7 @@ fn jade_xpub() {
 
     let xpub_master = jade.jade.get_master_xpub().unwrap();
     assert_eq!(xpub_master.depth, 0);
-    assert_eq!(xpub_master.network, bitcoin::Network::Testnet);
+    assert_eq!(xpub_master.network, bitcoin::NetworkKind::Test);
 
     let params = GetXpubParams {
         network: lwk_jade::Network::LocaltestLiquid,

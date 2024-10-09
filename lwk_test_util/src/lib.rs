@@ -384,7 +384,7 @@ impl TestElectrumServer {
             .unwrap();
         let hex = r.as_str().unwrap();
         let bytes = Vec::<u8>::from_hex(hex).unwrap();
-        bitcoin::Transaction::consensus_decode(&bytes[..]).unwrap()
+        bitcoin::consensus::deserialize(&bytes[..]).unwrap()
     }
 
     pub fn bitcoind_gettxoutproof(&self, txid: bitcoin::Txid) -> String {

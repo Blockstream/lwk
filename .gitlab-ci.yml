@@ -162,7 +162,7 @@ linux-wheels:
     paths:
       - target/wheels/
 
-nix:
+.nix:
   image: nixos/nix:2.22.0pre20240417_c16fc2c
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes

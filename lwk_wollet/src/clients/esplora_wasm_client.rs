@@ -141,7 +141,16 @@ impl EsploraWasmClient {
             let url = format!("{}/address/{}/txs", self.base_url, address);
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
             let response = get_with_retry(&self.client, &url).await?;
-            let json: Vec<EsploraTx> = serde_json::from_str(&response.text().await?)?;
+
+            // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
+            let text = response.text().await?;
+            let json: Vec<EsploraTx> = match serde_json::from_str(&text) {
+                Ok(e) => e,
+                Err(e) => {
+                    log::warn!("error {e:?} in converting following text:\n{text}");
+                    return Err(e.into());
+                }
+            };
 
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
             result.push(history)

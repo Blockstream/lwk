@@ -618,7 +618,7 @@ fn create_pset_error() {
         .tx_builder()
         .set_unvalidated_recipients(&addressees)
         .unwrap_err();
-    let expected = "base58 error: base58ck data not even long enough for a checksum";
+    let expected = "base58 error: too short";
     assert_eq!(err.to_string(), expected);
 
     // Not confidential address

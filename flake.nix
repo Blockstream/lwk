@@ -93,6 +93,17 @@
             '';
           });
 
+          elementsd_ct = pkgs.elementsd.overrideAttrs (final: prev: rec {
+            version = "23.2.3";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "ElementsProject";
+              repo = "elements";
+              rev = "elements-${version}";
+              sha256 = "sha256-E7RehIrW3EnLMRb/JV1vAztjDd9HRiRbofOIsZdRf5w=";
+            };
+          });
+
         in
         {
           packages =
@@ -108,7 +119,7 @@
 
             buildInputs = [ registry.bin rustToolchain ];
 
-            ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
+            ELEMENTSD_EXEC = "${elementsd_ct}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
             ELECTRS_LIQUID_EXEC = electrs.program;
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation

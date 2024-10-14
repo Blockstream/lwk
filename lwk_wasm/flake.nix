@@ -18,7 +18,7 @@
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ rust-overlay.overlay ];
+            overlays = [ rust-overlay.overlays.default ];
           };
         in
         (({ pkgs, ... }:

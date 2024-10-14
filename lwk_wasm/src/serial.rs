@@ -21,7 +21,7 @@ fn populate_filters(options: &mut web_sys::SerialPortRequestOptions) {
         })
         .collect();
     let ids = serde_wasm_bindgen::to_value(&ids).expect("static");
-    options.filters(&ids);
+    options.set_filters(&ids);
 }
 
 pub(crate) async fn get_jade_serial(filter: bool) -> Result<web_sys::SerialPort, Error> {

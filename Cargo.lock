@@ -1969,7 +1969,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "console_error_panic_hook",
  "lwk_common",

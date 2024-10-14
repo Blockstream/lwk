@@ -18,7 +18,7 @@
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ rust-overlay.overlay ];
+            overlays = [ rust-overlay.overlays.default ];
           };
         in
         (({ pkgs, ... }:
@@ -26,7 +26,7 @@
             buildInputs = with pkgs; [
               cargo
               wasm-pack
-              clang_17
+              clang_15
               nodejs_21
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
@@ -34,8 +34,8 @@
               })
             ];
 
-            CC_wasm32_unknown_unknown = "clang-17";
-            CFLAGS_wasm32_unknown_unknown = "-I${pkgs.clang_17}/resource-root/include";
+            CC_wasm32_unknown_unknown = "clang-15";
+            CFLAGS_wasm32_unknown_unknown = "-I${pkgs.clang_15}/resource-root/include";
             RUSTFLAGS = "--cfg=web_sys_unstable_apis";
 
           }) { pkgs = pkgs; });

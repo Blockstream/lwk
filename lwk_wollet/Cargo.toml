@@ -1,6 +1,6 @@
 [package]
 name = "lwk_wollet"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Watch-only wallet based on CT Descriptors"
@@ -11,7 +11,8 @@ documentation = "https://docs.rs/lwk_wollet"
 crate-type = ["lib"]
 
 [dependencies]
-lwk_common = { version = "0.7" }
+lwk_common = { version = "0.8.0" }
+lwk_signer = { version = "0.8.0", features = ["jade", "ledger"], optional = true }
 
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
@@ -52,17 +53,16 @@ regex-lite = "0.1.5"
 log.workspace = true
 fxhash = "0.2.1"
 
-lwk_signer = { version = "0.7", features = ["jade", "ledger"], optional = true }
 age = { version = "0.10.0", optional = true }
 url = "2.5.2"
 
 
 [dev-dependencies]
-lwk_jade = { version = "0.7", features = ["test_emulator"] }
-lwk_ledger = { version = "0.7", features = ["test_emulator"] }
-lwk_signer = { version = "0.7", features = ["jade", "ledger"] }
-lwk_containers = { version = "0.7" }
-lwk_test_util = { version = "0.7" }
+lwk_jade = { version = "0.8.0", features = ["test_emulator"] }
+lwk_ledger = { version = "0.8.0", features = ["test_emulator"] }
+lwk_signer = { version = "0.8.0", features = ["jade", "ledger"] }
+lwk_containers = { version = "0.8.0" }
+lwk_test_util = { version = "0.8.0" }
 
 tempfile = "3.8.0"
 tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }

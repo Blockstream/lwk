@@ -1676,11 +1676,6 @@ fn test_waterfalls_esplora() {
     conf.network = "liquidregtest";
 
     let elementsd = bitcoind::BitcoinD::with_conf(exe, &conf).unwrap();
-    let url = elementsd.rpc_url();
-    let cookie_values = elementsd.params.get_cookie_values().unwrap().unwrap();
-    let auth =
-        lwk_wollet::bitcoincore_rpc::Auth::UserPass(cookie_values.user, cookie_values.password);
-    let rpc = lwk_wollet::bitcoincore_rpc::Client::new(&url, auth).unwrap();
     let test_env = rt.block_on(waterfalls::test_env::launch_with_node(elementsd));
 
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
@@ -1718,13 +1713,7 @@ fn test_waterfalls_esplora() {
     assert!(sigs > 0);
 
     let tx = wollet.finalize(&mut pset).unwrap();
-    use elements::pset::serialize::Serialize;
-    use lwk_wollet::bitcoincore_rpc::RpcApi;
-    let _v: serde_json::Value = rpc
-        .call("sendrawtransaction", &[tx.serialize().to_hex().into()])
-        .unwrap();
-    // TODO: fix waterfalls to allow broadcasting through itself
-    // let _txid = client.broadcast(&tx).unwrap();
+    let _txid = client.broadcast(&tx).unwrap();
 
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();

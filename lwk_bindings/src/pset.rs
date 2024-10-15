@@ -1,5 +1,5 @@
-use crate::{types::AssetId, LwkError, Transaction};
-use elements::pset::PartiallySignedTransaction;
+use crate::{types::AssetId, LwkError, Transaction, Txid};
+use elements::pset::{Input, PartiallySignedTransaction};
 use std::{fmt::Display, sync::Arc};
 
 /// Partially Signed Elements Transaction, wrapper over [`elements::pset::PartiallySignedTransaction`]
@@ -52,6 +52,31 @@ impl Pset {
 
     pub(crate) fn inner(&self) -> PartiallySignedTransaction {
         self.inner.clone()
+    }
+}
+
+/// PSET input
+#[derive(uniffi::Object, Debug)]
+pub struct PsetInput {
+    inner: Input,
+}
+
+impl From<Input> for PsetInput {
+    fn from(inner: Input) -> Self {
+        Self { inner }
+    }
+}
+
+#[uniffi::export]
+impl PsetInput {
+    /// Prevout TXID of the input
+    pub fn previous_txid(&self) -> Arc<Txid> {
+        Arc::new(self.inner.previous_txid.into())
+    }
+
+    /// Prevout vout of the input
+    pub fn previous_vout(&self) -> u32 {
+        self.inner.previous_output_index
     }
 }
 

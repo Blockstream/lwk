@@ -45,7 +45,7 @@ pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use precision::Precision;
-pub use pset::Pset;
+pub use pset::{Pset, PsetInput};
 pub use test_env::TestEnv;
 pub use tx_builder::TxBuilder;
 pub use update::Update;

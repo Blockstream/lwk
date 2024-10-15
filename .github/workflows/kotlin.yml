@@ -47,7 +47,7 @@ jobs:
           ./gradlew build --console=plain
 
       - name: Temporarily save artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: lwk-artifact
           path: lwk_bindings/android_bindings
@@ -60,7 +60,7 @@ jobs:
     steps:
 
       - name: Retrieve saved artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: lwk-artifact
 

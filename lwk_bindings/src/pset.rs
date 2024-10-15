@@ -100,9 +100,15 @@ mod tests {
 
         let tx_expected =
             include_str!("../../lwk_jade/test_data/pset_to_be_signed_transaction.hex").to_string();
-        let tx_string = pset.extract_tx().unwrap().to_string();
-        assert_eq!(tx_expected, tx_string);
+        let tx = pset.extract_tx().unwrap();
+        assert_eq!(tx_expected, tx.to_string());
 
         assert_eq!(pset_string, pset.to_string());
+
+        assert_eq!(pset.inputs().len(), tx.inputs().len());
+        let pset_in = &pset.inputs()[0];
+        let tx_in = &tx.inputs()[0];
+        assert_eq!(pset_in.previous_txid(), tx_in.outpoint().txid());
+        assert_eq!(pset_in.previous_vout(), tx_in.outpoint().vout());
     }
 }

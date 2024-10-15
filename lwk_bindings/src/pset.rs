@@ -42,6 +42,14 @@ impl Pset {
     pub fn issuance_token(&self, index: u32) -> Option<AssetId> {
         self.issuances_ids(index).map(|e| e.1)
     }
+
+    pub fn inputs(&self) -> Vec<Arc<PsetInput>> {
+        self.inner
+            .inputs()
+            .iter()
+            .map(|i| Arc::new(i.clone().into()))
+            .collect()
+    }
 }
 
 impl Pset {

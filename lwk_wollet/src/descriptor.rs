@@ -5,7 +5,6 @@ use aes_gcm_siv::aead::NewAead;
 use aes_gcm_siv::Aes256GcmSiv;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
-use elements::secp256k1_zkp::Secp256k1;
 use elements::{bitcoin, Address, AddressParams, Script};
 use elements_miniscript::BtcDescriptor;
 use elements_miniscript::{
@@ -14,6 +13,8 @@ use elements_miniscript::{
     ConfidentialDescriptor, Descriptor, DescriptorPublicKey, ForEachKey,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::EC;
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -286,12 +287,11 @@ impl WolletDescriptor {
         network: bitcoin::Network,
         fed_desc: BtcDescriptor<bitcoin::PublicKey>,
     ) -> Result<bitcoin::Address, crate::error::Error> {
-        let secp = Secp256k1::new();
         let our_desc = self
             .definite_descriptor(Chain::External, index)?
-            .derived_descriptor(&secp)?;
+            .derived_descriptor(&EC)?;
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(fed_desc, our_desc);
-        let pegin_script = pegin.bitcoin_witness_script(&secp)?;
+        let pegin_script = pegin.bitcoin_witness_script(&EC)?;
         let pegin_address = bitcoin::Address::p2wsh(&pegin_script, network);
         Ok(pegin_address)
     }
@@ -346,10 +346,10 @@ mod test {
         str::FromStr,
     };
 
-    use elements::{bitcoin, secp256k1_zkp::Secp256k1};
+    use elements::bitcoin;
     use elements_miniscript::{BtcDescriptor, BtcMiniscript, BtcSegwitv0};
 
-    use crate::{descriptor::remove_checksum_if_any, Chain, WolletDescriptor};
+    use crate::{descriptor::remove_checksum_if_any, Chain, WolletDescriptor, EC};
 
     #[test]
     fn test_wollet_hash() {
@@ -490,7 +490,6 @@ mod test {
 
     #[test]
     fn get_pegin_address() {
-        let secp = Secp256k1::new();
         let d: BtcDescriptor<bitcoin::PublicKey> =
             BtcDescriptor::<bitcoin::PublicKey>::from_str(lwk_test_util::FED_PEG_DESC).unwrap();
 
@@ -499,9 +498,9 @@ mod test {
         let desc_vec = desc.descriptor().clone().into_single_descriptors().unwrap();
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(
             d.clone(),
-            desc_vec[0].derived_descriptor(&secp, 0).unwrap(),
+            desc_vec[0].derived_descriptor(&EC, 0).unwrap(),
         );
-        let pegin_script = pegin.bitcoin_witness_script(&secp).unwrap();
+        let pegin_script = pegin.bitcoin_witness_script(&EC).unwrap();
         let pegin_address = bitcoin::Address::p2wsh(&pegin_script, bitcoin::Network::Testnet);
 
         let expected = lwk_test_util::PEGIN_TEST_ADDR;

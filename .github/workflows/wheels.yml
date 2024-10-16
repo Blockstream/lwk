@@ -22,7 +22,7 @@ jobs:
        with:
          python-version: "3.12"
      - run: python3 -m pip install maturin
-     - run: python3 -m pip install uniffi-bindgen==0.26.1  # must be the same version as the dep in lwk_bindings/Cargo.toml
+     - run: python3 -m pip install uniffi-bindgen==0.28.0  # must be the same version as the dep in lwk_bindings/Cargo.toml
      - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
      - uses: actions/upload-artifact@v4
        with:
@@ -40,7 +40,7 @@ jobs:
        with:
          python-version: "3.12"
      - run: python3 -m pip install maturin
-     - run: python3 -m pip install uniffi-bindgen==0.26.1  # must be the same version as the dep in lwk_bindings/Cargo.toml
+     - run: python3 -m pip install uniffi-bindgen==0.28.0  # must be the same version as the dep in lwk_bindings/Cargo.toml
      - run: maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
      - uses: actions/upload-artifact@v4
        with:

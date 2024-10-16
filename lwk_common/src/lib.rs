@@ -15,6 +15,7 @@ mod keyorigin_xpub;
 mod model;
 pub mod precision;
 mod qr;
+mod segwit;
 mod signer;
 
 pub use crate::descriptor::{
@@ -27,6 +28,7 @@ pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
 pub use crate::model::*;
 pub use crate::precision::Precision;
 pub use crate::qr::*;
+pub use crate::segwit::is_provably_segwit;
 pub use crate::signer::Signer;
 
 use elements::confidential::{Asset, Value};

@@ -8,9 +8,11 @@ documentation = "https://docs.rs/lwk_bindings"
 
 [dependencies]
 lwk_common = { version = "0.8.0" }
-lwk_signer = { version = "0.8.0" }
-lwk_wollet = { version = "0.8.0" }
-lwk_test_util = { version = "0.8.0" }
+lwk_signer = { version = "0.8.0", default_features = false }
+lwk_wollet = { version = "0.8.0", default_features = false, features = [
+    "electrum",
+] }
+# lwk_test_util = { version = "0.8.0" }
 
 elements = "0.25.0"
 thiserror = "1.0.50"

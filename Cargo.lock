@@ -1820,7 +1820,6 @@ dependencies = [
  "elements",
  "lwk_common",
  "lwk_signer",
- "lwk_test_util",
  "lwk_wollet",
  "serde_json",
  "thiserror",

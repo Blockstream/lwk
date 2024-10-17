@@ -22,13 +22,13 @@ impl EsploraClient {
     }
 
     /// Construct an Esplora Client using Waterfalls endpoint
-    #[uniffi::constructor]
-    pub fn new_waterfalls(url: &str) -> Arc<Self> {
-        let client = lwk_wollet::EsploraClient::new_waterfalls(url);
-        Arc::new(Self {
-            inner: Mutex::new(client),
-        })
-    }
+    // #[uniffi::constructor]
+    // pub fn new_waterfalls(url: &str) -> Arc<Self> {
+    //     let client = lwk_wollet::EsploraClient::new_waterfalls(url);
+    //     Arc::new(Self {
+    //         inner: Mutex::new(client),
+    //     })
+    // }
 
     pub fn broadcast(&self, tx: &Transaction) -> Result<Arc<Txid>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.broadcast(tx.as_ref())?.into()))

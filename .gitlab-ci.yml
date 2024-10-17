@@ -138,6 +138,12 @@ bindings:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
 
+just:
+  extends: .base
+  script:
+    - just python-test-bindings
+    - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
+
 wasm:
   extends: .base
   variables:

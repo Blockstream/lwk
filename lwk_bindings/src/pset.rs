@@ -94,6 +94,14 @@ impl PsetInput {
             .as_ref()
             .map(|txout| Arc::new(txout.script_pubkey.clone().into()))
     }
+
+    /// Redeem script of the input
+    pub fn redeem_script(&self) -> Option<Arc<Script>> {
+        self.inner
+            .redeem_script
+            .as_ref()
+            .map(|s| Arc::new(s.clone().into()))
+    }
 }
 
 #[cfg(test)]
@@ -119,5 +127,6 @@ mod tests {
         assert_eq!(pset_in.previous_txid(), tx_in.outpoint().txid());
         assert_eq!(pset_in.previous_vout(), tx_in.outpoint().vout());
         assert!(pset_in.previous_script_pubkey().is_some());
+        assert!(pset_in.redeem_script().is_none());
     }
 }

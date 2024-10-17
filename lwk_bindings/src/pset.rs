@@ -1,4 +1,4 @@
-use crate::{types::AssetId, LwkError, Transaction, Txid};
+use crate::{types::AssetId, LwkError, Script, Transaction, Txid};
 use elements::pset::{Input, PartiallySignedTransaction};
 use std::{fmt::Display, sync::Arc};
 
@@ -86,6 +86,14 @@ impl PsetInput {
     pub fn previous_vout(&self) -> u32 {
         self.inner.previous_output_index
     }
+
+    /// Prevout scriptpubkey of the input
+    pub fn previous_script_pubkey(&self) -> Option<Arc<Script>> {
+        self.inner
+            .witness_utxo
+            .as_ref()
+            .map(|txout| Arc::new(txout.script_pubkey.clone().into()))
+    }
 }
 
 #[cfg(test)]
@@ -110,5 +118,6 @@ mod tests {
         let tx_in = &tx.inputs()[0];
         assert_eq!(pset_in.previous_txid(), tx_in.outpoint().txid());
         assert_eq!(pset_in.previous_vout(), tx_in.outpoint().vout());
+        assert!(pset_in.previous_script_pubkey().is_some());
     }
 }

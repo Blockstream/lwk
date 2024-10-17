@@ -28,9 +28,17 @@ builder.add_lbtc_recipient(address.address(), sent_satoshi)
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
-tx = finalized_pset.extract_tx()
+
+# Check that all inputs are provably segwit
+# This can be useful if we don't want that the txid changes after signatures are added/changed
+for input_ in unsigned_pset.inputs():
+    # You might want to check the script pubkey against the "real" utxo from the node
+    script_pubkey = input_.previous_script_pubkey()
+    redeem_script = input_.redeem_script()
+    assert is_provably_segwit(script_pubkey, redeem_script)
 
 # "externally" unblind the PSET/transaction
+tx = finalized_pset.extract_tx()
 for output in tx.outputs():
     spk = output.script_pubkey()
     if output.is_fee():

@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: extractions/setup-just@v1
+      - uses: extractions/setup-just@v2
       - run: just csharp-windows
       - run: ls target/release/csharp
       - uses: actions/upload-artifact@v4

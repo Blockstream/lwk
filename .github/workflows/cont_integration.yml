@@ -35,3 +35,14 @@ jobs:
             substituters = https://nix.casatta.it https://cache.nixos.org/
       - run: nix build .
 
+  just-swift: # swift framework is built in the lwk-swift repo, here we care `just swift` doesn't brake
+      runs-on: macos-14
+      steps:
+        - uses: actions/checkout@v4
+        - uses: dtolnay/rust-toolchain@1.75.0
+          with:
+            targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim
+        - uses: extractions/setup-just@v1
+          with:
+            just-version: 1.5.0  # optional semver specification, otherwise latest
+        - run: just swift

@@ -51,11 +51,19 @@ impl Script {
     }
 }
 
+#[uniffi::export]
+pub fn is_provably_segwit(script_pubkey: &Script, redeem_script: &Option<Arc<Script>>) -> bool {
+    lwk_common::is_provably_segwit(
+        &script_pubkey.into(),
+        &redeem_script.as_ref().map(|s| s.as_ref().into()),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use elements::hashes::hex::FromHex;
 
-    use super::Script;
+    use super::{is_provably_segwit, Script};
 
     #[test]
     fn script() {
@@ -71,5 +79,7 @@ mod tests {
             script.asm(),
             "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
         );
+
+        assert!(is_provably_segwit(&script, &None));
     }
 }

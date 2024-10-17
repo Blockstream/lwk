@@ -1,64 +1,88 @@
+# list available recipes
 default:
     just --list
 
-# Build python bindings
-# Mac users should either run env.sh or manually set LIB_EXT=dylib
-python-build-bindings:
-    LIBNAME=liblwk.${LIB_EXT:=so} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language python --out-dir target/debug/bindings && cp target/debug/${LIBNAME} target/debug/bindings
+# build the bindings lib: liblwk.so (as specified in lwk_bindings/Cargo.toml)
+build-bindings-lib:
+    # a debug build would be fine if used only to generate interfaces files but some jobs use it to package it, thus release is necessary.
+    cargo build --release -p lwk_bindings
 
+# build the python interface "lwk.py"
+python-build-bindings: build-bindings-lib
+    # note production wheels are built with maturin, but this can be useful during development
+    # we use release to generate interfaces only because build-bindings-lib is done in release, so we find intermediate packages
+    cargo run --release --features bindings -- generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
+    cp target/release/liblwk.so target/release/bindings
+
+# smoke test the python bindings
 python-test-bindings: python-build-bindings
-    PYTHONPATH=target/debug/bindings/ python3 -c 'import lwk'
+    PYTHONPATH=target/release/bindings/ python3 -c 'import lwk'
 
+# build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
-    PYTHONPATH=target/debug/bindings/ python3
+    PYTHONPATH=target/release/bindings/ python3
 
+# build the docker "xenoky/lwk-builder" used in the CI
 docker-build:
     cd context && docker build . -t xenoky/lwk-builder && cd -
 
+# push the docker "xenoky/lwk-builder" on docker hub
 docker-push: docker-build
     docker push xenoky/lwk-builder # require credentials
 
-kotlin-android: kotlin android
-
-# Build kotlin interface file `lwk.kt` for bindings
-# Mac users should either run env.sh or manually set LIB_EXT=dylib
-kotlin:
-    LIBNAME=liblwk.${LIB_EXT:=so} && cargo build --features bindings && cargo run --features bindings -- generate --library target/debug/${LIBNAME} --language kotlin --out-dir target/release/kotlin
+# Build the kotlin interface `lwk.kt`
+kotlin: build-bindings-lib
+    cargo run --release --features bindings -- generate --library target/release/liblwk.so --language kotlin --out-dir target/release/kotlin
     cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/main/kotlin
 
-android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
-    cp -a target/release/kotlin/jniLibs lwk_bindings/android_bindings/lib/src/main
-
+# Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
 	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
 
+# Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
 	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build -p lwk_bindings
 
+# Cross build the lib for i686-linux-android
 i686-linux-android:
 	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
 
+# Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
 	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
 
+# After cross building all the lib for android put them in final dir
+android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+    cp -a target/release/kotlin/jniLibs lwk_bindings/android_bindings/lib/src/main
+
+# Build the kotlin interface and android libs
+kotlin-android: kotlin android
+
+# Build ios (works only on mac)
+ios: aarch64-apple-ios
+
+# Build ios simulator libs x86/arm and merge them (works only on mac)
+ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
+    mkdir -p target/lipo-ios-sim/release
+    lipo target/aarch64-apple-ios-sim/release/liblwk.a target/x86_64-apple-ios/release/liblwk.a -create -output target/lipo-ios-sim/release/liblwk.a
+
+# Build x86_64-apple-ios
+x86_64-apple-ios:
+    cargo build --release --target x86_64-apple-ios -p lwk_bindings
+
+# Build aarch64-apple-ios
+aarch64-apple-ios:
+    cargo build --release --target aarch64-apple-ios -p lwk_bindings
+
+# Build aarch64-apple-ios-sim
+aarch64-apple-ios-sim:
+    cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings
+
+# Build the swift framework (works only on mac)
 swift: ios ios-sim
+    # we are not using build-bindings-lib because we need the mac targets anyway
     cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/liblwk.a --language swift --out-dir ./target/swift
     mkdir -p ./target/swift/include
     mv target/swift/lwkFFI.h target/swift/include
     mv target/swift/lwkFFI.modulemap  target/swift/include/module.modulemap
     xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwkFFI.xcframework
-
-ios: aarch64-apple-ios
-
-ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
-    mkdir -p target/lipo-ios-sim/release
-    lipo target/aarch64-apple-ios-sim/release/liblwk.a target/x86_64-apple-ios/release/liblwk.a -create -output target/lipo-ios-sim/release/liblwk.a
-
-x86_64-apple-ios:
-    cargo build --release --target x86_64-apple-ios -p lwk_bindings
-
-aarch64-apple-ios:
-    cargo build --release --target aarch64-apple-ios -p lwk_bindings
-
-aarch64-apple-ios-sim:
-    cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings

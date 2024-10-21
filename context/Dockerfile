@@ -33,3 +33,7 @@ RUN sh ./get-docker.sh
 
 # move following layers up once upper layers needs modification
 
+RUN cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev 984a7697e1d40914c4d9484bb925e3c44e16169f
+
+RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+RUN apt update -qq && apt install -y dotnet-sdk-6.0

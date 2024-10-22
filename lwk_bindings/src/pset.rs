@@ -102,6 +102,20 @@ impl PsetInput {
             .as_ref()
             .map(|s| Arc::new(s.clone().into()))
     }
+
+    /// If the input has an issuance, the asset id
+    pub fn issuance_asset(&self) -> Option<AssetId> {
+        self.inner
+            .has_issuance()
+            .then(|| self.inner.issuance_ids().0.into())
+    }
+
+    /// If the input has an issuance, the token id
+    pub fn issuance_token(&self) -> Option<AssetId> {
+        self.inner
+            .has_issuance()
+            .then(|| self.inner.issuance_ids().1.into())
+    }
 }
 
 #[cfg(test)]
@@ -128,5 +142,8 @@ mod tests {
         assert_eq!(pset_in.previous_vout(), tx_in.outpoint().vout());
         assert!(pset_in.previous_script_pubkey().is_some());
         assert!(pset_in.redeem_script().is_none());
+
+        assert!(pset_in.issuance_asset().is_none());
+        assert!(pset_in.issuance_token().is_none());
     }
 }

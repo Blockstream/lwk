@@ -137,18 +137,22 @@ bindings:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
-    - echo "Testing csharp"
-    - cargo build -p lwk_bindings
-    - mkdir target/debug/csharp
-    - cp target/debug/liblwk.so target/debug/csharp/
-    - uniffi-bindgen-cs --library target/debug/csharp/liblwk.so --out-dir target/debug/csharp
-    - sed -i 's#\"lwk\"#\"./liblwk.so\"#g' target/debug/csharp/lwk.cs # this is an hack, but make it work until we understand how to properly reference the dynamic lib
-    - cp lwk_bindings/tests/bindings/list_transactions.cs target/debug/csharp
-    - cp lwk_bindings/tests/test_data/test-dotnet.csproj target/debug/csharp
-    - cd target/debug/csharp && dotnet run && cd -
+
+csharp:
+  extends: .base
+  script:
+    - cargo build --release -p lwk_bindings
+    - mkdir csharp
+    - cp target/release/liblwk.so csharp/
+    - uniffi-bindgen-cs --library csharp/liblwk.so --out-dir csharp
+    - sed -i 's#\"lwk\"#\"./liblwk.so\"#g' csharp/lwk.cs # this is an hack, but make it work until we understand how to properly reference the dynamic lib
+    - cp lwk_bindings/tests/bindings/list_transactions.cs csharp
+    - cp lwk_bindings/tests/test_data/test-dotnet.csproj csharp
+    - cd csharp && dotnet run && cd -
+    - rm -rf csharp/bin && rm -rf csharp/obj # remove dotnet-build created files
   artifacts:
     paths:
-      - target/debug/csharp
+      - csharp
 
 just:
   extends: .base

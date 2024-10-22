@@ -139,11 +139,16 @@ bindings:
     - cargo test -p lwk_bindings --features foreign_bindings
     - echo "Testing csharp"
     - cargo build -p lwk_bindings
-    - uniffi-bindgen-cs --library target/debug/liblwk.so --out-dir target/debug/
-    - sed -i 's#\"lwk\"#\"./liblwk.so\"#g' target/debug/lwk.cs # this is an hack, but make it work until we understand how to properly reference the dynamic lib
-    - cp lwk_bindings/tests/bindings/list_transactions.cs target/debug/
-    - cp lwk_bindings/tests/test_data/test-dotnet.csproj target/debug/
-    - cd target/debug/ && dotnet run && cd -
+    - mkdir target/debug/csharp
+    - cp target/debug/liblwk.so target/debug/csharp/
+    - uniffi-bindgen-cs --library target/debug/csharp/liblwk.so --out-dir target/debug/csharp
+    - sed -i 's#\"lwk\"#\"./liblwk.so\"#g' target/debug/csharp/lwk.cs # this is an hack, but make it work until we understand how to properly reference the dynamic lib
+    - cp lwk_bindings/tests/bindings/list_transactions.cs target/debug/csharp
+    - cp lwk_bindings/tests/test_data/test-dotnet.csproj target/debug/csharp
+    - cd target/debug/csharp && dotnet run && cd -
+  artifacts:
+    paths:
+      - target/debug/csharp
 
 just:
   extends: .base

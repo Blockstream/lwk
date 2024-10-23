@@ -5,9 +5,11 @@ mod error;
 mod interpreter;
 mod merkle;
 mod psbt;
-mod transport_hid;
 mod transport_tcp;
 mod wallet;
+
+#[cfg(feature = "serial")]
+mod transport_hid;
 
 #[cfg(feature = "test_emulator")]
 mod ledger_emulator;
@@ -19,9 +21,6 @@ pub use ledger_emulator::TestLedgerEmulator;
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;
 use client::Transport;
-use ledger_transport_hid::hidapi::HidApi;
-use ledger_transport_hid::TransportNativeHID;
-use transport_hid::TransportHID;
 pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
@@ -55,10 +54,12 @@ impl Ledger<TransportTcp> {
     }
 }
 
-impl Ledger<TransportHID> {
+#[cfg(feature = "serial")]
+impl Ledger<transport_hid::TransportHID> {
     pub fn new_hid() -> Self {
-        let hid = TransportNativeHID::new(&HidApi::new().expect("unable to get HIDAPI")).unwrap();
-        let client = LiquidClient::new(TransportHID::new(hid));
+        let h = ledger_transport_hid::hidapi::HidApi::new().expect("unable to get HIDAPI");
+        let hid = ledger_transport_hid::TransportNativeHID::new(&h).unwrap();
+        let client = LiquidClient::new(transport_hid::TransportHID::new(hid));
         Self { client }
     }
 }

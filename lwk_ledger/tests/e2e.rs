@@ -129,6 +129,7 @@ fn test_ledger_commands() {
     assert_eq!(sigs[0].1, expected);
 }
 
+#[cfg(feature = "serial")]
 #[ignore = "requires hardware ledger connected via usb"]
 #[test]
 fn test_physical_device() {

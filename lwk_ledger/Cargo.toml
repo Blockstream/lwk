@@ -9,11 +9,11 @@ documentation = "https://docs.rs/lwk_jade"
 [dependencies]
 lwk_common = "0.8.0"
 lwk_containers = { version = "0.8.0", optional = true }
-
-ledger-apdu = "0.10"
+ledger-apdu = "0.11"
 elements-miniscript = { version = "0.4", features = ["serde"] }
 
 thiserror = "1"
+ledger-transport-hid = "0.11.0"
 
 [dev-dependencies]
 lwk_containers = { version = "0.8.0" }

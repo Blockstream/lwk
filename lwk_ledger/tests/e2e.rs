@@ -128,3 +128,12 @@ fn test_ledger_commands() {
     let expected = elements_miniscript::bitcoin::ecdsa::Signature::from_str("3044022071965f8315a264773d8e635fb5bb8dfdb425b849b7aaafa8f1dcf1356e87947a02202eae7f9bdb1f00af3d1662a10b8efc82f9e7ecb1fc4f76a0b7905dab4fc6358801").unwrap();
     assert_eq!(sigs[0].1, expected);
 }
+
+#[ignore = "requires hardware ledger connected via usb"]
+#[test]
+fn test_physical_device() {
+    let client = Ledger::new_hid().client;
+    let (name, version, _flags) = client.get_version().unwrap();
+    assert_eq!(name, "BOLOS");
+    assert_eq!(version, "1.5.5");
+}

@@ -5,7 +5,7 @@ mod error;
 mod interpreter;
 mod merkle;
 mod psbt;
-mod transport;
+mod transport_tcp;
 mod wallet;
 
 #[cfg(feature = "test_emulator")]
@@ -17,7 +17,7 @@ pub use ledger_emulator::TestLedgerEmulator;
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;
-pub use transport::TransportTcp;
+pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 use elements_miniscript::confidential::slip77;

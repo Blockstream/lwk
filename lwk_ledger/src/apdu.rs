@@ -1,8 +1,12 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 
+use ledger_apdu::APDUCommand;
+
 // p2 encodes the protocol version implemented
 pub const CURRENT_PROTOCOL_VERSION: u8 = 1;
+
+pub type APDUCmdVec = APDUCommand<Vec<u8>>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -16,7 +20,13 @@ pub enum Cla {
 #[repr(u8)]
 pub enum LiquidCommandCode {
     GetExtendedPubkey = 0x00,
-    GetVersion = 0x01,
+
+    /// This variant is used for two commands depending on the class:
+    ///
+    /// * With `Cla::Default` is GetVersion
+    /// * With `Cla::Framework` is ContinueInterrupted
+    GetVersionOrContinueInterrupted = 0x01,
+
     RegisterWallet = 0x02,
     GetWalletAddress = 0x03,
     SignPSBT = 0x04,
@@ -24,12 +34,6 @@ pub enum LiquidCommandCode {
     SignMessage = 0x10,
     // Liquid commands
     LiquidGetMasterBlindingKey = 0xe1,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u8)]
-pub enum FrameworkCommandCode {
-    ContinueInterrupted = 0x01,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -107,31 +111,15 @@ impl TryFrom<u16> for StatusWord {
     }
 }
 
-#[derive(Clone)]
-pub struct APDUCommand {
-    pub cla: u8,
-    pub ins: u8,
-    pub p1: u8,
-    pub p2: u8,
-    pub data: Vec<u8>,
-}
-
-impl APDUCommand {
-    pub fn encode(&self) -> Vec<u8> {
-        let mut vec = vec![self.cla, self.ins, self.p1, self.p2, self.data.len() as u8];
-        vec.extend(self.data.iter());
-        vec
+pub fn apdu(cla: Cla, ins: LiquidCommandCode, data: Vec<u8>) -> APDUCmdVec {
+    APDUCmdVec {
+        cla: cla as u8,
+        ins: ins as u8,
+        p1: 0x00,
+        p2: CURRENT_PROTOCOL_VERSION,
+        data,
     }
 }
-
-impl core::default::Default for APDUCommand {
-    fn default() -> Self {
-        Self {
-            cla: Cla::Default as u8,
-            ins: 0x00,
-            p1: 0x00,
-            p2: CURRENT_PROTOCOL_VERSION,
-            data: Vec::new(),
-        }
-    }
+pub fn apdu_empty(cla: Cla, ins: LiquidCommandCode) -> APDUCmdVec {
+    apdu(cla, ins, Vec::new())
 }

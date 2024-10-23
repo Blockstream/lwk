@@ -14,7 +14,7 @@ use elements_miniscript::elements::{
 use elements_miniscript::slip77::MasterBlindingKey;
 
 use crate::{
-    apdu::{APDUCommand, StatusWord},
+    apdu::{APDUCmdVec, StatusWord},
     command,
     error::LiquidClientError,
     interpreter::{get_merkleized_map_commitment, ClientCommandInterpreter},
@@ -35,7 +35,7 @@ impl<T: Transport> LiquidClient<T> {
 
     fn make_request(
         &self,
-        req: &APDUCommand,
+        req: &APDUCmdVec,
         interpreter: Option<&mut ClientCommandInterpreter>,
     ) -> Result<Vec<u8>, LiquidClientError<T::Error>> {
         let (mut sw, mut data) = self
@@ -363,5 +363,5 @@ impl<T: Transport> LiquidClient<T> {
 /// Communication layer between the bitcoin client and the Ledger device.
 pub trait Transport {
     type Error: Debug;
-    fn exchange(&self, command: &APDUCommand) -> Result<(StatusWord, Vec<u8>), Self::Error>;
+    fn exchange(&self, command: &APDUCmdVec) -> Result<(StatusWord, Vec<u8>), Self::Error>;
 }

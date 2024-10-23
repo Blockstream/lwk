@@ -1,7 +1,5 @@
-use crate::{
-    apdu::{APDUCommand, StatusWord},
-    client::Transport,
-};
+use crate::apdu::APDUCmdVec;
+use crate::{apdu::StatusWord, client::Transport};
 use ledger_transport_hid::TransportNativeHID;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -18,16 +16,9 @@ impl TransportHID {
 impl Transport for TransportHID {
     type Error = Box<dyn Error>;
 
-    fn exchange(&self, cmd: &APDUCommand) -> Result<(StatusWord, Vec<u8>), Self::Error> {
-        let apducommand = ledger_apdu::APDUCommand {
-            ins: cmd.ins,
-            cla: cmd.cla,
-            p1: cmd.p1,
-            p2: cmd.p2,
-            data: cmd.data.clone(),
-        };
+    fn exchange(&self, cmd: &APDUCmdVec) -> Result<(StatusWord, Vec<u8>), Self::Error> {
         self.0
-            .exchange(&apducommand)
+            .exchange(&cmd)
             .map(|answer| {
                 (
                     StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown),

@@ -7,10 +7,8 @@ use std::net::TcpStream;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Mutex;
 
-use crate::{
-    apdu::{APDUCommand, StatusWord},
-    client::Transport,
-};
+use crate::apdu::APDUCmdVec;
+use crate::{apdu::StatusWord, client::Transport};
 use ledger_apdu::APDUAnswer;
 
 /// Transport to communicate with the Ledger Speculos simulator.
@@ -31,9 +29,9 @@ impl TransportTcp {
 
 impl Transport for TransportTcp {
     type Error = Box<dyn Error>;
-    fn exchange(&self, command: &APDUCommand) -> Result<(StatusWord, Vec<u8>), Self::Error> {
+    fn exchange(&self, command: &APDUCmdVec) -> Result<(StatusWord, Vec<u8>), Self::Error> {
         if let Ok(mut stream) = self.connection.lock() {
-            let command_bytes = command.encode();
+            let command_bytes = command.serialize();
 
             let mut req = vec![0u8; command_bytes.len() + 4];
             req[..4].copy_from_slice(&(command_bytes.len() as u32).to_be_bytes());

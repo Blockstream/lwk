@@ -5,8 +5,11 @@ mod error;
 mod interpreter;
 mod merkle;
 mod psbt;
-mod transport;
+mod transport_tcp;
 mod wallet;
+
+#[cfg(feature = "serial")]
+mod transport_hid;
 
 #[cfg(feature = "test_emulator")]
 mod ledger_emulator;
@@ -17,7 +20,8 @@ pub use ledger_emulator::TestLedgerEmulator;
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;
-pub use transport::TransportTcp;
+use client::Transport;
+pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
 use elements_miniscript::confidential::slip77;
@@ -38,21 +42,31 @@ use elements_miniscript::elements::{
 use lwk_common::Signer;
 
 #[derive(Debug)]
-pub struct Ledger {
+pub struct Ledger<T: Transport> {
     /// Ledger Liquid Client
-    pub client: LiquidClient<TransportTcp>,
+    pub client: LiquidClient<T>,
 }
 
-impl Ledger {
+impl Ledger<TransportTcp> {
     pub fn new(port: u16) -> Self {
         let client = LiquidClient::new(TransportTcp::new(port).expect("TODO"));
         Self { client }
     }
 }
 
+#[cfg(feature = "serial")]
+impl Ledger<transport_hid::TransportHID> {
+    pub fn new_hid() -> Self {
+        let h = ledger_transport_hid::hidapi::HidApi::new().expect("unable to get HIDAPI");
+        let hid = ledger_transport_hid::TransportNativeHID::new(&h).unwrap();
+        let client = LiquidClient::new(transport_hid::TransportHID::new(hid));
+        Self { client }
+    }
+}
+
 pub type Error = error::LiquidClientError<TransportTcp>;
 
-impl Signer for &Ledger {
+impl<T: Transport> Signer for &Ledger<T> {
     type Error = crate::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> std::result::Result<u32, Self::Error> {
@@ -234,7 +248,7 @@ impl Signer for &Ledger {
     }
 }
 
-impl Signer for Ledger {
+impl<T: Transport> Signer for Ledger<T> {
     type Error = crate::Error;
 
     fn sign(&self, pset: &mut PartiallySignedTransaction) -> std::result::Result<u32, Self::Error> {

@@ -1,10 +1,10 @@
-use crate::Ledger;
+use crate::{Ledger, TransportTcp};
 use lwk_containers::testcontainers::{clients::Cli, Container};
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 
 /// A struct for Ledger testing with emulator
 pub struct TestLedgerEmulator<'a> {
-    pub ledger: Ledger,
+    pub ledger: Ledger<TransportTcp>,
     // Keep the containers so it's not dropped.
     _ledger_emul: Container<'a, LedgerEmulator>,
 }

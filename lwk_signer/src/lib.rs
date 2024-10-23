@@ -43,7 +43,7 @@ pub enum AnySigner {
 
     #[cfg(feature = "ledger")]
     Ledger(
-        lwk_ledger::Ledger,
+        lwk_ledger::Ledger<lwk_ledger::TransportTcp>,
         elements_miniscript::bitcoin::XKeyIdentifier,
     ),
 }

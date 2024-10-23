@@ -38,10 +38,8 @@ finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)
 
-asset_id = signed_pset.issuance_asset(0)
-token_id = signed_pset.issuance_token(0)
-assert signed_pset.inputs()[0].issuance_asset() == asset_id
-assert signed_pset.inputs()[0].issuance_token() == token_id
+asset_id = signed_pset.inputs()[0].issuance_asset()
+token_id = signed_pset.inputs()[0].issuance_token()
 
 wollet.wait_for_tx(txid, client)
 

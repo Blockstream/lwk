@@ -48,16 +48,6 @@ impl Pset {
         Ok(tx)
     }
 
-    #[wasm_bindgen(js_name = issuanceAsset)]
-    pub fn issuance_asset(&self, index: u32) -> Option<AssetId> {
-        self.issuances_ids(index).map(|e| e.0)
-    }
-
-    #[wasm_bindgen(js_name = issuanceToken)]
-    pub fn issuance_token(&self, index: u32) -> Option<AssetId> {
-        self.issuances_ids(index).map(|e| e.1)
-    }
-
     pub fn combine(&mut self, other: Pset) -> Result<(), Error> {
         self.inner.merge(other.into())?;
         Ok(())
@@ -65,13 +55,6 @@ impl Pset {
 
     pub fn inputs(&self) -> Vec<PsetInput> {
         self.inner.inputs().iter().map(Into::into).collect()
-    }
-}
-
-impl Pset {
-    fn issuances_ids(&self, index: u32) -> Option<(AssetId, AssetId)> {
-        let issuance_ids = self.inner.inputs().get(index as usize)?.issuance_ids();
-        Some((issuance_ids.0.into(), issuance_ids.1.into()))
     }
 }
 

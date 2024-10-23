@@ -100,6 +100,22 @@ impl PsetInput {
     pub fn previous_vout(&self) -> u32 {
         self.inner.previous_output_index
     }
+
+    /// If the input has an issuance, the asset id
+    #[wasm_bindgen(js_name = issuanceAsset)]
+    pub fn issuance_asset(&self) -> Option<AssetId> {
+        self.inner
+            .has_issuance()
+            .then(|| self.inner.issuance_ids().0.into())
+    }
+
+    /// If the input has an issuance, the token id
+    #[wasm_bindgen(js_name = issuanceToken)]
+    pub fn issuance_token(&self) -> Option<AssetId> {
+        self.inner
+            .has_issuance()
+            .then(|| self.inner.issuance_ids().1.into())
+    }
 }
 
 #[cfg(test)]
@@ -128,5 +144,8 @@ mod tests {
             "0093c96a69e9ea00b5409611f23435b6639c157afa1c88cf18960715ea10116c"
         );
         assert_eq!(pset_in.previous_vout(), 0);
+
+        assert!(pset_in.issuance_asset().is_none());
+        assert!(pset_in.issuance_token().is_none());
     }
 }

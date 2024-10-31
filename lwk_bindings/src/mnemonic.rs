@@ -31,6 +31,20 @@ impl Mnemonic {
         let inner = bip39::Mnemonic::from_str(s)?;
         Ok(Arc::new(Self { inner }))
     }
+
+    /// Creates a Mnemonic from entropy, at least 16 bytes are needed.
+    #[uniffi::constructor]
+    pub fn from_entropy(b: &[u8]) -> Result<Arc<Self>, LwkError> {
+        let inner = bip39::Mnemonic::from_entropy(b)?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Creates a random Mnemonic of given words (12,15,18,21,24)
+    #[uniffi::constructor]
+    pub fn from_random(word_count: u8) -> Result<Arc<Self>, LwkError> {
+        let inner = bip39::Mnemonic::generate(word_count as usize)?;
+        Ok(Arc::new(Self { inner }))
+    }
 }
 
 #[cfg(test)]
@@ -47,5 +61,12 @@ mod tests {
         let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
         assert_eq!(mnemonic_str, mnemonic.to_string());
         assert_eq!(from_bip39, *mnemonic);
+
+        let rand_mnemonic = Mnemonic::from_random(12).unwrap();
+        assert_ne!(mnemonic, rand_mnemonic);
+
+        let entropy = rand_mnemonic.inner.to_entropy();
+        let entropy_mnemonic = Mnemonic::from_entropy(&entropy).unwrap();
+        assert_eq!(entropy_mnemonic, rand_mnemonic);
     }
 }

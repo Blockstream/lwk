@@ -146,9 +146,8 @@ async fn test_asyncr_ledger() {
     let ledger = LedgerEmulator::new().expect("test");
     let container = docker.run(ledger);
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
-    let transport = asyncr::TransportTcp::new(port).unwrap();
-    let client = asyncr::LiquidClient::new(transport);
-    let (name, version, _flags) = client.get_version().await.unwrap();
+    let ledger = asyncr::Ledger::new(port);
+    let (name, version, _flags) = ledger.client.get_version().await.unwrap();
     assert_eq!(version, "2.0.4");
     assert_eq!(name, "Liquid Regtest");
 }

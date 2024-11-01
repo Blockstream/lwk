@@ -6,6 +6,7 @@ use crate::error::LiquidClientError;
 use crate::interpreter::ClientCommandInterpreter;
 use elements_miniscript::elements::bitcoin::consensus::encode::deserialize_partial;
 
+#[derive(Debug)]
 pub struct LiquidClient<T: Transport> {
     transport: T,
 }

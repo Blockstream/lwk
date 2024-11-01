@@ -138,3 +138,17 @@ fn test_physical_device() {
     assert_eq!(name, "BOLOS");
     assert_eq!(version, "1.5.5");
 }
+
+#[cfg(feature = "asyncr")]
+#[tokio::test]
+async fn test_asyncr_ledger() {
+    let docker = clients::Cli::default();
+    let ledger = LedgerEmulator::new().expect("test");
+    let container = docker.run(ledger);
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let transport = asyncr::TransportTcp::new(port).unwrap();
+    let client = asyncr::LiquidClient::new(transport);
+    let (name, version, _flags) = client.get_version().await.unwrap();
+    assert_eq!(version, "2.0.4");
+    assert_eq!(name, "Liquid Regtest");
+}

@@ -14,6 +14,9 @@ mod transport_hid;
 #[cfg(feature = "test_emulator")]
 mod ledger_emulator;
 
+#[cfg(feature = "asyncr")]
+pub mod asyncr;
+
 #[cfg(feature = "test_emulator")]
 pub use ledger_emulator::TestLedgerEmulator;
 

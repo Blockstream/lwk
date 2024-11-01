@@ -1948,6 +1948,7 @@ dependencies = [
  "lwk_common",
  "lwk_containers",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

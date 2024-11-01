@@ -26,7 +26,7 @@ tokio = { version = "1.36.0", features = [
 lwk_containers = { version = "0.8.0" }
 
 [features]
-default = ["test_emulator", "asyncr"] # TODO remove asyncr
+default = ["test_emulator"]
 test_emulator = ["lwk_containers"]
 asyncr = ["tokio"]
 

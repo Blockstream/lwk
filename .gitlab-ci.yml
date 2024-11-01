@@ -49,7 +49,7 @@ test_jade:
 test_ledger:
   extends: .base
   script:
-    - cargo test -p lwk_ledger
+    - cargo test -p lwk_ledger --features asyncr
 
 test_serial:
   extends: .base

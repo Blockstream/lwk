@@ -86,3 +86,9 @@ swift: ios ios-sim
     mv target/swift/lwkFFI.h target/swift/include
     mv target/swift/lwkFFI.modulemap  target/swift/include/module.modulemap
     xcodebuild -create-xcframework -library target/lipo-ios-sim/release/liblwk.a -headers target/swift/include -library target/aarch64-apple-ios/release/liblwk.a -headers target/swift/include -output target/lwkFFI.xcframework
+
+csharp-windows: build-bindings-lib
+    cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
+    uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
+    cp target/release/lwk.dll target/release/csharp
+

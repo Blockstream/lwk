@@ -91,4 +91,6 @@ csharp-windows: build-bindings-lib
     cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
     uniffi-bindgen-cs --library target/release/lwk.dll --out-dir target/release/csharp
     cp target/release/lwk.dll target/release/csharp
+    cp lwk_bindings/tests/test_data/test-dotnet.csproj target/release/csharp
+    cp lwk_bindings/tests/bindings/list_transactions.cs target/release/csharp
 

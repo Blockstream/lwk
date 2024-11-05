@@ -56,6 +56,10 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just csharp-windows
       - run: ls target/release/csharp
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+      - run: cd target/release/csharp && dotnet run && cd -
       - uses: actions/upload-artifact@v4
         with:
           name: csharp-windows

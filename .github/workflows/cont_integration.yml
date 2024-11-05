@@ -27,7 +27,7 @@ jobs:
   nix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v25
         with:
           extra_nix_config: |
@@ -42,7 +42,7 @@ jobs:
         - uses: dtolnay/rust-toolchain@1.75.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim
-        - uses: extractions/setup-just@v1
+        - uses: extractions/setup-just@v2
           with:
             just-version: 1.5.0  # optional semver specification, otherwise latest
         - run: just swift

@@ -123,20 +123,19 @@ impl<T: Transport> Signer for &Ledger<T> {
                         let path: DerivationPath = v.into();
 
                         // Do we care about the descriptor blinding key here?
-                        let name = "todo".to_string();
-                        let version = Version::V1;
+                        let name = "".to_string();
+                        let version = Version::V2;
                         // TODO: cache xpubs
                         let xpub = self
                             .client
                             .get_extended_pubkey(&path, false)
                             .expect("FIXME");
-                        let mut key = WalletPubKey::from(((*fp, path.clone()), xpub));
-                        key.multipath = Some("/**".to_string());
+                        let key = WalletPubKey::from(((*fp, path.clone()), xpub));
                         let keys = vec![key];
                         let desc = if is_p2wpkh {
-                            "wpkh(@0)"
+                            "wpkh(@0/**)"
                         } else {
-                            "sh(wpkh(@0))"
+                            "sh(wpkh(@0/**))"
                         };
                         let wallet_policy =
                             WalletPolicy::new(name, version, desc.to_string(), keys);

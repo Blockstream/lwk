@@ -1,3 +1,4 @@
+pub use crate::psbt::PartialSignature;
 pub use client::{LiquidClient, Transport};
 use elements_miniscript::{
     bitcoin::bip32::{ChildNumber, DerivationPath, Fingerprint, Xpub},
@@ -185,7 +186,12 @@ impl Ledger<TransportTcp> {
                 let input = &mut pset.inputs_mut()[input_idx];
                 for (public_key, (fp, _origin)) in &input.bip32_derivation {
                     if fp == &master_fp {
-                        input.partial_sigs.insert(*public_key, sig.to_vec());
+                        // TODO: user the pubkey from PartialSignature to insert in partial_sigs
+                        let sig_vec = match sig {
+                            PartialSignature::Sig(_, sig) => sig.to_vec(),
+                            _ => panic!("FIXME: support taproot sig ir raise error"),
+                        };
+                        input.partial_sigs.insert(*public_key, sig_vec);
                         // FIXME: handle cases where we have multiple pubkeys with master fingerprint
                         break;
                     }

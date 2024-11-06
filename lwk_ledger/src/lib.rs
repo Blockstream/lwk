@@ -24,6 +24,7 @@ pub use ledger_emulator::TestLedgerEmulator;
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;
 use client::Transport;
+pub use psbt::PartialSignature;
 pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
@@ -222,7 +223,12 @@ impl<T: Transport> Signer for &Ledger<T> {
                 let input = &mut pset.inputs_mut()[input_idx];
                 for (public_key, (fp, _origin)) in &input.bip32_derivation {
                     if fp == &master_fp {
-                        input.partial_sigs.insert(*public_key, sig.to_vec());
+                        // TODO: user the pubkey from PartialSignature to insert in partial_sigs
+                        let sig_vec = match sig {
+                            PartialSignature::Sig(_, sig) => sig.to_vec(),
+                            _ => panic!("FIXME: support taproot sig ir raise error"),
+                        };
+                        input.partial_sigs.insert(*public_key, sig_vec);
                         // FIXME: handle cases where we have multiple pubkeys with master fingerprint
                         break;
                     }

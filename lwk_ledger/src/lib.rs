@@ -225,7 +225,7 @@ impl<T: Transport> Signer for &Ledger<T> {
                         // TODO: user the pubkey from PartialSignature to insert in partial_sigs
                         let sig_vec = match sig {
                             PartialSignature::Sig(_, sig) => sig.to_vec(),
-                            _ => panic!("FIXME: support taproot sig ir raise error"),
+                            _ => panic!("FIXME: support taproot sig or raise error"),
                         };
                         input.partial_sigs.insert(*public_key, sig_vec);
                         // FIXME: handle cases where we have multiple pubkeys with master fingerprint

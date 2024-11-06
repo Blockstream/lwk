@@ -13,7 +13,7 @@ fn test_ledger_commands() {
     let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
     let client = Ledger::new(port).client;
     let (name, version, _flags) = client.get_version().unwrap();
-    assert_eq!(version, "2.0.4");
+    assert_eq!(version, "2.2.3");
     assert_eq!(name, "Liquid Regtest");
     let fingerprint = client.get_master_fingerprint().unwrap();
     assert_eq!(fingerprint.to_string(), "f5acc2fd");
@@ -38,12 +38,10 @@ fn test_ledger_commands() {
         "0c11648c2c6df4f9dacdb4c8d35d6166d94cea2b9ad37833a82210bb7c9f5fb4"
     );
 
-    // Use V2 if "/**" is speficied differently
-    let version = Version::V1;
-    let mut wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
-    wpk0.multipath = Some("/**".to_string());
+    let version = Version::V2;
+    let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
     use std::str::FromStr;
-    let wpk1 = WalletPubKey::from_str("[76223a6e/48'/1'/0'/1']tpubDE7NQymr4AFtcJXi9TaWZtrhAdy8QyKmT4U6b9qYByAxCzoyMJ8zw5d8xVLVpbTRAEqP8pVUxjLE2vDt1rSFjaiS8DSz1QcNZ8D1qxUMx1g/**").unwrap();
+    let wpk1 = WalletPubKey::from_str("[76223a6e/48'/1'/0'/1']tpubDE7NQymr4AFtcJXi9TaWZtrhAdy8QyKmT4U6b9qYByAxCzoyMJ8zw5d8xVLVpbTRAEqP8pVUxjLE2vDt1rSFjaiS8DSz1QcNZ8D1qxUMx1g").unwrap();
     let keys = vec![wpk0, wpk1];
 
     let wallet_policy = WalletPolicy::new_multisig(
@@ -77,14 +75,14 @@ fn test_ledger_commands() {
     );
 
     // Single sig, no need to register the wallet
-    let version = Version::V1;
+    let version = Version::V2;
     let path: DerivationPath = "m/84h/1h/0h".parse().unwrap();
     let xpub = client.get_extended_pubkey(&path, false).unwrap();
-    let mut wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
-    wpk0.multipath = Some("/**".to_string());
+    let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
     let ss_keys = vec![wpk0];
-    let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0))");
-    let ss = WalletPolicy::new("ss".to_string(), version, desc, ss_keys);
+    let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
+    // For wallets that do not require registration, name must be empty
+    let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());
     let address = client
         .get_wallet_address(
             &ss, None,  // hmac
@@ -98,9 +96,8 @@ fn test_ledger_commands() {
     assert_eq!(address.to_string(), expected);
 
     let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
-    let desc = format!("ct({view_key},wpkh(@0))");
-    let mut ss_view = ss.clone();
-    ss_view.descriptor_template = desc;
+    let desc = format!("ct({view_key},wpkh(@0/**))");
+    let ss_view = WalletPolicy::new("".to_string(), version, desc, ss_keys);
     let address = client
         .get_wallet_address(
             &ss_view, None,  // hmac
@@ -126,7 +123,11 @@ fn test_ledger_commands() {
     assert_eq!(sigs[0].0, 0);
     // From the Liquid Ledger App test vectors
     let expected = elements_miniscript::bitcoin::ecdsa::Signature::from_str("3044022071965f8315a264773d8e635fb5bb8dfdb425b849b7aaafa8f1dcf1356e87947a02202eae7f9bdb1f00af3d1662a10b8efc82f9e7ecb1fc4f76a0b7905dab4fc6358801").unwrap();
-    assert_eq!(sigs[0].1, expected);
+    let sig = match sigs[0].1 {
+        PartialSignature::Sig(_, sig) => sig,
+        _ => panic!("unexpected sig"),
+    };
+    assert_eq!(sig, expected);
 }
 
 #[cfg(feature = "serial")]

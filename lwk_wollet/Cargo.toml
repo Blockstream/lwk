@@ -12,13 +12,16 @@ crate-type = ["lib"]
 
 [dependencies]
 lwk_common = { version = "0.8.0" }
-lwk_signer = { version = "0.8.0", features = ["jade", "ledger"], optional = true }
+lwk_signer = { version = "0.8.0", features = [
+    "jade",
+    "ledger",
+], optional = true }
 
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 aes-gcm-siv = "0.10.0"
-electrum-client = { version = "0.21.0", optional = true, default-features=false, features = [
+electrum-client = { version = "0.21.0", optional = true, default-features = false, features = [
     "use-rustls-ring",
     "proxy",
 ] }
@@ -53,7 +56,7 @@ regex-lite = "0.1.5"
 log.workspace = true
 fxhash = "0.2.1"
 
-age = { version = "0.10.0", optional = true }
+age = { version = "0.11.0", optional = true }
 url = "2.5.2"
 
 

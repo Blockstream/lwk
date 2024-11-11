@@ -120,8 +120,8 @@ pub struct AuthUserParams {
 
 impl AuthUserParams {
     pub fn new(network: crate::Network) -> Self {
-        let epoch = wasm_timer::SystemTime::now()
-            .duration_since(wasm_timer::SystemTime::UNIX_EPOCH)
+        let epoch = web_time::SystemTime::now()
+            .duration_since(web_time::SystemTime::UNIX_EPOCH)
             .map(|e| e.as_secs())
             .unwrap_or(0);
         AuthUserParams { network, epoch }

@@ -11,7 +11,7 @@ chmod +x $FNAME
 
 
 # elementsd
-curl -Ls https://github.com/ElementsProject/elements/releases/download/elements-23.2.3/elements-23.2.3-x86_64-linux-gnu.tar.gz | tar -xz
+curl -Ls https://github.com/ElementsProject/elements/releases/download/elements-23.2.4/elements-23.2.4-x86_64-linux-gnu.tar.gz | tar -xz
 
 # bitcoind
 curl -Ls https://bitcoincore.org/bin/bitcoin-core-26.0/bitcoin-26.0-x86_64-linux-gnu.tar.gz | tar -xz

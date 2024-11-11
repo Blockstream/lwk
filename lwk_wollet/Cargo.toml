@@ -73,7 +73,6 @@ tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 waterfalls = { version = "0.4.2", default-features = false, features = [
     "test_env",
 ] }
-bitcoind = { version = "0.36" } # TODO: remove once we're able to broadcast through waterfalls
 
 [features]
 default = ["esplora", "electrum", "elements_rpc"]

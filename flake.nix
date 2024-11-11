@@ -94,13 +94,13 @@
           });
 
           elementsd_ct = pkgs.elementsd.overrideAttrs (final: prev: rec {
-            version = "23.2.3";
+            version = "23.2.4";
 
             src = pkgs.fetchFromGitHub {
               owner = "ElementsProject";
               repo = "elements";
               rev = "elements-${version}";
-              sha256 = "sha256-E7RehIrW3EnLMRb/JV1vAztjDd9HRiRbofOIsZdRf5w=";
+              sha256 = "sha256-UNjYkEZBjGuhkwBxSkNXjBBcLQqoan/afCLhoR2lOY4=";
             };
           });
 

@@ -458,7 +458,7 @@ fn inner_setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumS
     let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
     let elementsd_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
     let bitcoind_exec = if validate_pegin {
-        Some(env::var("BITCOIND_EXEC").expect("set ELEMENTSD_EXEC"))
+        Some(env::var("BITCOIND_EXEC").expect("set BITCOIND_EXEC"))
     } else {
         None
     };

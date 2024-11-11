@@ -1501,7 +1501,7 @@ fn test_ct_discount() {
     let fee_ct_discount = r.get("fee").unwrap().as_u64().unwrap();
 
     assert_eq!(fee_no_ct_discount, 250);
-    assert_eq!(fee_ct_discount, 35);
+    assert_eq!(fee_ct_discount, 26);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

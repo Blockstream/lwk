@@ -1215,7 +1215,7 @@ fn ct_discount() {
     // Check fees
     assert!(fee_no_discount > fee_with_discount);
     assert_eq!(fee_no_discount, 250);
-    assert_eq!(fee_with_discount, 35);
+    assert_eq!(fee_with_discount, 26);
 
     // Default has CT discount disabled
     let mut pset = wallet

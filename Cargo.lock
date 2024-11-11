@@ -922,9 +922,9 @@ dependencies = [
 
 [[package]]
 name = "elements"
-version = "0.25.0"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "739a0201c8b2d1e35e6509872ddb8250dd37b38d2a462b9cea05988bf9630196"
+checksum = "e8ab681914c4d96235d4c30d6a758f4aeb4eace26837f4995ca84bf7ea3189ea"
 dependencies = [
  "bech32 0.11.0",
  "bitcoin",
@@ -2949,7 +2949,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
- "bitcoin_hashes 0.14.0",
+ "bitcoin_hashes 0.13.0",
  "rand",
  "secp256k1-sys 0.10.1",
  "serde",

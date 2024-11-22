@@ -244,7 +244,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let mut addressees = vec![];
                 for rec in recipient {
                     addressees.push(
-                        rec.try_into()
+                        rec.parse()
                             .with_context(|| "error parsing recipient argument")?,
                     );
                 }

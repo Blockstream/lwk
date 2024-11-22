@@ -473,6 +473,8 @@ pub enum WalletCommand {
 
         /// Specify a recipient in the form "address:satoshi:asset_id"
         ///
+        /// "address:satoshi" can be used, in this case it will default to network policy asset (L-BTC for liquid)
+        ///
         /// Can be specified multiple times.
         ///
         /// Address can either be a valid address or "burn" if you want to burn the asset, i.e.

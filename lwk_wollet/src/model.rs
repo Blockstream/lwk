@@ -113,16 +113,19 @@ impl UnvalidatedRecipient {
     }
 }
 
-impl TryFrom<String> for UnvalidatedRecipient {
-    type Error = crate::Error;
+impl FromStr for UnvalidatedRecipient {
+    type Err = crate::Error;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let pieces: Vec<_> = value.split(':').collect();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut pieces: Vec<_> = s.split(':').collect();
+        if pieces.len() == 2 {
+            // the asset id can be unspecified, the network policy asset will be used
+            pieces.push("");
+        }
         if pieces.len() != 3 {
             // TODO make specific error
             return Err(Error::Generic(format!(
-                r#"Invalid number of elements in string "{}", should be "address:satoshi:assetid"#,
-                value,
+                r#"Invalid number of elements in string "{s}", should be "address:satoshi:assetid" or "address:satoshi"#,
             )));
         }
         Ok(UnvalidatedRecipient {
@@ -299,5 +302,37 @@ mod tests {
             wallet_tx.unblinded_url("https://blockstream.info/liquidtestnet/"),
             "https://blockstream.info/liquidtestnet/tx/c6e3187f028942973ad27224ca79baa8382e90ad686e927fc29896e8a2edf3f3#blinded=5000,38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5,ab9a42053c7a6ae0d55b774f3d462b1adfaa630e5d0f9b3c0f16640d55b8f6ab,6c5c2b44a0777e463d25eecb70adee84b316c2597b8a28108ffeea38c7acf45d"
         );
+    }
+
+    #[test]
+    fn test_recipient() {
+        let address = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
+        let script_pubkey = "Script(OP_0 OP_PUSHBYTES_20 d0c4a3ef09e997b6e99e397e518fe3e41a118ca1)";
+        let blinding_key = "028cc0e189e069238a18901f4e29c634b04cbade2f8a98ef62a7fdc75020d9b464";
+        let satoshi = 1000;
+        let asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"; // regtest policy asset
+        let network = ElementsNetwork::default_regtest();
+
+        let case = format!("{address}:{satoshi}:{asset}");
+        let unvalidated: UnvalidatedRecipient = case.parse().unwrap();
+        assert_eq!(unvalidated.satoshi, satoshi);
+        assert_eq!(unvalidated.address, address);
+        assert_eq!(unvalidated.asset, asset);
+        let validated = unvalidated.validate(network).unwrap();
+        assert_eq!(validated.asset.to_string(), asset);
+        assert_eq!(validated.satoshi, satoshi);
+        assert_eq!(validated.script_pubkey.to_string(), script_pubkey);
+        assert_eq!(validated.blinding_pubkey.unwrap().to_string(), blinding_key);
+
+        let case = format!("{address}:{satoshi}");
+        let unvalidated: UnvalidatedRecipient = case.parse().unwrap();
+        assert_eq!(unvalidated.satoshi, satoshi);
+        assert_eq!(unvalidated.address, address);
+        assert_eq!(unvalidated.asset, "");
+        let validated = unvalidated.validate(network).unwrap();
+        assert_eq!(validated.asset.to_string(), asset);
+        assert_eq!(validated.satoshi, satoshi);
+        assert_eq!(validated.script_pubkey.to_string(), script_pubkey);
+        assert_eq!(validated.blinding_pubkey.unwrap().to_string(), blinding_key);
     }
 }

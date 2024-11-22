@@ -1481,8 +1481,7 @@ fn test_ct_discount() {
 
     let address = server.elementsd_getnewaddress();
     let sats = 1_000;
-    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-    let recipient = format!(" --recipient {address}:{sats}:{policy_asset}");
+    let recipient = format!(" --recipient {address}:{sats}");
 
     // Without CT discount
     let r = sh(&format!("{cli} wallet send -w w1 {recipient}"));

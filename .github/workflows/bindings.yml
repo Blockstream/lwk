@@ -1,0 +1,162 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+name: CI
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04]
+        target: [aarch64-unknown-linux-gnu]
+        include:
+        - os: ubuntu-22.04
+          target: aarch64-unknown-linux-gnu
+        - os: ubuntu-22.04
+          target: x86_64-unknown-linux-gnu
+        - os: macos-14
+          target: aarch64-apple-darwin
+        - os: macos-14
+          target: x86_64-apple-darwin
+        - os: windows-2022
+          target: x86_64-pc-windows-msvc
+        - os: windows-2022
+          target: i686-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install gcc-aarch64-linux-gnu
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v4
+      - run: rm rust-toolchain.toml # otherwise try to use version specified in it
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --target ${{ matrix.target }} -p lwk_bindings
+      - run: ls -l target/${{ matrix.target }}/release
+
+      - name: Archive release windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/lwk.dll
+        if:  matrix.os == 'windows-2022'
+
+      - name: Archive release linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/liblwk.so
+        if:  matrix.os == 'ubuntu-22.04'
+
+      - name: Archive release mac
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/liblwk.dylib
+            target/${{ matrix.target }}/release/liblwk.a
+        if:  matrix.os == 'macos-14'
+
+  build-language:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: target/
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev be29aa170bf9c525edac812c9dd33b1aa801cf3d
+          uniffi-bindgen-cs --library target/liblwk.so --out-dir target
+      - run: ls -l target
+      - name: Archive csharp language interface
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-interface-csharp
+          path: target/lwk.cs
+
+  build-nuget:
+    needs: build-language
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-interface-csharp
+          path: csharp
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-aarch64-apple-darwin
+          path: csharp/runtimes/osx-arm64/native
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-apple-darwin
+          path: csharp/runtimes/osx-x64/native
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-aarch64-unknown-linux-gnu
+          path: csharp/runtimes/linux-arm64/native
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: csharp/runtimes/linux-x64/native
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-pc-windows-msvc
+          path: csharp/runtimes/win-x64/native
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-i686-pc-windows-msvc
+          path: csharp/runtimes/win-x86/native
+
+      - run: cp lwk_bindings/csharp/* csharp
+
+      - run: ls -R csharp
+
+      - name: Archive the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidWalletKitPackage
+          path: csharp/
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Build the project
+        working-directory: csharp
+        run: dotnet build LiquidWalletKit.csproj
+
+      - name: Create the package
+        working-directory: csharp
+        run: dotnet pack --configuration Release LiquidWalletKit.csproj
+
+      - name: Archive the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidWalletKit.0.8.2.nupkg  # TODO make version parametric
+          path: csharp/bin/Release/*.nupkg

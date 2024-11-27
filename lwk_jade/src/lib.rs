@@ -59,11 +59,14 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// Note that DYI device may be filtered out by these.
 ///
 /// Taken from reference impl <https://github.com/Blockstream/Jade/blob/f7fc4de8c3662b082c7d41e9354c4ff573f371ff/jadepy/jade_serial.py#L24>
-pub const JADE_DEVICE_IDS: [(u16, u16); 4] = [
+pub const JADE_DEVICE_IDS: [(u16, u16); 6] = [
     (0x10c4, 0xea60),
     (0x1a86, 0x55d4),
     (0x0403, 0x6001),
     (0x1a86, 0x7523),
+    // new
+    (0x303a, 0x4001),
+    (0x303a, 0x1001),
 ];
 
 const CHANGE_CHAIN: ChildNumber = ChildNumber::Normal { index: 1 };

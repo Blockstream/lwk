@@ -44,6 +44,7 @@ impl TxOutSecrets {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use lwk_wollet::elements;

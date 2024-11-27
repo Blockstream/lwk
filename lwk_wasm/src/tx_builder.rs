@@ -161,6 +161,7 @@ impl Display for TxBuilder {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use wasm_bindgen_test::*;

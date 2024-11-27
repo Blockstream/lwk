@@ -80,6 +80,7 @@ impl std::fmt::Display for WolletDescriptor {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
 

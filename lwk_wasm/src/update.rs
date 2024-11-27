@@ -68,6 +68,7 @@ impl Update {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use lwk_wollet::hashes::hex::FromHex;

@@ -151,6 +151,7 @@ pub fn big_number() -> Result<JsValue, Error> {
     Ok(big.serialize(&serializer)?)
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
 

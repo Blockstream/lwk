@@ -30,6 +30,7 @@ impl Precision {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;

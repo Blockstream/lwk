@@ -112,6 +112,7 @@ impl Network {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
 

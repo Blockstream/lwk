@@ -46,6 +46,7 @@ pub use update::Update;
 pub use wollet::Wollet;
 pub use xpub::Xpub;
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

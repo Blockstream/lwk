@@ -107,6 +107,7 @@ impl Txid {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use crate::{AssetId, Transaction, Txid};

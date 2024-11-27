@@ -76,6 +76,7 @@ impl lwk_common::Signer for FakeSigner {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use crate::{Mnemonic, Pset, Signer};

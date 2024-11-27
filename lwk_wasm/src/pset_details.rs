@@ -201,6 +201,7 @@ impl From<lwk_common::Issuance> for Issuance {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

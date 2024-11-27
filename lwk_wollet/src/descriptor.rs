@@ -1,8 +1,8 @@
 use std::{fmt::Display, str::FromStr};
 
 use aes_gcm_siv::aead::generic_array::GenericArray;
-use aes_gcm_siv::aead::NewAead;
 use aes_gcm_siv::Aes256GcmSiv;
+use aes_gcm_siv::KeyInit;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};

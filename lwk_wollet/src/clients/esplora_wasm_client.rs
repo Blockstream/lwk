@@ -94,7 +94,7 @@ impl EsploraWasmClient {
         Ok(txid)
     }
 
-    async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
+    pub async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
         let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
         let response = get_with_retry(&self.client, &tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
@@ -132,7 +132,10 @@ impl EsploraWasmClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-    async fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
+    pub async fn get_scripts_history(
+        &self,
+        scripts: &[&Script],
+    ) -> Result<Vec<Vec<History>>, Error> {
         let mut result: Vec<_> = vec![];
         for script in scripts.iter() {
             let address = Address::from_script(script, None, self.network.address_params()).ok_or(

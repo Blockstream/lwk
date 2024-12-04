@@ -1,5 +1,8 @@
 use crate::{types::AssetId, LwkError, Script, Transaction, Txid};
 use elements::pset::{Input, PartiallySignedTransaction};
+use elements::{hashes::Hash, BlockHash};
+use lwk_wollet::elements_miniscript::psbt::finalize;
+use lwk_wollet::EC;
 use std::{fmt::Display, sync::Arc};
 
 /// Partially Signed Elements Transaction, wrapper over [`elements::pset::PartiallySignedTransaction`]
@@ -28,6 +31,14 @@ impl Pset {
     pub fn new(base64: &str) -> Result<Arc<Self>, LwkError> {
         let inner: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(Arc::new(Pset { inner }))
+    }
+
+    /// Finalize and extract the PSET
+    pub fn finalize(&self) -> Result<Arc<Transaction>, LwkError> {
+        let mut pset = self.inner.clone();
+        finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        let tx: Transaction = pset.extract_tx()?.into();
+        Ok(Arc::new(tx))
     }
 
     pub fn extract_tx(&self) -> Result<Arc<Transaction>, LwkError> {

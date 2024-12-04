@@ -32,8 +32,11 @@ builder.add_lbtc_recipient(node_address, sent_satoshi)
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 
+# It's possible to finalize a PSET from the PSET itself, or using the wollet
+tx_ = signed_pset.finalize()
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
+assert str(tx) == str(tx_)
 txid = client.broadcast(tx)
 
 wollet.wait_for_tx(txid, client)

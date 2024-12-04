@@ -151,3 +151,11 @@ impl From<elements::UnblindError> for LwkError {
         }
     }
 }
+
+impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
+    fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{:?}", value),
+        }
+    }
+}

@@ -1,6 +1,5 @@
 use age::x25519::Recipient;
 use elements::{BlockHash, Script, Txid};
-use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use tokio::runtime::Runtime;
 
@@ -89,31 +88,6 @@ impl BlockchainBackend for EsploraClient {
         self.rt
             .block_on(self.client.get_history_waterfalls(descriptor, state))
     }
-}
-
-impl From<EsploraTx> for History {
-    fn from(value: EsploraTx) -> Self {
-        History {
-            txid: value.txid,
-            height: value.status.block_height.unwrap_or(-1),
-            block_hash: value.status.block_hash,
-            block_timestamp: None,
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct EsploraTx {
-    txid: elements::Txid,
-    status: Status,
-}
-
-// TODO some of this fields may be Option in unconfirmed
-
-#[derive(Deserialize)]
-struct Status {
-    block_height: Option<i32>,
-    block_hash: Option<BlockHash>,
 }
 
 #[cfg(test)]

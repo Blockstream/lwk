@@ -84,7 +84,7 @@ pub enum Error {
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
 
-    #[cfg(any(feature = "esplora_wasm", feature = "esplora"))]
+    #[cfg(feature = "esplora")]
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
 

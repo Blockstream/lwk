@@ -33,7 +33,6 @@ elements = { version = "0.25.0", features = ["base64"] }
 base64 = "0.21.4"
 bitcoincore-rpc = { version = "0.19.0", optional = true }
 
-# wasm
 reqwest = { version = "0.12", optional = true, default-features = false, features = [
     "charset",
     "http2",
@@ -42,15 +41,7 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
     "json",
     "rustls-tls",
 ] }
-wasm-bindgen-futures = { version = "0.4.41", optional = true }
-web-sys = { version = "0.3.68", features = ["Window"], optional = true }
-js-sys = { version = "0.3.68", optional = true }
-tokio = { version = "1.36.0", default-features = false, features = [
-    "time",
-    "rt",
-    "macros",
-    "rt-multi-thread",
-] }
+
 
 #registry
 idna = "1"
@@ -62,6 +53,28 @@ fxhash = "0.2.1"
 age = { version = "0.11.0", optional = true }
 url = "2.5.2"
 
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+
+
+tokio = { version = "1.36.0", default-features = false, features = [
+    "time",
+    "rt",
+    "macros",
+    "rt-multi-thread",
+
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1.36.0", default-features = false, features = [
+    "time",
+    "rt",
+    "macros",
+] }
+# wasm
+wasm-bindgen-futures = { version = "0.4.41" }
+web-sys = { version = "0.3.68", features = ["Window"] }
+js-sys = { version = "0.3.68" }
 
 [dev-dependencies]
 lwk_jade = { version = "0.8.0", features = ["test_emulator"] }
@@ -78,10 +91,9 @@ waterfalls = { version = "0.4.2", default-features = false, features = [
 
 [features]
 default = ["esplora", "electrum", "elements_rpc"]
-serial = ["lwk_jade/serial"]                                                   # this is a dev-dep feature
-esplora = ["reqwest/blocking", "age"]
+serial = ["lwk_jade/serial"]                      # this is a dev-dep feature
+esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
-esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "age"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]

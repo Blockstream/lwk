@@ -17,16 +17,15 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-#[cfg(feature = "esplora")]
+#[cfg(all(feature = "esplora", not(target_arch = "wasm32")))]
 pub(crate) mod esplora_client;
 
-#[cfg(any(feature = "esplora", feature = "esplora_wasm"))]
+#[cfg(feature = "esplora")]
 pub(crate) mod waterfalls;
 
 #[cfg(feature = "electrum")]
 pub(crate) mod electrum_client;
 
-#[cfg(feature = "esplora_wasm")]
 pub(crate) mod esplora_wasm_client;
 
 #[cfg(feature = "elements_rpc")]

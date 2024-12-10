@@ -929,7 +929,7 @@ fn wait_status_change(
     panic!("status didn't change");
 }
 
-#[cfg(feature = "esplora_wasm")]
+#[cfg(target_arch = "wasm32")]
 #[tokio::test]
 async fn test_esplora_wasm_client() {
     let server = setup_with_esplora();
@@ -964,7 +964,7 @@ async fn test_esplora_wasm_client() {
     assert!(wollet.tip().timestamp().is_some());
 }
 
-#[cfg(feature = "esplora_wasm")]
+#[cfg(feature = "esplora")]
 async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -> Update {
     for _ in 0..50 {
         let update = client.full_scan(wollet).await.unwrap();
@@ -979,7 +979,7 @@ async fn wait_update_with_txs(client: &mut EsploraWasmClient, wollet: &Wollet) -
 }
 
 #[ignore = "require network calls"]
-#[cfg(feature = "esplora_wasm")]
+#[cfg(feature = "esplora")]
 #[tokio::test]
 async fn test_esplora_wasm_waterfalls() {
     use std::time::Instant;
@@ -1014,7 +1014,7 @@ async fn test_esplora_wasm_waterfalls() {
     );
 }
 
-#[cfg(feature = "esplora_wasm")]
+#[cfg(feature = "esplora")]
 #[tokio::test]
 async fn test_esplora_wasm_local_waterfalls() {
     init_logging();

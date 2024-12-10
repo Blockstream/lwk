@@ -98,6 +98,7 @@ mod update;
 mod util;
 mod wollet;
 
+pub use crate::clients::esplora_wasm_client::EsploraWasmClient;
 pub use crate::clients::{BlockchainBackend, Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
@@ -119,16 +120,13 @@ pub use crate::wollet::full_scan_with_electrum_client;
 #[cfg(feature = "electrum")]
 pub use clients::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl};
 
-#[cfg(feature = "esplora")]
+#[cfg(all(feature = "esplora", not(target_arch = "wasm32")))]
 pub use clients::esplora_client::EsploraClient;
 
-#[cfg(feature = "esplora_wasm")]
-pub use clients::esplora_wasm_client::EsploraWasmClient;
-
-#[cfg(feature = "esplora_wasm")]
+#[cfg(feature = "esplora")]
 pub use clients::esplora_wasm_client::async_sleep;
 
-#[cfg(feature = "esplora_wasm")]
+#[cfg(feature = "esplora")]
 pub use age;
 
 #[cfg(feature = "elements_rpc")]

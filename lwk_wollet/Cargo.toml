@@ -47,7 +47,10 @@ web-sys = { version = "0.3.68", features = ["Window"], optional = true }
 js-sys = { version = "0.3.68", optional = true }
 tokio = { version = "1.36.0", default-features = false, features = [
     "time",
-], optional = true }
+    "rt",
+    "macros",
+    "rt-multi-thread",
+] }
 
 #registry
 idna = "0.4.0"
@@ -68,7 +71,6 @@ lwk_containers = { version = "0.8.0" }
 lwk_test_util = { version = "0.8.0" }
 
 tempfile = "3.8.0"
-tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 
 waterfalls = { version = "0.4.2", default-features = false, features = [
     "test_env",
@@ -76,17 +78,10 @@ waterfalls = { version = "0.4.2", default-features = false, features = [
 
 [features]
 default = ["esplora", "electrum", "elements_rpc"]
-serial = ["lwk_jade/serial"] # this is a dev-dep feature
+serial = ["lwk_jade/serial"]                                                   # this is a dev-dep feature
 esplora = ["reqwest/blocking", "age"]
 electrum = ["electrum-client"]
-esplora_wasm = [
-    "reqwest",
-    "wasm-bindgen-futures",
-    "web-sys",
-    "js-sys",
-    "tokio",
-    "age",
-]
+esplora_wasm = ["reqwest", "wasm-bindgen-futures", "web-sys", "js-sys", "age"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]

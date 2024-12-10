@@ -1,12 +1,15 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use super::{try_unblind, History};
+use super::{try_unblind, Capability, History};
 use crate::{
-    clients::waterfalls::{encrypt, WaterfallsResult},
-    clients::Data,
+    clients::{
+        waterfalls::{encrypt, WaterfallsResult},
+        Data,
+    },
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
+    wollet::WolletState,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
 };
 use age::x25519::Recipient;
@@ -36,7 +39,7 @@ pub struct EsploraWasmClient {
     waterfalls_server_recipient: Option<Recipient>,
 
     /// Avoid encrypting the descriptor field
-    waterfalls_avoid_encryption: bool,
+    pub(crate) waterfalls_avoid_encryption: bool,
 
     network: ElementsNetwork,
 }
@@ -63,7 +66,7 @@ impl EsploraWasmClient {
         }
     }
 
-    async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
+    pub(crate) async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
         let response = get_with_retry(&self.client, &self.tip_hash_url).await?;
         Ok(BlockHash::from_str(&response.text().await?)?)
     }
@@ -94,15 +97,25 @@ impl EsploraWasmClient {
         Ok(txid)
     }
 
-    async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
+    pub(crate) async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
         let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
         let response = get_with_retry(&self.client, &tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
 
         Ok(tx)
     }
+    pub(crate) async fn get_transactions(
+        &self,
+        txids: &[Txid],
+    ) -> Result<Vec<elements::Transaction>, Error> {
+        let mut result = vec![];
+        for txid in txids.iter().cloned() {
+            result.push(self.get_transaction(txid).await?);
+        }
+        Ok(result)
+    }
 
-    async fn get_headers(
+    pub(crate) async fn get_headers(
         &self,
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
@@ -132,7 +145,10 @@ impl EsploraWasmClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
-    async fn get_scripts_history(&self, scripts: &[&Script]) -> Result<Vec<Vec<History>>, Error> {
+    pub(crate) async fn get_scripts_history(
+        &self,
+        scripts: &[&Script],
+    ) -> Result<Vec<Vec<History>>, Error> {
         let mut result: Vec<_> = vec![];
         for script in scripts.iter() {
             let address = Address::from_script(script, None, self.network.address_params()).ok_or(
@@ -169,7 +185,7 @@ impl EsploraWasmClient {
             height_blockhash,
             height_timestamp,
         } = if self.waterfalls {
-            match self.get_history_waterfalls(&descriptor, store).await {
+            match self.get_history_waterfalls(&descriptor, wollet).await {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
                     self.get_history(&descriptor, store).await?
@@ -316,7 +332,7 @@ impl EsploraWasmClient {
     }
 
     /// Returns the waterfall server recipient key using a cached value or by asking the server its key
-    async fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
+    pub(crate) async fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
         match self.waterfalls_server_recipient.as_ref() {
             Some(r) => Ok(r.clone()),
             None => {
@@ -334,10 +350,10 @@ impl EsploraWasmClient {
         }
     }
 
-    async fn get_history_waterfalls(
+    pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
-        store: &Store,
+        store: &S,
     ) -> Result<Data, Error> {
         let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
         if descriptor.is_elip151() {
@@ -491,6 +507,14 @@ impl EsploraWasmClient {
         result.extend(heights_to_insert);
 
         Ok(result)
+    }
+
+    pub(crate) fn capabilities(&self) -> HashSet<Capability> {
+        if self.waterfalls {
+            vec![Capability::Waterfalls].into_iter().collect()
+        } else {
+            HashSet::new()
+        }
     }
 }
 

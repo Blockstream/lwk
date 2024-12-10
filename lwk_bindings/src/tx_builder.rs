@@ -39,8 +39,8 @@ impl TxBuilder {
     #[uniffi::constructor]
     pub fn new(network: &Network) -> Self {
         TxBuilder {
-            inner: Mutex::new(Some(lwk_wollet::TxBuilder::new((*network).into()))),
-            network: (*network).into(),
+            inner: Mutex::new(Some(lwk_wollet::TxBuilder::new(network.into()))),
+            network: network.into(),
         }
     }
 

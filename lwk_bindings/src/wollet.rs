@@ -33,7 +33,7 @@ impl Wollet {
         descriptor: &WolletDescriptor,
         persister: Arc<ForeignPersisterLink>,
     ) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_wollet::Wollet::new((*network).into(), persister, descriptor.into())?;
+        let inner = lwk_wollet::Wollet::new(network.into(), persister, descriptor.into())?;
 
         Ok(Arc::new(Self {
             inner: Mutex::new(inner),
@@ -49,11 +49,9 @@ impl Wollet {
     ) -> Result<Arc<Self>, LwkError> {
         let inner = match datadir {
             Some(path) => {
-                lwk_wollet::Wollet::with_fs_persist((*network).into(), descriptor.into(), path)?
+                lwk_wollet::Wollet::with_fs_persist(network.into(), descriptor.into(), path)?
             }
-            None => {
-                lwk_wollet::Wollet::new((*network).into(), NoPersist::new(), descriptor.into())?
-            }
+            None => lwk_wollet::Wollet::new(network.into(), NoPersist::new(), descriptor.into())?,
         };
 
         Ok(Arc::new(Self {

@@ -28,6 +28,12 @@ impl From<Network> for lwk_wollet::ElementsNetwork {
     }
 }
 
+impl From<&Network> for lwk_wollet::ElementsNetwork {
+    fn from(value: &Network) -> Self {
+        value.inner
+    }
+}
+
 #[uniffi::export]
 impl Network {
     #[uniffi::constructor]
@@ -78,7 +84,7 @@ impl Network {
             lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ } => "127.0.0.1:3000",
         };
 
-        EsploraClient::new(url)
+        EsploraClient::new(url, &self.inner.into())
     }
 
     pub fn is_mainnet(&self) -> bool {

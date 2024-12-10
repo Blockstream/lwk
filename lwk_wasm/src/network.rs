@@ -28,6 +28,12 @@ impl From<Network> for lwk_wollet::ElementsNetwork {
     }
 }
 
+impl From<&Network> for lwk_wollet::ElementsNetwork {
+    fn from(value: &Network) -> Self {
+        value.inner
+    }
+}
+
 impl From<Network> for lwk_jade::Network {
     fn from(value: Network) -> Self {
         match value.inner {

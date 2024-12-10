@@ -17,11 +17,13 @@ use reqwest::blocking::{self, Response};
 use serde::Deserialize;
 
 use crate::{
-    clients::waterfalls::{encrypt, WaterfallsResult},
-    clients::{Capability, Data, History},
+    clients::{
+        waterfalls::{encrypt, WaterfallsResult},
+        Capability, Data, History,
+    },
     store::Height,
     wollet::WolletState,
-    BlockchainBackend, Chain, Error, WolletDescriptor,
+    BlockchainBackend, Chain, ElementsNetwork, Error, WolletDescriptor,
 };
 
 #[derive(Debug)]
@@ -36,10 +38,12 @@ pub struct EsploraClient {
     waterfalls: bool,
     waterfalls_server_recipient: Option<Recipient>,
     waterfalls_avoid_encryption: bool,
+
+    network: ElementsNetwork,
 }
 
 impl EsploraClient {
-    pub fn new(url: &str) -> Self {
+    pub fn new(url: &str, network: ElementsNetwork) -> Self {
         Self {
             client: blocking::Client::new(),
             base_url: url.to_string(),
@@ -48,6 +52,7 @@ impl EsploraClient {
             waterfalls: false,
             waterfalls_server_recipient: None,
             waterfalls_avoid_encryption: false,
+            network,
         }
     }
 
@@ -60,8 +65,8 @@ impl EsploraClient {
 /// "Waterfalls" methods
 impl EsploraClient {
     /// Create a new Esplora client using the "waterfalls" endpoint
-    pub fn new_waterfalls(url: &str) -> Self {
-        let mut client = Self::new(url);
+    pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Self {
+        let mut client = Self::new(url, network);
         client.waterfalls = true;
         client
     }
@@ -323,7 +328,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::EsploraClient;
-    use crate::BlockchainBackend;
+    use crate::{BlockchainBackend, ElementsNetwork};
     use elements::{encode::Decodable, BlockHash};
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -351,7 +356,7 @@ mod tests {
     fn test_esplora_url(esplora_url: &str) {
         println!("{}", esplora_url);
 
-        let mut client = EsploraClient::new(esplora_url);
+        let mut client = EsploraClient::new(esplora_url, ElementsNetwork::default_regtest());
         let header = client.tip().unwrap();
         assert!(header.height > 100);
 

@@ -30,7 +30,7 @@ impl TxBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new(network: &Network) -> TxBuilder {
         TxBuilder {
-            inner: lwk_wollet::TxBuilder::new((*network).into()),
+            inner: lwk_wollet::TxBuilder::new(network.into()),
         }
     }
 

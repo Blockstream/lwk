@@ -12,7 +12,7 @@ impl EsploraClient {
     /// Creates a client, wrapper of [`lwk_wollet::EsploraWasmClient`]
     #[wasm_bindgen(constructor)]
     pub fn new(network: &Network, url: &str, waterfalls: bool) -> Self {
-        let inner = lwk_wollet::EsploraWasmClient::new((*network).into(), url, waterfalls);
+        let inner = lwk_wollet::EsploraWasmClient::new(network.into(), url, waterfalls);
         Self { inner }
     }
 

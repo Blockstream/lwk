@@ -249,7 +249,7 @@ impl EsploraWasmClient {
                 .cache
                 .heights
                 .keys()
-                .filter(|k| txid_height.get(*k).is_none())
+                .filter(|k| !txid_height.contains_key(*k))
                 .cloned()
                 .collect();
             let wollet_status = wollet.status();

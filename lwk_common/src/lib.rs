@@ -175,7 +175,10 @@ pub fn pset_balance(
                 // since the output witness, which includes the rangeproof,
                 // is not serialized.
                 let mut txout_with_rangeproof = txout.clone();
-                txout_with_rangeproof.witness.rangeproof = input.in_utxo_rangeproof.clone();
+                txout_with_rangeproof
+                    .witness
+                    .rangeproof
+                    .clone_from(&input.in_utxo_rangeproof);
                 let txout_secrets = txout_with_rangeproof
                     .unblind(&secp, private_blinding_key)
                     .map_err(|_| Error::InputMineNotUnblindable { idx })?;

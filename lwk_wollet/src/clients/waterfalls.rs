@@ -15,7 +15,7 @@ pub struct WaterfallsResult {
 ///
 /// This can be used to encrypt a descriptor to share with a "waterfalls" server
 pub fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
-    let recipients = vec![recipient];
+    let recipients = [recipient];
     let encryptor =
         age::Encryptor::with_recipients(recipients.iter().map(|e| e as &dyn age::Recipient))
             .expect("we provided a recipient");

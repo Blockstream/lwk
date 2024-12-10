@@ -231,7 +231,7 @@ pub trait BlockchainBackend {
             let txid_height_delete: Vec<_> = state
                 .heights()
                 .keys()
-                .filter(|k| txid_height.get(*k).is_none())
+                .filter(|k| !txid_height.contains_key(*k))
                 .cloned()
                 .collect();
             let wollet_status = state.wollet_status();

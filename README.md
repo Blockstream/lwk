@@ -197,7 +197,7 @@ $ cargo install lwk_cli --features serial
 
 ### Building LWK_CLI from source
 
-First you need [rust](https://www.rust-lang.org/tools/install), our MSRV is 1.75.0
+First you need [rust](https://www.rust-lang.org/tools/install), our MSRV is 1.78.0
 then you can build from source:
 
 ```sh

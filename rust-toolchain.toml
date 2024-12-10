@@ -1,5 +1,5 @@
 [toolchain]
-channel = "1.75.0"
+channel = "1.78.0"
 components = [
   "cargo",
   "clippy",
@@ -7,7 +7,6 @@ components = [
   "rust-std",
   "rust-analyzer",
   "rustc",
-  "rustfmt"
+  "rustfmt",
 ]
-targets = [ "wasm32-unknown-unknown" ]
-
+targets = ["wasm32-unknown-unknown"]

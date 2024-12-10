@@ -28,7 +28,10 @@ use crate::Error;
 
 #[derive(Debug)]
 enum AppSignerInner {
+    #[allow(dead_code)]
+    // allow dead_code otherwise warning on the second parameter which is needed only with the serial feature
     JadeId(XKeyIdentifier, Network),
+
     AvailableSigner(AnySigner),
     ExternalSigner(Fingerprint),
 }

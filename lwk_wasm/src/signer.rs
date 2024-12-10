@@ -51,6 +51,7 @@ impl Signer {
     }
 }
 
+#[allow(dead_code)]
 // Used internally to emulate a sync signer for some methods
 pub(crate) struct FakeSigner {
     pub(crate) paths: HashMap<bip32::DerivationPath, bip32::Xpub>,

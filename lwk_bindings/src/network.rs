@@ -75,7 +75,7 @@ impl Network {
         ElectrumClient::new(url, tls, validate_domain)
     }
 
-    pub fn default_esplora_client(&self) -> Arc<EsploraClient> {
+    pub fn default_esplora_client(&self) -> Result<Arc<EsploraClient>, LwkError> {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
             lwk_wollet::ElementsNetwork::LiquidTestnet => {

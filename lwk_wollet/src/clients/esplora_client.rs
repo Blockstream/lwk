@@ -20,22 +20,22 @@ pub struct EsploraClient {
 }
 
 impl EsploraClient {
-    pub fn new(url: &str, network: ElementsNetwork) -> Self {
-        Self {
-            rt: Runtime::new().unwrap(), // TODO
+    pub fn new(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
+        Ok(Self {
+            rt: Runtime::new()?,
             client: EsploraWasmClient::new(network, url, false),
-        }
+        })
     }
 }
 
 /// "Waterfalls" methods
 impl EsploraClient {
     /// Create a new Esplora client using the "waterfalls" endpoint
-    pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Self {
-        Self {
-            rt: Runtime::new().unwrap(), // TODO
+    pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
+        Ok(Self {
+            rt: Runtime::new()?,
             client: EsploraWasmClient::new(network, url, true),
-        }
+        })
     }
 
     /// Do not encrypt the descriptor when using the "waterfalls" endpoint
@@ -149,7 +149,8 @@ mod tests {
     fn test_esplora_url(esplora_url: &str) {
         println!("{}", esplora_url);
 
-        let mut client = EsploraClient::new(esplora_url, ElementsNetwork::default_regtest());
+        let mut client =
+            EsploraClient::new(esplora_url, ElementsNetwork::default_regtest()).unwrap();
         let header = client.tip().unwrap();
         assert!(header.height > 100);
 

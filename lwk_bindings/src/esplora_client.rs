@@ -14,20 +14,20 @@ pub struct EsploraClient {
 impl EsploraClient {
     /// Construct an Esplora Client
     #[uniffi::constructor]
-    pub fn new(url: &str, network: &Network) -> Arc<Self> {
-        let client = lwk_wollet::EsploraClient::new(url, network.into());
-        Arc::new(Self {
+    pub fn new(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
+        let client = lwk_wollet::EsploraClient::new(url, network.into())?;
+        Ok(Arc::new(Self {
             inner: Mutex::new(client),
-        })
+        }))
     }
 
     /// Construct an Esplora Client using Waterfalls endpoint
     #[uniffi::constructor]
-    pub fn new_waterfalls(url: &str, network: &Network) -> Arc<Self> {
-        let client = lwk_wollet::EsploraClient::new_waterfalls(url, network.into());
-        Arc::new(Self {
+    pub fn new_waterfalls(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
+        let client = lwk_wollet::EsploraClient::new_waterfalls(url, network.into())?;
+        Ok(Arc::new(Self {
             inner: Mutex::new(client),
-        })
+        }))
     }
 
     pub fn broadcast(&self, tx: &Transaction) -> Result<Arc<Txid>, LwkError> {

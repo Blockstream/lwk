@@ -1626,13 +1626,14 @@ fn test_clients() {
     let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
 
     let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let esplora_client = EsploraClient::new(&esplora_url, ElementsNetwork::default_regtest());
+    let esplora_client =
+        EsploraClient::new(&esplora_url, ElementsNetwork::default_regtest()).unwrap();
 
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
 
     let esplora_waterfalls_client =
-        EsploraClient::new_waterfalls(&esplora_url, ElementsNetwork::default_regtest());
+        EsploraClient::new_waterfalls(&esplora_url, ElementsNetwork::default_regtest()).unwrap();
     assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
 }
 
@@ -1664,7 +1665,8 @@ fn test_waterfalls_esplora() {
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
 
     let mut client =
-        EsploraClient::new_waterfalls(test_env.base_url(), ElementsNetwork::default_regtest());
+        EsploraClient::new_waterfalls(test_env.base_url(), ElementsNetwork::default_regtest())
+            .unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -1711,7 +1713,7 @@ fn test_waterfalls_esplora() {
 fn test_esplora_client() {
     let server = setup_with_esplora();
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let client = EsploraClient::new(&url, ElementsNetwork::default_regtest());
+    let client = EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();

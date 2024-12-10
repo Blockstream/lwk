@@ -167,7 +167,7 @@ wasm:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora_wasm,serial
+    - cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora,serial
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features

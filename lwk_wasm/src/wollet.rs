@@ -140,7 +140,7 @@ impl Tip {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 #[wasm_bindgen]
 pub fn big_number() -> Result<JsValue, Error> {
     use serde::Serialize;
@@ -151,7 +151,7 @@ pub fn big_number() -> Result<JsValue, Error> {
     Ok(big.serialize(&serializer)?)
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
 
     use crate::{Network, Wollet, WolletDescriptor};

@@ -101,7 +101,7 @@ impl PsetInput {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::Pset;
     use wasm_bindgen_test::*;

@@ -87,7 +87,7 @@ impl OptionWalletTxOut {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::WalletTxOut;
     use lwk_wollet::elements::{self, hex::ToHex};

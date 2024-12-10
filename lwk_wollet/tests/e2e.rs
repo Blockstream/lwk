@@ -929,7 +929,7 @@ fn wait_status_change(
     panic!("status didn't change");
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "esplora")]
 #[tokio::test]
 async fn test_esplora_wasm_client() {
     let server = setup_with_esplora();

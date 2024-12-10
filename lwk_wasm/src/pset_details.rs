@@ -201,7 +201,7 @@ impl From<lwk_common::Issuance> for Issuance {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use std::collections::HashMap;
 

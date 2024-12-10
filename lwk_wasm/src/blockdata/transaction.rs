@@ -107,7 +107,7 @@ impl Txid {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::{AssetId, Transaction, Txid};
     use wasm_bindgen_test::*;

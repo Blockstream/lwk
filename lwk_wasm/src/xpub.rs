@@ -51,7 +51,7 @@ impl Xpub {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::Xpub;
     use lwk_wollet::bitcoin::bip32;

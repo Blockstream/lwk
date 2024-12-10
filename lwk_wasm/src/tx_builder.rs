@@ -161,7 +161,7 @@ impl Display for TxBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use wasm_bindgen_test::*;
 

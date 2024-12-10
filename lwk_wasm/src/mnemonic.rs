@@ -51,7 +51,7 @@ impl Mnemonic {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::Mnemonic;
     use lwk_signer::bip39;

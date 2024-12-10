@@ -77,7 +77,7 @@ impl lwk_common::Signer for FakeSigner {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::{Mnemonic, Pset, Signer};
     use lwk_wollet::elements;

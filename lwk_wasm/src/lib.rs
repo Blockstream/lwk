@@ -46,7 +46,7 @@ pub use update::Update;
 pub use wollet::Wollet;
 pub use xpub::Xpub;
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use std::collections::HashMap;
 

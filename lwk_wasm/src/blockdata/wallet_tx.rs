@@ -72,7 +72,7 @@ impl WalletTx {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use crate::WalletTx;
     use lwk_wollet::elements::{self, hex::FromHex, pset::serialize::Deserialize};

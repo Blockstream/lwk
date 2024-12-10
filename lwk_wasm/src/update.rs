@@ -68,7 +68,7 @@ impl Update {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use lwk_wollet::hashes::hex::FromHex;
     use wasm_bindgen_test::*;

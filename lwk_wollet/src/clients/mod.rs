@@ -321,7 +321,7 @@ pub trait BlockchainBackend {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 /// Position of a transaction involving a certain script
 pub struct History {
     /// Transaction ID

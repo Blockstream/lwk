@@ -4,7 +4,7 @@ use lwk_wollet::{clients::blocking, BlockchainBackend};
 
 use crate::{LwkError, Network, Transaction, Txid, Update, Wollet};
 
-/// Wrapper over [`lwk_wollet::EsploraClient`]
+/// Wrapper over [`blocking::EsploraClient`]
 #[derive(uniffi::Object, Debug)]
 pub struct EsploraClient {
     inner: Mutex<blocking::EsploraClient>,

@@ -82,7 +82,7 @@
 //! # }
 //! ```
 
-mod clients;
+pub mod clients;
 mod config;
 mod descriptor;
 mod domain;
@@ -119,9 +119,6 @@ pub use crate::wollet::{Tip, Wollet};
 pub use crate::wollet::full_scan_with_electrum_client;
 #[cfg(feature = "electrum")]
 pub use clients::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl};
-
-#[cfg(all(feature = "esplora", not(target_arch = "wasm32")))]
-pub use clients::esplora_client::EsploraClient;
 
 #[cfg(feature = "esplora")]
 pub use clients::asyncr::esplora::async_sleep;

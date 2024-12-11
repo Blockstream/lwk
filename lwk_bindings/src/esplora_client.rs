@@ -1,13 +1,13 @@
 use std::sync::{Arc, Mutex};
 
-use lwk_wollet::BlockchainBackend;
+use lwk_wollet::{clients::blocking, BlockchainBackend};
 
 use crate::{LwkError, Network, Transaction, Txid, Update, Wollet};
 
 /// Wrapper over [`lwk_wollet::EsploraClient`]
 #[derive(uniffi::Object, Debug)]
 pub struct EsploraClient {
-    inner: Mutex<lwk_wollet::EsploraClient>,
+    inner: Mutex<blocking::EsploraClient>,
 }
 
 #[uniffi::export]
@@ -15,7 +15,7 @@ impl EsploraClient {
     /// Construct an Esplora Client
     #[uniffi::constructor]
     pub fn new(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let client = lwk_wollet::EsploraClient::new(url, network.into())?;
+        let client = blocking::EsploraClient::new(url, network.into())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
         }))
@@ -24,7 +24,7 @@ impl EsploraClient {
     /// Construct an Esplora Client using Waterfalls endpoint
     #[uniffi::constructor]
     pub fn new_waterfalls(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let client = lwk_wollet::EsploraClient::new_waterfalls(url, network.into())?;
+        let client = blocking::EsploraClient::new_waterfalls(url, network.into())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
         }))

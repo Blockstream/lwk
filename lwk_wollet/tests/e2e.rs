@@ -3,6 +3,7 @@ mod test_ledger;
 mod test_wollet;
 
 use crate::test_jade::jade_setup;
+use clients::blocking;
 use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::deserialize;
@@ -1627,17 +1628,21 @@ fn test_clients() {
 
     let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
     let esplora_client =
-        EsploraClient::new(&esplora_url, ElementsNetwork::default_regtest()).unwrap();
+        clients::blocking::EsploraClient::new(&esplora_url, ElementsNetwork::default_regtest())
+            .unwrap();
 
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
 
-    let esplora_waterfalls_client =
-        EsploraClient::new_waterfalls(&esplora_url, ElementsNetwork::default_regtest()).unwrap();
+    let esplora_waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
+        &esplora_url,
+        ElementsNetwork::default_regtest(),
+    )
+    .unwrap();
     assert_eq!(esplora_waterfalls_client.capabilities().len(), 1);
 }
 
-fn wait_esplora_tx_update(client: &mut EsploraClient, wollet: &Wollet) -> Update {
+fn wait_esplora_tx_update(client: &mut blocking::EsploraClient, wollet: &Wollet) -> Update {
     for _ in 0..50 {
         let update = client.full_scan(wollet).unwrap();
         if let Some(update) = update {
@@ -1655,6 +1660,7 @@ fn wait_esplora_tx_update(client: &mut EsploraClient, wollet: &Wollet) -> Update
 fn test_waterfalls_esplora() {
     // TODO: use TestWollet also for EsploraClient
     // FIXME: add launch_sync or similar to waterfalls
+
     init_logging();
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
@@ -1664,9 +1670,11 @@ fn test_waterfalls_esplora() {
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
 
-    let mut client =
-        EsploraClient::new_waterfalls(test_env.base_url(), ElementsNetwork::default_regtest())
-            .unwrap();
+    let mut client = clients::blocking::EsploraClient::new_waterfalls(
+        test_env.base_url(),
+        ElementsNetwork::default_regtest(),
+    )
+    .unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -1713,7 +1721,8 @@ fn test_waterfalls_esplora() {
 fn test_esplora_client() {
     let server = setup_with_esplora();
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let client = EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
+    let client =
+        clients::blocking::EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
 
     let signer = generate_signer();
     let view_key = generate_view_key();

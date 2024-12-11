@@ -17,8 +17,8 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-#[cfg(all(feature = "esplora", not(target_arch = "wasm32")))]
-pub(crate) mod esplora_client;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod blocking;
 
 #[cfg(feature = "esplora")]
 pub(crate) mod waterfalls;

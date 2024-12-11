@@ -30,7 +30,7 @@ use std::{
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
-pub struct EsploraWasmClient {
+pub struct EsploraClient {
     client: reqwest::Client,
     base_url: String,
     tip_hash_url: String,
@@ -44,7 +44,7 @@ pub struct EsploraWasmClient {
     network: ElementsNetwork,
 }
 
-impl EsploraWasmClient {
+impl EsploraClient {
     /// Creates a new esplora client using the given `url` as endpoint.
     ///
     /// If `waterfalls` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
@@ -602,9 +602,9 @@ struct Status {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ElementsNetwork;
+    use crate::{clients::asyncr::async_sleep, ElementsNetwork};
 
-    use super::EsploraWasmClient;
+    use super::EsploraClient;
     use elements::{encode::Decodable, BlockHash};
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -626,7 +626,7 @@ mod tests {
     #[tokio::test]
     async fn sleep_test() {
         // TODO this doesn't last a second when run, is it right?
-        super::async_sleep(1).await;
+        async_sleep(1).await;
     }
 
     #[ignore]
@@ -644,7 +644,7 @@ mod tests {
         } else {
             ElementsNetwork::default_regtest()
         };
-        let mut client = EsploraWasmClient::new(network, esplora_url, false);
+        let mut client = EsploraClient::new(network, esplora_url, false);
         let header = client.tip().await.unwrap();
         assert!(header.height > 100);
 

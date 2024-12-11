@@ -4,10 +4,10 @@ use std::collections::{HashMap, HashSet};
 use tokio::runtime::Runtime;
 
 use crate::{
-    clients::{Capability, Data, History},
+    clients::{asyncr, Capability, Data, History},
     store::Height,
     wollet::WolletState,
-    BlockchainBackend, ElementsNetwork, Error, EsploraWasmClient, WolletDescriptor,
+    BlockchainBackend, ElementsNetwork, Error, WolletDescriptor,
 };
 
 #[derive(Debug)]
@@ -15,14 +15,14 @@ use crate::{
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
 pub struct EsploraClient {
     rt: Runtime,
-    client: EsploraWasmClient,
+    client: asyncr::EsploraClient,
 }
 
 impl EsploraClient {
     pub fn new(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
-            client: EsploraWasmClient::new(network, url, false),
+            client: asyncr::EsploraClient::new(network, url, false),
         })
     }
 }
@@ -33,7 +33,7 @@ impl EsploraClient {
     pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
-            client: EsploraWasmClient::new(network, url, true),
+            client: asyncr::EsploraClient::new(network, url, true),
         })
     }
 

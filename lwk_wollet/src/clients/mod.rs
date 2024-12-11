@@ -26,7 +26,7 @@ pub(crate) mod waterfalls;
 #[cfg(feature = "electrum")]
 pub(crate) mod electrum_client;
 
-pub(crate) mod esplora_wasm_client;
+pub(crate) mod asyncr;
 
 #[cfg(feature = "elements_rpc")]
 pub(crate) mod elements_rpc_client;

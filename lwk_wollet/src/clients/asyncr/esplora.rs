@@ -1,7 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use super::{try_unblind, Capability, History};
+use crate::clients::{try_unblind, Capability, History};
 use crate::{
     clients::{
         waterfalls::{encrypt, WaterfallsResult},

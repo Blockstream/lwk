@@ -98,7 +98,7 @@ mod update;
 mod util;
 mod wollet;
 
-pub use crate::clients::esplora_wasm_client::EsploraWasmClient;
+pub use crate::clients::asyncr::esplora::EsploraWasmClient;
 pub use crate::clients::{BlockchainBackend, Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
@@ -124,7 +124,7 @@ pub use clients::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl}
 pub use clients::esplora_client::EsploraClient;
 
 #[cfg(feature = "esplora")]
-pub use clients::esplora_wasm_client::async_sleep;
+pub use clients::asyncr::esplora::async_sleep;
 
 #[cfg(feature = "esplora")]
 pub use age;

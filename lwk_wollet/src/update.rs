@@ -48,7 +48,7 @@ impl DownloadTxResult {
     }
 }
 
-/// Passing a wallet to [`crate::BlockchainBackend::full_scan()`] returns this structure which
+/// Passing a wallet to [`crate::clients::blocking::BlockchainBackend::full_scan()`] returns this structure which
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {

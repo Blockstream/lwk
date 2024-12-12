@@ -1,5 +1,4 @@
-use super::try_unblind;
-use crate::{Chain, ElementsNetwork, Error, WalletTxOut, WolletDescriptor};
+use crate::{clients::try_unblind, Chain, ElementsNetwork, Error, WalletTxOut, WolletDescriptor};
 
 use std::collections::HashMap;
 

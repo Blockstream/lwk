@@ -25,9 +25,6 @@ pub(crate) mod waterfalls;
 
 pub mod asyncr;
 
-#[cfg(feature = "elements_rpc")]
-pub(crate) mod elements_rpc_client;
-
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LastUnused {
     pub internal: u32,

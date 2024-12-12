@@ -123,7 +123,7 @@ pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions, El
 pub use age;
 
 #[cfg(feature = "elements_rpc")]
-pub use clients::elements_rpc_client::ElementsRpcClient;
+pub use clients::blocking::ElementsRpcClient;
 
 #[cfg(feature = "elements_rpc")]
 pub use bitcoincore_rpc;

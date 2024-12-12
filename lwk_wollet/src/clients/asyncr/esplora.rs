@@ -3,16 +3,14 @@
 
 use crate::clients::{try_unblind, Capability, History};
 use crate::{
-    clients::{
-        waterfalls::{encrypt, WaterfallsResult},
-        Data,
-    },
+    clients::Data,
     store::{Height, Store, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
     wollet::WolletState,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
 };
 use age::x25519::Recipient;
+use base64::Engine;
 use elements::{bitcoin::bip32::ChildNumber, Address, OutPoint};
 use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
@@ -23,6 +21,7 @@ use reqwest::Response;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
+    io::Write,
     str::FromStr,
     sync::atomic,
 };
@@ -596,6 +595,32 @@ struct EsploraTx {
 struct Status {
     block_height: Option<i32>,
     block_hash: Option<BlockHash>,
+}
+
+/// The result of a "waterfalls" descriptor endpoint call
+#[derive(Deserialize)]
+struct WaterfallsResult {
+    pub txs_seen: HashMap<String, Vec<Vec<History>>>,
+    pub page: u16,
+}
+
+/// Encrypt a plaintext using a recipient key
+///
+/// This can be used to encrypt a descriptor to share with a "waterfalls" server
+fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
+    let recipients = [recipient];
+    let encryptor =
+        age::Encryptor::with_recipients(recipients.iter().map(|e| e as &dyn age::Recipient))
+            .expect("we provided a recipient");
+
+    let mut encrypted = vec![];
+    let mut writer = encryptor
+        .wrap_output(&mut encrypted)
+        .map_err(|_| Error::CannotEncrypt)?;
+    writer.write_all(plaintext.as_ref())?;
+    writer.finish()?;
+    let result = base64::prelude::BASE64_STANDARD_NO_PAD.encode(encrypted);
+    Ok(result)
 }
 
 #[cfg(test)]

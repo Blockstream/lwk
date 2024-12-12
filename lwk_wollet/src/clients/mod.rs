@@ -20,9 +20,6 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 pub mod blocking;
 
-#[cfg(feature = "esplora")]
-pub(crate) mod waterfalls;
-
 pub mod asyncr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

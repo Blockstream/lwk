@@ -432,6 +432,10 @@ impl EsploraClient {
         self.waterfalls_avoid_encryption = true;
     }
 
+    pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
+        self.waterfalls_server_recipient = Some(recipient);
+    }
+
     async fn download_txs(
         &self,
         history_txs_id: &HashSet<Txid>,

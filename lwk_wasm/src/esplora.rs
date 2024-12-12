@@ -1,5 +1,5 @@
 use crate::{Error, Network, Pset, Txid, Update, Wollet};
-use lwk_wollet::clients::asyncr;
+use lwk_wollet::{age, clients::asyncr};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`asyncr::EsploraClient`]
@@ -27,6 +27,14 @@ impl EsploraClient {
         let tx = pset.extract_tx()?;
         let txid = self.inner.broadcast(&(tx.into())).await?;
         Ok(txid.into())
+    }
+
+    pub async fn set_waterfalls_server_recipient(&mut self, recipient: &str) -> Result<(), Error> {
+        let recipient: age::x25519::Recipient = recipient
+            .parse()
+            .map_err(|e: &str| Error::Generic(e.to_string()))?;
+        self.inner.set_waterfalls_server_recipient(recipient);
+        Ok(())
     }
 }
 

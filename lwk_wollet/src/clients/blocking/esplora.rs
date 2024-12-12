@@ -47,6 +47,10 @@ impl EsploraClient {
     pub fn waterfalls_server_recipient(&mut self) -> Result<Recipient, Error> {
         self.rt.block_on(self.client.waterfalls_server_recipient())
     }
+
+    pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
+        self.client.set_waterfalls_server_recipient(recipient);
+    }
 }
 
 impl BlockchainBackend for EsploraClient {

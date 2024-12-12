@@ -88,7 +88,7 @@ mod descriptor;
 mod domain;
 mod error;
 mod model;
-mod pegin;
+pub mod pegin;
 mod persister;
 mod pset_create;
 mod registry;
@@ -98,7 +98,7 @@ mod update;
 mod util;
 mod wollet;
 
-pub use crate::clients::{blocking::BlockchainBackend, Capability, History};
+pub use crate::clients::{Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
@@ -106,7 +106,7 @@ pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,
 };
-pub use crate::pegin::{fed_peg_script, fetch_last_full_header};
+pub use crate::pegin::fed_peg_script;
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};

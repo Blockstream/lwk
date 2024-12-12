@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use elements::{bitcoin, BlockHeader};
 
-use crate::{BlockchainBackend, ElementsNetwork, Error};
+use crate::{ElementsNetwork, Error};
 
 /// Returns the height of the block containing full federation parameters
 ///
@@ -22,7 +22,9 @@ pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
     }
 }
 
-pub fn fetch_last_full_header<B: BlockchainBackend>(
+// TODO move this in the trait
+#[cfg(not(target_arch = "wasm32"))]
+pub fn fetch_last_full_header<B: crate::clients::blocking::BlockchainBackend>(
     client: &B,
     network: ElementsNetwork,
     current_tip: u32,

@@ -3,7 +3,7 @@ mod test_ledger;
 mod test_wollet;
 
 use crate::test_jade::jade_setup;
-use clients::blocking;
+use clients::blocking::{self, BlockchainBackend};
 use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::deserialize;
@@ -14,6 +14,7 @@ use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_signer::*;
 use lwk_test_util::*;
+use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
 use test_wollet::{generate_signer, test_client_electrum, TestWollet};

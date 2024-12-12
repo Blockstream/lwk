@@ -7,8 +7,10 @@ use crate::{
     clients::{asyncr, Capability, Data, History},
     store::Height,
     wollet::WolletState,
-    BlockchainBackend, ElementsNetwork, Error, WolletDescriptor,
+    ElementsNetwork, Error, WolletDescriptor,
 };
+
+use super::BlockchainBackend;
 
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
@@ -95,7 +97,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::EsploraClient;
-    use crate::{BlockchainBackend, ElementsNetwork};
+    use crate::{clients::blocking::BlockchainBackend, ElementsNetwork};
     use elements::{encode::Decodable, BlockHash};
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {

@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use lwk_wollet::{clients::blocking, BlockchainBackend};
+use lwk_wollet::clients::blocking::{self, BlockchainBackend};
 
 use crate::{LwkError, Network, Transaction, Txid, Update, Wollet};
 

@@ -14,11 +14,11 @@ use lwk_test_util::{
     TestElectrumServer,
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
+use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::ElementsNetwork;
 use lwk_wollet::Tip;
 use lwk_wollet::{
-    AddressResult, BlockchainBackend, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx,
-    Wollet, WolletDescriptor,
+    AddressResult, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx, Wollet, WolletDescriptor,
 };
 use tempfile::TempDir;
 

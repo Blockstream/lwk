@@ -33,6 +33,7 @@ use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
+use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
@@ -41,7 +42,7 @@ use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, Ws
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
 use lwk_wollet::Wollet;
-use lwk_wollet::{BlockchainBackend, WolletDescriptor};
+use lwk_wollet::WolletDescriptor;
 use serde_json::Value;
 
 use crate::explorer::{get_registry_data, get_tx};

@@ -1,6 +1,6 @@
 use crate::store::Height;
+use crate::Error;
 use crate::History;
-use crate::{BlockchainBackend, Error};
 
 use electrum_client::ScriptStatus;
 use electrum_client::{Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::net::IpAddr;
 use std::str::FromStr;
+
+use super::BlockchainBackend;
 
 /// A client to issue TCP requests to an electrum server.
 pub struct ElectrumClient {

@@ -56,7 +56,7 @@ pub struct Data {
     pub height_timestamp: HashMap<Height, Timestamp>,
 }
 
-/// Capabilities that can be supported by a [`BlockchainBackend`]
+/// Capabilities that can be supported by a [`blocking::BlockchainBackend`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Capability {
     /// Can interfact with a Waterfalls data source

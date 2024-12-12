@@ -117,7 +117,7 @@ pub use crate::wollet::{Tip, Wollet};
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_with_electrum_client;
 #[cfg(feature = "electrum")]
-pub use clients::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl};
+pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl};
 
 #[cfg(feature = "esplora")]
 pub use age;
@@ -129,7 +129,7 @@ pub use clients::elements_rpc_client::ElementsRpcClient;
 pub use bitcoincore_rpc;
 
 #[cfg(feature = "electrum")]
-pub use crate::clients::electrum_client::UrlError;
+pub use crate::clients::blocking::electrum_client::UrlError;
 
 pub use elements_miniscript;
 pub use elements_miniscript::elements;

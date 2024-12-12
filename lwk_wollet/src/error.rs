@@ -185,7 +185,7 @@ pub enum Error {
 
     #[cfg(feature = "electrum")]
     #[error(transparent)]
-    Url(#[from] crate::clients::electrum_client::UrlError),
+    Url(#[from] crate::clients::blocking::electrum_client::UrlError),
 }
 
 // cannot derive automatically with this error because of trait bound

@@ -23,9 +23,6 @@ pub mod blocking;
 #[cfg(feature = "esplora")]
 pub(crate) mod waterfalls;
 
-#[cfg(feature = "electrum")]
-pub(crate) mod electrum_client;
-
 pub mod asyncr;
 
 #[cfg(feature = "elements_rpc")]

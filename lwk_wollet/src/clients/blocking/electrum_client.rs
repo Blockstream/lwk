@@ -1,5 +1,7 @@
 use crate::store::Height;
-use crate::Error;
+use crate::History;
+use crate::{BlockchainBackend, Error};
+
 use electrum_client::ScriptStatus;
 use electrum_client::{Client, ConfigBuilder, ElectrumApi, GetHistoryRes};
 use elements::encode::deserialize as elements_deserialize;
@@ -10,8 +12,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::net::IpAddr;
 use std::str::FromStr;
-
-use super::History;
 
 /// A client to issue TCP requests to an electrum server.
 pub struct ElectrumClient {
@@ -164,7 +164,7 @@ impl ElectrumClient {
         Ok(self.client.ping()?)
     }
 }
-impl super::BlockchainBackend for ElectrumClient {
+impl BlockchainBackend for ElectrumClient {
     fn tip(&mut self) -> Result<BlockHeader, Error> {
         let mut popped_header = None;
         while let Some(header) = self.client.block_headers_pop_raw()? {

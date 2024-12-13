@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <title>Liquid Wallet Kit in the browser</title>
+  <meta name="description" content="A proof of concept of the LWK (Liquid Wallet Kit) running in the browser.">
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon"
+    href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302" />
+</head>
+
+<body>
+  <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+  <script src="./bootstrap.js"></script>
+
+  <p>
+    This is a proof of concept of <a href="https://github.com/blockstream/lwk">LWK</a> (Liquid Wallet Kit) running in
+    the browser via WASM.
+  </p>
+  <p>
+    Scan a confidential transaction descriptor
+    <a href="https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki">[ELIP150]</a> and prints the
+    balance.
+  </p>
+
+  <p>
+    Works on Liquid Mainnet and Liquid Testnet.
+  </p>
+
+  <div>
+    <label for="descriptor">CT descriptor:</label>
+    <br />
+    <textarea id="descriptor" name="descriptor" rows="4"
+      cols="80">ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#utnwh7dr</textarea>
+  </div>
+
+  <button disabled id="scan-button" type="button">Scan</button>
+
+  <p>
+    Balance:
+
+  <div id="balance" style="word-break: break-word;"></div>
+  </p>
+
+  <br /><br /><br />
+  <p>
+    Known issues:
+  <ul>
+    <li>WASM file size is huge (the scan button is disabled until it is fully loaded)</li>
+    <li>The scan takes time, network calls to <a href="https://github.com/Blockstream/esplora">esplora</a> are
+      sequential but
+      concurrent requests would hit rate limiting</li>
+    <li>Some more calls than the needed gap limit size (20) are made</li>
+  </ul>
+  </p>
+
+  <p>
+    Jade
+  </p>
+  <label for="network-select">Liquid network:</label>
+
+  <select name="network-select" id="network-select">
+    <option value="mainnet">Mainnet</option>
+    <option value="testnet" selected>Testnet</option>
+  </select>
+  <button disabled id="jade-button" type="button">Ask Jade master xpub</button>
+  <div id="jade-text"></div>
+
+</body>
+
+</html>

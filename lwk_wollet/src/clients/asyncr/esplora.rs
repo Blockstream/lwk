@@ -73,6 +73,10 @@ impl EsploraClient {
     pub async fn tip(&mut self) -> Result<elements::BlockHeader, crate::Error> {
         let last_block_hash = self.last_block_hash().await?;
 
+        self.header(last_block_hash).await
+    }
+
+    async fn header(&mut self, last_block_hash: BlockHash) -> Result<elements::BlockHeader, Error> {
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
         let response = get_with_retry(&self.client, &header_url).await?;
         let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
@@ -183,6 +187,7 @@ impl EsploraClient {
             last_unused,
             height_blockhash,
             height_timestamp,
+            tip,
         } = if self.waterfalls {
             match self.get_history_waterfalls(&descriptor, wollet).await {
                 Ok(d) => d,
@@ -195,7 +200,11 @@ impl EsploraClient {
             self.get_history(&descriptor, store).await?
         };
 
-        let tip = self.tip().await?;
+        let tip = if let Some(tip) = tip {
+            self.header(tip).await?
+        } else {
+            self.tip().await?
+        };
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
         let new_txs = self
@@ -354,7 +363,7 @@ impl EsploraClient {
         descriptor: &WolletDescriptor,
         store: &S,
     ) -> Result<Data, Error> {
-        let descriptor_url = format!("{}/v1/waterfalls", self.base_url);
+        let descriptor_url = format!("{}/v2/waterfalls", self.base_url);
         if descriptor.is_elip151() {
             return Err(Error::UsingWaterfallsWithElip151);
         }
@@ -424,6 +433,7 @@ impl EsploraClient {
                 }
             }
         }
+        data.tip = waterfalls_result.tip;
 
         Ok(data)
     }
@@ -606,6 +616,7 @@ struct Status {
 struct WaterfallsResult {
     pub txs_seen: HashMap<String, Vec<Vec<History>>>,
     pub page: u16,
+    pub tip: Option<BlockHash>,
 }
 
 /// Encrypt a plaintext using a recipient key

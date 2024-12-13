@@ -54,6 +54,7 @@ pub struct Data {
     pub last_unused: LastUnused,
     pub height_blockhash: HashMap<Height, BlockHash>,
     pub height_timestamp: HashMap<Height, Timestamp>,
+    pub tip: Option<BlockHash>,
 }
 
 /// Capabilities that can be supported by a [`blocking::BlockchainBackend`]

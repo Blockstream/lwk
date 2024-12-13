@@ -28,7 +28,7 @@ pub(crate) mod elements_rpc_client;
 
 /// Trait implemented by types that can fetch data from a blockchain data source.
 pub trait BlockchainBackend {
-    /// Get the blockchain latest block
+    /// Get the blockchain latest block header
     fn tip(&mut self) -> Result<BlockHeader, Error>;
 
     /// Broadcast a transaction
@@ -135,6 +135,7 @@ pub trait BlockchainBackend {
             last_unused,
             height_blockhash,
             height_timestamp: _height_timestamp,
+            tip: _,
         } = if self.capabilities().contains(&Capability::Waterfalls) {
             match self.get_history_waterfalls(&descriptor, state) {
                 Ok(d) => d,

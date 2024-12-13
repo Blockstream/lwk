@@ -85,7 +85,7 @@ lwk_test_util = { version = "0.8.0" }
 
 tempfile = "3.8.0"
 
-waterfalls = { version = "0.4.2", default-features = false, features = [
+waterfalls = { version = "0.4.3", default-features = false, features = [
     "test_env",
 ] }
 

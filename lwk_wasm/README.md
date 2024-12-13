@@ -6,32 +6,8 @@ Liquid Wallet Kit working in the WASM environment.
 
 [Available](https://www.npmjs.com/package/lwk_wasm) as npm package.
 
-Examples:
-* Basic [example](https://blockstream.github.io/lwk/) integrating the npm package in a web app.
-* Basic working liquid [wallet](https://liquidwebwallet.org/). Works as CT descriptor watch-only wallet or connected to a Jade.
+For an example usage see the [Liquid Web Wallet](https://liquidwebwallet.org/) ([source](https://github.com/RCasatta/liquid-web-wallet)). Works as CT descriptor watch-only wallet or connected to a Jade.
 
-## For LWK library consumers (front-end developers)
-
-The demo page showcasing some of the library functionalities can be run locally with:
-
-```shell
-$ cd lwk_wasm/www
-$ npm install
-$ npm run start
-```
-
-Open the browser at `http://localhost:8080`
-
-Any changes in `index.html` and `index.js` are live reloaded in the browser.
-
-Tested with:
-
-```shell
-$ node --version
-v20.11.1
-$ npm --version
-10.2.4
-```
 
 ## For LWK Library developers
 
@@ -48,8 +24,17 @@ To enable web-serial:
 $ RUSTFLAGS="--cfg=web_sys_unstable_apis" wasm-pack build --dev --features serial
 ```
 
+## For LWK library consumers (front-end developers)
 
-Then follow the library consumer section.
+Download the Liquid Web Wallet source
+
+```shell
+$ git clone https://github.com/RCasatta/liquid-web-wallet
+$ npm install
+$ npm run start
+```
+
+Open the browser at `http://localhost:8080`
 
 ### Test
 
@@ -104,22 +89,4 @@ With [twiggy](https://github.com/rustwasm/twiggy) is then possible to analyze th
 
 ```shell
 twiggy top -n 10 pkg/lwk_wasm_bg.wasm
-```
-
-### Publish web page
-
-After building NPM package from previous section
-
-```shell
-$ git checkout master
-$ cd lwk_wasm/www
-$ npm run build
-$ cd -
-$ git checkout gh-pages
-$ git reset --hard HEAD~1
-$ git rebase master
-$ cp lwk_wasm/www/dist/* docs/
-$ git add docs
-$ git commit -m "gh-pages: update site"
-$ git push github gh-pages
 ```

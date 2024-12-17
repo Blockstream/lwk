@@ -2,7 +2,7 @@
   description = "wasm-pack setup";
 
   inputs = {
-    nixpkgs = { url = "github:nixos/nixpkgs/nixos-23.11"; };
+    nixpkgs = { url = "github:nixos/nixpkgs/nixos-24.11"; };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs = {
@@ -27,7 +27,7 @@
               cargo
               wasm-pack
               clang_15
-              nodejs_21
+              nodejs_22
               (rust-bin.stable.latest.default.override {
                 extensions = [ "rust-src" ];
                 targets = [ "wasm32-unknown-unknown" ];

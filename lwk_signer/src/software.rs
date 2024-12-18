@@ -101,6 +101,10 @@ impl SwSigner {
         })
     }
 
+    pub fn is_mainnet(&self) -> bool {
+        self.xprv.network == bitcoin::NetworkKind::Main
+    }
+
     pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
         Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))

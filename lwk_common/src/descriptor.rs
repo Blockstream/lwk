@@ -179,6 +179,16 @@ pub enum Bip {
     Bip87,
 }
 
+impl std::fmt::Display for Bip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Bip::Bip84 => write!(f, "bip84"),
+            Bip::Bip49 => write!(f, "bip49"),
+            Bip::Bip87 => write!(f, "bip87"),
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 #[error("Invalid bip  variant '{0}' supported variant are: 'bip84'")]
 pub struct InvalidBipVariant(String);
@@ -212,5 +222,22 @@ impl FromStr for Multisig {
             "wsh" => Multisig::Wsh,
             v => return Err(InvalidMultisigVariant(v.to_string())),
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use super::Bip;
+
+    #[test]
+    fn roundtrip_bip() {
+        for el in ["bip49", "bip84", "bip87"] {
+            let bip = Bip::from_str(el).unwrap();
+            let bip_str = bip.to_string();
+            assert_eq!(el, bip_str);
+        }
+        Bip::from_str("vattelapesca").unwrap_err();
     }
 }

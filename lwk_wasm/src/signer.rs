@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
+use crate::{Bip, Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
 use lwk_wollet::{
     bitcoin::bip32, elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
 };
@@ -49,6 +49,15 @@ impl Signer {
     pub fn get_master_xpub(&self) -> Result<Xpub, Error> {
         Ok(self.inner.xpub().into())
     }
+
+    #[wasm_bindgen(js_name = keyoriginXpub)]
+    pub fn keyorigin_xpub(&self, bip: Bip) -> Result<String, Error> {
+        Ok(lwk_common::Signer::keyorigin_xpub(
+            &self.inner,
+            bip.into(),
+            self.inner.is_mainnet(),
+        )?)
+    }
 }
 
 #[allow(dead_code)]
@@ -79,7 +88,7 @@ impl lwk_common::Signer for FakeSigner {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-    use crate::{Mnemonic, Pset, Signer};
+    use crate::{Bip, Mnemonic, Pset, Signer};
     use lwk_wollet::elements;
     use std::str::FromStr;
     use wasm_bindgen_test::*;
@@ -113,5 +122,7 @@ mod tests {
         assert_ne!(pset, signed_pset);
 
         assert_eq!(signer.get_master_xpub().unwrap().fingerprint(), "73c5da0a");
+
+        assert_eq!(signer.keyorigin_xpub(Bip::bip49()).unwrap(), "[73c5da0a/49h/1h/0h]tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2");
     }
 }

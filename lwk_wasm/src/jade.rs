@@ -3,9 +3,9 @@ use std::{collections::HashMap, str::FromStr};
 use crate::{
     serial::{get_jade_serial, WebSerial},
     signer::FakeSigner,
-    Error, Network, Pset, WolletDescriptor, Xpub,
+    Bip, Error, Network, Pset, WolletDescriptor, Xpub,
 };
-use lwk_common::{Bip, DescriptorBlindingKey, Signer};
+use lwk_common::{DescriptorBlindingKey, Signer};
 use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
@@ -146,14 +146,14 @@ impl Jade {
         Ok(serde_wasm_bindgen::to_value(&wallets_str)?)
     }
 
-    #[wasm_bindgen(js_name = keyoriginXpubBip87)]
-    pub async fn keyorigin_xpub_bip87(&self) -> Result<String, Error> {
+    #[wasm_bindgen(js_name = keyoriginXpub)]
+    pub async fn keyorigin_xpub(&self, bip: Bip) -> Result<String, Error> {
         self.inner.unlock().await?;
         let signer = self.create_fake_signer().await?;
         let is_mainnet = self.inner.network().is_mainnet();
 
         Ok(signer
-            .keyorigin_xpub(Bip::Bip87, is_mainnet)
+            .keyorigin_xpub(bip.into(), is_mainnet)
             .map_err(Error::Generic)?)
     }
 

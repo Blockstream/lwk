@@ -82,6 +82,7 @@
 //! # }
 //! ```
 
+#[cfg(feature = "amp2")]
 pub mod amp2;
 pub mod clients;
 mod config;

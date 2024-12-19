@@ -90,13 +90,14 @@ waterfalls = { version = "0.4.3", default-features = false, features = [
 ] }
 
 [features]
-default = ["esplora", "electrum", "elements_rpc"]
+default = ["esplora", "electrum", "elements_rpc", "amp2"]
 serial = ["lwk_jade/serial"]                      # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]
+amp2 = ["reqwest"]
 
 [[test]]
 name = "e2e"

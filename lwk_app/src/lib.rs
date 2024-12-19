@@ -1166,12 +1166,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 ));
             }
             let signer = s.get_available_signer(&r.name)?;
-            let fp = signer.fingerprint()?;
-            let path: DerivationPath = "m/87h/1h/0h".parse().expect("fixed value");
-            let xpub = signer.derive_xpub(&path)?;
-            let keysource = (fp, path);
-            let amp2_wallet = Amp2Wallet::new_testnet(keysource, xpub);
-            let descriptor = amp2_wallet.descriptor().to_string();
+            let descriptor = amp2wallet(&signer)?.descriptor().to_string();
             Response::result(
                 request.id,
                 serde_json::to_value(response::Amp2Descriptor { descriptor })?,
@@ -1277,6 +1272,14 @@ fn convert_tx(
         unblinded_url,
         memo,
     }
+}
+
+fn amp2wallet(signer: &AnySigner) -> Result<Amp2Wallet, Error> {
+    let fp = signer.fingerprint()?;
+    let path: DerivationPath = "m/87h/1h/0h".parse().expect("fixed value");
+    let xpub = signer.derive_xpub(&path)?;
+    let keysource = (fp, path);
+    Ok(Amp2Wallet::new_testnet(keysource, xpub))
 }
 
 #[cfg(test)]

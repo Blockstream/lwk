@@ -3,8 +3,8 @@ use lwk_rpc_model::request::Direction;
 use serde_json::Value;
 
 use crate::args::{
-    AssetSubCommandsEnum, DirectionCommand, MainCommand, SchemaArgs, ServerSubCommandsEnum,
-    SignerSubCommandsEnum, WalletSubCommandsEnum,
+    Amp2SubCommandsEnum, AssetSubCommandsEnum, DirectionCommand, MainCommand, SchemaArgs,
+    ServerSubCommandsEnum, SignerSubCommandsEnum, WalletSubCommandsEnum,
 };
 
 pub(crate) fn schema(a: SchemaArgs, client: Client) -> Result<Value, anyhow::Error> {
@@ -14,6 +14,7 @@ pub(crate) fn schema(a: SchemaArgs, client: Client) -> Result<Value, anyhow::Err
             MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Request)?,
             MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Request)?,
             MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Request)?,
+            MainCommand::Amp2(s) => client.schema(s.command.into(), Direction::Request)?,
             MainCommand::Schema => client.schema(Method::Schema, Direction::Request)?,
         },
         DirectionCommand::Response(res) => match res.command {
@@ -21,6 +22,7 @@ pub(crate) fn schema(a: SchemaArgs, client: Client) -> Result<Value, anyhow::Err
             MainCommand::Wallet(w) => client.schema(w.command.into(), Direction::Response)?,
             MainCommand::Signer(s) => client.schema(s.command.into(), Direction::Response)?,
             MainCommand::Asset(s) => client.schema(s.command.into(), Direction::Response)?,
+            MainCommand::Amp2(s) => client.schema(s.command.into(), Direction::Response)?,
             MainCommand::Schema => client.schema(Method::Schema, Direction::Response)?,
         },
     })
@@ -86,6 +88,14 @@ impl From<AssetSubCommandsEnum> for Method {
             AssetSubCommandsEnum::Insert => Method::AssetInsert,
             AssetSubCommandsEnum::Remove => Method::AssetRemove,
             AssetSubCommandsEnum::Publish => Method::AssetPublish,
+        }
+    }
+}
+
+impl From<Amp2SubCommandsEnum> for Method {
+    fn from(value: Amp2SubCommandsEnum) -> Self {
+        match value {
+            Amp2SubCommandsEnum::Descriptor => Method::Amp2Descriptor,
         }
     }
 }

@@ -31,6 +31,7 @@ use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_jade::Jade;
 use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
+use lwk_wollet::amp2::Amp2;
 use lwk_wollet::bitcoin::bip32::Fingerprint;
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
@@ -1156,6 +1157,23 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 ));
             }
         }
+        Method::Amp2Descriptor => {
+            let r: request::Amp2Descriptor = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
+                return Err(Error::Generic(
+                    "AMP2 methods are not available for this network".into(),
+                ));
+            }
+            let signer = s.get_available_signer(&r.name)?;
+            let amp2 = Amp2::new_testnet();
+            let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
+            let descriptor = desc.descriptor().to_string();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Amp2Descriptor { descriptor })?,
+            )
+        }
     };
     Ok(response)
 }
@@ -1256,6 +1274,12 @@ fn convert_tx(
         unblinded_url,
         memo,
     }
+}
+
+fn amp2userkey(signer: &AnySigner) -> Result<String, Error> {
+    let bip = lwk_common::Bip::Bip87;
+    let is_mainnet = false;
+    Ok(signer.keyorigin_xpub(bip, is_mainnet)?)
 }
 
 #[cfg(test)]

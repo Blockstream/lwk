@@ -465,6 +465,13 @@ pub struct WalletSetAddrMemo {
     pub memo: String,
 }
 
+/// Request to get an AMP2 wallet descriptor
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Descriptor {
+    /// The signer name
+    pub name: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

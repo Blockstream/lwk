@@ -1505,3 +1505,17 @@ fn test_ct_discount() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_amp2() {
+    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+
+    sw_signer(&cli, "sw");
+    let err = sh_err(&format!("{cli} amp2 descriptor -s sw"));
+    assert!(err.contains("AMP2 methods are not available for this network"));
+
+    // TODO: proper e2e tests with regtest AMP2
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

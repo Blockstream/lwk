@@ -436,6 +436,13 @@ pub enum WalletType {
     WshMulti(usize, usize),
 }
 
+/// Descriptor of an AMP2 wallet
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Descriptor {
+    /// AMP2 wallet descriptor
+    pub descriptor: String,
+}
+
 impl std::fmt::Display for WalletType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {

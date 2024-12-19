@@ -13,7 +13,9 @@ use env_logger::Env;
 use lwk_app::Config;
 use serde_json::Value;
 
-use crate::args::{AssetCommand, CliCommand, Network, ServerCommand, SignerCommand, WalletCommand};
+use crate::args::{
+    Amp2Command, AssetCommand, CliCommand, Network, ServerCommand, SignerCommand, WalletCommand,
+};
 pub use args::Cli;
 
 pub use args::{
@@ -424,6 +426,12 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             }
             AssetCommand::Publish { asset } => {
                 let r = client.asset_publish(asset)?;
+                serde_json::to_value(r)?
+            }
+        },
+        CliCommand::Amp2(a) => match a.command {
+            Amp2Command::Descriptor { signer } => {
+                let r = client.amp2_descriptor(signer)?;
                 serde_json::to_value(r)?
             }
         },

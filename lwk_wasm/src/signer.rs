@@ -58,6 +58,13 @@ impl Signer {
             self.inner.is_mainnet(),
         )?)
     }
+
+    pub fn mnemonic(&self) -> Mnemonic {
+        self.inner
+            .mnemonic()
+            .expect("wasm bindings always create signer via mnemonic and not via xpriv")
+            .into()
+    }
 }
 
 #[allow(dead_code)]
@@ -124,5 +131,7 @@ mod tests {
         assert_eq!(signer.get_master_xpub().unwrap().fingerprint(), "73c5da0a");
 
         assert_eq!(signer.keyorigin_xpub(Bip::bip49()).unwrap(), "[73c5da0a/49h/1h/0h]tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2");
+
+        assert_eq!(signer.mnemonic(), mnemonic);
     }
 }

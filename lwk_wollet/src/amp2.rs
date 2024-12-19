@@ -12,6 +12,7 @@
 
 use crate::WolletDescriptor;
 use elements::bitcoin::bip32::{KeySource, Xpub};
+use elements::pset::PartiallySignedTransaction;
 
 pub const FINGERPRINT_TESTNET: &str = "3d970d04";
 pub const XPUB_TESTNET: &str = "tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
@@ -34,6 +35,16 @@ struct RegisterRequest {
 #[derive(serde::Deserialize)]
 struct RegisterResponse {
     wid: String,
+}
+
+#[derive(serde::Serialize)]
+struct SignRequest {
+    pset: PartiallySignedTransaction,
+}
+
+#[derive(serde::Deserialize)]
+struct SignResponse {
+    pset: PartiallySignedTransaction,
 }
 
 impl Amp2Wallet {
@@ -67,6 +78,21 @@ impl Amp2Wallet {
             .json()
             .await?;
         Ok(j.wid)
+    }
+
+    pub async fn sign(
+        &self,
+        pset: &PartiallySignedTransaction,
+    ) -> Result<PartiallySignedTransaction, crate::Error> {
+        let body = SignRequest { pset: pset.clone() };
+        let j: SignResponse = reqwest::Client::new()
+            .post(&format!("{}/wallets/sign", self.url))
+            .json(&body)
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(j.pset)
     }
 }
 
@@ -110,5 +136,7 @@ mod test {
 
         let wid = amp2.register().await.unwrap();
         assert!(!wid.is_empty());
+
+        // TODO: test sign
     }
 }

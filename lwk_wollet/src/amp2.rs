@@ -26,6 +26,16 @@ pub struct Amp2Wallet {
     url: String,
 }
 
+#[derive(serde::Serialize)]
+struct RegisterRequest {
+    descriptor: String,
+}
+
+#[derive(serde::Deserialize)]
+struct RegisterResponse {
+    wid: String,
+}
+
 impl Amp2Wallet {
     /// AMP2 wallet for Liquid Testnet
     pub fn new_testnet(user_keysource: KeySource, user_xpub: Xpub) -> Self {
@@ -43,6 +53,20 @@ impl Amp2Wallet {
 
     pub fn descriptor(&self) -> WolletDescriptor {
         self.descriptor.clone()
+    }
+
+    pub async fn register(&self) -> Result<String, crate::Error> {
+        let body = RegisterRequest {
+            descriptor: self.descriptor().to_string(),
+        };
+        let j: RegisterResponse = reqwest::Client::new()
+            .post(&format!("{}/wallets/register", self.url))
+            .json(&body)
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(j.wid)
     }
 }
 
@@ -76,5 +100,15 @@ mod test {
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
         let amp2 = Amp2Wallet::new_testnet(keysource, xpub);
         assert_eq!(amp2.descriptor().to_string(), expected);
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn amp2_network_calls() {
+        let (keysource, xpub) = user_key();
+        let amp2 = Amp2Wallet::new_testnet(keysource, xpub);
+
+        let wid = amp2.register().await.unwrap();
+        assert!(!wid.is_empty());
     }
 }

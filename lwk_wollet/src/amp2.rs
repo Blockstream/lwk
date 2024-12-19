@@ -51,6 +51,14 @@ mod test {
     use super::*;
     use elements::bitcoin::bip32::{DerivationPath, Fingerprint};
 
+    fn user_key() -> (KeySource, Xpub) {
+        let fp: Fingerprint = "c67f5991".parse().unwrap();
+        let path: DerivationPath = "m/87'/1'/0'".parse().unwrap();
+        let keysource = (fp, path);
+        let xpub: Xpub = "tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj".parse().unwrap();
+        (keysource, xpub)
+    }
+
     #[test]
     fn amp2_keyorigin() {
         let s = format!(
@@ -64,12 +72,7 @@ mod test {
 
     #[test]
     fn amp2_desc() {
-        // User key
-        let fp: Fingerprint = "c67f5991".parse().unwrap();
-        let path: DerivationPath = "m/87'/1'/0'".parse().unwrap();
-        let keysource = (fp, path);
-        let xpub: Xpub = "tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj".parse().unwrap();
-
+        let (keysource, xpub) = user_key();
         let expected = "ct(slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67),elwsh(multi(2,[3d970d04/87'/1'/0']tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd/<0;1>/*,[c67f5991/87'/1'/0']tpubDC4SUtWGWcMQPtwjgQQ4DYnFmAYhiKxw3f3KKCvMGT9sojZNvHsQ4rVW6nQeCPtk4rLAxGKeuAzMmBmH92X3HDgLho3nRWpvuJrpCmYgeQj/<0;1>/*)))#6j2fne4s";
         let amp2 = Amp2Wallet::new_testnet(keysource, xpub);
         assert_eq!(amp2.descriptor().to_string(), expected);

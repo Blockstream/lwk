@@ -82,6 +82,7 @@
 //! # }
 //! ```
 
+pub mod amp2;
 pub mod clients;
 mod config;
 mod descriptor;

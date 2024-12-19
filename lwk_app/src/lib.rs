@@ -31,7 +31,8 @@ use lwk_jade::register_multisig::{JadeDescriptor, RegisterMultisigParams};
 use lwk_jade::Jade;
 use lwk_signer::{AnySigner, SwSigner};
 use lwk_tiny_jrpc::{tiny_http, JsonRpcServer, Request, Response};
-use lwk_wollet::bitcoin::bip32::Fingerprint;
+use lwk_wollet::amp2::Amp2Wallet;
+use lwk_wollet::bitcoin::bip32::{DerivationPath, Fingerprint};
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
@@ -1155,6 +1156,26 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     "Can't publish a policy asset or a reissuance token".to_string(),
                 ));
             }
+        }
+        Method::Amp2Descriptor => {
+            let r: request::Amp2Descriptor = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
+                return Err(Error::Generic(
+                    "AMP2 methods are not available for this network".into(),
+                ));
+            }
+            let signer = s.get_available_signer(&r.name)?;
+            let fp = signer.fingerprint()?;
+            let path: DerivationPath = "m/87h/1h/0h".parse().expect("fixed value");
+            let xpub = signer.derive_xpub(&path)?;
+            let keysource = (fp, path);
+            let amp2_wallet = Amp2Wallet::new_testnet(keysource, xpub);
+            let descriptor = amp2_wallet.descriptor().to_string();
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Amp2Descriptor { descriptor })?,
+            )
         }
     };
     Ok(response)

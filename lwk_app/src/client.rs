@@ -437,6 +437,11 @@ impl Client {
         self.make_request(Method::AssetPublish, Some(req))
     }
 
+    pub fn amp2_descriptor(&self, name: String) -> Result<response::Amp2Descriptor, Error> {
+        let req = request::Amp2Descriptor { name };
+        self.make_request(Method::Amp2Descriptor, Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

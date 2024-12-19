@@ -42,6 +42,9 @@ pub enum CliCommand {
     /// Asset commands
     Asset(AssetArgs),
 
+    /// AMP2 commands (expect breaking changes)
+    Amp2(Amp2Args),
+
     /// Print JSON schema of RPC requests and responses
     ///
     /// E.g. `lwk_cli schema response wallet details` returns the response parameters for
@@ -125,6 +128,7 @@ pub enum MainCommand {
     Wallet(WalletSubCommands),
     Signer(SignerSubCommands),
     Asset(AssetSubCommands),
+    Amp2(Amp2SubCommands),
     Schema,
 }
 
@@ -203,6 +207,17 @@ pub enum AssetSubCommandsEnum {
     Insert,
     Remove,
     Publish,
+}
+
+#[derive(Debug, Args)]
+pub struct Amp2SubCommands {
+    #[command(subcommand)]
+    pub command: Amp2SubCommandsEnum,
+}
+
+#[derive(Debug, Subcommand, ValueEnum, Clone)]
+pub enum Amp2SubCommandsEnum {
+    Descriptor,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -809,6 +824,22 @@ pub enum AssetCommand {
         /// Asset ID in hex
         #[arg(short, long)]
         asset: String,
+    },
+}
+
+#[derive(Debug, Args)]
+pub struct Amp2Args {
+    #[command(subcommand)]
+    pub command: Amp2Command,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Amp2Command {
+    /// Create an AMP2 wallet descriptor for a given signer
+    Descriptor {
+        /// Signer name
+        #[arg(short, long, env)]
+        signer: String,
     },
 }
 

@@ -46,6 +46,9 @@ pub enum Error {
     ElementsPset(#[from] crate::elements::pset::Error),
 
     #[error(transparent)]
+    ElementsPsetParse(#[from] crate::elements::pset::ParseError),
+
+    #[error(transparent)]
     PsetBlindError(#[from] crate::elements::pset::PsetBlindError),
 
     #[error(transparent)]

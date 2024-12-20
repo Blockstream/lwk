@@ -97,6 +97,7 @@ impl From<Amp2SubCommandsEnum> for Method {
         match value {
             Amp2SubCommandsEnum::Descriptor => Method::Amp2Descriptor,
             Amp2SubCommandsEnum::Register => Method::Amp2Register,
+            Amp2SubCommandsEnum::Cosign => Method::Amp2Cosign,
         }
     }
 }

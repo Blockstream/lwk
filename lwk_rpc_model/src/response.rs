@@ -450,6 +450,13 @@ pub struct Amp2Register {
     pub wid: String,
 }
 
+/// PSET cosigned by AMP2 wallet
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Cosign {
+    /// The cosigned PSET
+    pub pset: String,
+}
+
 impl std::fmt::Display for WalletType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {

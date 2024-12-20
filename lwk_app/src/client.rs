@@ -447,6 +447,11 @@ impl Client {
         self.make_request(Method::Amp2Register, Some(req))
     }
 
+    pub fn amp2_cosign(&self, pset: String) -> Result<response::Amp2Cosign, Error> {
+        let req = request::Amp2Cosign { pset };
+        self.make_request(Method::Amp2Cosign, Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

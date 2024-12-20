@@ -219,6 +219,7 @@ pub struct Amp2SubCommands {
 pub enum Amp2SubCommandsEnum {
     Descriptor,
     Register,
+    Cosign,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -848,6 +849,13 @@ pub enum Amp2Command {
         /// Signer name
         #[arg(short, long, env)]
         signer: String,
+    },
+
+    /// Ask AMP2 server to cosign a PSET
+    Cosign {
+        /// PSET
+        #[arg(short, long)]
+        pset: String,
     },
 }
 

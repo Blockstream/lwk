@@ -479,6 +479,13 @@ pub struct Amp2Register {
     pub name: String,
 }
 
+/// Request for AMP2 to cosign a PSET
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Cosign {
+    /// The PSET to cosign
+    pub pset: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

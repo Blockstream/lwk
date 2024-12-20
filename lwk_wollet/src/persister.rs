@@ -160,13 +160,15 @@ impl Persister for FsPersister {
         inner.get(index)
     }
 
-    fn push(&self, update: Update) -> Result<(), PersistError> {
+    fn push(&self, mut update: Update) -> Result<(), PersistError> {
         let mut inner = self.inner.lock().map_err(to_other)?;
         if update.only_tip() {
             if let Ok(Some(prev_update)) = inner.last() {
                 if prev_update.only_tip() {
                     // since this update and the last are only an update of the tip, we can
                     // overwrite last update instead of creating a new file.
+                    // But we need to update the wallet status so that there will be no problem in reapplying it
+                    update.wollet_status = prev_update.wollet_status;
                     inner.next = (inner.next.0 - 1).into() // safety: next is at least 1 or last() would be None
                 }
             }

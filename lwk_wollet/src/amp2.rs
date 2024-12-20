@@ -29,6 +29,7 @@ pub struct Amp2 {
 }
 
 /// An AMP2 descriptor
+#[derive(Debug, Clone)]
 pub struct Amp2Descriptor {
     inner: WolletDescriptor,
 }

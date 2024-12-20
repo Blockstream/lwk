@@ -523,9 +523,7 @@ impl Wollet {
         let mut txs = vec![];
         let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();
         my_txids.sort_by(|a, b| {
-            let height_cmp =
-                b.1.unwrap_or(std::u32::MAX)
-                    .cmp(&a.1.unwrap_or(std::u32::MAX));
+            let height_cmp = b.1.unwrap_or(u32::MAX).cmp(&a.1.unwrap_or(u32::MAX));
             match height_cmp {
                 Ordering::Equal => b.0.cmp(a.0),
                 h => h,

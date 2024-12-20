@@ -81,8 +81,8 @@ fn add_external_input(
 /// Design decisions:
 ///
 /// * We are not holding a reference of the wallet in the struct and we instead pass a reference
-/// of the wallet in the finish methods because this it more friendly for bindings implementation.
-/// Moreover, we could have an alternative finish which don't use a wallet at all.
+///   of the wallet in the finish methods because this it more friendly for bindings implementation.
+///   Moreover, we could have an alternative finish which don't use a wallet at all.
 /// * We are consuming and returning self to build the tx with method chaining
 #[derive(Debug)]
 pub struct TxBuilder {

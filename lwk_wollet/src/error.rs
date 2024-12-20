@@ -79,6 +79,9 @@ pub enum Error {
     PsetDetailsError(#[from] lwk_common::Error),
 
     #[error(transparent)]
+    InvalidKeyOriginXpubError(#[from] lwk_common::InvalidKeyOriginXpub),
+
+    #[error(transparent)]
     UtxoUpdateError(#[from] elements_miniscript::psbt::UtxoUpdateError),
 
     #[error(transparent)]

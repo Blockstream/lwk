@@ -115,6 +115,9 @@ pub enum Error {
     #[error("Missing vout")]
     MissingVout,
 
+    #[error("Missing keyorigin")]
+    MissingKeyorigin,
+
     #[error("Invalid amount")]
     InvalidAmount,
 

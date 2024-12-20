@@ -1,6 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 
+mod amp2;
 mod bip;
 mod blockdata;
 mod contract;
@@ -22,6 +23,7 @@ mod update;
 mod wollet;
 mod xpub;
 
+pub use amp2::{Amp2, Amp2Descriptor};
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
 pub use blockdata::asset_id::AssetId;

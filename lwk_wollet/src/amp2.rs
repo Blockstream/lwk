@@ -124,6 +124,7 @@ impl Amp2 {
     }
 
     /// Register an AMP2 wallet with the AMP2 server
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn blocking_register(
         &self,
         desc: Amp2Descriptor,
@@ -158,6 +159,7 @@ impl Amp2 {
     }
 
     /// Ask the AMP2 server to cosign a PSET
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn blocking_cosign(
         &self,
         pset: &PartiallySignedTransaction,

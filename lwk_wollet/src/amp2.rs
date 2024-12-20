@@ -71,7 +71,7 @@ impl Amp2Wallet {
             descriptor: self.descriptor().to_string(),
         };
         let j: RegisterResponse = reqwest::Client::new()
-            .post(&format!("{}/wallets/register", self.url))
+            .post(format!("{}/wallets/register", self.url))
             .json(&body)
             .send()
             .await?
@@ -86,7 +86,7 @@ impl Amp2Wallet {
     ) -> Result<PartiallySignedTransaction, crate::Error> {
         let body = SignRequest { pset: pset.clone() };
         let j: SignResponse = reqwest::Client::new()
-            .post(&format!("{}/wallets/sign", self.url))
+            .post(format!("{}/wallets/sign", self.url))
             .json(&body)
             .send()
             .await?

@@ -122,6 +122,22 @@ impl Amp2 {
         Ok(j)
     }
 
+    /// Register an AMP2 wallet with the AMP2 server
+    pub fn blocking_register(
+        &self,
+        desc: Amp2Descriptor,
+    ) -> Result<RegisterResponse, crate::Error> {
+        let body = RegisterRequest {
+            descriptor: desc.descriptor().to_string(),
+        };
+        let j: RegisterResponse = reqwest::blocking::Client::new()
+            .post(format!("{}/wallets/register", self.url))
+            .json(&body)
+            .send()?
+            .json()?;
+        Ok(j)
+    }
+
     /// Ask the AMP2 server to cosign a PSET
     pub async fn cosign(
         &self,
@@ -137,6 +153,22 @@ impl Amp2 {
             .await?
             .json()
             .await?;
+        j.try_into()
+    }
+
+    /// Ask the AMP2 server to cosign a PSET
+    pub fn blocking_cosign(
+        &self,
+        pset: &PartiallySignedTransaction,
+    ) -> Result<CosignResponse, crate::Error> {
+        let body = CosignRequest {
+            pset: pset.to_string(),
+        };
+        let j: CosignResponseInner = reqwest::blocking::Client::new()
+            .post(format!("{}/wallets/sign", self.url))
+            .json(&body)
+            .send()?
+            .json()?;
         j.try_into()
     }
 }

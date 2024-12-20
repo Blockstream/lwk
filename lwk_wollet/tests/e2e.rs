@@ -1740,3 +1740,20 @@ fn test_esplora_client() {
     let wallet = TestWollet::new(client, &desc);
     roundtrip_inner(wallet, &server, signers);
 }
+
+#[test]
+fn test_persistence_reload_after_only_tip() {
+    let server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    server.elementsd_generate(1);
+    wallet.wait_height(102);
+    wallet.sync();
+
+    TestWollet::check_persistence(wallet);
+}

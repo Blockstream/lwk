@@ -442,6 +442,11 @@ impl Client {
         self.make_request(Method::Amp2Descriptor, Some(req))
     }
 
+    pub fn amp2_register(&self, name: String) -> Result<response::Amp2Register, Error> {
+        let req = request::Amp2Register { name };
+        self.make_request(Method::Amp2Register, Some(req))
+    }
+
     pub fn schema(&self, arg: Method, direction: request::Direction) -> Result<Value, Error> {
         let req = request::Schema {
             method: arg.to_string(),

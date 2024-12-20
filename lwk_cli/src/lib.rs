@@ -434,6 +434,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.amp2_descriptor(signer)?;
                 serde_json::to_value(r)?
             }
+            Amp2Command::Register { signer } => {
+                let r = client.amp2_register(signer)?;
+                serde_json::to_value(r)?
+            }
         },
         CliCommand::Schema(a) => schema::schema(a, client)?,
         CliCommand::GenerateCompletion { shell } => {

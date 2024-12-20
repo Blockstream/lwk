@@ -1174,6 +1174,23 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 serde_json::to_value(response::Amp2Descriptor { descriptor })?,
             )
         }
+        Method::Amp2Register => {
+            let r: request::Amp2Register = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+            if !matches!(s.config.network, lwk_wollet::ElementsNetwork::LiquidTestnet) {
+                return Err(Error::Generic(
+                    "AMP2 methods are not available for this network".into(),
+                ));
+            }
+            let signer = s.get_available_signer(&r.name)?;
+            let amp2 = Amp2::new_testnet();
+            let desc = amp2.descriptor_from_str(&amp2userkey(signer)?)?;
+            let wid = amp2.blocking_register(desc)?.wid;
+            Response::result(
+                request.id,
+                serde_json::to_value(response::Amp2Register { wid })?,
+            )
+        }
     };
     Ok(response)
 }

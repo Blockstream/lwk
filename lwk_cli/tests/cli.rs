@@ -1514,6 +1514,9 @@ fn test_amp2() {
     let err = sh_err(&format!("{cli} amp2 descriptor -s sw"));
     assert!(err.contains("AMP2 methods are not available for this network"));
 
+    let err = sh_err(&format!("{cli} amp2 register -s sw"));
+    assert!(err.contains("AMP2 methods are not available for this network"));
+
     // TODO: proper e2e tests with regtest AMP2
 
     sh(&format!("{cli} server stop"));

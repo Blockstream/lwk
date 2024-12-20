@@ -472,6 +472,13 @@ pub struct Amp2Descriptor {
     pub name: String,
 }
 
+/// Request to register an AMP2 wallet descriptor
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Register {
+    /// The signer name
+    pub name: String,
+}
+
 #[cfg(test)]
 mod test {
     use schemars::schema_for;

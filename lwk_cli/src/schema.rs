@@ -96,6 +96,7 @@ impl From<Amp2SubCommandsEnum> for Method {
     fn from(value: Amp2SubCommandsEnum) -> Self {
         match value {
             Amp2SubCommandsEnum::Descriptor => Method::Amp2Descriptor,
+            Amp2SubCommandsEnum::Register => Method::Amp2Register,
         }
     }
 }

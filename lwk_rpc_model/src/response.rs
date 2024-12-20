@@ -443,6 +443,13 @@ pub struct Amp2Descriptor {
     pub descriptor: String,
 }
 
+/// Registered AMP2 wallet
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Amp2Register {
+    /// AMP2 wallet id
+    pub wid: String,
+}
+
 impl std::fmt::Display for WalletType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {

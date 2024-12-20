@@ -60,6 +60,7 @@ pub enum Method {
     AssetFromExplorer,
     AssetPublish,
     Amp2Descriptor,
+    Amp2Register,
 }
 impl Method {
     pub(crate) fn schema(&self, direction: request::Direction) -> Result<Value, serde_json::Error> {
@@ -111,6 +112,7 @@ impl Method {
                 Method::AssetFromExplorer => schema_for!(request::AssetFromExplorer),
                 Method::AssetPublish => schema_for!(request::AssetPublish),
                 Method::Amp2Descriptor => schema_for!(request::Amp2Descriptor),
+                Method::Amp2Register => schema_for!(request::Amp2Register),
             },
             Direction::Response => match self {
                 Method::Schema => return serde_json::from_str(include_str!("../schema.json")),
@@ -159,6 +161,7 @@ impl Method {
                 Method::AssetFromExplorer => schema_for!(request::Empty),
                 Method::AssetPublish => schema_for!(response::AssetPublish),
                 Method::Amp2Descriptor => schema_for!(response::Amp2Descriptor),
+                Method::Amp2Register => schema_for!(response::Amp2Register),
             },
         })
     }
@@ -213,6 +216,7 @@ impl FromStr for Method {
             "asset_from_explorer" => Method::AssetFromExplorer,
             "asset_publish" => Method::AssetPublish,
             "amp2_descriptor" => Method::Amp2Descriptor,
+            "amp2_register" => Method::Amp2Register,
             _ => {
                 return Err(MethodNotExist {
                     name: s.to_string(),
@@ -269,6 +273,7 @@ impl std::fmt::Display for Method {
             Method::AssetFromExplorer => "asset_from_explorer",
             Method::AssetPublish => "asset_publish",
             Method::Amp2Descriptor => "amp2_descriptor",
+            Method::Amp2Register => "amp2_register",
         };
         write!(f, "{}", s)
     }

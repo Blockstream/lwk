@@ -218,6 +218,7 @@ pub struct Amp2SubCommands {
 #[derive(Debug, Subcommand, ValueEnum, Clone)]
 pub enum Amp2SubCommandsEnum {
     Descriptor,
+    Register,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -837,6 +838,13 @@ pub struct Amp2Args {
 pub enum Amp2Command {
     /// Create an AMP2 wallet descriptor for a given signer
     Descriptor {
+        /// Signer name
+        #[arg(short, long, env)]
+        signer: String,
+    },
+
+    /// Register an AMP2 wallet with the AMP2 server
+    Register {
         /// Signer name
         #[arg(short, long, env)]
         signer: String,

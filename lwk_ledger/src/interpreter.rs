@@ -12,12 +12,14 @@ use crate::{apdu::ClientCommandCode, merkle::MerkleTree};
 /// This struct keeps has methods to keep track of:
 ///   - known preimages
 ///   - known Merkle trees from lists of elements
+///
 /// Moreover, it containes the state that is relevant for the interpreted client side commands:
 ///   - a queue of bytes that contains any bytes that could not fit in a response from the
 ///     GET_PREIMAGE client command (when a preimage is too long to fit in a single message) or the
 ///     GET_MERKLE_LEAF_PROOF command (which returns a Merkle proof, which might be too long to fit
 ///     in a single message). The data in the queue is returned in one (or more) successive
 ///     GET_MORE_ELEMENTS commands from the hardware wallet.
+///
 /// Finally, it keeps track of the yielded values (that is, the values sent from the hardware
 /// wallet with a YIELD client command).
 pub struct ClientCommandInterpreter {

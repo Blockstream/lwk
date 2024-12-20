@@ -3,9 +3,9 @@
 //! A crate containing common code used in multiple other crate in the workspace, such as:
 //!
 //!   * Utils to inspect a PSET: get the net effect of a PSET on a given wallet [`pset_balance()`], or get how many
-//!  signatures are missing , and which signers should provide them [`pset_signatures()`].
+//!     signatures are missing , and which signers should provide them [`pset_signatures()`].
 //!  * [`Signer`] trait: contains the methods to be implemented by a signer such as signing a pset or
-//!  returning an xpub
+//!     returning an xpub
 //!
 //!  To avoid circular dependencies this crate must not depend on other crate of the workspace
 

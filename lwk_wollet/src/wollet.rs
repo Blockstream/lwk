@@ -785,9 +785,18 @@ pub fn full_scan_with_electrum_client(
     wollet: &mut Wollet,
     electrum_client: &mut crate::ElectrumClient,
 ) -> Result<(), Error> {
+    full_scan_to_index_with_electrum_client(wollet, 0, electrum_client)
+}
+
+#[cfg(feature = "electrum")]
+pub fn full_scan_to_index_with_electrum_client(
+    wollet: &mut Wollet,
+    index: u32,
+    electrum_client: &mut crate::ElectrumClient,
+) -> Result<(), Error> {
     use crate::clients::blocking::BlockchainBackend;
 
-    let update = electrum_client.full_scan(wollet)?;
+    let update = electrum_client.full_scan_to_index(wollet, index)?;
     if let Some(update) = update {
         wollet.apply_update(update)?
     }

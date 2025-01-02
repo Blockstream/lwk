@@ -36,8 +36,19 @@ impl ElectrumClient {
     }
 
     pub fn full_scan(&self, wollet: &Wollet) -> Result<Option<Arc<Update>>, LwkError> {
+        self.full_scan_to_index(wollet, 0)
+    }
+
+    pub fn full_scan_to_index(
+        &self,
+        wollet: &Wollet,
+        index: u32,
+    ) -> Result<Option<Arc<Update>>, LwkError> {
         let wollet = wollet.inner_wollet()?;
-        let update: Option<lwk_wollet::Update> = self.inner.lock()?.full_scan(&wollet.state())?;
+        let update: Option<lwk_wollet::Update> = self
+            .inner
+            .lock()?
+            .full_scan_to_index(&wollet.state(), index)?;
         Ok(update.map(Into::into).map(Arc::new))
     }
 }

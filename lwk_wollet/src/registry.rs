@@ -160,26 +160,32 @@ mod tests {
         contract.entity = Entity::Domain("Tether.to".to_string());
         assert!(contract.validate().is_err());
         contract.entity = Entity::Domain("tether.to".to_string());
+        assert!(contract.validate().is_ok());
 
         contract.issuer_pubkey = vec![2];
         assert!(contract.validate().is_err());
-        contract.issuer_pubkey = vec![2; 32];
+        contract.issuer_pubkey = vec![2; 33];
+        assert!(contract.validate().is_ok());
 
         contract.ticker = "US".to_string();
         assert!(contract.validate().is_err());
         contract.ticker = "USDt".to_string();
+        assert!(contract.validate().is_ok());
 
         contract.name = "Tether USDü".to_string();
         assert!(contract.validate().is_err());
         contract.name = "Tether USD".to_string();
+        assert!(contract.validate().is_ok());
 
         contract.precision = 9;
         assert!(contract.validate().is_err());
         contract.precision = 8;
+        assert!(contract.validate().is_ok());
 
         contract.version = 1;
         assert!(contract.validate().is_err());
         contract.version = 0;
+        assert!(contract.validate().is_ok());
 
         // https://blockstream.info/liquid/api/tx/abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d/hex
         let tx_hex = include_str!("../tests/data/usdt-issuance-tx.hex");

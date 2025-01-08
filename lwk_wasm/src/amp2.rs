@@ -14,10 +14,21 @@ pub struct Amp2Descriptor {
     inner: lwk_wollet::amp2::Amp2Descriptor,
 }
 
+impl std::fmt::Display for Amp2Descriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
 #[wasm_bindgen]
 impl Amp2Descriptor {
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.descriptor().into()
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
     }
 }
 

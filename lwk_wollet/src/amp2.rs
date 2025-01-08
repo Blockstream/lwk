@@ -44,6 +44,12 @@ impl Amp2Descriptor {
     }
 }
 
+impl std::fmt::Display for Amp2Descriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
 #[derive(Serialize)]
 struct RegisterRequest {
     descriptor: String,

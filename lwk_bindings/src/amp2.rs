@@ -10,8 +10,15 @@ pub struct Amp2 {
 
 /// Wrapper over [`lwk_wollet::amp2::Amp2Descriptor`]
 #[derive(uniffi::Object)]
+#[uniffi::export(Display)]
 pub struct Amp2Descriptor {
     inner: lwk_wollet::amp2::Amp2Descriptor,
+}
+
+impl std::fmt::Display for Amp2Descriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
 }
 
 #[uniffi::export]

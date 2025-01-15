@@ -13,7 +13,9 @@ impl EsploraClient {
     /// Creates a client, wrapper of [`asyncr::EsploraClient`]
     #[wasm_bindgen(constructor)]
     pub fn new(network: &Network, url: &str, waterfalls: bool) -> Self {
-        let inner = asyncr::EsploraClient::new(network.into(), url, waterfalls);
+        let inner = asyncr::EsploraClientBuilder::new(url, network.into())
+            .waterfalls(waterfalls)
+            .build();
         Self { inner }
     }
 

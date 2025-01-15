@@ -44,25 +44,11 @@ pub struct EsploraClient {
 }
 
 impl EsploraClient {
-    /// Creates a new esplora client using the given `url` as endpoint.
+    /// Creates a new esplora client with default options using the given `url` as endpoint.
     ///
-    /// If `waterfalls` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
-    /// during the scan and for this reason is much faster. To achieve so the "bitcoin descriptor" part is shared with
-    /// the server. All of the address are shared with the server anyway even without the waterfalls scan, but in
-    /// separate calls, and in this case future addresses cannot be derived.
-    /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
-    /// assets and amount exchanged due to the nature of confidential transactions.
-    pub fn new(network: ElementsNetwork, url: &str, waterfalls: bool) -> Self {
-        Self {
-            client: reqwest::Client::new(),
-            base_url: url.to_string(),
-            tip_hash_url: format!("{url}/blocks/tip/hash"),
-            broadcast_url: format!("{url}/tx"),
-            waterfalls,
-            waterfalls_server_recipient: None,
-            waterfalls_avoid_encryption: false,
-            network,
-        }
+    /// To specify different options use the [`EsploraClientBuilder`]
+    pub fn new(network: ElementsNetwork, url: &str) -> Self {
+        EsploraClientBuilder::new(url, network).build()
     }
 
     pub(crate) async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
@@ -741,7 +727,7 @@ mod tests {
         } else {
             ElementsNetwork::default_regtest()
         };
-        let mut client = EsploraClient::new(network, esplora_url, false);
+        let mut client = EsploraClient::new(network, esplora_url);
         let header = client.tip().await.unwrap();
         assert!(header.height > 100);
 

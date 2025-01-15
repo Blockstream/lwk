@@ -936,8 +936,7 @@ fn wait_status_change(
 async fn test_esplora_wasm_client() {
     let server = setup_with_esplora();
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let mut client =
-        clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &url, false);
+    let mut client = clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &url);
     let signer = generate_signer();
     let view_key = generate_view_key();
     let descriptor = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
@@ -998,8 +997,9 @@ async fn test_esplora_wasm_waterfalls() {
     for waterfalls in [true, false] {
         let start = Instant::now();
         let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
-        let mut client =
-            clients::asyncr::EsploraClient::new(ElementsNetwork::Liquid, url, waterfalls);
+        let mut client = clients::asyncr::EsploraClientBuilder::new(url, ElementsNetwork::Liquid)
+            .waterfalls(waterfalls)
+            .build();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
         let first_scan = start.elapsed();
@@ -1035,11 +1035,9 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     let network = ElementsNetwork::default_regtest();
     let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
-    let mut client = asyncr::EsploraClient::new(
-        ElementsNetwork::default_regtest(),
-        test_env.base_url(),
-        true,
-    );
+    let mut client = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
+        .waterfalls(true)
+        .build();
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();

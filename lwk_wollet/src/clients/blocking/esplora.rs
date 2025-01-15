@@ -24,7 +24,7 @@ impl EsploraClient {
     pub fn new(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
-            client: asyncr::EsploraClient::new(network, url, false),
+            client: asyncr::EsploraClient::new(network, url),
         })
     }
 }
@@ -35,7 +35,9 @@ impl EsploraClient {
     pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
-            client: asyncr::EsploraClient::new(network, url, true),
+            client: asyncr::EsploraClientBuilder::new(url, network)
+                .waterfalls(true)
+                .build(),
         })
     }
 

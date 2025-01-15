@@ -115,7 +115,7 @@ impl Debug for ElectrumClient {
 
 #[derive(Default)]
 pub struct ElectrumOptions {
-    timeout: Option<u8>,
+    pub timeout: Option<u8>,
 }
 
 impl ElectrumClient {

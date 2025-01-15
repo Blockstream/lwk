@@ -530,12 +530,12 @@ impl EsploraClient {
         }
     }
 }
-
 /// A builder for the [`EsploraClient`]
 pub struct EsploraClientBuilder {
     base_url: String,
     waterfalls: bool,
     network: ElementsNetwork,
+    timeout: Option<u8>,
 }
 
 impl EsploraClientBuilder {
@@ -545,6 +545,7 @@ impl EsploraClientBuilder {
             base_url: base_url.to_string(),
             waterfalls: false,
             network,
+            timeout: None,
         }
     }
 
@@ -559,10 +560,23 @@ impl EsploraClientBuilder {
         self
     }
 
+    /// Set a timeout in seconds for requests
+    pub fn timeout(mut self, timeout: u8) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
     /// Consume the builder and build a new [`EsploraClient`]
     pub fn build(self) -> EsploraClient {
+        let client = match self.timeout {
+            Some(timeout) => reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(timeout as u64))
+                .build()
+                .expect("Failed to create client"), // TODO: handle error butnote that this is equivalent to the new() which panics
+            None => reqwest::Client::new(),
+        };
         EsploraClient {
-            client: reqwest::Client::new(),
+            client,
             base_url: self.base_url.clone(),
             tip_hash_url: format!("{}/blocks/tip/hash", self.base_url),
             broadcast_url: format!("{}/tx", self.base_url),

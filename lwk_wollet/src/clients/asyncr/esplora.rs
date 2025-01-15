@@ -531,6 +531,49 @@ impl EsploraClient {
     }
 }
 
+/// A builder for the [`EsploraClient`]
+pub struct EsploraClientBuilder {
+    base_url: String,
+    waterfalls: bool,
+    network: ElementsNetwork,
+}
+
+impl EsploraClientBuilder {
+    /// Create a new [`EsploraClientBuilder`]
+    pub fn new(base_url: &str, network: ElementsNetwork) -> Self {
+        Self {
+            base_url: base_url.to_string(),
+            waterfalls: false,
+            network,
+        }
+    }
+
+    /// If `waterfalls` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
+    /// during the scan and for this reason is much faster. To achieve so, the "bitcoin descriptor" part is shared with
+    /// the server. All of the address are shared with the server anyway even without the waterfalls scan, but in
+    /// separate calls, and in this case future addresses cannot be derived.
+    /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
+    /// assets and amount exchanged due to the nature of confidential transactions.
+    pub fn waterfalls(mut self, waterfalls: bool) -> Self {
+        self.waterfalls = waterfalls;
+        self
+    }
+
+    /// Consume the builder and build a new [`EsploraClient`]
+    pub fn build(self) -> EsploraClient {
+        EsploraClient {
+            client: reqwest::Client::new(),
+            base_url: self.base_url.clone(),
+            tip_hash_url: format!("{}/blocks/tip/hash", self.base_url),
+            broadcast_url: format!("{}/tx", self.base_url),
+            waterfalls: self.waterfalls,
+            waterfalls_server_recipient: None,
+            waterfalls_avoid_encryption: false,
+            network: self.network,
+        }
+    }
+}
+
 async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response, Error> {
     let mut attempt = 0;
     loop {

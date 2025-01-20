@@ -571,18 +571,11 @@ impl EsploraClientBuilder {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn client_with_timeout(timeout: u8) -> reqwest::Client {
     reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(timeout as u64))
         .build()
         .expect("Failed to create client") // TODO: handle error but note that this is equivalent to the new() which panics
-}
-
-#[cfg(target_arch = "wasm32")]
-fn client_with_timeout(timeout: u8) -> reqwest::Client {
-    // https://github.com/seanmonstar/reqwest/issues/1135
-    reqwest::Client::new()
 }
 
 async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response, Error> {

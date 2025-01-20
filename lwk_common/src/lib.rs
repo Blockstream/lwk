@@ -191,6 +191,7 @@ pub fn pset_balance(
         }
     }
 
+    let mut recipients = vec![];
     for (idx, output) in pset.outputs().iter().enumerate() {
         if output.script_pubkey.is_empty() {
             // Candidate fee output
@@ -209,7 +210,28 @@ pub fn pset_balance(
         }
 
         if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation).unwrap_or(false) {
-            // Ignore outputs we don't own
+            // external recipients
+
+            let address = output
+                .blinding_key
+                .as_ref()
+                .map(|k| {
+                    elements::Address::from_script(
+                        &output.script_pubkey,
+                        Some(k.inner.clone()),
+                        &elements::AddressParams::LIQUID_TESTNET,
+                    )
+                })
+                .flatten();
+            let recipient = Recipient {
+                address,
+                vout: idx as u32,
+                asset: output.asset,
+                value: output.amount,
+            };
+
+            recipients.push(recipient);
+
             continue;
         }
 
@@ -263,7 +285,11 @@ pub fn pset_balance(
     }
     let fee = fee.ok_or(Error::MissingFee)?;
 
-    Ok(PsetBalance { fee, balances })
+    Ok(PsetBalance {
+        fee,
+        balances,
+        recipients,
+    })
 }
 
 pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures> {
@@ -321,5 +347,23 @@ mod test {
         let balance = pset_balance(&pset, &desc).unwrap();
         let v = balance.balances.get(&asset_id).unwrap();
         assert_eq!(*v, -1);
+    }
+
+    #[test]
+    fn test_pset_outputs() {
+        let pset_str = include_str!("../test_data/pset_outputs/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let desc_str = include_str!("../test_data/pset_outputs/descriptor");
+        let desc = desc_str.parse().unwrap();
+        let expected_dest = "tlq1qqwx9sng3htz6u2yeqrgf2w525att79vnvwtcqsar7xyqj8hf7s32usgvct9q9f4u3nmnnkwhkfayswc853egs7cvnfs3t7zty";
+        let expected_asset_id = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
+        let expected_value = 120;
+        let balance = pset_balance(&pset, &desc).unwrap();
+        assert_eq!(balance.recipients.len(), 1);
+        let recipient = balance.recipients.first().unwrap();
+        let dest = recipient.address.as_ref().unwrap();
+        assert_eq!(dest.to_string(), expected_dest);
+        assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
+        assert_eq!(recipient.value.unwrap(), expected_value);
     }
 }

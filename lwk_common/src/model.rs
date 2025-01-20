@@ -11,6 +11,28 @@ use std::collections::{BTreeMap, BTreeSet};
 pub struct PsetBalance {
     pub fee: u64,
     pub balances: BTreeMap<AssetId, i64>,
+
+    /// Outputs going out of the wallet
+    pub recipients: Vec<Recipient>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Recipient {
+    /// The confidential address of the recipients.
+    ///
+    /// Can be None in the following cases:
+    ///  - if no blinding key is available in the PSET
+    ///  - if the script is not a known template
+    pub address: Option<elements::Address>,
+
+    /// The asset sent to this recipient if it's available to extract from the PSET
+    pub asset: Option<AssetId>,
+
+    /// The value sent to this recipient if it's available to extract from the PSET
+    pub value: Option<u64>,
+
+    /// The index of the output in the transaction
+    pub vout: u32,
 }
 
 #[derive(Debug, Clone)]

@@ -103,7 +103,7 @@ impl TxBuilder {
             network,
             recipients: vec![],
             fee_rate: 100.0,
-            ct_discount: false,
+            ct_discount: true,
             issuance_request: IssuanceRequest::None,
             drain_lbtc: false,
             drain_to: None,

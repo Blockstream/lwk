@@ -212,17 +212,13 @@ pub fn pset_balance(
         if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation).unwrap_or(false) {
             // external recipients
 
-            let address = output
-                .blinding_key
-                .as_ref()
-                .map(|k| {
-                    elements::Address::from_script(
-                        &output.script_pubkey,
-                        Some(k.inner.clone()),
-                        &elements::AddressParams::LIQUID_TESTNET,
-                    )
-                })
-                .flatten();
+            let address = output.blinding_key.as_ref().and_then(|k| {
+                elements::Address::from_script(
+                    &output.script_pubkey,
+                    Some(k.inner),
+                    &elements::AddressParams::LIQUID_TESTNET,
+                )
+            });
             let recipient = Recipient {
                 address,
                 vout: idx as u32,

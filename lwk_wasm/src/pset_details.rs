@@ -3,7 +3,7 @@ use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
-use crate::{AssetId, Error, Txid};
+use crate::{Address, AssetId, Error, Txid};
 
 /// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetDetails`]
 #[wasm_bindgen]
@@ -31,6 +31,13 @@ pub struct PsetSignatures {
 #[derive(Debug, Clone)]
 pub struct Issuance {
     inner: lwk_common::Issuance,
+}
+
+/// Recipient of a PSET, in other words outputs that doesn't belong to the wallet
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct Recipient {
+    inner: lwk_common::Recipient,
 }
 
 #[wasm_bindgen]
@@ -93,6 +100,15 @@ impl PsetBalance {
         let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
         Ok(self.inner.balances.serialize(&serializer)?)
     }
+
+    pub fn recipients(&self) -> Vec<Recipient> {
+        self.inner
+            .recipients
+            .clone()
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
 }
 
 #[wasm_bindgen]
@@ -149,6 +165,24 @@ impl Issuance {
     }
 }
 
+#[wasm_bindgen]
+impl Recipient {
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset.map(Into::into)
+    }
+
+    pub fn value(&self) -> Option<u64> {
+        self.inner.value.map(Into::into)
+    }
+
+    pub fn address(&self) -> Option<Address> {
+        self.inner.address.as_ref().map(Into::into)
+    }
+    pub fn vout(&self) -> u32 {
+        self.inner.vout
+    }
+}
+
 impl From<PsetDetails> for lwk_common::PsetDetails {
     fn from(pset_details: PsetDetails) -> Self {
         pset_details.inner
@@ -201,6 +235,18 @@ impl From<lwk_common::Issuance> for Issuance {
     }
 }
 
+impl From<Recipient> for lwk_common::Recipient {
+    fn from(pset_rec: Recipient) -> Self {
+        pset_rec.inner
+    }
+}
+
+impl From<lwk_common::Recipient> for Recipient {
+    fn from(pset_rec: lwk_common::Recipient) -> Self {
+        Self { inner: pset_rec }
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use std::collections::HashMap;
@@ -240,5 +286,18 @@ mod tests {
         assert_eq!(issuances.len(), 1);
         assert!(!issuances[0].is_issuance());
         assert!(!issuances[0].is_reissuance());
+
+        let recipients = details.balance().recipients();
+        assert_eq!(recipients.len(), 1);
+        assert_eq!(recipients[0].vout(), 0);
+        assert_eq!(
+            recipients[0].asset().unwrap().to_string(),
+            "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
+        );
+        assert_eq!(recipients[0].value(), Some(1000));
+        assert_eq!(
+            recipients[0].address().unwrap().to_string(),
+            "vjTyq4sgkDce4H7LzXS6Zvc8KdAuPzDQ8pudZC6tpC1hbd8XAxqfS9rK9p2oWtfBsJ2qwmgDm2BBTJBd"
+        );
     }
 }

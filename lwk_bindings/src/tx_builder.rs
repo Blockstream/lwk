@@ -147,15 +147,6 @@ impl TxBuilder {
         *lock = Some(new_inner);
         Ok(())
     }
-
-    /// Enable CT discount
-    pub fn enable_ct_discount(&self) -> Result<(), LwkError> {
-        let mut lock = self.inner.lock()?;
-        let inner = lock.take().ok_or_else(builder_finished)?;
-        let new_inner = inner.enable_ct_discount();
-        *lock = Some(new_inner);
-        Ok(())
-    }
 }
 
 impl TxBuilder {

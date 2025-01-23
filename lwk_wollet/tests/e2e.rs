@@ -1671,7 +1671,26 @@ fn test_waterfalls_esplora() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
 
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    // FIXME: replace with the following line once waterfalls test env sets acceptdiscountct
+    // let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    use bitcoind::{BitcoinD, Conf};
+    let mut conf = Conf::default();
+    let args = vec![
+        "-fallbackfee=0.0001",
+        "-dustrelayfee=0.00000001",
+        "-chain=liquidregtest",
+        "-initialfreecoins=2100000000",
+        "-validatepegin=0",
+        "-txindex=1",
+        "-rest=1",
+        "-acceptdiscountct=1",
+    ];
+    conf.args = args;
+    conf.view_stdout = std::env::var("RUST_LOG").is_ok();
+    conf.network = "liquidregtest";
+
+    let elementsd = BitcoinD::with_conf(exe, &conf).unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch_with_node(elementsd));
 
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();

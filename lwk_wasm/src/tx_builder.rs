@@ -177,13 +177,13 @@ mod tests {
         let policy = network.policy_asset();
 
         let mut builder = TxBuilder::new(&network);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: false, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
 
         builder = builder.fee_rate(Some(200.0));
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: false, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
 
         builder = builder.add_burn(1000, &policy);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: false, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
 
         builder = builder.enable_ct_discount();
         assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");

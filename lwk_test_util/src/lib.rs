@@ -76,13 +76,13 @@ pub fn add_checksum(desc: &str) -> String {
     }
 }
 
-pub fn compute_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
+pub fn compute_fee_rate_without_discount_ct(pset: &PartiallySignedTransaction) -> f32 {
     let vsize = pset.extract_tx().unwrap().vsize();
     let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
     1000.0 * (fee_satoshi as f32 / vsize as f32)
 }
 
-pub fn compute_discount_ct_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
+pub fn compute_fee_rate(pset: &PartiallySignedTransaction) -> f32 {
     let vsize = pset.extract_tx().unwrap().discount_vsize();
     let fee_satoshi = pset.outputs().last().unwrap().amount.unwrap();
     1000.0 * (fee_satoshi as f32 / vsize as f32)

@@ -1193,7 +1193,7 @@ fn ct_discount() {
     let details = wallet.wollet.get_details(&pset).unwrap();
     let fee_no_discount = details.balance.fee;
     wallet.send(&mut pset);
-    assert_fee_rate(compute_fee_rate(&pset), None);
+    assert_fee_rate(compute_fee_rate_without_discount_ct(&pset), None);
 
     // Send with CT discount
     let mut pset = wallet
@@ -1208,7 +1208,7 @@ fn ct_discount() {
     let details = wallet.wollet.get_details(&pset).unwrap();
     let fee_with_discount = details.balance.fee;
     wallet.send(&mut pset);
-    assert_fee_rate(compute_discount_ct_fee_rate(&pset), None);
+    assert_fee_rate(compute_fee_rate(&pset), None);
 
     // Confirm the transactions
     server.elementsd_generate(1);
@@ -1224,7 +1224,7 @@ fn ct_discount() {
     assert_eq!(fee_no_discount, 250);
     assert_eq!(fee_with_discount, 26);
 
-    // Default has CT discount disabled
+    // Default has CT discount enabled
     let mut pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&node_address, 1_000)
@@ -1235,7 +1235,7 @@ fn ct_discount() {
     wallet.sign(&signer, &mut pset);
     let details = wallet.wollet.get_details(&pset).unwrap();
     let fee_default = details.balance.fee;
-    assert_eq!(fee_no_discount, fee_default);
+    assert_eq!(fee_with_discount, fee_default);
 }
 
 #[test]

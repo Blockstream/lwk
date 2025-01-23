@@ -621,7 +621,7 @@ impl Wollet {
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
         Ok(PsetDetails {
-            balance: pset_balance(pset, self.descriptor())?,
+            balance: pset_balance(pset, self.descriptor(), self.config.address_params())?,
             sig_details: pset_signatures(pset),
             issuances: pset_issuances(pset),
         })

@@ -502,12 +502,6 @@ pub enum WalletCommand {
         /// Fee rate to use
         #[arg(long)]
         fee_rate: Option<f32>,
-
-        /// Enable ELIP200 discounted fees for Confidential Transactions
-        ///
-        /// Note: this field will be removed once discounted CT will be enabled on all networks.
-        #[arg(long)]
-        enable_ct_discount: bool,
     },
 
     /// Drain the wallet of the policy asset

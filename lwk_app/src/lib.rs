@@ -547,13 +547,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .into_iter()
                 .map(unvalidated_addressee)
                 .collect();
-            let mut builder = wollet
+            let builder = wollet
                 .tx_builder()
                 .set_unvalidated_recipients(&recipients)?
                 .fee_rate(r.fee_rate);
-            if r.enable_ct_discount {
-                builder = builder.enable_ct_discount();
-            }
             let mut tx = builder.finish()?;
 
             add_contracts(&mut tx, s.assets.iter());

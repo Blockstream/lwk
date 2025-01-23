@@ -1490,17 +1490,7 @@ fn test_ct_discount() {
     let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     let fee_default = r.get("fee").unwrap().as_u64().unwrap();
 
-    // With CT discount
-    let r = sh(&format!(
-        "{cli} wallet send -w w1 {recipient} --enable-ct-discount"
-    ));
-    let pset = get_str(&r, "pset");
-    complete(&cli, "w1", pset, signers);
-    let r = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
-    let fee_ct_discount = r.get("fee").unwrap().as_u64().unwrap();
-
     assert_eq!(fee_default, 26);
-    assert_eq!(fee_ct_discount, 26);
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

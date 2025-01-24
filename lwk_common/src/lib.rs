@@ -358,6 +358,7 @@ mod test {
         assert_eq!(dest.to_string(), expected_dest);
         assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
         assert_eq!(recipient.value.unwrap(), expected_value);
+        assert_eq!(recipient.vout, 0);
 
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID).unwrap();
         assert_eq!(balance.recipients.len(), 1);
@@ -367,5 +368,6 @@ mod test {
         assert_eq!(dest.to_string(), "lq1qqwx9sng3htz6u2yeqrgf2w525att79vnvwtcqsar7xyqj8hf7s32usgvct9q9f4u3nmnnkwhkfayswc853egsw4pnw8lktr6d");
         assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
         assert_eq!(recipient.value.unwrap(), expected_value);
+        assert_eq!(recipient.vout, 0);
     }
 }

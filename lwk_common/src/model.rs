@@ -21,7 +21,7 @@ pub struct Recipient {
     /// The confidential address of the recipients.
     ///
     /// Can be None in the following cases:
-    ///  - if no blinding key is available in the PSET
+    ///  - if no blinding key is available in the PSET, FIXME?
     ///  - if the script is not a known template
     pub address: Option<elements::Address>,
 

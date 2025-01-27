@@ -7,7 +7,7 @@ use crate::UniffiCustomTypeConverter;
 /// A valid asset identifier.
 ///
 /// 32 bytes encoded as hex string.
-#[derive(PartialEq, Eq, Debug, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone, Copy, PartialOrd, Ord)]
 pub struct AssetId {
     inner: elements::AssetId,
 }

@@ -3,7 +3,9 @@ use lwk_wollet::NoPersist;
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::AssetId;
-use crate::{AddressResult, ForeignPersisterLink, LwkError, Pset, Txid, Update, WalletTx};
+use crate::{
+    AddressResult, ForeignPersisterLink, LwkError, Pset, PsetDetails, Txid, Update, WalletTx,
+};
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::HashMap,
@@ -103,6 +105,12 @@ impl Wollet {
         let wollet = self.inner.lock()?;
         wollet.finalize(&mut pset)?;
         Ok(Arc::new(pset.into()))
+    }
+
+    pub fn pset_details(&self, pset: &Pset) -> Result<Arc<PsetDetails>, LwkError> {
+        let wollet = self.inner.lock()?;
+        let details = wollet.get_details(&pset.inner())?;
+        Ok(Arc::new(details.into()))
     }
 
     /// Note this a test method but we are not feature gating in test because we need it in

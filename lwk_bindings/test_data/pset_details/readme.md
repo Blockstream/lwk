@@ -1,0 +1,9 @@
+contains static test vector created via the cli tests `test_multisig` at 06166a87e5e3e2f5aaa836e23fa9b0f8eafd14ef.
+
+```
+...
+fs::write("/tmp/desc", desc).unwrap();
+...
+fs::write("/tmp/pset.base64", pset_s1).unwrap();
+...
+```

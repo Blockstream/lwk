@@ -297,7 +297,7 @@ mod tests {
         assert_eq!(recipients[0].value(), Some(1000));
         assert_eq!(
             recipients[0].address().unwrap().to_string(),
-            "vjTyq4sgkDce4H7LzXS6Zvc8KdAuPzDQ8pudZC6tpC1hbd8XAxqfS9rK9p2oWtfBsJ2qwmgDm2BBTJBd"
+            "AzpoyU5wJFcfdq6sh5ETbqCBA1oLuoLYk5UGJbYLGj3wKMurrVQiX1Djq67JHFAVt1hA5QVq41iNuVmy"
         );
     }
 }

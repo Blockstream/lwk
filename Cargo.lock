@@ -2146,7 +2146,6 @@ dependencies = [
  "base64 0.21.7",
  "bip39",
  "bitcoincore-rpc",
- "bitcoind",
  "electrum-client",
  "elements",
  "elements-miniscript",

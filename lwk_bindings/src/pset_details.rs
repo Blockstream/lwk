@@ -17,6 +17,17 @@ impl PsetDetails {
     pub fn balance(&self) -> Arc<PsetBalance> {
         Arc::new(self.inner.balance.clone().into())
     }
+
+    pub fn signatures(&self) -> Arc<Vec<PsetSignatures>> {
+        Arc::new(
+            self.inner
+                .sig_details
+                .clone()
+                .into_iter()
+                .map(|s| s.into())
+                .collect(),
+        )
+    }
 }
 
 #[derive(uniffi::Object, Debug)]
@@ -45,6 +56,48 @@ impl PsetBalance {
     }
 }
 
+#[derive(uniffi::Object, Debug)]
+pub struct PsetSignatures {
+    inner: lwk_common::PsetSignatures,
+}
+
+impl From<lwk_common::PsetSignatures> for PsetSignatures {
+    fn from(inner: lwk_common::PsetSignatures) -> Self {
+        Self { inner }
+    }
+}
+
+type PublicKey = String;
+type KeySource = String;
+
+#[uniffi::export]
+impl PsetSignatures {
+    pub fn has_signature(&self) -> HashMap<PublicKey, KeySource> {
+        self.inner
+            .has_signature
+            .iter()
+            .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
+            .collect()
+    }
+
+    pub fn missing_signature(&self) -> HashMap<PublicKey, KeySource> {
+        self.inner
+            .missing_signature
+            .iter()
+            .map(|(k, v)| (k.to_string(), key_source_to_string(v)))
+            .collect()
+    }
+}
+
+fn key_source_to_string(
+    key_source: &(
+        elements::bitcoin::bip32::Fingerprint,
+        elements::bitcoin::bip32::DerivationPath,
+    ),
+) -> String {
+    format!("[{}]{}", key_source.0, key_source.1)
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -71,5 +124,11 @@ mod tests {
         let asset_id: AssetId = asset_id.into();
         let val = balances.get(&asset_id).unwrap();
         assert_eq!(*val, -1254);
+
+        let signatures = details.signatures();
+        assert_eq!(signatures.len(), 1);
+
+        assert_eq!(format!("{:?}", signatures[0].has_signature()), "{\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\": \"[6e055509]87'/1'/0'/0/0\"}");
+        assert_eq!(format!("{:?}", signatures[0].missing_signature()), "{\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\": \"[281e2239]87'/1'/0'/0/0\"}");
     }
 }

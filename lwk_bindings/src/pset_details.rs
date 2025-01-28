@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{types::AssetId, Txid};
+use crate::{types::AssetId, Address, Txid};
 
 #[derive(uniffi::Object, Debug)]
 pub struct PsetDetails {
@@ -64,6 +64,15 @@ impl PsetBalance {
             .balances
             .iter()
             .map(|(k, v)| ((*k).into(), *v))
+            .collect()
+    }
+
+    pub fn recipients(&self) -> Vec<Arc<Recipient>> {
+        self.inner
+            .recipients
+            .clone()
+            .into_iter()
+            .map(|e| Arc::new(e.into()))
             .collect()
     }
 }
@@ -149,6 +158,38 @@ impl From<lwk_common::Issuance> for Issuance {
     }
 }
 
+#[derive(uniffi::Object, Debug)]
+pub struct Recipient {
+    inner: lwk_common::Recipient,
+}
+
+impl From<lwk_common::Recipient> for Recipient {
+    fn from(inner: lwk_common::Recipient) -> Self {
+        Self { inner }
+    }
+}
+
+#[uniffi::export]
+impl Recipient {
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset.map(Into::into)
+    }
+
+    pub fn value(&self) -> Option<u64> {
+        self.inner.value.map(Into::into)
+    }
+
+    pub fn address(&self) -> Option<Arc<Address>> {
+        self.inner
+            .address
+            .as_ref()
+            .map(|e| Arc::new(e.clone().into()))
+    }
+    pub fn vout(&self) -> u32 {
+        self.inner.vout
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -186,5 +227,18 @@ mod tests {
         assert_eq!(issuances.len(), 1);
         assert!(!issuances[0].is_issuance());
         assert!(!issuances[0].is_reissuance());
+
+        let recipients = details.balance().recipients();
+        assert_eq!(recipients.len(), 1);
+        assert_eq!(recipients[0].vout(), 0);
+        assert_eq!(
+            recipients[0].asset().unwrap().to_string(),
+            "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
+        );
+        assert_eq!(recipients[0].value(), Some(1000));
+        assert_eq!(
+            recipients[0].address().unwrap().to_string(),
+            "AzpoyU5wJFcfdq6sh5ETbqCBA1oLuoLYk5UGJbYLGj3wKMurrVQiX1Djq67JHFAVt1hA5QVq41iNuVmy"
+        );
     }
 }

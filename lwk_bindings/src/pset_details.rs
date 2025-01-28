@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::types::AssetId;
+use crate::{types::AssetId, Txid};
 
 #[derive(uniffi::Object, Debug)]
 pub struct PsetDetails {
@@ -27,6 +27,18 @@ impl PsetDetails {
                 .map(|s| s.into())
                 .collect(),
         )
+    }
+
+    pub fn inputs_issuances(&self) -> Vec<Issuance> {
+        // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
+        // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
+        // in the meantime, this less ergonomic method should suffice.
+        self.inner
+            .issuances
+            .clone()
+            .into_iter()
+            .map(Into::into)
+            .collect()
     }
 }
 
@@ -98,6 +110,45 @@ fn key_source_to_string(
     format!("[{}]{}", key_source.0, key_source.1)
 }
 
+#[derive(uniffi::Object, Debug)]
+
+pub struct Issuance {
+    inner: lwk_common::Issuance,
+}
+
+#[uniffi::export]
+impl Issuance {
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset().map(Into::into)
+    }
+
+    pub fn token(&self) -> Option<AssetId> {
+        self.inner.token().map(Into::into)
+    }
+
+    pub fn prev_vout(&self) -> Option<u32> {
+        self.inner.prev_vout().map(Into::into)
+    }
+
+    pub fn prev_txid(&self) -> Option<Arc<Txid>> {
+        self.inner.prev_txid().map(|e| Arc::new(e.into()))
+    }
+
+    pub fn is_issuance(&self) -> bool {
+        self.inner.is_issuance()
+    }
+
+    pub fn is_reissuance(&self) -> bool {
+        self.inner.is_reissuance()
+    }
+}
+
+impl From<lwk_common::Issuance> for Issuance {
+    fn from(inner: lwk_common::Issuance) -> Self {
+        Self { inner }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -130,5 +181,10 @@ mod tests {
 
         assert_eq!(format!("{:?}", signatures[0].has_signature()), "{\"02ab89406d9cf32ff1819838136eecb65c07add8e8ef1cd2d6c64bab1d85606453\": \"[6e055509]87'/1'/0'/0/0\"}");
         assert_eq!(format!("{:?}", signatures[0].missing_signature()), "{\"03c1d0c7ddab5bd5bffbe0bf04a8a570eeabd9b6356358ecaacc242f658c7d5aad\": \"[281e2239]87'/1'/0'/0/0\"}");
+
+        let issuances = details.inputs_issuances();
+        assert_eq!(issuances.len(), 1);
+        assert!(!issuances[0].is_issuance());
+        assert!(!issuances[0].is_reissuance());
     }
 }

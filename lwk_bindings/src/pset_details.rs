@@ -13,23 +13,22 @@ impl From<lwk_common::PsetDetails> for PsetDetails {
     }
 }
 
+#[uniffi::export]
 impl PsetDetails {
     pub fn balance(&self) -> Arc<PsetBalance> {
         Arc::new(self.inner.balance.clone().into())
     }
 
-    pub fn signatures(&self) -> Arc<Vec<PsetSignatures>> {
-        Arc::new(
-            self.inner
-                .sig_details
-                .clone()
-                .into_iter()
-                .map(|s| s.into())
-                .collect(),
-        )
+    pub fn signatures(&self) -> Vec<Arc<PsetSignatures>> {
+        self.inner
+            .sig_details
+            .clone()
+            .into_iter()
+            .map(|s| Arc::new(s.into()))
+            .collect()
     }
 
-    pub fn inputs_issuances(&self) -> Vec<Issuance> {
+    pub fn inputs_issuances(&self) -> Vec<Arc<Issuance>> {
         // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
         // in the meantime, this less ergonomic method should suffice.
@@ -37,7 +36,7 @@ impl PsetDetails {
             .issuances
             .clone()
             .into_iter()
-            .map(Into::into)
+            .map(|e| Arc::new(e.into()))
             .collect()
     }
 }

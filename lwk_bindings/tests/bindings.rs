@@ -11,4 +11,5 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/amp2.py",
     "tests/bindings/list_transactions.kts",
     "tests/bindings/list_transactions.swift",
+    "tests/bindings/pset_details.py",
 );

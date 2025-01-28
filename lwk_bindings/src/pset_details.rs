@@ -211,7 +211,7 @@ mod tests {
         let balances = details.balance().balances();
         assert_eq!(balances.len(), 1);
         let expected_asset_id = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-        let asset_id = elements::AssetId::from_str(&expected_asset_id).unwrap();
+        let asset_id = elements::AssetId::from_str(expected_asset_id).unwrap();
         let asset_id: AssetId = asset_id.into();
         let val = balances.get(&asset_id).unwrap();
         assert_eq!(*val, -1254);

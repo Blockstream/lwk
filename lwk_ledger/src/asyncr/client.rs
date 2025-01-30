@@ -373,5 +373,5 @@ pub trait Transport {
     fn exchange(
         &self,
         command: &APDUCmdVec,
-    ) -> impl std::future::Future<Output = Result<(StatusWord, Vec<u8>), Self::Error>> + Send; // TODO use async in trait instead of returning Future once supported by rust
+    ) -> impl std::future::Future<Output = Result<(StatusWord, Vec<u8>), Self::Error>>; // TODO use async in trait instead of returning Future once supported by rust
 }

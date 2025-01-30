@@ -28,6 +28,8 @@ pub use psbt::PartialSignature;
 pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
 
+pub use apdu::{APDUCmdVec, StatusWord};
+
 use elements_miniscript::confidential::slip77;
 use elements_miniscript::elements::bitcoin::bip32::{
     ChildNumber, DerivationPath, Fingerprint, Xpub,

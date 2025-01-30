@@ -10,6 +10,8 @@ mod error;
 mod esplora;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade;
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+mod ledger;
 mod mnemonic;
 mod network;
 mod precision;
@@ -51,6 +53,9 @@ pub use tx_builder::TxBuilder;
 pub use update::Update;
 pub use wollet::Wollet;
 pub use xpub::Xpub;
+
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+pub use ledger::search_ledger_device;
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {

@@ -6,6 +6,18 @@ use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
 use lwk_ledger::*;
 
 #[test]
+fn test_version() {
+    let docker = clients::Cli::default();
+    let ledger = LedgerEmulator::new().expect("test");
+    let container = docker.run(ledger);
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let client = Ledger::new(port).client;
+    let (name, version, _flags) = client.get_version().unwrap();
+    assert_eq!(version, "2.2.3");
+    assert_eq!(name, "Liquid Regtest");
+}
+
+#[test]
 fn test_ledger_commands() {
     let docker = clients::Cli::default();
     let ledger = LedgerEmulator::new().expect("test");
@@ -134,10 +146,11 @@ fn test_ledger_commands() {
 #[ignore = "requires hardware ledger connected via usb"]
 #[test]
 fn test_physical_device() {
+    let _ = env_logger::try_init();
     let client = Ledger::new_hid().client;
     let (name, version, _flags) = client.get_version().unwrap();
     assert_eq!(name, "BOLOS");
-    assert_eq!(version, "1.5.5");
+    assert_eq!(version, "1.6.1");
 }
 
 #[cfg(feature = "asyncr")]

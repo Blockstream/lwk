@@ -1,6 +1,6 @@
 mod apdu;
 mod client;
-mod command;
+pub mod command;
 mod error;
 mod interpreter;
 mod merkle;
@@ -17,8 +17,13 @@ mod ledger_emulator;
 #[cfg(feature = "asyncr")]
 pub mod asyncr;
 
+use std::io::Cursor;
+
+use byteorder::{BigEndian, ReadBytesExt};
 #[cfg(feature = "test_emulator")]
 pub use ledger_emulator::TestLedgerEmulator;
+
+pub use ledger_apdu::APDUAnswer;
 
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
@@ -27,6 +32,8 @@ use client::Transport;
 pub use psbt::PartialSignature;
 pub use transport_tcp::TransportTcp;
 pub use wallet::{AddressType, Version, WalletPolicy, WalletPubKey};
+
+pub use apdu::{APDUCmdVec, StatusWord};
 
 use elements_miniscript::confidential::slip77;
 use elements_miniscript::elements::bitcoin::bip32::{
@@ -282,7 +289,7 @@ impl<T: Transport> Signer for Ledger<T> {
 // taken and adapted from:
 // https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
 #[allow(unused)]
-fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
+pub fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
     fn decode_pushnum(op: All) -> Option<u8> {
         let start: u8 = OP_PUSHNUM_1.into_u8();
         let end: u8 = OP_PUSHNUM_16.into_u8();
@@ -342,5 +349,189 @@ fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
         Some((required_sigs.into(), pubkeys))
     } else {
         None
+    }
+}
+
+const LEDGER_CHANNEL: u16 = 0x0101;
+
+pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
+    let mut result = vec![];
+    let mut expected_apdu_len = 0usize;
+
+    for (sequence_idx, el) in apdu_answers.into_iter().enumerate() {
+        let res = el.len();
+
+        if (sequence_idx == 0 && res < 7) || res < 5 {
+            return Err(Error::ClientError(
+                "Read error. Incomplete header".to_string(),
+            ));
+        }
+
+        let mut rdr = Cursor::new(&el);
+
+        let rcv_channel = rdr
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::ClientError("Invalid channel".to_string()))?;
+        let rcv_tag = rdr
+            .read_u8()
+            .map_err(|_| Error::ClientError("Invalid tag".to_string()))?;
+        let rcv_seq_idx = rdr
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::ClientError("Invalid sequence idx".to_string()))?;
+
+        if rcv_channel != LEDGER_CHANNEL {
+            return Err(Error::ClientError("Invalid channel".to_string()));
+        }
+        if rcv_tag != 0x05u8 {
+            return Err(Error::ClientError("Invalid tag".to_string()));
+        }
+
+        if rcv_seq_idx != sequence_idx as u16 {
+            return Err(Error::ClientError("Invalid sequence idx".to_string()));
+        }
+
+        if rcv_seq_idx == 0 {
+            expected_apdu_len = rdr
+                .read_u16::<BigEndian>()
+                .map_err(|_| Error::ClientError("Invalid expected apdu len".to_string()))?
+                as usize;
+        }
+
+        let needs_more = expected_apdu_len > (result.len() + el.len()); // TODO check off by one
+
+        let start = rdr.position() as usize;
+        let end = if needs_more {
+            el.len()
+        } else {
+            expected_apdu_len - result.len() + start
+        };
+
+        let new_chunk = &el[start..end];
+
+        result.extend_from_slice(new_chunk);
+
+        if result.len() >= expected_apdu_len {
+            return Ok(result);
+        }
+    }
+    Err(Error::ClientError("Incomplete APDU".to_string()))
+}
+
+const LEDGER_PACKET_WRITE_SIZE: u8 = 64;
+
+// based on https://github.com/Zondax/ledger-rs/blob/master/ledger-transport-hid/src/lib.rs
+// with the notable difference we don't use the prefix 0x00
+pub fn write_apdu(apdu_command: &APDUCmdVec) -> Vec<[u8; LEDGER_PACKET_WRITE_SIZE as usize]> {
+    let channel = LEDGER_CHANNEL;
+    let apdu_command = apdu_command.serialize();
+    let mut results = vec![];
+    let command_length = apdu_command.len();
+    let mut in_data = Vec::with_capacity(command_length + 2);
+    in_data.push(((command_length >> 8) & 0xFF) as u8);
+    in_data.push((command_length & 0xFF) as u8);
+    in_data.extend_from_slice(&apdu_command);
+
+    let mut buffer = vec![0u8; LEDGER_PACKET_WRITE_SIZE as usize];
+    buffer[0] = ((channel >> 8) & 0xFF) as u8; // channel big endian
+    buffer[1] = (channel & 0xFF) as u8; // channel big endian
+    buffer[2] = 0x05u8;
+
+    for (sequence_idx, chunk) in in_data
+        .chunks((LEDGER_PACKET_WRITE_SIZE - 5) as usize)
+        .enumerate()
+    {
+        buffer[3] = ((sequence_idx >> 8) & 0xFF) as u8; // sequence_idx big endian
+        buffer[4] = (sequence_idx & 0xFF) as u8; // sequence_idx big endian
+        buffer[5..5 + chunk.len()].copy_from_slice(chunk);
+
+        results.push(buffer.clone().try_into().unwrap());
+    }
+    results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_apdu() {
+        // messages taken from xpub requests in the browser
+        let message1 = [
+            1, 1, 5, 0, 0, 0, 113, 116, 112, 117, 98, 68, 67, 119, 89, 106, 112, 68, 104, 85, 100,
+            80, 71, 80, 53, 114, 83, 51, 119, 103, 78, 103, 49, 51, 109, 84, 114, 114, 106, 66,
+            117, 71, 56, 86, 57, 86, 112, 87, 98, 121, 112, 116, 88, 54, 84, 82, 80, 98, 78, 111,
+            90, 86, 88, 115,
+        ]
+        .to_vec();
+        let message2 = [
+            1, 1, 5, 0, 1, 111, 86, 85, 83, 107, 67, 106, 109, 81, 56, 106, 74, 121, 99, 106, 117,
+            68, 75, 66, 98, 57, 101, 97, 116, 97, 83, 121, 109, 88, 97, 107, 84, 84, 97, 71, 105,
+            102, 120, 82, 54, 107, 109, 86, 115, 102, 70, 101, 104, 72, 49, 90, 103, 74, 84, 144,
+            0, 0, 0, 0,
+        ]
+        .to_vec();
+        let result = read_multi_apdu(vec![message1, message2]).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                116, 112, 117, 98, 68, 67, 119, 89, 106, 112, 68, 104, 85, 100, 80, 71, 80, 53,
+                114, 83, 51, 119, 103, 78, 103, 49, 51, 109, 84, 114, 114, 106, 66, 117, 71, 56,
+                86, 57, 86, 112, 87, 98, 121, 112, 116, 88, 54, 84, 82, 80, 98, 78, 111, 90, 86,
+                88, 115, 111, 86, 85, 83, 107, 67, 106, 109, 81, 56, 106, 74, 121, 99, 106, 117,
+                68, 75, 66, 98, 57, 101, 97, 116, 97, 83, 121, 109, 88, 97, 107, 84, 84, 97, 71,
+                105, 102, 120, 82, 54, 107, 109, 86, 115, 102, 70, 101, 104, 72, 49, 90, 103, 74,
+                84, 144, 0
+            ]
+        );
+        let answer = APDUAnswer::from_answer(result).unwrap();
+        let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
+        // let vec = answer.data().to_vec();
+        assert_eq!(status, StatusWord::OK);
+    }
+
+    #[test]
+    fn test_read_apdu_single() {
+        let get_version_test_vector_array = [
+            1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101, 115, 116, 5, 50, 46,
+            50, 46, 51, 1, 2, 144, 0,
+        ];
+
+        let received_apdu_ledger = [
+            1, 1, 5, 0, 0, 0, 26, 1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101,
+            115, 116, 5, 50, 46, 50, 46, 51, 1, 2, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let result = read_multi_apdu(vec![received_apdu_ledger.to_vec()]).unwrap();
+        assert_eq!(result, get_version_test_vector_array.to_vec());
+    }
+
+    #[test]
+    fn test_fix_return_error() {
+        let d = [[
+            1, 1, 5, 0, 0, 0, 67, 66, 246, 203, 175, 41, 59, 76, 239, 143, 8, 205, 206, 188, 195,
+            151, 107, 194, 119, 208, 91, 66, 183, 226, 62, 33, 83, 168, 81, 140, 125, 100, 200,
+            140, 146, 242, 46, 52, 250, 248, 37, 179, 244, 196, 225, 203, 90, 152, 201, 177, 38,
+            128, 184, 233, 230, 21, 233, 229,
+        ]
+        .to_vec()]
+        .to_vec();
+
+        let result = read_multi_apdu(d).unwrap_err();
+        assert_eq!(result.to_string(), "Client Error: Incomplete APDU");
+    }
+
+    #[test]
+    fn test_write_apdu() {
+        let command = crate::command::get_version();
+        assert_eq!(&command.serialize(), &[176u8, 1, 0, 0, 0]);
+        let results = write_apdu(&command);
+        assert_eq!(
+            results,
+            vec![[
+                1, 1, 5, 0, 0, 0, 5, 176, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0
+            ]]
+        );
     }
 }

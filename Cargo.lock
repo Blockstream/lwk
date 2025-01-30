@@ -2223,7 +2223,9 @@ dependencies = [
 name = "lwk_ledger"
 version = "0.9.0"
 dependencies = [
+ "byteorder",
  "elements-miniscript",
+ "env_logger",
  "ledger-apdu",
  "ledger-transport-hid",
  "lwk_common",
@@ -2291,9 +2293,11 @@ dependencies = [
 name = "lwk_wasm"
 version = "0.9.0"
 dependencies = [
+ "byteorder",
  "console_error_panic_hook",
  "lwk_common",
  "lwk_jade",
+ "lwk_ledger",
  "lwk_signer",
  "lwk_wollet",
  "reqwest",
@@ -2301,6 +2305,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "thiserror 1.0.69",
+ "tokio",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

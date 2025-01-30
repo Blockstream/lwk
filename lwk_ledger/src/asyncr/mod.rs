@@ -24,6 +24,12 @@ impl Ledger<TransportTcp> {
         Self { client }
     }
 }
+impl<T: Transport> Ledger<T> {
+    pub fn from_transport(transport: T) -> Self {
+        let client = LiquidClient::new(transport);
+        Self { client }
+    }
+}
 
 /// TODO Should implement Signer, but here we are async. Make async signer and impl here and for jade
 impl Ledger<TransportTcp> {

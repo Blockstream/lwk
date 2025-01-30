@@ -90,3 +90,16 @@ With [twiggy](https://github.com/rustwasm/twiggy) is then possible to analyze th
 ```shell
 twiggy top -n 10 pkg/lwk_wasm_bg.wasm
 ```
+
+### Build for nodejs
+
+```shell
+$ cd lwk_wasm
+$ RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
+```
+
+Rename the package to `lwk_node` so that we can publish it to npm.
+
+```shell
+sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
+```

@@ -2053,6 +2053,7 @@ name = "lwk_ledger"
 version = "0.8.0"
 dependencies = [
  "elements-miniscript",
+ "env_logger",
  "ledger-apdu",
  "ledger-transport-hid",
  "lwk_common",

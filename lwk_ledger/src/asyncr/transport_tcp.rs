@@ -40,6 +40,7 @@ impl Transport for TransportTcp {
             req[..4].copy_from_slice(&(command_bytes.len() as u32).to_be_bytes());
             req[4..].copy_from_slice(&command_bytes);
             stream.write_all(&req)?;
+            println!("req  -> {:?}", req);
 
             let mut buff = [0u8; 4];
             let len = match stream.read(&mut buff)? {
@@ -49,6 +50,8 @@ impl Transport for TransportTcp {
 
             let mut resp = vec![0u8; len as usize + 2];
             stream.read_exact(&mut resp)?;
+            println!("resp  -> {:?}", resp);
+
             let answer = APDUAnswer::from_answer(resp).map_err(|_| "Invalid Answer")?;
             Ok((
                 StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown),

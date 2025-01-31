@@ -1,6 +1,6 @@
 mod apdu;
 mod client;
-mod command;
+pub mod command;
 mod error;
 mod interpreter;
 mod merkle;

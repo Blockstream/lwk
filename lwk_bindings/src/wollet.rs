@@ -5,6 +5,7 @@ use crate::network::Network;
 use crate::types::AssetId;
 use crate::{
     AddressResult, ForeignPersisterLink, LwkError, Pset, PsetDetails, Txid, Update, WalletTx,
+    WalletTxOut,
 };
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -94,6 +95,18 @@ impl Wollet {
             .inner
             .lock()?
             .transactions()?
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect())
+    }
+
+    /// Get the unspent transaction outputs of the wallet
+    pub fn utxos(&self) -> Result<Vec<Arc<WalletTxOut>>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .utxos()?
             .into_iter()
             .map(Into::into)
             .map(Arc::new)

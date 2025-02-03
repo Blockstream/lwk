@@ -1514,3 +1514,29 @@ fn test_amp2() {
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }
+
+#[test]
+fn test_utxos() {
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+
+    sw_signer(&cli, "s1");
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
+    let (txid, addr) = fund(&server, &cli, "w1", 1_000_000);
+
+    let r = sh(&format!("{cli} wallet utxos --wallet w1"));
+    assert_eq!(get_len(&r, "utxos"), 1);
+    let utxo = &r.get("utxos").unwrap().as_array().unwrap()[0];
+    assert_eq!(
+        utxo.get("txid").unwrap().as_str().unwrap(),
+        txid.to_string()
+    );
+    assert_eq!(
+        utxo.get("address").unwrap().as_str().unwrap(),
+        addr.to_string()
+    );
+    assert_eq!(utxo.get("value").unwrap().as_u64().unwrap(), 1_000_000);
+
+    sh(&format!("{cli} server stop"));
+
+    t.join().unwrap();
+}

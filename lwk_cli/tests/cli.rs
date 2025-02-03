@@ -8,8 +8,8 @@ use std::{
 };
 
 use clap::{Parser, ValueEnum};
-use elements::encode::serialize;
 use elements::hex::ToHex;
+use elements::{encode::serialize, Txid};
 use elements::{pset::PartiallySignedTransaction, Address};
 use lwk_containers::{testcontainers::clients, JadeEmulator, EMULATOR_PORT};
 use serde_json::Value;
@@ -245,15 +245,14 @@ fn asset_ids_from_issuance_pset(cli: &str, wallet: &str, pset: &str) -> (String,
     (asset, token)
 }
 
-fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) {
+fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
-    let txid = server
-        .elementsd_sendtoaddress(&addr, sats, None)
-        .to_string();
+    let txid = server.elementsd_sendtoaddress(&addr, sats, None);
     // Only 2 blocks are necessary to make coinbase spendable
     server.elementsd_generate(2);
-    wait_tx(cli, wallet, &txid);
+    wait_tx(cli, wallet, &txid.to_string());
+    (txid, addr)
 }
 
 fn complete(cli: &str, wallet: &str, pset: &str, signers: &[&str]) -> String {
@@ -575,7 +574,7 @@ fn test_wallet_memos() {
     singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
 
     // Fund w1
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     // Send from w1 to w2
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -768,7 +767,7 @@ fn test_broadcast() {
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     assert_eq!(1_000_000, get_balance(&cli, "w1", policy_asset));
@@ -786,7 +785,7 @@ fn test_issue() {
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -937,7 +936,7 @@ fn test_issue() {
     // Move the reissuance token to another wallet and perform an "external" reissuance
     sw_signer(&cli, "s2");
     singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
-    fund(&server, &cli, "w2", 1_000_000);
+    let _ = fund(&server, &cli, "w2", 1_000_000);
     let w2_addr = address(&cli, "w2");
     let txid = send(&cli, "w1", &w2_addr, token, 1, &["s1"]);
     wait_tx(&cli, "w2", &txid);
@@ -994,7 +993,7 @@ fn test_jade_emulator() {
     sw_signer(&cli, "sw");
     let signers = &["sw", "emul"];
     multisig_wallet(&cli, "multi", 2, signers, "slip77-rand");
-    fund(&server, &cli, "multi", 10_000);
+    let _ = fund(&server, &cli, "multi", 10_000);
     let addr = address(&cli, "multi");
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     send(&cli, "multi", &addr, policy_asset, 1_000, signers);
@@ -1030,7 +1029,7 @@ fn test_commands() {
     let err = sh_err(&format!("{cli} wallet load --wallet wrong -d wrong"));
     assert!(err.contains("Invalid descriptor: Not a CT Descriptor"));
 
-    fund(&server, &cli, "custody", 1_000_000);
+    let _ = fund(&server, &cli, "custody", 1_000_000);
 
     let result = sh(&format!("{cli}  wallet balance --wallet custody"));
     let balance_obj = result.get("balance").unwrap();
@@ -1128,7 +1127,7 @@ fn test_multisig() {
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet multi -d {desc}"));
 
-    fund(&server, &cli, "multi", 1_000_000);
+    let _ = fund(&server, &cli, "multi", 1_000_000);
 
     let node_address = server.elementsd_getnewaddress();
     let satoshi = 1000;
@@ -1288,7 +1287,7 @@ fn test_registry_publish() {
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -1413,7 +1412,7 @@ fn test_3of5() {
     let signers = &["s1", "s2", "s3", "s4", "s5"];
     multisig_wallet(&cli, "multi", 3, signers, "elip151");
 
-    fund(&server, &cli, "multi", 1_000_000);
+    let _ = fund(&server, &cli, "multi", 1_000_000);
 
     let r = sh(&format!(
         "{cli} wallet issue --wallet multi --satoshi-asset 1000 --satoshi-token 1"
@@ -1455,7 +1454,7 @@ fn test_send_all() {
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
     let signers = &["sw"];
 
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     let node_address = server.elementsd_getnewaddress();
     let r = sh(&format!(
@@ -1477,7 +1476,7 @@ fn test_ct_discount() {
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
     let signers = &["sw"];
 
-    fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w1", 1_000_000);
 
     let address = server.elementsd_getnewaddress();
     let sats = 1_000;

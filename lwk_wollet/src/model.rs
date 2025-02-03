@@ -16,6 +16,7 @@ use std::str::FromStr;
 pub struct WalletTxOut {
     pub outpoint: OutPoint,
     pub script_pubkey: Script,
+    pub address: Address,
     pub height: Option<u32>,
     pub unblinded: TxOutSecrets,
     pub wildcard_index: u32,

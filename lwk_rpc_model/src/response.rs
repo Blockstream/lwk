@@ -319,6 +319,9 @@ pub struct Utxo {
     /// Output script pubkey
     pub script_pubkey: String,
 
+    /// Output address
+    pub address: String,
+
     /// Output asset
     pub asset: String,
 

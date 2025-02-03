@@ -76,7 +76,11 @@ mod tests {
 
     #[test]
     fn wallet_tx() {
+        let address_str = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
+        let address: elements::Address = address_str.parse().unwrap();
+
         let tx_out = lwk_wollet::WalletTxOut {
+            address,
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),
             height: Some(1),

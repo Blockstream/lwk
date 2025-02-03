@@ -95,9 +95,14 @@ impl ElementsRpcClient {
         // TODO: make this more efficient
         let params = self.network.address_params();
         let mut spk_map = HashMap::new();
+        let mut address_map = HashMap::new();
         for i in 0..range {
-            let spk_ext = desc.address(i, params)?.script_pubkey();
-            let spk_int = desc.change(i, params)?.script_pubkey();
+            let address = desc.address(i, params)?;
+            let spk_ext = address.script_pubkey();
+            address_map.insert(spk_ext.clone(), address);
+            let change = desc.change(i, params)?;
+            let spk_int = change.script_pubkey();
+            address_map.insert(spk_int.clone(), change);
             spk_map.insert(spk_ext, (Chain::External, i));
             spk_map.insert(spk_int, (Chain::Internal, i));
         }
@@ -109,6 +114,10 @@ impl ElementsRpcClient {
                 .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset".into()))?;
             let txout = self.get_txout(&outpoint, u.height)?;
             let unblinded = try_unblind(txout, desc)?;
+            let address = address_map
+                .get(&u.script_pubkey)
+                .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset address".into()))?
+                .clone();
             utxos.push(WalletTxOut {
                 outpoint,
                 script_pubkey: u.script_pubkey,
@@ -116,6 +125,7 @@ impl ElementsRpcClient {
                 unblinded,
                 wildcard_index,
                 ext_int,
+                address,
             })
         }
         Ok(utxos)

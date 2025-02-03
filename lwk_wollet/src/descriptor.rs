@@ -227,7 +227,7 @@ impl WolletDescriptor {
         self.inner_address(index, params, Chain::External)
     }
 
-    fn inner_address(
+    pub(crate) fn inner_address(
         &self,
         index: u32,
         params: &'static AddressParams,

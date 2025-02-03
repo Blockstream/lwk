@@ -435,6 +435,10 @@ impl Wollet {
                 .filter_map(|(outpoint, output)| {
                     if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
                         let index = self.index(&output.script_pubkey).ok()?;
+                        let address = self
+                            .descriptor
+                            .inner_address(index.1, self.config.address_params(), index.0)
+                            .ok()?;
                         return Some(WalletTxOut {
                             outpoint,
                             script_pubkey: output.script_pubkey.clone(),
@@ -442,6 +446,7 @@ impl Wollet {
                             unblinded: *unblinded,
                             wildcard_index: index.1,
                             ext_int: index.0,
+                            address,
                         });
                     }
                     None

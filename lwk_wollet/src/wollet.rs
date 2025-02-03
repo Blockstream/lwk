@@ -12,7 +12,7 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::persister::PersistError;
-use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
+use crate::store::{Height, ScriptBatch, Store, Timestamp, GAP_LIMIT};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
@@ -88,8 +88,8 @@ impl WolletState for WolletConciseState {
             ..Default::default()
         };
 
-        let start = batch * BATCH_SIZE;
-        let end = start + BATCH_SIZE;
+        let start = batch * GAP_LIMIT;
+        let end = start + GAP_LIMIT;
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;

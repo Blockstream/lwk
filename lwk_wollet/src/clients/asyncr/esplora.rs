@@ -4,7 +4,7 @@
 use crate::clients::{try_unblind, Capability, History};
 use crate::{
     clients::Data,
-    store::{Height, Store, Timestamp, BATCH_SIZE},
+    store::{Height, Store, Timestamp, GAP_LIMIT},
     update::DownloadTxResult,
     wollet::WolletState,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
@@ -289,10 +289,10 @@ impl EsploraClient {
                 if let Some(max) = max {
                     match chain {
                         Chain::External => {
-                            data.last_unused.external = 1 + max + batch_count * BATCH_SIZE
+                            data.last_unused.external = 1 + max + batch_count * GAP_LIMIT
                         }
                         Chain::Internal => {
-                            data.last_unused.internal = 1 + max + batch_count * BATCH_SIZE
+                            data.last_unused.internal = 1 + max + batch_count * GAP_LIMIT
                         }
                     }
                 };

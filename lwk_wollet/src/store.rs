@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-pub const BATCH_SIZE: u32 = 20;
+pub const GAP_LIMIT: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
@@ -120,8 +120,8 @@ impl Store {
             ..Default::default()
         };
 
-        let start = batch * BATCH_SIZE;
-        let end = start + BATCH_SIZE;
+        let start = batch * GAP_LIMIT;
+        let end = start + GAP_LIMIT;
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;

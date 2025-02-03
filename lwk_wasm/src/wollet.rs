@@ -1,4 +1,7 @@
-use crate::{AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WolletDescriptor};
+use crate::{
+    AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WalletTxOut,
+    WolletDescriptor,
+};
 use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements_miniscript::ForEachKey;
@@ -80,6 +83,11 @@ impl Wollet {
             .into_iter()
             .map(Into::into)
             .collect())
+    }
+
+    /// Get the unspent transaction outputs of the wallet
+    pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
+        Ok(self.inner.utxos()?.into_iter().map(Into::into).collect())
     }
 
     /// Finalize and consume the given PSET, returning the finalized one
@@ -222,5 +230,13 @@ mod tests {
         assert_eq!(tx.txid().to_string(), expected);
         assert_eq!(tx.outputs()[0].get().unwrap().unblinded().value(), 5000);
         assert_eq!(tx.unblinded_url("https://blockstream.info/liquid/"), "https://blockstream.info/liquid/tx/b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0#blinded=5000,6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d,996317a530241d05658cd5e7cecbaf89a3a23962c944c3459b21964410d08176,1eccf2fd5e8160343f2c69e2e9d261fec783a6f0f942387c0e78b25471672462");
+
+        let utxos = wollet.utxos().unwrap();
+        assert!(!utxos.is_empty());
+        let utxo = &utxos[0];
+        assert_eq!(
+            utxo.address().to_string(),
+            "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
+        );
     }
 }

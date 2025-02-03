@@ -77,11 +77,13 @@ mod tests {
     use crate::WalletTx;
     use lwk_wollet::elements::{self, hex::FromHex, pset::serialize::Deserialize};
     use std::collections::HashMap;
+    use std::str::FromStr;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
     fn wallet_tx() {
         let tx_out = lwk_wollet::WalletTxOut {
+            address: elements::Address::from_str("el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq").unwrap(),
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),
             height: Some(1),

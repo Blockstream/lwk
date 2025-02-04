@@ -1773,9 +1773,11 @@ fn test_non_standard_gap_limit() {
         wollet_desc.clone(),
     )
     .unwrap();
+    let datadir = tempfile::TempDir::new().unwrap();
+    let persister = FsPersister::new(&datadir, network, &wollet_desc).unwrap();
+
     let mut wollet_longer_gap =
-        Wollet::with_gap_limit(network, std::sync::Arc::new(NoPersist {}), wollet_desc, 30)
-            .unwrap();
+        Wollet::with_gap_limit(network, persister, wollet_desc.clone(), 30).unwrap();
 
     let i = Some(25);
     let address_after_gap_limit = wollet_std_gap.address(i).unwrap().address().clone();
@@ -1795,4 +1797,11 @@ fn test_non_standard_gap_limit() {
 
     let balance = wollet_std_gap.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &0);
+
+    drop(wollet_longer_gap);
+
+    let persister = FsPersister::new(&datadir, network, &wollet_desc).unwrap();
+    let _e = Wollet::new(network, persister, wollet_desc).unwrap_err();
+    // TODO error is not "different gap limit" but error on applying the update,
+    // the end result of preventing to create a wallet with a different gap limit is achieved but the error is misleading
 }

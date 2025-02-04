@@ -1,5 +1,6 @@
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
+use crate::store::GAP_LIMIT;
 use std::str::FromStr;
 
 const LIQUID_POLICY_ASSET_STR: &str =
@@ -79,14 +80,28 @@ impl ElementsNetwork {
     }
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct Config {
     network: ElementsNetwork,
+    gap_limit: u32,
+}
+
+impl std::hash::Hash for Config {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.network.hash(state);
+        if self.gap_limit != GAP_LIMIT {
+            // for retro compatibility, we hash the gap limit only if it's different from the default value
+            self.gap_limit.hash(state);
+        }
+    }
 }
 
 impl Config {
     pub fn new(network: ElementsNetwork) -> Result<Self, Error> {
-        Ok(Config { network })
+        Ok(Config {
+            network,
+            gap_limit: GAP_LIMIT,
+        })
     }
 
     pub fn address_params(&self) -> &'static AddressParams {
@@ -99,6 +114,10 @@ impl Config {
 
     pub fn network(&self) -> ElementsNetwork {
         self.network
+    }
+
+    pub fn gap_limit(&self) -> u32 {
+        self.gap_limit
     }
 }
 

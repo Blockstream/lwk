@@ -42,6 +42,14 @@ pub struct RawCache {
 
     /// last unused index for internal addresses (changes) for current descriptor
     pub last_unused_internal: AtomicU32,
+
+    /// gap limit as defined https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki#address-gap-limit
+    ///
+    /// if None, use the default value of 20
+    /// The wollet must be initialized with the same gap limit used in previous initialization or it will fail.
+    /// This is to prevent scan with different gap limits that can potentially make txs disappear.
+    /// If it's needed to change the gap limit, the cache must be deleted.
+    pub gap_limit: Option<u32>,
 }
 
 impl Default for RawCache {
@@ -56,6 +64,7 @@ impl Default for RawCache {
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
             timestamps: HashMap::default(),
+            gap_limit: None,
         }
     }
 }
@@ -120,8 +129,8 @@ impl Store {
             ..Default::default()
         };
 
-        let start = batch * GAP_LIMIT;
-        let end = start + GAP_LIMIT;
+        let start = batch * self.cache.gap_limit.unwrap_or(GAP_LIMIT);
+        let end = start + self.cache.gap_limit.unwrap_or(GAP_LIMIT);
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;

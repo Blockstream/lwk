@@ -12,7 +12,7 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::persister::PersistError;
-use crate::store::{Height, ScriptBatch, Store, Timestamp, GAP_LIMIT};
+use crate::store::{Height, ScriptBatch, Store, Timestamp};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
@@ -53,6 +53,7 @@ pub struct WolletConciseState {
     heights: HashMap<Txid, Option<Height>>,
     tip: (Height, BlockHash),
     last_unused: LastUnused,
+    gap_limit: u32,
 }
 
 pub trait WolletState {
@@ -74,6 +75,7 @@ pub trait WolletState {
     fn last_unused(&self) -> LastUnused; // TODO change to &LastUnused when possible
     fn descriptor(&self) -> WolletDescriptor;
     fn wollet_status(&self) -> u64;
+    fn gap_limit(&self) -> u32;
 }
 
 impl WolletState for WolletConciseState {
@@ -88,8 +90,8 @@ impl WolletState for WolletConciseState {
             ..Default::default()
         };
 
-        let start = batch * GAP_LIMIT;
-        let end = start + GAP_LIMIT;
+        let start = batch * self.gap_limit();
+        let end = start + self.gap_limit();
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
@@ -147,6 +149,10 @@ impl WolletState for WolletConciseState {
     fn wollet_status(&self) -> u64 {
         self.wollet_status
     }
+
+    fn gap_limit(&self) -> u32 {
+        self.gap_limit
+    }
 }
 
 impl std::fmt::Debug for Wollet {
@@ -156,6 +162,10 @@ impl std::fmt::Debug for Wollet {
 }
 
 impl WolletState for Wollet {
+    fn gap_limit(&self) -> u32 {
+        self.config.gap_limit()
+    }
+
     fn get_script_batch(
         &self,
         batch: u32,
@@ -272,6 +282,7 @@ impl Wollet {
                 internal: cache.last_unused_internal.load(atomic::Ordering::Relaxed),
                 external: cache.last_unused_external.load(atomic::Ordering::Relaxed),
             },
+            gap_limit: self.config.gap_limit(),
         }
     }
 

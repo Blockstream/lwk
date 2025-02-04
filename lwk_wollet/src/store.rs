@@ -104,6 +104,10 @@ impl std::hash::Hash for RawCache {
         self.last_unused_internal
             .load(Ordering::Relaxed)
             .hash(state);
+
+        if let Some(gap_limit) = self.gap_limit {
+            gap_limit.hash(state);
+        }
     }
 }
 
@@ -215,7 +219,8 @@ mod tests {
         let mut store = Store::default();
         let mut hasher = DefaultHasher::new();
         store.hash(&mut hasher);
-        assert_eq!(11565483422739161174, hasher.finish());
+        let hash1 = hasher.finish();
+        assert_eq!(11565483422739161174, hash1);
 
         store
             .cache
@@ -223,7 +228,17 @@ mod tests {
             .insert(<Txid as elements::hashes::Hash>::all_zeros(), None);
         let mut hasher = DefaultHasher::new();
         store.hash(&mut hasher);
-        assert_eq!(12004253425667158821, hasher.finish());
+        let hash2 = hasher.finish();
+        assert_eq!(12004253425667158821, hash2);
+        assert_ne!(hash1, hash2);
+
+        store.cache.gap_limit = Some(100);
+        let mut hasher = DefaultHasher::new();
+        store.hash(&mut hasher);
+        let hash3 = hasher.finish();
+        assert_eq!(17103859861122599372, hash3);
+        assert_ne!(hash1, hash3);
+        assert_ne!(hash2, hash3);
 
         // TODO test other fields change the hash
     }

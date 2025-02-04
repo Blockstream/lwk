@@ -97,11 +97,8 @@ impl std::hash::Hash for Config {
 }
 
 impl Config {
-    pub fn new(network: ElementsNetwork) -> Result<Self, Error> {
-        Ok(Config {
-            network,
-            gap_limit: GAP_LIMIT,
-        })
+    pub fn new(network: ElementsNetwork, gap_limit: u32) -> Result<Self, Error> {
+        Ok(Config { network, gap_limit })
     }
 
     pub fn address_params(&self) -> &'static AddressParams {
@@ -128,11 +125,13 @@ mod test {
         hash::{Hash, Hasher},
     };
 
+    use crate::store::GAP_LIMIT;
+
     use super::Config;
 
     #[test]
     fn test_config_hash() {
-        let config = Config::new(crate::ElementsNetwork::Liquid).unwrap();
+        let config = Config::new(crate::ElementsNetwork::Liquid, GAP_LIMIT).unwrap();
         let mut hasher = DefaultHasher::new();
         config.hash(&mut hasher);
         assert_eq!(13646096770106105413, hasher.finish());

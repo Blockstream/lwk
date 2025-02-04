@@ -190,6 +190,7 @@ pub trait BlockchainBackend {
             let wollet_status = state.wollet_status();
 
             let update = Update {
+                gap_limit: state.gap_limit(),
                 wollet_status,
                 new_txs,
                 txid_height_new,

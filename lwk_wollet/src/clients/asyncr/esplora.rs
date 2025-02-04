@@ -249,6 +249,7 @@ impl EsploraClient {
             let wollet_status = wollet.status();
 
             let update = Update {
+                gap_limit: store.cache.gap_limit,
                 wollet_status,
                 new_txs,
                 txid_height_new,

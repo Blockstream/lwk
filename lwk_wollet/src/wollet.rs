@@ -12,7 +12,7 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::persister::PersistError;
-use crate::store::{Height, ScriptBatch, Store, Timestamp};
+use crate::store::{Height, ScriptBatch, Store, Timestamp, GAP_LIMIT};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
@@ -239,8 +239,21 @@ impl Wollet {
         persister: Arc<dyn Persister + Send + Sync>,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
-        let config = Config::new(network)?;
+        Self::with_gap_limit(network, persister, descriptor, GAP_LIMIT)
+    }
 
+    /// Create a new  wallet specifying the gap limit
+    ///
+    /// Note the used gap limit must be the same as the one used in previous initialization or it will fail.
+    /// This is to prevent scan with different gap limits that can potentially make txs disappear.
+    /// If it's needed to change the gap limit, the cache must be deleted.
+    fn with_gap_limit(
+        network: ElementsNetwork,
+        persister: Arc<dyn Persister + Send + Sync>,
+        descriptor: WolletDescriptor,
+        gap_limit: u32,
+    ) -> Result<Self, Error> {
+        let config = Config::new(network, gap_limit)?;
         let store = Store::default();
         let max_weight_to_satisfy = descriptor
             .definite_descriptor(Chain::External, 0)?
@@ -258,6 +271,13 @@ impl Wollet {
                 Some(update) => wollet.apply_update_no_persist(update)?,
                 None => break,
             }
+        }
+
+        if wollet.store.cache.gap_limit != gap_limit {
+            return Err(Error::GapLimitMismatch {
+                expected: wollet.config.gap_limit(),
+                got: gap_limit,
+            });
         }
 
         Ok(wollet)

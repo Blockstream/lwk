@@ -1,7 +1,7 @@
 use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
-use crate::store::{Height, Timestamp};
+use crate::store::{Height, Timestamp, GAP_LIMIT};
 use crate::wollet::WolletState;
 use crate::{Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
@@ -63,6 +63,7 @@ pub struct Update {
     pub timestamps: Vec<(Height, Timestamp)>,
     pub scripts: HashMap<Script, (Chain, ChildNumber)>, // TODO should be Vec<(Script,(Chain,ChildNumber))>
     pub tip: BlockHeader,
+    pub gap_limit: u32,
 }
 
 impl Update {
@@ -161,6 +162,7 @@ impl Wollet {
             timestamps,
             scripts,
             tip,
+            gap_limit,
         } = update.clone();
 
         if tip.height + 1 < store.cache.tip.0 {
@@ -170,6 +172,7 @@ impl Wollet {
                 store_tip_height: store.cache.tip.0,
             });
         }
+        store.cache.gap_limit = gap_limit;
 
         store.cache.tip = (tip.height, tip.block_hash());
         store.cache.unblinded.extend(new_txs.unblinds);
@@ -349,7 +352,7 @@ impl Encodable for Update {
         let mut bytes_written = 0;
 
         bytes_written += UPDATE_MAGIC_BYTES.consensus_encode(&mut w)?; // Magic bytes
-        bytes_written += 1u8.consensus_encode(&mut w)?; // Version
+        bytes_written += 2u8.consensus_encode(&mut w)?; // Version
 
         bytes_written += self.wollet_status.consensus_encode(&mut w)?;
 
@@ -389,6 +392,8 @@ impl Encodable for Update {
 
         bytes_written += self.tip.consensus_encode(&mut w)?;
 
+        bytes_written += self.gap_limit.consensus_encode(&mut w)?;
+
         Ok(bytes_written)
     }
 }
@@ -401,10 +406,10 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 1 {
+        if version > 2 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
-        let wollet_status = if version == 1 {
+        let wollet_status = if version >= 1 {
             u64::consensus_decode(&mut d)?
         } else {
             0
@@ -464,6 +469,12 @@ impl Decodable for Update {
 
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
+        let gap_limit = if version >= 2 {
+            u32::consensus_decode(&mut d)?
+        } else {
+            GAP_LIMIT
+        };
+
         Ok(Self {
             wollet_status,
             new_txs,
@@ -472,6 +483,7 @@ impl Decodable for Update {
             timestamps,
             scripts,
             tip,
+            gap_limit,
         })
     }
 }
@@ -483,11 +495,12 @@ mod test {
 
     use elements::{
         encode::{Decodable, Encodable},
-        hex::ToHex,
         Script,
     };
 
-    use crate::{update::DownloadTxResult, Chain, Update, Wollet, WolletDescriptor};
+    use crate::{
+        store::GAP_LIMIT, update::DownloadTxResult, Chain, Update, Wollet, WolletDescriptor,
+    };
 
     use super::EncodableTxOutSecrets;
 
@@ -508,6 +521,7 @@ mod test {
     fn test_empty_update() {
         let tip = lwk_test_util::liquid_block_1().header;
         let mut update = Update {
+            gap_limit: GAP_LIMIT,
             new_txs: super::DownloadTxResult::default(),
             txid_height_new: Default::default(),
             txid_height_delete: Default::default(),
@@ -561,6 +575,7 @@ mod test {
 
         let tip = lwk_test_util::liquid_block_1().header;
         let update = Update {
+            gap_limit: GAP_LIMIT,
             new_txs,
             txid_height_new: vec![(txid, None), (txid, Some(12))],
             txid_height_delete: vec![txid],
@@ -572,10 +587,10 @@ mod test {
 
         let mut vec = vec![];
         let len = update.consensus_encode(&mut vec).unwrap();
-        std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap();
-        let exp_vec = lwk_test_util::update_test_vector_v1_bytes();
+        // std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap(); // TODO uncomment to get the vector if the version changes
+        let exp_vec = lwk_test_util::update_test_vector_v2_bytes();
         assert_eq!(vec, exp_vec);
-        assert_eq!(len, 2850);
+        assert_eq!(len, 2854);
         assert_eq!(vec.len(), len);
 
         let back = Update::consensus_decode(&vec[..]).unwrap();
@@ -628,13 +643,13 @@ mod test {
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let wollet = Wollet::without_persist(crate::ElementsNetwork::LiquidTestnet, desc).unwrap();
-        assert_eq!(update.serialize().unwrap().len(), 18444);
+        assert_eq!(update.serialize().unwrap().len(), 18448);
         let update_pruned = {
             let mut u = update.clone();
             u.prune(&wollet);
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 1114);
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1118);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

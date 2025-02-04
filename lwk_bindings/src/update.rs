@@ -58,7 +58,7 @@ mod tests {
         let update_v1 = crate::Update::new(&back).unwrap();
 
         assert_ne!(bytes, back);
-        assert_eq!(bytes.len() + 8, back.len()); // the new version serialize the wallet status
+        assert_eq!(bytes.len() + 12, back.len()); // the new version serialize the wallet status and the gap limit
 
         assert_eq!(update_v0, update_v1);
     }

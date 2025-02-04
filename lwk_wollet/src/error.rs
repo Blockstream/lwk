@@ -3,6 +3,9 @@ pub enum Error {
     #[error("{0}")]
     Generic(String),
 
+    #[error("Gap limit mismatch: expected {expected} got {got}")]
+    GapLimitMismatch { expected: u32, got: u32 },
+
     #[error("Aes {0}")]
     Aes(String),
 

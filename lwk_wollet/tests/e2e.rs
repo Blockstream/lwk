@@ -1755,3 +1755,44 @@ fn test_persistence_reload_after_only_tip() {
 
     TestWollet::check_persistence(wallet);
 }
+
+#[test]
+fn test_non_standard_gap_limit() {
+    let server = setup();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
+    let mut client = test_client_electrum(&server.electrs.electrum_url);
+    let network = ElementsNetwork::default_regtest();
+    let satoshi = 1_000_000;
+
+    let mut wollet_std_gap = Wollet::new(
+        network,
+        std::sync::Arc::new(NoPersist {}),
+        wollet_desc.clone(),
+    )
+    .unwrap();
+    let mut wollet_longer_gap =
+        Wollet::with_gap_limit(network, std::sync::Arc::new(NoPersist {}), wollet_desc, 30)
+            .unwrap();
+
+    let i = Some(25);
+    let address_after_gap_limit = wollet_std_gap.address(i).unwrap().address().clone();
+    let address_check = wollet_longer_gap.address(i).unwrap().address().clone();
+    assert_eq!(address_after_gap_limit, address_check);
+
+    let txid = server.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
+    server.elementsd_generate(1);
+
+    TestWollet::<ElectrumClient>::inner_wait_for_tx(&mut wollet_longer_gap, &mut client, &txid); // The other wallet cannot wait for tx, it would not see it
+
+    let balance = wollet_longer_gap.balance().unwrap();
+    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+
+    let update = client.full_scan(&wollet_std_gap).unwrap().unwrap();
+    wollet_std_gap.apply_update(update).unwrap();
+
+    let balance = wollet_std_gap.balance().unwrap();
+    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &0);
+}

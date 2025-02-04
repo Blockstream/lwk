@@ -107,10 +107,18 @@ impl<C: BlockchainBackend> TestWollet<C> {
     }
 
     /// Wait until tx appears in tx list (max 1 min)
-    fn wait_for_tx(&mut self, txid: &Txid) {
+    pub fn wait_for_tx(&mut self, txid: &Txid) {
+        Self::inner_wait_for_tx(&mut self.wollet, &mut self.client, txid);
+    }
+
+    pub fn inner_wait_for_tx<S: BlockchainBackend>(
+        wollet: &mut Wollet,
+        client: &mut S,
+        txid: &Txid,
+    ) {
         for _ in 0..120 {
-            sync(&mut self.wollet, &mut self.client);
-            let list = self.wollet.transactions().unwrap();
+            sync(wollet, client);
+            let list = wollet.transactions().unwrap();
             if list.iter().any(|e| &e.txid == txid) {
                 return;
             }

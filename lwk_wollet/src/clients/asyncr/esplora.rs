@@ -249,7 +249,7 @@ impl EsploraClient {
             let wollet_status = wollet.status();
 
             let update = Update {
-                gap_limit: store.cache.gap_limit,
+                gap_limit: store.cache.gap_limit.unwrap_or(GAP_LIMIT),
                 wollet_status,
                 new_txs,
                 txid_height_new,
@@ -290,10 +290,12 @@ impl EsploraClient {
                 if let Some(max) = max {
                     match chain {
                         Chain::External => {
-                            data.last_unused.external = 1 + max + batch_count * GAP_LIMIT
+                            data.last_unused.external =
+                                1 + max + batch_count * store.cache.gap_limit.unwrap_or(GAP_LIMIT)
                         }
                         Chain::Internal => {
-                            data.last_unused.internal = 1 + max + batch_count * GAP_LIMIT
+                            data.last_unused.internal =
+                                1 + max + batch_count * store.cache.gap_limit.unwrap_or(GAP_LIMIT)
                         }
                     }
                 };

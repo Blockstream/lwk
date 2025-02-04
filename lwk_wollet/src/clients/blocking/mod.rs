@@ -1,6 +1,6 @@
 use crate::{
     clients::try_unblind,
-    store::{Height, Timestamp, GAP_LIMIT},
+    store::{Height, Timestamp},
     update::{DownloadTxResult, Update},
     wollet::WolletState,
     Chain, Error, WolletDescriptor,
@@ -81,10 +81,10 @@ pub trait BlockchainBackend {
                 if let Some(max) = max {
                     match chain {
                         Chain::External => {
-                            data.last_unused.external = 1 + max + batch_count * GAP_LIMIT
+                            data.last_unused.external = 1 + max + batch_count * state.gap_limit()
                         }
                         Chain::Internal => {
-                            data.last_unused.internal = 1 + max + batch_count * GAP_LIMIT
+                            data.last_unused.internal = 1 + max + batch_count * state.gap_limit()
                         }
                     }
                 };

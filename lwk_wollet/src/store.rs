@@ -48,7 +48,7 @@ pub struct RawCache {
     /// The wollet must be initialized with the same gap limit used in previous initialization or it will fail.
     /// This is to prevent scan with different gap limits that can potentially make txs disappear.
     /// If it's needed to change the gap limit, the cache must be deleted.
-    pub gap_limit: u32,
+    pub gap_limit: Option<u32>,
 }
 
 impl Default for RawCache {
@@ -63,7 +63,7 @@ impl Default for RawCache {
             last_unused_internal: 0.into(),
             last_unused_external: 0.into(),
             timestamps: HashMap::default(),
-            gap_limit: GAP_LIMIT,
+            gap_limit: None,
         }
     }
 }
@@ -104,8 +104,10 @@ impl std::hash::Hash for RawCache {
             .load(Ordering::Relaxed)
             .hash(state);
 
-        if self.gap_limit != GAP_LIMIT {
-            self.gap_limit.hash(state);
+        if let Some(gap_limit) = self.gap_limit {
+            if gap_limit != GAP_LIMIT {
+                gap_limit.hash(state);
+            }
         }
     }
 }
@@ -132,8 +134,8 @@ impl Store {
             ..Default::default()
         };
 
-        let start = batch * self.cache.gap_limit;
-        let end = start + self.cache.gap_limit;
+        let start = batch * self.cache.gap_limit.unwrap_or(GAP_LIMIT);
+        let end = start + self.cache.gap_limit.unwrap_or(GAP_LIMIT);
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
@@ -231,7 +233,7 @@ mod tests {
         assert_eq!(12004253425667158821, hash2);
         assert_ne!(hash1, hash2);
 
-        store.cache.gap_limit = 100;
+        store.cache.gap_limit = Some(100);
         let mut hasher = DefaultHasher::new();
         store.hash(&mut hasher);
         let hash3 = hasher.finish();

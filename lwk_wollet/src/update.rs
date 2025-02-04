@@ -172,7 +172,7 @@ impl Wollet {
                 store_tip_height: store.cache.tip.0,
             });
         }
-        store.cache.gap_limit = gap_limit;
+        store.cache.gap_limit = Some(gap_limit);
 
         store.cache.tip = (tip.height, tip.block_hash());
         store.cache.unblinded.extend(new_txs.unblinds);

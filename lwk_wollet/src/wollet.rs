@@ -247,7 +247,7 @@ impl Wollet {
     /// Note the used gap limit must be the same as the one used in previous initialization or it will fail.
     /// This is to prevent scan with different gap limits that can potentially make txs disappear.
     /// If it's needed to change the gap limit, the cache must be deleted.
-    fn with_gap_limit(
+    pub fn with_gap_limit(
         network: ElementsNetwork,
         persister: Arc<dyn Persister + Send + Sync>,
         descriptor: WolletDescriptor,
@@ -273,12 +273,15 @@ impl Wollet {
             }
         }
 
-        if wollet.store.cache.gap_limit != gap_limit {
-            return Err(Error::GapLimitMismatch {
-                expected: wollet.config.gap_limit(),
-                got: gap_limit,
-            });
+        if let Some(store_gap_limit) = wollet.store.cache.gap_limit {
+            if store_gap_limit != gap_limit {
+                return Err(Error::GapLimitMismatch {
+                    expected: store_gap_limit,
+                    got: gap_limit,
+                });
+            }
         }
+        wollet.store.cache.gap_limit = Some(gap_limit);
 
         Ok(wollet)
     }

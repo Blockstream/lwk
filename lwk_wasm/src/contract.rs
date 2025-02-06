@@ -59,6 +59,11 @@ impl Contract {
     pub fn domain(&self) -> String {
         self.inner.entity.domain().to_string()
     }
+
+    pub fn clone(&self) -> Contract {
+        // This is unusual, but I can get around of passing Option<Contract> to the issue_asset by borrowing
+        self.inner.clone().into()
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

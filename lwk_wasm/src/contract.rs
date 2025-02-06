@@ -55,6 +55,10 @@ impl Contract {
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
+
+    pub fn domain(&self) -> String {
+        self.inner.entity.domain().to_string()
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]
@@ -76,5 +80,6 @@ mod tests {
         .unwrap();
         let expected = "{\"entity\":{\"domain\":\"ciao.it\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"NAME\",\"precision\":0,\"ticker\":\"NME\",\"version\":0}";
         assert_eq!(contract.to_string_js(), expected);
+        assert_eq!(contract.domain(), "ciao.it");
     }
 }

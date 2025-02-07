@@ -60,7 +60,8 @@ impl Contract {
         self.inner.entity.domain().to_string()
     }
 
-    pub fn clone(&self) -> Contract {
+    #[wasm_bindgen(js_name = clone)]
+    pub fn clone_js(&self) -> Contract {
         // This is unusual, but I can get around of passing Option<Contract> to the issue_asset by borrowing
         self.inner.clone().into()
     }

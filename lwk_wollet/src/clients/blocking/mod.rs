@@ -18,7 +18,7 @@ pub use esplora::EsploraClient;
 #[cfg(feature = "elements_rpc")]
 pub use elements_rpc_client::ElementsRpcClient;
 
-use super::{Capability, Data, History};
+use super::{Capability, Data, History, LastUnused};
 
 #[cfg(feature = "electrum")]
 pub(crate) mod electrum_client;
@@ -59,12 +59,14 @@ pub trait BlockchainBackend {
         descriptor: &WolletDescriptor,
         state: &S,
         index: u32,
+        last_unused: LastUnused,
     ) -> Result<Data, Error> {
         let mut data = Data::default();
 
         for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
             let mut batch_count = 0;
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
+            let index = index.max(last_unused[chain]);
             loop {
                 let batch = state.get_script_batch(batch_count, &descriptor)?;
 
@@ -153,12 +155,12 @@ pub trait BlockchainBackend {
             match self.get_history_waterfalls(&descriptor, state) {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
-                    self.get_history(&descriptor, state, index)?
+                    self.get_history(&descriptor, state, index, state.last_unused())?
                 }
                 Err(e) => return Err(e),
             }
         } else {
-            self.get_history(&descriptor, state, index)?
+            self.get_history(&descriptor, state, index, state.last_unused())?
         };
 
         let tip = self.tip()?;

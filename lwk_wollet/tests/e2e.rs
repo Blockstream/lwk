@@ -1762,7 +1762,6 @@ fn test_non_standard_gap_limit() {
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    println!("desc: {}", desc);
     let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
     let mut client = test_client_electrum(&server.electrs.electrum_url);
     let network = ElementsNetwork::default_regtest();
@@ -1805,11 +1804,11 @@ fn test_non_standard_gap_limit() {
     let balance = wollet_longer_gap.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
 
-    // a normal sync on the wollet_long_gap should not loose the tx
+    // a normal sync on the wollet_long_gap should not lose the tx
     full_scan_with_electrum_client(&mut wollet_longer_gap, &mut client).unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
 
-    // a normal sync on the wollet_std_gap don't see the tx
+    // a normal sync on the wollet_std_gap doesn't see the tx
     full_scan_with_electrum_client(&mut wollet_std_gap, &mut client).unwrap();
     let balance = wollet_std_gap.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &0);

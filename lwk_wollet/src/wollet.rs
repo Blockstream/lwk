@@ -785,6 +785,9 @@ fn tx_balance(
     balance
 }
 
+/// Performs a full blockchain scan using an Electrum client and applies any updates to the wallet.
+///
+/// For details about the scan see ['BlockchainBackend::full_scan']
 #[cfg(feature = "electrum")]
 pub fn full_scan_with_electrum_client(
     wollet: &mut Wollet,
@@ -793,6 +796,7 @@ pub fn full_scan_with_electrum_client(
     full_scan_to_index_with_electrum_client(wollet, 0, electrum_client)
 }
 
+/// Like [`full_scan_with_electrum_client`] but scans up to a specific derivation index (see ['BlockchainBackend::full_scan_to_index'] for details)
 #[cfg(feature = "electrum")]
 pub fn full_scan_to_index_with_electrum_client(
     wollet: &mut Wollet,

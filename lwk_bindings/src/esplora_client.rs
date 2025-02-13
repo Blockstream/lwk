@@ -34,10 +34,12 @@ impl EsploraClient {
         Ok(Arc::new(self.inner.lock()?.broadcast(tx.as_ref())?.into()))
     }
 
+    /// See [`BlockchainBackend::full_scan`]
     pub fn full_scan(&self, wollet: &Wollet) -> Result<Option<Arc<Update>>, LwkError> {
         self.full_scan_to_index(wollet, 0)
     }
 
+    /// See [`BlockchainBackend::full_scan_to_index`]
     pub fn full_scan_to_index(
         &self,
         wollet: &Wollet,

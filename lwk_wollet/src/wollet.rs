@@ -464,7 +464,12 @@ impl Wollet {
         Ok(utxos)
     }
 
-    fn txos(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
+    /// Get the wallet outputs, including spent ones
+    pub fn txos(&self) -> Result<Vec<WalletTxOut>, Error> {
+        self.txos_inner(false)
+    }
+
+    fn txos_map(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
         Ok(self
             .txos_inner(false)?
             .iter()
@@ -535,7 +540,7 @@ impl Wollet {
             }
         });
 
-        let txos = self.txos()?;
+        let txos = self.txos_map()?;
         for (txid, height) in my_txids.iter() {
             let tx = self
                 .store
@@ -577,7 +582,7 @@ impl Wollet {
         let height = self.store.cache.heights.get(txid);
         let tx = self.store.cache.all_txs.get(txid);
         if let (Some(height), Some(tx)) = (height, tx) {
-            let txos = self.txos()?;
+            let txos = self.txos_map()?;
 
             let balance = tx_balance(*txid, tx, &txos);
             let fee = tx_fee(tx);

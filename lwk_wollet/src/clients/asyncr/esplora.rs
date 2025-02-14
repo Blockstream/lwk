@@ -184,6 +184,9 @@ impl EsploraClient {
             height_timestamp,
             tip,
         } = if self.waterfalls {
+            if index != 0 {
+                return Err(Error::UsingWaterfallsWithNonZeroIndex);
+            }
             match self.get_history_waterfalls(&descriptor, wollet).await {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {

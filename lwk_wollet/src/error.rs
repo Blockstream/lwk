@@ -186,6 +186,9 @@ pub enum Error {
     #[error("Cannot use waterfalls scan with elip151 because it would reveal the blinding key to the server")]
     UsingWaterfallsWithElip151,
 
+    #[error("At the moment waterfalls does not support scanning up to index (index should be 0)")]
+    UsingWaterfallsWithNonZeroIndex,
+
     #[error("Cannot encrypt")]
     CannotEncrypt,
 

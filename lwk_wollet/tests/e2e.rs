@@ -1719,6 +1719,9 @@ fn test_waterfalls_esplora() {
     let balance = wollet.balance().unwrap();
     assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
 
+    let err = client.full_scan_to_index(&wollet, 1).unwrap_err();
+    assert!(matches!(err, Error::UsingWaterfallsWithNonZeroIndex));
+
     rt.block_on(test_env.shutdown());
 }
 

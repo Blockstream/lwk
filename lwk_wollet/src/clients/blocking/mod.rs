@@ -1,3 +1,5 @@
+//! Blocking clients to fetch data from the Blockchain.
+
 use crate::{
     clients::try_unblind,
     store::{Height, Timestamp, BATCH_SIZE},

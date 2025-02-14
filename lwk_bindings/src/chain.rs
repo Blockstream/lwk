@@ -1,4 +1,4 @@
-/// Wallet chain
+/// see [`lwk_wollet::Chain`]
 #[derive(uniffi::Enum, Debug, PartialEq, Eq)]
 pub enum Chain {
     /// External address, shown when asked for a payment.

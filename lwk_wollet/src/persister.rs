@@ -11,6 +11,7 @@ use elements::{bitcoin::hashes::Hash, hashes::sha256t_hash_newtype};
 
 use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 
+/// Error type for the [`Persister`] trait.
 #[derive(thiserror::Error, Debug)]
 pub enum PersistError {
     #[error(transparent)]
@@ -23,6 +24,11 @@ pub enum PersistError {
     Other(String),
 }
 
+/// Trait for persisting updates.
+///
+/// A persister writing on the file system is provided via [`FsPersister`],
+/// otherwise a user can use [`NoPersist`] to avoid persistence.
+/// Other persisters can be implemented by the user (even across ffi boundaries).
 pub trait Persister {
     /// Return ith elements inserted
     fn get(&self, index: usize) -> Result<Option<Update>, PersistError>;

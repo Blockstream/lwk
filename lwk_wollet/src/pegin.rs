@@ -1,3 +1,7 @@
+//! Pegin related functions (WIP)
+//!
+//! A Peg-in is a way to convert bitcoin (BTC) on the mainchain to liquid bitcoin (L-BTC).
+
 use std::collections::HashMap;
 
 use elements::{bitcoin, BlockHeader};

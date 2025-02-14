@@ -96,6 +96,7 @@ impl FromStr for WolletDescriptor {
     }
 }
 
+/// The chain can be either External or Internal.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
 pub enum Chain {
     /// External address, shown when asked for a payment.

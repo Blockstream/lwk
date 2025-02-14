@@ -14,6 +14,7 @@ static RE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").e
 static RE_TICKER: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[a-zA-Z0-9.\-]{3,24}$").expect("static"));
 
+/// The entity of an asset, contains the domain of the issuer.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Entity {
     #[serde(rename = "domain")]

@@ -1,3 +1,4 @@
+/// Error type for the whole crate.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("{0}")]

@@ -113,6 +113,7 @@ impl Debug for ElectrumClient {
     }
 }
 
+/// Options for the [`ElectrumClient::with_options()`] method.
 #[derive(Default)]
 pub struct ElectrumOptions {
     pub timeout: Option<u8>,
@@ -253,6 +254,7 @@ impl From<GetHistoryRes> for History {
     }
 }
 
+/// Error type when parsing a string to the [`ElectrumUrl`] type.
 #[derive(thiserror::Error, Debug)]
 pub enum UrlError {
     #[error(transparent)]

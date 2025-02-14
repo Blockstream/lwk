@@ -1,3 +1,5 @@
+//! Clients to fetch data from the Blockchain.
+
 use crate::{
     store::{Height, Timestamp},
     Chain, Error, WolletDescriptor, EC,
@@ -20,6 +22,8 @@ pub mod blocking;
 
 pub mod asyncr;
 
+/// Last unused derivation index for each chain.
+/// In other words the next index to be used when creating a new internal or external address.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LastUnused {
     pub internal: u32,

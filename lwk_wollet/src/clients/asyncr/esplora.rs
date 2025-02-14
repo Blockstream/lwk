@@ -87,13 +87,14 @@ impl EsploraClient {
         Ok(txid)
     }
 
-    pub async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
+    pub(crate) async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
         let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
         let response = get_with_retry(&self.client, &tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
 
         Ok(tx)
     }
+
     pub(crate) async fn get_transactions(
         &self,
         txids: &[Txid],

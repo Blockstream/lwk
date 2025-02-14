@@ -4,10 +4,16 @@
 //! LWK is a collection of libraries for Liquid wallets.
 //! `lwk_wollet` is the library for Watch-Only Wallets, the `wollet` spelling is not a typo but highlights the fact it is Watch-Only.
 //!
-//! A wallet is defined by a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
-//! which consists in a Bitcoin descriptor plus the descriptor blinding key.
+//! A [`Wollet`] is defined by a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki),
+//! which consists in a Bitcoin descriptor plus the descriptor blinding key. More precisely a subset of descriptors are supported, everything parsed by [`WolletDescriptor`].
+//! Every method on the `Wollet` will operate on local data, without network calls. The wallet data is updated via the [`Wollet::apply_update()`] method.
 //!
-//! From a wallet you can generate addresses, sync wallet data from the blockchain and create transactions, inclunding issuances, reissuances and burn.
+//! With a wallet you can:
+//! * Generate addresses via [`Wollet::address()`].
+//! * Pass it to a blockchain backend ([`ElectrumClient`], [`blocking::EsploraClient`]) to retrieve wallet history via the [`blocking::BlockchainBackend::full_scan()`] trait.
+//!   Or asyncronously via the [`asyncr::EsploraClient::full_scan()`] method. The convenience method [`full_scan_with_electrum_client()`] is also provided.
+//! * Create transactions, inclunding issuances, reissuances and burn via the [`TxBuilder`].
+//! * Analyze a partially signed transaction with respect to the wallet via [`Wollet::get_details()`].
 //!
 //! ## Examples
 //!
@@ -125,6 +131,9 @@ pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions, El
 
 #[cfg(feature = "esplora")]
 pub use age;
+
+pub use crate::clients::asyncr;
+pub use crate::clients::blocking;
 
 #[cfg(feature = "elements_rpc")]
 pub use clients::blocking::ElementsRpcClient;

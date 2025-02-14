@@ -1849,7 +1849,7 @@ async fn test_non_standard_gap_limit_esplora() {
 
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {
-        let update = client.full_scan_to_index(&mut wollet, 30).await.unwrap();
+        let update = client.full_scan_to_index(&wollet, 30).await.unwrap();
         if let Some(update) = update {
             wollet.apply_update(update).unwrap();
         }

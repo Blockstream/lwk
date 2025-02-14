@@ -1813,3 +1813,50 @@ fn test_non_standard_gap_limit() {
     let balance = wollet_std_gap.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &0);
 }
+
+#[tokio::test]
+#[cfg(feature = "esplora")]
+async fn test_non_standard_gap_limit_esplora() {
+    let server = setup_with_esplora();
+    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let network = ElementsNetwork::default_regtest();
+    let mut client = clients::asyncr::EsploraClient::new(network, &url);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
+    let satoshi = 1_000_000;
+
+    let mut wollet = Wollet::new(network, std::sync::Arc::new(NoPersist {}), wollet_desc).unwrap();
+
+    let i = Some(25);
+    let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
+    let address_check = wollet.address(i).unwrap().address().clone();
+    assert_eq!(address_after_gap_limit, address_check);
+
+    let txid = server.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
+    server.elementsd_generate(1);
+
+    // custom wait_for_tx using custom gap limit
+    for i in 0..60 {
+        let update = client.full_scan_to_index(&mut wollet, 30).await.unwrap();
+        if let Some(update) = update {
+            wollet.apply_update(update).unwrap();
+        }
+        let tx_found = wollet
+            .transactions()
+            .unwrap()
+            .iter()
+            .any(|tx| tx.txid == txid);
+        if tx_found {
+            break;
+        }
+        if i == 59 {
+            panic!("tx not found");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+
+    let balance = wollet.balance().unwrap();
+    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+}

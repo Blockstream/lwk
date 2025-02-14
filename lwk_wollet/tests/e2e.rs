@@ -1722,6 +1722,13 @@ fn test_waterfalls_esplora() {
     let err = client.full_scan_to_index(&wollet, 1).unwrap_err();
     assert!(matches!(err, Error::UsingWaterfallsWithNonZeroIndex));
 
+    let elip151_desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))";
+    let elip151_desc = WolletDescriptor::from_str(elip151_desc).unwrap();
+    let err = client
+        .get_history_waterfalls(&elip151_desc, &wollet)
+        .unwrap_err();
+    assert!(matches!(err, Error::UsingWaterfallsWithElip151));
+
     rt.block_on(test_env.shutdown());
 }
 

@@ -57,6 +57,7 @@ impl EsploraClient {
         Ok(BlockHash::from_str(&response.text().await?)?)
     }
 
+    /// Async version of [`crate::blocking::BlockchainBackend::tip()`]
     pub async fn tip(&mut self) -> Result<elements::BlockHeader, crate::Error> {
         let last_block_hash = self.last_block_hash().await?;
 
@@ -72,6 +73,7 @@ impl EsploraClient {
         Ok(header)
     }
 
+    /// Async version of [`crate::blocking::BlockchainBackend::broadcast()`]
     pub async fn broadcast(
         &self,
         tx: &elements::Transaction,
@@ -165,6 +167,7 @@ impl EsploraClient {
         Ok(result)
     }
 
+    /// Async version of [`crate::blocking::BlockchainBackend::full_scan()`]
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         self.full_scan_to_index(wollet, 0).await
     }
@@ -278,6 +281,7 @@ impl EsploraClient {
         }
     }
 
+    /// Async version of [`crate::blocking::BlockchainBackend::get_history()`]
     async fn get_history(
         &mut self,
         descriptor: &WolletDescriptor,

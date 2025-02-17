@@ -1,3 +1,5 @@
+use elements::OutPoint;
+
 /// Error type for the whole crate.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -199,6 +201,12 @@ pub enum Error {
     #[cfg(feature = "electrum")]
     #[error(transparent)]
     Url(#[from] crate::clients::blocking::electrum_client::UrlError),
+
+    #[error("Manual coin selection is not allowed when assets are involved (this limitation will be removed in the future)")]
+    ManualCoinSelectionOnlyLbtc,
+
+    #[error("Missing wallet UTXO {0}")]
+    MissingWalletUtxo(OutPoint),
 }
 
 // cannot derive automatically with this error because of trait bound

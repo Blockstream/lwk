@@ -5,7 +5,7 @@ use elements::{
     issuance::ContractHash,
     pset::{Output, PartiallySignedTransaction},
     secp256k1_zkp::ZERO_TWEAK,
-    Address, AssetId, Script, Transaction,
+    Address, AssetId, OutPoint, Script, Transaction,
 };
 use rand::thread_rng;
 
@@ -94,6 +94,8 @@ pub struct TxBuilder {
     drain_lbtc: bool,
     drain_to: Option<Address>,
     external_utxos: Vec<ExternalUtxo>,
+
+    selected_coins: Option<Vec<OutPoint>>,
 }
 
 impl TxBuilder {
@@ -108,6 +110,7 @@ impl TxBuilder {
             drain_lbtc: false,
             drain_to: None,
             external_utxos: vec![],
+            selected_coins: None,
         }
     }
 
@@ -300,6 +303,18 @@ impl TxBuilder {
         Ok(self)
     }
 
+    /// Switch to manual coin selection by giving a list of internal UTXOs to use.
+    ///
+    /// This method never fails, any error will be raised in [`TxBuilder::finish`].
+    ///
+    /// Possible errors:
+    /// * OutPoint doesn't belong to the wallet
+    /// * The OutPoint is not L-BTC (this restriction will be removed in the future)
+    pub fn set_wallet_utxos(mut self, utxos: Vec<OutPoint>) -> Self {
+        self.selected_coins = Some(utxos);
+        self
+    }
+
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         // Init PSET
@@ -318,6 +333,9 @@ impl TxBuilder {
 
         // Assets inputs and outputs
         let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
+        if !assets.is_empty() && self.selected_coins.is_some() {
+            return Err(Error::ManualCoinSelectionOnlyLbtc);
+        }
         for asset in assets {
             let mut satoshi_out = 0;
             let mut satoshi_in = 0;
@@ -364,10 +382,26 @@ impl TxBuilder {
             satoshi_in += utxo.unblinded.value;
         }
 
-        // FIXME: For implementation simplicity now we always add all L-BTC inputs
-        for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
-            wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
-            satoshi_in += utxo.unblinded.value;
+        match self.selected_coins {
+            Some(coins) => {
+                let utxos = wollet.utxos_map()?;
+
+                for coin in coins {
+                    let utxo = utxos.get(&coin).ok_or(Error::MissingWalletUtxo(coin))?;
+                    if utxo.unblinded.asset != policy_asset {
+                        return Err(Error::ManualCoinSelectionOnlyLbtc);
+                    }
+                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
+                    satoshi_in += utxo.unblinded.value;
+                }
+            }
+            None => {
+                // FIXME: For implementation simplicity now we always add all L-BTC inputs
+                for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
+                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+                    satoshi_in += utxo.unblinded.value;
+                }
+            }
         }
 
         // Set (re)issuance data
@@ -698,5 +732,12 @@ impl<'a> WolletTxBuilder<'a> {
             wollet: self.wollet,
             inner: self.inner.add_external_utxos(utxos)?,
         })
+    }
+
+    pub fn set_wallet_utxos(self, utxos: Vec<OutPoint>) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.set_wallet_utxos(utxos),
+        }
     }
 }

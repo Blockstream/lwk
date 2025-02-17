@@ -477,6 +477,14 @@ impl Wollet {
             .collect())
     }
 
+    pub(crate) fn utxos_map(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
+        Ok(self
+            .txos_inner(true)?
+            .iter()
+            .map(|txo| (txo.outpoint, txo.clone()))
+            .collect())
+    }
+
     /// Get the explicit UTXOs sent to script pubkeys owned by the wallet
     ///
     /// They can be spent as external utxos.

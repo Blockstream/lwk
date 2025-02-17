@@ -88,10 +88,11 @@ tempfile = "3.8.0"
 waterfalls = { version = "0.5.2", default-features = false, features = [
     "test_env",
 ] }
+criterion = "0.5.1"
 
 [features]
 default = ["esplora", "electrum", "elements_rpc", "amp2"]
-serial = ["lwk_jade/serial"]                      # this is a dev-dep feature
+serial = ["lwk_jade/serial"]                              # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
 elements_rpc = ["bitcoincore-rpc"]
@@ -109,3 +110,7 @@ name = "list_transactions"
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[bench]]
+name = "benches"
+harness = false

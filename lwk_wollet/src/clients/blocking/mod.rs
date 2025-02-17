@@ -169,6 +169,9 @@ pub trait BlockchainBackend {
             height_timestamp: _height_timestamp,
             tip: _,
         } = if self.capabilities().contains(&Capability::Waterfalls) {
+            if index != 0 {
+                return Err(Error::UsingWaterfallsWithNonZeroIndex);
+            }
             match self.get_history_waterfalls(&descriptor, state) {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {

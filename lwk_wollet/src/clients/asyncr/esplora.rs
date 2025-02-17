@@ -1,6 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
+use crate::clients::LastUnused;
 use crate::clients::{try_unblind, Capability, History};
 use crate::{
     clients::Data,
@@ -164,6 +165,14 @@ impl EsploraClient {
     }
 
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
+        self.full_scan_to_index(wollet, 0).await
+    }
+
+    pub async fn full_scan_to_index(
+        &mut self,
+        wollet: &Wollet,
+        index: u32,
+    ) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
         let store = &wollet.store;
 
@@ -175,15 +184,20 @@ impl EsploraClient {
             height_timestamp,
             tip,
         } = if self.waterfalls {
+            if index != 0 {
+                return Err(Error::UsingWaterfallsWithNonZeroIndex);
+            }
             match self.get_history_waterfalls(&descriptor, wollet).await {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
-                    self.get_history(&descriptor, store).await?
+                    self.get_history(&descriptor, store, index, wollet.last_unused())
+                        .await?
                 }
                 Err(e) => return Err(e),
             }
         } else {
-            self.get_history(&descriptor, store).await?
+            self.get_history(&descriptor, store, index, wollet.last_unused())
+                .await?
         };
 
         let tip = if let Some(tip) = tip {
@@ -267,11 +281,15 @@ impl EsploraClient {
         &mut self,
         descriptor: &WolletDescriptor,
         store: &Store,
+        index: u32,
+        last_unused: LastUnused,
     ) -> Result<Data, Error> {
         let mut data = Data::default();
+
         for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
             let mut batch_count = 0;
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
+            let index = index.max(last_unused[chain]);
             loop {
                 let batch = store.get_script_batch(batch_count, &descriptor)?;
 
@@ -299,7 +317,7 @@ impl EsploraClient {
 
                 let flattened: Vec<History> = result.into_iter().flatten().collect();
 
-                if flattened.is_empty() {
+                if flattened.is_empty() && index <= 1 + batch_count * BATCH_SIZE {
                     break;
                 }
 

@@ -113,6 +113,18 @@ impl Wollet {
             .collect())
     }
 
+    /// Get all the transaction outputs of the wallet, both spent and unspent
+    pub fn txos(&self) -> Result<Vec<Arc<WalletTxOut>>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .txos()?
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect())
+    }
+
     pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;

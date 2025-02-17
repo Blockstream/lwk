@@ -90,6 +90,11 @@ impl Wollet {
         Ok(self.inner.utxos()?.into_iter().map(Into::into).collect())
     }
 
+    /// Get all the transaction outputs of the wallet, both spent and unspent
+    pub fn txos(&self) -> Result<Vec<WalletTxOut>, Error> {
+        Ok(self.inner.txos()?.into_iter().map(Into::into).collect())
+    }
+
     /// Finalize and consume the given PSET, returning the finalized one
     pub fn finalize(&self, pset: Pset) -> Result<Pset, Error> {
         let mut pset: PartiallySignedTransaction = pset.into();
@@ -236,6 +241,15 @@ mod tests {
         let utxo = &utxos[0];
         assert_eq!(
             utxo.address().to_string(),
+            "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
+        );
+
+        let txos = wollet.txos().unwrap();
+        assert!(!txos.is_empty());
+        assert!(txos.len() >= utxos.len());
+        let txo = &txos[0];
+        assert_eq!(
+            txo.address().to_string(),
             "VJLAQiChRTcVDXEBKrRnSBnGccJLxNg45zW8cuDwkhbxb8NVFkb4U2QMWAzot4idqhLMWjtZ7SXA4nrA"
         );
     }

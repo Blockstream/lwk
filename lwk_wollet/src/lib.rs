@@ -133,6 +133,8 @@ pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions, El
 pub use age;
 
 pub use crate::clients::asyncr;
+
+#[cfg(feature = "electrum")]
 pub use crate::clients::blocking;
 
 #[cfg(feature = "elements_rpc")]

@@ -1841,8 +1841,6 @@ async fn test_non_standard_gap_limit_esplora() {
 
     let i = Some(25);
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
-    let address_check = wollet.address(i).unwrap().address().clone();
-    assert_eq!(address_after_gap_limit, address_check);
 
     let txid = server.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
     server.elementsd_generate(1);

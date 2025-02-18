@@ -15,11 +15,11 @@ use lwk_test_util::{
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::clients::blocking::BlockchainBackend;
-use lwk_wollet::ElementsNetwork;
-use lwk_wollet::Tip;
 use lwk_wollet::{
     AddressResult, Contract, ElectrumUrl, UnvalidatedRecipient, WalletTx, Wollet, WolletDescriptor,
 };
+use lwk_wollet::{ElementsNetwork, Update};
+use lwk_wollet::{NoPersist, Tip};
 use tempfile::TempDir;
 
 use crate::{ElectrumClient, WolletTxBuilder};
@@ -677,4 +677,19 @@ pub fn multisig_desc(signers: &[&AnySigner], threshold: usize) -> String {
         .join(",");
     let slip77 = generate_slip77();
     format!("ct(slip77({slip77}),elwsh(multi({threshold},{xpubs})))")
+}
+
+pub fn test_wollet_with_many_transactions() -> Wollet {
+    let update = lwk_test_util::update_test_vector_many_transactions();
+    let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
+    let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+    let update = Update::deserialize(&update).unwrap();
+    let mut wollet = Wollet::new(
+        ElementsNetwork::LiquidTestnet,
+        std::sync::Arc::new(NoPersist {}),
+        descriptor,
+    )
+    .unwrap();
+    wollet.apply_update(update).unwrap();
+    wollet
 }

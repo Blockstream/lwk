@@ -1978,3 +1978,30 @@ fn test_manual_coin_selection() {
         .unwrap_err();
     assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));
 }
+
+#[ignore = "This test connects to liquid testnet"]
+#[test]
+fn test_liquid_testnet() {
+    let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
+    let wollet_desc = WolletDescriptor::from_str(desc).unwrap();
+    let mut wollet = Wollet::new(
+        ElementsNetwork::LiquidTestnet,
+        std::sync::Arc::new(NoPersist {}),
+        wollet_desc,
+    )
+    .unwrap();
+    let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+    let mut client = blocking::EsploraClient::new(url, ElementsNetwork::LiquidTestnet).unwrap();
+    let update = client.full_scan(&wollet).unwrap().unwrap();
+    let update_serialized = update.serialize().unwrap();
+    std::fs::write("update.bin", update_serialized).unwrap();
+    wollet.apply_update(update).unwrap();
+}
+
+#[test]
+fn test_many_transactions() {
+    let wollet = test_wollet::test_wollet_with_many_transactions();
+    assert_eq!(wollet.transactions().unwrap().len(), 63);
+    let balance = wollet.balance().unwrap();
+    assert_eq!(format!("{:?}", balance), "{144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49: 1093721, 0cf33929dd6f87ae71d3c500aa056f6dbd027bcb3051b1dae6fe67750fbccd76: 5, 39ee0a62f96c5b5bd28266769ab4d7df28777ed2988f3818fffe48c4c5ba0f84: 1, 38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5: 9876, bf83e69c997b3336b731d1207e1dd8967dd089edfe55f96586c858f3a6da76bf: 1, 91618f01b2ec10c6cb6d03ea4fde9d765e30c23b8585522d247972a31c5435d6: 210}");
+}

@@ -5,7 +5,9 @@ use std::{
 
 use lwk_wollet::UnvalidatedRecipient;
 
-use crate::{types::AssetId, Address, Contract, LwkError, Network, Pset, Transaction, Wollet};
+use crate::{
+    types::AssetId, Address, Contract, LwkError, Network, OutPoint, Pset, Transaction, Wollet,
+};
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
 #[derive(uniffi::Object, Debug)]
@@ -145,6 +147,18 @@ impl TxBuilder {
             issuance_tx.map(|e| e.as_ref().into()),
         )?;
         *lock = Some(new_inner);
+        Ok(())
+    }
+
+    /// Manual coin selection, wrapper of [`lwk_wollet::TxBuilder::set_wallet_utxos()`]
+    pub fn set_wallet_utxos(&self, utxos: Vec<Arc<OutPoint>>) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        let utxos = utxos
+            .into_iter()
+            .map(|arc| elements::OutPoint::from(arc.as_ref()))
+            .collect();
+        *lock = Some(inner.set_wallet_utxos(utxos));
         Ok(())
     }
 }

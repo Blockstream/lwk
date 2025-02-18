@@ -588,6 +588,11 @@ pub fn update_test_vector_2_bytes() -> Vec<u8> {
     include_bytes!("../test_data/update_test_vector.bin").to_vec()
 }
 
+/// An update with 63 transactions on liquid testnet wallet defined by [`wollet_descriptor_many_transactions`]
+pub fn update_test_vector_many_transactions() -> Vec<u8> {
+    include_bytes!("../test_data/update_many_txs.bin").to_vec()
+}
+
 pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {
     Vec::<u8>::from_hex(include_str!(
         "../test_data/update_test_vector_encrypted.hex"
@@ -609,6 +614,10 @@ pub fn wollet_descriptor_string2() -> String {
 
 pub fn wollet_descriptor_string() -> String {
     include_str!("../test_data/update_test_vector/desc2").to_string()
+}
+
+pub fn wollet_descriptor_many_transactions() -> &'static str {
+    "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
 }
 
 //TODO remove this bad code once Conf::args is not Vec<&str>

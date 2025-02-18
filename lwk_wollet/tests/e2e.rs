@@ -1973,7 +1973,7 @@ fn test_manual_coin_selection() {
         .tx_builder()
         .add_recipient(&node_address, 200_000, asset)
         .unwrap()
-        .set_wallet_utxos(vec![asset_utxo.outpoint])
+        .set_wallet_utxos(vec![utxos[0].outpoint])
         .finish()
         .unwrap_err();
     assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));

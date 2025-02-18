@@ -95,7 +95,7 @@ pub struct TxBuilder {
     drain_to: Option<Address>,
     external_utxos: Vec<ExternalUtxo>,
 
-    selected_coins: Option<Vec<OutPoint>>,
+    selected_utxos: Option<Vec<OutPoint>>,
 }
 
 impl TxBuilder {
@@ -110,7 +110,7 @@ impl TxBuilder {
             drain_lbtc: false,
             drain_to: None,
             external_utxos: vec![],
-            selected_coins: None,
+            selected_utxos: None,
         }
     }
 
@@ -311,7 +311,7 @@ impl TxBuilder {
     /// * OutPoint doesn't belong to the wallet
     /// * The OutPoint is not L-BTC (this restriction will be removed in the future)
     pub fn set_wallet_utxos(mut self, utxos: Vec<OutPoint>) -> Self {
-        self.selected_coins = Some(utxos);
+        self.selected_utxos = Some(utxos);
         self
     }
 
@@ -333,7 +333,7 @@ impl TxBuilder {
 
         // Assets inputs and outputs
         let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
-        if !assets.is_empty() && self.selected_coins.is_some() {
+        if !assets.is_empty() && self.selected_utxos.is_some() {
             return Err(Error::ManualCoinSelectionOnlyLbtc);
         }
         for asset in assets {
@@ -382,7 +382,7 @@ impl TxBuilder {
             satoshi_in += utxo.unblinded.value;
         }
 
-        match self.selected_coins {
+        match self.selected_utxos {
             Some(coins) => {
                 let utxos = wollet.utxos_map()?;
 

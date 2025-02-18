@@ -380,6 +380,19 @@ impl TestElectrumServer {
         value.as_str().unwrap().to_string()
     }
 
+    pub fn elementsd_testmempoolaccept(&self, tx: &str) -> bool {
+        let value: serde_json::Value = self
+            .elementsd
+            .client
+            .call("testmempoolaccept", &[[tx].into()])
+            .unwrap();
+        value.as_array().unwrap()[0]
+            .get("allowed")
+            .unwrap()
+            .as_bool()
+            .unwrap()
+    }
+
     // methods on bitcoind
 
     pub fn bitcoind(&self) -> &electrsd::bitcoind::BitcoinD {

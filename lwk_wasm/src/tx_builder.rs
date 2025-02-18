@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
-use lwk_wollet::UnvalidatedRecipient;
+use lwk_wollet::{elements, UnvalidatedRecipient};
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Contract, Error, Network, Pset, Transaction, Wollet};
+use crate::{Address, AssetId, Contract, Error, Network, OutPoint, Pset, Transaction, Wollet};
 
 /// Wrapper of [`lwk_wollet::TxBuilder`]
 #[wasm_bindgen]
@@ -143,6 +143,13 @@ impl TxBuilder {
             .into())
     }
 
+    /// Manual coin selection, wrapper of [`lwk_wollet::TxBuilder::set_wallet_utxos()`]
+    #[wasm_bindgen(js_name = setWalletUtxos)]
+    pub fn set_wallet_utxos(self, outpoints: Vec<OutPoint>) -> TxBuilder {
+        let outpoints: Vec<elements::OutPoint> = outpoints.into_iter().map(Into::into).collect();
+        self.inner.set_wallet_utxos(outpoints).into()
+    }
+
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         self.to_string()
@@ -159,7 +166,7 @@ impl Display for TxBuilder {
 mod tests {
     use wasm_bindgen_test::*;
 
-    use crate::Network;
+    use crate::{Network, OutPoint};
 
     use super::TxBuilder;
 
@@ -171,12 +178,19 @@ mod tests {
         let policy = network.policy_asset();
 
         let mut builder = TxBuilder::new(&network);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 100.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_coins: None }");
 
         builder = builder.fee_rate(Some(200.0));
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_coins: None }");
 
         builder = builder.add_burn(1000, &policy);
-        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [] }");
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_coins: None }");
+
+        let o = OutPoint::new(
+            "[elements]b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0:0",
+        )
+        .unwrap();
+        builder = builder.set_wallet_utxos(vec![o]);
+        assert_eq!(builder.to_string(), "TxBuilder { network: Liquid, recipients: [Recipient { satoshi: 1000, script_pubkey: Script(OP_RETURN), blinding_pubkey: None, asset: 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d }], fee_rate: 200.0, ct_discount: true, issuance_request: None, drain_lbtc: false, drain_to: None, external_utxos: [], selected_coins: Some([OutPoint { txid: b93dbfb3fa1929b6f82ed46c4a5d8e1c96239ca8b3d9fce00c321d7dadbdf6e0, vout: 0 }]) }");
     }
 }

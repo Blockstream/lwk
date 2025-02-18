@@ -15,6 +15,12 @@ impl From<elements::OutPoint> for OutPoint {
     }
 }
 
+impl From<OutPoint> for elements::OutPoint {
+    fn from(o: OutPoint) -> Self {
+        o.inner
+    }
+}
+
 impl Display for OutPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

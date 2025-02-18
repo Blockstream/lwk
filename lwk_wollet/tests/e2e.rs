@@ -6,9 +6,9 @@ use crate::test_jade::jade_setup;
 use clients::blocking::{self, BlockchainBackend};
 use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
-use elements::encode::deserialize;
+use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
-use elements::Transaction;
+use elements::{OutPoint, Transaction};
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 use lwk_common::Signer;
 use lwk_containers::testcontainers::clients::Cli;
@@ -1867,4 +1867,114 @@ async fn test_non_standard_gap_limit_esplora() {
 
     let balance = wollet.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+}
+
+#[test]
+fn test_manual_coin_selection() {
+    let server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+    let node_address = server.elementsd_getnewaddress();
+
+    let policy_asset = w.policy_asset();
+
+    // Fund the wallet with 2 L-BTC UTXOs
+    w.fund(&server, 100_000, None, None);
+    w.fund(&server, 500_000, None, None);
+    server.elementsd_generate(1);
+
+    assert_eq!(w.balance(&policy_asset), 600_000);
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 2);
+    assert_eq!(
+        utxos[0].unblinded.value, 500_000,
+        "not sorted by biggest first"
+    );
+    assert_eq!(utxos[1].unblinded.value, 100_000);
+
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::InsufficientFunds));
+
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxos[1].outpoint]) // not enough
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::InsufficientFunds));
+
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxos[0].outpoint])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 1);
+    assert_eq!(pset.outputs().len(), 3); // recipient + change + fee
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    let mut pset = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![utxos[0].outpoint, utxos[1].outpoint])
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    assert_eq!(pset.outputs().len(), 3); // recipient + change + fee
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    let non_wallet_outpoint = OutPoint::new(txid_test_vector(), 0);
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![non_wallet_outpoint])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::MissingWalletUtxo(_)));
+
+    let signers = [&AnySigner::Software(signer)];
+    let (asset, _) = w.issueasset(&signers, 10, 1, None, None);
+    server.elementsd_generate(1);
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 3);
+    let asset_utxo = &utxos[1];
+    assert_eq!(asset_utxo.unblinded.value, 10);
+    assert_eq!(asset_utxo.unblinded.asset, asset);
+
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, policy_asset)
+        .unwrap()
+        .set_wallet_utxos(vec![asset_utxo.outpoint])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));
+    let err = w
+        .tx_builder()
+        .add_recipient(&node_address, 200_000, asset)
+        .unwrap()
+        .set_wallet_utxos(vec![asset_utxo.outpoint])
+        .finish()
+        .unwrap_err();
+    assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));
 }

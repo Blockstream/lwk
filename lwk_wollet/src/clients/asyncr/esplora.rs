@@ -1,7 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use crate::clients::LastUnused;
+use crate::clients::{check_witnesses_non_empty, LastUnused};
 use crate::clients::{try_unblind, Capability, History};
 use crate::{
     clients::Data,
@@ -78,6 +78,8 @@ impl EsploraClient {
         &self,
         tx: &elements::Transaction,
     ) -> Result<elements::Txid, crate::Error> {
+        check_witnesses_non_empty(tx)?; // We don't support legacy outputs, thus we always have the witness (or forget to sign/finalize)
+
         let tx_hex = tx.serialize().to_hex();
         let response = self
             .client
@@ -539,6 +541,7 @@ impl EsploraClient {
         }
     }
 }
+
 /// A builder for the [`EsploraClient`]
 pub struct EsploraClientBuilder {
     base_url: String,

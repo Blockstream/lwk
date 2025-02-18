@@ -207,6 +207,9 @@ pub enum Error {
 
     #[error("Missing wallet UTXO {0}")]
     MissingWalletUtxo(OutPoint),
+
+    #[error("Transaction has empty witness, did you forget to sign and finalize?")]
+    EmptyWitness,
 }
 
 // cannot derive automatically with this error because of trait bound

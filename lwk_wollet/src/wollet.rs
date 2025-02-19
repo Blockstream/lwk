@@ -1117,4 +1117,29 @@ mod tests {
         assert_eq!(addr.tweak_index(), 0);
         assert_eq!(addr.address().to_string(), lwk_test_util::PEGIN_TEST_ADDR);
     }
+
+    #[test]
+    fn test_txos_inner() {
+        let wollet = test_wollet_with_many_transactions();
+        let utxos = wollet.txos_inner(true).unwrap();
+        assert_eq!(utxos.len(), 26);
+        let txos = wollet.txos_inner(false).unwrap();
+        assert_eq!(txos.len(), 132);
+    }
+
+    // duplicated from tests/test_wollet.rs
+    pub fn test_wollet_with_many_transactions() -> Wollet {
+        let update = lwk_test_util::update_test_vector_many_transactions();
+        let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
+        let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+        let update = Update::deserialize(&update).unwrap();
+        let mut wollet = Wollet::new(
+            ElementsNetwork::LiquidTestnet,
+            std::sync::Arc::new(NoPersist {}),
+            descriptor,
+        )
+        .unwrap();
+        wollet.apply_update(update).unwrap();
+        wollet
+    }
 }

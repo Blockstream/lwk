@@ -20,6 +20,20 @@ pub fn wollet(c: &mut Criterion) {
                 let txs = wollet.transactions().unwrap();
                 black_box(txs);
             });
+        })
+        .bench_function("wallet utxos", |b: &mut criterion::Bencher<'_>| {
+            let wollet = test_wollet_with_many_transactions();
+            b.iter(|| {
+                let txs = wollet.utxos().unwrap();
+                black_box(txs);
+            });
+        })
+        .bench_function("wallet txos", |b: &mut criterion::Bencher<'_>| {
+            let wollet = test_wollet_with_many_transactions();
+            b.iter(|| {
+                let txs = wollet.txos().unwrap();
+                black_box(txs);
+            });
         });
 }
 

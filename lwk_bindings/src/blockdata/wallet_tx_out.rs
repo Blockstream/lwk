@@ -57,6 +57,7 @@ mod tests {
         let address: elements::Address = address_str.parse().unwrap();
 
         let el = lwk_wollet::WalletTxOut {
+            is_spent: false,
             address,
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),

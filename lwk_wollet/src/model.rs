@@ -21,6 +21,7 @@ pub struct WalletTxOut {
     pub unblinded: TxOutSecrets,
     pub wildcard_index: u32,
     pub ext_int: Chain,
+    pub is_spent: bool,
 }
 
 /// A UTXO owned by another wallet

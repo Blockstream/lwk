@@ -404,13 +404,17 @@ impl Wollet {
         Ok(AddressResult::new(address, index))
     }
 
-    pub fn txos_inner(&self, unspent: bool) -> Result<Vec<WalletTxOut>, Error> {
+    fn utxos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
+        Ok(self
+            .txos_inner()?
+            .into_iter()
+            .filter(|txo| !txo.is_spent)
+            .collect())
+    }
+
+    fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
-        let spent = if unspent {
-            self.store.spent()?
-        } else {
-            HashSet::new()
-        };
+        let spent = self.store.spent()?;
         for (tx_id, height) in self.store.cache.heights.iter() {
             let tx = self
                 .store
@@ -423,16 +427,13 @@ impl Wollet {
                 .iter()
                 .enumerate()
                 .map(|(vout, output)| {
-                    (
-                        OutPoint {
-                            txid: *tx_id,
-                            vout: vout as u32,
-                        },
-                        output,
-                    )
+                    let out_point = OutPoint {
+                        txid: *tx_id,
+                        vout: vout as u32,
+                    };
+                    (out_point, output, spent.contains(&out_point))
                 })
-                .filter(|(outpoint, _)| !spent.contains(outpoint))
-                .filter_map(|(outpoint, output)| {
+                .filter_map(|(outpoint, output, is_spent)| {
                     if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
                         let index = self.index(&output.script_pubkey).ok()?;
                         let address = self
@@ -447,6 +448,7 @@ impl Wollet {
                             wildcard_index: index.1,
                             ext_int: index.0,
                             address,
+                            is_spent,
                         });
                     }
                     None
@@ -459,32 +461,31 @@ impl Wollet {
 
     /// Get the wallet UTXOs
     pub fn utxos(&self) -> Result<Vec<WalletTxOut>, Error> {
-        let mut utxos = self.txos_inner(true)?;
+        let mut utxos = self.utxos_inner()?;
         utxos.sort_by(|a, b| b.unblinded.value.cmp(&a.unblinded.value));
         Ok(utxos)
     }
 
     /// Get the wallet outputs, including spent ones
     pub fn txos(&self) -> Result<Vec<WalletTxOut>, Error> {
-        self.txos_inner(false)
+        self.txos_inner()
     }
 
-    fn txos_map(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
+    pub(crate) fn txos_map(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
         Ok(self
-            .txos_inner(false)?
-            .iter()
-            .map(|txo| (txo.outpoint, txo.clone()))
+            .txos_inner()?
+            .into_iter()
+            .map(|txo| (txo.outpoint, txo))
             .collect())
     }
 
     pub(crate) fn utxos_map(&self) -> Result<HashMap<OutPoint, WalletTxOut>, Error> {
         Ok(self
-            .txos_inner(true)?
-            .iter()
-            .map(|txo| (txo.outpoint, txo.clone()))
+            .utxos_inner()?
+            .into_iter()
+            .map(|txo| (txo.outpoint, txo))
             .collect())
     }
-
     /// Get the explicit UTXOs sent to script pubkeys owned by the wallet
     ///
     /// They can be spent as external utxos.
@@ -1121,9 +1122,9 @@ mod tests {
     #[test]
     fn test_txos_inner() {
         let wollet = test_wollet_with_many_transactions();
-        let utxos = wollet.txos_inner(true).unwrap();
+        let utxos = wollet.utxos_inner().unwrap();
         assert_eq!(utxos.len(), 26);
-        let txos = wollet.txos_inner(false).unwrap();
+        let txos = wollet.txos_inner().unwrap();
         assert_eq!(txos.len(), 132);
     }
 

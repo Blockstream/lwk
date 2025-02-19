@@ -126,6 +126,7 @@ impl ElementsRpcClient {
                 wildcard_index,
                 ext_int,
                 address,
+                is_spent: false,
             })
         }
         Ok(utxos)

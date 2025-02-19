@@ -437,7 +437,8 @@
                 "value_bf": "ab9a42053c7a6ae0d55b774f3d462b1adfaa630e5d0f9b3c0f16640d55b8f6ab"
             },
             "wildcard_index": 1,
-            "ext_int": "External"
+            "ext_int": "External",
+            "is_spent": false
         },
         null,
         null,

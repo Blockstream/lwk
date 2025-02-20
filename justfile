@@ -94,3 +94,7 @@ csharp-windows: build-bindings-lib
     cp lwk_bindings/tests/test_data/test-dotnet.csproj target/release/csharp
     cp lwk_bindings/tests/bindings/list_transactions.cs target/release/csharp
 
+
+# Run benchmarks. Optionally specify which benchmark to run
+bench filter="":
+    cd lwk_wollet/benches && cargo bench -- {{filter}} && cd -

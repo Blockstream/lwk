@@ -321,7 +321,7 @@ fn test_state_regression() {
             sh(&format!("{cli} server start {params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 3);

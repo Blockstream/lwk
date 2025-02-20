@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use lwk_wollet::{ElementsNetwork, NoPersist, Update, Wollet, WolletDescriptor};
 
-criterion_group!(benches, wollet);
+criterion_group!(benches, wollet, address);
 criterion_main!(benches);
 
 pub fn wollet(c: &mut Criterion) {
@@ -33,6 +33,41 @@ pub fn wollet(c: &mut Criterion) {
             b.iter(|| {
                 let txs = wollet.txos().unwrap();
                 black_box(txs);
+            });
+        });
+}
+
+pub fn address(c: &mut Criterion) {
+    c.benchmark_group("address")
+        .bench_function("derive blinded", |b: &mut criterion::Bencher<'_>| {
+            let desc_str = include_str!("../../lwk_common/test_data/pset_details/descriptor");
+            let d: WolletDescriptor = desc_str.parse().unwrap();
+
+            b.iter(|| {
+                let address = d
+                    .address(0, ElementsNetwork::LiquidTestnet.address_params())
+                    .unwrap();
+                black_box(address);
+            });
+        })
+        .bench_function("derive unblinded", |b: &mut criterion::Bencher<'_>| {
+            let desc_str = include_str!("../../lwk_common/test_data/pset_details/descriptor");
+            let d: WolletDescriptor = desc_str.parse().unwrap();
+            let d = d
+                .descriptor()
+                .clone()
+                .into_single_descriptors()
+                .unwrap()
+                .pop()
+                .unwrap();
+
+            b.iter(|| {
+                let address = d
+                    .at_derivation_index(0)
+                    .unwrap()
+                    .address(ElementsNetwork::LiquidTestnet.address_params())
+                    .unwrap();
+                black_box(address);
             });
         });
 }

@@ -1132,6 +1132,34 @@ mod tests {
         assert_eq!(txos.len(), 132);
     }
 
+    #[test]
+    fn test_acceptable_performance() {
+        let wollet = test_wollet_with_many_transactions();
+
+        // This constant represents the maximum acceptable duration for the tested methods.
+        // The value needs to account for tests running in debug mode, which is much slower
+        // than release mode where benchmarks show these methods take less than 1ms.
+        // Also, CI is slow, so we need to account for that.
+        // We chose 150ms to catch significant performance regressions.
+        const MAX_DURATION: std::time::Duration = std::time::Duration::from_millis(150);
+
+        let start = std::time::Instant::now();
+        let _txs = wollet.transactions().unwrap();
+        let duration = start.elapsed();
+        println!("duration: {:?}", duration);
+        assert!(duration < MAX_DURATION);
+
+        let start = std::time::Instant::now();
+        let _utxos = wollet.utxos().unwrap();
+        let duration = start.elapsed();
+        assert!(duration < MAX_DURATION);
+
+        let start = std::time::Instant::now();
+        let _txos = wollet.txos().unwrap();
+        let duration = start.elapsed();
+        assert!(duration < MAX_DURATION);
+    }
+
     // duplicated from tests/test_wollet.rs
     pub fn test_wollet_with_many_transactions() -> Wollet {
         let update = lwk_test_util::update_test_vector_many_transactions();

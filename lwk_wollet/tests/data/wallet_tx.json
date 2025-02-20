@@ -428,7 +428,8 @@
         {
             "outpoint": "[elements]c6e3187f028942973ad27224ca79baa8382e90ad686e927fc29896e8a2edf3f3:0",
             "script_pubkey": "001402ff399ecb82178122afd18003c7a401dba16eb7",
-            "address": "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq",
+            "definite_descriptor": "ct(slip77(e574b56c3f770be325b48770537cab2278c740352dfb010f4756b5562be12e6e),elwpkh([7a414e60/84'/1'/0']tpubDDRxgt3k7isfqd26r8m3qiWa2DWghshZdCCpxPBWhtxP5oBw29cczWLTt9rv5TnwA9yTnfGGB32mdumHSgN9sgbttZV7gbCX5M6eAzxXJBB/0/0))#jlg2w5v2",
+            "network": "LiquidTestnet",
             "height": 1306469,
             "unblinded": {
                 "asset": "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5",

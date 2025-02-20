@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
 use std::str::FromStr;
@@ -8,7 +10,7 @@ const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
     "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
 
 /// The network of the elements blockchain.
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,

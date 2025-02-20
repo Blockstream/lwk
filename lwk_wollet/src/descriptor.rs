@@ -6,7 +6,9 @@ use aes_gcm_siv::KeyInit;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
+use elements_miniscript::confidential;
 use elements_miniscript::BtcDescriptor;
+use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
     confidential::Key,
     descriptor::{DescriptorSecretKey, Wildcard},
@@ -27,7 +29,7 @@ sha256t_hash_newtype! {
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
-pub struct WolletDescriptor(ConfidentialDescriptor<DescriptorPublicKey>);
+pub struct WolletDescriptor(pub ConfidentialDescriptor<DescriptorPublicKey>);
 
 impl Display for WolletDescriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -256,9 +258,21 @@ impl WolletDescriptor {
         &self,
         ext_int: Chain,
         index: u32,
-    ) -> Result<Descriptor<elements_miniscript::DefiniteDescriptorKey>, crate::Error> {
+    ) -> Result<Descriptor<DefiniteDescriptorKey>, crate::Error> {
         let desc = self.inner_descriptor_if_available(ext_int);
         Ok(desc.descriptor().at_derivation_index(index)?)
+    }
+
+    /// Get a CT definite descriptor
+    pub(crate) fn ct_definite_descriptor(
+        &self,
+        ext_int: Chain,
+        index: u32,
+    ) -> Result<confidential::Descriptor<DefiniteDescriptorKey>, crate::Error> {
+        Ok(self
+            .inner_descriptor_if_available(ext_int)
+            .0
+            .at_derivation_index(index)?)
     }
 
     /// Try also to parse it as a non-multipath descriptor specified on 2 lines,

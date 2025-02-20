@@ -76,12 +76,10 @@ mod tests {
 
     #[test]
     fn wallet_tx() {
-        let address_str = "tlq1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z58hd7zrsg9qn";
-        let address: elements::Address = address_str.parse().unwrap();
+        let definite_descriptor = "ct(slip77(e574b56c3f770be325b48770537cab2278c740352dfb010f4756b5562be12e6e),elwpkh([7a414e60/84'/1'/0']tpubDDRxgt3k7isfqd26r8m3qiWa2DWghshZdCCpxPBWhtxP5oBw29cczWLTt9rv5TnwA9yTnfGGB32mdumHSgN9sgbttZV7gbCX5M6eAzxXJBB/0/0))#jlg2w5v2".to_string();
 
         let tx_out = lwk_wollet::WalletTxOut {
             is_spent: false,
-            address,
             outpoint: elements::OutPoint::null(),
             script_pubkey: elements::Script::new(),
             height: Some(1),
@@ -93,6 +91,8 @@ mod tests {
             ),
             wildcard_index: 10,
             ext_int: lwk_wollet::Chain::External,
+            definite_descriptor,
+            network: lwk_wollet::ElementsNetwork::LiquidTestnet,
         };
 
         let tx_hex = include_str!("../../../lwk_jade/test_data/pset_to_be_signed_transaction.hex")

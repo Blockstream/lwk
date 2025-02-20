@@ -114,10 +114,7 @@ impl ElementsRpcClient {
                 .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset".into()))?;
             let txout = self.get_txout(&outpoint, u.height)?;
             let unblinded = try_unblind(txout, desc)?;
-            let address = address_map
-                .get(&u.script_pubkey)
-                .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset address".into()))?
-                .clone();
+
             utxos.push(WalletTxOut {
                 outpoint,
                 script_pubkey: u.script_pubkey,
@@ -125,8 +122,11 @@ impl ElementsRpcClient {
                 unblinded,
                 wildcard_index,
                 ext_int,
-                address,
                 is_spent: false,
+                definite_descriptor: desc
+                    .ct_definite_descriptor(ext_int, wildcard_index)?
+                    .to_string(),
+                network: self.network,
             })
         }
         Ok(utxos)

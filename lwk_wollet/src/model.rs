@@ -5,6 +5,8 @@ use crate::secp256k1::PublicKey;
 use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
 use elements::bitcoin;
+use elements_miniscript::{confidential, DefiniteDescriptorKey};
+
 use lwk_common::burn_script;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -16,12 +18,26 @@ use std::str::FromStr;
 pub struct WalletTxOut {
     pub outpoint: OutPoint,
     pub script_pubkey: Script,
-    pub address: Address,
     pub height: Option<u32>,
     pub unblinded: TxOutSecrets,
     pub wildcard_index: u32,
     pub ext_int: Chain,
     pub is_spent: bool,
+
+    /// The definite descriptor of the UTXO as a string.
+    /// This represents a [`confidential::Descriptor<DefiniteDescriptorKey>`] but is stored as a string since the descriptor type cannot be serialized with serde.
+    /// Used to compute the UTXO's address on demand rather than storing the Address directly, since address derivation is expensive.
+    pub definite_descriptor: String,
+    pub network: ElementsNetwork,
+}
+
+impl WalletTxOut {
+    pub fn address(&self) -> Address {
+        let desc: confidential::Descriptor<DefiniteDescriptorKey> =
+            self.definite_descriptor.parse().expect("validated desc");
+        desc.address(&crate::EC, self.network.address_params())
+            .expect("validated address")
+    }
 }
 
 /// A UTXO owned by another wallet

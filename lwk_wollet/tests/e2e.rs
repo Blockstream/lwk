@@ -1120,21 +1120,28 @@ fn drain() {
     // One utxo L-BTC
     wallet.fund_btc(&server);
     let node_address = server.elementsd_getnewaddress();
+    wallet.assert_spent_unspent(0, 1);
     wallet.send_all_btc(&signers, None, node_address);
+    wallet.assert_spent_unspent(1, 0);
 
     // Multiple utxos
     wallet.fund_btc(&server);
     wallet.fund_btc(&server);
-    let utxos = wallet.wollet.utxos().unwrap();
-    assert_eq!(utxos.len(), 2);
+    wallet.assert_spent_unspent(1, 2);
+
     let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
+    wallet.assert_spent_unspent(3, 0);
 
     // Drain ignores assets, since their change handling and coin selection is cosiderably easier
     wallet.fund_btc(&server);
+    wallet.assert_spent_unspent(3, 1);
     let (asset, token) = wallet.issueasset(&signers, 10, 1, None, None);
+    wallet.assert_spent_unspent(4, 3); // unspents are: asset+reissuance_token+change
     let node_address = server.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
+    wallet.assert_spent_unspent(5, 2);
+
     assert!(wallet.balance(&asset) > 0);
     assert!(wallet.balance(&token) > 0);
 

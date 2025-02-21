@@ -655,6 +655,29 @@ impl<C: BlockchainBackend> TestWollet<C> {
             max_weight_to_satisfy: self.wollet.max_weight_to_satisfy(),
         }
     }
+
+    #[track_caller]
+    pub fn assert_spent_unspent(&self, spent: usize, unspent: usize) {
+        let txos = self.wollet.txos().unwrap();
+        let spent_count = txos.iter().filter(|txo| txo.is_spent).count();
+        let unspent_count = txos.iter().filter(|txo| !txo.is_spent).count();
+        assert_eq!(spent_count, spent, "Wrong number of spent outputs");
+        assert_eq!(unspent_count, unspent, "Wrong number of unspent outputs");
+        assert_eq!(txos.len(), spent + unspent, "Wrong number of outputs");
+        let utxos = self.wollet.utxos().unwrap();
+        assert_eq!(utxos.len(), unspent, "Wrong number of unspent outputs");
+        assert!(utxos.iter().all(|utxo| !utxo.is_spent));
+        let txs = self.wollet.transactions().unwrap();
+        let tx_outs_from_tx: Vec<_> = txs
+            .iter()
+            .flat_map(|tx| tx.outputs.iter())
+            .filter_map(|o| o.as_ref())
+            .collect();
+        let spent_count_txs = tx_outs_from_tx.iter().filter(|o| o.is_spent).count();
+        let unspent_count_txs = tx_outs_from_tx.iter().filter(|o| !o.is_spent).count();
+        assert_eq!(spent_count_txs, spent);
+        assert_eq!(unspent_count_txs, unspent);
+    }
 }
 
 pub fn generate_signer() -> SwSigner {

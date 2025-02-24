@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use elements::Address;
 use lwk_wollet::{ElementsNetwork, NoPersist, Update, Wollet, WolletDescriptor};
 
 criterion_group!(benches, wollet, address);
@@ -67,6 +70,18 @@ pub fn address(c: &mut Criterion) {
                     .unwrap()
                     .address(ElementsNetwork::LiquidTestnet.address_params())
                     .unwrap();
+                black_box(address);
+            });
+        })
+        .bench_function("from components", |b: &mut criterion::Bencher<'_>| {
+            const ADDR: &str = "lq1qqf8er278e6nyvuwtgf39e6ewvdcnjupn9a86rzpx655y5lhkt0walu3djf9cklkxd3ryld97hu8h3xepw7sh2rlu7q45dcew5";
+            let addr = Address::from_str(ADDR).unwrap();
+            b.iter(|| {
+                let address = Address::from_script(
+                    &addr.script_pubkey(),
+                    addr.blinding_pubkey,
+                    ElementsNetwork::LiquidTestnet.address_params(),
+                );
                 black_box(address);
             });
         });

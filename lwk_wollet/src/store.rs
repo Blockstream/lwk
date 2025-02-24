@@ -12,8 +12,8 @@ pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
-/// RawCache is a persisted and encrypted cache of wallet data, contains stuff like wallet transactions
-/// It is fully reconstructable from xpub and data from electrum server (plus master blinding for elements)
+/// `RawCache` is a cache of wallet data, like wallet transactions.
+/// It is fully reconstructable from the CT Descriptor and the blockchain.
 #[derive(Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts

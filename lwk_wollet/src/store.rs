@@ -4,7 +4,6 @@ use crate::hashes::Hash;
 use crate::Error;
 use elements::bitcoin::bip32::ChildNumber;
 use elements_miniscript::{Descriptor, DescriptorPublicKey};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -14,7 +13,6 @@ pub type Timestamp = u32;
 
 /// `RawCache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
-#[derive(Serialize, Deserialize)]
 pub struct RawCache {
     /// contains all my tx and all prevouts
     pub all_txs: HashMap<Txid, Transaction>,

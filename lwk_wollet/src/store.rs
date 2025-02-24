@@ -1,9 +1,9 @@
 use crate::descriptor::Chain;
 use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::hashes::Hash;
-use crate::Error;
+use crate::{BlindingPublicKey, Error};
 use elements::bitcoin::bip32::ChildNumber;
-use elements_miniscript::{Descriptor, DescriptorPublicKey};
+use elements_miniscript::{confidential, DescriptorPublicKey};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -20,8 +20,8 @@ pub struct RawCache {
     /// contains all my script up to an empty batch of BATCHSIZE
     pub paths: HashMap<Script, (Chain, ChildNumber)>,
 
-    /// inverse of `paths`
-    pub scripts: HashMap<(Chain, ChildNumber), Script>,
+    /// inverse of `paths`, with the blinding public key for each script
+    pub scripts: HashMap<(Chain, ChildNumber), (Script, BlindingPublicKey)>,
 
     /// contains only my wallet txs with the relative heights (None if unconfirmed)
     pub heights: HashMap<Txid, Option<Height>>,
@@ -68,7 +68,8 @@ impl std::hash::Hash for RawCache {
         vec.sort();
         vec.hash(state);
 
-        let mut vec: Vec<_> = self.scripts.iter().collect();
+        // We don't hash the blinding public key for backward compatibility reasons
+        let mut vec: Vec<_> = self.scripts.iter().map(|(k, v)| (k, &v.0)).collect();
         vec.sort();
         vec.hash(state);
 
@@ -104,14 +105,14 @@ pub struct Store {
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,
-    pub value: Vec<(Script, (Chain, ChildNumber))>,
+    pub value: Vec<(Script, (Chain, ChildNumber, BlindingPublicKey))>,
 }
 
 impl Store {
     pub fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
     ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
@@ -123,9 +124,12 @@ impl Store {
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
-            let (script, cached) = self.get_or_derive(ext_int, child, descriptor)?;
+            let (script, blinding_pubkey, cached) =
+                self.get_or_derive(ext_int, child, descriptor)?;
             result.cached = cached;
-            result.value.push((script, (ext_int, child)));
+            result
+                .value
+                .push((script, (ext_int, child, blinding_pubkey)));
         }
 
         Ok(result)
@@ -135,19 +139,18 @@ impl Store {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &Descriptor<DescriptorPublicKey>,
-    ) -> Result<(Script, bool), Error> {
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         let opt_script = self.cache.scripts.get(&(ext_int, child));
-        let (script, cached) = match opt_script {
-            Some(script) => (script.clone(), true),
-            None => (
-                descriptor
-                    .at_derivation_index(child.into())?
-                    .script_pubkey(),
-                false,
-            ),
+        let (script, blinding_pubkey, cached) = match opt_script {
+            Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
+            None => {
+                let (script, blinding_pubkey) =
+                    crate::wollet::derive_script_and_blinding_key(descriptor, child)?;
+                (script, blinding_pubkey, false)
+            }
         };
-        Ok((script, cached))
+        Ok((script, blinding_pubkey, cached))
     }
 
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
@@ -164,7 +167,7 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use crate::{store::Store, WolletDescriptor};
-    use elements::Txid;
+    use elements::{Address, AddressParams, Txid};
     use elements_miniscript::ConfidentialDescriptor;
     use std::{
         collections::hash_map::DefaultHasher,
@@ -189,14 +192,22 @@ mod tests {
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
         let desc: WolletDescriptor = desc.try_into().unwrap();
+        let addr1 = desc.address(0, &AddressParams::LIQUID_TESTNET).unwrap();
 
         let store = Store::default();
 
         let x = store
-            .get_script_batch(0, &desc.as_ref().descriptor)
+            .get_script_batch(0, &desc.as_single_descriptors().unwrap()[0])
             .unwrap();
-        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }))");
+        assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }, PublicKey(0525054b498a69342d90750ed5e8f91cb6fb4da48735fd7011fdbcfc0e8edee1f0a30ed1e5c1d730e281b73f70f02dec2cbe20d0ac864d3d3d6942a02d66c6e3)))");
         assert_ne!(x.value[0], x.value[1]);
+        let addr2 = Address::from_script(
+            &x.value[0].0,
+            Some(x.value[0].1 .2),
+            &AddressParams::LIQUID_TESTNET,
+        )
+        .unwrap();
+        assert_eq!(addr1, addr2)
     }
 
     #[test]

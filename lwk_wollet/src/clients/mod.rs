@@ -2,7 +2,7 @@
 
 use crate::{
     store::{Height, Timestamp},
-    Chain, Error, WolletDescriptor, EC,
+    BlindingPublicKey, Chain, Error, WolletDescriptor, EC,
 };
 use elements::{
     bitcoin::bip32::ChildNumber,
@@ -54,7 +54,7 @@ impl IndexMut<Chain> for LastUnused {
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Data {
     pub txid_height: HashMap<Txid, Option<Height>>,
-    pub scripts: HashMap<Script, (Chain, ChildNumber)>,
+    pub scripts: HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
     pub last_unused: LastUnused,
     pub height_blockhash: HashMap<Height, BlockHash>,
     pub height_timestamp: HashMap<Height, Timestamp>,

@@ -5,7 +5,7 @@ use crate::{
     store::{Height, Timestamp, BATCH_SIZE},
     update::{DownloadTxResult, Update},
     wollet::WolletState,
-    Chain, Error, WolletDescriptor,
+    BlindingPublicKey, Chain, Error, WolletDescriptor,
 };
 use elements::{bitcoin::bip32::ChildNumber, OutPoint, Script};
 use elements::{BlockHash, BlockHeader, Transaction, Txid};
@@ -65,7 +65,7 @@ pub trait BlockchainBackend {
     ) -> Result<Data, Error> {
         let mut data = Data::default();
 
-        for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
+        for descriptor in descriptor.as_single_descriptors()? {
             let mut batch_count = 0;
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
             let index = index.max(last_unused[chain]);
@@ -228,13 +228,21 @@ pub trait BlockchainBackend {
                 .collect();
             let wollet_status = state.wollet_status();
 
+            let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts
+                .iter()
+                .map(|(script, (chain, child, blinding_pubkey))| {
+                    (*chain, *child, script.clone(), Some(*blinding_pubkey))
+                })
+                .collect();
+
             let update = Update {
+                version: 2,
                 wollet_status,
                 new_txs,
                 txid_height_new,
                 txid_height_delete,
                 timestamps,
-                scripts,
+                scripts_with_blinding_pubkey,
                 tip,
             };
             Ok(Some(update))
@@ -247,7 +255,7 @@ pub trait BlockchainBackend {
     fn download_txs<S: WolletState>(
         &self,
         history_txs_id: &HashSet<Txid>,
-        scripts: &HashMap<Script, (Chain, ChildNumber)>,
+        scripts: &HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
         state: &S,
         descriptor: &WolletDescriptor,
     ) -> Result<DownloadTxResult, Error> {

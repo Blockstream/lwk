@@ -3,6 +3,7 @@
 
 use crate::clients::{check_witnesses_non_empty, LastUnused};
 use crate::clients::{try_unblind, Capability, History};
+use crate::BlindingPublicKey;
 use crate::{
     clients::Data,
     store::{Height, Store, Timestamp, BATCH_SIZE},
@@ -17,7 +18,7 @@ use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
     Script, Txid,
 };
-use elements_miniscript::DescriptorPublicKey;
+use elements_miniscript::{confidential, DescriptorPublicKey};
 use reqwest::Response;
 use serde::Deserialize;
 use std::{
@@ -268,13 +269,21 @@ impl EsploraClient {
                 .collect();
             let wollet_status = wollet.status();
 
+            let scripts_with_blinding_pubkey: Vec<(_, _, _, _)> = scripts
+                .iter()
+                .map(|(script, (chain, child, blinding_pubkey))| {
+                    (*chain, *child, script.clone(), Some(*blinding_pubkey))
+                })
+                .collect();
+
             let update = Update {
+                version: 2,
                 wollet_status,
                 new_txs,
                 txid_height_new,
                 txid_height_delete,
                 timestamps,
-                scripts,
+                scripts_with_blinding_pubkey,
                 tip,
             };
             Ok(Some(update))
@@ -293,7 +302,7 @@ impl EsploraClient {
     ) -> Result<Data, Error> {
         let mut data = Data::default();
 
-        for descriptor in descriptor.descriptor().clone().into_single_descriptors()? {
+        for descriptor in descriptor.as_single_descriptors()? {
             let mut batch_count = 0;
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
             let index = index.max(last_unused[chain]);
@@ -421,9 +430,14 @@ impl EsploraClient {
             for (i, script_history) in chain_history.iter().enumerate() {
                 // TODO handle paging by asking following pages if there are more than 1000 results
                 let child = ChildNumber::from(waterfalls_result.page as u32 * 1000 + i as u32);
-                let (script, cached) = store.get_or_derive(chain, child, &desc)?;
+                let ct_desc = confidential::Descriptor {
+                    key: descriptor.0.key.clone(),
+                    descriptor: desc.clone(),
+                };
+                let (script, blinding_pubkey, cached) =
+                    store.get_or_derive(chain, child, &ct_desc)?;
                 if !cached {
-                    data.scripts.insert(script, (chain, child));
+                    data.scripts.insert(script, (chain, child, blinding_pubkey));
                 }
                 for tx_seen in script_history {
                     let height = if tx_seen.height > 0 {
@@ -460,7 +474,7 @@ impl EsploraClient {
     async fn download_txs(
         &self,
         history_txs_id: &HashSet<Txid>,
-        scripts: &HashMap<Script, (Chain, ChildNumber)>,
+        scripts: &HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
         store: &Store,
         descriptor: &WolletDescriptor,
     ) -> Result<DownloadTxResult, Error> {

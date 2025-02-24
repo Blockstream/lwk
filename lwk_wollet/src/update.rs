@@ -3,7 +3,8 @@ use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
 use crate::wollet::WolletState;
-use crate::{Wollet, WolletDescriptor};
+use crate::EC;
+use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use base64::prelude::*;
@@ -52,6 +53,8 @@ impl DownloadTxResult {
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
+    pub version: u8,
+
     /// The status of the wallet this update is generated from
     ///
     /// If 0 means it has been deserialized from a V0 version
@@ -61,7 +64,10 @@ pub struct Update {
     pub txid_height_new: Vec<(Txid, Option<Height>)>,
     pub txid_height_delete: Vec<Txid>,
     pub timestamps: Vec<(Height, Timestamp)>,
-    pub scripts: HashMap<Script, (Chain, ChildNumber)>, // TODO should be Vec<(Script,(Chain,ChildNumber))>
+
+    /// The script pub key with the chain, the child number and the blinding pubkey
+    /// The blinding pubkey is optional for backward compatibility reasons
+    pub scripts_with_blinding_pubkey: Vec<(Chain, ChildNumber, Script, Option<BlindingPublicKey>)>,
     pub tip: BlockHeader,
 }
 
@@ -70,7 +76,7 @@ impl Update {
         self.new_txs.is_empty()
             && self.txid_height_new.is_empty()
             && self.txid_height_delete.is_empty()
-            && self.scripts.is_empty()
+            && self.scripts_with_blinding_pubkey.is_empty()
     }
     pub fn prune(&mut self, wallet: &Wollet) {
         self.new_txs.prune(&wallet.store.cache.paths);
@@ -151,17 +157,21 @@ impl Wollet {
                 });
             }
         }
-
+        let descriptor = self.wollet_descriptor();
         let store = &mut self.store;
         let Update {
+            version: _,
             wollet_status: _,
             new_txs,
             txid_height_new,
             txid_height_delete,
             timestamps,
-            scripts,
+            scripts_with_blinding_pubkey,
             tip,
         } = update.clone();
+
+        let scripts_with_blinding_pubkey =
+            compute_blinding_pubkey_if_missing(scripts_with_blinding_pubkey, descriptor)?;
 
         if tip.height + 1 < store.cache.tip.0 {
             // Checking we are not applying an old update while giving enough space for a single block reorg
@@ -180,11 +190,18 @@ impl Wollet {
             .retain(|k, _| !txid_height_delete.contains(k));
         store.cache.heights.extend(txid_height_new.clone());
         store.cache.timestamps.extend(timestamps);
-        store
-            .cache
-            .scripts
-            .extend(scripts.clone().into_iter().map(|(a, b)| (b, a)));
-        store.cache.paths.extend(scripts);
+        store.cache.scripts.extend(
+            scripts_with_blinding_pubkey
+                .clone()
+                .into_iter()
+                .map(|(a, b, c, d)| ((a, b), (c, d))),
+        );
+        store.cache.paths.extend(
+            scripts_with_blinding_pubkey
+                .clone()
+                .into_iter()
+                .map(|(a, b, c, _d)| (c, (a, b))),
+        );
         let mut last_used_internal = None;
         let mut last_used_external = None;
         for (txid, _) in txid_height_new {
@@ -236,6 +253,34 @@ impl Wollet {
 
         Ok(())
     }
+}
+
+fn compute_blinding_pubkey_if_missing(
+    scripts_with_blinding_pubkey: Vec<(
+        Chain,
+        ChildNumber,
+        Script,
+        Option<elements::secp256k1_zkp::PublicKey>,
+    )>,
+    wollet_descriptor: WolletDescriptor,
+) -> Result<Vec<(Chain, ChildNumber, Script, BlindingPublicKey)>, Error> {
+    let mut result = Vec::with_capacity(scripts_with_blinding_pubkey.len());
+
+    for (chain, child_number, script, maybe_blinding_pubkey) in scripts_with_blinding_pubkey {
+        let blinding_pubkey = match maybe_blinding_pubkey {
+            Some(pubkey) => pubkey,
+            None => {
+                let desc = wollet_descriptor.ct_definite_descriptor(chain, child_number.into())?;
+                let address = desc.address(&EC, &elements::AddressParams::ELEMENTS)?; // we don't need the address, we need only the blinding pubkey, thus we can use any params
+                address
+                    .blinding_pubkey
+                    .expect("blinding pubkey is present when using ct descriptors")
+            }
+        };
+        result.push((chain, child_number, script, blinding_pubkey));
+    }
+
+    Ok(result)
 }
 
 impl Encodable for DownloadTxResult {
@@ -349,9 +394,12 @@ impl Encodable for Update {
         let mut bytes_written = 0;
 
         bytes_written += UPDATE_MAGIC_BYTES.consensus_encode(&mut w)?; // Magic bytes
-        bytes_written += 1u8.consensus_encode(&mut w)?; // Version
 
-        bytes_written += self.wollet_status.consensus_encode(&mut w)?;
+        bytes_written += self.version.consensus_encode(&mut w)?; // Version
+
+        if self.version >= 1 {
+            bytes_written += self.wollet_status.consensus_encode(&mut w)?;
+        }
 
         bytes_written += self.new_txs.consensus_encode(&mut w)?;
 
@@ -375,9 +423,11 @@ impl Encodable for Update {
             bytes_written += timestamp.consensus_encode(&mut w)?;
         }
 
-        bytes_written +=
-            elements::encode::VarInt(self.scripts.len() as u64).consensus_encode(&mut w)?;
-        for (script, (chain, child_number)) in self.scripts.iter() {
+        bytes_written += elements::encode::VarInt(self.scripts_with_blinding_pubkey.len() as u64)
+            .consensus_encode(&mut w)?;
+        for (chain, child_number, script, blinding_pubkey) in
+            self.scripts_with_blinding_pubkey.iter()
+        {
             bytes_written += script.consensus_encode(&mut w)?;
             bytes_written += match chain {
                 Chain::External => 0u8,
@@ -385,8 +435,19 @@ impl Encodable for Update {
             }
             .consensus_encode(&mut w)?;
             bytes_written += u32::from(*child_number).consensus_encode(&mut w)?;
+            if self.version >= 2 {
+                match blinding_pubkey {
+                    Some(blinding_pubkey) => {
+                        bytes_written += blinding_pubkey.serialize().consensus_encode(&mut w)?
+                    }
+                    None => {
+                        return Err(elements::encode::Error::ParseFailed(
+                            "Version 2 update with missing blinding pubkey",
+                        ))
+                    }
+                }
+            }
         }
-
         bytes_written += self.tip.consensus_encode(&mut w)?;
 
         Ok(bytes_written)
@@ -401,10 +462,10 @@ impl Decodable for Update {
         }
 
         let version = u8::consensus_decode(&mut d)?;
-        if version > 1 {
+        if version > 2 {
             return Err(elements::encode::Error::ParseFailed("Unsupported version"));
         }
-        let wollet_status = if version == 1 {
+        let wollet_status = if version >= 1 {
             u64::consensus_decode(&mut d)?
         } else {
             0
@@ -446,9 +507,9 @@ impl Decodable for Update {
             vec
         };
 
-        let scripts = {
+        let scripts_with_blinding_pubkey = {
             let len = elements::encode::VarInt::consensus_decode(&mut d)?.0;
-            let mut map = HashMap::with_capacity(len as usize);
+            let mut vec = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 let script = Script::consensus_decode(&mut d)?;
                 let chain = match u8::consensus_decode(&mut d)? {
@@ -457,20 +518,26 @@ impl Decodable for Update {
                     _ => return Err(elements::encode::Error::ParseFailed("Invalid chain")),
                 };
                 let child_number: ChildNumber = u32::consensus_decode(&mut d)?.into();
-                map.insert(script, (chain, child_number));
+                let blinding_pubkey = if version == 2 {
+                    Some(BlindingPublicKey::consensus_decode(&mut d)?)
+                } else {
+                    None
+                };
+                vec.push((chain, child_number, script, blinding_pubkey));
             }
-            map
+            vec
         };
 
         let tip = BlockHeader::consensus_decode(&mut d)?;
 
         Ok(Self {
+            version,
             wollet_status,
             new_txs,
             txid_height_new,
             txid_height_delete,
             timestamps,
-            scripts,
+            scripts_with_blinding_pubkey,
             tip,
         })
     }
@@ -479,11 +546,8 @@ impl Decodable for Update {
 #[cfg(test)]
 mod test {
 
-    use std::collections::HashMap;
-
     use elements::{
         encode::{Decodable, Encodable},
-        hex::ToHex,
         Script,
     };
 
@@ -508,11 +572,12 @@ mod test {
     fn test_empty_update() {
         let tip = lwk_test_util::liquid_block_1().header;
         let mut update = Update {
+            version: 1,
             new_txs: super::DownloadTxResult::default(),
             txid_height_new: Default::default(),
             txid_height_delete: Default::default(),
             timestamps: Default::default(),
-            scripts: Default::default(),
+            scripts_with_blinding_pubkey: Default::default(),
             tip,
             wollet_status: 1,
         };
@@ -555,25 +620,28 @@ mod test {
     fn test_update_roundtrip() {
         let txid = lwk_test_util::txid_test_vector();
         let new_txs = download_tx_result_test_vector();
-        let mut scripts = HashMap::new();
-        scripts.insert(Script::default(), (Chain::External, 0u32.into()));
-        scripts.insert(Script::default(), (Chain::Internal, 3u32.into()));
+        let scripts_with_blinding_pubkey =
+            vec![(Chain::Internal, 3u32.into(), Script::default(), None)];
+        // previous version of this test was misleading by inserting two elements in a map, you have only one element.
 
         let tip = lwk_test_util::liquid_block_1().header;
         let update = Update {
+            version: 1,
             new_txs,
             txid_height_new: vec![(txid, None), (txid, Some(12))],
             txid_height_delete: vec![txid],
             timestamps: vec![(12, 44), (12, 44)],
-            scripts,
+            scripts_with_blinding_pubkey,
             tip,
             wollet_status: 1,
         };
 
         let mut vec = vec![];
         let len = update.consensus_encode(&mut vec).unwrap();
-        std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap();
+        // std::fs::write("/tmp/xx.hex", vec.to_hex()).unwrap();
         let exp_vec = lwk_test_util::update_test_vector_v1_bytes();
+
+        assert_eq!(vec.len(), exp_vec.len());
         assert_eq!(vec, exp_vec);
         assert_eq!(len, 2850);
         assert_eq!(vec.len(), len);
@@ -593,6 +661,7 @@ mod test {
         let mut upd_from_v1 = Update::deserialize(&v1).unwrap();
         assert_ne!(upd_from_v0, upd_from_v1);
         upd_from_v1.wollet_status = 0;
+        upd_from_v1.version = 0; // now we save the version in the struct, thus to compare for equality we need this hack
         assert_eq!(upd_from_v0, upd_from_v1);
     }
 
@@ -616,7 +685,7 @@ mod test {
 
         let update = Update::deserialize_decrypted_base64(&base64, &desc).unwrap();
         let update_ser = update.serialize_encrypted_base64(&desc).unwrap();
-        assert_ne!(base64, update_ser); // decrypted content is the same, but enryption is not deterministic
+        assert_ne!(base64, update_ser); // decrypted content is the same, but encryption is not deterministic
 
         let back = Update::deserialize_decrypted_base64(&update_ser, &desc).unwrap();
         assert_eq!(update, back)
@@ -628,13 +697,14 @@ mod test {
         let update = Update::deserialize(&update_bytes).unwrap();
         let desc: WolletDescriptor = lwk_test_util::wollet_descriptor_string().parse().unwrap();
         let wollet = Wollet::without_persist(crate::ElementsNetwork::LiquidTestnet, desc).unwrap();
-        assert_eq!(update.serialize().unwrap().len(), 18444);
+        assert_eq!(update_bytes.len(), 18436);
+        assert_eq!(update.serialize().unwrap().len(), 18436);
         let update_pruned = {
             let mut u = update.clone();
             u.prune(&wollet);
             u
         };
-        assert_eq!(update_pruned.serialize().unwrap().len(), 1114);
+        assert_eq!(update_pruned.serialize().unwrap().len(), 1106);
         assert_eq!(update.new_txs.txs.len(), update_pruned.new_txs.txs.len());
         assert_eq!(update.new_txs.unblinds, update_pruned.new_txs.unblinds);
     }

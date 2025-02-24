@@ -15,11 +15,11 @@ use crate::persister::PersistError;
 use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
-use crate::{FsPersister, NoPersist, Persister, Update, WolletDescriptor};
-use elements::bitcoin;
+use crate::{BlindingPublicKey, FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
+use elements::{bitcoin, AddressParams};
 use elements_miniscript::psbt::PsbtExt;
-use elements_miniscript::{psbt, BtcDescriptor, ForEachKey};
+use elements_miniscript::{confidential, psbt, BtcDescriptor, ForEachKey};
 use elements_miniscript::{
     ConfidentialDescriptor, DefiniteDescriptorKey, Descriptor, DescriptorPublicKey,
 };
@@ -49,7 +49,7 @@ pub struct WolletConciseState {
     descriptor: WolletDescriptor,
     txs: HashSet<Txid>,
     paths: HashMap<Script, (Chain, ChildNumber)>,
-    scripts: HashMap<(Chain, ChildNumber), Script>,
+    scripts: HashMap<(Chain, ChildNumber), (Script, BlindingPublicKey)>,
     heights: HashMap<Txid, Option<Height>>,
     tip: (Height, BlockHash),
     last_unused: LastUnused,
@@ -59,14 +59,14 @@ pub trait WolletState {
     fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &Descriptor<DescriptorPublicKey>,
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
     ) -> Result<ScriptBatch, Error>;
     fn get_or_derive(
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &Descriptor<DescriptorPublicKey>,
-    ) -> Result<(Script, bool), Error>;
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, BlindingPublicKey, bool), Error>;
     fn heights(&self) -> &HashMap<Txid, Option<Height>>;
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)>;
     fn txs(&self) -> HashSet<Txid>;
@@ -81,7 +81,7 @@ impl WolletState for WolletConciseState {
     fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
     ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
@@ -93,9 +93,12 @@ impl WolletState for WolletConciseState {
         let ext_int: Chain = descriptor.try_into().unwrap_or(Chain::External);
         for j in start..end {
             let child = ChildNumber::from_normal_idx(j)?;
-            let (script, cached) = self.get_or_derive(ext_int, child, descriptor)?;
+            let (script, blinding_pubkey, cached) =
+                self.get_or_derive(ext_int, child, descriptor)?;
             result.cached = cached;
-            result.value.push((script, (ext_int, child)));
+            result
+                .value
+                .push((script, (ext_int, child, blinding_pubkey)));
         }
 
         Ok(result)
@@ -105,19 +108,17 @@ impl WolletState for WolletConciseState {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &Descriptor<DescriptorPublicKey>,
-    ) -> Result<(Script, bool), Error> {
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         let opt_script = self.scripts.get(&(ext_int, child));
-        let (script, cached) = match opt_script {
-            Some(script) => (script.clone(), true),
-            None => (
-                descriptor
-                    .at_derivation_index(child.into())?
-                    .script_pubkey(),
-                false,
-            ),
+        let (script, blinding_pubkey, cached) = match opt_script {
+            Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
+            None => {
+                let (script, blinding_pubkey) = derive_script_and_blinding_key(descriptor, child)?;
+                (script, blinding_pubkey, false)
+            }
         };
-        Ok((script, cached))
+        Ok((script, blinding_pubkey, cached))
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
@@ -159,7 +160,7 @@ impl WolletState for Wollet {
     fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &Descriptor<DescriptorPublicKey>,
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
     ) -> Result<ScriptBatch, Error> {
         self.store.get_script_batch(batch, descriptor)
     }
@@ -168,8 +169,8 @@ impl WolletState for Wollet {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &Descriptor<DescriptorPublicKey>,
-    ) -> Result<(Script, bool), Error> {
+        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+    ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         self.store.get_or_derive(ext_int, child, descriptor)
     }
 
@@ -914,6 +915,23 @@ impl Tip {
     pub fn timestamp(&self) -> Option<Timestamp> {
         self.timestamp
     }
+}
+
+/// Derive script_pubkey and blinding_pubkey from a descriptor at a given derivation index
+pub fn derive_script_and_blinding_key(
+    descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+    child: ChildNumber,
+) -> Result<(Script, BlindingPublicKey), Error> {
+    let address = descriptor
+        .at_derivation_index(child.into())?
+        .address(&EC, &AddressParams::ELEMENTS) // the params, doesn't matter, we don't use the address but its script and blinding pubkey, the latter cannot be retrieved in other way.
+        .expect("all supported descriptors can generate an address");
+    Ok((
+        address.script_pubkey(),
+        address
+            .blinding_pubkey
+            .expect("descriptor used include blinding key"),
+    ))
 }
 
 #[cfg(test)]

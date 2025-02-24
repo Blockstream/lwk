@@ -139,6 +139,16 @@ impl TryFrom<ChildNumber> for Chain {
     }
 }
 
+impl TryFrom<&confidential::Descriptor<DescriptorPublicKey>> for Chain {
+    type Error = ();
+
+    fn try_from(
+        value: &confidential::Descriptor<DescriptorPublicKey>,
+    ) -> Result<Self, Self::Error> {
+        (&value.descriptor).try_into()
+    }
+}
+
 impl WolletDescriptor {
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
         &self.0.descriptor
@@ -309,6 +319,20 @@ impl WolletDescriptor {
         let pegin_script = pegin.bitcoin_witness_script(&EC)?;
         let pegin_address = bitcoin::Address::p2wsh(&pegin_script, network);
         Ok(pegin_address)
+    }
+
+    pub(crate) fn as_single_descriptors(
+        &self,
+    ) -> Result<Vec<confidential::Descriptor<DescriptorPublicKey>>, crate::Error> {
+        let descriptors = self.0.descriptor.clone().into_single_descriptors()?;
+        let mut result = Vec::with_capacity(descriptors.len());
+        for descriptor in descriptors {
+            result.push(confidential::Descriptor {
+                key: self.0.key.clone(),
+                descriptor,
+            });
+        }
+        Ok(result)
     }
 }
 

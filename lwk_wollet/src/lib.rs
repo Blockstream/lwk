@@ -149,3 +149,5 @@ pub use crate::clients::blocking::electrum_client::UrlError;
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};
+
+pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey;

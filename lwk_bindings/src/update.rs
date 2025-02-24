@@ -53,13 +53,33 @@ mod tests {
     #[test]
     fn update() {
         let bytes = lwk_test_util::update_test_vector_bytes();
-        let update_v0 = crate::Update::new(&bytes).unwrap();
-        let back = update_v0.serialize().unwrap();
-        let update_v1 = crate::Update::new(&back).unwrap();
+        let update = crate::Update::new(&bytes).unwrap();
+        let back = update.serialize().unwrap();
+        let update_back: crate::Update = crate::Update::new(&back).unwrap(); // now we save the version, thus we serialize back exactly the same
 
-        assert_ne!(bytes, back);
-        assert_eq!(bytes.len() + 8, back.len()); // the new version serialize the wallet status
+        assert_eq!(bytes.len(), back.len());
+        assert_eq!(update, update_back);
 
-        assert_eq!(update_v0, update_v1);
+        let update_v1 = {
+            let mut update = update.clone();
+            update.inner.version = 1;
+            update
+        };
+        let back_v1 = update_v1.serialize().unwrap();
+        let update_back_v1: crate::Update = crate::Update::new(&back_v1).unwrap();
+        assert_eq!(update_v1, update_back_v1);
+
+        assert_ne!(bytes, back_v1);
+        assert_eq!(bytes.len() + 8, back_v1.len()); // the new version serialize the wallet status
+
+        let update_v2 = {
+            let mut update = update.clone();
+            update.inner.version = 2;
+            update
+        };
+        let err = update_v2.serialize().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("Version 2 update with missing blinding pubkey"));
     }
 }

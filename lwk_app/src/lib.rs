@@ -1278,7 +1278,7 @@ fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
         vout: u.outpoint.vout,
         height: u.height,
         script_pubkey: u.script_pubkey.to_hex(),
-        address: u.address().to_string(),
+        address: u.address.to_string(),
         asset: u.unblinded.asset.to_string(),
         value: u.unblinded.value,
     }

@@ -28,7 +28,7 @@ impl WalletTxOut {
     }
 
     pub fn address(&self) -> Arc<Address> {
-        Arc::new(self.inner.address().into())
+        Arc::new(self.inner.address.clone().into())
     }
 
     pub fn unblinded(&self) -> Arc<TxOutSecrets> {
@@ -47,15 +47,16 @@ impl WalletTxOut {
 #[cfg(test)]
 mod tests {
 
-    use elements::hex::ToHex;
-    use lwk_wollet::ElementsNetwork;
+    use std::str::FromStr;
+
+    use elements::{hex::ToHex, Address};
 
     use super::WalletTxOut;
 
     #[test]
     fn wallet_tx_out() {
         let address_str = "tlq1qqw8re6enadhd82hk9m445kr78e7rlddcu58vypmk9mqa7e989ph30xe8ag7mcqn9rsyu433dcvpas0737sk3sjaqw3484yccj";
-        let definite_descriptor = "ct(slip77(e574b56c3f770be325b48770537cab2278c740352dfb010f4756b5562be12e6e),elwpkh([7a414e60/84'/1'/0']tpubDDRxgt3k7isfqd26r8m3qiWa2DWghshZdCCpxPBWhtxP5oBw29cczWLTt9rv5TnwA9yTnfGGB32mdumHSgN9sgbttZV7gbCX5M6eAzxXJBB/0/0))#jlg2w5v2".to_string();
+        let address = Address::from_str(address_str).unwrap();
 
         let el = lwk_wollet::WalletTxOut {
             is_spent: false,
@@ -70,8 +71,7 @@ mod tests {
             ),
             wildcard_index: 10,
             ext_int: lwk_wollet::Chain::External,
-            definite_descriptor,
-            network: ElementsNetwork::LiquidTestnet,
+            address,
         };
 
         let wallet_tx_out: WalletTxOut = el.clone().into();

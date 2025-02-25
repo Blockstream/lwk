@@ -17,7 +17,7 @@ use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::{BlindingPublicKey, FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
-use elements::{bitcoin, AddressParams};
+use elements::{bitcoin, Address, AddressParams};
 use elements_miniscript::psbt::PsbtExt;
 use elements_miniscript::{confidential, psbt, BtcDescriptor, ForEachKey};
 use elements_miniscript::{
@@ -437,12 +437,17 @@ impl Wollet {
                 .filter_map(|(outpoint, output, is_spent)| {
                     if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
                         let index = self.index(&output.script_pubkey).ok()?;
-                        let definite_descriptor = self
-                            .descriptor
-                            .ct_definite_descriptor(index.0, index.1)
-                            .ok()?
-                            .to_string();
-
+                        let blinder = self
+                            .store
+                            .cache
+                            .scripts
+                            .get(&(index.0, index.1.into()))
+                            .map(|(_, blinding_pubkey)| *blinding_pubkey);
+                        let address = Address::from_script(
+                            &output.script_pubkey,
+                            blinder,
+                            self.network().address_params(),
+                        )?;
                         return Some(WalletTxOut {
                             outpoint,
                             script_pubkey: output.script_pubkey.clone(),
@@ -451,9 +456,7 @@ impl Wollet {
                             wildcard_index: index.1,
                             ext_int: index.0,
                             is_spent,
-
-                            definite_descriptor,
-                            network: self.network(),
+                            address,
                         });
                     }
                     None

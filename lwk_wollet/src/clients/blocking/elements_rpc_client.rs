@@ -3,7 +3,9 @@ use crate::{clients::try_unblind, Chain, ElementsNetwork, Error, WalletTxOut, Wo
 use std::collections::HashMap;
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use elements::{encode::deserialize, hex::FromHex, OutPoint, Script, Transaction, TxOut, Txid};
+use elements::{
+    encode::deserialize, hex::FromHex, Address, OutPoint, Script, Transaction, TxOut, Txid,
+};
 
 /// A client to issue RPCs to a Elements node
 pub struct ElementsRpcClient {
@@ -114,7 +116,9 @@ impl ElementsRpcClient {
                 .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset".into()))?;
             let txout = self.get_txout(&outpoint, u.height)?;
             let unblinded = try_unblind(txout, desc)?;
-
+            let address =
+                Address::from_script(&u.script_pubkey, None, self.network.address_params())
+                    .expect("used descriptors have addresses"); // TODO: get blinding key
             utxos.push(WalletTxOut {
                 outpoint,
                 script_pubkey: u.script_pubkey,
@@ -123,10 +127,7 @@ impl ElementsRpcClient {
                 wildcard_index,
                 ext_int,
                 is_spent: false,
-                definite_descriptor: desc
-                    .ct_definite_descriptor(ext_int, wildcard_index)?
-                    .to_string(),
-                network: self.network,
+                address,
             })
         }
         Ok(utxos)

@@ -734,7 +734,7 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, str::FromStr};
 
     use crate::{clients::asyncr::async_sleep, ElementsNetwork};
 
@@ -768,16 +768,31 @@ mod tests {
     async fn esplora_wasm_testnet() {
         test_esplora_url("https://blockstream.info/liquidtestnet/api").await;
         test_esplora_url("https://liquid.network/liquidtestnet/api").await;
+        test_esplora_url("https://waterfalls.liquidwebwallet.org/liquidtestnet/api").await;
+
+        test_esplora_url("https://blockstream.info/liquid/api").await;
+        test_esplora_url("https://liquid.network/liquid/api").await;
+        test_esplora_url("https://waterfalls.liquidwebwallet.org/liquid/api").await;
     }
 
     async fn test_esplora_url(esplora_url: &str) {
-        let network = if esplora_url.contains("liquidtestnet") {
-            ElementsNetwork::LiquidTestnet
+        let (network, txid) = if esplora_url.contains("liquidtestnet") {
+            (
+                ElementsNetwork::LiquidTestnet,
+                "0471d2f856b3fdbc4397af272bee1660b77aaf9a4aeb86fdd96110ce00f2b158",
+            )
         } else if esplora_url.contains("liquid") {
-            ElementsNetwork::Liquid
+            (
+                ElementsNetwork::Liquid,
+                "efb331fb5051a3b638ddbe719482dcb5232096448bd0a73550408c84bc2269ea",
+            )
         } else {
-            ElementsNetwork::default_regtest()
+            (
+                ElementsNetwork::default_regtest(),
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
         };
+        let is_waterfalls = esplora_url.contains("waterfalls");
         let mut client = EsploraClient::new(network, esplora_url);
         let header = client.tip().await.unwrap();
         assert!(header.height > 100);
@@ -786,18 +801,25 @@ mod tests {
         let genesis_header = &headers[0];
         assert_eq!(genesis_header.height, 0);
 
-        let genesis_block = get_block(esplora_url, genesis_header.block_hash()).await;
-        let genesis_tx = &genesis_block.txdata[0];
+        if !is_waterfalls {
+            // waterfalls doesn't have the block endpoint
+            let _ = get_block(esplora_url, genesis_header.block_hash()).await;
+        }
+        let txid = elements::Txid::from_str(txid).unwrap();
 
-        let txid = genesis_tx.txid();
         let tx = client.get_transaction(txid).await.unwrap();
-
         assert_eq!(tx.txid(), txid);
 
-        let existing_script = &genesis_tx.output[0].script_pubkey;
+        // Test get_transactions method with the same txid
+        let txs_batch = client.get_transactions(&[txid]).await.unwrap();
+        assert_eq!(txs_batch.len(), 1);
+        assert_eq!(txs_batch[0].txid(), txid);
+
+        let existing_script =
+            elements::Script::from_str("001414fe45f2c2a2b7c00d0940d694a3b6af6c9bf165").unwrap();
 
         let histories = client
-            .get_scripts_history(&[existing_script])
+            .get_scripts_history(&[&existing_script])
             .await
             .unwrap();
         assert!(!histories.is_empty())

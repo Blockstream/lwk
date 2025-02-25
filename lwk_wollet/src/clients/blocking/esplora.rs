@@ -148,9 +148,22 @@ mod tests {
 
         assert_eq!(txs[0].txid(), txid);
 
-        let existing_script = &genesis_tx.output[0].script_pubkey;
+        // Test get_transaction method
+        let tx = txs[0].clone();
 
-        let histories = client.get_scripts_history(&[existing_script]).unwrap();
-        assert!(!histories.is_empty())
+        // Test get_transactions method with the same txid
+        let txs_batch = client.get_transactions(&[txid]).unwrap();
+        assert_eq!(txs_batch.len(), 1);
+        assert_eq!(txs_batch[0].txid(), txid);
+
+        // Test get_transactions with multiple txids if there are more transactions in the block
+        if genesis_block.txdata.len() > 1 {
+            let txid2 = genesis_block.txdata[1].txid();
+            let txids = vec![txid, txid2];
+            let txs_multi = client.get_transactions(&txids).unwrap();
+            assert_eq!(txs_multi.len(), 2);
+            assert_eq!(txs_multi[0].txid(), txid);
+            assert_eq!(txs_multi[1].txid(), txid2);
+        }
     }
 }

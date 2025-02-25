@@ -360,7 +360,10 @@ impl TxBuilder {
                 }
             }
             if satoshi_in < satoshi_out {
-                return Err(Error::InsufficientFunds);
+                return Err(Error::InsufficientFunds {
+                    missing_sats: satoshi_out - satoshi_in,
+                    asset_id: asset,
+                });
             }
         }
 
@@ -459,9 +462,13 @@ impl TxBuilder {
                         None => {
                             // Add an input sending the token,
                             let utxos_token = wollet.asset_utxos(&token)?;
-                            let utxo_token = utxos_token
-                                .first()
-                                .ok_or_else(|| Error::InsufficientFunds)?;
+                            let utxo_token =
+                                utxos_token
+                                    .first()
+                                    .ok_or_else(|| Error::InsufficientFunds {
+                                        missing_sats: 1, // We need at least one token
+                                        asset_id: token,
+                                    })?;
                             let idx = wollet.add_input(
                                 &mut pset,
                                 &mut inp_txout_sec,
@@ -507,7 +514,10 @@ impl TxBuilder {
         // then we'll tweak those values to match the given fee rate.
         let temp_fee = 1;
         if satoshi_in <= (satoshi_out + temp_fee) {
-            return Err(Error::InsufficientFunds);
+            return Err(Error::InsufficientFunds {
+                missing_sats: (satoshi_out + temp_fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
+                asset_id: wollet.policy_asset(),
+            });
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
         let addressee = if let Some(address) = self.drain_to {
@@ -542,7 +552,10 @@ impl TxBuilder {
         let vsize = (weight + 4 - 1) / 4;
         let fee = (vsize as f32 * self.fee_rate / 1000.0).ceil() as u64;
         if satoshi_in <= (satoshi_out + fee) {
-            return Err(Error::InsufficientFunds);
+            return Err(Error::InsufficientFunds {
+                missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
+                asset_id: wollet.policy_asset(),
+            });
         }
         let satoshi_change = satoshi_in - satoshi_out - fee;
         // Replace change and fee outputs

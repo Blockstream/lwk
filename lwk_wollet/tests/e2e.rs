@@ -680,7 +680,7 @@ fn create_pset_error() {
         .unwrap()
         .finish()
         .unwrap_err();
-    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Not enough asset
     let addressees = vec![UnvalidatedRecipient {
@@ -694,7 +694,7 @@ fn create_pset_error() {
         .unwrap()
         .finish()
         .unwrap_err();
-    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Not enough token
     let signer2 = generate_signer();
@@ -722,7 +722,7 @@ fn create_pset_error() {
         .finish()
         .unwrap_err();
 
-    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // The other wallet is unaware of the issuance transaction,
     // so it can't reissue the asset.
@@ -1349,7 +1349,7 @@ fn few_lbtc() {
         .unwrap()
         .finish()
         .unwrap_err();
-    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Send an asset to the wallet and check that we have the same error
     let asset = wallet.fund_asset(&server);
@@ -1361,7 +1361,7 @@ fn few_lbtc() {
         .unwrap()
         .finish()
         .unwrap_err();
-    assert_eq!(err.to_string(), Error::InsufficientFunds.to_string());
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Send some more lbtc and we can send the asset and lbtc
     let address = wallet.address();
@@ -1910,7 +1910,7 @@ fn test_manual_coin_selection() {
         .set_wallet_utxos(vec![])
         .finish()
         .unwrap_err();
-    assert!(matches!(err, Error::InsufficientFunds));
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     let err = w
         .tx_builder()
@@ -1919,7 +1919,7 @@ fn test_manual_coin_selection() {
         .set_wallet_utxos(vec![utxos[1].outpoint]) // not enough
         .finish()
         .unwrap_err();
-    assert!(matches!(err, Error::InsufficientFunds));
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     let mut pset = w
         .tx_builder()

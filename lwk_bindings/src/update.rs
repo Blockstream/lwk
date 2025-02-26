@@ -55,7 +55,7 @@ mod tests {
         let bytes = lwk_test_util::update_test_vector_bytes();
         let update = crate::Update::new(&bytes).unwrap();
         let back = update.serialize().unwrap();
-        let update_back: crate::Update = crate::Update::new(&back).unwrap(); // now we save the version, thus we serialize back exactly the same
+        let update_back = crate::Update::new(&back).unwrap(); // now we save the version, thus we serialize back exactly the same
 
         assert_eq!(bytes.len(), back.len());
         assert_eq!(update, update_back);

@@ -3,7 +3,9 @@ use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::asyncr::LiquidClient;
 use lwk_ledger::APDUAnswer;
 use lwk_ledger::{APDUCmdVec, StatusWord};
+use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use serde::Serialize;
+use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HidDevice;
@@ -33,6 +35,11 @@ struct LedgerWeb {
     ledger: Ledger<TransportWeb>,
 }
 
+#[wasm_bindgen]
+struct Path {
+    derivation_path: DerivationPath,
+}
+
 // https://github.com/LedgerHQ/ledger-live/blob/develop/libs/ledgerjs/packages/devices/src/hid-framing.ts
 // https://github.com/LedgerHQ/ledger-live/blob/8fe361435ef6eef06fa028845977369990f36f71/libs/ledgerjs/packages/hw-transport-webhid/src/TransportWebHID.ts
 // https://github.com/Zondax/ledger-rs/blob/master/ledger-transport-hid/src/lib.rs#L83C9-L83C15
@@ -57,6 +64,42 @@ impl LedgerWeb {
             .map_err(|e| Error::Generic(format!("{:?} error getting version", e)))?;
         console_log!("a {} b {} c {:?}", a, b, c);
         Ok(format!("{} {} {:?}", a, b, c))
+    }
+
+    //pub async fn derive_xpub(&self, path: Path) -> Result<String, Error> { //std::result::Result<Xpub, Self::Error> {
+    pub async fn derive_xpub(&self) -> Result<String, Error> {
+        //let derivation_path = DerivationPath::master();
+        let derivation_path = DerivationPath::from_str("m/44'/1'/0'").unwrap();
+        let r = self
+            .ledger
+            .client
+            .get_extended_pubkey(&derivation_path, false)
+            .await
+            .map_err(|e| Error::Generic(format!("{:?} error getting XPUB derivation path {:?}.", e, derivation_path)))?;
+        console_log!("r {}", r.to_string());
+        Ok(r.to_string())
+    }
+
+    pub async fn slip77_master_blinding_key(&self) -> Result<String, Error> {
+        let r = self
+            .ledger
+            .client
+            .get_master_blinding_key()
+            .await
+            .map_err(|e| Error::Generic(format!("{:?} error getting Master Blinding Key", e)))?;
+        console_log!("r {}", r.to_string());
+        Ok(r.to_string())
+    }
+
+    pub async  fn fingerprint(&self) -> Result<String, Error> {
+        let r = self
+            .ledger
+            .client
+            .get_master_fingerprint()
+            .await
+            .map_err(|e| Error::Generic(format!("{:?} error getting fingerprint", e)))?;
+        console_log!("r {}", r.to_string());
+        Ok(r.to_string())
     }
 }
 

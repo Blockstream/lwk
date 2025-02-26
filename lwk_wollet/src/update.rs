@@ -272,6 +272,9 @@ fn compute_blinding_pubkey_if_missing(
             Some(pubkey) => pubkey,
             None => {
                 let desc = wollet_descriptor.ct_definite_descriptor(chain, child_number.into())?;
+                // TODO: derive the blinding pubkey from the descriptor blinding key and scriptpubkey
+                //       (needs function in elements-miniscript)
+
                 let address = desc.address(&EC, &elements::AddressParams::ELEMENTS)?; // we don't need the address, we need only the blinding pubkey, thus we can use any params
                 address
                     .blinding_pubkey

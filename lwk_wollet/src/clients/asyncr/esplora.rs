@@ -18,7 +18,7 @@ use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
     Script, Txid,
 };
-use elements_miniscript::{confidential, DescriptorPublicKey};
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use reqwest::Response;
 use serde::Deserialize;
 use std::{
@@ -430,7 +430,7 @@ impl EsploraClient {
             for (i, script_history) in chain_history.iter().enumerate() {
                 // TODO handle paging by asking following pages if there are more than 1000 results
                 let child = ChildNumber::from(waterfalls_result.page as u32 * 1000 + i as u32);
-                let ct_desc = confidential::Descriptor {
+                let ct_desc = ConfidentialDescriptor {
                     key: descriptor.0.key.clone(),
                     descriptor: desc.clone(),
                 };

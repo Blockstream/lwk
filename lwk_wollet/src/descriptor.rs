@@ -6,7 +6,6 @@ use aes_gcm_siv::KeyInit;
 use elements::bitcoin::{bip32::ChildNumber, WitnessVersion};
 use elements::hashes::{sha256t_hash_newtype, Hash};
 use elements::{bitcoin, Address, AddressParams, Script};
-use elements_miniscript::confidential;
 use elements_miniscript::BtcDescriptor;
 use elements_miniscript::DefiniteDescriptorKey;
 use elements_miniscript::{
@@ -139,12 +138,10 @@ impl TryFrom<ChildNumber> for Chain {
     }
 }
 
-impl TryFrom<&confidential::Descriptor<DescriptorPublicKey>> for Chain {
+impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
     type Error = ();
 
-    fn try_from(
-        value: &confidential::Descriptor<DescriptorPublicKey>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: &ConfidentialDescriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
         (&value.descriptor).try_into()
     }
 }
@@ -278,7 +275,7 @@ impl WolletDescriptor {
         &self,
         ext_int: Chain,
         index: u32,
-    ) -> Result<confidential::Descriptor<DefiniteDescriptorKey>, crate::Error> {
+    ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, crate::Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .0
@@ -323,11 +320,11 @@ impl WolletDescriptor {
 
     pub(crate) fn as_single_descriptors(
         &self,
-    ) -> Result<Vec<confidential::Descriptor<DescriptorPublicKey>>, crate::Error> {
+    ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, crate::Error> {
         let descriptors = self.0.descriptor.clone().into_single_descriptors()?;
         let mut result = Vec::with_capacity(descriptors.len());
         for descriptor in descriptors {
-            result.push(confidential::Descriptor {
+            result.push(ConfidentialDescriptor {
                 key: self.0.key.clone(),
                 descriptor,
             });

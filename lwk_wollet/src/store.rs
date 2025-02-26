@@ -3,7 +3,7 @@ use crate::elements::{BlockHash, OutPoint, Script, Transaction, TxOutSecrets, Tx
 use crate::hashes::Hash;
 use crate::{BlindingPublicKey, Error};
 use elements::bitcoin::bip32::ChildNumber;
-use elements_miniscript::{confidential, DescriptorPublicKey};
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -112,7 +112,7 @@ impl Store {
     pub fn get_script_batch(
         &self,
         batch: u32,
-        descriptor: &confidential::Descriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
+        descriptor: &ConfidentialDescriptor<DescriptorPublicKey>, // non confidential (we need only script_pubkey), non multipath (we need to be able to derive with index)
     ) -> Result<ScriptBatch, Error> {
         let mut result = ScriptBatch {
             cached: true,
@@ -139,7 +139,7 @@ impl Store {
         &self,
         ext_int: Chain,
         child: ChildNumber,
-        descriptor: &confidential::Descriptor<DescriptorPublicKey>,
+        descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
         let opt_script = self.cache.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {

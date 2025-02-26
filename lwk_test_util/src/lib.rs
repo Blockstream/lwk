@@ -588,9 +588,14 @@ pub fn update_test_vector_2_bytes() -> Vec<u8> {
     include_bytes!("../test_data/update_test_vector.bin").to_vec()
 }
 
-/// An update with 63 transactions on liquid testnet wallet defined by [`wollet_descriptor_many_transactions`]
+/// An update (serialized v1) with 63 transactions on liquid testnet wallet defined by [`wollet_descriptor_many_transactions`]
 pub fn update_test_vector_many_transactions() -> Vec<u8> {
     include_bytes!("../test_data/update_many_txs.bin").to_vec()
+}
+
+/// An update (serialized v2) after [`update_test_vector_many_transactions`]
+pub fn update_v2_test_vector_after_many_transactions() -> Vec<u8> {
+    include_bytes!("../test_data/update_v2_after_many_txs.bin").to_vec()
 }
 
 pub fn update_test_vector_encrypted_bytes() -> Vec<u8> {

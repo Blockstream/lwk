@@ -2012,3 +2012,14 @@ fn test_many_transactions() {
     let balance = wollet.balance().unwrap();
     assert_eq!(format!("{:?}", balance), "{144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49: 1093721, 0cf33929dd6f87ae71d3c500aa056f6dbd027bcb3051b1dae6fe67750fbccd76: 5, 39ee0a62f96c5b5bd28266769ab4d7df28777ed2988f3818fffe48c4c5ba0f84: 1, 38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5: 9876, bf83e69c997b3336b731d1207e1dd8967dd089edfe55f96586c858f3a6da76bf: 1, 91618f01b2ec10c6cb6d03ea4fde9d765e30c23b8585522d247972a31c5435d6: 210}");
 }
+
+#[test]
+fn test_update_v2_after_old_updates() {
+    let mut wollet = test_wollet::test_wollet_with_many_transactions();
+    assert_eq!(wollet.transactions().unwrap().len(), 63);
+    let update = Update::deserialize(&update_v2_test_vector_after_many_transactions()).unwrap();
+    assert_eq!(update.version, 2);
+    assert!(!update.new_txs.txs.is_empty());
+    wollet.apply_update(update).unwrap();
+    assert_eq!(wollet.transactions().unwrap().len(), 64);
+}

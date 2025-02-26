@@ -120,15 +120,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
         let vec = answer.data().to_vec();
         console_log!("status code: {:?} answer vec <- {:?}", status, vec);
 
-        // Ok((status, vec))
-        Ok((
-            StatusWord::OK,
-            [
-                1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101, 115, 116, 5, 50,
-                46, 50, 46, 51, 1, 2,
-            ]
-            .to_vec(),
-        ))
+        Ok((status, vec))
     }
 }
 

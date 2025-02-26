@@ -20,6 +20,8 @@ pub mod asyncr;
 #[cfg(feature = "test_emulator")]
 pub use ledger_emulator::TestLedgerEmulator;
 
+pub use ledger_apdu::APDUAnswer;
+
 // Adapted from
 // https://github.com/LedgerHQ/app-bitcoin-new/tree/master/bitcoin_client_rs
 pub use client::LiquidClient;

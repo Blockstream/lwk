@@ -1,6 +1,7 @@
 use crate::Error;
 use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::asyncr::LiquidClient;
+use lwk_ledger::APDUAnswer;
 use lwk_ledger::{APDUCmdVec, StatusWord};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -103,12 +104,20 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
                 .map_err(Error::JsVal)?;
         }
 
-        lwk_wollet::clients::asyncr::async_sleep(100).await; // TODO: how to wait for the response?
+        lwk_wollet::clients::asyncr::async_sleep(500).await; // TODO: how to wait for the response?
 
         let result = closure_result.take();
         console_log!("data <- {:?}", result);
 
-        Ok((StatusWord::OK, result))
+        // let answer = APDUAnswer::from_answer(result).map_err(|_| "Invalid Answer")?;
+        let answer = APDUAnswer::from_answer(result).unwrap();
+
+        console_log!("answer <- {:?}", answer);
+        let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
+        let vec = answer.data().to_vec();
+        console_log!("status code: {:?} answer vec <- {:?}", status, vec);
+
+        Ok((status, vec))
     }
 }
 

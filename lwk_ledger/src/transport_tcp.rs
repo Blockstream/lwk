@@ -50,6 +50,8 @@ impl Transport for TransportTcp {
             println!("resp  -> {:?}", resp);
 
             let answer = APDUAnswer::from_answer(resp).map_err(|_| "Invalid Answer")?;
+            println!("answer <- {:?}", answer);
+            println!("answer.data() <- {:?}", answer.data());
             Ok((
                 StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown),
                 answer.data().to_vec(),

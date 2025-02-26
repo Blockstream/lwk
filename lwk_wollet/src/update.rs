@@ -266,7 +266,8 @@ fn compute_blinding_pubkey_if_missing(
 ) -> Result<Vec<(Chain, ChildNumber, Script, BlindingPublicKey)>, Error> {
     let mut result = Vec::with_capacity(scripts_with_blinding_pubkey.len());
 
-    for (chain, child_number, script, maybe_blinding_pubkey) in scripts_with_blinding_pubkey {
+    for (chain, child_number, script_pubkey, maybe_blinding_pubkey) in scripts_with_blinding_pubkey
+    {
         let blinding_pubkey = match maybe_blinding_pubkey {
             Some(pubkey) => pubkey,
             None => {
@@ -277,7 +278,7 @@ fn compute_blinding_pubkey_if_missing(
                     .expect("blinding pubkey is present when using ct descriptors")
             }
         };
-        result.push((chain, child_number, script, blinding_pubkey));
+        result.push((chain, child_number, script_pubkey, blinding_pubkey));
     }
 
     Ok(result)

@@ -437,7 +437,7 @@ impl Wollet {
                 .filter_map(|(outpoint, output, is_spent)| {
                     if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
                         let index = self.index(&output.script_pubkey).ok()?;
-                        let blinder = self
+                        let blinding_pubkey = self
                             .store
                             .cache
                             .scripts
@@ -445,7 +445,7 @@ impl Wollet {
                             .map(|(_, blinding_pubkey)| *blinding_pubkey);
                         let address = Address::from_script(
                             &output.script_pubkey,
-                            blinder,
+                            blinding_pubkey,
                             self.network().address_params(),
                         )?;
                         return Some(WalletTxOut {

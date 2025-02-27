@@ -2052,6 +2052,7 @@ dependencies = [
 name = "lwk_ledger"
 version = "0.8.0"
 dependencies = [
+ "byteorder",
  "elements-miniscript",
  "env_logger",
  "ledger-apdu",
@@ -2122,6 +2123,7 @@ dependencies = [
 name = "lwk_wasm"
 version = "0.8.5"
 dependencies = [
+ "byteorder",
  "console_error_panic_hook",
  "lwk_common",
  "lwk_jade",

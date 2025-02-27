@@ -51,6 +51,7 @@ thiserror = "1.0.57"
 
 
 tokio = { version = "1.36.0", features = ["rt", "macros", "io-util", "sync"] }
+byteorder = "1.5.0"
 
 # the web-sys dependency declares different features according if it's compiled for wasm/doc or not
 # This is because all serial-related features are experimental and they required specific RUSTFLAGS

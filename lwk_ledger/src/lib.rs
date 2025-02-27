@@ -17,6 +17,9 @@ mod ledger_emulator;
 #[cfg(feature = "asyncr")]
 pub mod asyncr;
 
+use std::io::Cursor;
+
+use byteorder::{BigEndian, ReadBytesExt};
 #[cfg(feature = "test_emulator")]
 pub use ledger_emulator::TestLedgerEmulator;
 
@@ -346,5 +349,130 @@ fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
         Some((required_sigs.into(), pubkeys))
     } else {
         None
+    }
+}
+
+const LEDGER_CHANNEL: u16 = 0x0101;
+
+pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
+    let mut result = vec![];
+    let mut sequence_idx = 0u16;
+    let mut expected_apdu_len = 0usize;
+
+    for el in apdu_answers {
+        let res = el.len();
+
+        if (sequence_idx == 0 && res < 7) || res < 5 {
+            return Err(Error::ClientError(
+                "Read error. Incomplete header".to_string(),
+            ));
+        }
+
+        let mut rdr = Cursor::new(&el);
+
+        let rcv_channel = rdr
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::ClientError("Invalid channel".to_string()))?;
+        let rcv_tag = rdr
+            .read_u8()
+            .map_err(|_| Error::ClientError("Invalid tag".to_string()))?;
+        let rcv_seq_idx = rdr
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::ClientError("Invalid sequence idx".to_string()))?;
+
+        if rcv_channel != LEDGER_CHANNEL {
+            return Err(Error::ClientError("Invalid channel".to_string()));
+        }
+        if rcv_tag != 0x05u8 {
+            return Err(Error::ClientError("Invalid tag".to_string()));
+        }
+
+        if rcv_seq_idx != sequence_idx {
+            return Err(Error::ClientError("Invalid sequence idx".to_string()));
+        }
+
+        if rcv_seq_idx == 0 {
+            expected_apdu_len = rdr
+                .read_u16::<BigEndian>()
+                .map_err(|_| Error::ClientError("Invalid expected apdu len".to_string()))?
+                as usize;
+        }
+
+        let needs_more = expected_apdu_len > (result.len() + el.len()); // TODO check off by one
+        let start = rdr.position() as usize;
+        let end = if needs_more {
+            el.len()
+        } else {
+            expected_apdu_len - result.len() + start
+        };
+
+        let new_chunk = &el[start..end];
+
+        result.extend_from_slice(new_chunk);
+        println!("result: {:?} {}", result, result.len());
+
+        if result.len() >= expected_apdu_len {
+            return Ok(result);
+        }
+
+        sequence_idx += 1;
+    }
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_apdu() {
+        // messages taken from xpub requests in the browser
+        let message1 = [
+            1, 1, 5, 0, 0, 0, 113, 116, 112, 117, 98, 68, 67, 119, 89, 106, 112, 68, 104, 85, 100,
+            80, 71, 80, 53, 114, 83, 51, 119, 103, 78, 103, 49, 51, 109, 84, 114, 114, 106, 66,
+            117, 71, 56, 86, 57, 86, 112, 87, 98, 121, 112, 116, 88, 54, 84, 82, 80, 98, 78, 111,
+            90, 86, 88, 115,
+        ]
+        .to_vec();
+        let message2 = [
+            1, 1, 5, 0, 1, 111, 86, 85, 83, 107, 67, 106, 109, 81, 56, 106, 74, 121, 99, 106, 117,
+            68, 75, 66, 98, 57, 101, 97, 116, 97, 83, 121, 109, 88, 97, 107, 84, 84, 97, 71, 105,
+            102, 120, 82, 54, 107, 109, 86, 115, 102, 70, 101, 104, 72, 49, 90, 103, 74, 84, 144,
+            0, 0, 0, 0,
+        ]
+        .to_vec();
+        let result = read_multi_apdu(vec![message1, message2]).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                116, 112, 117, 98, 68, 67, 119, 89, 106, 112, 68, 104, 85, 100, 80, 71, 80, 53,
+                114, 83, 51, 119, 103, 78, 103, 49, 51, 109, 84, 114, 114, 106, 66, 117, 71, 56,
+                86, 57, 86, 112, 87, 98, 121, 112, 116, 88, 54, 84, 82, 80, 98, 78, 111, 90, 86,
+                88, 115, 111, 86, 85, 83, 107, 67, 106, 109, 81, 56, 106, 74, 121, 99, 106, 117,
+                68, 75, 66, 98, 57, 101, 97, 116, 97, 83, 121, 109, 88, 97, 107, 84, 84, 97, 71,
+                105, 102, 120, 82, 54, 107, 109, 86, 115, 102, 70, 101, 104, 72, 49, 90, 103, 74,
+                84, 144, 0
+            ]
+        );
+        let answer = APDUAnswer::from_answer(result).unwrap();
+        let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
+        // let vec = answer.data().to_vec();
+        assert_eq!(status, StatusWord::OK);
+    }
+
+    #[test]
+    fn test_read_apdu_single() {
+        let get_version_test_vector_array = [
+            1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101, 115, 116, 5, 50, 46,
+            50, 46, 51, 1, 2, 144, 0,
+        ];
+
+        let received_apdu_ledger = [
+            1, 1, 5, 0, 0, 0, 26, 1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101,
+            115, 116, 5, 50, 46, 50, 46, 51, 1, 2, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let result = read_multi_apdu(vec![received_apdu_ledger.to_vec()]).unwrap();
+        assert_eq!(result, get_version_test_vector_array.to_vec());
     }
 }

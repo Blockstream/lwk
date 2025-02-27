@@ -1,10 +1,14 @@
 use crate::Error;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
 use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::asyncr::LiquidClient;
+use lwk_ledger::read_multi_apdu;
 use lwk_ledger::APDUAnswer;
 use lwk_ledger::{APDUCmdVec, StatusWord};
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use serde::Serialize;
+use std::io::Cursor;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -128,7 +132,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
             console_log!("ba {:?}", ba);
 
             let mut c = result_clone.borrow_mut();
-            (*c).extend(ba);
+            (*c).push(ba);
         };
         let closure: Closure<dyn FnMut(_)> = Closure::new(f);
 
@@ -157,7 +161,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
         let result = closure_result.take();
         console_log!("apdu <- {:?}", result);
 
-        let result = read_apdu(result);
+        let result = read_multi_apdu(result).unwrap();
         console_log!("result  <- {:?}", result);
 
         // let answer = APDUAnswer::from_answer(result).map_err(|_| "Invalid Answer")?;
@@ -287,57 +291,6 @@ fn write_apdu(apdu_command: &APDUCmdVec) -> Vec<[u8; LEDGER_PACKET_WRITE_SIZE as
     results
 }
 
-// fn read_apdu(apdu_answer: Vec<u8>) -> Vec<u8> {
-//     let mut buffer = vec![0u8; LEDGER_PACKET_READ_SIZE as usize];
-//     let mut sequence_idx = 0u16;
-//     let mut expected_apdu_len = 0usize;
-
-//     loop {
-//         let res = device.read_timeout(&mut buffer, LEDGER_TIMEOUT)?;
-
-//         if (sequence_idx == 0 && res < 7) || res < 5 {
-//             return Err(LedgerHIDError::Comm("Read error. Incomplete header"));
-//         }
-
-//         let mut rdr = Cursor::new(&buffer);
-
-//         let rcv_channel = rdr.read_u16::<BigEndian>()?;
-//         let rcv_tag = rdr.read_u8()?;
-//         let rcv_seq_idx = rdr.read_u16::<BigEndian>()?;
-
-//         if rcv_channel != channel {
-//             return Err(LedgerHIDError::Comm("Invalid channel"));
-//         }
-//         if rcv_tag != 0x05u8 {
-//             return Err(LedgerHIDError::Comm("Invalid tag"));
-//         }
-
-//         if rcv_seq_idx != sequence_idx {
-//             return Err(LedgerHIDError::Comm("Invalid sequence idx"));
-//         }
-
-//         if rcv_seq_idx == 0 {
-//             expected_apdu_len = rdr.read_u16::<BigEndian>()? as usize;
-//         }
-
-//         let available: usize = buffer.len() - rdr.position() as usize;
-//         let missing: usize = expected_apdu_len - apdu_answer.len();
-//         let end_p = rdr.position() as usize + std::cmp::min(available, missing);
-
-//         let new_chunk = &buffer[rdr.position() as usize..end_p];
-
-//         info!("[{:3}] << {:}", new_chunk.len(), hex::encode(new_chunk));
-
-//         apdu_answer.extend_from_slice(new_chunk);
-
-//         if apdu_answer.len() >= expected_apdu_len {
-//             return Ok(apdu_answer.len());
-//         }
-
-//         sequence_idx += 1;
-//     }
-// }
-
 fn read_apdu(apdu_answer: Vec<u8>) -> Vec<u8> {
     let len = apdu_answer[6] as usize;
     let start = 7usize;
@@ -350,6 +303,8 @@ mod tests {
 
     use super::write_apdu;
     use super::LEDGER_CHANNEL;
+    use crate::ledger::APDUAnswer;
+    use crate::ledger::StatusWord;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -366,35 +321,6 @@ mod tests {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0
             ]]
-        );
-    }
-
-    #[wasm_bindgen_test]
-    async fn test_read_apdu() {
-        use lwk_wollet::elements::hex::FromHex;
-
-        let get_version_test_vector_hex = "010e4c6971756964205265677465737405322e322e330102";
-        let get_version_test_vector_bytes =
-            Vec::<u8>::from_hex(get_version_test_vector_hex).unwrap();
-        let get_version_test_vector_array = [
-            1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101, 115, 116, 5, 50, 46,
-            50, 46, 51, 1, 2,
-        ];
-        assert_eq!(get_version_test_vector_bytes, get_version_test_vector_array);
-
-        let received_apdu_ledger = [
-            1, 1, 5, 0, 0, 0, 26, 1, 14, 76, 105, 113, 117, 105, 100, 32, 82, 101, 103, 116, 101,
-            115, 116, 5, 50, 46, 50, 46, 51, 1, 2, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        let start = 7usize;
-        let len = received_apdu_ledger[6] as usize;
-        let len_excluded_status_code = len - 2;
-        let end = start + len_excluded_status_code;
-        let received_apdu = &received_apdu_ledger[start..end];
-        assert_eq!(
-            received_apdu.to_vec(),
-            get_version_test_vector_bytes.to_vec()
         );
     }
 }

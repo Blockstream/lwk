@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(txs[0].txid(), txid);
 
         // Test get_transaction method
-        let tx = txs[0].clone();
+        let _tx = txs[0].clone();
 
         // Test get_transactions method with the same txid
         let txs_batch = client.get_transactions(&[txid]).unwrap();

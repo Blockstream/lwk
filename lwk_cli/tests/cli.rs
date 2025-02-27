@@ -946,6 +946,17 @@ fn test_issue() {
     complete(&cli, "w2", get_str(&r, "pset"), &["s2"]);
     assert_eq!(1, get_balance(&cli, "w2", asset));
 
+    // Reissue from wallet w1 without token fail with InsufficientFunds
+    let err = sh_err(&format!(
+        "{cli} wallet reissue --wallet w1 --asset {asset} --satoshi-asset 1"
+    ));
+    assert_eq!(
+        err,
+        format!(
+            r#"Rpc returned an error RpcError {{ code: -32005, message: "Wollet Error: Insufficient funds: missing 1 units for token {token}", data: None }}"#
+        )
+    );
+
     // Removing the asset will cause the "external" reissuance to fail
     sh(&format!("{cli} asset remove --asset {asset}"));
     let err = sh_err(&format!(

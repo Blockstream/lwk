@@ -103,7 +103,8 @@ pub enum Error {
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 
-    #[error("Insufficient funds: missing {missing_sats} satoshis for asset/token {asset_id} is_token: {is_token}")]
+    #[error("Insufficient funds: missing {missing_sats} units for {} {asset_id}",
+        .is_token.then(|| "token").unwrap_or("asset"))]
     InsufficientFunds {
         missing_sats: u64,
         asset_id: crate::elements::AssetId,

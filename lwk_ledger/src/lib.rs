@@ -409,7 +409,6 @@ pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
         let new_chunk = &el[start..end];
 
         result.extend_from_slice(new_chunk);
-        println!("result: {:?} {}", result, result.len());
 
         if result.len() >= expected_apdu_len {
             return Ok(result);
@@ -418,6 +417,38 @@ pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
         sequence_idx += 1;
     }
     Ok(result)
+}
+
+const LEDGER_PACKET_WRITE_SIZE: u8 = 64;
+
+// based on https://github.com/Zondax/ledger-rs/blob/master/ledger-transport-hid/src/lib.rs
+// with the notable difference we don't use the prefix 0x00
+pub fn write_apdu(apdu_command: &APDUCmdVec) -> Vec<[u8; LEDGER_PACKET_WRITE_SIZE as usize]> {
+    let channel = LEDGER_CHANNEL;
+    let apdu_command = apdu_command.serialize();
+    let mut results = vec![];
+    let command_length = apdu_command.len();
+    let mut in_data = Vec::with_capacity(command_length + 2);
+    in_data.push(((command_length >> 8) & 0xFF) as u8);
+    in_data.push((command_length & 0xFF) as u8);
+    in_data.extend_from_slice(&apdu_command);
+
+    let mut buffer = vec![0u8; LEDGER_PACKET_WRITE_SIZE as usize];
+    buffer[0] = ((channel >> 8) & 0xFF) as u8; // channel big endian
+    buffer[1] = (channel & 0xFF) as u8; // channel big endian
+    buffer[2] = 0x05u8;
+
+    for (sequence_idx, chunk) in in_data
+        .chunks((LEDGER_PACKET_WRITE_SIZE - 5) as usize)
+        .enumerate()
+    {
+        buffer[3] = ((sequence_idx >> 8) & 0xFF) as u8; // sequence_idx big endian
+        buffer[4] = (sequence_idx & 0xFF) as u8; // sequence_idx big endian
+        buffer[5..5 + chunk.len()].copy_from_slice(chunk);
+
+        results.push(buffer.clone().try_into().unwrap());
+    }
+    results
 }
 
 #[cfg(test)]
@@ -474,5 +505,20 @@ mod tests {
         ];
         let result = read_multi_apdu(vec![received_apdu_ledger.to_vec()]).unwrap();
         assert_eq!(result, get_version_test_vector_array.to_vec());
+    }
+
+    #[test]
+    fn test_write_apdu() {
+        let command = crate::command::get_version();
+        assert_eq!(&command.serialize(), &[176u8, 1, 0, 0, 0]);
+        let results = write_apdu(&command);
+        assert_eq!(
+            results,
+            vec![[
+                1, 1, 5, 0, 0, 0, 5, 176, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0
+            ]]
+        );
     }
 }

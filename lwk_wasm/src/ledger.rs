@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::asyncr::LiquidClient;
 use lwk_ledger::read_multi_apdu;
+use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
 use lwk_ledger::{APDUCmdVec, StatusWord};
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
@@ -254,73 +255,4 @@ extern "C" {
     // Multiple arguments too!
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_many(a: &str, b: &str);
-}
-
-const LEDGER_PACKET_WRITE_SIZE: u8 = 64;
-const LEDGER_CHANNEL: u16 = 0x0101;
-
-// based on https://github.com/Zondax/ledger-rs/blob/master/ledger-transport-hid/src/lib.rs
-// with the notable difference we don't use the prefix 0x00
-fn write_apdu(apdu_command: &APDUCmdVec) -> Vec<[u8; LEDGER_PACKET_WRITE_SIZE as usize]> {
-    let channel = LEDGER_CHANNEL;
-    let apdu_command = apdu_command.serialize();
-    let mut results = vec![];
-    let command_length = apdu_command.len();
-    let mut in_data = Vec::with_capacity(command_length + 2);
-    in_data.push(((command_length >> 8) & 0xFF) as u8);
-    in_data.push((command_length & 0xFF) as u8);
-    in_data.extend_from_slice(&apdu_command);
-
-    let mut buffer = vec![0u8; LEDGER_PACKET_WRITE_SIZE as usize];
-    buffer[0] = ((channel >> 8) & 0xFF) as u8; // channel big endian
-    buffer[1] = (channel & 0xFF) as u8; // channel big endian
-    buffer[2] = 0x05u8;
-
-    for (sequence_idx, chunk) in in_data
-        .chunks((LEDGER_PACKET_WRITE_SIZE - 5) as usize)
-        .enumerate()
-    {
-        buffer[3] = ((sequence_idx >> 8) & 0xFF) as u8; // sequence_idx big endian
-        buffer[4] = (sequence_idx & 0xFF) as u8; // sequence_idx big endian
-        buffer[5..5 + chunk.len()].copy_from_slice(chunk);
-
-        println!("[{:3}] << {:?}", buffer.len(), &buffer);
-
-        results.push(buffer.clone().try_into().unwrap());
-    }
-    results
-}
-
-fn read_apdu(apdu_answer: Vec<u8>) -> Vec<u8> {
-    let len = apdu_answer[6] as usize;
-    let start = 7usize;
-    let end = start + len;
-    apdu_answer[start..end].to_vec()
-}
-
-#[cfg(all(test, target_arch = "wasm32"))]
-mod tests {
-
-    use super::write_apdu;
-    use super::LEDGER_CHANNEL;
-    use crate::ledger::APDUAnswer;
-    use crate::ledger::StatusWord;
-    use wasm_bindgen_test::*;
-
-    wasm_bindgen_test_configure!(run_in_browser);
-
-    #[wasm_bindgen_test]
-    async fn test_write_apdu() {
-        let command = lwk_ledger::command::get_version();
-        assert_eq!(&command.serialize(), &[176u8, 1, 0, 0, 0]);
-        let results = write_apdu(&command);
-        assert_eq!(
-            results,
-            vec![[
-                1, 1, 5, 0, 0, 0, 5, 176, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0
-            ]]
-        );
-    }
 }

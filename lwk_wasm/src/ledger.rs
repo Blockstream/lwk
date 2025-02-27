@@ -66,10 +66,8 @@ impl LedgerWeb {
         Ok(format!("{} {} {:?}", a, b, c))
     }
 
-    //pub async fn derive_xpub(&self, path: Path) -> Result<String, Error> { //std::result::Result<Xpub, Self::Error> {
-    pub async fn derive_xpub(&self) -> Result<String, Error> {
-        //let derivation_path = DerivationPath::master();
-        let derivation_path = DerivationPath::from_str("m/44'/1'/0'").unwrap();
+    pub async fn derive_xpub(&self, path: String) -> Result<String, Error> {
+        let derivation_path = DerivationPath::from_str(&path).unwrap();
         let r = self
             .ledger
             .client

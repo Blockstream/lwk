@@ -68,9 +68,7 @@ impl LedgerWeb {
     }
 
     #[wasm_bindgen(js_name = deriveXpub)]
-    //pub async fn derive_xpub(&self) -> Result<String, Error> {
     pub async fn derive_xpub(&self, path: &str) -> Result<String, Error> {
-        //let path = "m/44'/1'/0'";
         let derivation_path = DerivationPath::from_str(&path).unwrap();
         let r = self
             .ledger

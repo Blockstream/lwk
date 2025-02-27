@@ -75,7 +75,12 @@ impl LedgerWeb {
             .client
             .get_extended_pubkey(&derivation_path, false)
             .await
-            .map_err(|e| Error::Generic(format!("{:?} error getting XPUB derivation path {:?}.", e, derivation_path)))?;
+            .map_err(|e| {
+                Error::Generic(format!(
+                    "{:?} error getting XPUB derivation path {:?}.",
+                    e, derivation_path
+                ))
+            })?;
         console_log!("r {}", r.to_string());
         Ok(r.to_string())
     }
@@ -91,7 +96,7 @@ impl LedgerWeb {
         Ok(r.to_string())
     }
 
-    pub async  fn fingerprint(&self) -> Result<String, Error> {
+    pub async fn fingerprint(&self) -> Result<String, Error> {
         let r = self
             .ledger
             .client
@@ -123,9 +128,9 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
             console_log!("ba {:?}", ba);
 
             let mut c = result_clone.borrow_mut();
-            *c = ba;
+            (*c).extend(ba);
         };
-        let closure: Closure<dyn FnMut(_)> = Closure::once(f);
+        let closure: Closure<dyn FnMut(_)> = Closure::new(f);
 
         // // https://gist.github.com/kndysfm/f722e2b6dc26ab28e3da5945d5e21933
 
@@ -147,7 +152,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
                 .map_err(Error::JsVal)?;
         }
 
-        lwk_wollet::clients::asyncr::async_sleep(500).await; // TODO: how to wait for the response?
+        lwk_wollet::clients::asyncr::async_sleep(3500).await; // TODO: how to wait for the response?
 
         let result = closure_result.take();
         console_log!("apdu <- {:?}", result);

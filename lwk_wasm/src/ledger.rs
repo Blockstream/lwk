@@ -40,11 +40,6 @@ struct LedgerWeb {
     ledger: Ledger<TransportWeb>,
 }
 
-#[wasm_bindgen]
-struct Path {
-    derivation_path: DerivationPath,
-}
-
 // https://github.com/LedgerHQ/ledger-live/blob/develop/libs/ledgerjs/packages/devices/src/hid-framing.ts
 // https://github.com/LedgerHQ/ledger-live/blob/8fe361435ef6eef06fa028845977369990f36f71/libs/ledgerjs/packages/hw-transport-webhid/src/TransportWebHID.ts
 // https://github.com/Zondax/ledger-rs/blob/master/ledger-transport-hid/src/lib.rs#L83C9-L83C15
@@ -60,6 +55,7 @@ impl LedgerWeb {
         Self { ledger }
     }
 
+    #[wasm_bindgen(js_name = getVersion)]
     pub async fn get_version(&self) -> Result<String, Error> {
         let (a, b, c) = self
             .ledger
@@ -71,10 +67,11 @@ impl LedgerWeb {
         Ok(format!("{} {} {:?}", a, b, c))
     }
 
-    //pub async fn derive_xpub(&self, path: Path) -> Result<String, Error> { //std::result::Result<Xpub, Self::Error> {
-    pub async fn derive_xpub(&self) -> Result<String, Error> {
-        //let derivation_path = DerivationPath::master();
-        let derivation_path = DerivationPath::from_str("m/44'/1'/0'").unwrap();
+    #[wasm_bindgen(js_name = deriveXpub)]
+    //pub async fn derive_xpub(&self) -> Result<String, Error> {
+    pub async fn derive_xpub(&self, path: &str) -> Result<String, Error> {
+        //let path = "m/44'/1'/0'";
+        let derivation_path = DerivationPath::from_str(&path).unwrap();
         let r = self
             .ledger
             .client
@@ -90,6 +87,7 @@ impl LedgerWeb {
         Ok(r.to_string())
     }
 
+    #[wasm_bindgen(js_name = slip77MasterBlindingKey)]
     pub async fn slip77_master_blinding_key(&self) -> Result<String, Error> {
         let r = self
             .ledger
@@ -101,6 +99,7 @@ impl LedgerWeb {
         Ok(r.to_string())
     }
 
+    #[wasm_bindgen(js_name = fingerprint)]
     pub async fn fingerprint(&self) -> Result<String, Error> {
         let r = self
             .ledger
@@ -178,7 +177,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
 }
 
 //https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.HidDevice.html#method.send_report_with_u8_slice
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = searchLedgerDevice)]
 pub async fn search_ledger_device() -> Result<HidDevice, Error> {
     let window =
         web_sys::window().ok_or_else(|| Error::Generic("cannot get window".to_string()))?;

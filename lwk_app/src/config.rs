@@ -137,4 +137,12 @@ impl Config {
         // TODO cache it instead of recreating every time
         lwk_wollet::asyncr::EsploraClient::new(self.network, &self.esplora_api_url)
     }
+
+    pub fn esplora_blocking_client(&self) -> Result<lwk_wollet::blocking::EsploraClient, Error> {
+        // TODO cache it instead of recreating every time
+        Ok(lwk_wollet::blocking::EsploraClient::new(
+            &self.esplora_api_url.trim_end_matches('/'),
+            self.network,
+        )?)
+    }
 }

@@ -46,7 +46,6 @@ use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
 use serde_json::Value;
 
-use crate::explorer::get_tx;
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
 use lwk_rpc_model::{request, response};
@@ -60,7 +59,6 @@ mod client;
 mod config;
 pub mod consts;
 mod error;
-mod explorer;
 pub mod method;
 mod reqwest_transport;
 mod state;
@@ -901,7 +899,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let tx = if let Some(tx) = wollet.transaction(&txid)? {
                 tx.tx.clone()
             } else if r.from_explorer {
-                get_tx(&s.config.esplora_api_url, &txid)?
+                let client = s.config.esplora_blocking_client()?;
+                let mut txs = client.get_transactions(&[txid])?;
+                txs.pop().ok_or(Error::WalletTxNotFound(r.txid, r.name))?
             } else {
                 return Err(Error::WalletTxNotFound(r.txid, r.name));
             };

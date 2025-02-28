@@ -111,6 +111,7 @@ impl Registry {
         }
     }
 
+    #[allow(dead_code)]
     pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self::new(network_default_url(network)?))
     }

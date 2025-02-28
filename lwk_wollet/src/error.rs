@@ -104,7 +104,7 @@ pub enum Error {
     NotConfidentialAddress,
 
     #[error("Insufficient funds: missing {missing_sats} units for {} {asset_id}",
-        .is_token.then(|| "token").unwrap_or("asset"))]
+        .is_token.then(|| "reissuance token").unwrap_or("asset"))]
     InsufficientFunds {
         missing_sats: u64,
         asset_id: crate::elements::AssetId,

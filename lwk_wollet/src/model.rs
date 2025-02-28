@@ -236,7 +236,7 @@ pub struct IssuanceDetails {
 }
 
 pub(crate) struct DisplayTxOutSecrets<'a>(&'a TxOutSecrets);
-impl<'a> std::fmt::Display for DisplayTxOutSecrets<'a> {
+impl std::fmt::Display for DisplayTxOutSecrets<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
@@ -247,7 +247,7 @@ impl<'a> std::fmt::Display for DisplayTxOutSecrets<'a> {
 }
 
 pub(crate) struct DisplayWalletTxInputOutputs<'a>(&'a WalletTx);
-impl<'a> std::fmt::Display for DisplayWalletTxInputOutputs<'a> {
+impl std::fmt::Display for DisplayWalletTxInputOutputs<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let mut first = true;
 

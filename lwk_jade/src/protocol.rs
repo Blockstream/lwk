@@ -221,7 +221,6 @@ pub struct VersionInfoResult {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
-
 pub enum JadeState {
     /// no wallet set on the hw, mnemonic not entered, unit uninitialised
     Uninit,

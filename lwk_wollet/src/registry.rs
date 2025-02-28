@@ -142,6 +142,7 @@ fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> 
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod blocking {
     use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;

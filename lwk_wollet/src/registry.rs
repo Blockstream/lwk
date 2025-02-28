@@ -5,6 +5,8 @@ use crate::elements::hashes::{sha256, Hash};
 use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
+use crate::ElementsNetwork;
+use elements::Transaction;
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -96,6 +98,71 @@ impl FromStr for Contract {
     }
 }
 
+struct Registry {
+    client: reqwest::Client,
+    base_url: String,
+}
+
+impl Registry {
+    pub fn new(base_url: &str) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: base_url.to_string(),
+        }
+    }
+
+    pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
+        Ok(Self::new(network_default_url(network)?))
+    }
+
+    pub async fn fetch(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
+        let url = format!("{}/{}", self.base_url, asset_id);
+        let response = self.client.get(url).send().await?;
+        let data = response.json::<RegistryData>().await?;
+        Ok(data)
+    }
+}
+
+fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> {
+    Ok(match network {
+        ElementsNetwork::Liquid => "https://assets.blockstream.info",
+        ElementsNetwork::LiquidTestnet => "https://assets-testnet.blockstream.info",
+        _ => return Err(Error::Generic("Invalid network".to_string())),
+    })
+}
+
+pub mod blocking {
+    use elements::AssetId;
+    use tokio::runtime::Runtime;
+
+    use crate::{ElementsNetwork, Error};
+
+    pub struct Registry {
+        inner: super::Registry,
+        rt: Runtime,
+    }
+
+    impl Registry {
+        pub fn new(base_url: &str) -> Result<Self, Error> {
+            Ok(Self {
+                inner: super::Registry::new(base_url),
+                rt: Runtime::new()?,
+            })
+        }
+
+        pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
+            Ok(Self {
+                inner: super::Registry::new(super::network_default_url(network)?),
+                rt: Runtime::new()?,
+            })
+        }
+
+        pub fn fetch(&self, asset_id: AssetId) -> Result<super::RegistryData, Error> {
+            self.rt.block_on(self.inner.fetch(asset_id))
+        }
+    }
+}
+
 /// The asset id and reissuance token of the input
 ///
 /// Fails if they do not commit to the contract.
@@ -132,11 +199,39 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     Ok(ContractHash::from_raw_hash(hash))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct OutPointS {
+    pub txid: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegistryData {
+    pub contract: Contract,
+    pub issuance_txin: OutPointS,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use elements::hex::FromHex;
     use std::str::FromStr;
+
+    #[test]
+    fn test_get_assets() {
+        let registry_json_response = r#"{"asset_id":"8363084c77fbaebce672092d301fc103495546457468b88a0830ce4797562c03","contract":{"entity":{"domain":"nitramiz.github.io"},"issuer_pubkey":"02fd002ce3bb8bb5d626aec4b3821d100c0e2cae226f8199860767cb70b69a3305","name":"TestOps","precision":0,"ticker":"BSOPS","version":0},"issuance_txin":{"txid":"08186258abed0daa9a9d2a900c5e3d189235610887e3bda70f12cde11ba38747","vin":0},"issuance_prevout":{"txid":"ff0cbfa8d97a192a0e296451afee8028c9d414aae6dee145f4d71d35518c9962","vout":1},"version":0,"issuer_pubkey":"02fd002ce3bb8bb5d626aec4b3821d100c0e2cae226f8199860767cb70b69a3305","name":"TestOps","ticker":"BSOPS","precision":0,"entity":{"domain":"nitramiz.github.io"}}"#;
+        let _: RegistryData = serde_json::from_str(registry_json_response).unwrap();
+    }
+
+    #[ignore = "require internet connection"]
+    #[test]
+    fn test_registry_fetch_blocking() {
+        let tether_asset_id =
+            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+                .unwrap();
+        let registry = blocking::Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let registry_data = registry.fetch(tether_asset_id).unwrap();
+        assert_eq!(registry_data.contract.ticker, "USDt");
+    }
 
     #[test]
     fn test_registry() {

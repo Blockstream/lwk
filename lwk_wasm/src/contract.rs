@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::Contract`]
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct Contract {
     inner: lwk_wollet::Contract,
 }

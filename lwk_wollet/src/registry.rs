@@ -98,7 +98,7 @@ impl FromStr for Contract {
     }
 }
 
-struct Registry {
+pub struct Registry {
     client: reqwest::Client,
     base_url: String,
 }

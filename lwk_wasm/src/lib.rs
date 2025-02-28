@@ -15,6 +15,7 @@ mod network;
 mod precision;
 mod pset;
 mod pset_details;
+mod registry;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;

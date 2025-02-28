@@ -568,7 +568,7 @@ impl EsploraClientBuilder {
     /// Create a new [`EsploraClientBuilder`]
     pub fn new(base_url: &str, network: ElementsNetwork) -> Self {
         Self {
-            base_url: base_url.to_string(),
+            base_url: base_url.trim_end_matches('/').to_string(),
             waterfalls: false,
             network,
             timeout: None,

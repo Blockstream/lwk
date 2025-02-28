@@ -8,6 +8,12 @@ pub struct EsploraClient {
     inner: asyncr::EsploraClient,
 }
 
+impl AsRef<asyncr::EsploraClient> for EsploraClient {
+    fn as_ref(&self) -> &asyncr::EsploraClient {
+        &self.inner
+    }
+}
+
 #[wasm_bindgen]
 impl EsploraClient {
     /// Creates a client, wrapper of [`asyncr::EsploraClient`]

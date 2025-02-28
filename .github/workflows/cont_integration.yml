@@ -24,6 +24,16 @@ jobs:
       - run: cargo build
       - run: cargo build --features serial
 
+  test:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libudev-dev
+      - run: cargo test --workspace --exclude lwk_test_util --lib
+      - run: cargo test --features serial --workspace --exclude lwk_test_util --lib
+
   nix:
     runs-on: ubuntu-latest
     steps:
@@ -64,4 +74,3 @@ jobs:
         with:
           name: csharp-windows
           path: target/release/csharp
-

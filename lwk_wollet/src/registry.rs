@@ -6,7 +6,7 @@ use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
-use elements::Transaction;
+use elements::{Transaction, Txid};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -121,6 +121,16 @@ impl Registry {
         let data = response.json::<RegistryData>().await?;
         Ok(data)
     }
+
+    pub async fn fetch_with_tx(
+        &self,
+        asset_id: AssetId,
+        client: &crate::asyncr::EsploraClient,
+    ) -> Result<(Contract, Transaction), Error> {
+        let data = self.fetch(asset_id).await?;
+        let tx = client.get_transaction(data.issuance_txin.txid).await?;
+        Ok((data.contract, tx))
+    }
 }
 
 fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> {
@@ -132,7 +142,7 @@ fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> 
 }
 
 pub mod blocking {
-    use elements::AssetId;
+    use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;
 
     use crate::{ElementsNetwork, Error};
@@ -159,6 +169,14 @@ pub mod blocking {
 
         pub fn fetch(&self, asset_id: AssetId) -> Result<super::RegistryData, Error> {
             self.rt.block_on(self.inner.fetch(asset_id))
+        }
+
+        pub fn fetch_with_tx(
+            &self,
+            asset_id: AssetId,
+            client: &crate::asyncr::EsploraClient,
+        ) -> Result<(super::Contract, Transaction), Error> {
+            self.rt.block_on(self.inner.fetch_with_tx(asset_id, client))
         }
     }
 }
@@ -201,7 +219,7 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
 
 #[derive(Debug, Deserialize)]
 pub struct OutPointS {
-    pub txid: String,
+    pub txid: Txid,
 }
 
 #[derive(Debug, Deserialize)]

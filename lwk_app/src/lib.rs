@@ -1074,9 +1074,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 return Err(Error::AssetAlreadyInserted(r.asset_id));
             }
             let registry = lwk_wollet::registry::blocking::Registry::new(&s.config.registry_url)?;
-            let registry_data = registry.fetch(asset_id)?;
-            let issuance_tx = get_tx(&s.config.esplora_api_url, &registry_data.issuance_txin.txid)?;
-            s.insert_asset(asset_id, issuance_tx, registry_data.contract)?;
+            let (contract, issuance_tx) =
+                registry.fetch_with_tx(asset_id, &s.config.esplora_client())?;
+            s.insert_asset(asset_id, issuance_tx, contract)?;
             // convert the request to an AssetInsert to skip network calls
             let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");
             s.persist(&asset_insert_request)?;

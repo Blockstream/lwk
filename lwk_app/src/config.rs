@@ -132,4 +132,9 @@ impl Config {
         // TODO cache it instead of recreating every time
         Ok(lwk_wollet::ElectrumClient::new(&self.electrum_url()?)?)
     }
+
+    pub fn esplora_client(&self) -> lwk_wollet::asyncr::EsploraClient {
+        // TODO cache it instead of recreating every time
+        lwk_wollet::asyncr::EsploraClient::new(self.network, &self.esplora_api_url)
+    }
 }

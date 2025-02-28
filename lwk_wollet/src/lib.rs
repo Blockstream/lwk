@@ -99,7 +99,7 @@ mod model;
 pub mod pegin;
 mod persister;
 mod pset_create;
-mod registry;
+pub mod registry;
 mod store;
 mod tx_builder;
 mod update;

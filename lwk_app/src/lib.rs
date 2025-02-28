@@ -46,7 +46,7 @@ use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
 use serde_json::Value;
 
-use crate::explorer::{get_registry_data, get_tx};
+use crate::explorer::get_tx;
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
 use lwk_rpc_model::{request, response};
@@ -1073,7 +1073,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             if s.get_asset(&asset_id).is_ok() {
                 return Err(Error::AssetAlreadyInserted(r.asset_id));
             }
-            let registry_data = get_registry_data(&s.config.registry_url, &asset_id)?;
+            let registry = lwk_wollet::registry::blocking::Registry::new(&s.config.registry_url)?;
+            let registry_data = registry.fetch(asset_id)?;
             let txid = Txid::from_str(&registry_data.issuance_txin.txid)?;
             let issuance_tx = get_tx(&s.config.esplora_api_url, &txid)?;
             s.insert_asset(asset_id, issuance_tx, registry_data.contract)?;

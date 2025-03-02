@@ -278,6 +278,10 @@ pub fn pset_balance(
     }
     let fee = fee.ok_or(Error::MissingFee)?;
 
+    // Remove assets with 0 balance which are not changing the net balance.
+    // For example it happens with reissuance tokens.
+    balances.retain(|_, v| *v != 0);
+
     Ok(PsetBalance {
         fee,
         balances,
@@ -332,8 +336,10 @@ mod test {
         let pset_str = include_str!("../test_data/pset_details/pset.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
-        let v = balance.balances.get(&asset_id).unwrap();
-        assert_eq!(*v, 0); // it's correct the balance of this asset 0 because it's a redeposit
+        assert!(
+            balance.balances.get(&asset_id).is_none(),
+            "redeposit (balance = 0) should disappear from the list"
+        );
 
         let pset_str = include_str!("../test_data/pset_details/pset2.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();

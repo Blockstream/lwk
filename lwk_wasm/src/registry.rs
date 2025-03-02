@@ -14,6 +14,12 @@ pub struct AssetMeta {
 }
 
 #[wasm_bindgen]
+#[derive(Clone)]
+pub struct RegistryPost {
+    inner: lwk_wollet::registry::RegistryPost,
+}
+
+#[wasm_bindgen]
 impl AssetMeta {
     pub fn contract(&self) -> Contract {
         self.contract.clone()
@@ -21,6 +27,19 @@ impl AssetMeta {
 
     pub fn tx(&self) -> Transaction {
         self.tx.clone()
+    }
+}
+
+#[wasm_bindgen]
+impl RegistryPost {
+    #[wasm_bindgen(constructor)]
+    pub fn new(contract: Contract, asset_id: AssetId) -> Self {
+        lwk_wollet::registry::RegistryPost::new(contract.into(), asset_id.into()).into()
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self.inner)
     }
 }
 
@@ -32,6 +51,18 @@ impl From<lwk_wollet::registry::Registry> for Registry {
 
 impl From<Registry> for lwk_wollet::registry::Registry {
     fn from(inner: Registry) -> Self {
+        inner.inner
+    }
+}
+
+impl From<lwk_wollet::registry::RegistryPost> for RegistryPost {
+    fn from(inner: lwk_wollet::registry::RegistryPost) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<RegistryPost> for lwk_wollet::registry::RegistryPost {
+    fn from(inner: RegistryPost) -> Self {
         inner.inner
     }
 }
@@ -51,12 +82,12 @@ impl Registry {
     #[wasm_bindgen(js_name = fetchWithTx)]
     pub async fn fetch_with_tx(
         &self,
-        asset_id: AssetId,
+        asset_id: &AssetId,
         client: &EsploraClient,
     ) -> Result<AssetMeta, Error> {
         let (contract, tx) = self
             .inner
-            .fetch_with_tx(asset_id.into(), client.as_ref())
+            .fetch_with_tx(asset_id.clone().into(), client.as_ref())
             .await?;
         Ok(AssetMeta {
             contract: contract.into(),
@@ -64,10 +95,8 @@ impl Registry {
         })
     }
 
-    pub async fn post(&self, contract: &Contract, asset_id: AssetId) -> Result<(), Error> {
-        Ok(self
-            .inner
-            .post(&contract.clone().into(), asset_id.into())
-            .await?)
+    pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
+        let data: lwk_wollet::registry::RegistryPost = data.clone().into();
+        Ok(self.inner.post(&data).await?)
     }
 }

@@ -45,6 +45,7 @@ pub use network::Network;
 pub use precision::Precision;
 pub use pset::Pset;
 pub use pset_details::PsetDetails;
+pub use registry::{AssetMeta, Registry, RegistryPost};
 pub use signer::Signer;
 pub use tx_builder::TxBuilder;
 pub use update::Update;

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 
 use crate::domain::verify_domain_name;
@@ -103,10 +104,22 @@ pub struct Registry {
     base_url: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct RegistryPost {
     contract: Contract,
     asset_id: AssetId,
+}
+
+impl fmt::Display for RegistryPost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
+    }
+}
+
+impl RegistryPost {
+    pub fn new(contract: Contract, asset_id: AssetId) -> Self {
+        Self { contract, asset_id }
+    }
 }
 
 impl Registry {
@@ -139,12 +152,8 @@ impl Registry {
         Ok((data.contract, tx))
     }
 
-    pub async fn post(&self, contract: &Contract, asset_id: AssetId) -> Result<(), Error> {
-        let body = RegistryPost {
-            contract: contract.clone(),
-            asset_id,
-        };
-        let response = self.client.post(&self.base_url).json(&body).send().await?;
+    pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
+        let response = self.client.post(&self.base_url).json(&data).send().await?;
         if response.status().is_success() {
             Ok(())
         } else {
@@ -170,6 +179,8 @@ pub mod blocking {
     use tokio::runtime::Runtime;
 
     use crate::{ElementsNetwork, Error};
+
+    use super::RegistryPost;
 
     pub struct Registry {
         inner: super::Registry,
@@ -203,8 +214,8 @@ pub mod blocking {
             self.rt.block_on(self.inner.fetch_with_tx(asset_id, client))
         }
 
-        pub fn post(&self, contract: &super::Contract, asset_id: AssetId) -> Result<(), Error> {
-            self.rt.block_on(self.inner.post(contract, asset_id))
+        pub fn post(&self, data: &RegistryPost) -> Result<(), Error> {
+            self.rt.block_on(self.inner.post(data))
         }
     }
 }

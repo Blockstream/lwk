@@ -103,6 +103,12 @@ pub struct Registry {
     base_url: String,
 }
 
+#[derive(Serialize)]
+pub struct RegistryPost {
+    contract: Contract,
+    asset_id: AssetId,
+}
+
 impl Registry {
     pub fn new(base_url: &str) -> Self {
         Self {
@@ -131,6 +137,22 @@ impl Registry {
         let data = self.fetch(asset_id).await?;
         let tx = client.get_transaction(data.issuance_txin.txid).await?;
         Ok((data.contract, tx))
+    }
+
+    pub async fn post(&self, contract: &Contract, asset_id: AssetId) -> Result<(), Error> {
+        let body = RegistryPost {
+            contract: contract.clone(),
+            asset_id,
+        };
+        let response = self.client.post(&self.base_url).json(&body).send().await?;
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(Error::Generic(format!(
+                "Failed to post contract to registry: {}",
+                response.status()
+            )))
+        }
     }
 }
 
@@ -179,6 +201,10 @@ pub mod blocking {
             client: &crate::asyncr::EsploraClient,
         ) -> Result<(super::Contract, Transaction), Error> {
             self.rt.block_on(self.inner.fetch_with_tx(asset_id, client))
+        }
+
+        pub fn post(&self, contract: &super::Contract, asset_id: AssetId) -> Result<(), Error> {
+            self.rt.block_on(self.inner.post(contract, asset_id))
         }
     }
 }

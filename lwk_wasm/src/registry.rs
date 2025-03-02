@@ -43,7 +43,7 @@ impl Registry {
     }
 
     #[wasm_bindgen(js_name = defaultForNetwork)]
-    pub fn default_for_network(network: Network) -> Result<Self, Error> {
+    pub fn default_for_network(network: &Network) -> Result<Self, Error> {
         let inner = lwk_wollet::registry::Registry::default_for_network(network.into())?;
         Ok(inner.into())
     }
@@ -62,5 +62,12 @@ impl Registry {
             contract: contract.into(),
             tx: tx.into(),
         })
+    }
+
+    pub async fn post(&self, contract: &Contract, asset_id: AssetId) -> Result<(), Error> {
+        Ok(self
+            .inner
+            .post(&contract.clone().into(), asset_id.into())
+            .await?)
     }
 }

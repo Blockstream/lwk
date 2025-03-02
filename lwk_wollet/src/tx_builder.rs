@@ -758,3 +758,37 @@ impl<'a> WolletTxBuilder<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use elements::encode::Decodable;
+
+    use super::*;
+
+    #[test]
+    fn test_extract_issuances() {
+        let tx_bytes = include_bytes!(
+            "../tests/data/62ea5d0aa7c9f4339b16a6d8e6ff4437ffb244de658222841c74d335324e4219"
+        );
+        let tx = Transaction::consensus_decode(&tx_bytes[..]).unwrap();
+        let issuances = extract_issuances(&tx);
+        assert_eq!(issuances.len(), 1);
+        let issuance = &issuances[0];
+        assert_eq!(
+            issuance.txid.to_string(),
+            "62ea5d0aa7c9f4339b16a6d8e6ff4437ffb244de658222841c74d335324e4219"
+        );
+        assert_eq!(issuance.vin, 0);
+        assert_eq!(
+            issuance.asset.to_string(),
+            "71aba14535beded7753ba1f3a0ff3d47a166363fa06a27eb65559abc92b4bc09"
+        );
+        assert_eq!(
+            issuance.token.to_string(),
+            "82cd33501102795d04a9eb093bcfd5434da9d993e40cef5ba7c5a8fa1750bf8f"
+        );
+        assert_eq!(issuance.is_reissuance, false);
+        assert_eq!(issuance.asset_amount, Some(1000000000));
+        assert_eq!(issuance.token_amount, Some(1));
+    }
+}

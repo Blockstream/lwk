@@ -100,7 +100,7 @@ impl EsploraClient {
         Ok(tx)
     }
 
-    pub(crate) async fn get_transactions(
+    pub async fn get_transactions(
         &self,
         txids: &[Txid],
     ) -> Result<Vec<elements::Transaction>, Error> {
@@ -111,7 +111,7 @@ impl EsploraClient {
         Ok(result)
     }
 
-    pub(crate) async fn get_headers(
+    pub async fn get_headers(
         &self,
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,

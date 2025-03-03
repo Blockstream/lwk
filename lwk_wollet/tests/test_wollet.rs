@@ -519,10 +519,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             *details.balance.balances.get(asset).unwrap(),
             satoshi_asset as i64
         );
-        assert_eq!(
-            *details.balance.balances.get(&issuance.token).unwrap(),
-            0i64
-        );
+        assert!(!details.balance.balances.contains_key(&issuance.token));
 
         for signer in signers {
             self.sign(signer, &mut pset);

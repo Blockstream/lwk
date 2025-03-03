@@ -523,7 +523,7 @@ fn multiple_descriptors() {
         *details_a.balance.balances.get(asset).unwrap(),
         satoshi_ar as i64
     );
-    assert_eq!(*details_t.balance.balances.get(token).unwrap(), 0i64);
+    assert!(!details_t.balance.balances.contains_key(token));
     let mut pset_t1 = pset.clone();
     let mut pset_t2 = pset.clone();
     wallet_t.sign(&signer_t1, &mut pset_t1);

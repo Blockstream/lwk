@@ -261,14 +261,15 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct OutPointS {
+pub struct TxIn {
     pub txid: Txid,
+    pub vin: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RegistryData {
     pub contract: Contract,
-    pub issuance_txin: OutPointS,
+    pub issuance_txin: TxIn,
 }
 
 #[cfg(test)]

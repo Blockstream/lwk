@@ -87,7 +87,7 @@ impl Registry {
     ) -> Result<AssetMeta, Error> {
         let (contract, tx) = self
             .inner
-            .fetch_with_tx(asset_id.clone().into(), client.as_ref())
+            .fetch_with_tx((*asset_id).into(), client.as_ref())
             .await?;
         Ok(AssetMeta {
             contract: contract.into(),

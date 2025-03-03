@@ -787,7 +787,7 @@ mod tests {
             issuance.token.to_string(),
             "82cd33501102795d04a9eb093bcfd5434da9d993e40cef5ba7c5a8fa1750bf8f"
         );
-        assert_eq!(issuance.is_reissuance, false);
+        assert!(!issuance.is_reissuance);
         assert_eq!(issuance.asset_amount, Some(1000000000));
         assert_eq!(issuance.token_amount, Some(1));
     }

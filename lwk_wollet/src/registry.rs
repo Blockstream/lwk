@@ -112,7 +112,11 @@ pub struct RegistryPost {
 
 impl fmt::Display for RegistryPost {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
+        write!(
+            f,
+            "{}",
+            serde_json::to_string(self).expect("failed to serialize registry post")
+        )
     }
 }
 

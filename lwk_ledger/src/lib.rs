@@ -289,7 +289,7 @@ impl<T: Transport> Signer for Ledger<T> {
 // taken and adapted from:
 // https://github.com/rust-bitcoin/rust-bitcoin/blob/37daf4620c71dc9332c3e08885cf9de696204bca/bitcoin/src/blockdata/script/borrowed.rs#L266
 #[allow(unused)]
-fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
+pub fn parse_multisig(script: &Script) -> Option<(u32, Vec<PublicKey>)> {
     fn decode_pushnum(op: All) -> Option<u8> {
         let start: u8 = OP_PUSHNUM_1.into_u8();
         let end: u8 = OP_PUSHNUM_16.into_u8();

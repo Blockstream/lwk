@@ -334,8 +334,10 @@ mod tests {
         let message = "Hello, world!";
         let path = DerivationPath::master();
         let signature = signer.sign_message(message, &path).unwrap();
-        let xpub = signer.xpub();
+        let xpub = signer.derive_xpub(&path).unwrap();
         let address = p2pkh(&xpub);
+        assert_eq!(address.to_string(), "1BZ9j3F7m4H1RPyeDp5iFwpR31SB6zrs19");
+        assert_eq!(signature.to_string(), "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=");
         let verified = verify(&signer.secp, &address, message, &signature).unwrap();
         assert!(verified);
 

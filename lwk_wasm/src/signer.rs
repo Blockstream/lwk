@@ -31,6 +31,16 @@ impl Signer {
         Ok(pset.into())
     }
 
+    /// Sign a message with the master key, return the signature as a base64 string
+    #[wasm_bindgen(js_name = signMessage)]
+    pub fn sign_message(&self, message: &str) -> Result<String, Error> {
+        // TODO: make path parameter
+        let signature = self
+            .inner
+            .sign_message(message, &bip32::DerivationPath::master())?;
+        Ok(signature.to_string())
+    }
+
     #[wasm_bindgen(js_name = wpkhSlip77Descriptor)]
     pub fn wpkh_slip77_descriptor(&self) -> Result<WolletDescriptor, Error> {
         // TODO: make script_variant and blinding_variant parameters
@@ -133,5 +143,7 @@ mod tests {
         assert_eq!(signer.keyorigin_xpub(Bip::bip49()).unwrap(), "[73c5da0a/49h/1h/0h]tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2");
 
         assert_eq!(signer.mnemonic(), mnemonic);
+
+        assert_eq!(signer.sign_message("Hello, world!").unwrap(), "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=");
     }
 }

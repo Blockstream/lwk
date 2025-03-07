@@ -1,6 +1,12 @@
 use bip39::Mnemonic;
 use elements_miniscript::{
-    bitcoin::{self, bip32::DerivationPath, PrivateKey},
+    bitcoin::{
+        self,
+        bip32::DerivationPath,
+        secp256k1::Message,
+        sign_message::{MessageSignature, MessageSignatureError},
+        PrivateKey,
+    },
     elements::{
         bitcoin::{
             bip32::{self, Fingerprint, Xpriv, Xpub},
@@ -148,6 +154,42 @@ impl SwSigner {
     pub fn derive_xprv(&self, path: &DerivationPath) -> Result<Xpriv, SignError> {
         Ok(self.xprv.derive_priv(&self.secp, path)?)
     }
+
+    // TODO: move in trait Signer
+    pub fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, SignError> {
+        let digest = bitcoin::sign_message::signed_msg_hash(message);
+        let message = Message::from_digest_slice(digest.as_ref()).expect("digest is 32");
+        let derived = self.xprv.derive_priv(&self.secp, path)?;
+        let signature = self
+            .secp
+            .sign_ecdsa_recoverable(&message, &derived.private_key);
+        let signature = MessageSignature {
+            signature,
+            compressed: true,
+        };
+        Ok(signature)
+    }
+}
+
+#[allow(dead_code)]
+fn verify(
+    secp: &Secp256k1<All>,
+    address: &bitcoin::Address,
+    message: &str,
+    signature: &MessageSignature,
+) -> Result<bool, MessageSignatureError> {
+    let msg_hash = bitcoin::sign_message::signed_msg_hash(message);
+    signature.is_signed_by_address(secp, address, msg_hash)
+}
+
+#[allow(dead_code)]
+fn p2pkh(xpub: &Xpub) -> bitcoin::Address {
+    let bitcoin_pubkey = bitcoin::PublicKey::new(xpub.public_key);
+    bitcoin::Address::p2pkh(&bitcoin_pubkey, xpub.network)
 }
 
 impl Signer for SwSigner {
@@ -284,5 +326,20 @@ mod tests {
         let sig_low_r = pset_low_r.inputs()[0].partial_sigs.values().next().unwrap();
         assert_ne!(sig_low_r, sig_no_grind);
         assert!(sig_low_r.len() < sig_no_grind.len());
+    }
+
+    #[test]
+    fn test_sign_verify() {
+        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, true).unwrap();
+        let message = "Hello, world!";
+        let path = DerivationPath::master();
+        let signature = signer.sign_message(message, &path).unwrap();
+        let xpub = signer.xpub();
+        let address = p2pkh(&xpub);
+        let verified = verify(&signer.secp, &address, message, &signature).unwrap();
+        assert!(verified);
+
+        // result checked also with bitcoin-cli
+        // bitcoin-cli verifymessage "1BZ9j3F7m4H1RPyeDp5iFwpR31SB6zrs19" "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=" 'Hello, world!'
     }
 }

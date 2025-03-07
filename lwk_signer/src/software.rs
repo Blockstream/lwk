@@ -189,7 +189,7 @@ fn verify(
 #[allow(dead_code)]
 fn p2pkh(xpub: &Xpub) -> bitcoin::Address {
     let bitcoin_pubkey = bitcoin::PublicKey::new(xpub.public_key);
-    bitcoin::Address::p2pkh(&bitcoin_pubkey, xpub.network)
+    bitcoin::Address::p2pkh(bitcoin_pubkey, xpub.network)
 }
 
 impl Signer for SwSigner {

@@ -41,6 +41,16 @@ txid = client.broadcast(tx)
 asset_id = signed_pset.inputs()[0].issuance_asset()
 token_id = signed_pset.inputs()[0].issuance_token()
 
+issuance = unsigned_pset.inputs()[0].issuance()
+assert issuance.asset() == asset_id
+assert issuance.token() == token_id
+assert not issuance.is_confidential()
+assert not issuance.is_null()
+assert issuance.is_issuance()
+assert not issuance.is_reissuance()
+assert issuance.asset_satoshi() == issued_asset
+assert issuance.token_satoshi() == reissuance_tokens
+
 wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[asset_id] == issued_asset)
@@ -56,6 +66,15 @@ finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)
 
+reissuance = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance())
+assert reissuance.asset() == asset_id
+assert reissuance.token() == token_id
+assert not reissuance.is_confidential()
+assert not reissuance.is_null()
+assert not reissuance.is_issuance()
+assert reissuance.is_reissuance()
+assert reissuance.asset_satoshi() == reissue_asset
+assert reissuance.token_satoshi() is None
 
 wollet.wait_for_tx(txid, client)
 

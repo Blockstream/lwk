@@ -242,6 +242,8 @@ mod tests {
         assert_eq!(issuances.len(), 1);
         assert!(!issuances[0].is_issuance());
         assert!(!issuances[0].is_reissuance());
+        assert!(issuances[0].is_null());
+        assert!(!issuances[0].is_confidential());
 
         let recipients = details.balance().recipients();
         assert_eq!(recipients.len(), 1);

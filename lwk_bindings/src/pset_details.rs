@@ -157,6 +157,10 @@ impl Issuance {
     pub fn asset_satoshi(&self) -> Option<u64> {
         self.inner.asset_satoshi().map(Into::into)
     }
+
+    pub fn token_satoshi(&self) -> Option<u64> {
+        self.inner.token_satoshi().map(Into::into)
+    }
 }
 
 impl From<lwk_common::Issuance> for Issuance {

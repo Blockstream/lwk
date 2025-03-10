@@ -1,4 +1,4 @@
-use crate::{types::AssetId, LwkError, Script, Transaction, Txid};
+use crate::{types::AssetId, Issuance, LwkError, Script, Transaction, Txid};
 use elements::pset::{Input, PartiallySignedTransaction};
 use elements::{hashes::Hash, BlockHash};
 use lwk_wollet::elements_miniscript::psbt::finalize;
@@ -113,6 +113,13 @@ impl PsetInput {
         self.inner
             .has_issuance()
             .then(|| self.inner.issuance_ids().1.into())
+    }
+
+    /// If the input has a (re)issuance, the issuance object
+    pub fn issuance(&self) -> Option<Arc<Issuance>> {
+        self.inner
+            .has_issuance()
+            .then(|| Arc::new(lwk_common::Issuance::new(&self.inner).into()))
     }
 }
 

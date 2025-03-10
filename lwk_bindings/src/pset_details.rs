@@ -153,6 +153,10 @@ impl Issuance {
     pub fn is_reissuance(&self) -> bool {
         self.inner.is_reissuance()
     }
+
+    pub fn asset_satoshi(&self) -> Option<u64> {
+        self.inner.asset_satoshi().map(Into::into)
+    }
 }
 
 impl From<lwk_common::Issuance> for Issuance {

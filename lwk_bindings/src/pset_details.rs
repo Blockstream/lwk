@@ -154,6 +154,10 @@ impl Issuance {
         self.inner.is_reissuance()
     }
 
+    pub fn is_confidential(&self) -> bool {
+        self.inner.is_confidential()
+    }
+
     pub fn asset_satoshi(&self) -> Option<u64> {
         self.inner.asset_satoshi().map(Into::into)
     }

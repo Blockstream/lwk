@@ -142,6 +142,10 @@ impl Issuance {
         self.inner.prev_txid().map(|e| Arc::new(e.into()))
     }
 
+    pub fn is_null(&self) -> bool {
+        self.inner.is_null()
+    }
+
     pub fn is_issuance(&self) -> bool {
         self.inner.is_issuance()
     }

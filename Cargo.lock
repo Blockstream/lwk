@@ -2244,7 +2244,6 @@ dependencies = [
  "anyhow",
  "jsonrpc 0.17.0",
  "log",
- "reqwest",
  "serde",
  "serde_derive",
  "serde_json",

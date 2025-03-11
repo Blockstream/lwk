@@ -2386,6 +2386,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "minicbor"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ded7eb446d01ad767689ff97ac883a548f6e0d266f20a8cb593b67c9d2590b3"
+dependencies = [
+ "minicbor-derive",
+]
+
+[[package]]
+name = "minicbor-derive"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f29ac9686ec36cb5c82e866f97eaa67e299bf4ecab0c152f2860e1145be468e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "minicov"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2823,15 +2843,8 @@ dependencies = [
  "memchr",
  "parking_lot",
  "procfs",
- "protobuf",
  "thiserror 1.0.69",
 ]
-
-[[package]]
-name = "protobuf"
-version = "2.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "pulldown-cmark"
@@ -4373,13 +4386,14 @@ dependencies = [
 
 [[package]]
 name = "waterfalls"
-version = "0.5.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4142bf4af53eec298e36f76e33f268578b891307b0fbe077637a27a891d9e5f2"
+checksum = "e8afa22f1b9bd8f9f4ccda29e3d00f565de6c06fd78c5722d202731003643e00"
 dependencies = [
  "age",
  "anyhow",
  "base64 0.21.7",
+ "bitcoin",
  "bitcoind",
  "clap",
  "elements",
@@ -4393,6 +4407,7 @@ dependencies = [
  "hyper-util",
  "lazy_static",
  "log",
+ "minicbor",
  "prometheus",
  "reqwest",
  "serde",

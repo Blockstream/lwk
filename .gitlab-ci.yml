@@ -177,17 +177,6 @@ wasm:
     paths:
       - lwk_wasm/pkg
 
-linux-wheels:
-  image:
-    name: ghcr.io/pyo3/maturin
-    entrypoint: [""]
-  script:
-    - pip install uniffi-bindgen==0.28.0 # major version must be the same as in lwk_bindings/Cargo.toml
-    - maturin build --release -m lwk_bindings/Cargo.toml -b uniffi
-  artifacts:
-    paths:
-      - target/wheels/
-
 nix:
   image: nixos/nix:2.22.0pre20240417_c16fc2c
   variables:

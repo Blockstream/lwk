@@ -8,6 +8,22 @@ name: Build python wheels on mac and windows
 
 jobs:
 
+
+  linux-wheels:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: docker://ghcr.io/pyo3/maturin:latest
+        with:
+          entrypoint: bash
+          args: -c "python3 -m pip install uniffi-bindgen==0.28.0 && maturin build --compatibility manylinux2014 --release -m lwk_bindings/Cargo.toml -b uniffi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-wheels
+          path: target/wheels
+
+
   osx-wheels:
     strategy:
       matrix:

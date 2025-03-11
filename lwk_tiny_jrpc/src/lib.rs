@@ -424,7 +424,12 @@ pub enum Id {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::File, io::Write, path::PathBuf};
+    use std::{
+        fs::File,
+        io::{Read, Write},
+        net::TcpStream,
+        path::PathBuf,
+    };
 
     use super::*;
     use jsonrpc::Client;
@@ -442,6 +447,20 @@ mod test {
             _ => unimplemented!(),
         };
         Ok(response)
+    }
+
+    fn send_http_request(stream: &mut TcpStream, request: &str) -> Vec<u8> {
+        // Add Connection: close header to all requests
+        let request = request.trim_end_matches("\r\n\r\n");
+        let request = format!("{}\r\nConnection: close\r\n\r\n", request);
+        stream.write_all(request.as_bytes()).unwrap();
+        let mut response = Vec::new();
+        stream.read_to_end(&mut response).unwrap();
+        response
+    }
+
+    fn assert_response_contains(response: &[u8], expected: &str) {
+        assert!(String::from_utf8_lossy(response).contains(expected));
     }
 
     #[test]
@@ -544,25 +563,18 @@ mod test {
         };
         let rpc = JsonRpcServer::new(server, config, state, process);
         let port = rpc.port().unwrap();
-        let url = format!("http://127.0.0.1:{}", port);
 
-        let client = reqwest::blocking::Client::builder().build().unwrap();
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let request = "OPTIONS / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
+        let response = send_http_request(&mut stream, request);
 
-        let resp = client
-            .request(reqwest::Method::OPTIONS, url)
-            .send()
-            .unwrap();
-        assert_eq!(resp.status(), 204);
-        assert_eq!(resp.headers().get("allow").unwrap(), "GET, POST, OPTIONS");
-        assert_eq!(
-            resp.headers().get("access-control-allow-origin").unwrap(),
-            "http://127.0.0.1:8000"
+        assert_response_contains(&response, "HTTP/1.1 204");
+        assert_response_contains(&response, "Allow: GET, POST, OPTIONS");
+        assert_response_contains(
+            &response,
+            "Access-Control-Allow-Origin: http://127.0.0.1:8000",
         );
-        assert_eq!(
-            resp.headers().get("access-control-allow-headers").unwrap(),
-            "content-type"
-        );
-        assert!(resp.bytes().unwrap().is_empty());
+        assert_response_contains(&response, "Access-Control-Allow-Headers: content-type");
     }
 
     fn make_file(dir_path: PathBuf, file_name: String, data: &[u8]) -> File {
@@ -600,19 +612,31 @@ mod test {
             ("png", include_bytes!("../test/data/file.png")),
             ("svg", include_bytes!("../test/data/file.svg")),
         ];
+
         for (ext, data) in file_types.into_iter() {
             let file_name = format!("file.{}", ext);
-            let url = format!("http://127.0.0.1:{}/{}", port, file_name);
-            make_file(dir_path.clone(), file_name, data);
-            let resp = reqwest::blocking::get(url).unwrap();
-            assert_eq!(resp.status(), 200);
-            assert_eq!(&resp.bytes().unwrap()[..], data);
+            make_file(dir_path.clone(), file_name.clone(), data);
+
+            let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+            let request = format!("GET /{} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n", file_name);
+            let response = send_http_request(&mut stream, &request);
+
+            assert_response_contains(&response, "HTTP/1.1 200");
+            // Find the body after the headers
+            if let Some(body_start) = response.windows(4).position(|window| window == b"\r\n\r\n") {
+                let body = &response[body_start + 4..];
+                assert_eq!(body, data);
+            } else {
+                panic!("No body found in response");
+            }
         }
 
         // 404
-        let url = format!("http://127.0.0.1:{}/missing.file", port);
-        let resp = reqwest::blocking::get(url).unwrap();
-        assert_eq!(resp.status(), 404);
-        assert_eq!(resp.text().unwrap(), "404: File not found");
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let request = "GET /missing.file HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
+        let response = send_http_request(&mut stream, request);
+
+        assert_response_contains(&response, "HTTP/1.1 404");
+        assert_response_contains(&response, "404: File not found");
     }
 }

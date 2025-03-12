@@ -4,7 +4,7 @@ on:
       - master
   pull_request: {}
 
-name: Build python wheels on mac and windows
+name: Build python wheels on linux, mac and windows
 
 jobs:
 

@@ -3,18 +3,21 @@ use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::asyncr::LiquidClient;
+use lwk_ledger::parse_multisig;
 use lwk_ledger::read_multi_apdu;
 use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
-use lwk_ledger::{APDUCmdVec, StatusWord};
+use lwk_ledger::AddressType;
+use lwk_ledger::PartialSignature;
 use lwk_ledger::Version;
 use lwk_ledger::WalletPolicy;
 use lwk_ledger::WalletPubKey;
-use lwk_ledger::parse_multisig;
-use lwk_ledger::AddressType;
-use lwk_ledger::PartialSignature;
-use lwk_wollet::{bitcoin::bip32::ChildNumber, bitcoin::bip32::DerivationPath, bitcoin::bip32::Fingerprint, elements::pset::PartiallySignedTransaction};
+use lwk_ledger::{APDUCmdVec, StatusWord};
 use lwk_wollet::elements_miniscript;
+use lwk_wollet::{
+    bitcoin::bip32::ChildNumber, bitcoin::bip32::DerivationPath, bitcoin::bip32::Fingerprint,
+    elements::pset::PartiallySignedTransaction,
+};
 use serde::Serialize;
 use std::io::Cursor;
 use std::str::FromStr;
@@ -117,8 +120,9 @@ impl LedgerWeb {
     }
 
     #[wasm_bindgen(js_name = sign)]
-    pub async fn sign(&self, pset_str: &str)-> Result<String, Error>  {
-        let mut pset:PartiallySignedTransaction = PartiallySignedTransaction::from_str(pset_str).expect("PSET parsing");
+    pub async fn sign(&self, pset_str: &str) -> Result<String, Error> {
+        let mut pset: PartiallySignedTransaction =
+            PartiallySignedTransaction::from_str(pset_str).expect("PSET parsing");
         // Set the default values some fields that Ledger requires
         if pset.global.tx_data.fallback_locktime.is_none() {
             pset.global.tx_data.fallback_locktime =
@@ -256,7 +260,12 @@ impl LedgerWeb {
         for wallet_policy in wallets.values() {
             let hmac = if wallet_policy.threshold.is_some() {
                 // Register multisig wallets
-                let (_id, hmac) = self.ledger.client.register_wallet(wallet_policy).await.map_err(|e| Error::Generic(format!("{:?} error getting xpub", e)))?;
+                let (_id, hmac) = self
+                    .ledger
+                    .client
+                    .register_wallet(wallet_policy)
+                    .await
+                    .map_err(|e| Error::Generic(format!("{:?} error getting xpub", e)))?;
                 Some(hmac)
             } else {
                 None
@@ -290,7 +299,6 @@ impl LedgerWeb {
         console_log!("signed pset {}", pset.to_string());
         Ok(pset.to_string())
     }
-
 }
 
 impl lwk_ledger::asyncr::Transport for TransportWeb {
@@ -302,22 +310,19 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
         let result_clone = closure_result.clone();
 
         let f = move |e: web_sys::HidInputReportEvent| {
-            // TODO: how to handle multiple chunks?
             let dataview = e.data();
 
             let ofs = dataview.byte_offset();
             let len = dataview.byte_length();
-            console_log!("ofs {} len {}", ofs, len);
 
             let ba: Vec<u8> = (0..len).map(|i| dataview.get_uint8(i + ofs)).collect();
-            console_log!("ba {:?}", ba);
 
             let mut c = result_clone.borrow_mut();
             (*c).push(ba);
         };
         let closure: Closure<dyn FnMut(_)> = Closure::new(f);
 
-        // // https://gist.github.com/kndysfm/f722e2b6dc26ab28e3da5945d5e21933
+        // https://gist.github.com/kndysfm/f722e2b6dc26ab28e3da5945d5e21933
 
         self.hid_device
             .set_oninputreport(Some(closure.as_ref().unchecked_ref()));
@@ -325,7 +330,7 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
         let chunks = write_apdu(&command);
         let report_id = 0x00;
         for mut chunk in chunks.into_iter() {
-            console_log!("data -> {:?}", &chunk[..]);
+            // console_log!("data -> {:?}", &chunk[..]);
 
             let promise = self
                 .hid_device
@@ -337,21 +342,32 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
                 .map_err(Error::JsVal)?;
         }
 
-        lwk_wollet::clients::asyncr::async_sleep(1000).await; // TODO: how to wait for the response?
+        let sleep_ms = 100;
+        let mut attempts = (1000 / sleep_ms) * 10 * 60; // 10 minutes
+        loop {
+            lwk_wollet::clients::asyncr::async_sleep(sleep_ms).await;
+            if !closure_result.borrow().is_empty() {
+                let copy = closure_result.borrow().clone();
+                if let Ok(_) = read_multi_apdu(copy) {
+                    break;
+                }
+            }
+            attempts -= 1;
+            if attempts == 0 {
+                console_log!("Timeout waiting for response");
+                return Err(Error::Generic("Timeout waiting for response".to_string()));
+            }
+        }
 
         let result = closure_result.take();
-        console_log!("apdu <- {:?}", result);
 
         let result = read_multi_apdu(result).unwrap();
-        console_log!("result  <- {:?}", result);
 
-        // let answer = APDUAnswer::from_answer(result).map_err(|_| "Invalid Answer")?;
         let answer = APDUAnswer::from_answer(result).unwrap();
 
-        console_log!("answer <- {:?}", answer);
         let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
         let vec = answer.data().to_vec();
-        console_log!("status code: {:?} answer vec <- {:?}", status, vec);
+        console_log!("status code: {:?} ", status);
 
         Ok((status, vec))
     }
@@ -378,7 +394,6 @@ pub async fn search_ledger_device() -> Result<HidDevice, Error> {
         .await
         .map_err(Error::JsVal)?;
     let hids: web_sys::js_sys::Array = result.dyn_into().map_err(Error::JsVal)?;
-    web_sys::console::log_2(&"hids".into(), &hids);
 
     let hid_device = if hids.length() > 0 {
         // TODO handle multiple ledgers?
@@ -399,7 +414,6 @@ pub async fn search_ledger_device() -> Result<HidDevice, Error> {
             .map_err(Error::JsVal)?;
 
         let hids: web_sys::js_sys::Array = result.dyn_into().map_err(Error::JsVal)?;
-        web_sys::console::log_2(&"hids".into(), &hids);
 
         if hids.length() > 0 {
             // TODO handle multiple ledgers?
@@ -414,7 +428,6 @@ pub async fn search_ledger_device() -> Result<HidDevice, Error> {
         let result = wasm_bindgen_futures::JsFuture::from(promise)
             .await
             .map_err(Error::JsVal)?;
-        web_sys::console::log_2(&"device was opened".into(), &result);
     }
     Ok(hid_device)
 }

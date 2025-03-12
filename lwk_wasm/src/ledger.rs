@@ -1,25 +1,13 @@
 use crate::Error;
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
 use lwk_ledger::asyncr::Ledger;
-use lwk_ledger::asyncr::LiquidClient;
-use lwk_ledger::parse_multisig;
 use lwk_ledger::read_multi_apdu;
 use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
-use lwk_ledger::AddressType;
-use lwk_ledger::PartialSignature;
-use lwk_ledger::Version;
-use lwk_ledger::WalletPolicy;
-use lwk_ledger::WalletPubKey;
 use lwk_ledger::{APDUCmdVec, StatusWord};
-use lwk_wollet::elements_miniscript;
-use lwk_wollet::{
-    bitcoin::bip32::ChildNumber, bitcoin::bip32::DerivationPath, bitcoin::bip32::Fingerprint,
-    elements::pset::PartiallySignedTransaction,
-};
+use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use serde::Serialize;
-use std::io::Cursor;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -43,6 +31,9 @@ struct HidFilter {
 
 struct TransportWeb {
     hid_device: HidDevice,
+
+    closure: Closure<dyn FnMut(web_sys::HidInputReportEvent)>,
+    closure_result: Rc<RefCell<Vec<Vec<u8>>>>,
 }
 
 #[wasm_bindgen]
@@ -59,7 +50,28 @@ impl LedgerWeb {
     /// hid_device must be already opened
     #[wasm_bindgen(constructor)]
     pub fn new(hid_device: HidDevice) -> Self {
-        let transport = TransportWeb { hid_device };
+        let closure_result = std::rc::Rc::new(std::cell::RefCell::new(vec![]));
+
+        let result_clone = closure_result.clone();
+
+        let f = move |e: web_sys::HidInputReportEvent| {
+            let dataview = e.data();
+
+            let ofs = dataview.byte_offset();
+            let len = dataview.byte_length();
+
+            let ba: Vec<u8> = (0..len).map(|i| dataview.get_uint8(i + ofs)).collect();
+
+            let mut c = result_clone.borrow_mut();
+            (*c).push(ba);
+        };
+        let closure: Closure<dyn FnMut(_)> = Closure::new(f);
+
+        let transport = TransportWeb {
+            hid_device,
+            closure,
+            closure_result,
+        };
 
         let ledger = Ledger::from_transport(transport);
         Self { ledger }
@@ -136,27 +148,16 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
     type Error = Error;
 
     async fn exchange(&self, command: &APDUCmdVec) -> Result<(StatusWord, Vec<u8>), Self::Error> {
-        let closure_result = std::rc::Rc::new(std::cell::RefCell::new(vec![]));
-
-        let result_clone = closure_result.clone();
-
-        let f = move |e: web_sys::HidInputReportEvent| {
-            let dataview = e.data();
-
-            let ofs = dataview.byte_offset();
-            let len = dataview.byte_length();
-
-            let ba: Vec<u8> = (0..len).map(|i| dataview.get_uint8(i + ofs)).collect();
-
-            let mut c = result_clone.borrow_mut();
-            (*c).push(ba);
-        };
-        let closure: Closure<dyn FnMut(_)> = Closure::new(f);
-
+        let window =
+            web_sys::window().ok_or_else(|| Error::Generic("cannot get window".to_string()))?;
+        let performance = window
+            .performance()
+            .ok_or_else(|| Error::Generic("cannot get performance".to_string()))?;
+        let start_time = performance.now();
         // https://gist.github.com/kndysfm/f722e2b6dc26ab28e3da5945d5e21933
-
+        self.closure_result.borrow_mut().clear();
         self.hid_device
-            .set_oninputreport(Some(closure.as_ref().unchecked_ref()));
+            .set_oninputreport(Some(self.closure.as_ref().unchecked_ref()));
 
         let chunks = write_apdu(&command);
         let report_id = 0x00;
@@ -168,37 +169,41 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
                 .send_report_with_u8_slice(report_id, &mut chunk[..])
                 .unwrap();
 
-            let result = wasm_bindgen_futures::JsFuture::from(promise)
+            let _result = wasm_bindgen_futures::JsFuture::from(promise)
                 .await
                 .map_err(Error::JsVal)?;
         }
 
-        let sleep_ms = 100;
-        let mut attempts = (1000 / sleep_ms) * 10 * 60; // 10 minutes
-        loop {
-            lwk_wollet::clients::asyncr::async_sleep(sleep_ms).await;
-            if !closure_result.borrow().is_empty() {
-                let copy = closure_result.borrow().clone();
-                if let Ok(_) = read_multi_apdu(copy) {
-                    break;
+        let mut attempts = 0;
+        let sleep_ms = 10;
+        let total_attempts = (1000 / sleep_ms) * 10 * 60; // 10 minutes
+        let result = loop {
+            if !self.closure_result.borrow().is_empty() {
+                let copy = self.closure_result.borrow().clone();
+                if let Ok(result) = read_multi_apdu(copy) {
+                    self.closure_result.borrow_mut().clear();
+                    break result;
                 }
             }
-            attempts -= 1;
-            if attempts == 0 {
+            attempts += 1;
+            lwk_wollet::clients::asyncr::async_sleep(sleep_ms).await;
+
+            if attempts >= total_attempts {
                 console_log!("Timeout waiting for response");
                 return Err(Error::Generic("Timeout waiting for response".to_string()));
             }
-        }
-
-        let result = closure_result.take();
-
-        let result = read_multi_apdu(result).unwrap();
+        };
 
         let answer = APDUAnswer::from_answer(result).unwrap();
 
         let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
         let vec = answer.data().to_vec();
-        console_log!("status code: {:?} ", status);
+        console_log!(
+            "status code: {:?} time: {:?}ms attempts: {}",
+            status,
+            performance.now() - start_time,
+            attempts
+        );
 
         Ok((status, vec))
     }
@@ -256,7 +261,7 @@ pub async fn search_ledger_device() -> Result<HidDevice, Error> {
 
     if !hid_device.opened() {
         let promise = hid_device.open();
-        let result = wasm_bindgen_futures::JsFuture::from(promise)
+        let _result = wasm_bindgen_futures::JsFuture::from(promise)
             .await
             .map_err(Error::JsVal)?;
     }

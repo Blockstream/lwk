@@ -399,6 +399,7 @@ pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
         }
 
         let needs_more = expected_apdu_len > (result.len() + el.len()); // TODO check off by one
+
         let start = rdr.position() as usize;
         let end = if needs_more {
             el.len()
@@ -416,7 +417,7 @@ pub fn read_multi_apdu(apdu_answers: Vec<Vec<u8>>) -> Result<Vec<u8>, Error> {
 
         sequence_idx += 1;
     }
-    Ok(result)
+    Err(Error::ClientError("Incomplete APDU".to_string()))
 }
 
 const LEDGER_PACKET_WRITE_SIZE: u8 = 64;
@@ -505,6 +506,20 @@ mod tests {
         ];
         let result = read_multi_apdu(vec![received_apdu_ledger.to_vec()]).unwrap();
         assert_eq!(result, get_version_test_vector_array.to_vec());
+    }
+
+    #[test]
+    fn test_fix_return_error() {
+        let d = [[
+            1, 1, 5, 0, 0, 0, 67, 66, 246, 203, 175, 41, 59, 76, 239, 143, 8, 205, 206, 188, 195,
+            151, 107, 194, 119, 208, 91, 66, 183, 226, 62, 33, 83, 168, 81, 140, 125, 100, 200,
+            140, 146, 242, 46, 52, 250, 248, 37, 179, 244, 196, 225, 203, 90, 152, 201, 177, 38,
+            128, 184, 233, 230, 21, 233, 229,
+        ]
+        .to_vec()]
+        .to_vec();
+
+        let result = read_multi_apdu(d).unwrap_err();
     }
 
     #[test]

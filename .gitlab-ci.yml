@@ -32,7 +32,7 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
     - cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
-    - (cd lwk_wasm && wasm-pack test --chrome --features serial)
+    - (cd lwk_wasm && wasm-pack test --chrome --headless --features serial)
     - (cd lwk_wasm && wasm-pack build --features serial)
   artifacts:
     paths:

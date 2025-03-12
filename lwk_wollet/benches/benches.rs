@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use elements::Address;
+use elements::{pset::PartiallySignedTransaction, Address};
+use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use lwk_wollet::{ElementsNetwork, NoPersist, Update, Wollet, WolletDescriptor};
 
-criterion_group!(benches, wollet, address);
+criterion_group!(benches, wollet, address, pset);
 criterion_main!(benches);
 
 pub fn wollet(c: &mut Criterion) {
@@ -83,6 +84,26 @@ pub fn address(c: &mut Criterion) {
                     ElementsNetwork::LiquidTestnet.address_params(),
                 );
                 black_box(address);
+            });
+        });
+}
+
+pub fn pset(c: &mut Criterion) {
+    c.benchmark_group("pset")
+        .bench_function("pset_balance", |b: &mut criterion::Bencher<'_>| {
+            let desc_str = include_str!("../../lwk_common/test_data/pset_details/descriptor");
+            let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc_str.parse().unwrap();
+            let pset_str = include_str!("../../lwk_common/test_data/pset_details/pset.base64");
+            let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+            b.iter(|| {
+                let balance = lwk_common::pset_balance(
+                    &pset,
+                    &desc,
+                    &elements::AddressParams::LIQUID_TESTNET,
+                )
+                .unwrap();
+
+                black_box(balance);
             });
         });
 }

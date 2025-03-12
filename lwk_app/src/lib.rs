@@ -1130,6 +1130,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let s = state.lock()?;
             let asset = s.get_asset(&asset_id)?;
             if let AppAsset::RegistryAsset(asset) = asset {
+                let registry = lwk_wollet::registry::blocking::Registry::new(&s.config.registry_url)?;
+                let data = lwk_wollet::registry::RegistryPost::new(asset.contract().clone(), asset_id);
+                registry.post(&data)?;
+                let result = "TODO".to_string();
+                /*
                 let client = reqwest::blocking::Client::new();
                 let url = &s.config.registry_url;
                 let contract = asset.contract();
@@ -1141,6 +1146,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     let domain = contract.entity.domain();
                     result = format!("https://{domain}/.well-known/liquid-asset-proof-{asset_id} must contain the following 'Authorize linking the domain name {domain} to the Liquid asset {asset_id}'");
                 }
+                 * */
                 Response::result(
                     request.id,
                     serde_json::to_value(response::AssetPublish {

@@ -326,13 +326,17 @@ mod test {
 
     use crate::pset_balance;
 
-    #[test]
-    fn test_pset_details() {
+    fn setup_pset_details() -> (AssetId, ConfidentialDescriptor<DescriptorPublicKey>) {
         let asset_id_str = "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5";
         let asset_id: AssetId = asset_id_str.parse().unwrap();
         let desc_str = include_str!("../test_data/pset_details/descriptor");
         let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc_str.parse().unwrap();
+        (asset_id, desc)
+    }
 
+    #[test]
+    fn test_pset_details_redeposit_balance() {
+        let (asset_id, desc) = setup_pset_details();
         let pset_str = include_str!("../test_data/pset_details/pset.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
@@ -340,7 +344,11 @@ mod test {
             !balance.balances.contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
+    }
 
+    #[test]
+    fn test_pset_details_negative_balance() {
+        let (asset_id, desc) = setup_pset_details();
         let pset_str = include_str!("../test_data/pset_details/pset2.base64");
         let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();

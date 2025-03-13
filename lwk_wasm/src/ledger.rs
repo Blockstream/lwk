@@ -1,4 +1,5 @@
 use crate::Error;
+use crate::Pset;
 use crate::WolletDescriptor;
 use lwk_ledger::asyncr::Ledger;
 use lwk_ledger::read_multi_apdu;
@@ -146,12 +147,13 @@ impl LedgerWeb {
         ))?)
     }
 
-    pub async fn sign(&self, pset_str: &str) -> Result<String, Error> {
+    /// Sign and consume the given PSET, returning the signed one
+    pub async fn sign(&self, pset: Pset) -> Result<Pset, Error> {
         let performance = get_performance()?;
         let start_time = performance.now();
 
-        let mut pset = PartiallySignedTransaction::from_str(&pset_str)
-            .map_err(|e| Error::Generic(format!("{:?} error parsing pset", e)))?;
+        let mut pset: PartiallySignedTransaction = pset.into();
+
         let _ = self
             .ledger
             .client
@@ -163,7 +165,7 @@ impl LedgerWeb {
             "Time taken for signing: {:?}ms",
             performance.now() - start_time
         );
-        Ok(pset.to_string())
+        Ok(pset.into())
     }
 }
 

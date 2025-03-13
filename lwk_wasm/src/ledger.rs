@@ -139,9 +139,6 @@ impl LedgerWeb {
         let fingerprint = self.fingerprint().await?;
         let path = "84'/1'/0'";
         let xpub = self.derive_xpub(path).await?;
-        let is_mainnet = false; // TODO handle mainnet
-        let script_variant = lwk_common::Singlesig::Wpkh;
-        let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
 
         Ok(format!(
             "ct(slip77({blinding}),elwpkh([{fingerprint}/{path}]{xpub}/<0;1>/*))"

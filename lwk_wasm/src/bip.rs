@@ -18,6 +18,12 @@ impl From<lwk_common::Bip> for Bip {
     }
 }
 
+impl From<&Bip> for lwk_common::Bip {
+    fn from(value: &Bip) -> Self {
+        value.inner
+    }
+}
+
 impl From<Bip> for lwk_common::Bip {
     fn from(value: Bip) -> Self {
         value.inner

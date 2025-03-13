@@ -147,7 +147,7 @@ impl Jade {
     }
 
     #[wasm_bindgen(js_name = keyoriginXpub)]
-    pub async fn keyorigin_xpub(&self, bip: Bip) -> Result<String, Error> {
+    pub async fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, Error> {
         self.inner.unlock().await?;
         let signer = self.create_fake_signer().await?;
         let is_mainnet = self.inner.network().is_mainnet();

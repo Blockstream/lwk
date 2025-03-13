@@ -33,6 +33,9 @@ impl Pset {
     /// Creates a `Pset`
     #[wasm_bindgen(constructor)]
     pub fn new(base64: &str) -> Result<Pset, Error> {
+        if base64.trim().is_empty() {
+            return Err(Error::Generic("Empty pset".to_string()));
+        }
         let pset: PartiallySignedTransaction = base64.trim().parse()?;
         Ok(pset.into())
     }

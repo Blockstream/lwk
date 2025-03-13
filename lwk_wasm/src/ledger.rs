@@ -132,6 +132,22 @@ impl LedgerWeb {
         Ok(r.to_string())
     }
 
+    /// TODO Should use Signer::wpkh_slip77_descriptor
+    #[wasm_bindgen(js_name = wpkhSlip77Descriptor)]
+    pub async fn wpkh_slip77_descriptor(&self) -> Result<String, Error> {
+        let blinding = self.slip77_master_blinding_key().await?;
+        let fingerprint = self.fingerprint().await?;
+        let path = "84'/1'/0'";
+        let xpub = self.derive_xpub(path).await?;
+        let is_mainnet = false; // TODO handle mainnet
+        let script_variant = lwk_common::Singlesig::Wpkh;
+        let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
+
+        Ok(format!(
+            "ct(slip77({blinding}),elwpkh([{fingerprint}/{path}]{xpub}/<0;1>/*))"
+        ))
+    }
+
     pub async fn sign(&self, pset_str: &str) -> Result<String, Error> {
         let performance = get_performance()?;
         let start_time = performance.now();

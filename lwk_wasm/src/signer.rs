@@ -61,7 +61,7 @@ impl Signer {
     }
 
     #[wasm_bindgen(js_name = keyoriginXpub)]
-    pub fn keyorigin_xpub(&self, bip: Bip) -> Result<String, Error> {
+    pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, Error> {
         Ok(lwk_common::Signer::keyorigin_xpub(
             &self.inner,
             bip.into(),
@@ -78,6 +78,7 @@ impl Signer {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 // Used internally to emulate a sync signer for some methods
 pub(crate) struct FakeSigner {
     pub(crate) paths: HashMap<bip32::DerivationPath, bip32::Xpub>,

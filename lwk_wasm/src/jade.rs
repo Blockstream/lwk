@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, sync::OnceLock};
 
 use crate::{
     serial::{get_jade_serial, WebSerial},
@@ -21,6 +21,8 @@ use wasm_bindgen::prelude::*;
 pub struct Jade {
     inner: asyncr::Jade<WebSerial>,
     _port: web_sys::SerialPort,
+
+    fake_signer: OnceLock<FakeSigner>,
 }
 
 // NOTE: Every exposed method (`pub async`) needs to try to unlock the jade as first step.
@@ -36,7 +38,11 @@ impl Jade {
         let web_serial = WebSerial::new(&port)?;
 
         let inner = asyncr::Jade::new(web_serial, network.clone().into());
-        Ok(Jade { inner, _port: port })
+        Ok(Jade {
+            inner,
+            _port: port,
+            fake_signer: OnceLock::new(),
+        })
     }
 
     #[wasm_bindgen(js_name = getVersion)]
@@ -148,8 +154,7 @@ impl Jade {
 
     #[wasm_bindgen(js_name = keyoriginXpub)]
     pub async fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, Error> {
-        self.inner.unlock().await?;
-        let signer = self.create_fake_signer().await?;
+        let signer = self.get_or_create_fake_signer().await?;
         let is_mainnet = self.inner.network().is_mainnet();
 
         Ok(signer
@@ -180,35 +185,11 @@ impl Jade {
 
 // Inner methods don't try to unlock, they are supposed to operate on an already unlocked Jade,
 impl Jade {
-    // Asks all possible derivation needed for standard singlesig wallets (first account)
-    // TODO get_cached_xpub is faster after first, but we should cache the fake signer as field in Jade
-    // so that we are not asking the master blinding every time
-    async fn create_fake_signer(&self) -> Result<FakeSigner, Error> {
-        let network = self.inner.network();
-        let mut paths = HashMap::new();
-
-        for purpose in [49, 84, 87] {
-            for coin_type in [1, 1776] {
-                let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
-                let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
-                let path = derivation_path_to_vec(&derivation_path);
-                let params = GetXpubParams { network, path };
-                let xpub = self.inner.get_cached_xpub(params).await?;
-                paths.insert(derivation_path, xpub);
-            }
-        }
-        let xpub = self.inner.get_master_xpub().await?;
-        paths.insert(DerivationPath::master(), xpub);
-        let slip77 = self.inner.slip77_master_blinding_key().await?;
-
-        Ok(FakeSigner { paths, slip77 })
-    }
-
     async fn desc(&self, script_variant: lwk_common::Singlesig) -> Result<WolletDescriptor, Error> {
-        let signer = self.create_fake_signer().await?;
+        let signer = self.get_or_create_fake_signer().await?;
 
         let desc_str = lwk_common::singlesig_desc(
-            &signer,
+            signer,
             script_variant,
             DescriptorBlindingKey::Slip77,
             self.inner.network().is_mainnet(),
@@ -227,6 +208,34 @@ impl Jade {
         };
         let r = self.inner.get_registered_multisig(param).await?;
         Ok(r)
+    }
+
+    async fn get_or_create_fake_signer(&self) -> Result<&FakeSigner, Error> {
+        if let Some(signer) = self.fake_signer.get() {
+            return Ok(signer);
+        }
+
+        self.inner.unlock().await?;
+        let network = self.inner.network();
+        let mut paths = HashMap::new();
+
+        for purpose in [49, 84, 87] {
+            for coin_type in [1, 1776] {
+                let derivation_path_str = format!("m/{purpose}h/{coin_type}h/0h");
+                let derivation_path = DerivationPath::from_str(&derivation_path_str)?;
+                let path = derivation_path_to_vec(&derivation_path);
+                let params = GetXpubParams { network, path };
+                let xpub = self.inner.get_cached_xpub(params).await?;
+                paths.insert(derivation_path, xpub);
+            }
+        }
+        let xpub = self.inner.get_master_xpub().await?;
+        paths.insert(DerivationPath::master(), xpub);
+        let slip77 = self.inner.slip77_master_blinding_key().await?;
+
+        let signer = FakeSigner { paths, slip77 };
+        self.fake_signer.set(signer).unwrap();
+        Ok(self.fake_signer.get().unwrap())
     }
 }
 

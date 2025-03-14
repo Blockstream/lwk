@@ -1,4 +1,5 @@
 use crate::Error;
+use crate::Network;
 use crate::Pset;
 use crate::WolletDescriptor;
 use lwk_ledger::asyncr::Ledger;
@@ -52,7 +53,7 @@ struct LedgerWeb {
 impl LedgerWeb {
     /// hid_device must be already opened
     #[wasm_bindgen(constructor)]
-    pub fn new(hid_device: HidDevice) -> Self {
+    pub fn new(hid_device: HidDevice, network: &Network) -> Self {
         let closure_result = std::rc::Rc::new(std::cell::RefCell::new(vec![]));
 
         let result_clone = closure_result.clone();
@@ -76,7 +77,7 @@ impl LedgerWeb {
             closure_result,
         };
 
-        let ledger = Ledger::from_transport(transport);
+        let ledger = Ledger::from_transport(transport, (*network).into());
         Self { ledger }
     }
 

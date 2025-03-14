@@ -139,14 +139,13 @@ impl LedgerWeb {
     /// TODO Should use Signer::wpkh_slip77_descriptor
     #[wasm_bindgen(js_name = wpkhSlip77Descriptor)]
     pub async fn wpkh_slip77_descriptor(&self) -> Result<WolletDescriptor, Error> {
-        let blinding = self.slip77_master_blinding_key().await?;
-        let fingerprint = self.fingerprint().await?;
-        let path = "84'/1'/0'";
-        let xpub = self.derive_xpub(path).await?;
-
-        Ok(WolletDescriptor::new(&format!(
-            "ct(slip77({blinding}),elwpkh([{fingerprint}/{path}]{xpub}/<0;1>/*))"
-        ))?)
+        let r = self
+            .ledger
+            .client
+            .wpkh_slip77_descriptor()
+            .await
+            .map_err(|e| Error::Generic(format!("{:?} error getting wpkh_slip77_descriptor", e)))?;
+        Ok(WolletDescriptor::new(&r)?)
     }
 
     /// Sign and consume the given PSET, returning the signed one

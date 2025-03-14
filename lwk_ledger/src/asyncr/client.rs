@@ -630,6 +630,24 @@ impl<T: Transport> LiquidClient<T> {
             }
         })
     }
+
+    pub async fn wpkh_slip77_descriptor(&self) -> Result<String, LiquidClientError<T::Error>> {
+        let blinding = self.get_master_blinding_key().await?;
+        let fingerprint = self.get_master_fingerprint().await?;
+
+        let path: DerivationPath = match self.network {
+            lwk_common::Network::Liquid => "84'/1776'/0'",
+            _ => "84'/1'/0'",
+        }
+        .parse()
+        .expect("static string");
+
+        let xpub = self.get_extended_pubkey(&path, false).await?;
+
+        Ok(format!(
+            "ct(slip77({blinding}),elwpkh([{fingerprint}/{path}]{xpub}/<0;1>/*))"
+        ))
+    }
 }
 
 /// Asynchronous communication layer between the bitcoin client and the Ledger device.

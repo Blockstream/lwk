@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use elements::AddressParams;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,6 +13,14 @@ pub enum Network {
 impl Network {
     pub fn is_mainnet(&self) -> bool {
         self == &Self::Liquid
+    }
+
+    pub fn address_params(&self) -> &'static AddressParams {
+        match self {
+            Network::Liquid => &AddressParams::LIQUID,
+            Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
+            Network::LocaltestLiquid => &AddressParams::ELEMENTS,
+        }
     }
 }
 

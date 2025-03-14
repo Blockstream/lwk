@@ -235,7 +235,6 @@ async fn test_asyncr_ledger() {
 
     assert_eq!(id, wallet_policy.id());
 
-    let params = &AddressParams::ELEMENTS;
     let address = client
         .get_wallet_address(
             &wallet_policy,
@@ -243,7 +242,6 @@ async fn test_asyncr_ledger() {
             false, // change
             0,     // address index
             false, // display
-            params,
         )
         .await
         .unwrap();
@@ -266,7 +264,6 @@ async fn test_asyncr_ledger() {
             false, // change
             0,     // address index
             false, // display
-            params,
         )
         .await
         .unwrap();
@@ -282,7 +279,6 @@ async fn test_asyncr_ledger() {
             false, // change
             0,     // address index
             false, // display
-            params,
         )
         .await
         .unwrap();

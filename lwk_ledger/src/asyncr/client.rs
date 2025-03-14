@@ -11,9 +11,7 @@ use crate::{
     wallet::WalletPolicy,
     AddressType, Version, WalletPubKey,
 };
-use elements_miniscript::elements::{
-    pset::PartiallySignedTransaction as Psbt, Address, AddressParams,
-};
+use elements_miniscript::elements::{pset::PartiallySignedTransaction as Psbt, Address};
 use elements_miniscript::slip77::MasterBlindingKey;
 use elements_miniscript::{
     bitcoin::bip32::ChildNumber,
@@ -155,7 +153,6 @@ impl<T: Transport> LiquidClient<T> {
 
     // Helper method to check if a path matches our cached paths
     fn check_cached_xpub(&self, path: &DerivationPath) -> Option<Xpub> {
-        println!("check_cached_xpub: {:?}", path);
         match path.to_string().as_str() {
             // m/84h/1h/0h (testnet)
             "84'/1'/0'" => self.xpub_wpkh_testnet.get().copied(),
@@ -265,7 +262,6 @@ impl<T: Transport> LiquidClient<T> {
         let ss_keys = vec![wpk0];
         let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
         let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());
-        let params = &AddressParams::LIQUID_TESTNET; // TODO
 
         let address = self
             .get_wallet_address(
@@ -273,7 +269,6 @@ impl<T: Transport> LiquidClient<T> {
                 false, // change
                 index, // address index
                 false, // display
-                params,
             )
             .await?;
         Ok(address.to_string())
@@ -288,9 +283,8 @@ impl<T: Transport> LiquidClient<T> {
         change: bool,
         address_index: u32,
         display: bool,
-        // TODO: move to self?
-        params: &'static AddressParams,
     ) -> Result<Address, LiquidClientError<T::Error>> {
+        let params = self.network.address_params();
         let mut intpr = ClientCommandInterpreter::new();
         intpr.add_known_preimage(wallet.serialize());
         let keys: Vec<String> = wallet.keys.iter().map(|k| k.to_string()).collect();

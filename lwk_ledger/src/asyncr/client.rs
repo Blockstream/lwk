@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use std::str::FromStr;
+use std::{str::FromStr, sync::OnceLock};
 
 use crate::{
     apdu::{APDUCmdVec, StatusWord},
@@ -28,11 +28,16 @@ use elements_miniscript::{
 #[derive(Debug)]
 pub struct LiquidClient<T: Transport> {
     transport: T,
+
+    fingerprint: OnceLock<Fingerprint>,
 }
 
 impl<T: Transport> LiquidClient<T> {
     pub fn new(transport: T) -> Self {
-        Self { transport }
+        Self {
+            transport,
+            fingerprint: OnceLock::new(),
+        }
     }
 
     async fn make_request(
@@ -108,6 +113,10 @@ impl<T: Transport> LiquidClient<T> {
 
     /// Retrieve the master fingerprint.
     pub async fn get_master_fingerprint(&self) -> Result<Fingerprint, LiquidClientError<T::Error>> {
+        if let Some(fingerprint) = self.fingerprint.get() {
+            return Ok(*fingerprint);
+        }
+
         let cmd = command::get_master_fingerprint();
         self.make_request(&cmd, None).await.and_then(|data| {
             if data.len() < 4 {
@@ -118,7 +127,12 @@ impl<T: Transport> LiquidClient<T> {
             } else {
                 let mut fg = [0x00; 4];
                 fg.copy_from_slice(&data[0..4]);
-                Ok(Fingerprint::from(fg))
+                let fingerprint = Fingerprint::from(fg);
+
+                // Cache the fingerprint in the OnceLock
+                let _ = self.fingerprint.set(fingerprint);
+
+                Ok(fingerprint)
             }
         })
     }

@@ -165,8 +165,21 @@ async fn test_asyncr_ledger() {
     let (name, version, _flags) = client.get_version().await.unwrap();
     assert_eq!(version, "2.2.3");
     assert_eq!(name, "Liquid Regtest");
+
+    let a_millis = std::time::Duration::from_millis(1);
+    let now = std::time::Instant::now();
     let fingerprint = client.get_master_fingerprint().await.unwrap();
     assert_eq!(fingerprint.to_string(), "f5acc2fd");
+    println!("get_master_fingerprint took {:?}", now.elapsed());
+    assert!(now.elapsed() > a_millis);
+
+    // After caching it should be faster
+    let now = std::time::Instant::now();
+    let fingerprint_cached = client.get_master_fingerprint().await.unwrap();
+    assert_eq!(fingerprint_cached.to_string(), "f5acc2fd");
+    println!("get_master_fingerprint took {:?}", now.elapsed());
+    assert!(now.elapsed() < a_millis);
+    assert_eq!(fingerprint, fingerprint_cached);
 
     let path: DerivationPath = "m/44h/1h/0h".parse().unwrap();
     let xpub = client.get_extended_pubkey(&path, false).await.unwrap();
@@ -189,7 +202,7 @@ async fn test_asyncr_ledger() {
     );
 
     let version = Version::V2;
-    let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
+    let wpk0 = WalletPubKey::from(((fingerprint_cached, path), xpub));
     use std::str::FromStr;
     let wpk1 = WalletPubKey::from_str("[76223a6e/48'/1'/0'/1']tpubDE7NQymr4AFtcJXi9TaWZtrhAdy8QyKmT4U6b9qYByAxCzoyMJ8zw5d8xVLVpbTRAEqP8pVUxjLE2vDt1rSFjaiS8DSz1QcNZ8D1qxUMx1g").unwrap();
     let keys = vec![wpk0, wpk1];
@@ -229,7 +242,7 @@ async fn test_asyncr_ledger() {
     let version = Version::V2;
     let path: DerivationPath = "m/84h/1h/0h".parse().unwrap();
     let xpub = client.get_extended_pubkey(&path, false).await.unwrap();
-    let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
+    let wpk0 = WalletPubKey::from(((fingerprint_cached, path), xpub));
     let ss_keys = vec![wpk0];
     let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
     let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());

@@ -181,6 +181,20 @@ async fn test_asyncr_ledger() {
     assert!(now.elapsed() < a_millis);
     assert_eq!(fingerprint, fingerprint_cached);
 
+    // Test caching also for xpubs that use a different logic
+    let now = std::time::Instant::now();
+    let path: DerivationPath = "m/84h/1h/0h".parse().unwrap();
+    let xpub = client.get_extended_pubkey(&path, false).await.unwrap();
+    assert_eq!(xpub.to_string(), "tpubDCtKfsNyRhULjZ9XMS4VKKtVcPdVDi8MKUbcSD9MJDyjRu1A2ND5MiipozyyspBT9bg8upEp7a8EAgFxNxXn1d7QkdbL52Ty5jiSLcxPt1P");
+    println!("get_extended_pubkey took {:?}", now.elapsed());
+    assert!(now.elapsed() > a_millis);
+    // after caching it should be faster
+    let now = std::time::Instant::now();
+    let xpub = client.get_extended_pubkey(&path, false).await.unwrap();
+    assert_eq!(xpub.to_string(), "tpubDCtKfsNyRhULjZ9XMS4VKKtVcPdVDi8MKUbcSD9MJDyjRu1A2ND5MiipozyyspBT9bg8upEp7a8EAgFxNxXn1d7QkdbL52Ty5jiSLcxPt1P");
+    println!("get_extended_pubkey took {:?}", now.elapsed());
+    assert!(now.elapsed() < a_millis);
+
     let path: DerivationPath = "m/44h/1h/0h".parse().unwrap();
     let xpub = client.get_extended_pubkey(&path, false).await.unwrap();
     assert_eq!(xpub.to_string(), "tpubDCwYjpDhUdPGP5rS3wgNg13mTrrjBuG8V9VpWbyptX6TRPbNoZVXsoVUSkCjmQ8jJycjuDKBb9eataSymXakTTaGifxR6kmVsfFehH1ZgJT");

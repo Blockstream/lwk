@@ -32,6 +32,12 @@ pub struct LiquidClient<T: Transport> {
     fingerprint: OnceLock<Fingerprint>,
 
     master_blinding_key: OnceLock<MasterBlindingKey>,
+
+    // Should we move to a more generic Mutex<HashMap<DerivationPath, Xpub>> ? Maybe but it can cause deadlocks, so let's start
+    /// m/84h/1h/0h
+    xpub_wpkh_testnet: OnceLock<Xpub>,
+    /// m/84h/1776h/0h
+    xpub_wpkh_mainnet: OnceLock<Xpub>,
 }
 
 impl<T: Transport> LiquidClient<T> {
@@ -40,6 +46,8 @@ impl<T: Transport> LiquidClient<T> {
             transport,
             fingerprint: OnceLock::new(),
             master_blinding_key: OnceLock::new(),
+            xpub_wpkh_testnet: OnceLock::new(),
+            xpub_wpkh_mainnet: OnceLock::new(),
         }
     }
 
@@ -140,6 +148,32 @@ impl<T: Transport> LiquidClient<T> {
         })
     }
 
+    // Helper method to check if a path matches our cached paths
+    fn check_cached_xpub(&self, path: &DerivationPath) -> Option<Xpub> {
+        println!("check_cached_xpub: {:?}", path);
+        match path.to_string().as_str() {
+            // m/84h/1h/0h (testnet)
+            "84'/1'/0'" => self.xpub_wpkh_testnet.get().copied(),
+            // m/84h/1776h/0h (mainnet)
+            "84'/1776'/0'" => self.xpub_wpkh_mainnet.get().copied(),
+            _ => None,
+        }
+    }
+
+    fn cache_xpub(&self, path: &DerivationPath, xpub: Xpub) {
+        match path.to_string().as_str() {
+            // m/84h/1h/0h (testnet)
+            "84'/1'/0'" => {
+                let _ = self.xpub_wpkh_testnet.set(xpub);
+            }
+            // m/84h/1776h/0h (mainnet)
+            "84'/1776'/0'" => {
+                let _ = self.xpub_wpkh_mainnet.set(xpub);
+            }
+            _ => {}
+        }
+    }
+
     /// Retrieve the bip32 extended pubkey derived with the given path
     /// and optionally display it on screen
     pub async fn get_extended_pubkey(
@@ -147,14 +181,26 @@ impl<T: Transport> LiquidClient<T> {
         path: &DerivationPath,
         display: bool,
     ) -> Result<Xpub, LiquidClientError<T::Error>> {
+        // Check if we have this path cached
+        if !display {
+            if let Some(cached_xpub) = self.check_cached_xpub(path) {
+                return Ok(cached_xpub);
+            }
+        }
+
         let cmd = command::get_extended_pubkey(path, display);
         self.make_request(&cmd, None).await.and_then(|data| {
-            Xpub::from_str(&String::from_utf8_lossy(&data)).map_err(|_| {
+            let xpub = Xpub::from_str(&String::from_utf8_lossy(&data)).map_err(|_| {
                 LiquidClientError::UnexpectedResult {
                     command: cmd.ins,
                     data,
                 }
-            })
+            })?;
+
+            // Cache the xpub if it matches one of our special paths
+            self.cache_xpub(path, xpub);
+
+            Ok(xpub)
         })
     }
 

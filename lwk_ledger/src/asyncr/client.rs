@@ -252,7 +252,7 @@ impl<T: Transport> LiquidClient<T> {
         &self,
         variant: Singlesig,
         index: u32,
-    ) -> Result<String, LiquidClientError<T::Error>> {
+    ) -> Result<Address, LiquidClientError<T::Error>> {
         let version = Version::V2;
         let path = variant.derivation_path();
         let xpub = self.get_extended_pubkey(&path, false).await?;
@@ -271,7 +271,7 @@ impl<T: Transport> LiquidClient<T> {
                 false, // display
             )
             .await?;
-        Ok(address.to_string())
+        Ok(address)
     }
 
     /// For a given wallet that was already registered on the device (or a standard wallet that does not need registration),

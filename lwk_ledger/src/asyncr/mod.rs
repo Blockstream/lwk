@@ -25,6 +25,7 @@ impl<T: Transport> Ledger<T> {
     }
 }
 
+// TODO use lwk_common::descriptor::Singlesig when adding variant
 pub enum Singlesig {
     Wpkh,
 }

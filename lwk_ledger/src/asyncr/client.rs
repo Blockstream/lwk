@@ -25,6 +25,8 @@ use elements_miniscript::{
     },
 };
 
+use super::Singlesig;
+
 #[derive(Debug)]
 pub struct LiquidClient<T: Transport> {
     transport: T,
@@ -244,6 +246,34 @@ impl<T: Transport> LiquidClient<T> {
          * */
 
         Ok((id, hmac))
+    }
+
+    pub async fn get_receive_address_single(
+        &self,
+        variant: Singlesig,
+        index: u32,
+    ) -> Result<String, LiquidClientError<T::Error>> {
+        let version = Version::V2;
+        let path = variant.derivation_path();
+        let xpub = self.get_extended_pubkey(&path, false).await?;
+        let fingerprint = self.get_master_fingerprint().await?;
+        let master_blinding_key = self.get_master_blinding_key().await?;
+        let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
+        let ss_keys = vec![wpk0];
+        let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
+        let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());
+        let params = &AddressParams::LIQUID_TESTNET; // TODO
+
+        let address = self
+            .get_wallet_address(
+                &ss, None,  // hmac
+                false, // change
+                index, // address index
+                false, // display
+                params,
+            )
+            .await?;
+        Ok(address.to_string())
     }
 
     /// For a given wallet that was already registered on the device (or a standard wallet that does not need registration),

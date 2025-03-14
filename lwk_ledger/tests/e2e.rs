@@ -281,4 +281,9 @@ async fn test_asyncr_ledger() {
         _ => panic!("unexpected sig"),
     };
     assert_eq!(sig, expected);
+
+    // Try the sign(pset) method
+    let mut pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
+    let signed = client.sign(&mut pset).await.unwrap();
+    assert!(signed > 0);
 }

@@ -13,14 +13,14 @@ pub struct Ledger<T: Transport> {
 }
 
 impl Ledger<TransportTcp> {
-    pub fn new(port: u16) -> Self {
-        let client = LiquidClient::new(TransportTcp::new(port).expect("TODO"));
+    pub fn new(port: u16, network: lwk_common::Network) -> Self {
+        let client = LiquidClient::new(TransportTcp::new(port).expect("TODO"), network);
         Self { client }
     }
 }
 impl<T: Transport> Ledger<T> {
-    pub fn from_transport(transport: T) -> Self {
-        let client = LiquidClient::new(transport);
+    pub fn from_transport(transport: T, network: lwk_common::Network) -> Self {
+        let client = LiquidClient::new(transport, network);
         Self { client }
     }
 }

@@ -31,6 +31,8 @@ use super::Singlesig;
 pub struct LiquidClient<T: Transport> {
     transport: T,
 
+    network: lwk_common::Network,
+
     fingerprint: OnceLock<Fingerprint>,
 
     master_blinding_key: OnceLock<MasterBlindingKey>,
@@ -43,9 +45,10 @@ pub struct LiquidClient<T: Transport> {
 }
 
 impl<T: Transport> LiquidClient<T> {
-    pub fn new(transport: T) -> Self {
+    pub fn new(transport: T, network: lwk_common::Network) -> Self {
         Self {
             transport,
+            network,
             fingerprint: OnceLock::new(),
             master_blinding_key: OnceLock::new(),
             xpub_wpkh_testnet: OnceLock::new(),

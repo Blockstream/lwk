@@ -12,9 +12,10 @@ use crate::register_multisig::{
     RegisteredMultisigDetails,
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
-use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Network, Result};
+use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements_miniscript::slip77;
+use lwk_common::Network;
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;

@@ -1,6 +1,6 @@
 use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
-use lwk_jade::Network as JadeNetwork;
+use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
 use lwk_wollet::elements::AssetId;
 use lwk_wollet::ElementsNetwork;

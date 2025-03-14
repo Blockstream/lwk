@@ -3,6 +3,7 @@ use std::{
     time::SystemTimeError,
 };
 
+use lwk_common::Network;
 use serde::{Deserialize, Serialize};
 use serde_cbor::Value;
 
@@ -34,10 +35,7 @@ pub enum Error {
     Bip32(#[from] elements::bitcoin::bip32::Error),
 
     #[error("Mismatching network, jade was initialized with: {init} but the method params received {passed}")]
-    MismatchingXpub {
-        init: crate::Network,
-        passed: crate::Network,
-    },
+    MismatchingXpub { init: Network, passed: Network },
 
     #[error("Poison error: {0}")]
     PoisonError(String),

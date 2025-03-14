@@ -1,9 +1,10 @@
 use std::fmt::Debug;
 
 use elements::hex::ToHex;
+use lwk_common::Network;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 
-use crate::{get_receive_address::SingleOrMulti, Network};
+use crate::get_receive_address::SingleOrMulti;
 
 #[derive(Serialize)]
 pub struct SignLiquidTxParams {

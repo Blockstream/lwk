@@ -7,10 +7,11 @@ use elements_miniscript::{
     confidential::Key, descriptor::WshInner, ConfidentialDescriptor, Descriptor,
     DescriptorPublicKey, Terminal,
 };
+use lwk_common::Network;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-use crate::{derivation_path_to_vec, Error, Network};
+use crate::{derivation_path_to_vec, Error};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GetRegisteredMultisigParams {

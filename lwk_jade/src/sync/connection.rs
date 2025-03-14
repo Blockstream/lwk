@@ -76,6 +76,7 @@ impl From<Box<dyn serialport::SerialPort>> for Connection {
 #[cfg(test)]
 mod test {
 
+    use lwk_common::Network;
     use serde_cbor::Value;
 
     use crate::{
@@ -99,7 +100,7 @@ mod test {
 
         let connection = Connection::PartialReadTest { data, status: 0 };
 
-        let jade = Jade::new(connection, crate::Network::LocaltestLiquid);
+        let jade = Jade::new(connection, Network::LocaltestLiquid);
         let result: Value = jade.send(Request::Ping).unwrap();
         assert_eq!(result, text);
     }

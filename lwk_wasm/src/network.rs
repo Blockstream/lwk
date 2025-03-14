@@ -34,13 +34,13 @@ impl From<&Network> for lwk_wollet::ElementsNetwork {
     }
 }
 
-impl From<Network> for lwk_jade::Network {
+impl From<Network> for lwk_common::Network {
     fn from(value: Network) -> Self {
         match value.inner {
-            lwk_wollet::ElementsNetwork::Liquid => lwk_jade::Network::Liquid,
-            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_jade::Network::TestnetLiquid,
+            lwk_wollet::ElementsNetwork::Liquid => lwk_common::Network::Liquid,
+            lwk_wollet::ElementsNetwork::LiquidTestnet => lwk_common::Network::TestnetLiquid,
             lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => {
-                lwk_jade::Network::LocaltestLiquid
+                lwk_common::Network::LocaltestLiquid
             }
         }
     }

@@ -134,7 +134,7 @@ fn jade_xpub() {
     assert_eq!(xpub_master.network, bitcoin::NetworkKind::Test);
 
     let params = GetXpubParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         path: vec![0],
     };
     let xpub = jade.jade.get_cached_xpub(params).unwrap();
@@ -153,7 +153,7 @@ fn jade_receive_address() {
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let params = GetReceiveAddressParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         address: SingleOrMulti::Single {
             variant: Variant::ShWpkh,
             path: vec![2147483697, 2147483648, 2147483648, 0, 143],
@@ -174,7 +174,7 @@ fn jade_register_multisig() {
     let jade_master_xpub = jade.jade.get_master_xpub().unwrap();
 
     let params = GetXpubParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
     let jade_xpub = jade.jade.get_cached_xpub(params).unwrap();
@@ -195,7 +195,7 @@ fn jade_register_multisig() {
     ];
 
     let params = RegisterMultisigParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         multisig_name: "finney-satoshi".to_string(),
         descriptor: JadeDescriptor {
             variant: "wsh(multi(k))".to_string(),
@@ -220,7 +220,7 @@ fn jade_max_multisigs() {
     jade.set_debug_mnemonic(TEST_MNEMONIC);
 
     let xpub_params = GetXpubParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         path: vec![0, 1],
     };
     let jade_signer = MultisigSigner {
@@ -236,7 +236,7 @@ fn jade_max_multisigs() {
             .collect::<Vec<_>>()
             .join("");
         RegisterMultisigParams {
-            network: lwk_jade::Network::LocaltestLiquid,
+            network: lwk_common::Network::LocaltestLiquid,
             multisig_name: index.to_string(),
             descriptor: JadeDescriptor {
                 variant: "wsh(multi(k))".to_string(),
@@ -288,7 +288,7 @@ fn jade_register_multisig_check_address() {
 
     let desc: ConfidentialDescriptor<DescriptorPublicKey> = desc.parse().unwrap();
     let jade_desc: JadeDescriptor = (&desc).try_into().unwrap();
-    let network = lwk_jade::Network::LocaltestLiquid;
+    let network = lwk_common::Network::LocaltestLiquid;
     jade.jade
         .register_multisig(RegisterMultisigParams {
             network,
@@ -367,7 +367,7 @@ fn jade_sign_message() {
         .unwrap();
 
     let params = GetXpubParams {
-        network: lwk_jade::Network::LocaltestLiquid,
+        network: lwk_common::Network::LocaltestLiquid,
         path: vec![0],
     };
     let xpub = jade.jade.get_cached_xpub(params).unwrap();
@@ -420,7 +420,7 @@ async fn async_ping() {
     let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
         .await
         .unwrap();
-    let network = lwk_jade::Network::LocaltestLiquid;
+    let network = lwk_common::Network::LocaltestLiquid;
     let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network);
     let result = jade.ping().await.unwrap();
     assert_eq!(result, 0);
@@ -440,7 +440,7 @@ async fn async_sign() {
     let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
         .await
         .unwrap();
-    let network = lwk_jade::Network::LocaltestLiquid;
+    let network = lwk_common::Network::LocaltestLiquid;
     let jade = lwk_jade::asyncr::Jade::new_tcp(stream, network);
     let params = DebugSetMnemonicParams {
         mnemonic: TEST_MNEMONIC.to_string(),

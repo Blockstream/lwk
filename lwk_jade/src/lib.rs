@@ -8,7 +8,6 @@ pub mod asyncr;
 pub mod consts;
 pub mod error;
 pub mod get_receive_address;
-mod network;
 pub mod protocol;
 pub mod register_multisig;
 pub mod sign_liquid_tx;
@@ -39,8 +38,7 @@ use elements::{
 };
 pub use error::Error;
 use get_receive_address::{SingleOrMulti, Variant};
-use lwk_common::burn_script;
-pub use network::Network;
+use lwk_common::{burn_script, Network};
 
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};

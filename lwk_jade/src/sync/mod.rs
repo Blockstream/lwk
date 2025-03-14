@@ -15,14 +15,13 @@ use crate::register_multisig::{
 };
 use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 use crate::{
-    derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error,
-    Network, Result,
+    derivation_path_to_vec, json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result,
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
-use lwk_common::Signer;
+use lwk_common::{Network, Signer};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 
@@ -38,7 +37,7 @@ pub struct Jade {
     conn: Mutex<Connection>,
 
     /// The network
-    pub(crate) network: crate::Network,
+    pub(crate) network: Network,
 
     /// Cached xpubs
     cached_xpubs: Mutex<HashMap<DerivationPath, Xpub>>,

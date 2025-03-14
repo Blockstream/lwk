@@ -1,8 +1,9 @@
+use lwk_common::Network;
 use serde::{ser::SerializeStruct, Serialize};
 
 #[derive(Debug)]
 pub struct GetReceiveAddressParams {
-    pub network: crate::Network,
+    pub network: Network,
 
     pub address: SingleOrMulti,
 }
@@ -61,6 +62,7 @@ impl Serialize for GetReceiveAddressParams {
 
 #[cfg(test)]
 mod test {
+    use lwk_common::Network;
     use serde_json::Value;
 
     use crate::get_receive_address::{SingleOrMulti, Variant};
@@ -78,7 +80,7 @@ mod test {
         "#;
         let single_value: Value = serde_json::from_str(single_str).unwrap();
         let single_struct = GetReceiveAddressParams {
-            network: crate::Network::Liquid,
+            network: Network::Liquid,
             address: SingleOrMulti::Single {
                 variant: Variant::ShWpkh,
                 path: vec![2147483697, 2147483648, 2147483648, 0, 143],
@@ -98,7 +100,7 @@ mod test {
         "#;
         let multi_value: Value = serde_json::from_str(multi_str).unwrap();
         let multi_struct = GetReceiveAddressParams {
-            network: crate::Network::Liquid,
+            network: Network::Liquid,
             address: SingleOrMulti::Multi {
                 multisig_name: "small_beans".to_string(),
                 paths: vec![vec![0, 43], vec![0, 14]],

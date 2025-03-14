@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use elements::hex::ToHex;
+use lwk_common::Network;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use serde_cbor::Value;
@@ -10,7 +11,6 @@ use crate::{
     get_receive_address::GetReceiveAddressParams,
     register_multisig::{GetRegisteredMultisigParams, RegisterMultisigParams},
     sign_liquid_tx::{SignLiquidTxParams, TxInputParams},
-    Network,
 };
 
 #[derive(Debug, Serialize)]
@@ -114,12 +114,12 @@ impl Request {
 
 #[derive(Debug, Serialize)]
 pub struct AuthUserParams {
-    pub network: crate::Network,
+    pub network: Network,
     pub epoch: u64,
 }
 
 impl AuthUserParams {
-    pub fn new(network: crate::Network) -> Self {
+    pub fn new(network: Network) -> Self {
         let epoch = web_time::SystemTime::now()
             .duration_since(web_time::SystemTime::UNIX_EPOCH)
             .map(|e| e.as_secs())
@@ -141,7 +141,7 @@ pub struct EntropyParams {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetXpubParams {
-    pub network: crate::Network,
+    pub network: Network,
 
     /// Derive the master node (m) with the given path and the return the resuting xpub
     pub path: Vec<u32>,

@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use lwk_common::Signer;
-use lwk_jade::{Jade, Network};
+use lwk_jade::Jade;
 use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
 use lwk_signer::SwSigner;
@@ -30,7 +30,7 @@ use crate::Error;
 enum AppSignerInner {
     #[allow(dead_code)]
     // allow dead_code otherwise warning on the second parameter which is needed only with the serial feature
-    JadeId(XKeyIdentifier, Network),
+    JadeId(XKeyIdentifier, lwk_common::Network),
 
     AvailableSigner(AnySigner),
     ExternalSigner(Fingerprint),
@@ -52,7 +52,7 @@ impl AppSigner {
     pub fn new_jade(
         id: XKeyIdentifier,
         emulator: Option<SocketAddr>,
-        network: Network,
+        network: lwk_common::Network,
     ) -> Result<Self, Error> {
         let inner = if let Some(socket) = emulator {
             // The emulator is meant to be used only in testing, we don't aim to handle connection/disconnection

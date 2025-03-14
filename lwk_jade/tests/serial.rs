@@ -14,7 +14,7 @@ fn serial_test_setup() -> Jade {
         .open()
         .unwrap();
 
-    Jade::new(port.into(), lwk_jade::Network::TestnetLiquid)
+    Jade::new(port.into(), lwk_common::Network::TestnetLiquid)
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn receive_address() {
     jade_api.unlock().unwrap();
 
     let params = GetReceiveAddressParams {
-        network: lwk_jade::Network::TestnetLiquid,
+        network: lwk_common::Network::TestnetLiquid,
         address: SingleOrMulti::Single {
             variant: Variant::ShWpkh,
             path: vec![2147483697, 2147483648, 2147483648, 0, 143],

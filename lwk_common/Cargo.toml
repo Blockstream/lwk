@@ -13,6 +13,7 @@ elements-miniscript = "0.4"
 qr_code = { version = "2.0.0", features = ["bmp"] }
 rand = "0.8"
 thiserror = "1.0.48"
+serde = "1"
 # avoid deps to the workspace
 
 [target.wasm32-unknown-unknown.dependencies]

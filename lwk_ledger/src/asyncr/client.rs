@@ -30,6 +30,8 @@ pub struct LiquidClient<T: Transport> {
     transport: T,
 
     fingerprint: OnceLock<Fingerprint>,
+
+    master_blinding_key: OnceLock<MasterBlindingKey>,
 }
 
 impl<T: Transport> LiquidClient<T> {
@@ -37,6 +39,7 @@ impl<T: Transport> LiquidClient<T> {
         Self {
             transport,
             fingerprint: OnceLock::new(),
+            master_blinding_key: OnceLock::new(),
         }
     }
 
@@ -531,6 +534,10 @@ impl<T: Transport> LiquidClient<T> {
     pub async fn get_master_blinding_key(
         &self,
     ) -> Result<MasterBlindingKey, LiquidClientError<T::Error>> {
+        if let Some(master_blinding_key) = self.master_blinding_key.get() {
+            return Ok(*master_blinding_key);
+        }
+
         let cmd = command::get_master_blinding_key();
         self.make_request(&cmd, None).await.and_then(|data| {
             if data.len() != 32 {
@@ -541,7 +548,12 @@ impl<T: Transport> LiquidClient<T> {
             } else {
                 let mut fg = [0x00; 32];
                 fg.copy_from_slice(&data[0..32]);
-                Ok(MasterBlindingKey::from(fg))
+                let master_blinding_key = MasterBlindingKey::from(fg);
+
+                // Cache the master blinding key in the OnceLock
+                let _ = self.master_blinding_key.set(master_blinding_key);
+
+                Ok(master_blinding_key)
             }
         })
     }

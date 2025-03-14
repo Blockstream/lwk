@@ -3,6 +3,7 @@ use crate::Network;
 use crate::Pset;
 use crate::WolletDescriptor;
 use lwk_ledger::asyncr::Ledger;
+use lwk_ledger::asyncr::Singlesig;
 use lwk_ledger::read_multi_apdu;
 use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
@@ -167,6 +168,23 @@ impl LedgerWeb {
             performance.now() - start_time
         );
         Ok(pset.into())
+    }
+
+    /// Return a single sig address with the given `variant` and `index`
+    #[wasm_bindgen(js_name = getReceiveAddressSingle)]
+    pub async fn get_receive_address_single(
+        &self,
+        // variant: Singlesig,  // TODO support other variants
+        index: u32,
+    ) -> Result<String, Error> {
+        let address = self
+            .ledger
+            .client
+            .get_receive_address_single(Singlesig::Wpkh, index)
+            .await
+            .map_err(|e| Error::Generic(format!("{:?} error getting address", e)))?;
+
+        Ok(address.to_string())
     }
 }
 

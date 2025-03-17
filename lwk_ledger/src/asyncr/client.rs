@@ -268,7 +268,7 @@ impl<T: Transport> LiquidClient<T> {
                 &ss, None,  // hmac
                 false, // change
                 index, // address index
-                false, // display
+                true,  // display
             )
             .await?;
         Ok(address)

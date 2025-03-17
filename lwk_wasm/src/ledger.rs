@@ -204,7 +204,8 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
         let chunks = write_apdu(&command);
         let report_id = 0x00;
         for mut chunk in chunks.into_iter() {
-            // console_log!("data -> {:?}", &chunk[..]);
+            #[cfg(debug_assertions)]
+            console_log!("chunkdata -> {:?}", &chunk[..]);
 
             let promise = self
                 .hid_device
@@ -240,6 +241,9 @@ impl lwk_ledger::asyncr::Transport for TransportWeb {
 
         let status = StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown);
         let vec = answer.data().to_vec();
+
+        #[cfg(debug_assertions)]
+        console_log!("full response {:?}", &vec[..]);
 
         #[cfg(debug_assertions)]
         console_log!(

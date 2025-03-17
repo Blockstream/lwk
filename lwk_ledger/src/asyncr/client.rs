@@ -296,11 +296,17 @@ impl<T: Transport> LiquidClient<T> {
             .make_request(&cmd, Some(&mut intpr))
             .await
             .and_then(|data| {
-                Address::parse_with_params(&String::from_utf8_lossy(&data), params).map_err(|_| {
-                    LiquidClientError::UnexpectedResult {
-                        command: cmd.ins,
-                        data,
-                    }
+                let address_str = String::from_utf8_lossy(&data).to_string();
+                Address::parse_with_params(&address_str, params).map_err(|_| {
+                    let unexpected_err: LiquidClientError<T::Error> =
+                        LiquidClientError::UnexpectedResult {
+                            command: cmd.ins,
+                            data,
+                        };
+                    LiquidClientError::ClientError(format!(
+                        "{unexpected_err:?} address_str:{address_str} trying to parse as:{}",
+                        self.network
+                    ))
                 })
             })?;
 

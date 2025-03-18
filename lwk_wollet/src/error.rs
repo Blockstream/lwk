@@ -79,6 +79,9 @@ pub enum Error {
     AddressError(#[from] crate::elements::AddressError),
 
     #[error(transparent)]
+    SecpZkpError(#[from] crate::elements::secp256k1_zkp::Error),
+
+    #[error(transparent)]
     PsetDetailsError(#[from] lwk_common::Error),
 
     #[error(transparent)]

@@ -66,7 +66,7 @@ impl Network {
         .into()
     }
 
-    /// Creates the default regtest `Network`
+    /// Creates the default regtest `Network` with the policy asset `5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225`
     #[wasm_bindgen(js_name = regtestDefault)]
     pub fn regtest_default() -> Network {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -90,6 +90,19 @@ impl Network {
     #[wasm_bindgen(js_name = isMainnet)]
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
+    }
+
+    #[wasm_bindgen(js_name = isTestnet)]
+    pub fn is_testnet(&self) -> bool {
+        matches!(&self.inner, &lwk_wollet::ElementsNetwork::LiquidTestnet)
+    }
+
+    #[wasm_bindgen(js_name = isRegtest)]
+    pub fn is_regtest(&self) -> bool {
+        matches!(
+            &self.inner,
+            &lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset: _ }
+        )
     }
 
     #[wasm_bindgen(js_name = toString)]

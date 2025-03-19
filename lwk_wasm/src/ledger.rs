@@ -19,7 +19,11 @@ use web_sys::HidDevice;
 use web_sys::HidDeviceRequestOptions;
 use web_sys::Performance;
 
-const LEDGER_DEVICE_IDS: [(u16, u16); 1] = [(0x2c97, 0x1011)];
+const LEDGER_DEVICE_IDS: [(u16, u16); 2] = [
+    (0x2c97, 0x1011), // nano S
+    (0x2c97, 0x5000), // nano S Plus
+                      // (0x2c97, 0x4000), // nano X
+];
 
 macro_rules! console_log {
     // Note that this is using the `log` function imported above during

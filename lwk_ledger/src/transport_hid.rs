@@ -18,7 +18,7 @@ impl Transport for TransportHID {
 
     fn exchange(&self, cmd: &APDUCmdVec) -> Result<(StatusWord, Vec<u8>), Self::Error> {
         self.0
-            .exchange(&cmd)
+            .exchange(cmd)
             .map(|answer| {
                 (
                     StatusWord::try_from(answer.retcode()).unwrap_or(StatusWord::Unknown),

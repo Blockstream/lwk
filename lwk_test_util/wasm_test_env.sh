@@ -50,6 +50,7 @@ $ELEMENTSD_EXEC \
     -rpcpassword=pass \
     -rpcbind=$ELEMENTS_HOST \
     -rpcport=$ELEMENTS_PORT \
+    -txindex=1 \
     -daemon
 
 echo "Waiting for elementsd to start..."
@@ -63,7 +64,7 @@ $ELEMENTS_CLI_CMD sendtoaddress el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7u
 # Start block generation loop in background
 (
     while true; do
-        $ELEMENTS_CLI_CMD generatetoaddress 1 $($ELEMENTS_CLI_CMD getnewaddress)
+        $ELEMENTS_CLI_CMD generatetoaddress 1 $($ELEMENTS_CLI_CMD getnewaddress) | jq -c
         sleep 5
     done
 ) &
@@ -72,13 +73,16 @@ GENERATE_PID=$!
 
 # Start waterfalls in the background
 $WATERFALLS_EXEC \
-    --testnet \
+    --regtest \
+    --add-cors \
     --node-url="http://$ELEMENTS_ADDR" \
     --listen="$LISTEN_ADDR" \
     --db-dir="$WATERFALLS_DB" \
     --rpc-user-password="user:pass" &
 
 WATERFALLS_PID=$!
+
+POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 
 echo "Using executables:"
 echo "  elementsd: $ELEMENTSD_EXEC"
@@ -87,6 +91,7 @@ echo "  waterfalls: $WATERFALLS_EXEC"
 echo
 echo "Waterfalls started with address: http://$LISTEN_ADDR"
 echo "Elements RPC address: http://$ELEMENTS_ADDR"
+echo "Policy asset: $POLICY_ASSET"
 
 echo "Press Ctrl+C to stop all services"
 

@@ -253,16 +253,27 @@ impl<T: Transport> LiquidClient<T> {
         variant: Singlesig,
         index: u32,
     ) -> Result<Address, LiquidClientError<T::Error>> {
+        let map_str_err = |e: LiquidClientError<T::Error>, message: &str| {
+            LiquidClientError::ClientError(format!("{} {}", message, e))
+        };
         let version = Version::V2;
-        let path = variant.derivation_path();
-        let xpub = self.get_extended_pubkey(&path, false).await?;
-        let fingerprint = self.get_master_fingerprint().await?;
-        let master_blinding_key = self.get_master_blinding_key().await?;
+        let path = variant.derivation_path(self.network);
+        let xpub = self
+            .get_extended_pubkey(&path, false)
+            .await
+            .map_err(|e| map_str_err(e, "Failed to get extended pubkey"))?;
+        let fingerprint = self
+            .get_master_fingerprint()
+            .await
+            .map_err(|e| map_str_err(e, "Failed to get master fingerprint"))?;
+        let master_blinding_key = self
+            .get_master_blinding_key()
+            .await
+            .map_err(|e| map_str_err(e, "Failed to get master blinding key"))?;
         let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
         let ss_keys = vec![wpk0];
         let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
         let ss = WalletPolicy::new("".to_string(), version, desc, ss_keys.clone());
-
         let address = self
             .get_wallet_address(
                 &ss, None,  // hmac
@@ -270,7 +281,8 @@ impl<T: Transport> LiquidClient<T> {
                 index, // address index
                 true,  // display
             )
-            .await?;
+            .await
+            .map_err(|e| map_str_err(e, "Failed to get wallet address"))?;
         Ok(address)
     }
 

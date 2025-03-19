@@ -1,6 +1,7 @@
 pub use crate::psbt::PartialSignature;
 pub use client::{LiquidClient, Transport};
 use elements_miniscript::bitcoin::bip32::DerivationPath;
+use lwk_common::Network;
 pub use transport_tcp::TransportTcp;
 
 mod client;
@@ -31,10 +32,15 @@ pub enum Singlesig {
 }
 
 impl Singlesig {
-    pub fn derivation_path(&self) -> DerivationPath {
+    pub fn derivation_path(&self, network: Network) -> DerivationPath {
         // TODO network
-        match self {
-            Singlesig::Wpkh => "m/84h/1h/0h".parse().expect("static"),
+        match network {
+            Network::Liquid => match self {
+                Singlesig::Wpkh => "m/84h/1776h/0h".parse().expect("static"),
+            },
+            _ => match self {
+                Singlesig::Wpkh => "m/84h/1h/0h".parse().expect("static"),
+            },
         }
     }
 }

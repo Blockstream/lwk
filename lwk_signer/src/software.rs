@@ -16,6 +16,7 @@ use elements_miniscript::{
         pset::PartiallySignedTransaction,
         secp256k1_zkp::{All, Secp256k1},
         sighash::SighashCache,
+        EcdsaSighashType,
     },
     elementssig_to_rawsig,
     psbt::PsbtExt,
@@ -212,11 +213,12 @@ impl Signer for SwSigner {
             messages.push(msg);
         }
 
-        // Fixme: Take a parameter
-        let hash_ty = elements_miniscript::elements::EcdsaSighashType::All;
-
         let signer_fingerprint = self.fingerprint();
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
+            let hash_ty = input
+                .sighash_type
+                .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
+                .unwrap_or(EcdsaSighashType::All);
             for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
                 if &signer_fingerprint == fingerprint {
                     let ext_derived = self.xprv.derive_priv(&self.secp, derivation_path)?;

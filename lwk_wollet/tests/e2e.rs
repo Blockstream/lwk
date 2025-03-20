@@ -2023,3 +2023,138 @@ fn test_update_v2_after_old_updates() {
     wollet.apply_update(update).unwrap();
     assert_eq!(wollet.transactions().unwrap().len(), 64);
 }
+
+fn liquidex<C: BlockchainBackend>(
+    wallet_maker: &mut TestWollet<C>,
+    signer_maker: &AnySigner,
+    wallet_taker: &mut TestWollet<C>,
+    signer_taker: &AnySigner,
+    utxo_send: OutPoint,
+    sats_recv: u64,
+    asset_recv: elements::AssetId,
+) {
+    // LiquiDEX make
+    let addr = wallet_maker.address_result(None).address().clone();
+    let mut pset = wallet_maker
+        .tx_builder()
+        .liquidex_make(utxo_send, &addr, sats_recv, asset_recv)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let pset_unsigned = pset.clone();
+    wallet_maker.sign(signer_maker, &mut pset);
+
+    // TODO: handle wollet_get_details
+
+    // Deserialization (done in wallet_make.sign) loses the input abf,
+    // until we update rust-elements we need
+    // to get the input abf from the unsigned pset.
+    // FIXME: remove this once we update to the latest rust-elements release
+    pset.merge(pset_unsigned).unwrap();
+    let proposal = LiquidexProposal::from_pset(&pset).unwrap();
+
+    // Extract validated assets and amounts from the proposal
+    let txid = proposal.get_previous_outpoint().unwrap().txid;
+    let tx = wallet_maker.wollet.transaction(&txid).unwrap().unwrap().tx;
+    let (maker_input_sats, maker_input_asset) = proposal.get_input(Some(tx)).unwrap();
+    assert_eq!(maker_input_sats, pset.inputs()[0].amount.unwrap());
+    assert_eq!(maker_input_asset, pset.inputs()[0].asset.unwrap());
+    let (maker_output_sats, maker_output_asset) = proposal.get_output().unwrap();
+    assert_eq!(maker_output_sats, sats_recv);
+    assert_eq!(maker_output_asset, asset_recv);
+
+    // LiquiDEX take
+    let mut pset = wallet_taker
+        .tx_builder()
+        .liquidex_take(vec![proposal])
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet_taker.sign(signer_taker, &mut pset);
+    let _txid = wallet_taker.send(&mut pset);
+    wait_tx_update(wallet_maker);
+}
+
+#[test]
+fn test_liquidex() {
+    let server = setup();
+
+    // Alice
+    let signer_a = generate_signer();
+    let view_key = generate_view_key();
+    let desc_a = format!("ct({},elwpkh({}/*))", view_key, signer_a.xpub());
+    let sa = AnySigner::Software(signer_a);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wa = TestWollet::new(client, &desc_a);
+
+    // Bob
+    let signer_b = generate_signer();
+    let view_key = generate_view_key();
+    let desc_b = format!("ct({},elwpkh({}/*))", view_key, signer_b.xpub());
+    let sb = AnySigner::Software(signer_b);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wb = TestWollet::new(client, &desc_b);
+
+    wa.fund_btc(&server);
+    wb.fund_btc(&server);
+
+    let (asset_1, _) = wa.issueasset(&[&sa], 10, 1, None, None);
+    let (asset_2, _) = wb.issueasset(&[&sb], 10, 1, None, None);
+
+    assert_eq!(wa.balance(&asset_1), 10);
+    assert_eq!(wa.balance(&asset_2), 0);
+    assert_eq!(wb.balance(&asset_1), 0);
+    assert_eq!(wb.balance(&asset_2), 10);
+    let policy_asset = wa.policy_asset();
+
+    // Maker: A, sends LBTC, receives 1 of asset_2
+    let utxo = wa
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 1, asset_2);
+    assert_eq!(wa.balance(&asset_1), 10);
+    assert_eq!(wa.balance(&asset_2), 1);
+    assert_eq!(wa.balance(&policy_asset), 0);
+    assert_eq!(wb.balance(&asset_1), 0);
+    assert_eq!(wb.balance(&asset_2), 9);
+
+    // Maker: A, sends asset_2, receives LBTC
+    let utxo = wa
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == asset_2)
+        .unwrap()
+        .outpoint;
+    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 10_000, policy_asset);
+    assert_eq!(wa.balance(&asset_1), 10);
+    assert_eq!(wa.balance(&asset_2), 0);
+    assert_eq!(wa.balance(&policy_asset), 10_000);
+    assert_eq!(wb.balance(&asset_1), 0);
+    assert_eq!(wb.balance(&asset_2), 10);
+
+    // Maker: A, sends asset_1, receives asset_2
+    let utxo = wa
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == asset_1)
+        .unwrap()
+        .outpoint;
+    liquidex(&mut wa, &sa, &mut wb, &sb, utxo, 1, asset_2);
+    assert_eq!(wa.balance(&asset_1), 0);
+    assert_eq!(wa.balance(&asset_2), 1);
+    assert_eq!(wa.balance(&policy_asset), 10_000);
+    assert_eq!(wb.balance(&asset_1), 10);
+    assert_eq!(wb.balance(&asset_2), 9);
+
+    // TODO: check fees
+}

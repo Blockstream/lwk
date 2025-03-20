@@ -6,6 +6,7 @@ set -e
 # Default addresses and executables if not specified in environment
 LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
 ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
+ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
 # Compute ELEMENTS_CLI_EXEC based on ELEMENTSD_EXEC location if not provided
 if [ -z "$ELEMENTS_CLI_EXEC" ]; then
@@ -19,6 +20,7 @@ if [ -z "$ELEMENTS_CLI_EXEC" ]; then
     fi
 fi
 WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
+REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
 
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
@@ -27,7 +29,8 @@ echo "Using temporary directory: $ROOT_DIR"
 # Create necessary directories
 ELEMENTS_DIR="$ROOT_DIR/elements_data"
 WATERFALLS_DB="$ROOT_DIR/waterfalls_db"
-mkdir -p "$ELEMENTS_DIR" "$WATERFALLS_DB"
+ASSET_REGISTRY_DB="$ROOT_DIR/asset_registry_db"
+mkdir -p "$ELEMENTS_DIR" "$WATERFALLS_DB" "$ASSET_REGISTRY_DB"
 
 # Extract host and port from ELEMENTS_ADDR
 ELEMENTS_HOST=$(echo $ELEMENTS_ADDR | cut -d: -f1)
@@ -86,15 +89,25 @@ $WATERFALLS_EXEC \
 
 WATERFALLS_PID=$!
 
+# Start asset registry in the background
+SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
+    --addr "$ASSET_REGISTRY_ADDR" \
+    --db-path "$ASSET_REGISTRY_DB" \
+    --esplora-url "http://$LISTEN_ADDR" &
+
+ASSET_REGISTRY_PID=$!
+
 POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 
 echo "Using executables:"
 echo "  elementsd: $ELEMENTSD_EXEC"
 echo "  elements-cli: $ELEMENTS_CLI_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
+echo "  registry: $REGISTRY_EXEC"
 echo
 echo "Waterfalls started with address: http://$LISTEN_ADDR"
 echo "Elements RPC address: http://$ELEMENTS_ADDR"
+echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
 echo "Policy asset: $POLICY_ASSET"
 
 echo "Press Ctrl+C to stop all services"
@@ -104,6 +117,7 @@ cleanup() {
     echo "Stopping services..."
     kill $WATERFALLS_PID || true
     kill $GENERATE_PID || true
+    kill $ASSET_REGISTRY_PID || true
     $ELEMENTS_CLI_CMD stop || true
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"

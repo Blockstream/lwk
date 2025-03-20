@@ -95,6 +95,7 @@ mod config;
 mod descriptor;
 mod domain;
 mod error;
+mod liquidex;
 mod model;
 pub mod pegin;
 mod persister;
@@ -110,6 +111,7 @@ pub use crate::clients::{Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
+pub use crate::liquidex::LiquidexProposal;
 pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,

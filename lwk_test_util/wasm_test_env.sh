@@ -77,7 +77,7 @@ GENERATE_PID=$!
 
 # Start waterfalls in the background
 $WATERFALLS_EXEC \
-    --regtest \
+    --network elements-regtest \
     --add-cors \
     --node-url="http://$ELEMENTS_ADDR" \
     --listen="$LISTEN_ADDR" \

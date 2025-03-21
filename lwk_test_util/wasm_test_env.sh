@@ -92,6 +92,7 @@ WATERFALLS_PID=$!
 # Start asset registry in the background
 SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
     --addr "$ASSET_REGISTRY_ADDR" \
+    --add-cors \
     --db-path "$ASSET_REGISTRY_DB" \
     --esplora-url "http://$LISTEN_ADDR" &
 

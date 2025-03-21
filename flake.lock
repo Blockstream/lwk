@@ -94,11 +94,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1713271724,
-        "narHash": "sha256-0TRBGEJROTxtv1+ISeZ+vGriAd999v6lJ1L8aFdlNV4=",
+        "lastModified": 1742546456,
+        "narHash": "sha256-SaqNzprV2AblJ2ovUkwxgdjR8GY1Qgo7wq+IUY6m9Mw=",
         "owner": "blockstream",
         "repo": "asset_registry",
-        "rev": "f1c62fd793652827d3387e9aa4fca13c76de334e",
+        "rev": "731832245ed388e5ec1de4b60745483667ab02fc",
         "type": "github"
       },
       "original": {

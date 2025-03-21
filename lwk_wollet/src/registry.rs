@@ -158,12 +158,14 @@ impl Registry {
 
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         let response = self.client.post(&self.base_url).json(&data).send().await?;
-        if response.status().is_success() {
+        let status = response.status();
+        if status.is_success() {
             Ok(())
         } else {
+            let body = response.text().await.unwrap_or_default();
             Err(Error::Generic(format!(
-                "Failed to post contract to registry: {}",
-                response.status()
+                "Failed to post contract to registry: {} {}",
+                status, body
             )))
         }
     }

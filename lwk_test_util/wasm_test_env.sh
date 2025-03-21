@@ -7,6 +7,7 @@ set -e
 LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
 ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
 ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
+ELECTRS_HTTP_ADDR="${ELECTRS_HTTP_ADDR:-127.0.0.1:3002}" # required for asset registry server
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
 # Compute ELEMENTS_CLI_EXEC based on ELEMENTSD_EXEC location if not provided
 if [ -z "$ELEMENTS_CLI_EXEC" ]; then
@@ -21,6 +22,7 @@ if [ -z "$ELEMENTS_CLI_EXEC" ]; then
 fi
 WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
 REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
+ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
 
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
@@ -30,7 +32,8 @@ echo "Using temporary directory: $ROOT_DIR"
 ELEMENTS_DIR="$ROOT_DIR/elements_data"
 WATERFALLS_DB="$ROOT_DIR/waterfalls_db"
 ASSET_REGISTRY_DB="$ROOT_DIR/asset_registry_db"
-mkdir -p "$ELEMENTS_DIR" "$WATERFALLS_DB" "$ASSET_REGISTRY_DB"
+ELECTRS_DB="$ROOT_DIR/electrs_db"
+mkdir -p "$ELEMENTS_DIR" "$WATERFALLS_DB" "$ASSET_REGISTRY_DB" "$ELECTRS_DB"
 
 # Extract host and port from ELEMENTS_ADDR
 ELEMENTS_HOST=$(echo $ELEMENTS_ADDR | cut -d: -f1)
@@ -57,7 +60,7 @@ $ELEMENTSD_EXEC \
     -daemon
 
 echo "Waiting for elementsd to start..."
-sleep 3
+sleep 1
 
 $ELEMENTS_CLI_CMD createwallet test_wallet
 $ELEMENTS_CLI_CMD rescanblockchain
@@ -72,13 +75,26 @@ $ELEMENTS_CLI_CMD sendtoaddress el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262
 (
     while true; do
         $ELEMENTS_CLI_CMD generatetoaddress 1 $($ELEMENTS_CLI_CMD getnewaddress) | jq -c
-        sleep 5
+        sleep 2
     done
 ) &
 
 GENERATE_PID=$!
 
+# Start electrs in the background
+echo "Starting electrs..."
+$ELECTRS_LIQUID_EXEC \
+    --network liquidregtest \
+    --jsonrpc-import \
+    --db-dir="$ELECTRS_DB" \
+    --daemon-rpc-addr="$ELEMENTS_ADDR" \
+    --cookie="user:pass" \
+    --http-addr="$ELECTRS_HTTP_ADDR" &
+
+ELECTRS_PID=$!
+
 # Start waterfalls in the background
+echo "Starting waterfalls..."
 $WATERFALLS_EXEC \
     --network elements-regtest \
     --add-cors \
@@ -90,11 +106,13 @@ $WATERFALLS_EXEC \
 WATERFALLS_PID=$!
 
 # Start asset registry in the background
+# Note: using electrs HTTP endpoint for the esplora URL because it has the /asset endpoint
+echo "Starting asset registry..."
 SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
     --addr "$ASSET_REGISTRY_ADDR" \
     --add-cors \
     --db-path "$ASSET_REGISTRY_DB" \
-    --esplora-url "http://$LISTEN_ADDR" &
+    --esplora-url "http://$ELECTRS_HTTP_ADDR" &
 
 ASSET_REGISTRY_PID=$!
 
@@ -103,15 +121,22 @@ POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 echo "Using executables:"
 echo "  elementsd: $ELEMENTSD_EXEC"
 echo "  elements-cli: $ELEMENTS_CLI_EXEC"
+echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
 echo "  registry: $REGISTRY_EXEC"
 echo
-echo "Waterfalls started with address: http://$LISTEN_ADDR"
+echo "Waterfalls HTTP API: http://$LISTEN_ADDR"
 echo "Elements RPC address: http://$ELEMENTS_ADDR"
+echo "Electrs RPC address: $ELECTRS_RPC_ADDR"
+echo "Electrs HTTP API: http://$ELECTRS_HTTP_ADDR"
 echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
 echo "Policy asset: $POLICY_ASSET"
 
 echo "Press Ctrl+C to stop all services"
+
+# Need to set these env vars for tests
+export ELECTRS_LIQUID_EXEC
+export ELEMENTSD_EXEC
 
 # Handle cleanup on script termination
 cleanup() {
@@ -119,6 +144,7 @@ cleanup() {
     kill $WATERFALLS_PID || true
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true
+    kill $ELECTRS_PID || true
     $ELEMENTS_CLI_CMD stop || true
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"

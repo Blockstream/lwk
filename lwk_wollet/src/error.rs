@@ -42,6 +42,9 @@ pub enum Error {
     #[error(transparent)]
     ElementsEncode(#[from] crate::elements::encode::Error),
 
+    #[error("Hex Error: {0}")]
+    ElementsHex(crate::elements::hex::Error),
+
     #[error(transparent)]
     Hashes(#[from] crate::elements::hashes::FromSliceError),
 
@@ -224,5 +227,11 @@ pub enum Error {
 impl From<aes_gcm_siv::aead::Error> for Error {
     fn from(err: aes_gcm_siv::aead::Error) -> Self {
         Self::Aes(err.to_string())
+    }
+}
+
+impl From<elements::hex::Error> for Error {
+    fn from(err: elements::hex::Error) -> Self {
+        Self::ElementsHex(err)
     }
 }

@@ -454,7 +454,6 @@ mod test {
                 &signer,
                 lwk_common::Singlesig::Wpkh,
                 lwk_common::DescriptorBlindingKey::Slip77,
-                network.is_mainnet(),
             )
             .unwrap();
 

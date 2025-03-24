@@ -45,12 +45,10 @@ impl Signer {
     pub fn wpkh_slip77_descriptor(&self) -> Result<WolletDescriptor, Error> {
         // TODO: make script_variant and blinding_variant parameters
 
-        let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
         let script_variant = lwk_common::Singlesig::Wpkh;
         let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
-        let desc_str =
-            lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant, is_mainnet)
-                .map_err(Error::Generic)?;
+        let desc_str = lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant)
+            .map_err(Error::Generic)?;
 
         WolletDescriptor::new(&desc_str)
     }

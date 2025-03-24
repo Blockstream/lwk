@@ -19,7 +19,6 @@ fn roundtrip(
             signers[0],
             variant.unwrap(),
             lwk_common::DescriptorBlindingKey::Slip77,
-            false,
         )
         .unwrap(),
         _ => multisig_desc(signers, threshold.unwrap()),

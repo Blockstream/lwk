@@ -28,7 +28,6 @@ fn roundtrip(
             signers[0],
             variant.unwrap(),
             lwk_common::DescriptorBlindingKey::Slip77,
-            false,
         )
         .unwrap(),
         _ => {
@@ -109,8 +108,7 @@ fn jade_slip77() {
     let script_variant = lwk_common::Singlesig::Wpkh;
     let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
     let desc_str =
-        lwk_common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant, false)
-            .unwrap();
+        lwk_common::singlesig_desc(&jade_init.jade, script_variant, blinding_variant).unwrap();
     assert!(desc_str.contains(lwk_test_util::TEST_MNEMONIC_SLIP77))
 }
 

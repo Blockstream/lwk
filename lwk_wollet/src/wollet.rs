@@ -1097,7 +1097,7 @@ mod tests {
                     DescriptorBlindingKey::Elip151,
                 ] {
                     let desc: WolletDescriptor =
-                        singlesig_desc(&signer, script_variant, blinding_variant, is_mainnet)
+                        singlesig_desc(&signer, script_variant, blinding_variant)
                             .unwrap()
                             .parse()
                             .unwrap();

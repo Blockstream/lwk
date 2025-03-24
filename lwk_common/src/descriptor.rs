@@ -13,8 +13,8 @@ pub fn singlesig_desc<S: Signer>(
     signer: &S,
     script_variant: Singlesig,
     blinding_variant: DescriptorBlindingKey,
-    is_mainnet: bool,
 ) -> Result<String, String> {
+    let is_mainnet = signer.is_mainnet().map_err(|e| format!("{:?}", e))?;
     let coin_type = if is_mainnet { 1776 } else { 1 };
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),

@@ -583,7 +583,6 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::SignerSinglesigDescriptor => {
             let r: request::SignerSinglesigDescriptor = serde_json::from_value(params)?;
             let mut s = state.lock()?;
-            let is_mainnet = s.config.is_mainnet();
 
             let signer = s.get_available_signer(&r.name)?;
 
@@ -597,7 +596,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .parse()
                 .map_err(|e: InvalidBlindingKeyVariant| e.to_string())?;
 
-            let descriptor = singlesig_desc(signer, script_variant, blinding_variant, is_mainnet)?;
+            let descriptor = singlesig_desc(signer, script_variant, blinding_variant)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::SignerSinglesigDescriptor { descriptor })?,

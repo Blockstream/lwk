@@ -136,7 +136,7 @@ impl<T: Transport> Signer for &Ledger<T> {
                         let xpub = self
                             .client
                             .get_extended_pubkey(&path, false)
-                            .expect("FIXME");
+                            .map_err(to_dbg)?;
                         let key = WalletPubKey::from(((*fp, path.clone()), xpub));
                         let keys = vec![key];
                         let desc = if is_p2wpkh {
@@ -199,7 +199,7 @@ impl<T: Transport> Signer for &Ledger<T> {
                             sorted,
                             None,
                         )
-                        .expect("FIXME");
+                        .map_err(to_dbg)?;
                         let is_change = false;
                         if let Ok(d) = wallet_policy.get_descriptor(is_change) {
                             wallets.insert(d, wallet_policy);
@@ -213,7 +213,7 @@ impl<T: Transport> Signer for &Ledger<T> {
         for wallet_policy in wallets.values() {
             let hmac = if wallet_policy.threshold.is_some() {
                 // Register multisig wallets
-                let (_id, hmac) = self.client.register_wallet(wallet_policy).expect("FIXME");
+                let (_id, hmac) = self.client.register_wallet(wallet_policy).map_err(to_dbg)?;
                 Some(hmac)
             } else {
                 None
@@ -221,7 +221,7 @@ impl<T: Transport> Signer for &Ledger<T> {
             let partial_sigs = self
                 .client
                 .sign_psbt(pset, wallet_policy, hmac.as_ref())
-                .expect("FIXME");
+                .map_err(to_dbg)?;
             n_sigs += partial_sigs.len();
 
             // Add sigs to pset
@@ -246,21 +246,22 @@ impl<T: Transport> Signer for &Ledger<T> {
     }
 
     fn derive_xpub(&self, path: &DerivationPath) -> std::result::Result<Xpub, Self::Error> {
-        let r = self.client.get_extended_pubkey(path, false).expect("FIXME");
-        Ok(r)
+        self.client.get_extended_pubkey(path, false).map_err(to_dbg)
     }
 
     fn slip77_master_blinding_key(
         &self,
     ) -> std::result::Result<slip77::MasterBlindingKey, Self::Error> {
-        let r = self.client.get_master_blinding_key().expect("FIXME");
-        Ok(r)
+        self.client.get_master_blinding_key().map_err(to_dbg)
     }
 
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
-        let r = self.client.get_master_fingerprint().expect("FIXME");
-        Ok(r)
+        self.client.get_master_fingerprint().map_err(to_dbg)
     }
+}
+
+fn to_dbg(e: impl std::fmt::Debug) -> Error {
+    Error::ClientError(format!("{:?}", e))
 }
 
 impl<T: Transport> Signer for Ledger<T> {

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use elements::{
     bitcoin::{
         self,
-        bip32::{DerivationPath, Fingerprint, Xpub},
+        bip32::{ChildNumber, DerivationPath, Fingerprint, Xpub},
         XKeyIdentifier,
     },
     pset::PartiallySignedTransaction,
@@ -58,6 +58,18 @@ pub trait Signer {
     }
 
     fn is_mainnet(&self) -> Result<bool, Self::Error> {
-        Ok(self.xpub()?.network == bitcoin::NetworkKind::Main)
+        let xpub = match self.xpub() {
+            Ok(xpub) => xpub,
+            Err(_) => {
+                // We are probably on a Ledger that won't return the master xpub
+                let path = [
+                    ChildNumber::from_hardened_idx(44).expect("static"),
+                    ChildNumber::from_hardened_idx(1).expect("static"), // TODO: work on  mainnet?
+                    ChildNumber::from_hardened_idx(0).expect("static"),
+                ];
+                self.derive_xpub(&DerivationPath::from_iter(path))?
+            }
+        };
+        Ok(xpub.network == bitcoin::NetworkKind::Main)
     }
 }

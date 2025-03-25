@@ -188,13 +188,9 @@ impl Jade {
     async fn desc(&self, script_variant: lwk_common::Singlesig) -> Result<WolletDescriptor, Error> {
         let signer = self.get_or_create_fake_signer().await?;
 
-        let desc_str = lwk_common::singlesig_desc(
-            signer,
-            script_variant,
-            DescriptorBlindingKey::Slip77,
-            self.inner.network().is_mainnet(),
-        )
-        .map_err(Error::Generic)?;
+        let desc_str =
+            lwk_common::singlesig_desc(signer, script_variant, DescriptorBlindingKey::Slip77)
+                .map_err(Error::Generic)?;
         WolletDescriptor::new(&desc_str)
     }
 

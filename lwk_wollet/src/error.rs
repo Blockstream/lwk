@@ -221,6 +221,9 @@ pub enum Error {
 
     #[error("Transaction has empty witness, did you forget to sign and finalize?")]
     EmptyWitness,
+
+    #[error(transparent)]
+    LiquidexError(#[from] crate::liquidex::LiquidexError),
 }
 
 // cannot derive automatically with this error because of trait bound

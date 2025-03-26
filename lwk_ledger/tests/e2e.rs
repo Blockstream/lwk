@@ -315,3 +315,26 @@ async fn test_asyncr_ledger() {
     let signed = client.sign(&mut pset).await.unwrap();
     assert!(signed > 0);
 }
+
+#[test]
+fn test_ledger_sign_issuance() {
+    let docker = clients::Cli::default();
+    let ledger = LedgerEmulator::new().expect("test");
+    let container = docker.run(ledger);
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let c = Ledger::new(port);
+
+    // Get device info for wallet setup
+    let fingerprint = c.client.get_master_fingerprint().unwrap();
+    assert_eq!(fingerprint.to_string(), "f5acc2fd");
+
+    // Load and parse the issuance PSET
+    let pset_b64 = include_str!("../tests/data/pset_ledger_regtest_issuance.base64");
+    let mut pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
+
+    // Sign the PSET
+    let sigs = lwk_common::Signer::sign(&c, &mut pset).unwrap();
+
+    // Check that we got at least one sigs
+    assert!(sigs > 0);
+}

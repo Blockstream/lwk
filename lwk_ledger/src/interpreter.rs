@@ -140,7 +140,10 @@ fn get_preimage_command(
     let (_, preimage) = known_preimages
         .iter()
         .find(|(hash, _)| hash == &request[1..])
-        .ok_or(InterpreterError::UnknownHash)?;
+        .ok_or(InterpreterError::Generic(format!(
+            "Unknown preimage: {:?}",
+            &request[1..]
+        )))?;
 
     let preimage_len_out = encode::serialize(&VarInt(preimage.len() as u64));
 
@@ -190,10 +193,14 @@ fn get_merkle_leaf_proof(
         InterpreterError::UnsupportedRequest(ClientCommandCode::GetMerkleLeafProof as u8)
     })?;
 
-    let tree = trees
-        .iter()
-        .find(|tree| tree.root_hash() == root)
-        .ok_or(InterpreterError::UnknownHash)?;
+    let tree =
+        trees
+            .iter()
+            .find(|tree| tree.root_hash() == root)
+            .ok_or(InterpreterError::Generic(format!(
+                "Unknown Merkle root: {:?}",
+                root
+            )))?;
 
     if leaf_index >= tree_size || tree_size.0 != tree.size() as u64 {
         return Err(InterpreterError::InvalidIndexOrSize);
@@ -237,14 +244,21 @@ fn get_merkle_leaf_index(
     let root = &request[0..32];
     let hash = &request[32..64];
 
-    let tree = trees
-        .iter()
-        .find(|tree| tree.root_hash() == root)
-        .ok_or(InterpreterError::UnknownHash)?;
+    let tree =
+        trees
+            .iter()
+            .find(|tree| tree.root_hash() == root)
+            .ok_or(InterpreterError::Generic(format!(
+                "Unknown Merkle root: {:?}",
+                root
+            )))?;
 
     let leaf_index = tree
         .get_leaf_index(hash)
-        .ok_or(InterpreterError::UnknownHash)?;
+        .ok_or(InterpreterError::Generic(format!(
+            "Unknown leaf hash: {:?}",
+            hash
+        )))?;
 
     let mut response = 1_u8.to_be_bytes().to_vec();
     response.extend(encode::serialize(&VarInt(leaf_index as u64)));
@@ -318,4 +332,5 @@ pub enum InterpreterError {
     UnknownHash,
     UnknownMerkleRoot,
     UnexpectedQueue,
+    Generic(String),
 }

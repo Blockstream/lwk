@@ -3,7 +3,6 @@ use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::AddressParams;
 use lwk_containers::testcontainers::clients;
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
-use lwk_ledger::asyncr::Singlesig;
 use lwk_ledger::*;
 
 #[test]
@@ -315,4 +314,67 @@ async fn test_asyncr_ledger() {
     let mut pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
     let signed = client.sign(&mut pset).await.unwrap();
     assert!(signed > 0);
+}
+
+#[test]
+fn test_ledger_sign_issuance() {
+    let docker = clients::Cli::default();
+    let ledger = LedgerEmulator::new().expect("test");
+    let container = docker.run(ledger);
+    let port = container.get_host_port_ipv4(LEDGER_EMULATOR_PORT);
+    let client = Ledger::new(port).client;
+
+    // Verify we can connect to the emulator
+    let (name, version, _flags) = client.get_version().unwrap();
+    assert_eq!(version, "2.2.3");
+    assert_eq!(name, "Liquid Regtest");
+
+    // Get device info for wallet setup
+    let fingerprint = client.get_master_fingerprint().unwrap();
+    assert_eq!(fingerprint.to_string(), "f5acc2fd");
+
+    // Get master blinding key for confidential transactions
+    let master_blinding_key = client.get_master_blinding_key().unwrap();
+
+    // Get the xpub for creating a single-sig wallet
+    let path: DerivationPath = "m/84h/1h/0h".parse().unwrap();
+    let xpub = client.get_extended_pubkey(&path, false).unwrap();
+    let wpk0 = WalletPubKey::from(((fingerprint, path), xpub));
+    let ss_keys = vec![wpk0];
+
+    // Create a single-sig wallet with slip77 blinding
+    let version = Version::V2;
+    let desc = format!("ct(slip77({master_blinding_key}),wpkh(@0/**))");
+    let ss_wallet = WalletPolicy::new("".to_string(), version, desc, ss_keys);
+
+    // Load and parse the issuance PSET
+    let pset_b64 = include_str!("../tests/data/pset_ledger_regtest_issuance.base64");
+    let mut pset: PartiallySignedTransaction = pset_b64.parse().unwrap();
+
+    // Sign the PSET
+    let sigs = client
+        .sign_psbt(
+            &pset, &ss_wallet, None, // hmac not needed for singlesig
+        )
+        .unwrap();
+
+    // Check that we got at least one signature
+    assert!(!sigs.is_empty());
+
+    // Sign using the direct method
+    let mut pset_direct: PartiallySignedTransaction = pset_b64.parse().unwrap();
+    let signed = client.sign_psbt(&pset_direct, &ss_wallet, None).unwrap();
+    assert!(!signed.is_empty());
+
+    // Validate the signatures match
+    assert_eq!(sigs.len(), signed.len());
+    for ((idx1, sig1), (idx2, sig2)) in sigs.iter().zip(signed.iter()) {
+        assert_eq!(idx1, idx2);
+        match (sig1, sig2) {
+            (PartialSignature::Sig(_, sig1), PartialSignature::Sig(_, sig2)) => {
+                assert_eq!(sig1, sig2);
+            }
+            _ => panic!("unexpected signature type"),
+        }
+    }
 }

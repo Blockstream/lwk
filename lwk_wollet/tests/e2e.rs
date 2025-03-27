@@ -653,6 +653,13 @@ fn create_pset_error() {
         .unwrap_err();
     assert_eq!(err.to_string(), Error::InvalidAmount.to_string());
 
+    // Cannot issue 0 of the asset and 0 of the token
+    let err = wallet
+        .tx_builder()
+        .issue_asset(0, None, 0, None, None)
+        .unwrap_err();
+    assert!(matches!(err, Error::InvalidAmount));
+
     // Invalid asset
     let addressees = vec![UnvalidatedRecipient {
         satoshi: 1_000,

@@ -432,7 +432,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let issuance = &details.issuances[0];
         assert_eq!(asset, issuance.asset().unwrap());
         assert_eq!(token, issuance.token().unwrap());
-        assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap());
+        assert_eq!(satoshi_asset, issuance.asset_satoshi().unwrap_or(0));
         assert_eq!(satoshi_token, issuance.token_satoshi().unwrap());
         let fee = details.balance.fee as i64;
         assert!(fee > 0);
@@ -441,7 +441,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
             -fee
         );
         assert_eq!(
-            *details.balance.balances.get(&asset).unwrap(),
+            *details.balance.balances.get(&asset).unwrap_or(&0),
             satoshi_asset as i64
         );
         assert_eq!(
@@ -465,8 +465,8 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let issuance = self.wollet.issuance(&asset).unwrap();
         assert_eq!(issuance.vin, 0);
         assert!(!issuance.is_reissuance);
-        assert_eq!(issuance.asset_amount, Some(satoshi_asset));
-        assert_eq!(issuance.token_amount, Some(satoshi_token));
+        assert_eq!(issuance.asset_amount.unwrap_or(0), satoshi_asset);
+        assert_eq!(issuance.token_amount.unwrap_or(0), satoshi_token);
 
         let prevout = OutPoint::new(
             issuance_input.previous_txid,

@@ -135,7 +135,9 @@ impl Wollet {
             .inputs_mut()
             .get_mut(idx)
             .ok_or_else(|| Error::MissingVin)?;
-        input.issuance_value_amount = Some(satoshi_asset);
+        if satoshi_asset > 0 {
+            input.issuance_value_amount = Some(satoshi_asset);
+        }
         if satoshi_token > 0 {
             input.issuance_inflation_keys = Some(satoshi_token);
         }

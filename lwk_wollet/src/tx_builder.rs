@@ -233,7 +233,7 @@ impl TxBuilder {
         if let Some(addr) = token_receiver.as_ref() {
             validate_address(&addr.to_string(), self.network())?;
         }
-        if asset_sats == 0 {
+        if asset_sats == 0 && token_sats == 0 {
             return Err(Error::InvalidAmount);
         }
         self.issuance_request = IssuanceRequest::Issuance(
@@ -791,15 +791,17 @@ impl TxBuilder {
                 let (asset, token) =
                     wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;
 
-                let addressee = match address_asset {
-                    Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
-                    None => wollet.addressee_external(
-                        satoshi_asset,
-                        asset,
-                        &mut last_unused_external,
-                    )?,
-                };
-                wollet.add_output(&mut pset, &addressee)?;
+                if satoshi_asset > 0 {
+                    let addressee = match address_asset {
+                        Some(address) => Recipient::from_address(satoshi_asset, &address, asset),
+                        None => wollet.addressee_external(
+                            satoshi_asset,
+                            asset,
+                            &mut last_unused_external,
+                        )?,
+                    };
+                    wollet.add_output(&mut pset, &addressee)?;
+                }
 
                 if satoshi_token > 0 {
                     let addressee = match address_token {

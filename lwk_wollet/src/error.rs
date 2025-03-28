@@ -109,6 +109,9 @@ pub enum Error {
     #[error("Address must be confidential")]
     NotConfidentialAddress,
 
+    #[error("Input must be confidential")]
+    NotConfidentialInput,
+
     #[error("Insufficient funds: missing {missing_sats} units for {} {asset_id}",
         .is_token.then(|| "reissuance token").unwrap_or("asset"))]
     InsufficientFunds {

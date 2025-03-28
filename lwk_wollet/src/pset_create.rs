@@ -76,8 +76,11 @@ impl Wollet {
     ) -> Result<usize, Error> {
         let mut input = Input::from_prevout(utxo.outpoint);
         let mut txout = self.get_txout(&utxo.outpoint)?;
-        let value_comm = txout.value.commitment().expect("TODO");
-        let asset_gen = txout.asset.commitment().expect("TODO");
+        let (Some(value_comm), Some(asset_gen)) =
+            (txout.value.commitment(), txout.asset.commitment())
+        else {
+            return Err(Error::NotConfidentialInput);
+        };
         // This field is used by stateless blinders or signers to
         // learn the blinding factors and unblinded values of this input.
         // We need this since the output witness, which includes the

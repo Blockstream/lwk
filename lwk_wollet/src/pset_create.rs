@@ -93,27 +93,21 @@ impl Wollet {
         use elements::{BlindAssetProofs, BlindValueProofs};
 
         input.asset = Some(utxo.unblinded.asset);
-        input.blind_asset_proof = Some(Box::new(
-            SurjectionProof::blind_asset_proof(
-                &mut rng,
-                &secp,
-                utxo.unblinded.asset,
-                utxo.unblinded.asset_bf,
-            )
-            .expect("TODO"),
-        ));
+        input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
+            &mut rng,
+            &secp,
+            utxo.unblinded.asset,
+            utxo.unblinded.asset_bf,
+        )?));
         input.amount = Some(utxo.unblinded.value);
-        input.blind_value_proof = Some(Box::new(
-            RangeProof::blind_value_proof(
-                &mut rng,
-                &secp,
-                utxo.unblinded.value,
-                value_comm,
-                asset_gen,
-                utxo.unblinded.value_bf,
-            )
-            .expect("TODO"),
-        ));
+        input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
+            &mut rng,
+            &secp,
+            utxo.unblinded.value,
+            value_comm,
+            asset_gen,
+            utxo.unblinded.value_bf,
+        )?));
 
         pset.add_input(input);
         let idx = pset.inputs().len() - 1;

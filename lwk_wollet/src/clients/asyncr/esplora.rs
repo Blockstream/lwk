@@ -561,6 +561,7 @@ pub struct EsploraClientBuilder {
     base_url: String,
     waterfalls: bool,
     network: ElementsNetwork,
+    headers: HashMap<String, String>,
     timeout: Option<u8>,
 }
 
@@ -571,6 +572,7 @@ impl EsploraClientBuilder {
             base_url: base_url.trim_end_matches('/').to_string(),
             waterfalls: false,
             network,
+            headers: HashMap::new(),
             timeout: None,
         }
     }
@@ -592,12 +594,28 @@ impl EsploraClientBuilder {
         self
     }
 
+    /// Set the HTTP request headers for each request
+    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.headers = headers;
+        self
+    }
+
+    /// Add a HTTP header to set on each request
+    pub fn header(mut self, key: String, val: String) -> Self {
+        self.headers.insert(key, val);
+        self
+    }
+
     /// Consume the builder and build a new [`EsploraClient`]
     pub fn build(self) -> EsploraClient {
-        let client = match self.timeout {
-            Some(timeout) => client_with_timeout(timeout),
-            None => reqwest::Client::new(),
-        };
+        let headers = (&self.headers).try_into().expect("Expected valid headers");
+        let mut builder = reqwest::Client::builder().default_headers(headers);
+        // See https://github.com/seanmonstar/reqwest/issues/1135
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(timeout) = self.timeout {
+            builder = builder.timeout(std::time::Duration::from_secs(timeout as u64));
+        }
+        let client = builder.build().expect("Failed to create client"); // TODO: handle error but note that this is equivalent to the new() which panics
         EsploraClient {
             client,
             base_url: self.base_url.clone(),
@@ -609,20 +627,6 @@ impl EsploraClientBuilder {
             network: self.network,
         }
     }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn client_with_timeout(timeout: u8) -> reqwest::Client {
-    reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(timeout as u64))
-        .build()
-        .expect("Failed to create client") // TODO: handle error but note that this is equivalent to the new() which panics
-}
-
-#[cfg(target_arch = "wasm32")]
-fn client_with_timeout(timeout: u8) -> reqwest::Client {
-    // https://github.com/seanmonstar/reqwest/issues/1135
-    reqwest::Client::new()
 }
 
 async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response, Error> {

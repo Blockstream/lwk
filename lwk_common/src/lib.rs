@@ -321,6 +321,31 @@ pub fn burn_script() -> Script {
     Builder::new().push_opcode(OP_RETURN).into_script()
 }
 
+pub fn pset_debug(pset: &PartiallySignedTransaction) -> String {
+    let debug_str = format!("{:#?}", pset);
+    let mut result = String::new();
+
+    // Remove new line for lines that contain only a number ending with a comma so that the output is more readable
+    for line in debug_str.lines() {
+        let trimmed = line.trim();
+
+        if trimmed.ends_with(',') {
+            if let Some(num_part) = trimmed.strip_suffix(",") {
+                if num_part.parse::<u64>().is_ok() {
+                    result.push_str(trimmed);
+                    continue;
+                }
+            }
+        }
+
+        // For other lines, append with newline
+        result.push_str(line);
+        result.push('\n');
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod test {
     use elements::{pset::PartiallySignedTransaction, AssetId};
@@ -385,5 +410,14 @@ mod test {
         assert_eq!(recipient.asset.unwrap().to_string(), expected_asset_id);
         assert_eq!(recipient.value.unwrap(), expected_value);
         assert_eq!(recipient.vout, 0);
+    }
+
+    #[test]
+    fn test_pset_debug() {
+        let pset_str = include_str!("../test_data/pset_outputs/pset.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let debug = crate::pset_debug(&pset);
+        let expected = include_str!("../test_data/pset_debug.txt");
+        assert_eq!(debug, expected);
     }
 }

@@ -28,6 +28,10 @@ use std::{
     sync::atomic,
 };
 
+// TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
+// the max page size in the response, so we know when we have to request another page
+const WATERFALLS_MAX_ADDRESSES: usize = 10_000;
+
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
@@ -397,68 +401,86 @@ impl EsploraClient {
             encrypt(&desc, recipient)?
         };
 
-        let response = self
-            .client
-            .get(&descriptor_url)
-            .query(&[("descriptor", desc)])
-            .send()
-            .await?;
-        let status = response.status().as_u16();
-        let body = response.text().await?;
-
-        if status != 200 {
-            return Err(Error::Generic(body));
-        }
-
-        let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+        let mut page = 0;
         let mut data = Data::default();
 
-        for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
-            let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
-            let chain: Chain = (&desc)
-                .try_into()
-                .map_err(|_| Error::Generic("Cannot determine chain from desc".into()))?;
-            let max = chain_history
-                .iter()
-                .enumerate()
-                .filter(|(_, v)| !v.is_empty())
-                .map(|(i, _)| i as u32)
-                .max();
-            if let Some(max) = max {
-                data.last_unused[chain] = max + 1;
-            }
-            for (i, script_history) in chain_history.iter().enumerate() {
-                // TODO handle paging by asking following pages if there are more than 1000 results
-                let child = ChildNumber::from(waterfalls_result.page as u32 * 1000 + i as u32);
-                let ct_desc = ConfidentialDescriptor {
-                    key: descriptor.0.key.clone(),
-                    descriptor: desc.clone(),
-                };
-                let (script, blinding_pubkey, cached) =
-                    store.get_or_derive(chain, child, &ct_desc)?;
-                if !cached {
-                    data.scripts.insert(script, (chain, child, blinding_pubkey));
-                }
-                for tx_seen in script_history {
-                    let height = if tx_seen.height > 0 {
-                        Some(tx_seen.height as u32)
-                    } else {
-                        None
-                    };
-                    if let Some(height) = height.as_ref() {
-                        if let Some(block_hash) = tx_seen.block_hash.as_ref() {
-                            data.height_blockhash.insert(*height, *block_hash);
-                        }
-                        if let Some(ts) = tx_seen.block_timestamp.as_ref() {
-                            data.height_timestamp.insert(*height, *ts);
-                        }
-                    }
+        loop {
+            let response = self
+                .client
+                .get(&descriptor_url)
+                .query(&[("descriptor", desc.clone())])
+                .query(&[("page", page.to_string())])
+                .send()
+                .await?;
+            let status = response.status().as_u16();
+            let body = response.text().await?;
 
-                    data.txid_height.insert(tx_seen.txid, height);
+            if status != 200 {
+                return Err(Error::Generic(body));
+            }
+
+            let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+
+            for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
+                let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
+                let chain: Chain = (&desc)
+                    .try_into()
+                    .map_err(|_| Error::Generic("Cannot determine chain from desc".into()))?;
+                let max = chain_history
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| !v.is_empty())
+                    .map(|(i, _)| i as u32)
+                    .max();
+                if let Some(max) = max {
+                    data.last_unused[chain] = max + 1;
                 }
+                for (i, script_history) in chain_history.iter().enumerate() {
+                    let child = ChildNumber::from(
+                        waterfalls_result.page as u32 * WATERFALLS_MAX_ADDRESSES as u32 + i as u32,
+                    );
+                    let ct_desc = ConfidentialDescriptor {
+                        key: descriptor.0.key.clone(),
+                        descriptor: desc.clone(),
+                    };
+                    let (script, blinding_pubkey, cached) =
+                        store.get_or_derive(chain, child, &ct_desc)?;
+                    if !cached {
+                        data.scripts.insert(script, (chain, child, blinding_pubkey));
+                    }
+                    for tx_seen in script_history {
+                        let height = if tx_seen.height > 0 {
+                            Some(tx_seen.height as u32)
+                        } else {
+                            None
+                        };
+                        if let Some(height) = height.as_ref() {
+                            if let Some(block_hash) = tx_seen.block_hash.as_ref() {
+                                data.height_blockhash.insert(*height, *block_hash);
+                            }
+                            if let Some(ts) = tx_seen.block_timestamp.as_ref() {
+                                data.height_timestamp.insert(*height, *ts);
+                            }
+                        }
+
+                        data.txid_height.insert(tx_seen.txid, height);
+                    }
+                }
+            }
+            data.tip = waterfalls_result.tip;
+            page = waterfalls_result.page + 1;
+
+            let total = waterfalls_result
+                .txs_seen
+                .values()
+                .map(|chain_history| chain_history.len())
+                .max()
+                .unwrap_or(0);
+
+            if total < WATERFALLS_MAX_ADDRESSES {
+                break;
             }
         }
-        data.tip = waterfalls_result.tip;
 
         Ok(data)
     }

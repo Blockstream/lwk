@@ -92,9 +92,12 @@ impl BlockchainBackend for EsploraClient {
         &mut self,
         descriptor: &WolletDescriptor,
         state: &S,
+        to_index: u32,
     ) -> Result<Data, Error> {
-        self.rt
-            .block_on(self.client.get_history_waterfalls(descriptor, state))
+        self.rt.block_on(
+            self.client
+                .get_history_waterfalls(descriptor, state, to_index),
+        )
     }
 }
 

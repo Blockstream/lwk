@@ -191,10 +191,10 @@ impl EsploraClient {
             height_timestamp,
             tip,
         } = if self.waterfalls {
-            if index != 0 {
-                return Err(Error::UsingWaterfallsWithNonZeroIndex);
-            }
-            match self.get_history_waterfalls(&descriptor, wollet).await {
+            match self
+                .get_history_waterfalls(&descriptor, wollet, index)
+                .await
+            {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
                     self.get_history(&descriptor, store, index, wollet.last_unused())
@@ -382,6 +382,7 @@ impl EsploraClient {
         &mut self,
         descriptor: &WolletDescriptor,
         store: &S,
+        to_index: u32,
     ) -> Result<Data, Error> {
         let descriptor_url = format!("{}/v2/waterfalls", self.base_url);
         if descriptor.is_elip151() {
@@ -401,6 +402,7 @@ impl EsploraClient {
             .client
             .get(&descriptor_url)
             .query(&[("descriptor", desc)])
+            .query(&[("to_index", to_index.to_string())])
             .send()
             .await?;
         let status = response.status().as_u16();

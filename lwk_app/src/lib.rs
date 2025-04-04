@@ -37,6 +37,7 @@ use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
+use lwk_wollet::elements::pset::elip100::TokenMetadata;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, AssetId, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
@@ -1259,12 +1260,14 @@ fn add_contracts<'a>(
 ) {
     let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
     for (_, asset) in assets {
-        if let AppAsset::RegistryAsset(_) = asset {
+        if let AppAsset::RegistryAsset(registry_data) = asset {
             // Policy asset and reissuance tokens do not require the contract
             let asset_id = asset.asset_id();
             if assets_in_pset.contains(&asset_id) {
                 if let Some(metadata) = asset.asset_metadata() {
                     pset.add_asset_metadata(asset_id, &metadata);
+                    let token_id = registry_data.reissuance_token();
+                    pset.add_token_metadata(token_id, &TokenMetadata::new(token_id, true));
                 }
             }
         }

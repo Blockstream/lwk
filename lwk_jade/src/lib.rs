@@ -253,6 +253,7 @@ fn create_jade_sign_req(
                 assets_info.push(asset_info);
             }
         }
+        // TODO: handle token metadata
     }
     let params = SignLiquidTxParams {
         network,

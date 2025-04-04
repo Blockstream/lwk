@@ -168,6 +168,10 @@ impl RegistryAssetData {
     pub fn issuance_prevout(&self) -> OutPoint {
         self.issuance_tx.input[self.issuance_vin as usize].previous_output
     }
+
+    pub fn reissuance_token(&self) -> AssetId {
+        self.token_id
+    }
 }
 
 pub enum AppAsset {

@@ -244,11 +244,16 @@ fn get_merkle_leaf_index(
 
     let leaf_index = tree
         .get_leaf_index(hash)
-        .ok_or(InterpreterError::UnknownHash)?;
+        .map(|leaf_index| encode::serialize(&VarInt(leaf_index as u64)));
 
-    let mut response = 1_u8.to_be_bytes().to_vec();
-    response.extend(encode::serialize(&VarInt(leaf_index as u64)));
-    Ok(response)
+    match leaf_index {
+        Some(val) => {
+            let mut response = vec![0x01]; // means that a leaf index is found
+            response.extend(val);
+            Ok(response)
+        }
+        None => Ok(vec![0x00, 0x00]), // means that a leaf index is not found
+    }
 }
 
 fn get_more_elements(queue: &mut Vec<Vec<u8>>) -> Result<Vec<u8>, InterpreterError> {

@@ -3,7 +3,6 @@ use crate::Network;
 use crate::Pset;
 use crate::WolletDescriptor;
 use lwk_ledger::asyncr::Ledger;
-use lwk_ledger::asyncr::Singlesig;
 use lwk_ledger::read_multi_apdu;
 use lwk_ledger::write_apdu;
 use lwk_ledger::APDUAnswer;
@@ -183,7 +182,7 @@ impl LedgerWeb {
         let address = self
             .ledger
             .client
-            .get_receive_address_single(Singlesig::Wpkh, index)
+            .get_receive_address_single(lwk_common::Singlesig::Wpkh, index)
             .await
             .map_err(|e| Error::Generic(format!("{:?} error getting address", e)))?;
 

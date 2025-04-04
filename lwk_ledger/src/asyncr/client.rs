@@ -23,8 +23,6 @@ use elements_miniscript::{
     },
 };
 
-use super::Singlesig;
-
 #[derive(Debug)]
 pub struct LiquidClient<T: Transport> {
     transport: T,
@@ -250,14 +248,25 @@ impl<T: Transport> LiquidClient<T> {
 
     pub async fn get_receive_address_single(
         &self,
-        variant: Singlesig,
+        variant: lwk_common::Singlesig,
         index: u32,
     ) -> Result<Address, LiquidClientError<T::Error>> {
         let map_str_err = |e: LiquidClientError<T::Error>, message: &str| {
             LiquidClientError::ClientError(format!("{} {}", message, e))
         };
         let version = Version::V2;
-        let path = variant.derivation_path(self.network);
+        let coin_type = if self.network == lwk_common::Network::Liquid {
+            1776
+        } else {
+            1
+        };
+        let purpose = match variant {
+            lwk_common::Singlesig::Wpkh => 84,
+            lwk_common::Singlesig::ShWpkh => 49,
+        };
+        let path = format!("m/{}h/{}h/0h", purpose, coin_type)
+            .parse()
+            .expect("static");
         let xpub = self
             .get_extended_pubkey(&path, false)
             .await

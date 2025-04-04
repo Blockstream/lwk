@@ -3,7 +3,6 @@ use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::AddressParams;
 use lwk_containers::testcontainers::clients;
 use lwk_containers::{LedgerEmulator, LEDGER_EMULATOR_PORT};
-use lwk_ledger::asyncr::Singlesig;
 use lwk_ledger::*;
 
 #[test]
@@ -271,7 +270,7 @@ async fn test_asyncr_ledger() {
     let expected = "el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3";
     assert_eq!(address.to_string(), expected);
     let address2 = client
-        .get_receive_address_single(Singlesig::Wpkh, 0)
+        .get_receive_address_single(lwk_common::Singlesig::Wpkh, 0)
         .await
         .unwrap();
     assert_eq!(address, address2);

@@ -1267,7 +1267,12 @@ fn add_contracts<'a>(
                 if let Some(metadata) = asset.asset_metadata() {
                     pset.add_asset_metadata(asset_id, &metadata);
                     let token_id = registry_data.reissuance_token();
-                    pset.add_token_metadata(token_id, &TokenMetadata::new(token_id, true));
+                    // TODO: handle blinded issuance
+                    let issuance_blinded = false;
+                    pset.add_token_metadata(
+                        token_id,
+                        &TokenMetadata::new(token_id, issuance_blinded),
+                    );
                 }
             }
         }

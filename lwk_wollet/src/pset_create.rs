@@ -151,7 +151,9 @@ impl Wollet {
             let issuance_prevout = OutPoint::new(input.previous_txid, input.previous_output_index);
             let contract = serde_json::to_string(&contract)?;
             pset.add_asset_metadata(asset, &AssetMetadata::new(contract, issuance_prevout));
-            pset.add_token_metadata(token, &TokenMetadata::new(token, true));
+            // TODO: handle blinded issuance
+            let issuance_blinded = false;
+            pset.add_token_metadata(token, &TokenMetadata::new(token, issuance_blinded));
         }
 
         Ok((asset, token))

@@ -610,8 +610,7 @@ impl EsploraClientBuilder {
     pub fn build(self) -> EsploraClient {
         let headers = (&self.headers).try_into().expect("Expected valid headers");
         let mut builder = reqwest::Client::builder().default_headers(headers);
-        // See https://github.com/seanmonstar/reqwest/issues/1135
-        #[cfg(not(target_arch = "wasm32"))]
+
         if let Some(timeout) = self.timeout {
             builder = builder.timeout(std::time::Duration::from_secs(timeout as u64));
         }

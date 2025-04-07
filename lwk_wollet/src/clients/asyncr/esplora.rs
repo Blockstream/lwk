@@ -31,7 +31,7 @@ use std::{
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page
-const WATERFALLS_MAX_ADDRESSES: usize = 10_000;
+const WATERFALLS_MAX_ADDRESSES: usize = 1_000;
 
 #[derive(Debug)]
 /// A blockchain backend implementation based on the

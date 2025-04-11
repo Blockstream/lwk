@@ -155,9 +155,9 @@ impl EsploraClient {
             ));
         }
         if self.waterfalls {
-            return self.get_scripts_history_waterfalls(&addresses).await;
+            self.get_scripts_history_waterfalls(&addresses).await
         } else {
-            return self.get_scripts_history_esplora(&addresses).await;
+            self.get_scripts_history_esplora(&addresses).await
         }
     }
 

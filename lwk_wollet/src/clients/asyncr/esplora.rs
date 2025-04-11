@@ -145,11 +145,28 @@ impl EsploraClient {
         &self,
         scripts: &[&Script],
     ) -> Result<Vec<Vec<History>>, Error> {
-        let mut result: Vec<_> = vec![];
-        for script in scripts.iter() {
-            let address = Address::from_script(script, None, self.network.address_params()).ok_or(
-                Error::Generic("script generated is not a known template".to_owned()),
-            )?;
+        let addresses = scripts
+            .iter()
+            .filter_map(|script| Address::from_script(script, None, self.network.address_params()))
+            .collect::<Vec<_>>();
+        if addresses.len() != scripts.len() {
+            return Err(Error::Generic(
+                "script generated is not a known template".to_owned(),
+            ));
+        }
+        if self.waterfalls {
+            return self.get_scripts_history_waterfalls(&addresses).await;
+        } else {
+            return self.get_scripts_history_esplora(&addresses).await;
+        }
+    }
+
+    async fn get_scripts_history_esplora(
+        &self,
+        addresses: &[Address],
+    ) -> Result<Vec<Vec<History>>, Error> {
+        let mut result = vec![];
+        for address in addresses.iter() {
             let url = format!("{}/address/{}/txs", self.base_url, address);
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
             let response = get_with_retry(&self.client, &url).await?;
@@ -163,9 +180,44 @@ impl EsploraClient {
                     return Err(e.into());
                 }
             };
-
             let history: Vec<History> = json.into_iter().map(Into::into).collect();
             result.push(history)
+        }
+        Ok(result)
+    }
+
+    async fn get_scripts_history_waterfalls(
+        &self,
+        addresses: &[Address],
+    ) -> Result<Vec<Vec<History>>, Error> {
+        let mut result = vec![];
+        for address_batch in addresses.chunks(50) {
+            let url = format!("{}/v2/waterfalls", self.base_url);
+            let response = self
+                .client
+                .get(&url)
+                .query(&[(
+                    "addresses",
+                    address_batch
+                        .iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
+                )])
+                .send()
+                .await?;
+            let status = response.status().as_u16();
+            let body = response.text().await?;
+
+            if status != 200 {
+                return Err(Error::Generic(body));
+            }
+
+            let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
+
+            for (_, chain_history) in waterfalls_result.txs_seen.into_iter() {
+                result.extend(chain_history);
+            }
         }
         Ok(result)
     }

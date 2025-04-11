@@ -1720,7 +1720,7 @@ fn test_waterfalls_esplora() {
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
-        .drain_lbtc_to(address)
+        .drain_lbtc_to(address.clone())
         .finish()
         .unwrap();
 
@@ -1728,7 +1728,7 @@ fn test_waterfalls_esplora() {
     assert!(sigs > 0);
 
     let tx = wollet.finalize(&mut pset).unwrap();
-    let _txid = client.broadcast(&tx).unwrap();
+    let txid = client.broadcast(&tx).unwrap();
 
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
@@ -1744,6 +1744,13 @@ fn test_waterfalls_esplora() {
         .get_history_waterfalls(&elip151_desc, &wollet)
         .unwrap_err();
     assert!(matches!(err, Error::UsingWaterfallsWithElip151));
+
+    let history = client
+        .get_scripts_history(&[&address.script_pubkey()])
+        .unwrap();
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].len(), 1);
+    assert_eq!(history[0][0].txid, txid);
 
     rt.block_on(test_env.shutdown());
 }

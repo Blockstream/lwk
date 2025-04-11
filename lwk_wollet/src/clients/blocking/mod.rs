@@ -126,6 +126,7 @@ pub trait BlockchainBackend {
         &mut self,
         _descriptor: &WolletDescriptor,
         _state: &S,
+        _to_index: u32,
     ) -> Result<Data, Error> {
         Err(Error::WaterfallsUnimplemented)
     }
@@ -171,10 +172,7 @@ pub trait BlockchainBackend {
             height_timestamp: _height_timestamp,
             tip: _,
         } = if self.capabilities().contains(&Capability::Waterfalls) {
-            if index != 0 {
-                return Err(Error::UsingWaterfallsWithNonZeroIndex);
-            }
-            match self.get_history_waterfalls(&descriptor, state) {
+            match self.get_history_waterfalls(&descriptor, state, index) {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
                     self.get_history(&descriptor, state, index, state.last_unused())?

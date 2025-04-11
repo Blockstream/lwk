@@ -1735,13 +1735,10 @@ fn test_waterfalls_esplora() {
     let balance = wollet.balance().unwrap();
     assert_eq!(0, *balance.get(&network.policy_asset()).unwrap());
 
-    let err = client.full_scan_to_index(&wollet, 1).unwrap_err();
-    assert!(matches!(err, Error::UsingWaterfallsWithNonZeroIndex));
-
     let elip151_desc = "ct(elip151,elwpkh(tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))";
     let elip151_desc = WolletDescriptor::from_str(elip151_desc).unwrap();
     let err = client
-        .get_history_waterfalls(&elip151_desc, &wollet)
+        .get_history_waterfalls(&elip151_desc, &wollet, 0)
         .unwrap_err();
     assert!(matches!(err, Error::UsingWaterfallsWithElip151));
 
@@ -1871,6 +1868,63 @@ async fn test_non_standard_gap_limit_esplora() {
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {
         let update = client.full_scan_to_index(&wollet, 30).await.unwrap();
+        if let Some(update) = update {
+            wollet.apply_update(update).unwrap();
+        }
+        let tx_found = wollet
+            .transactions()
+            .unwrap()
+            .iter()
+            .any(|tx| tx.txid == txid);
+        if tx_found {
+            break;
+        }
+        if i == 59 {
+            panic!("tx not found");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+
+    let balance = wollet.balance().unwrap();
+    assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+}
+
+#[tokio::test]
+#[cfg(feature = "esplora")]
+async fn test_non_standard_gap_limit_waterfalls_esplora() {
+    // TODO: use TestWollet also for EsploraClient
+    // FIXME: add launch_sync or similar to waterfalls
+
+    init_logging();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let url = format!("{}/blocks/tip/hash", test_env.base_url());
+    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
+
+    let mut client = clients::blocking::EsploraClient::new_waterfalls(
+        test_env.base_url(),
+        ElementsNetwork::default_regtest(),
+    )
+    .unwrap();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/<0;1>/*))", view_key, signer.xpub());
+    let desc = WolletDescriptor::from_str(&desc).unwrap();
+    let network = ElementsNetwork::default_regtest();
+    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+
+    let i = Some(25);
+    let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
+
+    let satoshi = 1_000_000;
+    let txid = test_env.send_to(&address_after_gap_limit, satoshi);
+    test_env.node_generate(1).await;
+
+    // custom wait_for_tx using custom gap limit
+    for i in 0..60 {
+        let update = client.full_scan_to_index(&wollet, 30).unwrap();
         if let Some(update) = update {
             wollet.apply_update(update).unwrap();
         }

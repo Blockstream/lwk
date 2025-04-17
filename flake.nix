@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -89,17 +89,6 @@
             '';
           });
 
-          elementsd_ct = pkgs.elementsd.overrideAttrs (final: prev: rec {
-            version = "23.2.4";
-
-            src = pkgs.fetchFromGitHub {
-              owner = "ElementsProject";
-              repo = "elements";
-              rev = "elements-${version}";
-              sha256 = "sha256-UNjYkEZBjGuhkwBxSkNXjBBcLQqoan/afCLhoR2lOY4=";
-            };
-          });
-
         in
         {
           packages =
@@ -115,7 +104,7 @@
 
             buildInputs = [ registry.bin rustToolchain ];
 
-            ELEMENTSD_EXEC = "${elementsd_ct}/bin/elementsd";
+            ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
             ELECTRS_LIQUID_EXEC = electrs.program;
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation

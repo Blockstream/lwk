@@ -178,7 +178,7 @@ wasm:
       - lwk_wasm/pkg
 
 nix:
-  image: nixos/nix:2.22.0pre20240417_c16fc2c
+  image: nixos/nix:latest
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it

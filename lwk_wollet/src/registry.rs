@@ -140,7 +140,7 @@ impl Registry {
     }
 
     pub async fn fetch(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
-        let url = format!("{}/{}", self.base_url, asset_id);
+        let url = format!("{}/{}", self.base_url.trim_end_matches("/"), asset_id);
         let response = self.client.get(url).send().await?;
         let data = response.json::<RegistryData>().await?;
         Ok(data)

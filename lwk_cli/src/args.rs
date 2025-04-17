@@ -724,6 +724,17 @@ pub enum WalletCommand {
         #[arg(long)]
         memo: String,
     },
+
+    /// Take Liquidex proposal if possible
+    LiquidexTake {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// Liquidex proposal
+        #[arg(short, long, required = true)]
+        pset: String,
+    },
 }
 
 #[derive(Debug, Args)]

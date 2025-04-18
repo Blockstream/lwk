@@ -725,6 +725,29 @@ pub enum WalletCommand {
         memo: String,
     },
 
+    /// Make a Liquidex proposal
+    LiquidexMake {
+        /// Wallet name
+        #[arg(short, long, env)]
+        wallet: String,
+
+        /// The transaction id of the output to spend
+        #[arg(short, long, required = true)]
+        txid: String,
+
+        /// The vout index of the output to spend
+        #[arg(short, long, required = true)]
+        vout: u32,
+
+        /// The asset to receive
+        #[arg(short, long, required = true)]
+        asset: String,
+
+        /// The amount to receive in satoshi
+        #[arg(short, long, required = true)]
+        satoshi: u64,
+    },
+
     /// Take Liquidex proposal if possible
     LiquidexTake {
         /// Wallet name

@@ -460,6 +460,35 @@ pub struct WalletSetAddrMemo {
     pub memo: String,
 }
 
+/// Request to make a Liquidex proposal
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletLiquidexMake {
+    /// The wallet name
+    pub name: String,
+
+    /// The transaction id of the output to spend
+    pub txid: String,
+
+    /// The vout index of the output to spend
+    pub vout: u32,
+
+    /// The asset to receive
+    pub asset: String,
+
+    /// The amount to receive in satoshi
+    pub satoshi: u64,
+}
+
+/// Request to take a Liquidex proposal
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WalletLiquidexTake {
+    /// The wallet name
+    pub name: String,
+
+    /// The PSET in base64 to take
+    pub pset: String,
+}
+
 /// Request to get an AMP2 wallet descriptor
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Amp2Descriptor {

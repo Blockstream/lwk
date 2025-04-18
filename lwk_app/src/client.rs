@@ -320,6 +320,16 @@ impl Client {
         self.make_request(Method::WalletSetAddrMemo, Some(req))
     }
 
+    pub fn wallet_liquidex_make(&self, name: String, txid: String, vout: u32, asset: String, satoshi: u64) -> Result<response::Pset, Error> {
+        let req = request::WalletLiquidexMake { name, txid, vout, asset, satoshi };
+        self.make_request(Method::WalletLiquidexMake, Some(req))
+    }
+
+    pub fn wallet_liquidex_take(&self, name: String, pset: String) -> Result<response::Pset, Error> {
+        let req = request::WalletLiquidexTake { name, pset };
+        self.make_request(Method::WalletLiquidexTake, Some(req))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn wallet_issue(
         &self,

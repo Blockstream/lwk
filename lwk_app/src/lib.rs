@@ -39,13 +39,15 @@ use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
 use lwk_wollet::elements::pset::elip100::TokenMetadata;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
-use lwk_wollet::elements::{Address, AssetId, Txid};
+use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
+use lwk_wollet::LiquidexProposal;
 use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
 use serde_json::Value;
+
 
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
@@ -929,6 +931,52 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.addr_memos.set(&r.name, &address, &r.memo)?;
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
+        }
+        Method::WalletLiquidexMake => {
+            let r: request::WalletLiquidexMake = serde_json::from_value(params)?;
+            let txid = Txid::from_str(&r.txid)?;
+            let vout = r.vout;
+            let asset = AssetId::from_str(&r.asset)?;
+            let satoshi = r.satoshi;
+
+            let mut s = state.lock()?;
+            let wollet = s.wollets.get_mut(&r.name)?;
+
+            let outpoint = OutPoint::new(txid, vout);
+
+            let addr = wollet.address(Some(0))?;
+            let receiving_address = addr.address().to_string();
+
+            let receiving_address = Address::from_str(&receiving_address)?;
+
+            let pset = wollet.tx_builder().liquidex_make(outpoint, &receiving_address, satoshi, asset).unwrap().finish()?;
+
+            Response::result(
+                request.id,
+                serde_json::to_value(response::WalletCombine {
+                    pset: pset.to_string(),
+                })?,
+            )
+            
+        }
+        Method::WalletLiquidexTake => {
+            let r: request::WalletLiquidexTake = serde_json::from_value(params)?;
+            let proposal_pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            println!("proposal_pset: {}", proposal_pset.to_string());
+            let proposal = LiquidexProposal::from_pset(&proposal_pset).unwrap();
+            
+            let mut s = state.lock()?;
+            let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
+
+            let pset = wollet.tx_builder().liquidex_take(vec![proposal]).unwrap().finish()?;
+            
+            Response::result(
+                request.id,
+                serde_json::to_value(response::WalletCombine {
+                    pset: pset.to_string(),
+                })?,
+            )
+
         }
         Method::WalletIssue => {
             let r: request::WalletIssue = serde_json::from_value(params)?;

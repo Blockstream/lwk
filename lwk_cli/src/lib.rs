@@ -381,6 +381,10 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_set_addr_memo(wallet, address, memo)?;
                 serde_json::to_value(r)?
             }
+            WalletCommand::LiquidexMake { wallet, txid, vout, asset, satoshi } => {
+                let r = client.wallet_liquidex_make(wallet, txid, vout, asset, satoshi)?;
+                serde_json::to_value(r)?
+            }
             WalletCommand::LiquidexTake { wallet, pset } => {
                 let r = client.wallet_liquidex_take(wallet, pset)?;
                 serde_json::to_value(r)?

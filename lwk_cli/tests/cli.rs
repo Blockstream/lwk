@@ -200,6 +200,24 @@ fn txs(cli: &str, wallet: &str) -> Vec<Value> {
     r.get("txs").unwrap().as_array().unwrap().to_vec()
 }
 
+/// Sign and broadcast a pset, returning the txid
+fn sign_and_broadcast(cli: &str, signer: &str, wallet: &str, pset: &str) -> String {
+    let pset_parsed: PartiallySignedTransaction = pset.parse().unwrap();
+    let r = sh(&format!(
+        "{cli} signer sign --signer {signer} --pset {pset}"
+    ));
+    let pset_signed = r.get("pset").unwrap().as_str().unwrap();
+    let pset_signed_parsed: PartiallySignedTransaction = pset_signed.parse().unwrap();
+    assert_ne!(pset_signed_parsed, pset_parsed);
+
+    let r = sh(&format!(
+        "{cli} wallet broadcast --wallet {wallet} --pset {pset_signed}"
+    ));
+    let txid = r.get("txid").unwrap().as_str().unwrap().to_string();
+    wait_tx(cli, wallet, &txid);
+    txid
+}
+
 fn tx(cli: &str, wallet: &str, txid: &str) -> Option<Value> {
     txs(cli, wallet)
         .into_iter()
@@ -660,6 +678,80 @@ fn test_wallet_memos() {
 
     assert_eq!(tx_memo(&cli, "w1", &txid), memo1);
     assert_eq!(addr_memo(&cli, "w1", index), memo1);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_liquidex() {
+    // Test liquidex swap
+    // w1 sell asset issued
+    // w2 pay with policy asset
+
+    let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+
+    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+
+    // Create 2 wallets
+    sw_signer(&cli, "s1");
+    sw_signer(&cli, "s2");
+    singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
+    singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
+
+    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&server, &cli, "w2", 1_000_000);
+
+    let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
+    let contract = serde_json::to_string(&r).unwrap();
+    let r = sh(&format!(
+        "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"
+    ));
+    let pset = get_str(&r, "pset");
+    let _txid = sign_and_broadcast(&cli, "s1", "w1", pset);
+
+    let result = sh(&format!("{cli} wallet utxos --wallet w1"));
+    let utxos = result.get("utxos").unwrap().as_array().unwrap();
+    let asset_utxo = utxos
+        .iter()
+        .find(|u| u.get("asset").unwrap().as_str().unwrap() != policy_asset)
+        .unwrap();
+    let issued_asset_id = asset_utxo.get("asset").unwrap().as_str().unwrap();
+    let txid = asset_utxo.get("txid").unwrap().as_str().unwrap();
+    let vout = asset_utxo.get("vout").unwrap().as_u64().unwrap();
+    let value = asset_utxo.get("value").unwrap().as_u64().unwrap();
+
+    let result = sh(&format!(
+        "{cli} wallet liquidex-make --wallet w1 --txid {txid} --vout {vout} --asset {policy_asset} --satoshi {value}"
+    ));
+    let pset = get_str(&result, "pset");
+    let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
+
+    let r = sh(&format!("{cli} signer sign --signer s1 --pset {pset}"));
+    let pset = r.get("pset").unwrap().as_str().unwrap();
+    let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
+    assert_ne!(pset_signed, pset_unsigned);
+
+    let result = sh(&format!(
+        "{cli} wallet liquidex-take --wallet w2 --pset {pset}"
+    ));
+    let pset = get_str(&result, "pset");
+
+    let result = sh(&format!("{cli} wallet balance --wallet w1"));
+    let balance = result.get("balance").unwrap().as_object().unwrap();
+    assert_eq!(
+        balance.get(issued_asset_id).unwrap().as_i64().unwrap(),
+        1000
+    );
+
+    let _txid = sign_and_broadcast(&cli, "s2", "w2", pset);
+
+    let result = sh(&format!("{cli} wallet balance --wallet w2"));
+    let balance = result.get("balance").unwrap().as_object().unwrap();
+    assert_eq!(
+        balance.get(issued_asset_id).unwrap().as_i64().unwrap(),
+        1000
+    );
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

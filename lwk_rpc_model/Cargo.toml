@@ -9,6 +9,7 @@ documentation = "https://docs.rs/lwk_rpc_model"
 [dependencies]
 schemars = "0.8.16"
 serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.108"
 # avoid deps to the workspace
 
 [dev-dependencies]

@@ -986,7 +986,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let proposal = LiquidexProposal::from_pset(&pset)?;
             log::debug!("liquidex to proposal222");
 
-            let proposal = serde_json::to_string(&proposal)?; // TODO: is String?
+            let proposal = serde_json::to_value(&proposal)?;
             Response::result(
                 request.id,
                 serde_json::to_value(response::LiquidexProposal { proposal })?,

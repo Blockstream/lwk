@@ -485,7 +485,7 @@ pub struct LiquidexTake {
     /// The wallet name
     pub name: String,
 
-    /// The [`LiquidexProposal`] to take
+    /// The LiquidexProposal JSON to take
     pub proposal: String,
 }
 

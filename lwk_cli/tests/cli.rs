@@ -733,8 +733,8 @@ fn test_liquidex() {
     assert_ne!(pset_signed, pset_unsigned);
 
     let r = sh(&format!("{cli} liquidex to-proposal --pset {pset}"));
-    let proposal = get_str(&r, "proposal");
-    println!("proposal: {:?}", proposal);
+    let json = &r.get("proposal").unwrap();
+    let proposal = serde_json::to_string(json).unwrap();
 
     let result = sh(&format!(
         "{cli} liquidex take --wallet w2 --proposal '{proposal}'"

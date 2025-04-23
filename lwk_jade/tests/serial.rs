@@ -1,20 +1,15 @@
 use lwk_jade::{
     get_receive_address::{GetReceiveAddressParams, SingleOrMulti, Variant},
     protocol::JadeState,
-    Jade, BAUD_RATE, TIMEOUT,
+    Jade, TIMEOUT,
 };
 use std::str::FromStr;
 
 fn serial_test_setup() -> Jade {
-    lwk_test_util::init_logging();
-    let ports = serialport::available_ports().unwrap();
-    let path = &ports[0].port_name;
-    let port = serialport::new(path, BAUD_RATE)
-        .timeout(TIMEOUT)
-        .open()
-        .unwrap();
-
-    Jade::new(port.into(), lwk_common::Network::TestnetLiquid)
+    Jade::from_any_serial(lwk_common::Network::TestnetLiquid, Some(TIMEOUT))
+        .pop()
+        .unwrap()
+        .unwrap()
 }
 
 #[test]

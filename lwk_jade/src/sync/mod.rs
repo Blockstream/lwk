@@ -47,7 +47,7 @@ pub struct Jade {
 }
 
 impl Jade {
-    pub fn new(conn: Connection, network: Network) -> Self {
+    pub(crate) fn new(conn: Connection, network: Network) -> Self {
         Self {
             conn: Mutex::new(conn),
             network,

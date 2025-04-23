@@ -950,8 +950,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let pset = wollet
                 .tx_builder()
-                .liquidex_make(outpoint, &receiving_address, satoshi, asset)
-                .unwrap()
+                .liquidex_make(outpoint, &receiving_address, satoshi, asset)?
                 .finish()?;
 
             Response::result(
@@ -970,8 +969,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let pset = wollet
                 .tx_builder()
-                .liquidex_take(vec![proposal])
-                .unwrap()
+                .liquidex_take(vec![proposal])?
                 .finish()?;
 
             Response::result(

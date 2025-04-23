@@ -48,7 +48,6 @@ use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
 use serde_json::Value;
 
-
 use crate::method::Method;
 use crate::state::{AppAsset, AppSigner, State};
 use lwk_rpc_model::{request, response};
@@ -932,8 +931,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.persist(&request)?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
-        Method::WalletLiquidexMake => {
-            let r: request::WalletLiquidexMake = serde_json::from_value(params)?;
+        Method::LiquidexMake => {
+            let r: request::LiquidexMake = serde_json::from_value(params)?;
             let txid = Txid::from_str(&r.txid)?;
             let vout = r.vout;
             let asset = AssetId::from_str(&r.asset)?;
@@ -949,7 +948,11 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let receiving_address = Address::from_str(&receiving_address)?;
 
-            let pset = wollet.tx_builder().liquidex_make(outpoint, &receiving_address, satoshi, asset).unwrap().finish()?;
+            let pset = wollet
+                .tx_builder()
+                .liquidex_make(outpoint, &receiving_address, satoshi, asset)
+                .unwrap()
+                .finish()?;
 
             Response::result(
                 request.id,
@@ -957,26 +960,39 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     pset: pset.to_string(),
                 })?,
             )
-            
         }
-        Method::WalletLiquidexTake => {
-            let r: request::WalletLiquidexTake = serde_json::from_value(params)?;
-            let proposal_pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
-            println!("proposal_pset: {}", proposal_pset.to_string());
-            let proposal = LiquidexProposal::from_pset(&proposal_pset).unwrap();
-            
+        Method::LiquidexTake => {
+            let r: request::LiquidexTake = serde_json::from_value(params)?;
+            let proposal: LiquidexProposal = serde_json::from_str(&r.proposal)?;
+
             let mut s = state.lock()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;
 
-            let pset = wollet.tx_builder().liquidex_take(vec![proposal]).unwrap().finish()?;
-            
+            let pset = wollet
+                .tx_builder()
+                .liquidex_take(vec![proposal])
+                .unwrap()
+                .finish()?;
+
             Response::result(
                 request.id,
                 serde_json::to_value(response::WalletCombine {
                     pset: pset.to_string(),
                 })?,
             )
+        }
+        Method::LiquidexToProposal => {
+            log::debug!("liquidex to proposal");
+            let r: request::LiquidexToProposal = serde_json::from_value(params)?;
+            let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
+            let proposal = LiquidexProposal::from_pset(&pset)?;
+            log::debug!("liquidex to proposal222");
 
+            let proposal = serde_json::to_string(&proposal)?; // TODO: is String?
+            Response::result(
+                request.id,
+                serde_json::to_value(response::LiquidexProposal { proposal })?,
+            )
         }
         Method::WalletIssue => {
             let r: request::WalletIssue = serde_json::from_value(params)?;

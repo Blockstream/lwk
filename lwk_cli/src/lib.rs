@@ -8,6 +8,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
+use args::LiquidexCommand;
 use clap::CommandFactory;
 use env_logger::Env;
 use lwk_app::Config;
@@ -381,12 +382,24 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.wallet_set_addr_memo(wallet, address, memo)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::LiquidexMake { wallet, txid, vout, asset, satoshi } => {
-                let r = client.wallet_liquidex_make(wallet, txid, vout, asset, satoshi)?;
+        },
+        CliCommand::Liquidex(a) => match a.command {
+            LiquidexCommand::Make {
+                wallet,
+                txid,
+                vout,
+                asset,
+                satoshi,
+            } => {
+                let r = client.liquidex_make(wallet, txid, vout, asset, satoshi)?;
                 serde_json::to_value(r)?
             }
-            WalletCommand::LiquidexTake { wallet, pset } => {
-                let r = client.wallet_liquidex_take(wallet, pset)?;
+            LiquidexCommand::Take { wallet, proposal } => {
+                let r = client.liquidex_take(wallet, proposal)?;
+                serde_json::to_value(r)?
+            }
+            LiquidexCommand::ToProposal { pset } => {
+                let r = client.liquidex_to_proposal(pset)?;
                 serde_json::to_value(r)?
             }
         },

@@ -111,6 +111,13 @@ pub struct Pset {
     pub pset: String,
 }
 
+/// Liquidex proposal response
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct LiquidexProposal {
+    /// The Liquidex proposal TODO is String?
+    pub proposal: String,
+}
+
 /// Response containing a single signature descriptor
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignerSinglesigDescriptor {

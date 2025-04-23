@@ -462,7 +462,7 @@ pub struct WalletSetAddrMemo {
 
 /// Request to make a Liquidex proposal
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct WalletLiquidexMake {
+pub struct LiquidexMake {
     /// The wallet name
     pub name: String,
 
@@ -481,11 +481,18 @@ pub struct WalletLiquidexMake {
 
 /// Request to take a Liquidex proposal
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct WalletLiquidexTake {
+pub struct LiquidexTake {
     /// The wallet name
     pub name: String,
 
-    /// The PSET in base64 to take
+    /// The [`LiquidexProposal`] to take
+    pub proposal: String,
+}
+
+/// Request to convert a PSET to a Liquidex proposal
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct LiquidexToProposal {
+    /// The PSET
     pub pset: String,
 }
 

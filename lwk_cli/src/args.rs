@@ -39,6 +39,9 @@ pub enum CliCommand {
     /// Wallet commands
     Wallet(WalletArgs),
 
+    /// Liquidex commands
+    Liquidex(LiquidexArgs),
+
     /// Asset commands
     Asset(AssetArgs),
 
@@ -724,9 +727,18 @@ pub enum WalletCommand {
         #[arg(long)]
         memo: String,
     },
+}
 
+#[derive(Debug, Args)]
+pub struct LiquidexArgs {
+    #[command(subcommand)]
+    pub command: LiquidexCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum LiquidexCommand {
     /// Make a Liquidex proposal
-    LiquidexMake {
+    Make {
         /// Wallet name
         #[arg(short, long, env)]
         wallet: String,
@@ -749,12 +761,19 @@ pub enum WalletCommand {
     },
 
     /// Take Liquidex proposal if possible
-    LiquidexTake {
+    Take {
         /// Wallet name
         #[arg(short, long, env)]
         wallet: String,
 
         /// Liquidex proposal
+        #[arg(short, long, required = true)]
+        proposal: String,
+    },
+
+    /// Convert a PSET to a Liquidex proposal
+    ToProposal {
+        /// PSET
         #[arg(short, long, required = true)]
         pset: String,
     },

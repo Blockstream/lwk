@@ -722,7 +722,7 @@ fn test_liquidex() {
     let value = asset_utxo.get("value").unwrap().as_u64().unwrap();
 
     let result = sh(&format!(
-        "{cli} wallet liquidex-make --wallet w1 --txid {txid} --vout {vout} --asset {policy_asset} --satoshi {value}"
+        "{cli} liquidex make --wallet w1 --txid {txid} --vout {vout} --asset {policy_asset} --satoshi {value}"
     ));
     let pset = get_str(&result, "pset");
     let pset_unsigned: PartiallySignedTransaction = pset.parse().unwrap();
@@ -732,10 +732,20 @@ fn test_liquidex() {
     let pset_signed: PartiallySignedTransaction = pset.parse().unwrap();
     assert_ne!(pset_signed, pset_unsigned);
 
+    let r = sh(&format!("{cli} liquidex to-proposal --pset {pset}"));
+    let proposal = get_str(&r, "proposal");
+    println!("proposal: {:?}", proposal);
+
     let result = sh(&format!(
-        "{cli} wallet liquidex-take --wallet w2 --pset {pset}"
+        "{cli} liquidex take --wallet w2 --proposal '{proposal}'"
     ));
     let pset = get_str(&result, "pset");
+
+    let result = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
+    println!("result w1: {:?}", result); // TODO: check
+
+    let result = sh(&format!("{cli} wallet pset-details --wallet w2 -p {pset}"));
+    println!("result w2: {:?}", result);
 
     let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance = result.get("balance").unwrap().as_object().unwrap();

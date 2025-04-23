@@ -320,14 +320,32 @@ impl Client {
         self.make_request(Method::WalletSetAddrMemo, Some(req))
     }
 
-    pub fn wallet_liquidex_make(&self, name: String, txid: String, vout: u32, asset: String, satoshi: u64) -> Result<response::Pset, Error> {
-        let req = request::WalletLiquidexMake { name, txid, vout, asset, satoshi };
-        self.make_request(Method::WalletLiquidexMake, Some(req))
+    pub fn liquidex_make(
+        &self,
+        name: String,
+        txid: String,
+        vout: u32,
+        asset: String,
+        satoshi: u64,
+    ) -> Result<response::Pset, Error> {
+        let req = request::LiquidexMake {
+            name,
+            txid,
+            vout,
+            asset,
+            satoshi,
+        };
+        self.make_request(Method::LiquidexMake, Some(req))
     }
 
-    pub fn wallet_liquidex_take(&self, name: String, pset: String) -> Result<response::Pset, Error> {
-        let req = request::WalletLiquidexTake { name, pset };
-        self.make_request(Method::WalletLiquidexTake, Some(req))
+    pub fn liquidex_take(&self, name: String, proposal: String) -> Result<response::Pset, Error> {
+        let req = request::LiquidexTake { name, proposal };
+        self.make_request(Method::LiquidexTake, Some(req))
+    }
+
+    pub fn liquidex_to_proposal(&self, pset: String) -> Result<response::LiquidexProposal, Error> {
+        let req = request::LiquidexToProposal { pset };
+        self.make_request(Method::LiquidexToProposal, Some(req))
     }
 
     #[allow(clippy::too_many_arguments)]

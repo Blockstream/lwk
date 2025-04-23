@@ -5,7 +5,9 @@ use std::{
 
 #[derive(Debug)]
 pub enum Connection {
+    #[allow(dead_code)]
     Bluetooth,
+
     TcpStream(TcpStream),
 
     #[cfg(feature = "serial")]

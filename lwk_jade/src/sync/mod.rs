@@ -31,6 +31,12 @@ mod sign_pset;
 #[cfg(feature = "serial")]
 use crate::consts::{BAUD_RATE, TIMEOUT};
 
+/// A Jade hardware wallet with a blocking connection.
+///
+/// This is the main struct for interacting with a Jade hardware wallet.
+/// It provides methods for unlocking, signing, and other operations.
+///
+/// To build this struct use the from_* methods like [`Jade::from_any_serial`].
 #[derive(Debug)]
 pub struct Jade {
     /// Jade working via emulator(tcp), physical(serial/bluetooth)

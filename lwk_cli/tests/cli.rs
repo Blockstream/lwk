@@ -717,15 +717,16 @@ fn test_liquidex() {
     let json = &r.get("proposal").unwrap();
     let proposal = serde_json::to_string(json).unwrap();
 
-    let _result = sh(&format!(
+    let result = sh(&format!(
         "{cli} liquidex take --wallet w2 --proposal '{proposal}'"
     ));
+    let pset = get_str(&result, "pset");
 
     let result = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     println!("result w1: {:?}", result); // TODO: check
 
-    let result = sh(&format!("{cli} wallet pset-details --wallet w2 -p {pset}"));
-    println!("result w2: {:?}", result);
+    //let result = sh(&format!("{cli} wallet pset-details --wallet w2 -p {pset}"));
+    //println!("result w2: {:?}", result);
 
     let result = sh(&format!("{cli} wallet balance --wallet w1"));
     let balance = result.get("balance").unwrap().as_object().unwrap();
@@ -734,7 +735,7 @@ fn test_liquidex() {
         1000
     );
 
-    complete(&cli, "w2", get_str(&r, "pset"), &["s2"]);
+    complete(&cli, "w2", pset, &["s2"]);
 
     let result = sh(&format!("{cli} wallet balance --wallet w2"));
     let balance = result.get("balance").unwrap().as_object().unwrap();

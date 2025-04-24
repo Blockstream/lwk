@@ -200,24 +200,6 @@ fn txs(cli: &str, wallet: &str) -> Vec<Value> {
     r.get("txs").unwrap().as_array().unwrap().to_vec()
 }
 
-/// Sign and broadcast a pset, returning the txid
-fn sign_and_broadcast(cli: &str, signer: &str, wallet: &str, pset: &str) -> String {
-    let pset_parsed: PartiallySignedTransaction = pset.parse().unwrap();
-    let r = sh(&format!(
-        "{cli} signer sign --signer {signer} --pset {pset}"
-    ));
-    let pset_signed = r.get("pset").unwrap().as_str().unwrap();
-    let pset_signed_parsed: PartiallySignedTransaction = pset_signed.parse().unwrap();
-    assert_ne!(pset_signed_parsed, pset_parsed);
-
-    let r = sh(&format!(
-        "{cli} wallet broadcast --wallet {wallet} --pset {pset_signed}"
-    ));
-    let txid = r.get("txid").unwrap().as_str().unwrap().to_string();
-    wait_tx(cli, wallet, &txid);
-    txid
-}
-
 fn tx(cli: &str, wallet: &str, txid: &str) -> Option<Value> {
     txs(cli, wallet)
         .into_iter()
@@ -707,8 +689,7 @@ fn test_liquidex() {
     let r = sh(&format!(
         "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 0 --contract '{contract}'"
     ));
-    let pset = get_str(&r, "pset");
-    let _txid = sign_and_broadcast(&cli, "s1", "w1", pset);
+    complete(&cli, "w1", get_str(&r, "pset"), &["s1"]);
 
     let result = sh(&format!("{cli} wallet utxos --wallet w1"));
     let utxos = result.get("utxos").unwrap().as_array().unwrap();
@@ -739,7 +720,6 @@ fn test_liquidex() {
     let result = sh(&format!(
         "{cli} liquidex take --wallet w2 --proposal '{proposal}'"
     ));
-    let pset = get_str(&result, "pset");
 
     let result = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
     println!("result w1: {:?}", result); // TODO: check
@@ -754,7 +734,7 @@ fn test_liquidex() {
         1000
     );
 
-    let _txid = sign_and_broadcast(&cli, "s2", "w2", pset);
+    complete(&cli, "w2", get_str(&r, "pset"), &["s2"]);
 
     let result = sh(&format!("{cli} wallet balance --wallet w2"));
     let balance = result.get("balance").unwrap().as_object().unwrap();

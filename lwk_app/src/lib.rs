@@ -955,7 +955,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(
                 request.id,
-                serde_json::to_value(response::WalletCombine {
+                serde_json::to_value(response::Pset {
                     pset: pset.to_string(),
                 })?,
             )
@@ -974,7 +974,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             Response::result(
                 request.id,
-                serde_json::to_value(response::WalletCombine {
+                serde_json::to_value(response::Pset {
                     pset: pset.to_string(),
                 })?,
             )

@@ -717,7 +717,7 @@ fn test_liquidex() {
     let json = &r.get("proposal").unwrap();
     let proposal = serde_json::to_string(json).unwrap();
 
-    let result = sh(&format!(
+    let _result = sh(&format!(
         "{cli} liquidex take --wallet w2 --proposal '{proposal}'"
     ));
 

@@ -980,11 +980,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             )
         }
         Method::LiquidexToProposal => {
-            log::debug!("liquidex to proposal");
             let r: request::LiquidexToProposal = serde_json::from_value(params)?;
             let pset = PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let proposal = LiquidexProposal::from_pset(&pset)?;
-            log::debug!("liquidex to proposal222");
 
             let proposal = serde_json::to_value(&proposal)?;
             Response::result(

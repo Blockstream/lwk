@@ -154,6 +154,20 @@ impl TxBuilder {
     pub fn to_string_js(&self) -> String {
         self.to_string()
     }
+
+    #[wasm_bindgen(js_name = liquidexMake)]
+    pub fn liquidex_make(
+        self,
+        utxo: OutPoint,
+        address: Address,
+        satoshi: u64,
+        asset_id: AssetId,
+    ) -> Result<TxBuilder, Error> {
+        Ok(self
+            .inner
+            .liquidex_make(utxo.into(), &(address.into()), satoshi, asset_id.into())?
+            .into())
+    }
 }
 
 impl Display for TxBuilder {

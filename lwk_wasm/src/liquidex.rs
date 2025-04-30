@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use wasm_bindgen::prelude::*;
 
+use crate::Pset;
+
 /// Wrapper of [`lwk_wollet::LiquidexProposal`]
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -34,6 +36,14 @@ impl FromStr for LiquidexProposal {
         Ok(Self {
             inner: serde_json::from_str(s)?,
         })
+    }
+}
+
+impl LiquidexProposal {
+    pub fn from_pset(pset: Pset) -> Result<Self, crate::Error> {
+        let pset = pset.into();
+        let proposal = lwk_wollet::LiquidexProposal::from_pset(&pset)?;
+        Ok(Self { inner: proposal })
     }
 }
 

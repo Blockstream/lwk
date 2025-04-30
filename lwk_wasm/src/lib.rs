@@ -12,6 +12,7 @@ mod esplora;
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod ledger;
+mod liquidex;
 mod mnemonic;
 mod network;
 mod precision;

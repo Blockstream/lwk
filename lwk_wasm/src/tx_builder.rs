@@ -3,7 +3,10 @@ use std::fmt::Display;
 use lwk_wollet::{elements, UnvalidatedRecipient};
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Contract, Error, Network, OutPoint, Pset, Transaction, Wollet};
+use crate::{
+    liquidex::LiquidexProposal, Address, AssetId, Contract, Error, Network, OutPoint, Pset,
+    Transaction, Wollet,
+};
 
 /// Wrapper of [`lwk_wollet::TxBuilder`]
 #[wasm_bindgen]
@@ -167,6 +170,13 @@ impl TxBuilder {
             .inner
             .liquidex_make(utxo.into(), &(address.into()), satoshi, asset_id.into())?
             .into())
+    }
+
+    #[wasm_bindgen(js_name = liquidexTake)]
+    pub fn liquidex_take(self, proposals: Vec<LiquidexProposal>) -> Result<Self, Error> {
+        let proposals: Vec<lwk_wollet::LiquidexProposal> =
+            proposals.into_iter().map(Into::into).collect();
+        Ok(self.inner.liquidex_take(proposals)?.into())
     }
 }
 

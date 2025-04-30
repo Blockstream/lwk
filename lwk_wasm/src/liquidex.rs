@@ -49,11 +49,13 @@ impl LiquidexProposal {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
+    use lwk_wollet::{elements::hex::FromHex, elements_miniscript::descriptor};
     use serde_json::Value;
     use std::str::FromStr;
     use wasm_bindgen_test::*;
 
     use super::LiquidexProposal;
+    use crate::{Address, Network, TxBuilder, Wollet, WolletDescriptor};
 
     #[wasm_bindgen_test]
     fn test_liquidex_proposal() {
@@ -81,5 +83,41 @@ mod tests {
         let proposal = LiquidexProposal::from_str(proposal_str).unwrap();
         let proposal_back_json: Value = serde_json::from_str(&proposal.to_string()).unwrap();
         assert_eq!(proposal_json, proposal_back_json);
+    }
+
+    const DESCRIPTOR: &str = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
+    #[wasm_bindgen_test]
+    fn test_tx_builder_liquidex() {
+        let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
+
+        let network = Network::mainnet();
+        let mut wollet = Wollet::new(&network, &descriptor).unwrap();
+
+        let bytes = Vec::<u8>::from_hex(include_str!(
+            "../test_data/update_test_balance_and_transactions.hex"
+        ))
+        .unwrap();
+        let update = crate::Update::new(&bytes).unwrap();
+        wollet.apply_update(&update).unwrap();
+        let utxos = wollet.utxos().unwrap();
+        let addr = wollet.address(None).unwrap().address();
+
+        assert!(!utxos.is_empty());
+        let utxo = utxos[0].outpoint();
+        let policy = network.policy_asset();
+
+        let mut builder = TxBuilder::new(&network);
+        let pset_maker = builder
+            .liquidex_make(utxo, addr, 1000, policy)
+            .unwrap()
+            .finish(&wollet)
+            .unwrap();
+
+        // TODO: sign, need a signer, but also an update with a UTXO...
+
+        let proposal = LiquidexProposal::from_pset(from_pset);
+
+        // TODO: let proposal = proposal.unwrap();
+        // TODO: taker steps
     }
 }

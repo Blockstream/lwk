@@ -147,5 +147,10 @@ mod tests {
             .finish(&wollet)
             .unwrap();
         let signed_pset_taker = signer.sign(pset_taker).unwrap();
+
+        let net_balance = wollet.pset_details(&signed_pset_taker).unwrap().balance();
+
+        // TODO why address in recipients is None?
+        assert_eq!(format!("{:?}", net_balance), "PsetBalance { inner: PsetBalance { fee: 53, balances: {144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49: 99947, 38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5: -1}, recipients: [Recipient { address: None, asset: Some(38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5), value: Some(1), vout: 0 }] } }");
     }
 }

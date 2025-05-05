@@ -118,11 +118,10 @@ mod tests {
             .finish(&wollet)
             .unwrap();
 
-        // TODO: sign, need a signer, but also an update with a UTXO...
+        let signed_pset_maker = signer.sign(pset_maker).unwrap();
 
-        let proposal = LiquidexProposal::from_pset(pset_maker);
+        let proposal = LiquidexProposal::from_pset(signed_pset_maker).unwrap();
 
-        // TODO: let proposal = proposal.unwrap();
         // TODO: taker steps
     }
 }

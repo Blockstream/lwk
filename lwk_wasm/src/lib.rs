@@ -96,4 +96,31 @@ mod tests {
             "balance isn't as expected, it could be some coin has been spent"
         )
     }
+
+    #[wasm_bindgen_test]
+    async fn test_data() {
+        let network = Network::testnet();
+        let mut client = network.default_esplora_client();
+
+        let mnemonic = crate::Mnemonic::new(include_str!(
+            "../test_data/update_with_mnemonic/mnemonic.txt"
+        ))
+        .unwrap();
+        let signer = crate::Signer::new(&mnemonic, &network).unwrap();
+        let descriptor = signer.wpkh_slip77_descriptor().unwrap();
+        let expected = include_str!("../test_data/update_with_mnemonic/descriptor.txt");
+        assert_eq!(format!("{}", descriptor), expected);
+        let mut wollet = Wollet::new(&Network::testnet(), &descriptor).unwrap();
+        let address = wollet.address(None).unwrap().address();
+        let expected = "tlq1qqwql6y6tswwhdx5423yraz27fghllv04tutsgwje6sumc34ux8pmpv2n9ruj4sy23my2yvwz5cknhlcacjkavu07vn5fr5e8s";
+        assert_eq!(address.to_string(), expected);
+
+        let update_base64 =
+            include_str!("../test_data/update_with_mnemonic/update_serialized_encrypted.txt");
+        let update =
+            crate::Update::deserialize_decrypted_base64(update_base64, &descriptor).unwrap();
+        wollet.apply_update(&update).unwrap();
+        let utxos = wollet.utxos().unwrap();
+        assert_eq!(utxos.len(), 1);
+    }
 }

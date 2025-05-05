@@ -123,4 +123,29 @@ mod tests {
         let utxos = wollet.utxos().unwrap();
         assert_eq!(utxos.len(), 1);
     }
+
+    #[wasm_bindgen_test]
+    async fn test_data2() {
+        let network = Network::testnet();
+        let mnemonic = crate::Mnemonic::new(include_str!(
+            "../test_data/update_with_mnemonic/mnemonic2.txt"
+        ))
+        .unwrap();
+        let signer = crate::Signer::new(&mnemonic, &network).unwrap();
+        let descriptor = signer.wpkh_slip77_descriptor().unwrap();
+        let expected = include_str!("../test_data/update_with_mnemonic/descriptor2.txt");
+        assert_eq!(format!("{}", descriptor), expected);
+        let mut wollet = Wollet::new(&Network::testnet(), &descriptor).unwrap();
+        let address = wollet.address(None).unwrap().address();
+        let expected = "tlq1qqge8nc4myrnfhczje9axcu8agchucgllvcnrvc5ezufqt9guq00vwer0jdryetd8z9dkqjh25yr50vun7qd0yc6g6nv63n0ak";
+        assert_eq!(address.to_string(), expected);
+
+        let update_base64 =
+            include_str!("../test_data/update_with_mnemonic/update_serialized_encrypted2.txt");
+        let update =
+            crate::Update::deserialize_decrypted_base64(update_base64, &descriptor).unwrap();
+        wollet.apply_update(&update).unwrap();
+        let utxos = wollet.utxos().unwrap();
+        assert_eq!(utxos.len(), 2); // 2 utxos, one for the tLBTC and the other for the asset 38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5
+    }
 }

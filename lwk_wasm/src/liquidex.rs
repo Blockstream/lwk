@@ -109,11 +109,13 @@ mod tests {
 
         assert!(!utxos.is_empty());
         let utxo = utxos[0].outpoint();
-        let policy = network.policy_asset();
+        let wanted_asset =
+            crate::AssetId::new("38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5")
+                .unwrap();
 
         let mut builder = TxBuilder::new(&network);
         let pset_maker = builder
-            .liquidex_make(utxo, addr, 1000, policy)
+            .liquidex_make(utxo, addr, 1, wanted_asset)
             .unwrap()
             .finish(&wollet)
             .unwrap();
@@ -123,5 +125,27 @@ mod tests {
         let proposal = LiquidexProposal::from_pset(signed_pset_maker).unwrap();
 
         // TODO: taker steps
+        let mnemonic = crate::Mnemonic::new(include_str!(
+            "../test_data/update_with_mnemonic/mnemonic2.txt"
+        ))
+        .unwrap();
+        let descriptor = include_str!("../test_data/update_with_mnemonic/descriptor2.txt");
+        let update_base64 =
+            include_str!("../test_data/update_with_mnemonic/update_serialized_encrypted2.txt");
+
+        let signer = crate::Signer::new(&mnemonic, &network).unwrap();
+        let descriptor = WolletDescriptor::new(&descriptor).unwrap();
+        let mut wollet = Wollet::new(&network, &descriptor).unwrap();
+        let update =
+            crate::Update::deserialize_decrypted_base64(update_base64, &descriptor).unwrap();
+        wollet.apply_update(&update).unwrap();
+
+        let mut builder = TxBuilder::new(&network);
+        let pset_taker = builder
+            .liquidex_take([proposal].to_vec())
+            .unwrap()
+            .finish(&wollet)
+            .unwrap();
+        let signed_pset_taker = signer.sign(pset_taker).unwrap();
     }
 }

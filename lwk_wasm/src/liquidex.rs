@@ -85,20 +85,25 @@ mod tests {
         assert_eq!(proposal_json, proposal_back_json);
     }
 
-    const DESCRIPTOR: &str = "ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1776'/0']xpub6D3Y5EKNsmegjE7azkF2foAYFivHrV5u7tcnN2TXELxv1djNtabCHtp3jMvxqEhTU737mYSUqHD1sA5MdZXQ8DWJLNft1gwtpzXZDsRnrZd/<0;1>/*)))#efvhq75f";
     #[wasm_bindgen_test]
     fn test_tx_builder_liquidex() {
-        let descriptor = WolletDescriptor::new(DESCRIPTOR).unwrap();
+        let network = Network::testnet(); // but offline with pre-loaded static update
 
-        let network = Network::mainnet();
-        let mut wollet = Wollet::new(&network, &descriptor).unwrap();
-
-        let bytes = Vec::<u8>::from_hex(include_str!(
-            "../test_data/update_test_balance_and_transactions.hex"
+        let mnemonic = crate::Mnemonic::new(include_str!(
+            "../test_data/update_with_mnemonic/mnemonic.txt"
         ))
         .unwrap();
-        let update = crate::Update::new(&bytes).unwrap();
+        let descriptor = include_str!("../test_data/update_with_mnemonic/descriptor.txt");
+        let update_base64 =
+            include_str!("../test_data/update_with_mnemonic/update_serialized_encrypted.txt");
+
+        let signer = crate::Signer::new(&mnemonic, &network).unwrap();
+        let descriptor = WolletDescriptor::new(&descriptor).unwrap();
+        let mut wollet = Wollet::new(&network, &descriptor).unwrap();
+        let update =
+            crate::Update::deserialize_decrypted_base64(update_base64, &descriptor).unwrap();
         wollet.apply_update(&update).unwrap();
+
         let utxos = wollet.utxos().unwrap();
         let addr = wollet.address(None).unwrap().address();
 
@@ -115,7 +120,7 @@ mod tests {
 
         // TODO: sign, need a signer, but also an update with a UTXO...
 
-        let proposal = LiquidexProposal::from_pset(from_pset);
+        let proposal = LiquidexProposal::from_pset(pset_maker);
 
         // TODO: let proposal = proposal.unwrap();
         // TODO: taker steps

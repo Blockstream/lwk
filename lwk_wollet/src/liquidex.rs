@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 use elements::{
@@ -111,6 +113,24 @@ pub struct LiquidexProposal {
     inputs: Vec<LiquidexTxOutSecrets>,
     outputs: Vec<LiquidexTxOutSecrets>,
     scalars: Vec<secp256k1_zkp::Tweak>,
+}
+
+impl std::fmt::Display for LiquidexProposal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            serde_json::to_string(self).expect("failed to serialize")
+        )
+    }
+}
+
+impl FromStr for LiquidexProposal {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
 }
 
 impl LiquidexProposal {

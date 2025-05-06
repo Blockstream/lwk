@@ -11,7 +11,7 @@ pub struct LiquidexProposal {
 
 impl Display for LiquidexProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_json::to_string(&self.inner).unwrap())
+        write!(f, "{}", &self.inner)
     }
 }
 impl From<lwk_wollet::LiquidexProposal> for LiquidexProposal {
@@ -30,9 +30,7 @@ impl std::str::FromStr for LiquidexProposal {
     type Err = LwkError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            inner: serde_json::from_str(s)?,
-        })
+        Ok(lwk_wollet::LiquidexProposal::from_str(s)?.into())
     }
 }
 

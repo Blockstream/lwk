@@ -24,6 +24,12 @@ impl Display for Pset {
     }
 }
 
+impl AsRef<PartiallySignedTransaction> for Pset {
+    fn as_ref(&self) -> &PartiallySignedTransaction {
+        &self.inner
+    }
+}
+
 #[uniffi::export]
 impl Pset {
     /// Construct a Watch-Only wallet object

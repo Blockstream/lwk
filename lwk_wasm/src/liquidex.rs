@@ -122,9 +122,9 @@ mod tests {
 
         let signed_pset_maker = signer.sign(pset_maker).unwrap();
 
+        // TODO How do lwk_wasm users securely extract amounts and assets from the proposal?
         let proposal = LiquidexProposal::from_pset(signed_pset_maker).unwrap();
 
-        // TODO: taker steps
         let mnemonic = crate::Mnemonic::new(include_str!(
             "../test_data/update_with_mnemonic/mnemonic2.txt"
         ))

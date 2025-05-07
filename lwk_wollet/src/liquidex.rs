@@ -218,7 +218,7 @@ impl LiquidexProposal<Unvalidated> {
         })
     }
 
-    /// Get the txid of the transaction needed for [`validate()`]
+    /// Get the txid of the transaction needed for [`LiquidexProposal::<Unvalidated>::validate()`]
     pub fn needed_tx(&self) -> Result<Txid, Error> {
         Ok(self.get_previous_outpoint()?.txid)
     }

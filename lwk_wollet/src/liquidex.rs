@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{marker::PhantomData, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -95,6 +95,12 @@ impl LiquidexTxOutSecrets {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Validated;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unvalidated;
+
 /// LiquiDEX swap proposal
 ///
 /// A LiquiDEX swap proposal is a transaction with one input and one output created by the "maker".
@@ -106,16 +112,19 @@ impl LiquidexTxOutSecrets {
 /// adding more inputs and more outputs to balance the amounts, meaning that the "taker" sends the
 /// output and receives the input.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
-pub struct LiquidexProposal {
+pub struct LiquidexProposal<S> {
     version: u32,
     // TODO: use serde with to make tx a elements::Transaction
     tx: String,
     inputs: Vec<LiquidexTxOutSecrets>,
     outputs: Vec<LiquidexTxOutSecrets>,
     scalars: Vec<secp256k1_zkp::Tweak>,
+
+    #[serde(skip)]
+    data: PhantomData<S>,
 }
 
-impl std::fmt::Display for LiquidexProposal {
+impl std::fmt::Display for LiquidexProposal<Validated> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -125,7 +134,7 @@ impl std::fmt::Display for LiquidexProposal {
     }
 }
 
-impl FromStr for LiquidexProposal {
+impl FromStr for LiquidexProposal<Unvalidated> {
     type Err = serde_json::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -133,7 +142,7 @@ impl FromStr for LiquidexProposal {
     }
 }
 
-impl LiquidexProposal {
+impl LiquidexProposal<Unvalidated> {
     /// Create a LiquiDEX proposal from a PSET
     ///
     /// The PSET must be created with [`crate::TxBuilder::liquidex_make()`] and must be signed.
@@ -199,9 +208,25 @@ impl LiquidexProposal {
             inputs: vec![input],
             outputs: vec![output],
             scalars: pset.global.scalars.clone(),
+            data: PhantomData,
         })
     }
 
+    /// Convert an unvalidated proposal into a validated one without doing real verifcation
+    /// This is unsafe and should only be used if the proposal is guaranteed to be valid
+    pub fn assume_validated(self) -> LiquidexProposal<Validated> {
+        LiquidexProposal {
+            version: self.version,
+            tx: self.tx,
+            inputs: self.inputs,
+            outputs: self.outputs,
+            scalars: self.scalars,
+            data: PhantomData,
+        }
+    }
+}
+
+impl LiquidexProposal<Validated> {
     pub(crate) fn transaction(&self) -> Result<Transaction, Error> {
         let bytes = Vec::<u8>::from_hex(&self.tx)?;
         Ok(elements::encode::deserialize(&bytes)?)
@@ -369,6 +394,10 @@ pub(crate) fn scalar_offset(txoutsecrets: &elements::TxOutSecrets) -> secp256k1_
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use crate::Unvalidated;
+
     use super::LiquidexProposal;
 
     #[test]
@@ -393,7 +422,10 @@ mod tests {
                 "95e27208708a7b57e0ec3b562bbe0dd56548bb9d0359d7f9a8604dfd9ec02eba"
             ]
         }"#;
-        let proposal: LiquidexProposal = serde_json::from_str(proposal_str).unwrap();
+        let proposal = LiquidexProposal::<Unvalidated>::from_str(proposal_str).unwrap();
+
+        // TODO: make verification steps below inside the method
+        let proposal = proposal.assume_validated();
 
         let _ = proposal.get_previous_outpoint().unwrap();
         let (maker_input_sats, maker_input_asset) = proposal.get_input(None).unwrap();
@@ -410,8 +442,9 @@ mod tests {
         );
 
         // verify that the serialized proposal matches the deserialized one
-        let proposal_str2 = serde_json::to_string(&proposal).unwrap();
-        let proposal2: LiquidexProposal = serde_json::from_str(&proposal_str2).unwrap();
+        let proposal_str2 = proposal.to_string();
+        let proposal2 = LiquidexProposal::<Unvalidated>::from_str(&proposal_str2).unwrap();
+        let proposal2 = proposal2.assume_validated();
         assert_eq!(proposal, proposal2);
     }
 }

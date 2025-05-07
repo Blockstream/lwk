@@ -11,7 +11,7 @@ use rand::thread_rng;
 
 use crate::{
     hashes::Hash,
-    liquidex::{self, LiquidexError},
+    liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest},
     Contract, ElementsNetwork, Error, LiquidexProposal, UnvalidatedRecipient, Wollet, EC,
@@ -100,7 +100,7 @@ pub struct TxBuilder {
 
     // LiquiDEX fields
     is_liquidex_make: bool,
-    liquidex_proposals: Vec<LiquidexProposal>,
+    liquidex_proposals: Vec<LiquidexProposal<Validated>>,
 }
 
 impl TxBuilder {
@@ -338,7 +338,10 @@ impl TxBuilder {
     }
 
     /// Set data to take LiquiDEX proposals
-    pub fn liquidex_take(mut self, proposals: Vec<LiquidexProposal>) -> Result<Self, Error> {
+    pub fn liquidex_take(
+        mut self,
+        proposals: Vec<LiquidexProposal<Validated>>,
+    ) -> Result<Self, Error> {
         self.liquidex_proposals = proposals;
         Ok(self)
     }
@@ -1143,7 +1146,7 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Wrapper of [`TxBuilder::liquidex_take()`]
-    pub fn liquidex_take(self, proposals: Vec<LiquidexProposal>) -> Result<Self, Error> {
+    pub fn liquidex_take(self, proposals: Vec<LiquidexProposal<Validated>>) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
             inner: self.inner.liquidex_take(proposals)?,

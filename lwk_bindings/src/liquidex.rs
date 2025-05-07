@@ -1,45 +1,55 @@
 use std::{fmt::Display, sync::Arc};
 
+use lwk_wollet::{Unvalidated, Validated};
+
 use crate::{LwkError, Pset};
 
-/// Wrapper over [`lwk_wollet::ElementsNetwork`]
-#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
+/// Wrapper over [`lwk_wollet::LiquidexProposal<Validated>`]
+#[derive(uniffi::Object, Debug, Clone)]
 #[uniffi::export(Display)]
-pub struct LiquidexProposal {
-    inner: lwk_wollet::LiquidexProposal,
+pub struct ValidatedLiquidexProposal {
+    inner: lwk_wollet::LiquidexProposal<Validated>,
 }
 
-impl Display for LiquidexProposal {
+/// Wrapper over [`lwk_wollet::LiquidexProposal<Unvalidated>`]
+#[derive(uniffi::Object, Debug, Clone)]
+pub struct UnvalidatedLiquidexProposal {
+    inner: lwk_wollet::LiquidexProposal<Unvalidated>,
+}
+
+impl Display for ValidatedLiquidexProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.inner)
     }
 }
-impl From<lwk_wollet::LiquidexProposal> for LiquidexProposal {
-    fn from(inner: lwk_wollet::LiquidexProposal) -> Self {
-        Self { inner }
-    }
-}
 
-impl From<LiquidexProposal> for lwk_wollet::LiquidexProposal {
-    fn from(value: LiquidexProposal) -> Self {
-        value.inner
-    }
-}
-
-impl std::str::FromStr for LiquidexProposal {
+impl std::str::FromStr for UnvalidatedLiquidexProposal {
     type Err = LwkError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(lwk_wollet::LiquidexProposal::from_str(s)?.into())
+        let inner = lwk_wollet::LiquidexProposal::from_str(s)?;
+        Ok(UnvalidatedLiquidexProposal { inner })
     }
 }
 
 #[uniffi::export]
-impl LiquidexProposal {
+impl UnvalidatedLiquidexProposal {
     #[uniffi::constructor]
-    pub fn from_pset(pset: &Pset) -> Result<Arc<LiquidexProposal>, LwkError> {
+    pub fn from_pset(pset: &Pset) -> Result<Arc<UnvalidatedLiquidexProposal>, LwkError> {
         let proposal = lwk_wollet::LiquidexProposal::from_pset(pset.as_ref())?;
         Ok(Arc::new(Self { inner: proposal }))
+    }
+
+    pub fn assume_validated(&self) -> Arc<ValidatedLiquidexProposal> {
+        Arc::new(ValidatedLiquidexProposal {
+            inner: self.inner.clone().assume_validated(),
+        })
+    }
+}
+
+impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated> {
+    fn from(value: ValidatedLiquidexProposal) -> Self {
+        value.inner
     }
 }
 
@@ -49,7 +59,7 @@ mod tests {
 
     use serde_json::Value;
 
-    use crate::LiquidexProposal;
+    use crate::UnvalidatedLiquidexProposal;
 
     #[test]
     fn test_liquidex_proposal() {
@@ -74,7 +84,8 @@ mod tests {
             ]
         }"#;
         let proposal_json: Value = serde_json::from_str(proposal_str).unwrap();
-        let proposal = LiquidexProposal::from_str(proposal_str).unwrap();
+        let proposal = UnvalidatedLiquidexProposal::from_str(proposal_str).unwrap();
+        let proposal = proposal.assume_validated();
         let proposal_back_json: Value = serde_json::from_str(&proposal.to_string()).unwrap();
         assert_eq!(proposal_json, proposal_back_json);
     }

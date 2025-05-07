@@ -1,47 +1,55 @@
 use std::str::FromStr;
 
+use lwk_wollet::{Unvalidated, Validated};
 use wasm_bindgen::prelude::*;
 
 use crate::Pset;
 
-/// Wrapper of [`lwk_wollet::LiquidexProposal`]
+/// Wrapper of [`lwk_wollet::LiquidexProposal<Unvalidated>`]
 #[wasm_bindgen]
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct LiquidexProposal {
-    inner: lwk_wollet::LiquidexProposal,
+#[derive(Debug, Clone)]
+pub struct UnvalidatedLiquidexProposal {
+    inner: lwk_wollet::LiquidexProposal<Unvalidated>,
 }
 
-impl std::fmt::Display for LiquidexProposal {
+/// Wrapper of [`lwk_wollet::LiquidexProposal<Validated>`]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct ValidatedLiquidexProposal {
+    inner: lwk_wollet::LiquidexProposal<Validated>,
+}
+
+impl std::fmt::Display for ValidatedLiquidexProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.inner)
     }
 }
 
-impl From<lwk_wollet::LiquidexProposal> for LiquidexProposal {
-    fn from(inner: lwk_wollet::LiquidexProposal) -> Self {
-        Self { inner }
-    }
-}
-
-impl From<LiquidexProposal> for lwk_wollet::LiquidexProposal {
-    fn from(value: LiquidexProposal) -> Self {
-        value.inner
-    }
-}
-
-impl FromStr for LiquidexProposal {
+impl FromStr for UnvalidatedLiquidexProposal {
     type Err = serde_json::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(lwk_wollet::LiquidexProposal::from_str(s)?.into())
+        let inner = lwk_wollet::LiquidexProposal::from_str(s)?;
+        Ok(UnvalidatedLiquidexProposal { inner })
     }
 }
 
-impl LiquidexProposal {
+impl UnvalidatedLiquidexProposal {
     pub fn from_pset(pset: Pset) -> Result<Self, crate::Error> {
         let pset = pset.into();
         let proposal = lwk_wollet::LiquidexProposal::from_pset(&pset)?;
         Ok(Self { inner: proposal })
+    }
+
+    pub fn assume_validated(self) -> ValidatedLiquidexProposal {
+        let inner = self.inner.assume_validated();
+        ValidatedLiquidexProposal { inner }
+    }
+}
+
+impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated> {
+    fn from(value: ValidatedLiquidexProposal) -> Self {
+        value.inner
     }
 }
 

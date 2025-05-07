@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use lwk_wollet::{elements, UnvalidatedRecipient};
+use lwk_wollet::{elements, UnvalidatedRecipient, Validated};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    liquidex::LiquidexProposal, Address, AssetId, Contract, Error, Network, OutPoint, Pset,
-    Transaction, Wollet,
+    liquidex::ValidatedLiquidexProposal, Address, AssetId, Contract, Error, Network, OutPoint,
+    Pset, Transaction, Wollet,
 };
 
 /// Wrapper of [`lwk_wollet::TxBuilder`]
@@ -173,8 +173,8 @@ impl TxBuilder {
     }
 
     #[wasm_bindgen(js_name = liquidexTake)]
-    pub fn liquidex_take(self, proposals: Vec<LiquidexProposal>) -> Result<Self, Error> {
-        let proposals: Vec<lwk_wollet::LiquidexProposal> =
+    pub fn liquidex_take(self, proposals: Vec<ValidatedLiquidexProposal>) -> Result<Self, Error> {
+        let proposals: Vec<lwk_wollet::LiquidexProposal<Validated>> =
             proposals.into_iter().map(Into::into).collect();
         Ok(self.inner.liquidex_take(proposals)?.into())
     }

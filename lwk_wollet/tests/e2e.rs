@@ -2076,10 +2076,16 @@ fn liquidex<C: BlockchainBackend>(
     let proposal = proposal.validate(tx).unwrap();
 
     // Extract validated assets and amounts from the proposal
-    let (maker_input_sats, maker_input_asset) = proposal.get_input();
+    let AssetAmount {
+        amount: maker_input_sats,
+        asset: maker_input_asset,
+    } = proposal.get_input();
     assert_eq!(maker_input_sats, pset.inputs()[0].amount.unwrap());
     assert_eq!(maker_input_asset, pset.inputs()[0].asset.unwrap());
-    let (maker_output_sats, maker_output_asset) = proposal.get_output();
+    let AssetAmount {
+        amount: maker_output_sats,
+        asset: maker_output_asset,
+    } = proposal.get_output();
     assert_eq!(maker_output_sats, sats_recv);
     assert_eq!(maker_output_asset, asset_recv);
 

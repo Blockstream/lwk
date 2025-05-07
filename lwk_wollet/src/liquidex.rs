@@ -8,7 +8,7 @@ use elements::{
     hashes::Hash,
     hex::{FromHex, ToHex},
     pset::PartiallySignedTransaction,
-    secp256k1_zkp, BlindValueProofs, BlockHash, Transaction, Txid,
+    secp256k1_zkp, AssetId, BlindValueProofs, BlockHash, Transaction, Txid,
 };
 use elements_miniscript::psbt;
 
@@ -122,6 +122,11 @@ pub struct LiquidexProposal<S> {
 
     #[serde(skip)]
     data: PhantomData<S>,
+}
+
+pub struct AssetAmount {
+    pub amount: u64,
+    pub asset: AssetId,
 }
 
 impl std::fmt::Display for LiquidexProposal<Validated> {
@@ -360,17 +365,23 @@ impl LiquidexProposal<Validated> {
     }
 
     /// Get the input amount (in satoshi) and asset
-    pub fn get_input(&self) -> (u64, elements::AssetId) {
+    pub fn get_input(&self) -> AssetAmount {
         let input = &self.inputs.as_slice()[0]; // safety: the presence of the input is guaranteed by validation
 
-        (input.satoshi, input.asset)
+        AssetAmount {
+            amount: input.satoshi,
+            asset: input.asset,
+        }
     }
 
     /// Get the output amount (in satoshi) and asset
-    pub fn get_output(&self) -> (u64, elements::AssetId) {
+    pub fn get_output(&self) -> AssetAmount {
         let output = &self.outputs.as_slice()[0]; // safety: the presence of the output is guaranteed by validation
 
-        (output.satoshi, output.asset)
+        AssetAmount {
+            amount: output.satoshi,
+            asset: output.asset,
+        }
     }
 }
 
@@ -424,7 +435,7 @@ pub(crate) fn scalar_offset(txoutsecrets: &elements::TxOutSecrets) -> secp256k1_
 mod tests {
     use std::str::FromStr;
 
-    use crate::Unvalidated;
+    use crate::{liquidex::AssetAmount, Unvalidated};
 
     use super::LiquidexProposal;
 
@@ -455,8 +466,15 @@ mod tests {
         // TODO: make verification steps below inside the method
         let proposal = proposal.insecure_validate().expect("TODO");
 
-        let (maker_input_sats, maker_input_asset) = proposal.get_input();
-        let (maker_output_sats, maker_output_asset) = proposal.get_output();
+        let AssetAmount {
+            amount: maker_input_sats,
+            asset: maker_input_asset,
+        } = proposal.get_input();
+
+        let AssetAmount {
+            amount: maker_output_sats,
+            asset: maker_output_asset,
+        } = proposal.get_output();
         assert_eq!(maker_input_sats, 10000);
         assert_eq!(
             maker_input_asset.to_string(),

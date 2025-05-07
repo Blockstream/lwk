@@ -111,7 +111,7 @@ pub use crate::clients::{Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
-pub use crate::liquidex::{LiquidexProposal, Unvalidated, Validated};
+pub use crate::liquidex::{AssetAmount, LiquidexProposal, Unvalidated, Validated};
 pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,

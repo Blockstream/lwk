@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use lwk_wollet::{Unvalidated, Validated};
 
-use crate::{LwkError, Pset, Transaction};
+use crate::{types::AssetId, LwkError, Pset, Transaction};
 
 /// Wrapper over [`lwk_wollet::LiquidexProposal<Validated>`]
 #[derive(uniffi::Object, Debug, Clone)]
@@ -15,6 +15,12 @@ pub struct ValidatedLiquidexProposal {
 #[derive(uniffi::Object, Debug, Clone)]
 pub struct UnvalidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Unvalidated>,
+}
+
+/// Wrapper over [`lwk_wollet::AssetAmount`]
+#[derive(uniffi::Object, Debug, Clone)]
+pub struct AssetAmount {
+    inner: lwk_wollet::AssetAmount,
 }
 
 impl Display for ValidatedLiquidexProposal {
@@ -62,6 +68,30 @@ impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated>
     }
 }
 
+#[uniffi::export]
+impl ValidatedLiquidexProposal {
+    pub fn input(&self) -> Arc<AssetAmount> {
+        let inner = self.inner.input();
+        Arc::new(AssetAmount { inner })
+    }
+
+    pub fn output(&self) -> Arc<AssetAmount> {
+        let inner = self.inner.output();
+        Arc::new(AssetAmount { inner })
+    }
+}
+
+#[uniffi::export]
+impl AssetAmount {
+    pub fn amount(&self) -> u64 {
+        self.inner.amount
+    }
+
+    pub fn asset(&self) -> AssetId {
+        self.inner.asset.into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -97,5 +127,16 @@ mod tests {
         let proposal = proposal.insecure_validate().unwrap();
         let proposal_back_json: Value = serde_json::from_str(&proposal.to_string()).unwrap();
         assert_eq!(proposal_json, proposal_back_json);
+
+        assert_eq!(proposal.input().amount(), 10000);
+        assert_eq!(proposal.output().amount(), 10000);
+        assert_eq!(
+            proposal.input().asset().to_string(),
+            "6921c799f7b53585025ae8205e376bfd2a7c0571f781649fb360acece252a6a7"
+        );
+        assert_eq!(
+            proposal.output().asset().to_string(),
+            "f13806d2ab6ef8ba56fc4680c1689feb21d7596700af1871aef8c2d15d4bfd28"
+        );
     }
 }

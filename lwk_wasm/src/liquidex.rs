@@ -3,7 +3,7 @@ use std::str::FromStr;
 use lwk_wollet::{Unvalidated, Validated};
 use wasm_bindgen::prelude::*;
 
-use crate::{Pset, Transaction};
+use crate::{AssetId, Pset, Transaction};
 
 /// Wrapper of [`lwk_wollet::LiquidexProposal<Unvalidated>`]
 #[wasm_bindgen]
@@ -17,6 +17,13 @@ pub struct UnvalidatedLiquidexProposal {
 #[derive(Debug, Clone)]
 pub struct ValidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Validated>,
+}
+
+/// Wrapper of [`lwk_wollet::AssetAmount`]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct AssetAmount {
+    inner: lwk_wollet::AssetAmount,
 }
 
 impl std::fmt::Display for ValidatedLiquidexProposal {
@@ -34,6 +41,7 @@ impl FromStr for UnvalidatedLiquidexProposal {
     }
 }
 
+#[wasm_bindgen]
 impl UnvalidatedLiquidexProposal {
     pub fn from_pset(pset: Pset) -> Result<Self, crate::Error> {
         let pset = pset.into();
@@ -58,6 +66,29 @@ impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated>
     }
 }
 
+#[wasm_bindgen]
+impl AssetAmount {
+    pub fn amount(&self) -> u64 {
+        self.inner.amount
+    }
+
+    pub fn asset(&self) -> AssetId {
+        self.inner.asset.into()
+    }
+}
+
+#[wasm_bindgen]
+impl ValidatedLiquidexProposal {
+    pub fn input(&self) -> AssetAmount {
+        let inner = self.inner.input();
+        AssetAmount { inner }
+    }
+
+    pub fn output(&self) -> AssetAmount {
+        let inner = self.inner.output();
+        AssetAmount { inner }
+    }
+}
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use lwk_wollet::{elements::hex::FromHex, elements_miniscript::descriptor};
@@ -137,6 +168,14 @@ mod tests {
         // TODO How do lwk_wasm users securely extract amounts and assets from the proposal?
         let proposal = UnvalidatedLiquidexProposal::from_pset(signed_pset_maker).unwrap();
         let proposal = proposal.insecure_validate().unwrap();
+
+        let input = proposal.input();
+        let output = proposal.output();
+
+        assert_eq!(input.amount(), 100000);
+        assert_eq!(input.asset(), network.policy_asset());
+        assert_eq!(output.amount(), 1);
+        assert_eq!(output.asset(), wanted_asset);
 
         let mnemonic = crate::Mnemonic::new(include_str!(
             "../test_data/update_with_mnemonic/mnemonic2.txt"

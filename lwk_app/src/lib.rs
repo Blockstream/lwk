@@ -963,10 +963,14 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
         Method::LiquidexTake => {
             let r: request::LiquidexTake = serde_json::from_value(params)?;
 
-            // TODO: properly validated the proposal
-            let proposal = LiquidexProposal::from_str(&r.proposal)?
-                .insecure_validate()
-                .expect("TODO");
+            let proposal = LiquidexProposal::from_str(&r.proposal)?;
+            let txid = proposal.needed_tx()?;
+            let client = {
+                let s = state.lock()?;
+                s.config.esplora_blocking_client()?
+            };
+            let tx = client.get_transactions(&[txid])?.pop().expect("tx");
+            let proposal = proposal.validate(tx)?;
 
             let mut s = state.lock()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;

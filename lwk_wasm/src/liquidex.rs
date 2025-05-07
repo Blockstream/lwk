@@ -3,7 +3,7 @@ use std::str::FromStr;
 use lwk_wollet::{Unvalidated, Validated};
 use wasm_bindgen::prelude::*;
 
-use crate::Pset;
+use crate::{Pset, Transaction};
 
 /// Wrapper of [`lwk_wollet::LiquidexProposal<Unvalidated>`]
 #[wasm_bindgen]
@@ -41,9 +41,14 @@ impl UnvalidatedLiquidexProposal {
         Ok(Self { inner: proposal })
     }
 
-    pub fn assume_validated(self) -> ValidatedLiquidexProposal {
-        let inner = self.inner.insecure_validate().expect("TODO");
-        ValidatedLiquidexProposal { inner }
+    pub fn insecure_validate(self) -> Result<ValidatedLiquidexProposal, crate::Error> {
+        let inner = self.inner.insecure_validate()?;
+        Ok(ValidatedLiquidexProposal { inner })
+    }
+
+    pub fn validate(self, tx: Transaction) -> Result<ValidatedLiquidexProposal, crate::Error> {
+        let inner = self.inner.validate(tx.into())?;
+        Ok(ValidatedLiquidexProposal { inner })
     }
 }
 
@@ -60,7 +65,7 @@ mod tests {
     use std::str::FromStr;
     use wasm_bindgen_test::*;
 
-    use super::LiquidexProposal;
+    use super::{UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
     use crate::{Address, Network, TxBuilder, Wollet, WolletDescriptor};
 
     #[wasm_bindgen_test]
@@ -86,7 +91,8 @@ mod tests {
             ]
         }"#;
         let proposal_json: Value = serde_json::from_str(proposal_str).unwrap();
-        let proposal = LiquidexProposal::from_str(proposal_str).unwrap();
+        let proposal = UnvalidatedLiquidexProposal::from_str(proposal_str).unwrap();
+        let proposal = proposal.insecure_validate().unwrap();
         let proposal_back_json: Value = serde_json::from_str(&proposal.to_string()).unwrap();
         assert_eq!(proposal_json, proposal_back_json);
     }
@@ -129,7 +135,8 @@ mod tests {
         let signed_pset_maker = signer.sign(pset_maker).unwrap();
 
         // TODO How do lwk_wasm users securely extract amounts and assets from the proposal?
-        let proposal = LiquidexProposal::from_pset(signed_pset_maker).unwrap();
+        let proposal = UnvalidatedLiquidexProposal::from_pset(signed_pset_maker).unwrap();
+        let proposal = proposal.insecure_validate().unwrap();
 
         let mnemonic = crate::Mnemonic::new(include_str!(
             "../test_data/update_with_mnemonic/mnemonic2.txt"

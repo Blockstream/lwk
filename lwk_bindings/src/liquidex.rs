@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use lwk_wollet::{Unvalidated, Validated};
 
-use crate::{LwkError, Pset};
+use crate::{LwkError, Pset, Transaction};
 
 /// Wrapper over [`lwk_wollet::LiquidexProposal<Validated>`]
 #[derive(uniffi::Object, Debug, Clone)]
@@ -40,10 +40,19 @@ impl UnvalidatedLiquidexProposal {
         Ok(Arc::new(Self { inner: proposal }))
     }
 
-    pub fn assume_validated(&self) -> Arc<ValidatedLiquidexProposal> {
-        Arc::new(ValidatedLiquidexProposal {
-            inner: self.inner.clone().insecure_validate().expect("TODO"),
-        })
+    pub fn insecure_validate(&self) -> Result<Arc<ValidatedLiquidexProposal>, LwkError> {
+        Ok(Arc::new(ValidatedLiquidexProposal {
+            inner: self.inner.clone().insecure_validate()?,
+        }))
+    }
+
+    pub fn validate(
+        &self,
+        previous_tx: &Transaction,
+    ) -> Result<Arc<ValidatedLiquidexProposal>, LwkError> {
+        Ok(Arc::new(ValidatedLiquidexProposal {
+            inner: self.inner.clone().validate(previous_tx.into())?,
+        }))
     }
 }
 
@@ -85,7 +94,7 @@ mod tests {
         }"#;
         let proposal_json: Value = serde_json::from_str(proposal_str).unwrap();
         let proposal = UnvalidatedLiquidexProposal::from_str(proposal_str).unwrap();
-        let proposal = proposal.assume_validated();
+        let proposal = proposal.insecure_validate().unwrap();
         let proposal_back_json: Value = serde_json::from_str(&proposal.to_string()).unwrap();
         assert_eq!(proposal_json, proposal_back_json);
     }

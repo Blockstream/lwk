@@ -124,6 +124,7 @@ pub struct LiquidexProposal<S> {
     data: PhantomData<S>,
 }
 
+#[derive(Debug, Clone)]
 pub struct AssetAmount {
     pub amount: u64,
     pub asset: AssetId,
@@ -365,7 +366,7 @@ impl LiquidexProposal<Validated> {
     }
 
     /// Get the input amount (in satoshi) and asset
-    pub fn get_input(&self) -> AssetAmount {
+    pub fn input(&self) -> AssetAmount {
         let input = &self.inputs.as_slice()[0]; // safety: the presence of the input is guaranteed by validation
 
         AssetAmount {
@@ -375,7 +376,7 @@ impl LiquidexProposal<Validated> {
     }
 
     /// Get the output amount (in satoshi) and asset
-    pub fn get_output(&self) -> AssetAmount {
+    pub fn output(&self) -> AssetAmount {
         let output = &self.outputs.as_slice()[0]; // safety: the presence of the output is guaranteed by validation
 
         AssetAmount {
@@ -469,12 +470,12 @@ mod tests {
         let AssetAmount {
             amount: maker_input_sats,
             asset: maker_input_asset,
-        } = proposal.get_input();
+        } = proposal.input();
 
         let AssetAmount {
             amount: maker_output_sats,
             asset: maker_output_asset,
-        } = proposal.get_output();
+        } = proposal.output();
         assert_eq!(maker_input_sats, 10000);
         assert_eq!(
             maker_input_asset.to_string(),

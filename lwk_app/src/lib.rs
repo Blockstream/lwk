@@ -964,7 +964,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let r: request::LiquidexTake = serde_json::from_value(params)?;
 
             // TODO: properly validated the proposal
-            let proposal = LiquidexProposal::from_str(&r.proposal)?.assume_validated();
+            let proposal = LiquidexProposal::from_str(&r.proposal)?
+                .insecure_validate()
+                .expect("TODO");
 
             let mut s = state.lock()?;
             let wollet: &mut Wollet = s.wollets.get_mut(&r.name)?;

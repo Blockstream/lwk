@@ -42,7 +42,7 @@ impl UnvalidatedLiquidexProposal {
     }
 
     pub fn assume_validated(self) -> ValidatedLiquidexProposal {
-        let inner = self.inner.assume_validated();
+        let inner = self.inner.insecure_validate().expect("TODO");
         ValidatedLiquidexProposal { inner }
     }
 }

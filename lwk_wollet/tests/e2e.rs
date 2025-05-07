@@ -2070,16 +2070,16 @@ fn liquidex<C: BlockchainBackend>(
     pset.merge(pset_unsigned).unwrap();
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
 
-    // TODO: make verification steps below inside the method
-    let proposal = proposal.assume_validated();
+    let txid = proposal.needed_tx().unwrap();
+    assert_eq!(txid, utxo_send.txid);
+    let tx = wallet_maker.wollet.transaction(&txid).unwrap().unwrap().tx;
+    let proposal = proposal.validate(tx).unwrap();
 
     // Extract validated assets and amounts from the proposal
-    let txid = proposal.get_previous_outpoint().unwrap().txid;
-    let tx = wallet_maker.wollet.transaction(&txid).unwrap().unwrap().tx;
-    let (maker_input_sats, maker_input_asset) = proposal.get_input(Some(tx)).unwrap();
+    let (maker_input_sats, maker_input_asset) = proposal.get_input();
     assert_eq!(maker_input_sats, pset.inputs()[0].amount.unwrap());
     assert_eq!(maker_input_asset, pset.inputs()[0].asset.unwrap());
-    let (maker_output_sats, maker_output_asset) = proposal.get_output().unwrap();
+    let (maker_output_sats, maker_output_asset) = proposal.get_output();
     assert_eq!(maker_output_sats, sats_recv);
     assert_eq!(maker_output_asset, asset_recv);
 

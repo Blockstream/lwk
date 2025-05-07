@@ -42,7 +42,7 @@ impl UnvalidatedLiquidexProposal {
 
     pub fn assume_validated(&self) -> Arc<ValidatedLiquidexProposal> {
         Arc::new(ValidatedLiquidexProposal {
-            inner: self.inner.clone().assume_validated(),
+            inner: self.inner.clone().insecure_validate().expect("TODO"),
         })
     }
 }

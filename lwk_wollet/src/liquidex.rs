@@ -8,7 +8,7 @@ use elements::{
     hashes::Hash,
     hex::{FromHex, ToHex},
     pset::PartiallySignedTransaction,
-    secp256k1_zkp, BlindValueProofs, BlockHash, Transaction,
+    secp256k1_zkp, BlindValueProofs, BlockHash, Transaction, Txid,
 };
 use elements_miniscript::psbt;
 
@@ -212,9 +212,25 @@ impl LiquidexProposal<Unvalidated> {
         })
     }
 
-    /// Convert an unvalidated proposal into a validated one without doing real verifcation
-    /// This is unsafe and should only be used if the proposal is guaranteed to be valid
-    pub fn assume_validated(self) -> LiquidexProposal<Validated> {
+    /// Get the txid of the transaction needed for [`validate()`]
+    pub fn needed_tx(&self) -> Result<Txid, Error> {
+        Ok(self.get_previous_outpoint()?.txid)
+    }
+
+    /// Validate the proposal input and output
+    pub fn validate(self, previous_tx: Transaction) -> Result<LiquidexProposal<Validated>, Error> {
+        self.get_output()?;
+        self.get_input(Some(previous_tx))?;
+        Ok(self.validated())
+    }
+
+    /// Validate the proposal output but not the input wich require fetching the previous transaction
+    pub fn insecure_validate(self) -> Result<LiquidexProposal<Validated>, Error> {
+        self.get_output()?;
+        Ok(self.validated())
+    }
+
+    fn validated(self) -> LiquidexProposal<Validated> {
         LiquidexProposal {
             version: self.version,
             tx: self.tx,
@@ -224,14 +240,58 @@ impl LiquidexProposal<Unvalidated> {
             data: PhantomData,
         }
     }
+
+    fn get_input(
+        &self,
+        previous_tx: Option<Transaction>,
+    ) -> Result<(u64, elements::AssetId), Error> {
+        let [input] = self.inputs.as_slice() else {
+            return Err(Error::LiquidexError(LiquidexError::UnexpectedInputs));
+        };
+        if let Some(tx) = previous_tx {
+            let prev_outpoint = self.get_previous_outpoint()?;
+            if prev_outpoint.txid != tx.txid() {
+                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
+            }
+            let Some(txout) = tx.output.get(prev_outpoint.vout as usize) else {
+                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
+            };
+            if !input.verify(txout) {
+                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
+            }
+        }
+        Ok((input.satoshi, input.asset))
+    }
+
+    /// Get the output amount (in satoshi) and asset
+    fn get_output(&self) -> Result<(u64, elements::AssetId), Error> {
+        let [output] = self.outputs.as_slice() else {
+            return Err(Error::LiquidexError(LiquidexError::UnexpectedOutputs));
+        };
+        let tx = self.transaction()?;
+        let [txout] = tx.output.as_slice() else {
+            return Err(Error::LiquidexError(LiquidexError::UnexpectedOutputs));
+        };
+        if !output.verify(txout) {
+            return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
+        }
+        Ok((output.satoshi, output.asset))
+    }
+
+    /// Get the outpoint of the UTXO being spent
+    ///
+    /// You can use this to check that the UTXO is actually unspent and to fetch the transaction
+    /// to validate the input amount and asset.
+    fn get_previous_outpoint(&self) -> Result<elements::OutPoint, Error> {
+        let tx = self.transaction()?;
+        let [input] = tx.input.as_slice() else {
+            return Err(Error::LiquidexError(LiquidexError::UnexpectedInputs));
+        };
+        Ok(input.previous_output)
+    }
 }
 
 impl LiquidexProposal<Validated> {
-    pub(crate) fn transaction(&self) -> Result<Transaction, Error> {
-        let bytes = Vec::<u8>::from_hex(&self.tx)?;
-        Ok(elements::encode::deserialize(&bytes)?)
-    }
-
     /// Create a PSET from the info in a proposal
     pub(crate) fn to_pset(&self) -> Result<PartiallySignedTransaction, Error> {
         let mut pset = PartiallySignedTransaction::new_v2();
@@ -299,57 +359,25 @@ impl LiquidexProposal<Validated> {
         Ok(pset)
     }
 
-    /// Get the outpoint of the UTXO being spent
-    ///
-    /// You can use this to check that the UTXO is actually unspent and to fetch the transaction
-    /// to validate the input amount and asset.
-    pub fn get_previous_outpoint(&self) -> Result<elements::OutPoint, Error> {
-        let tx = self.transaction()?;
-        let [input] = tx.input.as_slice() else {
-            return Err(Error::LiquidexError(LiquidexError::UnexpectedInputs));
-        };
-        Ok(input.previous_output)
-    }
-
     /// Get the input amount (in satoshi) and asset
-    ///
-    /// If `previous_tx` is `None`, no validation is done.
-    /// If it's `Some`, the amount and asset are validated against the output being spent.
-    pub fn get_input(
-        &self,
-        previous_tx: Option<Transaction>,
-    ) -> Result<(u64, elements::AssetId), Error> {
-        let [input] = self.inputs.as_slice() else {
-            return Err(Error::LiquidexError(LiquidexError::UnexpectedInputs));
-        };
-        if let Some(tx) = previous_tx {
-            let prev_outpoint = self.get_previous_outpoint()?;
-            if prev_outpoint.txid != tx.txid() {
-                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
-            }
-            let Some(txout) = tx.output.get(prev_outpoint.vout as usize) else {
-                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
-            };
-            if !input.verify(txout) {
-                return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
-            }
-        }
-        Ok((input.satoshi, input.asset))
+    pub fn get_input(&self) -> (u64, elements::AssetId) {
+        let input = &self.inputs.as_slice()[0]; // safety: the presence of the input is guaranteed by validation
+
+        (input.satoshi, input.asset)
     }
 
     /// Get the output amount (in satoshi) and asset
-    pub fn get_output(&self) -> Result<(u64, elements::AssetId), Error> {
-        let [output] = self.outputs.as_slice() else {
-            return Err(Error::LiquidexError(LiquidexError::UnexpectedOutputs));
-        };
-        let tx = self.transaction()?;
-        let [txout] = tx.output.as_slice() else {
-            return Err(Error::LiquidexError(LiquidexError::UnexpectedOutputs));
-        };
-        if !output.verify(txout) {
-            return Err(Error::LiquidexError(LiquidexError::VerificationFailed));
-        }
-        Ok((output.satoshi, output.asset))
+    pub fn get_output(&self) -> (u64, elements::AssetId) {
+        let output = &self.outputs.as_slice()[0]; // safety: the presence of the output is guaranteed by validation
+
+        (output.satoshi, output.asset)
+    }
+}
+
+impl<T> LiquidexProposal<T> {
+    pub(crate) fn transaction(&self) -> Result<Transaction, Error> {
+        let bytes = Vec::<u8>::from_hex(&self.tx)?;
+        Ok(elements::encode::deserialize(&bytes)?)
     }
 }
 
@@ -425,11 +453,10 @@ mod tests {
         let proposal = LiquidexProposal::<Unvalidated>::from_str(proposal_str).unwrap();
 
         // TODO: make verification steps below inside the method
-        let proposal = proposal.assume_validated();
+        let proposal = proposal.insecure_validate().expect("TODO");
 
-        let _ = proposal.get_previous_outpoint().unwrap();
-        let (maker_input_sats, maker_input_asset) = proposal.get_input(None).unwrap();
-        let (maker_output_sats, maker_output_asset) = proposal.get_output().unwrap();
+        let (maker_input_sats, maker_input_asset) = proposal.get_input();
+        let (maker_output_sats, maker_output_asset) = proposal.get_output();
         assert_eq!(maker_input_sats, 10000);
         assert_eq!(
             maker_input_asset.to_string(),
@@ -444,7 +471,7 @@ mod tests {
         // verify that the serialized proposal matches the deserialized one
         let proposal_str2 = proposal.to_string();
         let proposal2 = LiquidexProposal::<Unvalidated>::from_str(&proposal_str2).unwrap();
-        let proposal2 = proposal2.assume_validated();
+        let proposal2 = proposal2.insecure_validate().unwrap();
         assert_eq!(proposal, proposal2);
     }
 }

@@ -1889,9 +1889,9 @@ async fn test_non_standard_gap_limit_esplora() {
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
 }
 
-#[tokio::test]
+#[test]
 #[cfg(feature = "esplora")]
-async fn test_non_standard_gap_limit_waterfalls_esplora() {
+fn test_non_standard_gap_limit_waterfalls_esplora() {
     // TODO: use TestWollet also for EsploraClient
     // FIXME: add launch_sync or similar to waterfalls
 
@@ -1920,7 +1920,7 @@ async fn test_non_standard_gap_limit_waterfalls_esplora() {
 
     let satoshi = 1_000_000;
     let txid = test_env.send_to(&address_after_gap_limit, satoshi);
-    test_env.node_generate(1).await;
+    rt.block_on(test_env.node_generate(1));
 
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {

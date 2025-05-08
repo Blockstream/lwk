@@ -18,9 +18,10 @@ impl AsRef<asyncr::EsploraClient> for EsploraClient {
 impl EsploraClient {
     /// Creates a client, wrapper of [`asyncr::EsploraClient`]
     #[wasm_bindgen(constructor)]
-    pub fn new(network: &Network, url: &str, waterfalls: bool) -> Self {
+    pub fn new(network: &Network, url: &str, waterfalls: bool, concurrency: usize) -> Self {
         let inner = asyncr::EsploraClientBuilder::new(url, network.into())
             .waterfalls(waterfalls)
+            .concurrency(concurrency)
             .build();
         Self { inner }
     }

@@ -995,23 +995,52 @@ async fn wait_update_with_txs(
 #[ignore = "require network calls"]
 #[cfg(feature = "esplora")]
 #[tokio::test]
-async fn test_esplora_wasm_waterfalls() {
-    use std::time::Instant;
-
+async fn test_esplora_wasm_waterfalls_normal() {
     let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
     let desc = "ct(e350a44c4dad493e7b1faf4ef6a96c1ad13a6fb8d03d61fcec561afb8c3bae18,elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#3axrmm5c";
+    test_esplora_wasm_waterfalls_desc(desc, url).await;
+}
+
+#[ignore = "require network calls"]
+#[cfg(feature = "esplora")]
+#[tokio::test]
+async fn test_esplora_wasm_waterfalls_huge() {
+    // better to run in release mode
+    let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+    // more than 6k txs
+    let desc = "ct(slip77(1bda6cd71a1e206e3eb793e5a4d98a46c3fa473c9ab7bdef9bb9c814764d6614),elwpkh([cb4ba44a/84'/1'/0']tpubDDrybtUajFcgXC85rvwPsh1oU7Azx4kJ9BAiRzMbByqK7UnVXY3gDRJPwEDfaQwguNUZFzrhavJGgEhbsfuebyxUSZQnjLezWVm2Vdqb7UM/<0;1>/*))#za9ktavp";
+    test_esplora_wasm_waterfalls_desc(desc, url).await;
+}
+
+async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) {
+    let network = if desc.contains("xpub") {
+        ElementsNetwork::Liquid
+    } else {
+        ElementsNetwork::LiquidTestnet
+    };
+    init_logging();
+    use std::time::Instant;
+
     let desc = WolletDescriptor::from_str(desc).unwrap();
 
     let mut wollets = vec![];
     for waterfalls in [true, false] {
         let start = Instant::now();
-        let mut wollet = Wollet::without_persist(ElementsNetwork::Liquid, desc.clone()).unwrap();
-        let mut client = clients::asyncr::EsploraClientBuilder::new(url, ElementsNetwork::Liquid)
+        let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+        let mut client = clients::asyncr::EsploraClientBuilder::new(url, network)
             .waterfalls(waterfalls)
+            .concurrency(4)
             .build();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
         let first_scan = start.elapsed();
+
+        println!(
+            "waterfall:{waterfalls} first_scan: {}ms {} txs",
+            first_scan.as_millis(),
+            wollet.transactions().unwrap().len(),
+        );
+
         client.full_scan(&wollet).await.unwrap();
         let second_scan = start.elapsed() - first_scan;
 

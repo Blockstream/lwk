@@ -113,7 +113,9 @@ impl Update {
     }
 
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
-        let nonce_bytes = &bytes[..12];
+        let nonce_bytes = &bytes
+            .get(..12)
+            .ok_or_else(|| Error::Generic("Missing nonce in encrypted bytes".to_string()))?;
         let mut ciphertext = bytes[12..].to_vec();
 
         let nonce = GenericArray::from_slice(nonce_bytes);

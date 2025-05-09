@@ -2326,6 +2326,7 @@ dependencies = [
  "electrum-client",
  "elements",
  "elements-miniscript",
+ "futures",
  "fxhash",
  "idna",
  "js-sys",

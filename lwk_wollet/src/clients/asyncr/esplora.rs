@@ -19,6 +19,7 @@ use elements::{
     Script, Txid,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+use futures::stream::{iter, StreamExt};
 use reqwest::Response;
 use serde::Deserialize;
 use std::{
@@ -38,6 +39,7 @@ pub struct EsploraClient {
     broadcast_url: String,
     waterfalls: bool,
     waterfalls_server_recipient: Option<Recipient>,
+    concurrency: usize,
 
     /// Avoid encrypting the descriptor field
     pub(crate) waterfalls_avoid_encryption: bool,
@@ -104,11 +106,12 @@ impl EsploraClient {
         &self,
         txids: &[Txid],
     ) -> Result<Vec<elements::Transaction>, Error> {
-        let mut result = vec![];
-        for txid in txids.iter().cloned() {
-            result.push(self.get_transaction(txid).await?);
-        }
-        Ok(result)
+        let stream = iter(txids.iter().cloned())
+            .map(|txid| self.get_transaction(txid))
+            .buffer_unordered(self.concurrency);
+
+        let results: Vec<Result<elements::Transaction, Error>> = stream.collect().await;
+        results.into_iter().collect()
     }
 
     pub async fn get_headers(
@@ -538,27 +541,37 @@ impl EsploraClient {
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
-        for txid in txs_to_download {
-            let tx = self.get_transaction(txid).await?;
+        let mut stream = iter(txs_to_download.iter().cloned())
+            .map(|txid| async move {
+                let tx = self.get_transaction(txid).await?;
+                Ok::<(Txid, elements::Transaction), Error>((txid, tx))
+            })
+            .buffer_unordered(self.concurrency);
 
-            txs_in_db.insert(txid);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok((txid, tx)) => {
+                    txs_in_db.insert(txid);
 
-            for (i, output) in tx.output.iter().enumerate() {
-                // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
-                if store.cache.paths.contains_key(&output.script_pubkey)
-                    || scripts.contains_key(&output.script_pubkey)
-                {
-                    let vout = i as u32;
-                    let outpoint = OutPoint { txid, vout };
+                    for (i, output) in tx.output.iter().enumerate() {
+                        // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
+                        if store.cache.paths.contains_key(&output.script_pubkey)
+                            || scripts.contains_key(&output.script_pubkey)
+                        {
+                            let vout = i as u32;
+                            let outpoint = OutPoint { txid, vout };
 
-                    match try_unblind(output.clone(), descriptor) {
-                            Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                            Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                            match try_unblind(output.clone(), descriptor) {
+                                    Ok(unblinded) => unblinds.push((outpoint, unblinded)),
+                                    Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                                }
                         }
-                }
-            }
+                    }
 
-            txs.push((txid, tx));
+                    txs.push((txid, tx));
+                }
+                Err(e) => return Err(e),
+            }
         }
 
         Ok(DownloadTxResult { txs, unblinds })
@@ -617,6 +630,7 @@ pub struct EsploraClientBuilder {
     network: ElementsNetwork,
     headers: HashMap<String, String>,
     timeout: Option<u8>,
+    concurrency: Option<usize>,
 }
 
 impl EsploraClientBuilder {
@@ -628,6 +642,7 @@ impl EsploraClientBuilder {
             network,
             headers: HashMap::new(),
             timeout: None,
+            concurrency: None,
         }
     }
 
@@ -645,6 +660,13 @@ impl EsploraClientBuilder {
     /// Set a timeout in seconds for requests
     pub fn timeout(mut self, timeout: u8) -> Self {
         self.timeout = Some(timeout);
+        self
+    }
+
+    /// Set the concurrency level for requests, default is 1.
+    /// Concurrency can't be 0, if 0 is passed 1 will be used.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = Some(concurrency.max(1)); // 0 would hang the executor
         self
     }
 
@@ -679,6 +701,7 @@ impl EsploraClientBuilder {
             waterfalls_server_recipient: None,
             waterfalls_avoid_encryption: false,
             network: self.network,
+            concurrency: self.concurrency.unwrap_or(1),
         }
     }
 }

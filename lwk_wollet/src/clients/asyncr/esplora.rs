@@ -661,9 +661,10 @@ impl EsploraClientBuilder {
         self
     }
 
-    /// Set the concurrency level for requests, default is 1
+    /// Set the concurrency level for requests, default is 1.
+    /// Concurrency can't be 0, if 0 is passed 1 will be used.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = Some(concurrency);
+        self.concurrency = Some(concurrency.max(1)); // 0 would hang the executor
         self
     }
 

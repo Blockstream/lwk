@@ -2141,16 +2141,7 @@ fn liquidex<C: BlockchainBackend>(
         .finish()
         .unwrap();
 
-    let pset_unsigned = pset.clone();
     wallet_maker.sign(signer_maker, &mut pset);
-
-    // TODO: handle wollet_get_details
-
-    // Deserialization (done in wallet_make.sign) loses the input abf,
-    // until we update rust-elements we need
-    // to get the input abf from the unsigned pset.
-    // FIXME: remove this once we update to the latest rust-elements release
-    pset.merge(pset_unsigned).unwrap();
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
 
     let txid = proposal.needed_tx().unwrap();

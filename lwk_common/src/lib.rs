@@ -245,13 +245,17 @@ pub fn pset_balance(
             (
                 Some(asset),
                 Some(asset_comm),
-                Some(blind_asset_proof),
+                blind_asset_proof,
                 Some(amount),
                 Some(amount_comm),
                 Some(blind_value_proof),
             ) => {
-                if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
-                    return Err(Error::InvalidAssetBlindProof { idx });
+                if let Some(blind_asset_proof) = blind_asset_proof {
+                    if !blind_asset_proof.blind_asset_proof_verify(&secp, asset, asset_comm) {
+                        return Err(Error::InvalidAssetBlindProof { idx });
+                    }
+                } else {
+                    // TODO: handle this case
                 }
                 if !blind_value_proof.blind_value_proof_verify(
                     &secp,
@@ -278,7 +282,7 @@ pub fn pset_balance(
             _ => return Err(Error::OutputNotBlinded { idx }),
         }
     }
-    let fee = fee.ok_or(Error::MissingFee)?;
+    let fee = fee.unwrap_or(0); // TODO: is this acceptable? or should we have fee optional in PsetBalance?
 
     // Remove assets with 0 balance which are not changing the net balance.
     // For example it happens with reissuance tokens.

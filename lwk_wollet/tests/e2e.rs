@@ -2132,6 +2132,9 @@ fn liquidex<C: BlockchainBackend>(
     sats_recv: u64,
     asset_recv: elements::AssetId,
 ) {
+    let policy_asset = wallet_maker.policy_asset();
+    let is_policy_asset = asset_recv == policy_asset;
+
     // LiquiDEX make
     let addr = wallet_maker.address_result(None).address().clone();
     let mut pset = wallet_maker
@@ -2141,7 +2144,14 @@ fn liquidex<C: BlockchainBackend>(
         .finish()
         .unwrap();
 
+    let balance = wallet_maker.wollet.get_details(&pset).unwrap().balance;
+    assert_eq!(balance.fee, 0);
+    assert_eq!(
+        balance.balances.get(&asset_recv).unwrap(),
+        &(sats_recv as i64)
+    );
     wallet_maker.sign(signer_maker, &mut pset);
+
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
 
     let txid = proposal.needed_tx().unwrap();
@@ -2170,6 +2180,16 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap()
         .finish()
         .unwrap();
+
+    let balance = wallet_taker.wollet.get_details(&pset).unwrap().balance;
+    assert!(balance.fee > 0);
+    let expected = if is_policy_asset {
+        -(sats_recv as i64) - (balance.fee as i64)
+    } else {
+        -(sats_recv as i64)
+    };
+    assert_eq!(balance.balances.get(&asset_recv).unwrap(), &expected);
+
     wallet_taker.sign(signer_taker, &mut pset);
     let _txid = wallet_taker.send(&mut pset);
     wait_tx_update(wallet_maker);

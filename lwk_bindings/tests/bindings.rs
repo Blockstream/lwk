@@ -13,4 +13,5 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/list_transactions.swift",
     "tests/bindings/pset_details.py",
     "tests/bindings/manual_coin_selection.py",
+    "tests/bindings/liquidex.py",
 );

@@ -51,4 +51,12 @@ impl ElectrumClient {
             .full_scan_to_index(&wollet.state(), index)?;
         Ok(update.map(Into::into).map(Arc::new))
     }
+
+    pub fn get_tx(&self, txid: &Txid) -> Result<Arc<Transaction>, LwkError> {
+        let err = || LwkError::Generic {
+            msg: "tx not found".to_string(),
+        };
+        let mut tx = self.inner.lock()?.get_transactions(&[txid.into()])?;
+        Ok(Arc::new(Transaction::from(tx.pop().ok_or_else(err)?)))
+    }
 }

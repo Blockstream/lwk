@@ -6,7 +6,8 @@ use std::{
 use lwk_wollet::UnvalidatedRecipient;
 
 use crate::{
-    types::AssetId, Address, Contract, LwkError, Network, OutPoint, Pset, Transaction, Wollet,
+    types::AssetId, Address, Contract, LwkError, Network, OutPoint, Pset, Transaction,
+    ValidatedLiquidexProposal, Wollet,
 };
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
@@ -159,6 +160,30 @@ impl TxBuilder {
             .map(|arc| elements::OutPoint::from(arc.as_ref()))
             .collect();
         *lock = Some(inner.set_wallet_utxos(utxos));
+        Ok(())
+    }
+
+    pub fn liquidex_make(
+        &self,
+        utxo: &OutPoint,
+        address: &Address,
+        amount: u64,
+        asset: AssetId,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock = Some(inner.liquidex_make(utxo.into(), address.as_ref(), amount, asset.into())?);
+        Ok(())
+    }
+
+    pub fn liquidex_take(
+        &self,
+        proposals: Vec<Arc<ValidatedLiquidexProposal>>,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock =
+            Some(inner.liquidex_take(proposals.into_iter().map(|p| p.as_ref().into()).collect())?);
         Ok(())
     }
 }

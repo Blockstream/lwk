@@ -23,6 +23,12 @@ pub struct AssetAmount {
     inner: lwk_wollet::AssetAmount,
 }
 
+impl From<&ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated> {
+    fn from(value: &ValidatedLiquidexProposal) -> Self {
+        value.inner.clone()
+    }
+}
+
 impl Display for ValidatedLiquidexProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.inner)

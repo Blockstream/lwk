@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use lwk_wollet::{Unvalidated, Validated};
 
-use crate::{types::AssetId, LwkError, Pset, Transaction};
+use crate::{types::AssetId, LwkError, Pset, Transaction, Txid};
 
 /// Wrapper over [`lwk_wollet::LiquidexProposal<Validated>`]
 #[derive(uniffi::Object, Debug, Clone)]
@@ -71,6 +71,10 @@ impl UnvalidatedLiquidexProposal {
         Ok(Arc::new(ValidatedLiquidexProposal {
             inner: self.inner.clone().validate(previous_tx.into())?,
         }))
+    }
+
+    pub fn needed_tx(&self) -> Result<Arc<Txid>, LwkError> {
+        Ok(Arc::new(self.inner.needed_tx()?.into()))
     }
 }
 

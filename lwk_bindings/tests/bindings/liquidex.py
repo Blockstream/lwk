@@ -39,11 +39,12 @@ signed_pset = signer.sign(pset)
 proposal = UnvalidatedLiquidexProposal.from_pset(signed_pset)
 proposal_valid = proposal.insecure_validate() # TODO: I am creating it, doesn't make much sense to validate it, but without it I can't convert it to string
 proposal_str = str(proposal_valid)
-print(proposal_str)
 
-# (taker) Parse the proposal from string
+# (taker) Parse the proposal from string and validate it
 proposal_from_str = UnvalidatedLiquidexProposal(proposal_str)
-validated_proposal = proposal_from_str.insecure_validate()
+txid = proposal_from_str.needed_tx()
+previous_tx = client.get_tx(txid)
+validated_proposal = proposal_from_str.validate(previous_tx)
 
 # (taker) Verify proposal details
 input_amount = validated_proposal.input().amount()

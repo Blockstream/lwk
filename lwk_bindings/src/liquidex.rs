@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use lwk_wollet::{Unvalidated, Validated};
 
@@ -49,6 +49,12 @@ impl UnvalidatedLiquidexProposal {
     #[uniffi::constructor]
     pub fn from_pset(pset: &Pset) -> Result<Arc<UnvalidatedLiquidexProposal>, LwkError> {
         let proposal = lwk_wollet::LiquidexProposal::from_pset(pset.as_ref())?;
+        Ok(Arc::new(Self { inner: proposal }))
+    }
+
+    #[uniffi::constructor]
+    pub fn new(s: &str) -> Result<Arc<UnvalidatedLiquidexProposal>, LwkError> {
+        let proposal = lwk_wollet::LiquidexProposal::from_str(s)?;
         Ok(Arc::new(Self { inner: proposal }))
     }
 

@@ -16,6 +16,18 @@ impl From<elements::Txid> for Txid {
     }
 }
 
+impl From<Txid> for elements::Txid {
+    fn from(value: Txid) -> Self {
+        value.inner
+    }
+}
+
+impl From<&Txid> for elements::Txid {
+    fn from(value: &Txid) -> Self {
+        value.inner
+    }
+}
+
 //use elements::bitcoin::hex::HexToArrayError;
 
 impl FromStr for Txid {

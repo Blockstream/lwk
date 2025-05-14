@@ -130,7 +130,7 @@ pub struct AssetAmount {
     pub asset: AssetId,
 }
 
-impl std::fmt::Display for LiquidexProposal<Validated> {
+impl<T> std::fmt::Display for LiquidexProposal<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

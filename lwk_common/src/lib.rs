@@ -278,7 +278,7 @@ pub fn pset_balance(
             _ => return Err(Error::OutputNotBlinded { idx }),
         }
     }
-    let fee = fee.ok_or(Error::MissingFee)?;
+    let fee = fee.unwrap_or(0);
 
     // Remove assets with 0 balance which are not changing the net balance.
     // For example it happens with reissuance tokens.

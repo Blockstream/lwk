@@ -5,7 +5,7 @@ use elements::{
     issuance::ContractHash,
     pset::{Output, PartiallySignedTransaction, PsbtSighashType},
     secp256k1_zkp::{self, ZERO_TWEAK},
-    Address, AssetId, EcdsaSighashType, OutPoint, Script, Transaction,
+    Address, AssetId, BlindAssetProofs, EcdsaSighashType, OutPoint, Script, Transaction,
 };
 use rand::thread_rng;
 
@@ -464,6 +464,13 @@ impl TxBuilder {
         let output_scalar_offset = liquidex::scalar_offset(&txoutsecrets);
         let blind_value_proof = liquidex::blind_value_proof(&txoutsecrets)?;
         output.blind_value_proof = Some(Box::new(blind_value_proof));
+        // Add blind asset proof
+        // Note: this is technically redundant since one could use the asset and abf,
+        // but we add it to make things easier for verifiers,
+        // so they don't have to handle the liquidex special case.
+        let blind_asset_proof =
+            secp256k1_zkp::SurjectionProof::blind_asset_proof(&mut rng, &EC, asset, abf)?;
+        output.blind_asset_proof = Some(Box::new(blind_asset_proof));
 
         // Add scalar
         // Compute the scalar offset to be added to the last vbf by the Taker to balance the transaction:

@@ -2141,6 +2141,15 @@ fn liquidex<C: BlockchainBackend>(
         .finish()
         .unwrap();
 
+    let details = wallet_maker.wollet.get_details(&pset).unwrap();
+    assert_eq!(details.balance.fee, 0);
+    let asset_send = pset.inputs()[0].asset.unwrap();
+    let sats_send = pset.inputs()[0].amount.unwrap();
+    let from_details_send = *details.balance.balances.get(&asset_send).unwrap();
+    let from_details_recv = *details.balance.balances.get(&asset_recv).unwrap();
+    assert_eq!(from_details_send, -(sats_send as i64));
+    assert_eq!(from_details_recv, sats_recv as i64);
+
     wallet_maker.sign(signer_maker, &mut pset);
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
 

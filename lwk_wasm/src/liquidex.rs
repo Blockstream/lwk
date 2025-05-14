@@ -32,6 +32,12 @@ impl std::fmt::Display for ValidatedLiquidexProposal {
     }
 }
 
+impl std::fmt::Display for UnvalidatedLiquidexProposal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.inner)
+    }
+}
+
 impl FromStr for UnvalidatedLiquidexProposal {
     type Err = serde_json::Error;
 

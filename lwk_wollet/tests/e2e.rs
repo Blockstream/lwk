@@ -2179,6 +2179,23 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap()
         .finish()
         .unwrap();
+
+    let details = wallet_taker.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fee as i64;
+    assert!(fee > 0);
+    // "send" and "recv" are from the maker perspective
+    let mut from_details_send = *details.balance.balances.get(&asset_send).unwrap();
+    let mut from_details_recv = *details.balance.balances.get(&asset_recv).unwrap();
+    let policy_asset = wallet_taker.policy_asset();
+    if asset_send == policy_asset {
+        from_details_send += fee;
+    }
+    if asset_recv == policy_asset {
+        from_details_recv += fee;
+    }
+    assert_eq!(from_details_send, sats_send as i64);
+    assert_eq!(from_details_recv, -(sats_recv as i64));
+
     wallet_taker.sign(signer_taker, &mut pset);
     let _txid = wallet_taker.send(&mut pset);
     wait_tx_update(wallet_maker);

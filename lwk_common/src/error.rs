@@ -34,9 +34,6 @@ pub enum Error {
     #[error("Output #{idx} has none value and none asset")]
     OutputAssetValueNone { idx: usize },
 
-    #[error("PSET doesn't contain a fee output")]
-    MissingFee,
-
     #[error("Multiple fee outputs")]
     MultipleFee,
 

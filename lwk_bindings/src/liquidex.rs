@@ -13,6 +13,7 @@ pub struct ValidatedLiquidexProposal {
 
 /// Wrapper over [`lwk_wollet::LiquidexProposal<Unvalidated>`]
 #[derive(uniffi::Object, Debug, Clone)]
+#[uniffi::export(Display)]
 pub struct UnvalidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Unvalidated>,
 }
@@ -30,6 +31,12 @@ impl From<&ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated
 }
 
 impl Display for ValidatedLiquidexProposal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.inner)
+    }
+}
+
+impl Display for UnvalidatedLiquidexProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.inner)
     }

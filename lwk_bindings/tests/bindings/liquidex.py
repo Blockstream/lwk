@@ -37,8 +37,7 @@ signed_pset = signer.sign(pset)
 
 # (maker) Create the proposal  and convert it to string to pass it to the taker
 proposal = UnvalidatedLiquidexProposal.from_pset(signed_pset)
-proposal_valid = proposal.insecure_validate() # TODO: I am creating it, doesn't make much sense to validate it, but without it I can't convert it to string
-proposal_str = str(proposal_valid)
+proposal_str = str(proposal)
 
 # (taker) Parse the proposal from string and validate it
 proposal_from_str = UnvalidatedLiquidexProposal(proposal_str)

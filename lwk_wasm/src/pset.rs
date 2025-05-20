@@ -1,5 +1,5 @@
-use crate::{AssetId, Error, Transaction, Txid};
-use lwk_wollet::elements::pset::{Input, PartiallySignedTransaction};
+use crate::{AssetId, Error, Script, Transaction, Txid};
+use lwk_wollet::elements::pset::{Input, Output, PartiallySignedTransaction};
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
@@ -59,6 +59,10 @@ impl Pset {
     pub fn inputs(&self) -> Vec<PsetInput> {
         self.inner.inputs().iter().map(Into::into).collect()
     }
+
+    pub fn outputs(&self) -> Vec<PsetOutput> {
+        self.inner.outputs().iter().map(Into::into).collect()
+    }
 }
 
 /// PSET input
@@ -101,6 +105,27 @@ impl PsetInput {
         self.inner
             .has_issuance()
             .then(|| self.inner.issuance_ids().1.into())
+    }
+}
+
+/// PSET output
+#[wasm_bindgen]
+pub struct PsetOutput {
+    inner: Output,
+}
+
+impl From<&Output> for PsetOutput {
+    fn from(inner: &Output) -> Self {
+        Self {
+            inner: inner.clone(),
+        }
+    }
+}
+
+#[wasm_bindgen]
+impl PsetOutput {
+    pub fn script_pubkey(&self) -> Script {
+        self.inner.script_pubkey.clone().into()
     }
 }
 

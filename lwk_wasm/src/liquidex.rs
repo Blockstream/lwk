@@ -69,6 +69,11 @@ impl UnvalidatedLiquidexProposal {
         let inner = self.inner.validate(tx.into())?;
         Ok(ValidatedLiquidexProposal { inner })
     }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated> {
@@ -98,6 +103,11 @@ impl ValidatedLiquidexProposal {
     pub fn output(&self) -> AssetAmount {
         let inner = self.inner.output();
         AssetAmount { inner }
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
     }
 }
 #[cfg(all(test, target_arch = "wasm32"))]

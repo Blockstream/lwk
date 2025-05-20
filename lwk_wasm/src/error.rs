@@ -15,6 +15,9 @@ pub enum Error {
     SerdeJs(#[from] serde_wasm_bindgen::Error),
 
     #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
+
+    #[error(transparent)]
     Address(#[from] lwk_wollet::elements::AddressError),
 
     #[error(transparent)]

@@ -49,6 +49,11 @@ impl FromStr for UnvalidatedLiquidexProposal {
 
 #[wasm_bindgen]
 impl UnvalidatedLiquidexProposal {
+    pub fn new(s: &str) -> Result<Self, crate::Error> {
+        let inner = lwk_wollet::LiquidexProposal::from_str(s)?;
+        Ok(UnvalidatedLiquidexProposal { inner })
+    }
+
     pub fn from_pset(pset: Pset) -> Result<Self, crate::Error> {
         let pset = pset.into();
         let proposal = lwk_wollet::LiquidexProposal::from_pset(&pset)?;

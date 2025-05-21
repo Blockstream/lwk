@@ -129,6 +129,7 @@ pub struct Contract {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AdditionalInfo {
     pub tx_type: String,
+    pub is_partial: bool,
     pub wallet_input_summary: Vec<Summary>,
     pub wallet_output_summary: Vec<Summary>,
 }

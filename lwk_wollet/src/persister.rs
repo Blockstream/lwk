@@ -175,6 +175,9 @@ impl Persister for FsPersister {
                     // overwrite last update instead of creating a new file.
                     // But we need to update the wallet status so that there will be no problem in reapplying it
                     update.wollet_status = prev_update.wollet_status;
+
+                    // We need to merge the timestamps to be consistent with the wallet status
+                    update.timestamps = vec![prev_update.timestamps, update.timestamps].concat();
                     inner.next = (inner.next.0 - 1).into() // safety: next is at least 1 or last() would be None
                 }
             }

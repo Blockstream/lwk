@@ -60,6 +60,9 @@ pub enum Error {
     #[error(transparent)]
     Pset(#[from] elements::pset::Error),
 
+    #[error("Missing asset id in input {0}")]
+    MissingAssetIdInInput(usize),
+
     #[error("Missing asset id in output {0}")]
     MissingAssetIdInOutput(usize),
 

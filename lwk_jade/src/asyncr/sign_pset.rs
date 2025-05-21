@@ -67,6 +67,7 @@ impl<S: Stream> Jade<S> {
                             previous_output_script.asm(),
                         ));
                     };
+                    let sighash = input.sighash_type.map(|x| x.to_u32());
 
                     let params = TxInputParams {
                         is_witness: true,
@@ -78,7 +79,7 @@ impl<S: Stream> Jade<S> {
                             .serialize()
                             .to_vec(),
                         path,
-                        sighash: Some(1),
+                        sighash,
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
                     };
                     let signer_commitment: Vec<u8> = self.tx_input(params).await?.to_vec();

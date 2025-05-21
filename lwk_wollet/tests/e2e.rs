@@ -2308,6 +2308,6 @@ fn test_liquidex() {
         .find(|u| u.unblinded.asset == policy_asset)
         .unwrap()
         .outpoint;
-    // TODO: fix this, at the moment erroring with: ElementsMiniscriptPset(InputError(WrongSighashFlag { required: SinglePlusAnyoneCanPay, got: All...
+    // TODO: fix this, at the moment erroring with: JadeError(JadeError(ErrorDetails { code: -32602, message: "Unsupported sighash value", data: None })), in the PSET the sighash type is 131 (should be single + anyone can pay)
     // liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_2);
 }

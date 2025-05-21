@@ -41,7 +41,9 @@ use get_receive_address::{SingleOrMulti, Variant};
 use lwk_common::{burn_script, Network};
 
 use register_multisig::RegisteredMultisigDetails;
-use sign_liquid_tx::{AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams};
+use sign_liquid_tx::{
+    AdditionalInfo, AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, Summary,
+};
 #[cfg(feature = "sync")]
 pub use sync::Jade;
 
@@ -255,6 +257,65 @@ fn create_jade_sign_req(
         }
         // TODO: handle token metadata
     }
+
+    let additional_info = {
+        let is_swap = pset
+            .inputs()
+            .first()
+            .map(|i| {
+                i.sighash_type
+                    .map(|sh| {
+                        sh.ecdsa_hash_ty()
+                            == Some(elements::EcdsaSighashType::SinglePlusAnyoneCanPay)
+                    })
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+
+        if !is_swap {
+            None
+        } else {
+            let tx_type = "swap".to_string();
+            let mut wallet_input_summary = vec![];
+            for (vin, i) in pset.inputs().iter().enumerate() {
+                // FIXME: only consider my data?
+                // if i.bip32_derivation.values().any(|(fp, _)| fp == &my_fingerprint)
+                let asset_id = i.asset.ok_or(Error::MissingAssetIdInInput(vin))?;
+                let mut asset_id = serialize(&asset_id);
+                asset_id.reverse(); // Jade want it reversed
+                let summary = Summary {
+                    asset_id,
+                    satoshi: i.amount.ok_or(Error::MissingAmountInInput(vin))?,
+                };
+                wallet_input_summary.push(summary);
+            }
+
+            let mut wallet_output_summary = vec![];
+            for (vout, o) in pset.outputs().iter().enumerate() {
+                // FIXME: only consider my data?
+                // if o.bip32_derivation.values().any(|(fp, _)| fp == &my_fingerprint)
+                let asset_id = o.asset.ok_or(Error::MissingAssetIdInOutput(vout))?;
+                let mut asset_id = serialize(&asset_id);
+                asset_id.reverse(); // Jade want it reversed
+                let summary = Summary {
+                    asset_id,
+                    satoshi: o.amount.ok_or(Error::MissingAmountInOutput(vout))?,
+                };
+                wallet_output_summary.push(summary);
+            }
+
+            let is_partial = wallet_input_summary.len() == 1 && wallet_output_summary.len() == 1;
+
+            Some(AdditionalInfo {
+                tx_type,
+                is_partial,
+                wallet_input_summary,
+                wallet_output_summary,
+            })
+        }
+    };
+
+    println!("add info: {:#?}", additional_info);
     let params = SignLiquidTxParams {
         network,
         txn,
@@ -263,7 +324,7 @@ fn create_jade_sign_req(
         change: changes,
         asset_info: assets_info,
         trusted_commitments,
-        additional_info: None,
+        additional_info,
     };
     Ok(params)
 }

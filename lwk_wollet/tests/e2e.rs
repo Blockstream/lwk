@@ -2221,9 +2221,25 @@ fn test_liquidex() {
     let client = test_client_electrum(&server.electrs.electrum_url);
     let mut wb = TestWollet::new(client, &desc_b);
 
+    // Jade
+    let mnemonic = TEST_MNEMONIC;
+    let docker = Cli::default();
+    let jade_init = jade_setup(&docker, mnemonic);
+    let sj = AnySigner::Jade(
+        jade_init.jade,
+        XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
+    );
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let view_key = sj.slip77_master_blinding_key().unwrap().to_string();
+    let xpub = sj
+        .derive_xpub(&DerivationPath::from_str("m").unwrap())
+        .unwrap();
+    let desc_j = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let mut wj = TestWollet::new(client, &desc_j);
+
     wa.fund_btc(&server);
     wb.fund_btc(&server);
-
+    wj.fund_btc(&server);
     let (asset_1, _) = wa.issueasset(&[&sa], 10, 1, None, None);
     let (asset_2, _) = wb.issueasset(&[&sb], 10, 1, None, None);
 
@@ -2282,4 +2298,16 @@ fn test_liquidex() {
     assert_eq!(wb.balance(&asset_2), 9);
 
     // TODO: check fees
+
+    // TEST with Jade
+    let utxo = wj
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+    // TODO: fix this, at the moment erroring with: ElementsMiniscriptPset(InputError(WrongSighashFlag { required: SinglePlusAnyoneCanPay, got: All...
+    // liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_2);
 }

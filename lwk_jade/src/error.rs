@@ -75,6 +75,9 @@ pub enum Error {
     #[error("Missing blinding key in output {0}")]
     MissingBlindingKeyInOutput(usize),
 
+    #[error("Missing amount in input {0}")]
+    MissingAmountInInput(usize),
+
     #[error("Missing amount in output {0}")]
     MissingAmountInOutput(usize),
 

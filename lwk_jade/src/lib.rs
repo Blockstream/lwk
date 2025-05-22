@@ -116,6 +116,19 @@ pub(crate) fn json_to_cbor(value: &serde_json::Value) -> Result<serde_cbor::Valu
     Ok(serde_cbor::from_slice(&serde_cbor::to_vec(&value)?)?)
 }
 
+fn is_swap(pset: &PartiallySignedTransaction) -> bool {
+    pset.inputs()
+        .first()
+        .map(|i| {
+            i.sighash_type
+                .map(|sh| {
+                    sh.ecdsa_hash_ty() == Some(elements::EcdsaSighashType::SinglePlusAnyoneCanPay)
+                })
+                .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
 fn create_jade_sign_req(
     pset: &mut PartiallySignedTransaction,
     my_fingerprint: Fingerprint,
@@ -259,18 +272,7 @@ fn create_jade_sign_req(
     }
 
     let additional_info = {
-        let is_swap = pset
-            .inputs()
-            .first()
-            .map(|i| {
-                i.sighash_type
-                    .map(|sh| {
-                        sh.ecdsa_hash_ty()
-                            == Some(elements::EcdsaSighashType::SinglePlusAnyoneCanPay)
-                    })
-                    .unwrap_or(false)
-            })
-            .unwrap_or(false);
+        let is_swap = is_swap(pset);
 
         if !is_swap {
             None

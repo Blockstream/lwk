@@ -174,7 +174,7 @@ pub struct TxInputParams {
     pub unblinding_data: Option<UnblindingData>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UnblindingData {
     /// abf, 32-bytes - asset blinding factor
     #[serde(with = "serde_bytes")]
@@ -205,6 +205,19 @@ impl Debug for TxInputParams {
             .field("path", &self.path)
             .field("sighash", &self.sighash)
             .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .field("unblinding_data", &self.unblinding_data)
+            .finish()
+    }
+}
+
+impl Debug for UnblindingData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnblindingData")
+            .field("asset_blind_proof", &self.asset_blind_proof.to_hex())
+            .field("asset_id", &self.asset_id.to_hex())
+            .field("asset_generator", &self.asset_generator.to_hex())
+            .field("vbf", &self.vbf.to_hex())
+            .field("value", &self.value)
             .finish()
     }
 }

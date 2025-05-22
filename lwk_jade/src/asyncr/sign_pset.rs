@@ -13,6 +13,7 @@ impl<S: Stream> Jade<S> {
     /// Sign a pset from a Jade
     pub async fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let my_fingerprint = self.fingerprint().await?;
+        let secp = elements::secp256k1_zkp::Secp256k1::new();
 
         // Singlesig signing don't need this, however, it is simpler to always ask for it and once cached is a
         // fast operation anyway (and in a real scenario you may ask for registered multisigs at the beginning of the session)
@@ -76,6 +77,13 @@ impl<S: Stream> Jade<S> {
                             .value
                             .commitment()
                             .ok_or(Error::NonConfidentialInput(i))?
+                            .serialize()
+                            .to_vec(),
+                        asset_generator: txout
+                            .asset
+                            .clone()
+                            .into_asset_gen(&secp)
+                            .ok_or(Error::MissingAssetIdInInput(i))?
                             .serialize()
                             .to_vec(),
                         path,

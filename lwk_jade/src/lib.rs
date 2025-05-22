@@ -32,7 +32,7 @@ use elements::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
     },
-    pset::{Input, PartiallySignedTransaction},
+    pset::{serialize::Serialize, Input, PartiallySignedTransaction},
     script::Instruction,
     Script,
 };
@@ -350,17 +350,33 @@ fn unblinding_data(
 ) -> Result<Option<UnblindingData>> {
     if is_swap {
         log::debug!("unblinding_data input {:?}", pset_input);
-        let asset_blind_proof = pset_input
-            .blind_asset_proof
-            .as_ref()
-            .ok_or(Error::MissingAssetIdInInput(input_index))? // TODO: create appropriate error variant
+        let abf = pset_input
+            .get_abf()
+            .ok_or(Error::MissingBlindAssetProofInOutput(input_index))? // TODO handle with correct error variant
+            .map_err(|_| Error::MissingBlindAssetProofInOutput(input_index))?
             .serialize();
+
+        let mut asset_id = pset_input
+            .asset
+            .ok_or(Error::MissingAssetIdInInput(input_index))?
+            .serialize();
+        asset_id.reverse(); // Jade want it reversed
+
+        let value = pset_input
+            .amount
+            .ok_or(Error::MissingAmountInInput(input_index))?;
+
+        let value_blind_proof = pset_input
+            .blind_value_proof
+            .as_ref()
+            .ok_or(Error::MissingBlindAssetProofInOutput(input_index))?
+            .serialize();
+
         Ok(Some(UnblindingData {
-            asset_blind_proof,
-            asset_id: vec![],
-            asset_generator: vec![],
-            vbf: vec![],
-            value: 0,
+            abf,
+            asset_id,
+            value,
+            value_blind_proof,
         }))
     } else {
         Ok(None)

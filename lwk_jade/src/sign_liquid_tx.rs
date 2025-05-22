@@ -162,6 +162,9 @@ pub struct TxInputParams {
     #[serde(with = "serde_bytes")]
     pub value_commitment: Vec<u8>,
 
+    #[serde(with = "serde_bytes")]
+    pub asset_generator: Vec<u8>,
+
     pub path: Vec<u32>,
 
     pub sighash: Option<u32>,
@@ -176,24 +179,19 @@ pub struct TxInputParams {
 
 #[derive(Deserialize, Serialize)]
 pub struct UnblindingData {
-    /// asset blind proof
+    /// abf, 32-bytes - the asset blinding factor
     #[serde(with = "serde_bytes")]
-    pub asset_blind_proof: Vec<u8>,
+    pub abf: Vec<u8>,
 
     /// asset_id, 32-bytes - the unblinded asset-id
     #[serde(with = "serde_bytes")]
     pub asset_id: Vec<u8>,
 
-    /// asset_generator, 33-bytes - the (blinded) asset-generator
-    #[serde(with = "serde_bytes")]
-    pub asset_generator: Vec<u8>,
-
-    /// vbf, 32-bytes - the value blinding factor
-    #[serde(with = "serde_bytes")]
-    pub vbf: Vec<u8>,
-
     /// value, int - the unblinded sats value of the input
     pub value: u64,
+
+    #[serde(with = "serde_bytes")]
+    pub value_blind_proof: Vec<u8>,
 }
 
 impl Debug for TxInputParams {
@@ -205,6 +203,7 @@ impl Debug for TxInputParams {
             .field("path", &self.path)
             .field("sighash", &self.sighash)
             .field("ae_host_commitment", &self.ae_host_commitment.to_hex())
+            .field("asset_generator", &self.asset_generator.to_hex())
             .field("unblinding_data", &self.unblinding_data)
             .finish()
     }
@@ -213,10 +212,9 @@ impl Debug for TxInputParams {
 impl Debug for UnblindingData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnblindingData")
-            .field("asset_blind_proof", &self.asset_blind_proof.to_hex())
+            .field("abf", &self.abf.to_hex())
             .field("asset_id", &self.asset_id.to_hex())
-            .field("asset_generator", &self.asset_generator.to_hex())
-            .field("vbf", &self.vbf.to_hex())
+            .field("value_blind_proof", &self.value_blind_proof.to_hex())
             .field("value", &self.value)
             .finish()
     }

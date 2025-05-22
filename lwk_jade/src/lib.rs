@@ -345,10 +345,26 @@ fn script_code_wpkh(script: &Script) -> Script {
 
 fn unblinding_data(
     pset_input: &Input,
-    input: usize,
+    input_index: usize,
     is_swap: bool,
 ) -> Result<Option<UnblindingData>> {
-    Ok(None)
+    if is_swap {
+        log::debug!("unblinding_data input {:?}", pset_input);
+        let asset_blind_proof = pset_input
+            .blind_asset_proof
+            .as_ref()
+            .ok_or(Error::MissingAssetIdInInput(input_index))? // TODO: create appropriate error variant
+            .serialize();
+        Ok(Some(UnblindingData {
+            asset_blind_proof,
+            asset_id: vec![],
+            asset_generator: vec![],
+            vbf: vec![],
+            value: 0,
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 // taken and adapted from:

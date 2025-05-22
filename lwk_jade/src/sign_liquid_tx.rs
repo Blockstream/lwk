@@ -176,9 +176,9 @@ pub struct TxInputParams {
 
 #[derive(Deserialize, Serialize)]
 pub struct UnblindingData {
-    /// abf, 32-bytes - asset blinding factor
+    /// asset blind proof
     #[serde(with = "serde_bytes")]
-    pub abf: Vec<u8>,
+    pub asset_blind_proof: Vec<u8>,
 
     /// asset_id, 32-bytes - the unblinded asset-id
     #[serde(with = "serde_bytes")]

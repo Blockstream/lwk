@@ -169,6 +169,31 @@ pub struct TxInputParams {
     /// 32 bytes anti-exfiltration commitment (random data not verified for now). TODO verify
     #[serde(with = "serde_bytes")]
     pub ae_host_commitment: Vec<u8>,
+
+    #[serde(flatten)]
+    pub unblinding_data: Option<UnblindingData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UnblindingData {
+    /// abf, 32-bytes - asset blinding factor
+    #[serde(with = "serde_bytes")]
+    pub abf: Vec<u8>,
+
+    /// asset_id, 32-bytes - the unblinded asset-id
+    #[serde(with = "serde_bytes")]
+    pub asset_id: Vec<u8>,
+
+    /// asset_generator, 33-bytes - the (blinded) asset-generator
+    #[serde(with = "serde_bytes")]
+    pub asset_generator: Vec<u8>,
+
+    /// vbf, 32-bytes - the value blinding factor
+    #[serde(with = "serde_bytes")]
+    pub vbf: Vec<u8>,
+
+    /// value, int - the unblinded sats value of the input
+    pub value: u64,
 }
 
 impl Debug for TxInputParams {

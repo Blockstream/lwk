@@ -81,6 +81,7 @@ impl<S: Stream> Jade<S> {
                         path,
                         sighash,
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
+                        unblinding_data: None,
                     };
                     let signer_commitment: Vec<u8> = self.tx_input(params).await?.to_vec();
                     signers_commitment.insert(*want_public_key, signer_commitment);

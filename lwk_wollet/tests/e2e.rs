@@ -2249,6 +2249,18 @@ fn test_liquidex() {
     assert_eq!(wb.balance(&asset_2), 10);
     let policy_asset = wa.policy_asset();
 
+    // TEST with Jade
+    let utxo = wj
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+    // TODO: fix this, at the moment erroring with: JadeError(JadeError(ErrorDetails { code: -32602, message: "Unsupported sighash value", data: None })), in the PSET the sighash type is 131 (should be single + anyone can pay)
+    liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_2);
+
     // Maker: A, sends LBTC, receives 1 of asset_2
     let utxo = wa
         .wollet
@@ -2298,16 +2310,4 @@ fn test_liquidex() {
     assert_eq!(wb.balance(&asset_2), 9);
 
     // TODO: check fees
-
-    // TEST with Jade
-    let utxo = wj
-        .wollet
-        .utxos()
-        .unwrap()
-        .into_iter()
-        .find(|u| u.unblinded.asset == policy_asset)
-        .unwrap()
-        .outpoint;
-    // TODO: fix this, at the moment erroring with: JadeError(JadeError(ErrorDetails { code: -32602, message: "Unsupported sighash value", data: None })), in the PSET the sighash type is 131 (should be single + anyone can pay)
-    // liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_2);
 }

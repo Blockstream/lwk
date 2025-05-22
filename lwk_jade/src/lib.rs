@@ -32,7 +32,7 @@ use elements::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
     },
-    pset::PartiallySignedTransaction,
+    pset::{Input, PartiallySignedTransaction},
     script::Instruction,
     Script,
 };
@@ -43,6 +43,7 @@ use lwk_common::{burn_script, Network};
 use register_multisig::RegisteredMultisigDetails;
 use sign_liquid_tx::{
     AdditionalInfo, AssetInfo, Change, Commitment, Contract, Prevout, SignLiquidTxParams, Summary,
+    UnblindingData,
 };
 #[cfg(feature = "sync")]
 pub use sync::Jade;
@@ -340,6 +341,14 @@ fn script_code_wpkh(script: &Script) -> Script {
     script_code.push(0x88);
     script_code.push(0xac);
     Script::from(script_code)
+}
+
+fn unblinding_data(
+    pset_input: &Input,
+    input: usize,
+    is_swap: bool,
+) -> Result<Option<UnblindingData>> {
+    Ok(None)
 }
 
 // taken and adapted from:

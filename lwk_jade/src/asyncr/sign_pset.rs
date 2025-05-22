@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use elements::pset::PartiallySignedTransaction;
 
 use crate::{
-    create_jade_sign_req, derivation_path_to_vec, protocol::GetSignatureParams, script_code_wpkh,
-    sign_liquid_tx::TxInputParams, Error,
+    create_jade_sign_req, derivation_path_to_vec, is_swap, protocol::GetSignatureParams,
+    script_code_wpkh, sign_liquid_tx::TxInputParams, unblinding_data, Error,
 };
 
 use super::{Jade, Stream};
@@ -26,7 +26,7 @@ impl<S: Stream> Jade<S> {
         assert!(sign_response);
 
         let mut signers_commitment = HashMap::new();
-
+        let is_swap = is_swap(pset);
         for (i, input) in pset.inputs_mut().iter_mut().enumerate() {
             for (want_public_key, (fingerprint, derivation_path)) in input.bip32_derivation.iter() {
                 if &my_fingerprint == fingerprint {
@@ -81,7 +81,7 @@ impl<S: Stream> Jade<S> {
                         path,
                         sighash,
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
-                        unblinding_data: None,
+                        unblinding_data: unblinding_data(input, i, is_swap)?,
                     };
                     let signer_commitment: Vec<u8> = self.tx_input(params).await?.to_vec();
                     signers_commitment.insert(*want_public_key, signer_commitment);

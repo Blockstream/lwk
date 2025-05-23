@@ -22,12 +22,14 @@ use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use futures::stream::{iter, StreamExt};
 use reqwest::Response;
 use serde::Deserialize;
+use std::time::Duration;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
     str::FromStr,
     sync::atomic,
 };
+use tokio_with_wasm::alias as tokio;
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page
@@ -765,22 +767,8 @@ async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response,
     }
 }
 
-// based on https://users.rust-lang.org/t/rust-wasm-async-sleeping-for-100-milli-seconds-goes-up-to-1-minute/81177
-// TODO remove/handle/justify unwraps
-#[cfg(target_arch = "wasm32")]
 pub async fn async_sleep(millis: i32) {
-    let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {
-        web_sys::window()
-            .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, millis)
-            .unwrap();
-    };
-    let p = js_sys::Promise::new(&mut cb);
-    wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
-}
-#[cfg(not(target_arch = "wasm32"))]
-pub async fn async_sleep(millis: i32) {
-    tokio::time::sleep(tokio::time::Duration::from_millis(millis as u64)).await;
+    tokio::time::sleep(Duration::from_millis(millis as u64)).await;
 }
 
 impl From<EsploraTx> for History {

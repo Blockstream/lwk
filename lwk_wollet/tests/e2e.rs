@@ -2234,7 +2234,7 @@ fn test_liquidex() {
     let xpub = sj
         .derive_xpub(&DerivationPath::from_str("m").unwrap())
         .unwrap();
-    let desc_j = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let desc_j = format!("ct({},elwpkh({}/<0;1>/*))", view_key, xpub);
     let mut wj = TestWollet::new(client, &desc_j);
 
     wa.fund_btc(&server);
@@ -2337,7 +2337,7 @@ fn test_liquidex_tmpquickjade() {
     let xpub = sj
         .derive_xpub(&DerivationPath::from_str("m").unwrap())
         .unwrap();
-    let desc_j = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let desc_j = format!("ct({},elwpkh({}/<0;1>/*))", view_key, xpub);
     let mut wj = TestWollet::new(client, &desc_j);
 
     wa.fund_btc(&server);

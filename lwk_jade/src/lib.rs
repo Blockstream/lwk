@@ -142,6 +142,7 @@ fn create_jade_sign_req(
     let mut asset_ids_in_tx = HashSet::new();
     let mut trusted_commitments = vec![];
     let mut changes = vec![];
+    let is_swap = is_swap(pset);
     for (i, output) in pset.outputs().iter().enumerate() {
         let asset_id = output.asset.ok_or(Error::MissingAssetIdInOutput(i))?;
         asset_ids_in_tx.insert(asset_id);
@@ -188,7 +189,9 @@ fn create_jade_sign_req(
             if fingerprint == &my_fingerprint {
                 // This ensures that path has at least 2 elements
                 let is_change = path.clone().into_iter().nth_back(1) == Some(&CHANGE_CHAIN);
-                if is_change {
+                // liquidex maker examples from jade have the change field set
+                // not sure if it's appropriate for taker
+                if is_change || is_swap {
                     if output.script_pubkey.is_v0_p2wpkh() {
                         change = Some(Change {
                             address: SingleOrMulti::Single {
@@ -273,8 +276,6 @@ fn create_jade_sign_req(
     }
 
     let additional_info = {
-        let is_swap = is_swap(pset);
-
         if !is_swap {
             None
         } else {

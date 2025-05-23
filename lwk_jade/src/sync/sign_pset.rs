@@ -10,7 +10,6 @@ impl Jade {
     /// Sign a pset from a Jade
     pub fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let my_fingerprint = self.fingerprint()?;
-        let secp = elements::secp256k1_zkp::Secp256k1::new();
 
         // Singlesig signing don't need this, however, it is simpler to always ask for it and once cached is a
         // fast operation anyway (and in a real scenario you may ask for registered multisigs at the beginning of the session)
@@ -77,17 +76,16 @@ impl Jade {
                             .ok_or(Error::NonConfidentialInput(i))?
                             .serialize()
                             .to_vec(),
+                        asset_generator: txout
+                            .asset
+                            .commitment()
+                            .ok_or(Error::NonConfidentialInput(i))?
+                            .serialize()
+                            .to_vec(),
                         path,
                         sighash,
                         ae_host_commitment: vec![1u8; 32], // TODO verify anti-exfil
                         unblinding_data: unblinding_data(input, i, is_swap)?,
-                        asset_generator: txout
-                            .asset
-                            .clone()
-                            .into_asset_gen(&secp)
-                            .unwrap()
-                            .serialize()
-                            .to_vec(),
                     };
                     let signer_commitment: Vec<u8> = self.tx_input(params)?.to_vec();
                     signers_commitment.insert(*want_public_key, signer_commitment);

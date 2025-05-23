@@ -318,7 +318,6 @@ fn create_jade_sign_req(
         }
     };
 
-    println!("add info: {:#?}", additional_info);
     let params = SignLiquidTxParams {
         network,
         txn,

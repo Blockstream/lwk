@@ -2311,3 +2311,51 @@ fn test_liquidex() {
 
     // TODO: check fees
 }
+
+#[test]
+fn test_liquidex_tmpquickjade() {
+    let server = setup();
+
+    // Alice
+    let signer_a = generate_signer();
+    let view_key = generate_view_key();
+    let desc_a = format!("ct({},elwpkh({}/*))", view_key, signer_a.xpub());
+    let sa = AnySigner::Software(signer_a);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wa = TestWollet::new(client, &desc_a);
+
+    // Jade
+    let mnemonic = TEST_MNEMONIC;
+    let docker = Cli::default();
+    let jade_init = jade_setup(&docker, mnemonic);
+    let sj = AnySigner::Jade(
+        jade_init.jade,
+        XKeyIdentifier::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
+    );
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let view_key = sj.slip77_master_blinding_key().unwrap().to_string();
+    let xpub = sj
+        .derive_xpub(&DerivationPath::from_str("m").unwrap())
+        .unwrap();
+    let desc_j = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let mut wj = TestWollet::new(client, &desc_j);
+
+    wa.fund_btc(&server);
+    wj.fund_btc(&server);
+    let (asset_1, _) = wa.issueasset(&[&sa], 10, 1, None, None);
+
+    assert_eq!(wa.balance(&asset_1), 10);
+    assert_eq!(wj.balance(&asset_1), 0);
+    let policy_asset = wa.policy_asset();
+
+    // TEST with Jade
+    let utxo = wj
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == policy_asset)
+        .unwrap()
+        .outpoint;
+    liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_1);
+}

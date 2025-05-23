@@ -2358,4 +2358,6 @@ fn test_liquidex_tmpquickjade() {
         .unwrap()
         .outpoint;
     liquidex(&mut wj, &sj, &mut wa, &sa, utxo, 1, asset_1);
+    // fails with
+    // "Failed to validate input/output summary information"
 }

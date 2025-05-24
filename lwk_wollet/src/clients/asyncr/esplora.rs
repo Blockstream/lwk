@@ -94,7 +94,12 @@ impl EsploraClient {
             .body(tx_hex)
             .send()
             .await?;
-        let txid = elements::Txid::from_str(&response.text().await?)?;
+        let text = response.text().await?;
+        let txid = elements::Txid::from_str(&text).map_err(|e| {
+            crate::Error::Generic(format!(
+                "Failed to parse response to txid. Response: {text}, Error: {e}"
+            ))
+        })?;
         Ok(txid)
     }
 

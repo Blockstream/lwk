@@ -1012,12 +1012,31 @@ async fn test_esplora_wasm_waterfalls_huge() {
     test_esplora_wasm_waterfalls_desc(desc, url).await;
 }
 
-async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) {
+#[ignore = "require network calls"]
+#[cfg(feature = "esplora")]
+#[tokio::test]
+async fn test_esplora_wasm_waterfalls_missing_txs() {
+    let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+    let desc = "ct(slip77(ae4af8c4fca43888025cb81c0f2b8821c371c1f8340b67b2f75111f9b1cf87f6),elwpkh([43d9b504/84'/1'/0']tpubDCvprDpPNi7AFKbVQjjcvBVdPx7twgpRruwDY8HHtngE7847KjAnusVULdBmKYqvx4hKA9KK2sKMtSSrT5wxndbesxErAWSo8YNQFuhtV8Z/<0;1>/*))#326lmfs5";
+    let txs = test_esplora_wasm_waterfalls_desc(desc, url).await;
+
+    let electrum_url = ElectrumUrl::new(LIQUID_TESTNET_SOCKET, true, true).unwrap();
+    let mut electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    let desc = WolletDescriptor::from_str(desc).unwrap();
+    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, desc).unwrap();
+    let update = electrum_client.full_scan(&wollet).unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+
+    assert_eq!(wollet.transactions().unwrap().len(), txs);
+}
+
+async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
     let network = if desc.contains("xpub") {
         ElementsNetwork::Liquid
     } else {
         ElementsNetwork::LiquidTestnet
     };
+
     init_logging();
     use std::time::Instant;
 
@@ -1057,6 +1076,8 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) {
         wollets[0].transactions().unwrap(),
         wollets[1].transactions().unwrap()
     );
+
+    wollets[0].transactions().unwrap().len()
 }
 
 #[cfg(feature = "esplora")]

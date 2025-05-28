@@ -94,7 +94,9 @@ impl EsploraClient {
             .body(tx_hex)
             .send()
             .await?;
-        let txid = elements::Txid::from_str(&response.text().await?)?;
+        let response_text = response.text().await?;
+        let txid = elements::Txid::from_str(&response_text)
+            .map_err(|_| Error::Generic(format!("broadcast: {response_text}")))?;
         Ok(txid)
     }
 

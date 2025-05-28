@@ -55,7 +55,8 @@ impl TxBuilder {
         Ok(inner.finish(&wollet)?.into())
     }
 
-    /// Set the fee rate
+    /// Fee rate in sats/kvb
+    /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(&self, rate: Option<f32>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;

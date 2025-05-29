@@ -62,6 +62,29 @@
         "type": "github"
       }
     },
+    "nexus_relay": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1748344372,
+        "narHash": "sha256-I1OJwH7IAJa7Nr7T5RggfRDHQQ/FVXEEZ23nAqO9HeA=",
+        "owner": "RCasatta",
+        "repo": "nexus_relay",
+        "rev": "47a43d797cc3db71b72a2a6d6e9017af3a0e30b5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "RCasatta",
+        "repo": "nexus_relay",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1744463964,
@@ -113,6 +136,7 @@
         "crane": "crane",
         "electrs-flake": "electrs-flake",
         "flake-utils": "flake-utils",
+        "nexus_relay": "nexus_relay",
         "nixpkgs": "nixpkgs",
         "registry-flake": "registry-flake",
         "rust-overlay": "rust-overlay"

@@ -29,8 +29,15 @@
         rust-overlay.follows = "rust-overlay";
       };
     };
+    nexus_relay = {
+      url = "github:RCasatta/nexus_relay";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
+    };
   };
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, registry-flake }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, electrs-flake, registry-flake, nexus_relay }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
@@ -107,6 +114,7 @@
             ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
             ELECTRS_LIQUID_EXEC = electrs.program;
+            NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
           };
         }

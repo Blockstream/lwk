@@ -956,7 +956,7 @@ mod tests {
     use crate::elements::bitcoin::bip32::{Xpriv, Xpub};
     use crate::elements::bitcoin::network::Network;
     use crate::elements::AddressParams;
-    use crate::NoPersist;
+    use crate::{DownloadTxResult, NoPersist};
     use elements_miniscript::confidential::bare::tweak_private_key;
     use elements_miniscript::confidential::Key;
     use elements_miniscript::descriptor::checksum::desc_checksum;
@@ -1048,6 +1048,53 @@ mod tests {
         assert_eq!(new_wollet(&desc_s_xpub).signers(), vec![fp_xpub]);
         assert_eq!(new_wollet(&desc_m_1single).signers(), vec![fp1, fp_single]);
         assert_eq!(new_wollet(&desc_m_12).signers(), vec![fp1, fp2]);
+    }
+
+    #[test]
+    fn test_restore_only_tip() {
+        let desc_str = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))";
+        let desc: WolletDescriptor = format!("{}#{}", desc_str, desc_checksum(desc_str).unwrap())
+            .parse()
+            .unwrap();
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let persister = FsPersister::new(&tempdir, ElementsNetwork::LiquidTestnet, &desc).unwrap();
+        let mut wollet = Wollet::new(
+            ElementsNetwork::LiquidTestnet,
+            persister.clone(),
+            desc.clone(),
+        )
+        .unwrap();
+
+        let tip = lwk_test_util::liquid_block_1().header;
+        let update = Update {
+            version: 1,
+            wollet_status: wollet.status(),
+            new_txs: DownloadTxResult::default(),
+            txid_height_new: Vec::new(),
+            txid_height_delete: Vec::new(),
+            timestamps: vec![(tip.height, tip.time)],
+            scripts_with_blinding_pubkey: Vec::new(),
+            tip,
+        };
+
+        wollet.apply_update(update.clone()).unwrap();
+
+        // Apply second only tip update with different block timestamps
+        let new_tip = lwk_test_util::liquid_block_header_2_963_520();
+        let update2 = Update {
+            tip: new_tip.clone(),
+            timestamps: vec![(new_tip.height, new_tip.time)],
+            wollet_status: wollet.status(),
+            ..update.clone()
+        };
+        wollet.apply_update(update2).unwrap();
+
+        // We restore the wallet and expects the same status
+        let restored_wollet =
+            Wollet::new(ElementsNetwork::LiquidTestnet, persister.clone(), desc).unwrap();
+
+        assert_eq!(wollet.status(), restored_wollet.status());
     }
 
     #[test]

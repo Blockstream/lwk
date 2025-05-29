@@ -8,6 +8,7 @@ LISTEN_ADDR="${LISTEN_ADDR:-127.0.0.1:3000}"
 ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
 ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
 ELECTRS_HTTP_ADDR="${ELECTRS_HTTP_ADDR:-127.0.0.1:3002}" # required for asset registry server
+NEXUS_RELAY_PORT="${NEXUS_RELAY_PORT:-3330}"
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
 # Compute ELEMENTS_CLI_EXEC based on ELEMENTSD_EXEC location if not provided
 if [ -z "$ELEMENTS_CLI_EXEC" ]; then
@@ -23,6 +24,7 @@ fi
 WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
 REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
 ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
+NEXUS_RELAY_EXEC="${NEXUS_RELAY_EXEC:-nexus_relay}"
 
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
@@ -38,6 +40,7 @@ mkdir -p "$ELEMENTS_DIR" "$WATERFALLS_DB" "$ASSET_REGISTRY_DB" "$ELECTRS_DB"
 # Extract host and port from ELEMENTS_ADDR
 ELEMENTS_HOST=$(echo $ELEMENTS_ADDR | cut -d: -f1)
 ELEMENTS_PORT=$(echo $ELEMENTS_ADDR | cut -d: -f2)
+ZMQ_ENDPOINT="tcp://${ELEMENTS_HOST}:29000"
 
 # Initialize elements-cli command with common arguments
 ELEMENTS_CLI_CMD="$ELEMENTS_CLI_EXEC -rpcconnect=$ELEMENTS_HOST -rpcport=$ELEMENTS_PORT -rpcuser=user -rpcpassword=pass"
@@ -57,6 +60,7 @@ $ELEMENTSD_EXEC \
     -rpcbind=$ELEMENTS_HOST \
     -rpcport=$ELEMENTS_PORT \
     -txindex=1 \
+    -zmqpubrawtx=$ZMQ_ENDPOINT \
     -daemon
 
 echo "Waiting for elementsd to start..."
@@ -116,6 +120,16 @@ SKIP_VERIFY_DOMAIN_LINK=1 $REGISTRY_EXEC \
 
 ASSET_REGISTRY_PID=$!
 
+# Start nexus_relay in the background
+echo "Starting nexus_relay..."
+$NEXUS_RELAY_EXEC \
+    --port $NEXUS_RELAY_PORT \
+    --base-url "http://$ELEMENTS_ADDR" \
+    --zmq-endpoint "$ZMQ_ENDPOINT" \
+    --network elements-regtest &
+
+NEXUS_RELAY_PID=$!
+
 POLICY_ASSET=$($ELEMENTS_CLI_CMD getsidechaininfo | jq .pegged_asset)
 
 echo "Using executables:"
@@ -124,12 +138,14 @@ echo "  elements-cli: $ELEMENTS_CLI_EXEC"
 echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
 echo "  registry: $REGISTRY_EXEC"
+echo "  nexus_relay: $NEXUS_RELAY_EXEC"
 echo
 echo "Waterfalls HTTP API: http://$LISTEN_ADDR"
 echo "Elements RPC address: http://$ELEMENTS_ADDR"
 echo "Electrs RPC address: $ELECTRS_RPC_ADDR"
 echo "Electrs HTTP API: http://$ELECTRS_HTTP_ADDR"
 echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
+echo "Nexus Relay WebSocket: ws://localhost:$NEXUS_RELAY_PORT"
 echo "Policy asset: $POLICY_ASSET"
 
 echo "Press Ctrl+C to stop all services"
@@ -145,6 +161,7 @@ cleanup() {
     kill $GENERATE_PID || true
     kill $ASSET_REGISTRY_PID || true
     kill $ELECTRS_PID || true
+    kill $NEXUS_RELAY_PID || true
     $ELEMENTS_CLI_CMD stop || true
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"

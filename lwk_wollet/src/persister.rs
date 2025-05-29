@@ -177,7 +177,7 @@ impl Persister for FsPersister {
                     update.wollet_status = prev_update.wollet_status;
 
                     // We need to merge the timestamps to be consistent with the wallet status
-                    update.timestamps = vec![prev_update.timestamps, update.timestamps].concat();
+                    update.timestamps = [prev_update.timestamps, update.timestamps].concat();
                     inner.next = (inner.next.0 - 1).into() // safety: next is at least 1 or last() would be None
                 }
             }

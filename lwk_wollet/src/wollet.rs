@@ -545,8 +545,12 @@ impl Wollet {
         self.balance_from_utxos(&utxos)
     }
 
-    /// Get the wallet transactions
-    pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
+    /// Get the wallet transactions with pagination
+    pub fn transactions_paginated(
+        &self,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Vec<WalletTx>, Error> {
         let mut txs = vec![];
         let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();
         my_txids.sort_by(|a, b| {
@@ -558,7 +562,7 @@ impl Wollet {
         });
 
         let txos = self.txos_map()?;
-        for (txid, height) in my_txids.iter() {
+        for (txid, height) in my_txids.iter().skip(offset).take(limit) {
             let tx = self
                 .store
                 .cache
@@ -592,6 +596,11 @@ impl Wollet {
         }
 
         Ok(txs)
+    }
+
+    /// Get the wallet transactions
+    pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
+        self.transactions_paginated(0, usize::MAX)
     }
 
     /// Get a wallet transaction
@@ -1235,6 +1244,55 @@ mod tests {
         let _txos = wollet.txos().unwrap();
         let duration = start.elapsed();
         assert!(duration < MAX_DURATION);
+    }
+
+    #[test]
+    fn test_transactions_pagination() {
+        let wollet = test_wollet_with_many_transactions();
+
+        // Get all transactions
+        let all_txs = wollet.transactions().unwrap();
+        let total_txs = all_txs.len();
+        assert!(total_txs > 0, "Test wallet should have some transactions");
+
+        // Test pagination with different offsets and limits
+        let test_cases = vec![
+            (0, 5),             // First 5 transactions
+            (5, 5),             // Next 5 transactions
+            (10, 10),           // Next 10 transactions
+            (0, 1),             // Just the first transaction
+            (total_txs - 1, 1), // Just the last transaction
+            (total_txs, 1),     // Offset beyond available transactions
+            (0, total_txs + 1), // Limit larger than available transactions
+        ];
+
+        for (offset, limit) in test_cases {
+            let paginated_txs = wollet.transactions_paginated(offset, limit).unwrap();
+
+            // Verify the number of returned transactions
+            let expected_count = if offset >= total_txs {
+                0
+            } else {
+                std::cmp::min(limit, total_txs - offset)
+            };
+            assert_eq!(
+                paginated_txs.len(),
+                expected_count,
+                "Wrong number of transactions for offset={}, limit={}",
+                offset,
+                limit
+            );
+
+            // Verify the transactions match the expected slice of all transactions
+            if !paginated_txs.is_empty() {
+                let expected_txs = &all_txs[offset..offset + paginated_txs.len()];
+                assert_eq!(
+                    paginated_txs, expected_txs,
+                    "Transactions don't match for offset={}, limit={}",
+                    offset, limit
+                );
+            }
+        }
     }
 
     // duplicated from tests/test_wollet.rs

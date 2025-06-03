@@ -91,10 +91,18 @@ impl Wollet {
     }
 
     pub fn transactions(&self) -> Result<Vec<Arc<WalletTx>>, LwkError> {
+        self.transactions_paginated(0, u32::MAX)
+    }
+
+    pub fn transactions_paginated(
+        &self,
+        offset: u32,
+        limit: u32,
+    ) -> Result<Vec<Arc<WalletTx>>, LwkError> {
         Ok(self
             .inner
             .lock()?
-            .transactions()?
+            .transactions_paginated(offset as usize, limit as usize)?
             .into_iter()
             .map(Into::into)
             .map(Arc::new)

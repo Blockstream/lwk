@@ -1339,7 +1339,7 @@ fn add_contracts<'a>(
                     let issuance_blinded = false;
                     pset.add_token_metadata(
                         token_id,
-                        &TokenMetadata::new(token_id, issuance_blinded),
+                        &TokenMetadata::new(asset_id, issuance_blinded),
                     );
                 }
             }

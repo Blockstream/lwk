@@ -1339,7 +1339,7 @@ fn add_contracts<'a>(
                     let issuance_blinded = false;
                     pset.add_token_metadata(
                         token_id,
-                        &TokenMetadata::new(token_id, issuance_blinded),
+                        &TokenMetadata::new(asset_id, issuance_blinded),
                     );
                 }
             }
@@ -1391,7 +1391,12 @@ fn amp2userkey(signer: &AnySigner) -> Result<String, Error> {
 #[cfg(test)]
 mod tests {
     use std::net::TcpListener;
-
+    use std::str::FromStr;
+    use std::collections::HashMap;
+    use lwk_wollet::Contract;
+    use lwk_wollet::elements::AssetId;
+    use lwk_wollet::elements::pset::{PartiallySignedTransaction, elip100::PSET_HWW_PREFIX};
+    use crate::state::{AppAsset, RegistryAssetData};
     use super::*;
 
     fn app_random_port() -> App {
@@ -1423,5 +1428,56 @@ mod tests {
 
         app.stop().unwrap();
         app.join_threads().unwrap();
+    }
+
+    #[test]
+    fn add_contracts_embeds_valid_metadata() {
+        // Prepare and validate contract
+        let contract_json = r#"{"entity":{"domain":"example.com"},"issuer_pubkey":"020202020202020202020202020202020202020202020202020202020202020202","name":"MyCoin","precision":0,"ticker":"MYCO","version":0}"#;
+        let contract_value = serde_json::Value::from_str(contract_json).unwrap();
+        let contract = Contract::from_value(&contract_value).unwrap();
+        contract.validate().unwrap();
+        let contract_serialized = serde_json::to_string(&contract).unwrap();
+        assert_eq!(contract_serialized, contract_json);
+
+        // Load PSET
+        let pset_str = include_str!("../test_data/issuance_pset.base64");
+        let mut pset = PartiallySignedTransaction::from_str(pset_str).unwrap();
+
+        // Remove asset metadata preserving initial number of proprietary keys
+        let n_proprietary_keys = pset.global.proprietary.len();
+        pset.global.proprietary.retain(|key, _| {
+            !key.prefix.starts_with(PSET_HWW_PREFIX)
+        });
+        assert!(pset.global.proprietary.keys().all(|key| !key.prefix.starts_with(PSET_HWW_PREFIX)));
+        let removed = n_proprietary_keys - pset.global.proprietary.len();
+        assert_eq!(removed, 2, "Expected to remove 2 proprietary keys with HWW prefix");
+
+        // Extract transaction
+        let tx = pset.extract_tx().unwrap();
+
+        // Prepare assets map
+        let mut assets_map: HashMap<AssetId, AppAsset> = HashMap::new();
+        let asset_id = AssetId::from_str("25e85efe02e5010a880ddb7c936e82896cd7fc493d2a5bc4422e8ec26100b00d").unwrap();
+        let asset_data = RegistryAssetData::new(asset_id, tx.clone(), contract.clone()).expect("valid registry data");
+        let token_id = asset_data.reissuance_token();
+        assets_map.insert(asset_id, AppAsset::RegistryAsset(asset_data.clone()));
+        assets_map.insert(token_id, AppAsset::ReissuanceToken(asset_data.clone()));
+
+        // Add contracts
+        add_contracts(&mut pset, assets_map.iter());
+
+        // Ensure the asset metadata records are fully re-created
+        assert_eq!(pset.global.proprietary.len(), n_proprietary_keys, "Contract metadata was not fully restored");
+
+        // Assert asset metadata is present and valid
+        let asset_meta = pset.get_asset_metadata(asset_id).unwrap().unwrap();
+        assert_eq!(asset_meta.contract(), contract_json, "Invalid contract in asset metadata");
+        assert_eq!(asset_meta.issuance_prevout(), asset_data.issuance_prevout(), "Invalid issuance prevout in asset metadata");
+
+        // Assert token metadata is present and valid
+        let token_meta = pset.get_token_metadata(token_id).unwrap().unwrap();
+        assert_eq!(token_meta.asset_id(), &asset_id, "Invalid asset tag in reissuance token metadata");
+        assert_eq!(token_meta.issuance_blinded(), false, "Invalid issuance blinded flag in reissuance token metadata");
     }
 }

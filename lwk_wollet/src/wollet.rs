@@ -527,17 +527,31 @@ impl Wollet {
         Ok(utxos)
     }
 
-    /// Return all UTXOs in the wallet, including spent, unblinded and unblindable ones
-    pub fn all_utxos(&self) -> Result<Vec<(OutPoint, elements::TxOut)>, Error> {
+    /// Return UTXOs unblinded with a custom blinding key
+    ///
+    /// They can be spent using [`crate::TxBuilder::add_external_utxos()`]
+    pub fn unblind_utxos_with(
+        &self,
+        blinding_key: bitcoin::secp256k1::SecretKey,
+    ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
         let spent = self.store.spent()?;
-
+        let unblinded = &self.store.cache.unblinded;
+        let secp = bitcoin::key::Secp256k1::new();
         for (txid, tx) in self.store.cache.all_txs.iter() {
-            for (i, o) in tx.output.iter().enumerate() {
-                if self.store.cache.paths.contains_key(&o.script_pubkey) {
+            for (i, txout) in tx.output.iter().enumerate() {
+                if self.store.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
-                    if !spent.contains(&outpoint) {
-                        utxos.push((outpoint, o.clone()));
+                    if !spent.contains(&outpoint) && !unblinded.contains_key(&outpoint) {
+                        if let Ok(unblinded) = txout.unblind(&secp, blinding_key) {
+                            let external_utxo = ExternalUtxo {
+                                outpoint,
+                                txout: txout.clone(),
+                                unblinded,
+                                max_weight_to_satisfy: self.max_weight_to_satisfy(),
+                            };
+                            utxos.push(external_utxo);
+                        }
                     }
                 }
             }

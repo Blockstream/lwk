@@ -1677,21 +1677,12 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     std::thread::sleep(std::time::Duration::from_secs(10)); // Can't wait_for_tx because it's not getting unblindable txs
     w.sync();
 
-    let mut utxos = w.wollet.all_utxos().unwrap();
+    let mut utxos = w.wollet.unblind_utxos_with(blinding_key).unwrap();
     assert_eq!(utxos.len(), 1);
     let balance = w.balance(&policy_asset);
     assert_eq!(balance, 0, "unblindable utxos are considered");
 
-    let (outpoint, txout) = utxos.pop().unwrap();
-    let unblinded = txout.unblind(&secp, blinding_key).unwrap();
-    assert_eq!(unblinded.value, amount);
-
-    let external_utxo = lwk_wollet::ExternalUtxo {
-        outpoint,
-        txout,
-        unblinded,
-        max_weight_to_satisfy: w.wollet.max_weight_to_satisfy(),
-    };
+    let external_utxo = utxos.pop().unwrap();
 
     // Sending the unblinded utxo to the wallet as correctly blinded output
     let mut pset = w

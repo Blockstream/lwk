@@ -625,4 +625,94 @@ mod test {
         let pegin_address_api = desc.pegin_address(0, bitcoin::Network::Testnet, d).unwrap();
         assert_eq!(pegin_address_api.to_string(), expected);
     }
+
+    #[test]
+    fn test_liquid_multisig_issuance() {
+        // generated from https://github.com/Blockstream/liquid_multisig_issuance/blob/d0e473871bb7c096dff2baa00f5331022bd7730f/3of5/create_multisig.py
+        let json = r#"
+        {
+                "blindingkey": "1f8ddeeebc82f6b34d8242f635d70ecff0fa61d23899906cf315ecf90662833e",
+                "kind": "multisig 3 of 5",
+                "multisig": "Azpk4cdN1i62AmgMehkLju97mBc5TCPCPboxpmf5ju8SyAc9Tji3pPCdeyT7cWDnyKBFEij5vgFWjF1M",
+                "participants": [
+                    {
+                        "address": "Azpk4cdN1i62AmgMehkLju97mBc5TCPCPboxpmf5ju8SyAcCUqqE5soNdSRmpnsuEDJmHEEVHEjJRW82",
+                        "name": "first",
+                        "pubkey": "02d07923f1980be3f3540d1c97241df57786b2c91d2513a059caebcf8fbe47c17d"
+                    },
+                    {
+                        "address": "AzpmxSKSbGLXNYTveF1n5ZUTESQtGWYty4NQvncN64siaWXV7QCvDMHYDDjsRUuGTDTCb2W69yz3nJBU",
+                        "name": "second",
+                        "pubkey": "02e803b7d19e7fb6286d4c9a8938e777fcffeb444a1795b9919ad3fd34898f2a97"
+                    },
+                    {
+                        "address": "Azpnrg3ezz7SWAzhQXBVKsmiUG1tXq5uRBceZfAC8reJnA4zmRGjegS2d7YuL75ySFHnGwdPUCgNXvmU",
+                        "name": "third",
+                        "pubkey": "02873ddb31b6a87e775e3e35bf038b3179d496b5164cd8afb57547df9eef5d90b8"
+                    },
+                    {
+                        "address": "AzpjGErNCb8r92MzpospU3zeXQZG2hhr5uVmi7HfeGbQkf3FXhErJgSHdVdFthN1PtV9FBZteHh1t6dz",
+                        "name": "fourth",
+                        "pubkey": "0337fa5c53d4c9311a079c18e01ec5552eb60a5a34d4a83c921ff6a91050f33dcb"
+                    },
+                    {
+                        "address": "Azpqn9u25NqM5eCpgGM5LGztGWhabfdyfnJKKsVaE4XM12FnUMYtsKr7cDzgQqfhkGCWtGgwCM2Trsan",
+                        "name": "fifth",
+                        "pubkey": "025f83f10c091e99e4c8e6683f0d0d2c10ee2f2d648d88d2ddd1d2c3cea51460df"
+                    }
+                ]
+            }
+        "#;
+
+        #[derive(serde::Deserialize, Debug)]
+        struct Participant {
+            // address: String,
+            // name: String,
+            pubkey: String,
+        }
+
+        #[derive(serde::Deserialize, Debug)]
+        struct WalletMultisig {
+            blindingkey: String,
+            // kind: String,
+            multisig: String,
+            participants: Vec<Participant>,
+        }
+
+        let v = serde_json::from_str::<WalletMultisig>(json).unwrap();
+        let p = &v.participants;
+        // println!("{:?}", v);
+        let desc = format!(
+            "ct({},elsh(multi(3,{},{},{},{},{})))",
+            v.blindingkey, p[0].pubkey, p[1].pubkey, p[2].pubkey, p[3].pubkey, p[4].pubkey
+        );
+        assert_eq!(desc, "ct(1f8ddeeebc82f6b34d8242f635d70ecff0fa61d23899906cf315ecf90662833e,elsh(multi(3,02d07923f1980be3f3540d1c97241df57786b2c91d2513a059caebcf8fbe47c17d,02e803b7d19e7fb6286d4c9a8938e777fcffeb444a1795b9919ad3fd34898f2a97,02873ddb31b6a87e775e3e35bf038b3179d496b5164cd8afb57547df9eef5d90b8,0337fa5c53d4c9311a079c18e01ec5552eb60a5a34d4a83c921ff6a91050f33dcb,025f83f10c091e99e4c8e6683f0d0d2c10ee2f2d648d88d2ddd1d2c3cea51460df)))");
+        let desc: elements_miniscript::ConfidentialDescriptor<bitcoin::PublicKey> =
+            desc.parse().unwrap();
+
+        let params = &elements::AddressParams::ELEMENTS;
+        let secp = bitcoin::key::Secp256k1::new();
+        let a = desc.address(&secp, params).unwrap();
+        let expected_address = elements::Address::from_str(&v.multisig).unwrap();
+
+        let mut unconfidential_address = a.to_unconfidential();
+        assert_eq!(
+            unconfidential_address.to_string(),
+            expected_address.to_unconfidential().to_string(),
+        );
+
+        assert_ne!(
+            a.to_string(),
+            expected_address.to_string(),
+            "addresses in ct descriptor are always tweaked, thus they are not equal"
+        );
+
+        // creating the address by using the blinding key directly
+        let blinding_key = bitcoin::secp256k1::SecretKey::from_str(&v.blindingkey).unwrap();
+        unconfidential_address.blinding_pubkey = Some(blinding_key.public_key(&secp));
+        assert_eq!(
+            unconfidential_address.to_string(),
+            expected_address.to_string()
+        );
+    }
 }

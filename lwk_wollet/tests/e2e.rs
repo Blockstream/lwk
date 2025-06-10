@@ -1665,12 +1665,13 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
     let client = test_client_electrum(&server.electrs.electrum_url);
     let mut w = TestWollet::new(client, &desc);
+    let policy_asset = w.policy_asset();
     let secp = bitcoin::secp256k1::Secp256k1::new();
     let mut address_with_custom_blinding = w.address();
     address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&secp));
 
     let amount = 100_000;
-    let txid = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
+    let _ = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
     server.elementsd_generate(1);
 
     std::thread::sleep(std::time::Duration::from_secs(10)); // Can't wait_for_tx because it's not getting unblindable txs
@@ -1678,6 +1679,8 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
 
     let mut utxos = w.wollet.all_utxos().unwrap();
     assert_eq!(utxos.len(), 1);
+    let balance = w.balance(&policy_asset);
+    assert_eq!(balance, 0, "unblindable utxos are considered");
 
     let (outpoint, txout) = utxos.pop().unwrap();
     let unblinded = txout.unblind(&secp, blinding_key).unwrap();
@@ -1701,7 +1704,6 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     signer.sign(&mut pset).unwrap();
     let _ = w.send(&mut pset);
 
-    let policy_asset = w.policy_asset();
     let balance = w.balance(&policy_asset);
 
     let details = w.wollet.get_details(&pset).unwrap();

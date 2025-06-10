@@ -496,7 +496,7 @@ impl Wollet {
     }
     /// Get the explicit UTXOs sent to script pubkeys owned by the wallet
     ///
-    /// They can be spent as external utxos.
+    /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
         let spent = self.store.spent()?;
         let mut utxos = vec![];

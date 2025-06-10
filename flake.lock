@@ -69,14 +69,15 @@
         ],
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1748344372,
-        "narHash": "sha256-I1OJwH7IAJa7Nr7T5RggfRDHQQ/FVXEEZ23nAqO9HeA=",
+        "lastModified": 1748629522,
+        "narHash": "sha256-kFugFrhcnPyLqVXo7sMQ7oJ6b5EOFBHAC+j4tqm04Oo=",
         "owner": "RCasatta",
         "repo": "nexus_relay",
-        "rev": "47a43d797cc3db71b72a2a6d6e9017af3a0e30b5",
+        "rev": "1a7c4c0187633b435931e0f2839f5f1798ea39e5",
         "type": "github"
       },
       "original": {
@@ -86,6 +87,22 @@
       }
     },
     "nixpkgs": {
+      "locked": {
+        "lastModified": 1744536153,
+        "narHash": "sha256-awS2zRgF4uTwrOKwwiJcByDzDOdo3Q1rPZbiHQg/N38=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "18dd725c29603f582cf1900e0d25f9f1063dbf11",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1744463964,
         "narHash": "sha256-LWqduOgLHCFxiTNYi3Uj5Lgz0SR+Xhw3kr/3Xd0GPTM=",
@@ -137,12 +154,30 @@
         "electrs-flake": "electrs-flake",
         "flake-utils": "flake-utils",
         "nexus_relay": "nexus_relay",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": "nixpkgs_2",
         "registry-flake": "registry-flake",
-        "rust-overlay": "rust-overlay"
+        "rust-overlay": "rust-overlay_2"
       }
     },
     "rust-overlay": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1748572605,
+        "narHash": "sha256-k0nhPtkVDQkVJckRw6fGIeeDBktJf1BH0i8T48o7zkk=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "405ef13a5b80a0a4d4fc87c83554423d80e5f929",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "rust-overlay_2": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"

@@ -1657,6 +1657,59 @@ fn test_unblinded_utxo() {
     assert_eq!(w.balance(&policy_asset), 0);
 }
 
+#[test]
+fn test_spend_blinded_utxo_with_custom_blinding_key() {
+    let server = setup();
+    let signer = generate_signer();
+    let blinding_key = secp256k1::SecretKey::new(&mut rand::thread_rng());
+    let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+    let secp = bitcoin::secp256k1::Secp256k1::new();
+    let mut address_with_custom_blinding = w.address();
+    address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&secp));
+
+    let amount = 100_000;
+    let txid = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
+    server.elementsd_generate(1);
+
+    std::thread::sleep(std::time::Duration::from_secs(10)); // Can't wait_for_tx because it's not getting unblindable txs
+    w.sync();
+
+    let mut utxos = w.wollet.all_utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+
+    let (outpoint, txout) = utxos.pop().unwrap();
+    let unblinded = txout.unblind(&secp, blinding_key).unwrap();
+    assert_eq!(unblinded.value, amount);
+
+    let external_utxo = lwk_wollet::ExternalUtxo {
+        outpoint,
+        txout,
+        unblinded,
+        max_weight_to_satisfy: w.wollet.max_weight_to_satisfy(),
+    };
+
+    // Sending the unblinded utxo to the wallet as correctly blinded output
+    let mut pset = w
+        .tx_builder()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    signer.sign(&mut pset).unwrap();
+    let _ = w.send(&mut pset);
+
+    let policy_asset = w.policy_asset();
+    let balance = w.balance(&policy_asset);
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fee;
+
+    assert_eq!(balance, amount - fee);
+}
+
 #[cfg(feature = "elements_rpc")]
 #[test]
 fn test_elements_rpc() {

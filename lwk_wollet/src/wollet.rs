@@ -527,6 +527,24 @@ impl Wollet {
         Ok(utxos)
     }
 
+    /// Return all UTXOs in the wallet, including spent, unblinded and unblindable ones
+    pub fn all_utxos(&self) -> Result<Vec<(OutPoint, elements::TxOut)>, Error> {
+        let mut utxos = vec![];
+        let spent = self.store.spent()?;
+
+        for (txid, tx) in self.store.cache.all_txs.iter() {
+            for (i, o) in tx.output.iter().enumerate() {
+                if self.store.cache.paths.contains_key(&o.script_pubkey) {
+                    let outpoint = OutPoint::new(*txid, i as u32);
+                    if !spent.contains(&outpoint) {
+                        utxos.push((outpoint, o.clone()));
+                    }
+                }
+            }
+        }
+        Ok(utxos)
+    }
+
     pub(crate) fn balance_from_utxos(
         &self,
         utxos: &[WalletTxOut],

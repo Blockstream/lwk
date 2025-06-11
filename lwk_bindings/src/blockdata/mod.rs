@@ -5,6 +5,7 @@
 
 pub mod address;
 pub mod address_result;
+pub mod external_utxo;
 pub mod out_point;
 pub mod script;
 pub mod transaction;

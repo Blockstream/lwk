@@ -73,6 +73,11 @@ web-sys = { version = "0.3.69", optional = true, features = [
     "HidInputReportEvent",
     "console",
     "Performance",
+    "WebSocket",
+    "MessageEvent",
+    "BinaryType",
+    "Window",
+    "Event",
 ] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 web-sys = { version = "0.3.69", optional = true, features = [

@@ -11,6 +11,8 @@ mod esplora;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod jade;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
+mod jade_websocket;
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod ledger;
 mod liquidex;
 mod mnemonic;
@@ -43,6 +45,8 @@ pub(crate) use error::Error;
 pub use esplora::EsploraClient;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::{Jade, Singlesig};
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+pub use jade_websocket::JadeWebSocket;
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use precision::Precision;

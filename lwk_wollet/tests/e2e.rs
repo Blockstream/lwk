@@ -2461,4 +2461,30 @@ fn test_sh_multi() {
 
     // Receive
     wallet.fund_btc(&server);
+
+    // Send
+    let balance_before = wallet.balance_btc();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&wallet.address(), 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    pset = pset_rt(&pset);
+
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fee as i64;
+    assert!(fee > 0);
+    // TODO: fee rate estimation is off, fix it and use send_btc in this test
+    assert!(compute_fee_rate(&pset) > 100.0);
+
+    wallet.sign(&signer1, &mut pset);
+    let txid = wallet.send(&mut pset);
+    let balance_after = wallet.balance_btc();
+    assert!(balance_before > balance_after);
+    let tx = wallet.get_tx(&txid);
+    assert_eq!(&tx.type_, "outgoing");
+
+    let txs = wallet.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 2);
 }

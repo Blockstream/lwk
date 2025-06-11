@@ -2584,4 +2584,24 @@ fn test_issuance_amount_limits() {
 
     // // The node rejects more than 21M BTC issuance.
     // assert!(!server.elementsd_testmempoolaccept(&tx_hex));
+
+    let amount = 21_000_000 * 100_000_000;
+    let mut pset = wallet
+        .tx_builder()
+        .reissue_asset(asset, amount, None, None)
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    wallet.send(&mut pset);
+
+    let reissue_error = wallet
+        .tx_builder()
+        .reissue_asset(asset, amount_over_btc_max, None, None)
+        .unwrap_err();
+
+    assert_eq!(
+        reissue_error.to_string(),
+        "Issuance amount greater than 21M*10^8 are not allowed"
+    );
 }

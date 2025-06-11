@@ -530,6 +530,9 @@ impl Wollet {
     /// Return UTXOs unblinded with a custom blinding key
     ///
     /// They can be spent using [`crate::TxBuilder::add_external_utxos()`]
+    ///
+    /// Note: if the blinding key is the one derived from the wallet descriptor,
+    /// this function will NOT return that UTXO. That UTXO is available with the normal flow.
     pub fn unblind_utxos_with(
         &self,
         blinding_key: bitcoin::secp256k1::SecretKey,

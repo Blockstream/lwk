@@ -1538,17 +1538,102 @@ fn test_external_utxo() {
     // utxo w1, utxo w2, sent to node, fee
     assert_eq!(balance, 100_000 + 100_000 - 110_000 - fee);
 
-    // External UTXO cannot be asset UTXOs
+    // External UTXO can be asset UTXOs
     w2.sync();
-    w2.fund_asset(&server);
+    let asset = w2.fund_asset(&server);
+    let utxo = &w2.wollet.utxos().unwrap()[0];
+    let external_utxo = w2.make_external(utxo);
+    assert_eq!(w1.balance(&asset), 0);
+    assert_eq!(w2.balance(&asset), 10_000);
+
+    let mut pset = w1
+        .tx_builder()
+        .add_recipient(&w2.address(), 1_000, asset)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    for signer in signers {
+        w1.sign(signer, &mut pset);
+    }
+    w1.send(&mut pset);
+    w2.sync();
+
+    // w1 gets change, w2 gets 1_000
+    assert_eq!(w1.balance(&asset), 9_000);
+    assert_eq!(w2.balance(&asset), 1_000);
+
+    // Send exact amount (no change) spending only external utxo
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
 
-    let err = w1
+    let mut pset = w1
         .tx_builder()
+        .add_recipient(&w2.address(), 1_000, asset)
+        .unwrap()
         .add_external_utxos(vec![external_utxo])
-        .unwrap_err();
-    assert_eq!(err.to_string(), "External utxos must be L-BTC");
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    for signer in signers {
+        w1.sign(signer, &mut pset);
+    }
+    w1.send(&mut pset);
+    w2.sync();
+
+    assert_eq!(w1.balance(&asset), 9_000);
+    assert_eq!(w2.balance(&asset), 1_000);
+
+    // Spend mixed internal and external utxos
+    let utxo = &w2.wollet.utxos().unwrap()[0];
+    let external_utxo = w2.make_external(utxo);
+
+    let mut pset = w1
+        .tx_builder()
+        .add_recipient(&w2.address(), 2_000, asset)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    for signer in signers {
+        w1.sign(signer, &mut pset);
+    }
+    w1.send(&mut pset);
+    w2.sync();
+
+    assert_eq!(w1.balance(&asset), 8_000);
+    assert_eq!(w2.balance(&asset), 2_000);
+
+    // Spend mixed internal and external utxos (no change)
+    let utxo = &w2.wollet.utxos().unwrap()[0];
+    let external_utxo = w2.make_external(utxo);
+
+    let mut pset = w1
+        .tx_builder()
+        .add_recipient(&w2.address(), 10_000, asset)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    w2.wollet.add_details(&mut pset).unwrap();
+    for signer in signers {
+        w1.sign(signer, &mut pset);
+    }
+    w1.send(&mut pset);
+    w2.sync();
+
+    assert_eq!(w1.balance(&asset), 0);
+    assert_eq!(w2.balance(&asset), 10_000);
 }
 
 #[test]

@@ -37,6 +37,12 @@ impl SecretKey {
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.secret_bytes().to_vec()
     }
+
+    #[uniffi::constructor]
+    pub fn from_wif(wif: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = elements::bitcoin::PrivateKey::from_wif(wif)?.inner;
+        Ok(Arc::new(SecretKey { inner }))
+    }
 }
 
 #[cfg(test)]
@@ -53,5 +59,11 @@ mod tests {
 
         assert_eq!(key, *key1);
         assert_eq!(&key.bytes(), &bytes);
+
+        let wif_test = "cTJTN1hGHqucsgqmYVbhU3g4eU9g5HzE1sxuSY32M1xap1K4sYHF";
+        let wif_main = "L2wTu6hQrnDMiFNWA5na6jB12ErGQqtXwqpSL7aWquJaZG8Ai3ch";
+        let key_test = SecretKey::from_wif(wif_test).unwrap();
+        let key_main = SecretKey::from_wif(wif_main).unwrap();
+        assert_eq!(key_test.bytes(), key_main.bytes());
     }
 }

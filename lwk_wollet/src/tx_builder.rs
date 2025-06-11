@@ -68,6 +68,20 @@ fn add_external_input(
     // relying on its presence.
     input.in_utxo_rangeproof = txout.witness.rangeproof.take();
     input.witness_utxo = Some(txout);
+    if let Some(tx) = &utxo.tx {
+        // For pre-segwit add non_witness_utxo
+        let mut tx = tx.clone();
+        // Remove the rangeproof to match the witness utxo,
+        // to pass the checks done by elements-miniscript
+        let _ = tx
+            .output
+            .get_mut(utxo.outpoint.vout as usize)
+            .expect("got txout above")
+            .witness
+            .rangeproof
+            .take();
+        input.non_witness_utxo = Some(tx);
+    }
 
     pset.add_input(input);
     let idx = pset.inputs().len() - 1;

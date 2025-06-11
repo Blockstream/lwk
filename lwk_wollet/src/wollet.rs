@@ -536,12 +536,12 @@ impl Wollet {
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
         let spent = self.store.spent()?;
-        let unblinded = &self.store.cache.unblinded;
+        let store_unblinded = &self.store.cache.unblinded;
         for (txid, tx) in self.store.cache.all_txs.iter() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.store.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
-                    if !spent.contains(&outpoint) && !unblinded.contains_key(&outpoint) {
+                    if !spent.contains(&outpoint) && !store_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
                             let external_utxo = ExternalUtxo {
                                 outpoint,

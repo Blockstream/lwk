@@ -34,6 +34,11 @@ pub struct ExternalUtxo {
     /// The transaction output
     pub txout: elements::TxOut,
 
+    /// The transaction
+    ///
+    /// Only for pre-segwit external utxos.
+    pub tx: Option<elements::Transaction>,
+
     /// The unblinded values
     pub unblinded: elements::TxOutSecrets,
 

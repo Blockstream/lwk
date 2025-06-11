@@ -523,9 +523,15 @@ impl Wollet {
                         o.value.explicit().expect("explicit"),
                         ValueBlindingFactor::zero(),
                     );
+                    let tx_ = if self.is_segwit() {
+                        None
+                    } else {
+                        Some(tx.clone())
+                    };
                     utxos.push(ExternalUtxo {
                         outpoint,
                         txout: o.clone(),
+                        tx: tx_,
                         unblinded,
                         max_weight_to_satisfy: self.max_weight_to_satisfy,
                     });
@@ -554,9 +560,15 @@ impl Wollet {
                     let outpoint = OutPoint::new(*txid, i as u32);
                     if !spent.contains(&outpoint) && !store_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
+                            let tx_ = if self.is_segwit() {
+                                None
+                            } else {
+                                Some(tx.clone())
+                            };
                             let external_utxo = ExternalUtxo {
                                 outpoint,
                                 txout: txout.clone(),
+                                tx: tx_,
                                 unblinded,
                                 max_weight_to_satisfy: self.max_weight_to_satisfy(),
                             };

@@ -647,9 +647,15 @@ impl<C: BlockchainBackend> TestWollet<C> {
     pub fn make_external(&mut self, utxo: &lwk_wollet::WalletTxOut) -> lwk_wollet::ExternalUtxo {
         let tx = self.get_tx(&utxo.outpoint.txid).tx;
         let txout = tx.output.get(utxo.outpoint.vout as usize).unwrap().clone();
+        let tx = if self.wollet.is_segwit() {
+            None
+        } else {
+            Some(tx)
+        };
         lwk_wollet::ExternalUtxo {
             outpoint: utxo.outpoint,
             txout,
+            tx,
             unblinded: utxo.unblinded,
             max_weight_to_satisfy: self.wollet.max_weight_to_satisfy(),
         }

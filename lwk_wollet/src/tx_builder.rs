@@ -276,6 +276,9 @@ impl TxBuilder {
         if satoshi_to_reissue == 0 {
             return Err(Error::InvalidAmount);
         }
+        if satoshi_to_reissue > 21_000_000 * 100_000_000 {
+            return Err(Error::IssuanceAmountGreaterThanBtcMax);
+        }
         self.issuance_request = IssuanceRequest::Reissuance(
             asset_to_reissue,
             satoshi_to_reissue,

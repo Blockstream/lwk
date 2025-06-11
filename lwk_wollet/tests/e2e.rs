@@ -2440,3 +2440,25 @@ fn test_no_wildcard() {
     assert_eq!(waterfalls_txs.len(), 2);
      * */
 }
+
+#[test]
+fn test_sh_multi() {
+    //let server = setup_with_esplora();
+    let server = setup();
+
+    let slip77_key = generate_slip77();
+    let signer1 = generate_signer();
+    let signer2 = generate_signer();
+    let xpub1 = signer1.xpub();
+    let xpub2 = signer2.xpub();
+    let desc = format!(
+        "ct(slip77({}),elsh(multi(1,{}/*,{}/*)))",
+        slip77_key, xpub1, xpub2
+    );
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    // Receive
+    wallet.fund_btc(&server);
+}

@@ -713,22 +713,36 @@ impl TxBuilder {
                 wollet.add_output(&mut pset, addressee)?;
                 satoshi_out += addressee.satoshi;
             }
-            for utxo in wollet.asset_utxos(&asset)? {
-                wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+
+            // Add all external asset utxos
+            for utxo in &self.external_utxos {
+                if utxo.unblinded.asset != asset {
+                    continue;
+                }
+                add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
                 satoshi_in += utxo.unblinded.value;
-                if satoshi_in >= satoshi_out {
-                    if satoshi_in > satoshi_out {
-                        let satoshi_change = satoshi_in - satoshi_out;
-                        let addressee = wollet.addressee_change(
-                            satoshi_change,
-                            asset,
-                            &mut last_unused_internal,
-                        )?;
-                        wollet.add_output(&mut pset, &addressee)?;
+            }
+
+            // Add more asset utxos
+            if satoshi_in < satoshi_out {
+                for utxo in wollet.asset_utxos(&asset)? {
+                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+                    satoshi_in += utxo.unblinded.value;
+                    if satoshi_in >= satoshi_out {
+                        break;
                     }
-                    break;
                 }
             }
+
+            // Add change
+            if satoshi_in > satoshi_out {
+                let satoshi_change = satoshi_in - satoshi_out;
+                let addressee =
+                    wollet.addressee_change(satoshi_change, asset, &mut last_unused_internal)?;
+                wollet.add_output(&mut pset, &addressee)?;
+            }
+
+            // Insufficient funds
             if satoshi_in < satoshi_out {
                 return Err(Error::InsufficientFunds {
                     missing_sats: satoshi_out - satoshi_in,

@@ -58,9 +58,6 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             }
         }
 
-        if !desc.descriptor.has_wildcard() {
-            return Err(Self::Error::UnsupportedDescriptorWithoutWildcard);
-        }
         if desc.descriptor.is_multipath() {
             let descriptors = desc.descriptor.clone().into_single_descriptors()?;
 

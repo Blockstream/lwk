@@ -691,8 +691,7 @@ mod test {
             desc.parse().unwrap();
 
         let params = &elements::AddressParams::ELEMENTS;
-        let secp = bitcoin::key::Secp256k1::new();
-        let a = desc.address(&secp, params).unwrap();
+        let a = desc.address(&EC, params).unwrap();
         let expected_address = elements::Address::from_str(&v.multisig).unwrap();
 
         let mut unconfidential_address = a.to_unconfidential();
@@ -709,7 +708,7 @@ mod test {
 
         // creating the address by using the blinding key directly
         let blinding_key = bitcoin::secp256k1::SecretKey::from_str(&v.blindingkey).unwrap();
-        unconfidential_address.blinding_pubkey = Some(blinding_key.public_key(&secp));
+        unconfidential_address.blinding_pubkey = Some(blinding_key.public_key(&EC));
         assert_eq!(
             unconfidential_address.to_string(),
             expected_address.to_string()

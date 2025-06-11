@@ -1666,9 +1666,8 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     let client = test_client_electrum(&server.electrs.electrum_url);
     let mut w = TestWollet::new(client, &desc);
     let policy_asset = w.policy_asset();
-    let secp = bitcoin::secp256k1::Secp256k1::new();
     let mut address_with_custom_blinding = w.address();
-    address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&secp));
+    address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&EC));
 
     let amount = 100_000;
     let _ = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);

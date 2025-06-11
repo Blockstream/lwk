@@ -2690,3 +2690,92 @@ fn test_issuance_amount_limits() {
         "Issuance amount greater than 21M*10^8 are not allowed"
     );
 }
+
+#[test]
+fn test_non_std_legacy_multisig() {
+    let server = setup_with_esplora();
+
+    // Receiver wallet
+    let recv_signer = generate_signer();
+    let recv_xpub = recv_signer.xpub();
+    let recv_desc = format!("ct(elip151,elwpkh({}/*))", recv_xpub);
+    let recv_client = test_client_electrum(&server.electrs.electrum_url);
+    let mut recv_wallet = TestWollet::new(recv_client, &recv_desc);
+    let recv_addr = recv_wallet.address();
+    assert_eq!(recv_wallet.balance_btc(), 0);
+
+    // P2SH 2of3 with 3 single keys blinded in a non standard way
+
+    // 3 single keys
+    // TODO: add wif conversion
+    let sk_a = secp256k1::SecretKey::from_str(
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+    .unwrap();
+    let sk_b = secp256k1::SecretKey::from_str(
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    )
+    .unwrap();
+    let sk_c = secp256k1::SecretKey::from_str(
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    )
+    .unwrap();
+    let pk_a = sk_a.public_key(&EC);
+    let pk_b = sk_b.public_key(&EC);
+    let pk_c = sk_c.public_key(&EC);
+
+    // A temporary descriptor blinding key
+    let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+    // P2SH 2of3 with 3 single pubkeys
+    let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
+
+    // Create the wallet
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    // Get an address
+    let mut addr = wallet.address();
+    // But use another blinding key
+    // `elements-cli dumpblindingkey $ADDR` returns 64 hex chars
+    let blinding_privkey = secp256k1::SecretKey::from_str(
+        "7777777777777777777777777777777777777777777777777777777777777777",
+    )
+    .unwrap();
+    addr.blinding_pubkey = Some(blinding_privkey.public_key(&EC));
+
+    // Fund the address with an asset
+    let satoshi = 10_000;
+    let asset = server.elementsd_issueasset(satoshi);
+    let txid = server.elementsd_sendtoaddress(&addr, satoshi, Some(asset));
+    wallet.wait_for_tx_outside_list(&txid);
+
+    // Get external utxo
+    let mut utxos = wallet.wollet.unblind_utxos_with(blinding_privkey).unwrap();
+    assert_eq!(utxos.len(), 1);
+    let external_utxo = utxos.pop().unwrap();
+
+    // Fund with some btc for the fees
+    wallet.fund_btc(&server);
+
+    // Create spending tx
+    let mut pset = wallet
+        .tx_builder()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .add_recipient(&recv_addr, satoshi, asset)
+        .unwrap()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(recv_addr)
+        .finish()
+        .unwrap();
+
+    sign_with_seckey(sk_a, &mut pset).unwrap();
+    sign_with_seckey(sk_b, &mut pset).unwrap();
+    wallet.send(&mut pset);
+    recv_wallet.sync();
+
+    // Check receiver balance
+    assert_eq!(recv_wallet.balance(&asset), 10_000);
+    assert!(recv_wallet.balance_btc() > 0);
+    assert_eq!(wallet.balance_btc(), 0);
+}

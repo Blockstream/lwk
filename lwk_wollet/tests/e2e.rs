@@ -251,7 +251,7 @@ fn unsupported_descriptor() {
     let xpub2 = signer2.xpub();
     let view_key = generate_view_key();
     let desc_p2pkh = format!("ct({view_key},elpkh({xpub1}/*))");
-    let desc_p2sh = format!("ct({view_key},elsh(multi(2,{xpub1}/*,{xpub2}/*)))",);
+    let desc_p2sh = format!("ct({view_key},elsh(pkh({xpub1}/*)))",);
     let desc_p2tr = format!("ct({view_key},eltr({xpub1}/*))");
 
     let desc_multi_path_1 = format!("ct({view_key},elwpkh({xpub1}/<0;1;2>/*))");

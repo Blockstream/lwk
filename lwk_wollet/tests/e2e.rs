@@ -2622,3 +2622,71 @@ fn test_singlekey() {
 
     assert!(balance_before > balance_after);
 }
+
+#[test]
+fn test_issuance_amount_limits() {
+    let server = setup();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+    wallet.fund_btc(&server);
+
+    // Let's test an issuance of 21M*10^8,
+    let amount_21m = 21_000_000 * 100_000_000;
+
+    let mut pset = wallet
+        .tx_builder()
+        .issue_asset(amount_21m, None, 1, None, None)
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    let (asset, _) = pset.inputs()[0].issuance_ids();
+    wallet.send(&mut pset);
+
+    // Let's test an issuance of 21M*10^8+1, which should be valid but the node rejects it.
+    let amount_over_btc_max = 21_000_000 * 100_000_000 + 1;
+
+    let issue_error = wallet
+        .tx_builder()
+        .issue_asset(amount_over_btc_max, None, 1, None, None)
+        .unwrap_err();
+
+    assert_eq!(
+        issue_error.to_string(),
+        "Issuance amount greater than 21M*10^8 are not allowed"
+    );
+
+    // Before introducing IssuanceAmountGreaterThanBtcMax error this was testing the effectively the node rejects it.
+    // With the error in place this is hard to test.
+
+    // wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    // let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    // let tx_hex = elements::encode::serialize(&tx).to_hex();
+
+    // // The node rejects more than 21M BTC issuance.
+    // assert!(!server.elementsd_testmempoolaccept(&tx_hex));
+
+    let amount = 21_000_000 * 100_000_000;
+    let mut pset = wallet
+        .tx_builder()
+        .reissue_asset(asset, amount, None, None)
+        .unwrap()
+        .finish()
+        .unwrap();
+    wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    wallet.send(&mut pset);
+
+    let reissue_error = wallet
+        .tx_builder()
+        .reissue_asset(asset, amount_over_btc_max, None, None)
+        .unwrap_err();
+
+    assert_eq!(
+        reissue_error.to_string(),
+        "Issuance amount greater than 21M*10^8 are not allowed"
+    );
+}

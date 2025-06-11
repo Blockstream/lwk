@@ -224,6 +224,9 @@ pub enum Error {
 
     #[error(transparent)]
     LiquidexError(#[from] crate::liquidex::LiquidexError),
+
+    #[error("Issuance amount greater than 21M*10^8 are not allowed")]
+    IssuanceAmountGreaterThanBtcMax,
 }
 
 // cannot derive automatically with this error because of trait bound

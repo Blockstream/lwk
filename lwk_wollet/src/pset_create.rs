@@ -89,15 +89,9 @@ impl Wollet {
         // relying on its presence.
         input.in_utxo_rangeproof = txout.witness.rangeproof.take();
         input.witness_utxo = Some(txout);
-        if self
-            .descriptor()
-            .descriptor
-            .desc_type()
-            .segwit_version()
-            .is_none()
-        {
+
+        if !self.is_segwit() {
             // For pre-segwit add non_witness_utxo
-            // FIXME: we need to do this also for external utxos
             let mut tx = self.get_tx(&utxo.outpoint.txid)?;
             // Remove the rangeproof to match the witness utxo,
             // to pass the checks done by elements-miniscript

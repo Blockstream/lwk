@@ -6,8 +6,8 @@ use std::{
 use lwk_wollet::UnvalidatedRecipient;
 
 use crate::{
-    types::AssetId, Address, Contract, LwkError, Network, OutPoint, Pset, Transaction,
-    ValidatedLiquidexProposal, Wollet,
+    types::AssetId, Address, Contract, ExternalUtxo, LwkError, Network, OutPoint, Pset,
+    Transaction, ValidatedLiquidexProposal, Wollet,
 };
 
 /// Wrapper over [`lwk_wollet::TxBuilder`]
@@ -161,6 +161,18 @@ impl TxBuilder {
             .map(|arc| elements::OutPoint::from(arc.as_ref()))
             .collect();
         *lock = Some(inner.set_wallet_utxos(utxos));
+        Ok(())
+    }
+
+    /// Add external utxos, wrapper of [`lwk_wollet::TxBuilder::add_external_utxos()`]
+    pub fn add_external_utxos(&self, utxos: Vec<Arc<ExternalUtxo>>) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        let utxos = utxos
+            .into_iter()
+            .map(|arc| lwk_wollet::ExternalUtxo::from(arc.as_ref()))
+            .collect();
+        *lock = Some(inner.add_external_utxos(utxos)?);
         Ok(())
     }
 

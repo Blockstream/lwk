@@ -79,6 +79,14 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
                 }
             }
         }
+
+        // Support legacy p2sh multisig
+        if let elements_miniscript::descriptor::DescriptorType::Sh = desc.descriptor.desc_type() {
+            if desc.descriptor.to_string().starts_with("elsh(multi(") {
+                return Ok(WolletDescriptor(desc));
+            }
+        }
+
         match desc.descriptor.desc_type().segwit_version() {
             Some(WitnessVersion::V0) => Ok(WolletDescriptor(desc)),
             _ => Err(Self::Error::UnsupportedDescriptorNonV0),

@@ -259,6 +259,48 @@ impl Signer for SwSigner {
     }
 }
 
+pub fn sign_with_seckey(
+    seckey: bitcoin::secp256k1::SecretKey,
+    pset: &mut PartiallySignedTransaction,
+) -> Result<u32, SignError> {
+    // TODO: share code with fn.sign above
+    let secp = Secp256k1::new();
+    let signing_pk = seckey.public_key(&secp);
+    let signing_pk = bitcoin::key::PublicKey::new(signing_pk);
+
+    let tx = pset.extract_tx()?;
+    let mut sighash_cache = SighashCache::new(&tx);
+    let mut signature_added = 0;
+    let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
+    let mut messages = vec![];
+    for i in 0..pset.inputs().len() {
+        let msg = pset
+            .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
+            .to_secp_msg();
+        messages.push(msg);
+    }
+
+    for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
+        let hash_ty = input
+            .sighash_type
+            .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))
+            .unwrap_or(EcdsaSighashType::All);
+        for pk in input.bip32_derivation.keys() {
+            if pk == &signing_pk {
+                let sig = secp.sign_ecdsa_low_r(&msg, &seckey);
+                let sig = elementssig_to_rawsig(&(sig, hash_ty));
+
+                let inserted = input.partial_sigs.insert(signing_pk, sig);
+                if inserted.is_none() {
+                    signature_added += 1;
+                }
+            }
+        }
+    }
+
+    Ok(signature_added)
+}
+
 #[cfg(test)]
 mod tests {
     use elements_miniscript::elements::hex::ToHex;

@@ -2707,19 +2707,12 @@ fn test_non_std_legacy_multisig() {
     // P2SH 2of3 with 3 single keys blinded in a non standard way
 
     // 3 single keys
-    // TODO: add wif conversion
-    let sk_a = secp256k1::SecretKey::from_str(
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    )
-    .unwrap();
-    let sk_b = secp256k1::SecretKey::from_str(
-        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    )
-    .unwrap();
-    let sk_c = secp256k1::SecretKey::from_str(
-        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    )
-    .unwrap();
+    let wif_aa = "cTJTN1hGHqucsgqmYVbhU3g4eU9g5HzE1sxuSY32M1xap1K4sYHF";
+    let wif_bb = "cTsdXxTC346tsb7HaddDzC5dTqAT8XCsdJsacS4N3ak2mCGGZcN5";
+    let wif_cc = "cUSohuD7nGJAsVNocmekWLVCHCBEBkRXEjnFnL5hk9XUiPBCLR4d";
+    let sk_a = bitcoin::PrivateKey::from_wif(wif_aa).unwrap().inner;
+    let sk_b = bitcoin::PrivateKey::from_wif(wif_bb).unwrap().inner;
+    let sk_c = bitcoin::PrivateKey::from_wif(wif_cc).unwrap().inner;
     let pk_a = sk_a.public_key(&EC);
     let pk_b = sk_b.public_key(&EC);
     let pk_c = sk_c.public_key(&EC);

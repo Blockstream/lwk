@@ -2,10 +2,10 @@ use lwk_wollet::NoPersist;
 
 use crate::desc::WolletDescriptor;
 use crate::network::Network;
-use crate::types::AssetId;
+use crate::types::{AssetId, SecretKey};
 use crate::{
-    AddressResult, ForeignPersisterLink, LwkError, Pset, PsetDetails, Txid, Update, WalletTx,
-    WalletTxOut,
+    AddressResult, ExternalUtxo, ForeignPersisterLink, LwkError, Pset, PsetDetails, Txid, Update,
+    WalletTx, WalletTxOut,
 };
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -167,5 +167,21 @@ impl Wollet {
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
         panic!("I wait 30s but I didn't see {}", txid);
+    }
+
+    /// Get the utxo with unspent transaction outputs of the wallet
+    /// Return utxos unblinded with a specific blinding key
+    pub fn unblind_utxos_with(
+        &self,
+        blinding_privkey: &SecretKey,
+    ) -> Result<Vec<Arc<ExternalUtxo>>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .unblind_utxos_with(blinding_privkey.into())?
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect())
     }
 }

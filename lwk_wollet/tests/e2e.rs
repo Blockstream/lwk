@@ -2488,3 +2488,52 @@ fn test_sh_multi() {
     let txs = wallet.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);
 }
+
+#[test]
+fn test_singlekey() {
+    let server = setup_with_esplora();
+    let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
+    let sk_a = secp256k1::SecretKey::from_str(
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+    .unwrap();
+    let sk_b = secp256k1::SecretKey::from_str(
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    )
+    .unwrap();
+    let sk_c = secp256k1::SecretKey::from_str(
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    )
+    .unwrap();
+    let pk_a = sk_a.public_key(&EC);
+    let pk_b = sk_b.public_key(&EC);
+    let pk_c = sk_c.public_key(&EC);
+    let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    wallet.fund_btc(&server);
+    let balance_before = wallet.balance_btc();
+
+    // Send some L-BTC to another address
+    let node_addr = server.elementsd_getnewaddress();
+    let satoshi = 5000;
+
+    // Create tx
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, satoshi)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    sign_with_seckey(sk_a, &mut pset).unwrap();
+    sign_with_seckey(sk_b, &mut pset).unwrap();
+
+    // Finalize and send the PSET
+    wallet.send(&mut pset);
+
+    let balance_after = wallet.balance_btc();
+
+    assert!(balance_before > balance_after);
+}

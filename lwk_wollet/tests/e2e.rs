@@ -2565,16 +2565,23 @@ fn test_issuance_amount_limits() {
     // Let's test an issuance of 21M*10^8+1, which should be valid but the node rejects it.
     let amount_over_btc_max = 21_000_000 * 100_000_000 + 1;
 
-    let mut pset = wallet
+    let issue_error = wallet
         .tx_builder()
         .issue_asset(amount_over_btc_max, None, 1, None, None)
-        .unwrap()
-        .finish()
-        .unwrap();
-    wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
-    let tx = wallet.wollet.finalize(&mut pset).unwrap();
-    let tx_hex = elements::encode::serialize(&tx).to_hex();
+        .unwrap_err();
 
-    // The node rejects more than 21M BTC issuance.
-    assert!(!server.elementsd_testmempoolaccept(&tx_hex));
+    assert_eq!(
+        issue_error.to_string(),
+        "Issuance amount greater than 21M*10^8 are not allowed"
+    );
+
+    // Before introducing IssuanceAmountGreaterThanBtcMax error this was testing the effectively the node rejects it.
+    // With the error in place this is hard to test.
+
+    // wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    // let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    // let tx_hex = elements::encode::serialize(&tx).to_hex();
+
+    // // The node rejects more than 21M BTC issuance.
+    // assert!(!server.elementsd_testmempoolaccept(&tx_hex));
 }

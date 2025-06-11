@@ -254,6 +254,14 @@ impl Wollet {
         Ok(wollet)
     }
 
+    pub fn is_segwit(&self) -> bool {
+        self.descriptor()
+            .descriptor
+            .desc_type()
+            .segwit_version()
+            .is_some()
+    }
+
     /// Max weight to satisfy for inputs belonging to this wallet
     pub fn max_weight_to_satisfy(&self) -> usize {
         self.max_weight_to_satisfy

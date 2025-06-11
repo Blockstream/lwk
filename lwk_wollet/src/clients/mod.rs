@@ -102,6 +102,7 @@ pub fn try_unblind(output: TxOut, descriptor: &WolletDescriptor) -> Result<TxOut
     }
 }
 
+#[allow(unused)]
 pub(crate) fn check_witnesses_non_empty(tx: &elements::Transaction) -> Result<(), Error> {
     if tx.input.iter().any(|e| e.witness.is_empty()) {
         return Err(Error::EmptyWitness);

@@ -596,9 +596,11 @@ impl<C: BlockchainBackend> TestWollet<C> {
 
     pub fn send(&mut self, pset: &mut PartiallySignedTransaction) -> Txid {
         *pset = pset_rt(pset);
-        let tx_pre_finalize = pset.extract_tx().unwrap();
-        let err = self.client.broadcast(&tx_pre_finalize).unwrap_err();
-        assert!(matches!(err, lwk_wollet::Error::EmptyWitness));
+        // TODO: check we that the tx has some signatures
+        // check_witnesses_non_empty does not cover the pre-segwit case anymore
+        // let tx_pre_finalize = pset.extract_tx().unwrap();
+        // let err = self.client.broadcast(&tx_pre_finalize).unwrap_err();
+        // assert!(matches!(err, lwk_wollet::Error::EmptyWitness));
         let tx = self.wollet.finalize(pset).unwrap();
         let txid = self.client.broadcast(&tx).unwrap();
         self.wait_for_tx(&txid);

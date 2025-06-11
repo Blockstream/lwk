@@ -1,4 +1,3 @@
-use crate::clients::check_witnesses_non_empty;
 use crate::store::Height;
 use crate::Error;
 use crate::History;
@@ -196,7 +195,7 @@ impl BlockchainBackend for ElectrumClient {
     }
 
     fn broadcast(&self, tx: &Transaction) -> Result<Txid, Error> {
-        check_witnesses_non_empty(tx)?; // We don't support legacy outputs, thus we always have the witness (or forget to sign/finalize)
+        // TODO: check that the transaction contains some signatures
 
         let txid = self
             .client

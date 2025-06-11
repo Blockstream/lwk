@@ -122,7 +122,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
     /// Wait until the wallet has the transaction, although it might not be in the tx list
     ///
     /// This might be useful for explicit outputs or blinded outputs that cannot be unblinded.
-    fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
+    pub fn wait_for_tx_outside_list(&mut self, txid: &Txid) {
         for _ in 0..120 {
             sync(&mut self.wollet, &mut self.client);
             if self.wollet.transaction(txid).unwrap().is_some() {

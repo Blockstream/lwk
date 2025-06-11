@@ -1670,11 +1670,10 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
     address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&EC));
 
     let amount = 100_000;
-    let _ = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
+    let txid = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
     server.elementsd_generate(1);
 
-    std::thread::sleep(std::time::Duration::from_secs(10)); // Can't wait_for_tx because it's not getting unblindable txs
-    w.sync();
+    w.wait_for_tx_outside_list(&txid);
 
     let mut utxos = w.wollet.unblind_utxos_with(blinding_key).unwrap();
     assert_eq!(utxos.len(), 1);

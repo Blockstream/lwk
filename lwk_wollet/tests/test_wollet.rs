@@ -139,11 +139,11 @@ impl<C: BlockchainBackend> TestWollet<C> {
         *balance.get(asset).unwrap_or(&0u64)
     }
 
-    fn balance_btc(&mut self) -> u64 {
+    pub fn balance_btc(&mut self) -> u64 {
         self.balance(&self.wollet.policy_asset())
     }
 
-    fn get_tx(&mut self, txid: &Txid) -> WalletTx {
+    pub fn get_tx(&mut self, txid: &Txid) -> WalletTx {
         self.wollet.transaction(txid).unwrap().unwrap()
     }
 

@@ -253,7 +253,6 @@ fn unsupported_descriptor() {
     let desc_p2pkh = format!("ct({view_key},elpkh({xpub1}/*))");
     let desc_p2sh = format!("ct({view_key},elsh(multi(2,{xpub1}/*,{xpub2}/*)))",);
     let desc_p2tr = format!("ct({view_key},eltr({xpub1}/*))");
-    let desc_no_wildcard = format!("ct({view_key},elwpkh({xpub1}))");
 
     let desc_multi_path_1 = format!("ct({view_key},elwpkh({xpub1}/<0;1;2>/*))");
     let desc_multi_path_2 = format!("ct({view_key},elwpkh({xpub1}/<0;1>/0/*))");
@@ -265,10 +264,6 @@ fn unsupported_descriptor() {
         (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
         (desc_p2sh, Error::UnsupportedDescriptorNonV0),
         (desc_p2tr, Error::UnsupportedDescriptorNonV0),
-        (
-            desc_no_wildcard,
-            Error::UnsupportedDescriptorWithoutWildcard,
-        ),
         (desc_multi_path_1, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_2, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_3, Error::UnsupportedMultipathDescriptor),
@@ -2347,4 +2342,101 @@ fn test_liquidex() {
     assert_eq!(wb.balance(&asset_2), 9);
 
     // TODO: check fees
+}
+
+#[test]
+fn test_no_wildcard() {
+    let server = setup_with_esplora();
+
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    // Receive
+    wallet.fund_btc(&server);
+
+    // Send
+    let balance_before = wallet.balance_btc();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&wallet.address(), 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    pset = pset_rt(&pset);
+
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let fee = details.balance.fee as i64;
+    assert!(fee > 0);
+    // TODO: fix balance computation for this case, then use send_btc in this test
+    assert!(!details
+        .balance
+        .balances
+        .contains_key(&wallet.policy_asset()));
+
+    wallet.sign(&signer, &mut pset);
+    let txid = wallet.send(&mut pset);
+    let balance_after = wallet.balance_btc();
+    assert!(balance_before > balance_after);
+    let tx = wallet.get_tx(&txid);
+    assert_eq!(&tx.type_, "outgoing");
+
+    let txs = wallet.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 2);
+
+    // Use esplora client
+    let network = ElementsNetwork::default_regtest();
+    let mut esplora_wollet = Wollet::new(
+        network,
+        std::sync::Arc::new(NoPersist {}),
+        desc.parse().unwrap(),
+    )
+    .unwrap();
+
+    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let mut esplora_client = clients::blocking::EsploraClient::new(&esplora_url, network).unwrap();
+
+    let update = esplora_client.full_scan(&esplora_wollet).unwrap();
+    if let Some(update) = update {
+        esplora_wollet.apply_update(update).unwrap();
+    }
+
+    let esplora_txs = esplora_wollet.transactions().unwrap();
+    assert_eq!(esplora_txs.len(), 2);
+
+    // TODO: waterfalls support
+    /*
+    // Use waterfalls client
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+
+    let url = format!("{}/blocks/tip/hash", test_env.base_url());
+    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
+
+    let mut waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
+        test_env.base_url(),
+        network,
+    )
+    .unwrap();
+
+    let mut waterfalls_wollet = Wollet::new(
+        network,
+        std::sync::Arc::new(NoPersist {}),
+        desc.parse().unwrap(),
+    )
+    .unwrap();
+
+    let update = waterfalls_client.full_scan(&waterfalls_wollet).unwrap();
+    if let Some(update) = update {
+        waterfalls_wollet.apply_update(update).unwrap();
+    }
+
+    let waterfalls_txs = waterfalls_wollet.transactions().unwrap();
+    assert_eq!(waterfalls_txs.len(), 2);
+     * */
 }

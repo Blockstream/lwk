@@ -9,6 +9,8 @@ ELEMENTS_ADDR="${ELEMENTS_ADDR:-127.0.0.1:7041}"
 ASSET_REGISTRY_ADDR="${ASSET_REGISTRY_ADDR:-127.0.0.1:3023}"
 ELECTRS_HTTP_ADDR="${ELECTRS_HTTP_ADDR:-127.0.0.1:3002}" # required for asset registry server
 NEXUS_RELAY_PORT="${NEXUS_RELAY_PORT:-3330}"
+JADE_WEBSOCKET_PORT="${JADE_WEBSOCKET_PORT:-3331}"
+EMULATOR_PORT="${EMULATOR_PORT:-30121}"
 ELEMENTSD_EXEC="${ELEMENTSD_EXEC:-elementsd}"
 # Compute ELEMENTS_CLI_EXEC based on ELEMENTSD_EXEC location if not provided
 if [ -z "$ELEMENTS_CLI_EXEC" ]; then
@@ -25,6 +27,7 @@ WATERFALLS_EXEC="${WATERFALLS_EXEC:-waterfalls}"
 REGISTRY_EXEC="${REGISTRY_EXEC:-server}"
 ELECTRS_LIQUID_EXEC="${ELECTRS_LIQUID_EXEC:-electrs}"
 NEXUS_RELAY_EXEC="${NEXUS_RELAY_EXEC:-nexus_relay}"
+WEBSOCAT_EXEC="${WEBSOCAT_EXEC:-websocat}"
 
 # Create temporary root directory
 ROOT_DIR=$(mktemp -d)
@@ -44,6 +47,20 @@ ZMQ_ENDPOINT="tcp://${ELEMENTS_HOST}:29000"
 
 # Initialize elements-cli command with common arguments
 ELEMENTS_CLI_CMD="$ELEMENTS_CLI_EXEC -rpcconnect=$ELEMENTS_HOST -rpcport=$ELEMENTS_PORT -rpcuser=user -rpcpassword=pass"
+
+# Start Jade emulator docker container
+echo "Starting Jade emulator..."
+JADE_CONTAINER_ID=$(docker run -d --rm -p $EMULATOR_PORT:$EMULATOR_PORT xenoky/local-jade-emulator:1.0.27)
+echo "Jade emulator container ID: $JADE_CONTAINER_ID"
+
+# Wait for Jade emulator to be ready
+echo "Waiting for Jade emulator to start..."
+sleep 3
+
+# Start websocat to bridge TCP to WebSocket for Jade
+echo "Starting WebSocket bridge for Jade..."
+$WEBSOCAT_EXEC --binary ws-listen:127.0.0.1:$JADE_WEBSOCKET_PORT tcp:127.0.0.1:$EMULATOR_PORT &
+WEBSOCAT_PID=$!
 
 # Start elementsd
 $ELEMENTSD_EXEC \
@@ -139,6 +156,7 @@ echo "  electrs: $ELECTRS_LIQUID_EXEC"
 echo "  waterfalls: $WATERFALLS_EXEC"
 echo "  registry: $REGISTRY_EXEC"
 echo "  nexus_relay: $NEXUS_RELAY_EXEC"
+echo "  websocat: $WEBSOCAT_EXEC"
 echo
 echo "Waterfalls HTTP API: http://$LISTEN_ADDR"
 echo "Elements RPC address: http://$ELEMENTS_ADDR"
@@ -146,6 +164,7 @@ echo "Electrs RPC address: $ELECTRS_RPC_ADDR"
 echo "Electrs HTTP API: http://$ELECTRS_HTTP_ADDR"
 echo "Asset Registry address: http://$ASSET_REGISTRY_ADDR"
 echo "Nexus Relay WebSocket: ws://localhost:$NEXUS_RELAY_PORT"
+echo "Jade WebSocket Bridge: ws://localhost:$JADE_WEBSOCKET_PORT"
 echo "Policy asset: $POLICY_ASSET"
 
 echo "Press Ctrl+C to stop all services"
@@ -162,7 +181,12 @@ cleanup() {
     kill $ASSET_REGISTRY_PID || true
     kill $ELECTRS_PID || true
     kill $NEXUS_RELAY_PID || true
+    kill $WEBSOCAT_PID || true
     $ELEMENTS_CLI_CMD stop || true
+    if [ ! -z "$JADE_CONTAINER_ID" ]; then
+        echo "Stopping Jade emulator container..."
+        docker stop $JADE_CONTAINER_ID || true
+    fi
     echo "Removing temporary directory..."
     rm -rf "$ROOT_DIR"
 }

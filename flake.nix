@@ -109,12 +109,13 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = [ bin ];
 
-            buildInputs = [ registry.bin rustToolchain ];
+            buildInputs = [ registry.bin rustToolchain pkgs.websocat ];
 
             ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
             ELECTRS_LIQUID_EXEC = electrs.program;
             NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
+            WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation
           };
         }

@@ -89,6 +89,28 @@ impl Wollet {
         // relying on its presence.
         input.in_utxo_rangeproof = txout.witness.rangeproof.take();
         input.witness_utxo = Some(txout);
+        if self
+            .descriptor()
+            .descriptor
+            .desc_type()
+            .segwit_version()
+            .is_none()
+        {
+            // For pre-segwit add non_witness_utxo
+            // FIXME: we need to do this also for external utxos
+            let mut tx = self.get_tx(&utxo.outpoint.txid)?;
+            // Remove the rangeproof to match the witness utxo,
+            // to pass the checks done by elements-miniscript
+            let _ = tx
+                .output
+                .get_mut(utxo.outpoint.vout as usize)
+                .expect("got txout above")
+                .witness
+                .rangeproof
+                .take();
+            input.non_witness_utxo = Some(tx);
+        }
+
         // Needed by ledger
         let mut rng = rand::thread_rng();
         let secp = elements::secp256k1_zkp::Secp256k1::new();

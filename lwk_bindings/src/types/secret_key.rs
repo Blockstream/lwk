@@ -1,4 +1,5 @@
 use crate::LwkError;
+use crate::Pset;
 use elements::bitcoin::secp256k1;
 use std::sync::Arc;
 
@@ -42,6 +43,13 @@ impl SecretKey {
     pub fn from_wif(wif: &str) -> Result<Arc<Self>, LwkError> {
         let inner = elements::bitcoin::PrivateKey::from_wif(wif)?.inner;
         Ok(Arc::new(SecretKey { inner }))
+    }
+
+    /// Sign the given `pset`
+    pub fn sign(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
+        let mut pset = pset.inner();
+        lwk_signer::sign_with_seckey(self.inner, &mut pset)?;
+        Ok(Arc::new(pset.into()))
     }
 }
 

@@ -298,14 +298,6 @@ impl TxBuilder {
     ///
     /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
     pub fn add_external_utxos(mut self, utxos: Vec<ExternalUtxo>) -> Result<Self, Error> {
-        // TODO: allow for non L-BTC utxos
-        let policy_asset = self.network().policy_asset();
-        for utxo in &utxos {
-            if utxo.unblinded.asset != policy_asset {
-                return Err(Error::Generic("External utxos must be L-BTC".to_string()));
-            }
-        }
-
         self.external_utxos.extend(utxos);
         Ok(self)
     }

@@ -63,10 +63,12 @@ str(lwk.Network.mainnet())
 
 ### Publish Python wheel
 
-Download artifacts from CI:
+Download 4 artifacts from github CI:
 
- - github ci for windows and mac
- - gitlab ci for linux
+- windows
+- linux
+- mac arm64
+- mac x86_64
 
 ```sh
 $ twine upload *.whl

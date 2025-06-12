@@ -719,4 +719,49 @@ mod test {
             expected_address.to_string()
         );
     }
+
+    #[test]
+    fn test_address_from_pubkey() {
+        let pubkey = "02d07923f1980be3f3540d1c97241df57786b2c91d2513a059caebcf8fbe47c17d";
+        let address = "XVeVNX983xtxf3kDj1NYFH83yR4Fv7B3XC";
+        let desc = format!("ct({pubkey},elsh(wpkh({pubkey})))");
+        let desc: elements_miniscript::ConfidentialDescriptor<bitcoin::PublicKey> =
+            desc.parse().unwrap();
+        let params = &elements::AddressParams::ELEMENTS;
+        let a = desc.address(&EC, params).unwrap();
+        assert_eq!(a.to_unconfidential().to_string(), address);
+    }
+
+    #[test]
+    fn test_all_singlesig_address_from_pubkeys() {
+        let redeem_script = "	OP_PUSHNUM_2 OP_PUSHBYTES_33 0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904 OP_PUSHBYTES_33 033e4d8ee20b70b8f47a2922036b85becd4a6c7cb2bb8485a505672f5169d1e42f OP_PUSHBYTES_33 03ea819ecd0044f28b57c1e28b4758661fb507318860e14532c54a2e3f57a33ad7 OP_PUSHNUM_3 OP_CHECKMULTISIG";
+        let pubkeys = [
+            "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904",
+            "033e4d8ee20b70b8f47a2922036b85becd4a6c7cb2bb8485a505672f5169d1e42f",
+            "03ea819ecd0044f28b57c1e28b4758661fb507318860e14532c54a2e3f57a33ad7",
+        ];
+        println!("pubkey elpkh() elsh(wpkh()) elwpkh()");
+        for pubkey in pubkeys {
+            assert!(redeem_script.contains(pubkey));
+
+            let desc1 = format!("ct({pubkey},elpkh({pubkey}))");
+            let address1 = unconf_address_from_desc(&desc1);
+
+            let desc2 = format!("ct({pubkey},elsh(wpkh({pubkey})))");
+            let address2 = unconf_address_from_desc(&desc2);
+
+            let desc3 = format!("ct({pubkey},elwpkh({pubkey}))");
+            let address3 = unconf_address_from_desc(&desc3);
+
+            println!("{pubkey} {address1} {address2} {address3}");
+        }
+    }
+
+    fn unconf_address_from_desc(desc: &str) -> String {
+        let desc: elements_miniscript::ConfidentialDescriptor<bitcoin::PublicKey> =
+            desc.parse().unwrap();
+        let params = &elements::AddressParams::LIQUID;
+        let a = desc.address(&EC, params).unwrap();
+        a.to_unconfidential().to_string()
+    }
 }

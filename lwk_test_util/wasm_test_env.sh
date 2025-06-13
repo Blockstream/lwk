@@ -92,6 +92,9 @@ $ELEMENTS_CLI_CMD sendtoaddress el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7u
 # first wpkh_slip77 address of ledger mnemonic "glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin"
 $ELEMENTS_CLI_CMD sendtoaddress el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3 1
 
+# Send to jade emulator first address
+$ELEMENTS_CLI_CMD sendtoaddress el1qqv7rvrvjzhwzy0v0xpd4lguzwdknf6az2sgvplcvnkedgyn6q25h62k2zskmqgn5x0dpu3xvey2tpnm2mr8hywnnpajzxvrnq 1
+
 # Start block generation loop in background
 (
     while true; do

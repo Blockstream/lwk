@@ -1,9 +1,10 @@
-use crate::{Error, Script};
+use crate::{Error, Network, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`elements::Address`]
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct Address {
     inner: elements::Address,
 }
@@ -46,6 +47,13 @@ impl Address {
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;
+        Ok(inner.into())
+    }
+
+    /// Parses an `Address` ensuring is for the right network
+    pub fn parse(s: &str, network: &Network) -> Result<Address, Error> {
+        let common_addr = lwk_common::Address::parse(s, network.clone().into())?;
+        let inner: elements::Address = common_addr.into();
         Ok(inner.into())
     }
 
@@ -147,5 +155,19 @@ mod tests {
         );
 
         assert_eq!(address.qr_code_uri(None).unwrap(), "data:image/bmp;base64,Qk2GAQAAAAAAAD4AAAAoAAAAKQAAACkAAAABAAEAAAAAAEgBAAAAAgAAAAIAAAIAAAACAAAA////AAAAAAD+rhsdLwAAAIIBYidDgAAAuitpGseAAAC6FxQO0AAAALqGM/j4gAAAghPrII2AAAD+hUGKrAAAAACdlV+PgAAAw5WVyv2AAAAUfcT/9gAAAD62KlcnAAAAqV5aRQcAAADLW8XukAAAAAmtIQ39AAAA0sDx+G0AAAA4q8MaVAAAAOJCysWLgAAAQFCHbgKAAAB2Pxvq2oAAAMT876hGgAAA2ueBU1MAAAC4AQzPZYAAAI6ot+xlgAAA0fxBqruAAADX4QbxQAAAAKgn3wI9AAAA9mvTjNQAAADhUNCr54AAANcOWlNNAAAAxKq3TqUAAACnH0+yiIAAAFi4oJQIAAAAi8J7NXyAAAAAvg4kAAAAAP6qqqq/gAAAgtYuIaCAAAC6/AzSLoAAALrgXA4ugAAAuiJqsa6AAACCIz/toIAAAP7clm2/gAAA");
+
+        let address_network_check = Address::parse(
+            address_str,
+            &lwk_wollet::ElementsNetwork::LiquidTestnet.into(),
+        )
+        .unwrap();
+        assert_eq!(address_network_check.to_string(), address_str);
+
+        let address_network_check_fail =
+            Address::parse(address_str, &lwk_wollet::ElementsNetwork::Liquid.into()).unwrap_err();
+        assert_eq!(
+            address_network_check_fail.to_string(),
+            "Expected a mainnet address but got a testnet one"
+        );
     }
 }

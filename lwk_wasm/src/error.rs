@@ -56,6 +56,9 @@ pub enum Error {
     #[error(transparent)]
     Precision(#[from] lwk_common::precision::Error),
 
+    #[error(transparent)]
+    AddressParse(#[from] lwk_common::AddressParseError),
+
     #[error("{0}")]
     Generic(String),
 

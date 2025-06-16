@@ -52,7 +52,7 @@ impl Address {
 
     /// Parses an `Address` ensuring is for the right network
     pub fn parse(s: &str, network: &Network) -> Result<Address, Error> {
-        let common_addr = lwk_common::Address::parse(s, network.clone().into())?;
+        let common_addr = lwk_common::Address::parse(s, (*network).into())?;
         let inner: elements::Address = common_addr.into();
         Ok(inner.into())
     }

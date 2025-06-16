@@ -69,12 +69,10 @@ impl Address {
                     } else {
                         Err(AddressParseError::ExpectedBlindedAddress)
                     }
+                } else if network.is_mainnet() {
+                    Err(AddressParseError::ExpectedMainnetGotTestnet)
                 } else {
-                    if network.is_mainnet() {
-                        Err(AddressParseError::ExpectedMainnetGotTestnet)
-                    } else {
-                        Err(AddressParseError::ExpectedTestnetGotMainnet)
-                    }
+                    Err(AddressParseError::ExpectedTestnetGotMainnet)
                 }
             }
             Err(elements_error) => {

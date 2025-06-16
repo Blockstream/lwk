@@ -44,6 +44,8 @@ impl std::fmt::Display for Address {
 #[wasm_bindgen]
 impl Address {
     /// Creates an `Address`
+    ///
+    /// If you know the network, you can use [`Address::parse()`] to validate that the network is consistent.
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;

@@ -4,7 +4,7 @@ use elements::bitcoin;
 
 use crate::Network;
 
-/// A wrapper around `elements::Address` that provides a more user-friendly parse errors
+/// A wrapper around `elements::Address` that checks the network and provides a more user-friendly parse errors
 #[derive(Debug)]
 pub struct Address {
     inner: elements::Address,
@@ -56,6 +56,7 @@ impl Display for Address {
 }
 
 impl Address {
+    /// Parses an `Address` ensuring is for the right network
     pub fn parse(s: &str, network: Network) -> Result<Address, AddressParseError> {
         if s.is_empty() {
             return Err(AddressParseError::EmptyAddressString);

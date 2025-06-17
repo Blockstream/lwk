@@ -120,12 +120,14 @@ impl RegistryCache {
     }
 
     pub async fn get(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
-        let mut cache = self.cache.lock().await;
+        let cache = self.cache.lock().await;
         if let Some(data) = cache.get(&asset_id) {
             return Ok(data.clone());
         }
+        drop(cache);
 
         let data = self.inner.fetch(asset_id).await?;
+        let mut cache = self.cache.lock().await;
         cache.insert(asset_id, data.clone());
         Ok(data)
     }

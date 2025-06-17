@@ -436,4 +436,25 @@ mod tests {
         contract.version = 1;
         assert!(asset_ids(&tx.input[0], &contract).is_err());
     }
+
+    #[ignore = "require internet connection"]
+    #[tokio::test]
+    async fn test_registry_cache() {
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let asset_id =
+            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+                .unwrap();
+        let cache = RegistryCache::new(registry);
+        assert!(!cache.contains(asset_id).await.unwrap());
+        let data = cache.get(asset_id).await.unwrap();
+        assert_eq!(data.contract.ticker, "USDt");
+        assert_eq!(data.contract.precision, 8);
+        assert!(cache.contains(asset_id).await.unwrap());
+
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let cache_2 = RegistryCache::new(registry);
+        assert!(!cache_2.contains(asset_id).await.unwrap());
+        cache_2.multi_init(&[asset_id], 1).await.unwrap();
+        assert!(cache_2.contains(asset_id).await.unwrap());
+    }
 }

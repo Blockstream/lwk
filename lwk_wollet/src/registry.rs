@@ -153,6 +153,11 @@ impl RegistryCache {
         }
         Ok(())
     }
+
+    pub async fn contains(&self, asset_id: AssetId) -> Result<bool, Error> {
+        let cache = self.cache.lock().await;
+        Ok(cache.contains_key(&asset_id))
+    }
 }
 
 #[derive(Serialize, Clone)]

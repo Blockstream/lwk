@@ -9,6 +9,7 @@ use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::{Transaction, Txid};
+use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -130,6 +131,27 @@ impl RegistryCache {
         let mut cache = self.cache.lock().await;
         cache.insert(asset_id, data.clone());
         Ok(data)
+    }
+
+    pub async fn multi_init(&self, asset_ids: &[AssetId], concurrency: usize) -> Result<(), Error> {
+        let mut results = Vec::new();
+
+        // Create a stream of futures and process them with buffer_unordered
+        let mut stream = stream::iter(asset_ids.iter())
+            .map(|&asset_id| self.inner.fetch(asset_id))
+            .buffer_unordered(concurrency);
+
+        // Collect all results
+        while let Some(result) = stream.next().await {
+            results.push(result?);
+        }
+
+        // Acquire lock once and insert all results
+        let mut cache = self.cache.lock().await;
+        for (asset_id, data) in asset_ids.iter().zip(results) {
+            cache.insert(*asset_id, data);
+        }
+        Ok(())
     }
 }
 

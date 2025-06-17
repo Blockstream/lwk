@@ -92,6 +92,13 @@ $ELEMENTS_CLI_CMD sendtoaddress el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7u
 # first wpkh_slip77 address of ledger mnemonic "glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin"
 $ELEMENTS_CLI_CMD sendtoaddress el1qqvk6gl0lgs80w8rargdqyfsl7f0llsttzsx8gd4fz262cjnt0uxh6y68aq4qx76ahvuvlrz8t8ey9v04clsf58w045gzmxga3 1
 
+# Send to jade emulator first address
+$ELEMENTS_CLI_CMD sendtoaddress el1qqv7rvrvjzhwzy0v0xpd4lguzwdknf6az2sgvplcvnkedgyn6q25h62k2zskmqgn5x0dpu3xvey2tpnm2mr8hywnnpajzxvrnq 1
+
+# Send to multisig wallet between jade emulator and abandon wallet
+# first address of ct(slip77(74819a3e39ffccee0218f9f2164998e01c8fb0797017d62800761f466dd84b51),elwsh(multi(2,[73c5da0a/87'/1'/0']tpubDCChhoz5Qdrkn7Z7KXawq6Ad6r3A4MUkCoVTqeWxfTkA6bHNJ3CHUEtALQdkNeixNz4446PcAmw4WKcj3mV2vb29H7sg9EPzbyCU1y2merw/<0;1>/*,[e3ebcc79/87'/1'/0']tpubDDJ2wnPWhEeV4yxmgoe1YdjxffXP2QTuoVQ1wCGgyFyxZLLKbzXVijZoAXbhkNVJoMVp2UKW1V5NXxdYgENwvx2T4652P4wTxLM1ycTppcu/<0;1>/*)))#wyx8q05s
+$ELEMENTS_CLI_CMD sendtoaddress el1qqvfzwj9gep2l6cw0y2lwe94ks2lgv02egrmwyngahd7aseu9yet95fzen9v5harcjn8ug7kdutv3fwndugvdj6tjpz0ajgkmctyjt7577fvwelnvgntk 1
+
 # Start block generation loop in background
 (
     while true; do

@@ -324,8 +324,15 @@ fn address() {
     assert_eq!(last_address.index(), gap_limit);
     let mid_address = Some(mid_address.address().clone());
     let last_address = Some(last_address.address().clone());
-    wallet.fund(&server, satoshi, mid_address, None);
+    wallet.fund(&server, satoshi, mid_address.clone(), None);
     wallet.fund(&server, satoshi, last_address, None);
+    let last_unused_before = wallet.address_result(None).index();
+    wallet.fund(&server, satoshi, mid_address, None);
+    let last_unused_after = wallet.address_result(None).index();
+    assert!(
+        last_unused_before <= last_unused_after,
+        "last_unused_before: {last_unused_before}, last_unused_after: {last_unused_after}"
+    );
 }
 
 #[test]

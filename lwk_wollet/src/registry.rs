@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -12,6 +13,7 @@ use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tokio::sync::Mutex;
 
 static RE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[[:ascii:]]{1,255}$").expect("static"));
 static RE_TICKER: Lazy<Regex> =
@@ -102,6 +104,31 @@ impl FromStr for Contract {
 pub struct Registry {
     client: reqwest::Client,
     base_url: String,
+}
+
+pub struct RegistryCache {
+    inner: Registry,
+    cache: Mutex<HashMap<AssetId, RegistryData>>,
+}
+
+impl RegistryCache {
+    pub fn new(registry: Registry) -> Self {
+        Self {
+            inner: registry,
+            cache: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub async fn get(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
+        let mut cache = self.cache.lock().await;
+        if let Some(data) = cache.get(&asset_id) {
+            return Ok(data.clone());
+        }
+
+        let data = self.inner.fetch(asset_id).await?;
+        cache.insert(asset_id, data.clone());
+        Ok(data)
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -262,13 +289,13 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     Ok(ContractHash::from_raw_hash(hash))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TxIn {
     pub txid: Txid,
     pub vin: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct RegistryData {
     pub contract: Contract,
     pub issuance_txin: TxIn,

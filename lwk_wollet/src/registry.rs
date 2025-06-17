@@ -325,6 +325,16 @@ pub struct RegistryData {
     pub issuance_txin: TxIn,
 }
 
+impl RegistryData {
+    pub fn precision(&self) -> u8 {
+        self.contract.precision
+    }
+
+    pub fn ticker(&self) -> &str {
+        &self.contract.ticker
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

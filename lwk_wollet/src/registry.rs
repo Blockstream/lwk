@@ -138,7 +138,10 @@ impl RegistryCache {
 
         // Create a stream of futures and process them with buffer_unordered
         let mut stream = stream::iter(asset_ids.iter())
-            .map(|&asset_id| self.inner.fetch(asset_id))
+            .map(|&asset_id| async move {
+                let result = self.inner.fetch(asset_id).await?;
+                Ok::<_, Error>((asset_id, result))
+            })
             .buffer_unordered(concurrency);
 
         // Collect all results
@@ -148,8 +151,8 @@ impl RegistryCache {
 
         // Acquire lock once and insert all results
         let mut cache = self.cache.lock().await;
-        for (asset_id, data) in asset_ids.iter().zip(results) {
-            cache.insert(*asset_id, data);
+        for (asset_id, data) in results {
+            cache.insert(asset_id, data);
         }
         Ok(())
     }

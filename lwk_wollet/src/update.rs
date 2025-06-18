@@ -240,13 +240,13 @@ impl Wollet {
             store
                 .cache
                 .last_unused_external
-                .store(last_used_external + 1, atomic::Ordering::Relaxed);
+                .fetch_max(last_used_external + 1, atomic::Ordering::Relaxed);
         }
         if let Some(last_used_internal) = last_used_internal {
             store
                 .cache
                 .last_unused_internal
-                .store(last_used_internal + 1, atomic::Ordering::Relaxed);
+                .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
         }
 
         if do_persist {

@@ -119,9 +119,10 @@ impl RegistryCache {
     pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
         let mut cache = HashMap::new();
         cache.extend([lbtc(), tlbtc(), rlbtc()]);
+        let keys = cache.keys().cloned().collect::<Vec<_>>();
 
         let registry_clone = registry.clone();
-        let mut stream = stream::iter(asset_ids)
+        let mut stream = stream::iter(asset_ids.iter().filter(|e| !keys.contains(e)))
             .map(|&asset_id| {
                 let registry = registry_clone.clone();
                 async move { (asset_id, registry.fetch(asset_id).await.ok()) }

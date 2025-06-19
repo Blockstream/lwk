@@ -1,3 +1,4 @@
+use crate::blockdata::asset_id::AssetIds;
 use crate::{
     AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WalletTxOut,
     WolletDescriptor,
@@ -74,6 +75,11 @@ impl Wollet {
         let balance = self.inner.balance()?;
         let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
         Ok(balance.serialize(&serializer)?)
+    }
+
+    #[wasm_bindgen(js_name = assetsOwned)]
+    pub fn assets_owned(&self) -> Result<AssetIds, Error> {
+        Ok(self.inner.assets_owned()?.into())
     }
 
     pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {

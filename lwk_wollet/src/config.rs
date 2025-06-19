@@ -4,10 +4,12 @@ use crate::elements::{AddressParams, AssetId};
 use crate::error::Error;
 use std::str::FromStr;
 
-const LIQUID_POLICY_ASSET_STR: &str =
+pub const LIQUID_POLICY_ASSET_STR: &str =
     "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
-const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
+pub const LIQUID_TESTNET_POLICY_ASSET_STR: &str =
     "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49";
+pub const LIQUID_DEFAULT_REGTEST_ASSET_STR: &str =
+    "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
 /// The network of the elements blockchain.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy, Hash)]
@@ -47,9 +49,7 @@ impl ElementsNetwork {
     }
 
     pub fn default_regtest() -> ElementsNetwork {
-        let policy_asset =
-            AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225")
-                .expect("static");
+        let policy_asset = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
 
         ElementsNetwork::ElementsRegtest { policy_asset }
     }

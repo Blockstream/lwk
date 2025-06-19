@@ -599,6 +599,12 @@ impl Wollet {
         self.balance_from_utxos(&utxos)
     }
 
+    /// Get the asset identifiers owned by the wallet
+    pub fn assets_owned(&self) -> Result<HashSet<AssetId>, Error> {
+        let utxos = self.utxos()?;
+        Ok(utxos.iter().map(|utxo| utxo.unblinded.asset).collect())
+    }
+
     /// Get the wallet transactions with pagination
     pub fn transactions_paginated(
         &self,

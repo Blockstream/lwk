@@ -2437,6 +2437,59 @@ fn test_liquidex() {
 }
 
 #[test]
+fn test_no_wildcard_with_path_after() {
+    let server = setup_with_esplora();
+
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc = format!("ct(slip77({}),elwpkh({}/0/0))", slip77_key, xpub);
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc);
+
+    let balance_1 = wallet.balance_btc();
+    assert_eq!(balance_1, 0);
+
+    // Fund
+    wallet.fund_btc(&server);
+
+    let balance_2 = wallet.balance_btc();
+    assert!(balance_1 < balance_2);
+
+    // Self send
+    let addr = wallet.address();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&addr, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    let _ = wallet.send(&mut pset);
+    let balance_3 = wallet.balance_btc();
+    assert!(balance_3 < balance_2);
+    assert!(balance_3 > balance_1);
+
+    assert_eq!(wallet.address(), addr);
+    assert_eq!(wallet.address(), wallet.address());
+
+    // Address match the first from the descriptor with wildcard
+    let desc = format!("ct(slip77({}),elwpkh({}/<0;1>/*))", slip77_key, xpub);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let wallet = TestWollet::new(client, &desc);
+
+    // for some reason the first last unused has index 1 instead of 0
+    assert_ne!(wallet.address(), addr);
+    assert_eq!(wallet.address_result(None).index(), 1);
+    assert_eq!(wallet.address_result(None).index(), 1);
+
+    // But explicitly specifying index 0 works
+    assert_eq!(wallet.address_result(Some(0)).address(), &addr);
+}
+
+#[test]
 fn test_no_wildcard() {
     let server = setup_with_esplora();
 

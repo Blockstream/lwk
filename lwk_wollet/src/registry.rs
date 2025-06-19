@@ -1,6 +1,10 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
+use crate::config::{
+    LIQUID_DEFAULT_REGTEST_ASSET_STR, LIQUID_POLICY_ASSET_STR, LIQUID_TESTNET_POLICY_ASSET_STR,
+};
 use crate::domain::verify_domain_name;
 use crate::elements::hashes::{sha256, Hash};
 use crate::elements::{AssetId, ContractHash, OutPoint};
@@ -8,6 +12,7 @@ use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::{Transaction, Txid};
+use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
@@ -99,9 +104,57 @@ impl FromStr for Contract {
     }
 }
 
+#[derive(Clone)]
 pub struct Registry {
     client: reqwest::Client,
     base_url: String,
+}
+
+pub struct RegistryCache {
+    inner: Registry,
+    cache: HashMap<AssetId, RegistryData>,
+}
+
+impl RegistryCache {
+    pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
+        let mut cache = HashMap::new();
+        cache.extend([lbtc(), tlbtc(), rlbtc()]);
+
+        let registry_clone = registry.clone();
+        let mut stream = stream::iter(asset_ids)
+            .map(|&asset_id| {
+                let registry = registry_clone.clone();
+                async move { (asset_id, registry.fetch(asset_id).await.ok()) }
+            })
+            .buffer_unordered(concurrency);
+
+        while let Some((asset_id, data)) = stream.next().await {
+            if let Some(data) = data {
+                cache.insert(asset_id, data);
+            }
+        }
+
+        Self {
+            inner: registry,
+            cache,
+        }
+    }
+
+    pub fn get(&self, asset_id: AssetId) -> Option<RegistryData> {
+        self.cache.get(&asset_id).cloned()
+    }
+
+    pub async fn fetch_with_tx(
+        &self,
+        asset_id: AssetId,
+        client: &crate::asyncr::EsploraClient,
+    ) -> Result<(Contract, Transaction), Error> {
+        self.inner.fetch_with_tx(asset_id, client).await
+    }
+
+    pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
+        self.inner.post(data).await
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -140,6 +193,7 @@ impl Registry {
     }
 
     pub async fn fetch(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
+        // TODO should discriminate between 404 and other errors
         let url = format!("{}/{}", self.base_url.trim_end_matches("/"), asset_id);
         let response = self.client.get(url).send().await?;
         let data = response.json::<RegistryData>().await?;
@@ -262,16 +316,95 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     Ok(ContractHash::from_raw_hash(hash))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TxIn {
     pub txid: Txid,
     pub vin: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct RegistryData {
     pub contract: Contract,
     pub issuance_txin: TxIn,
+}
+
+impl RegistryData {
+    pub fn precision(&self) -> u8 {
+        self.contract.precision
+    }
+
+    pub fn ticker(&self) -> &str {
+        &self.contract.ticker
+    }
+}
+
+/// Create a RegistryData mock for Liquid Bitcoin
+fn lbtc() -> (AssetId, RegistryData) {
+    let asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+    let data = RegistryData {
+        contract: Contract {
+            entity: Entity::Domain("".to_string()),
+            issuer_pubkey: vec![2; 33],
+            name: "Liquid Bitcoin".to_string(),
+            precision: 8,
+            ticker: "LBTC".to_string(),
+            version: 0,
+        },
+        issuance_txin: TxIn {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            vin: 0,
+        },
+    };
+    (asset_id, data)
+}
+
+/// Create a RegistryData mock for TestnetLiquid Bitcoin
+fn tlbtc() -> (AssetId, RegistryData) {
+    let asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
+    let data = RegistryData {
+        contract: Contract {
+            entity: Entity::Domain("".to_string()),
+            issuer_pubkey: vec![2; 33],
+            name: "Testnet Liquid Bitcoin".to_string(),
+            precision: 8,
+            ticker: "tLBTC".to_string(),
+            version: 0,
+        },
+        issuance_txin: TxIn {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            vin: 0,
+        },
+    };
+    (asset_id, data)
+}
+
+/// Create a RegistryData mock for RegtestLiquid Bitcoin
+fn rlbtc() -> (AssetId, RegistryData) {
+    let asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
+    let data = RegistryData {
+        contract: Contract {
+            entity: Entity::Domain("".to_string()),
+            issuer_pubkey: vec![2; 33],
+            name: "Regtest Liquid Bitcoin".to_string(),
+            precision: 8,
+            ticker: "rLBTC".to_string(),
+            version: 0,
+        },
+        issuance_txin: TxIn {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            vin: 0,
+        },
+    };
+    (asset_id, data)
 }
 
 #[cfg(test)]
@@ -369,5 +502,35 @@ mod tests {
         // Error cases
         contract.version = 1;
         assert!(asset_ids(&tx.input[0], &contract).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_registry_cache_hardcoded() {
+        let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
+        let cache = RegistryCache::new(registry, &[], 1).await;
+        // policy assets of regtest(default)/testnet/mainnet network are hard coded
+        let regtest_asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
+        let testnet_asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
+        let mainnet_asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+        assert!(cache.get(regtest_asset_id).is_some());
+        assert!(cache.get(testnet_asset_id).is_some());
+        assert!(cache.get(mainnet_asset_id).is_some());
+    }
+
+    #[ignore = "require internet connection"]
+    #[tokio::test]
+    async fn test_registry_cache() {
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let asset_id =
+            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+                .unwrap();
+        let cache = RegistryCache::new(registry, &[asset_id], 1).await;
+        let data = cache.get(asset_id).unwrap();
+        assert_eq!(data.contract.ticker, "USDt");
+        assert_eq!(data.contract.precision, 8);
+
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let cache_2 = RegistryCache::new(registry, &[], 1).await;
+        assert!(cache_2.get(asset_id).is_none());
     }
 }

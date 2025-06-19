@@ -32,7 +32,7 @@ mod xpub;
 pub use amp2::{Amp2, Amp2Descriptor};
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
-pub use blockdata::asset_id::AssetId;
+pub use blockdata::asset_id::{AssetId, AssetIds};
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
 pub use blockdata::transaction::{Transaction, Txid};

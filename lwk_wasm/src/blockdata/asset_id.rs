@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    collections::{BTreeSet, HashSet},
+    str::FromStr,
+};
 
 use crate::Error;
 use lwk_wollet::elements;
@@ -11,6 +14,14 @@ use wasm_bindgen::prelude::*;
 #[derive(PartialEq, Eq, Debug, Hash, Clone, Copy)]
 pub struct AssetId {
     inner: elements::AssetId,
+}
+
+// wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
+/// A collection of asset identifiers. wrapper of [`Vec<elements::AssetId>`]
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, Hash, Clone)]
+pub struct AssetIds {
+    inner: BTreeSet<elements::AssetId>,
 }
 
 impl std::fmt::Display for AssetId {
@@ -31,6 +42,54 @@ impl From<AssetId> for elements::AssetId {
     }
 }
 
+impl From<AssetIds> for Vec<elements::AssetId> {
+    fn from(value: AssetIds) -> Self {
+        value.inner.into_iter().collect()
+    }
+}
+
+impl From<AssetIds> for Vec<AssetId> {
+    fn from(value: AssetIds) -> Self {
+        value.inner.into_iter().map(AssetId::from).collect()
+    }
+}
+
+impl From<&AssetIds> for Vec<elements::AssetId> {
+    fn from(value: &AssetIds) -> Self {
+        value.inner.clone().into_iter().collect()
+    }
+}
+
+impl From<Vec<elements::AssetId>> for AssetIds {
+    fn from(value: Vec<elements::AssetId>) -> Self {
+        AssetIds {
+            inner: value.into_iter().collect(),
+        }
+    }
+}
+
+impl From<HashSet<elements::AssetId>> for AssetIds {
+    fn from(value: HashSet<elements::AssetId>) -> Self {
+        AssetIds {
+            inner: value.into_iter().collect(),
+        }
+    }
+}
+
+impl From<Vec<AssetId>> for AssetIds {
+    fn from(value: Vec<AssetId>) -> Self {
+        AssetIds {
+            inner: value.into_iter().map(|asset_id| asset_id.inner).collect(),
+        }
+    }
+}
+
+impl std::fmt::Display for AssetIds {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
 #[wasm_bindgen]
 impl AssetId {
     /// Creates an `AssetId`
@@ -45,12 +104,25 @@ impl AssetId {
     }
 }
 
+#[wasm_bindgen]
+impl AssetIds {
+    pub fn empty() -> Result<AssetIds, Error> {
+        Ok(AssetIds {
+            inner: BTreeSet::new(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
+    }
+}
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
 
     use wasm_bindgen_test::*;
 
-    use crate::AssetId;
+    use crate::{AssetId, AssetIds};
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -66,5 +138,20 @@ mod tests {
 
         let hex = "0000000000000000000000000000000000000000000000000000000000000001";
         assert_eq!(hex, AssetId::new(hex).unwrap().to_string());
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_asset_ids() {
+        let a = "0000000000000000000000000000000000000000000000000000000000000001";
+        let asset_id1 = AssetId::new(a).unwrap();
+        let b = "0000000000000000000000000000000000000000000000000000000000000002";
+        let asset_id2 = AssetId::new(b).unwrap();
+        let c = "0000000000000000000000000000000000000000000000000000000000000003";
+        let asset_id3 = AssetId::new(c).unwrap();
+
+        let asset_ids: AssetIds = vec![asset_id3, asset_id1, asset_id2].into();
+        assert_eq!(asset_ids.to_string(), format!("{{{a}, {b}, {c}}}"));
+        let asset_ids2: AssetIds = vec![asset_id2, asset_id1, asset_id3].into();
+        assert_eq!(asset_ids, asset_ids2);
     }
 }

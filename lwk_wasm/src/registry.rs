@@ -1,10 +1,18 @@
+use lwk_wollet::{elements, registry::RegistryCache};
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{AssetId, Contract, Error, EsploraClient, Network, Transaction};
+use crate::{
+    blockdata::asset_id::AssetIds, AssetId, Contract, Error, EsploraClient, Network, Transaction,
+};
 
 #[wasm_bindgen]
 pub struct Registry {
-    inner: lwk_wollet::registry::Registry,
+    inner: lwk_wollet::registry::RegistryCache,
+}
+
+#[wasm_bindgen]
+pub struct RegistryData {
+    inner: lwk_wollet::registry::RegistryData,
 }
 
 #[wasm_bindgen]
@@ -43,13 +51,13 @@ impl RegistryPost {
     }
 }
 
-impl From<lwk_wollet::registry::Registry> for Registry {
-    fn from(inner: lwk_wollet::registry::Registry) -> Self {
+impl From<lwk_wollet::registry::RegistryCache> for Registry {
+    fn from(inner: lwk_wollet::registry::RegistryCache) -> Self {
         Self { inner }
     }
 }
 
-impl From<Registry> for lwk_wollet::registry::Registry {
+impl From<Registry> for lwk_wollet::registry::RegistryCache {
     fn from(inner: Registry) -> Self {
         inner.inner
     }
@@ -67,16 +75,35 @@ impl From<RegistryPost> for lwk_wollet::registry::RegistryPost {
     }
 }
 
+impl From<lwk_wollet::registry::RegistryData> for RegistryData {
+    fn from(inner: lwk_wollet::registry::RegistryData) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<RegistryData> for lwk_wollet::registry::RegistryData {
+    fn from(inner: RegistryData) -> Self {
+        inner.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Registry {
-    pub fn new(url: &str) -> Result<Self, Error> {
-        Ok(lwk_wollet::registry::Registry::new(url).into())
+    pub async fn new(url: &str, asset_ids: &AssetIds) -> Result<Self, Error> {
+        let registry = lwk_wollet::registry::Registry::new(url);
+        let asset_ids: Vec<elements::AssetId> = asset_ids.into();
+        Ok(RegistryCache::new(registry, &asset_ids, 4).await.into())
     }
 
     #[wasm_bindgen(js_name = defaultForNetwork)]
-    pub fn default_for_network(network: &Network) -> Result<Self, Error> {
-        let inner = lwk_wollet::registry::Registry::default_for_network(network.into())?;
-        Ok(inner.into())
+    pub async fn default_for_network(
+        network: &Network,
+        asset_ids: &AssetIds,
+    ) -> Result<Self, Error> {
+        let registry = lwk_wollet::registry::Registry::default_for_network(network.into())?;
+        let asset_ids: Vec<elements::AssetId> = asset_ids.into();
+        let cache = RegistryCache::new(registry, &asset_ids, 1).await;
+        Ok(cache.into())
     }
 
     #[wasm_bindgen(js_name = fetchWithTx)]
@@ -98,5 +125,20 @@ impl Registry {
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         let data: lwk_wollet::registry::RegistryPost = data.clone().into();
         Ok(self.inner.post(&data).await?)
+    }
+
+    pub fn get(&self, asset_id: &AssetId) -> Option<RegistryData> {
+        self.inner.get((*asset_id).into()).map(|data| data.into())
+    }
+}
+
+#[wasm_bindgen]
+impl RegistryData {
+    pub fn precision(&self) -> u8 {
+        self.inner.precision()
+    }
+
+    pub fn ticker(&self) -> String {
+        self.inner.ticker().to_string()
     }
 }

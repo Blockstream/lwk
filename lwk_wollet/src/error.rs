@@ -227,6 +227,9 @@ pub enum Error {
 
     #[error("Issuance amount greater than 21M*10^8 are not allowed")]
     IssuanceAmountGreaterThanBtcMax,
+
+    #[error("Number of transaction inputs ({0}) exceeds maximum allowed input count of 256")]
+    TooManyInputs(usize),
 }
 
 // cannot derive automatically with this error because of trait bound

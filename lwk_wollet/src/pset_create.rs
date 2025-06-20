@@ -13,6 +13,8 @@ use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
+
 #[derive(Debug, Serialize, Deserialize)]
 // We make issuance and reissuance are mutually exclusive for simplicity
 pub enum IssuanceRequest {
@@ -74,6 +76,10 @@ impl Wollet {
         inp_weight: &mut usize,
         utxo: &WalletTxOut,
     ) -> Result<usize, Error> {
+        if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+            return Err(Error::TooManyInputs(pset.inputs().len()));
+        }
+
         let mut input = Input::from_prevout(utxo.outpoint);
         let mut txout = self.get_txout(&utxo.outpoint)?;
         let (Some(value_comm), Some(asset_gen)) =
@@ -233,7 +239,10 @@ pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Resul
 
 #[cfg(test)]
 mod test {
-    use crate::{pset_create::validate_address, ElementsNetwork};
+    use crate::{pset_create::validate_address, ElementsNetwork, Update, WolletDescriptor};
+
+    use super::*;
+    use crate::NoPersist;
 
     #[test]
     fn test_validate() {
@@ -244,5 +253,59 @@ mod test {
 
         let network = ElementsNetwork::Liquid;
         assert!(validate_address(testnet_address, network).is_err())
+    }
+
+    #[test]
+    fn test_add_input_exceeds_limit() {
+        let wollet = test_wollet_with_many_transactions();
+
+        let mut pset = PartiallySignedTransaction::default();
+        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+            pset.add_input(Default::default());
+        }
+
+        let mut inp_txout_sec = HashMap::new();
+        let mut inp_weight = 0usize;
+        let dummy_utxo = wollet.utxos().unwrap()[0].clone();
+        let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+
+        match result {
+            Err(Error::TooManyInputs(count)) => {
+                assert_eq!(count, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS);
+            }
+            _ => panic!("Expected TooManyInputs error"),
+        }
+    }
+
+    #[test]
+    fn test_add_input_just_under_limit() {
+        let wollet = test_wollet_with_many_transactions();
+        let mut pset = PartiallySignedTransaction::default();
+        let mut inp_txout_sec = HashMap::new();
+        let mut inp_weight = 0usize;
+        let dummy_utxo = wollet.utxos().unwrap()[0].clone();
+
+        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS - 1 {
+            pset.add_input(Default::default());
+        }
+
+        let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+        assert!(result.is_ok());
+    }
+
+    // duplicated from tests/test_wollet.rs
+    pub fn test_wollet_with_many_transactions() -> Wollet {
+        let update = lwk_test_util::update_test_vector_many_transactions();
+        let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
+        let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+        let update = Update::deserialize(&update).unwrap();
+        let mut wollet = Wollet::new(
+            ElementsNetwork::LiquidTestnet,
+            std::sync::Arc::new(NoPersist {}),
+            descriptor,
+        )
+        .unwrap();
+        wollet.apply_update(update).unwrap();
+        wollet
     }
 }

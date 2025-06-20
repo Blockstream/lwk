@@ -434,6 +434,44 @@ mod test {
 
     use crate::{descriptor::remove_checksum_if_any, Chain, WolletDescriptor, EC};
 
+    #[track_caller]
+    fn chain(desc: &str, expected: Option<Chain>) {
+        let wallet_desc = WolletDescriptor::from_str(desc).unwrap();
+        let desc = wallet_desc.descriptor();
+        let chain = Chain::try_from(desc);
+        match expected {
+            Some(expected) => assert_eq!(chain.unwrap(), expected),
+            None => assert!(chain.is_err()),
+        };
+    }
+
+    #[test]
+    fn test_chain_from_descriptor() {
+        let blinding = "slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92)";
+        let base = "elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA";
+
+        let desc_multi = format!("ct({blinding},{base}/<0;1>/*))");
+        chain(&desc_multi, None);
+
+        let desc_single = format!("ct({blinding},{base}/0/*))");
+        chain(&desc_single, Some(Chain::External));
+
+        let desc_single_internal = format!("ct({blinding},{base}/1/*))");
+        chain(&desc_single_internal, Some(Chain::Internal));
+
+        let desc_single_internal = format!("ct({blinding},{base}/2/*))");
+        chain(&desc_single_internal, None);
+
+        let desc_no_wildcard = format!("ct({blinding},{base}/0/506))");
+        chain(&desc_no_wildcard, Some(Chain::External));
+
+        let desc_no_wildcard = format!("ct({blinding},{base}/1/506))");
+        chain(&desc_no_wildcard, Some(Chain::Internal));
+
+        let desc_no_wildcard = format!("ct({blinding},{base}/2/506))");
+        chain(&desc_no_wildcard, None);
+    }
+
     #[test]
     fn test_wollet_hash() {
         let desc_str = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";

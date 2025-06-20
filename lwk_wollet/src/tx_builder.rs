@@ -571,6 +571,7 @@ impl TxBuilder {
             let satoshi_out = maker_output_satoshi;
             let mut satoshi_in = 0;
             for utxo in wollet.asset_utxos(&maker_output_asset)? {
+                // Check if have inputs exceeds limit
                 if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
                     return Err(Error::TooManyInputs(pset.inputs().len()));
                 }

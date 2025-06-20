@@ -17,6 +17,8 @@ use crate::{
     Contract, ElementsNetwork, Error, LiquidexProposal, UnvalidatedRecipient, Wollet, EC,
 };
 
+const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
+
 pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
     let mut r = vec![];
     for (vin, txin) in tx.input.iter().enumerate() {
@@ -569,6 +571,9 @@ impl TxBuilder {
             let satoshi_out = maker_output_satoshi;
             let mut satoshi_in = 0;
             for utxo in wollet.asset_utxos(&maker_output_asset)? {
+                if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                    return Err(Error::TooManyInputs(pset.inputs().len()));
+                }
                 wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
                 let surj_input = elements::SurjectionInput::from_txout_secrets(utxo.unblinded);
                 input_domain.push(surj_input.surjection_target(&EC).expect("from secrets"));
@@ -609,6 +614,9 @@ impl TxBuilder {
 
         // FIXME: For implementation simplicity now we always add all L-BTC inputs
         for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
+            if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                return Err(Error::TooManyInputs(pset.inputs().len()));
+            }
             wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
             let surj_input = elements::SurjectionInput::from_txout_secrets(utxo.unblinded);
             input_domain.push(surj_input.surjection_target(&EC).expect("from secrets"));
@@ -746,6 +754,9 @@ impl TxBuilder {
             // Add more asset utxos
             if satoshi_in < satoshi_out {
                 for utxo in wollet.asset_utxos(&asset)? {
+                    if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                        return Err(Error::TooManyInputs(pset.inputs().len()));
+                    }
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
                     satoshi_in += utxo.unblinded.value;
                     if satoshi_in >= satoshi_out {
@@ -786,6 +797,11 @@ impl TxBuilder {
             if utxo.unblinded.asset != policy_asset {
                 continue;
             }
+
+            if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                return Err(Error::TooManyInputs(pset.inputs().len()));
+            }
+
             add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
             satoshi_in += utxo.unblinded.value;
         }
@@ -799,6 +815,11 @@ impl TxBuilder {
                     if utxo.unblinded.asset != policy_asset {
                         return Err(Error::ManualCoinSelectionOnlyLbtc);
                     }
+
+                    if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                        return Err(Error::TooManyInputs(pset.inputs().len()));
+                    }
+
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;
                 }
@@ -806,6 +827,10 @@ impl TxBuilder {
             None => {
                 // FIXME: For implementation simplicity now we always add all L-BTC inputs
                 for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
+                    if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                        return Err(Error::TooManyInputs(pset.inputs().len()));
+                    }
+
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
                     satoshi_in += utxo.unblinded.value;
                 }
@@ -877,6 +902,9 @@ impl TxBuilder {
                                         asset_id: token,
                                         is_token: true,
                                     })?;
+                            if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+                                return Err(Error::TooManyInputs(pset.inputs().len()));
+                            }
                             let idx = wollet.add_input(
                                 &mut pset,
                                 &mut inp_txout_sec,

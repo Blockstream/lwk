@@ -118,10 +118,17 @@ impl TryFrom<&Descriptor<DescriptorPublicKey>> for Chain {
 
     fn try_from(value: &Descriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
         let mut ext_int = None;
-        // can keys have different derivation path???
+        // TODO: error if multiple keys have different derivation path
+
+        let has_wildcard = value.has_wildcard();
+
         value.for_each_key(|k| {
             if let Some(path) = k.full_derivation_path() {
-                ext_int = path.into_iter().last().cloned();
+                if has_wildcard {
+                    ext_int = path.into_iter().last().cloned();
+                } else {
+                    ext_int = path.into_iter().nth_back(1).cloned();
+                }
             }
             false
         });

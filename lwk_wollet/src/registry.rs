@@ -341,7 +341,7 @@ impl RegistryData {
 
 /// Create a RegistryData mock for Liquid Bitcoin
 fn lbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+    let asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).expect("static");
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -355,7 +355,7 @@ fn lbtc() -> (AssetId, RegistryData) {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
-            .unwrap(),
+            .expect("static"),
             vin: 0,
         },
     };
@@ -364,7 +364,7 @@ fn lbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for TestnetLiquid Bitcoin
 fn tlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
+    let asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("static");
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -378,7 +378,7 @@ fn tlbtc() -> (AssetId, RegistryData) {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
-            .unwrap(),
+            .expect("static"),
             vin: 0,
         },
     };
@@ -387,7 +387,7 @@ fn tlbtc() -> (AssetId, RegistryData) {
 
 /// Create a RegistryData mock for RegtestLiquid Bitcoin
 fn rlbtc() -> (AssetId, RegistryData) {
-    let asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
+    let asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
     let data = RegistryData {
         contract: Contract {
             entity: Entity::Domain("".to_string()),
@@ -401,7 +401,7 @@ fn rlbtc() -> (AssetId, RegistryData) {
             txid: Txid::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
-            .unwrap(),
+            .expect("static"),
             vin: 0,
         },
     };

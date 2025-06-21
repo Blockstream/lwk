@@ -786,6 +786,7 @@ impl TxBuilder {
             if utxo.unblinded.asset != policy_asset {
                 continue;
             }
+
             add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
             satoshi_in += utxo.unblinded.value;
         }
@@ -799,6 +800,7 @@ impl TxBuilder {
                     if utxo.unblinded.asset != policy_asset {
                         return Err(Error::ManualCoinSelectionOnlyLbtc);
                     }
+
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;
                 }
@@ -877,6 +879,7 @@ impl TxBuilder {
                                         asset_id: token,
                                         is_token: true,
                                     })?;
+
                             let idx = wollet.add_input(
                                 &mut pset,
                                 &mut inp_txout_sec,

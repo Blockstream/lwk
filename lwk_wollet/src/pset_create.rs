@@ -260,13 +260,13 @@ mod test {
         let wollet = test_wollet_with_many_transactions();
 
         let mut pset = PartiallySignedTransaction::default();
-        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
-            pset.add_input(Default::default());
-        }
-
         let mut inp_txout_sec = HashMap::new();
         let mut inp_weight = 0usize;
         let dummy_utxo = wollet.utxos().unwrap()[0].clone();
+        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+            let res = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+            assert!(res.is_ok());
+        }
         let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
 
         match result {
@@ -275,22 +275,6 @@ mod test {
             }
             _ => panic!("Expected TooManyInputs error"),
         }
-    }
-
-    #[test]
-    fn test_add_input_just_under_limit() {
-        let wollet = test_wollet_with_many_transactions();
-        let mut pset = PartiallySignedTransaction::default();
-        let mut inp_txout_sec = HashMap::new();
-        let mut inp_weight = 0usize;
-        let dummy_utxo = wollet.utxos().unwrap()[0].clone();
-
-        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS - 1 {
-            pset.add_input(Default::default());
-        }
-
-        let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
-        assert!(result.is_ok());
     }
 
     // duplicated from tests/test_wollet.rs

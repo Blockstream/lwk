@@ -4393,9 +4393,9 @@ dependencies = [
 
 [[package]]
 name = "waterfalls"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f681c70bba27a5cb37abc65d7876ce0b5081c22dcbd6dc52fcde9b3ded010c4e"
+checksum = "81377a05e2a3d006bc4c3690659f372570122bfc3527ea9cabcd22296ddf45ab"
 dependencies = [
  "age",
  "anyhow",

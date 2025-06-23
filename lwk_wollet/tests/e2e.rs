@@ -2490,6 +2490,35 @@ fn test_no_wildcard_with_path_after() {
 }
 
 #[test]
+fn test_no_wildcard_waterfalls() {
+    let network = ElementsNetwork::default_regtest();
+
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let desc: WolletDescriptor = desc.parse().unwrap();
+    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+
+    let address = wollet.address(None).unwrap();
+    let _txid = test_env.send_to(address.address(), 10000);
+    std::thread::sleep(std::time::Duration::from_secs(10));
+
+    let mut waterfalls_client =
+        clients::blocking::EsploraClient::new_waterfalls(test_env.base_url(), network).unwrap();
+
+    let update = waterfalls_client.full_scan(&wollet).unwrap().unwrap();
+
+    wollet.apply_update(update).unwrap();
+
+    let waterfalls_txs = wollet.transactions().unwrap();
+    assert_eq!(waterfalls_txs.len(), 1);
+}
+
+#[test]
 fn test_no_wildcard() {
     let server = setup_with_esplora();
 
@@ -2552,38 +2581,6 @@ fn test_no_wildcard() {
 
     let esplora_txs = esplora_wollet.transactions().unwrap();
     assert_eq!(esplora_txs.len(), 2);
-
-    // TODO: waterfalls support
-    /*
-    // Use waterfalls client
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
-
-    let url = format!("{}/blocks/tip/hash", test_env.base_url());
-    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
-
-    let mut waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
-        test_env.base_url(),
-        network,
-    )
-    .unwrap();
-
-    let mut waterfalls_wollet = Wollet::new(
-        network,
-        std::sync::Arc::new(NoPersist {}),
-        desc.parse().unwrap(),
-    )
-    .unwrap();
-
-    let update = waterfalls_client.full_scan(&waterfalls_wollet).unwrap();
-    if let Some(update) = update {
-        waterfalls_wollet.apply_update(update).unwrap();
-    }
-
-    let waterfalls_txs = waterfalls_wollet.transactions().unwrap();
-    assert_eq!(waterfalls_txs.len(), 2);
-     * */
 }
 
 #[test]

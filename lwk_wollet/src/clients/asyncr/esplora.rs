@@ -485,9 +485,11 @@ impl EsploraClient {
 
             for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
                 let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
-                let chain: Chain = (&desc)
-                    .try_into()
-                    .map_err(|_| Error::Generic("Cannot determine chain from desc".into()))?;
+
+                // NOTE: in case of descriptors without path ending, the Chain will be wrong, and the
+                // `Data::scripts` will be wrong too, this doesn't seem to impact the correctness of the scan.
+                let chain: Chain = (&desc).try_into().unwrap_or(Chain::External);
+
                 let max = chain_history
                     .iter()
                     .enumerate()
@@ -510,6 +512,7 @@ impl EsploraClient {
                     if !cached {
                         data.scripts.insert(script, (chain, child, blinding_pubkey));
                     }
+
                     for tx_seen in script_history {
                         let height = if tx_seen.height > 0 {
                             Some(tx_seen.height as u32)

@@ -1,6 +1,38 @@
 use crate::{LwkError, Mnemonic, Network, Pset, WolletDescriptor};
 use std::sync::Arc;
 
+#[derive(uniffi::Enum)]
+pub enum Singlesig {
+    Wpkh,
+    ShWpkh,
+}
+
+impl From<Singlesig> for lwk_common::Singlesig {
+    fn from(singlesig: Singlesig) -> Self {
+        match singlesig {
+            Singlesig::Wpkh => lwk_common::Singlesig::Wpkh,
+            Singlesig::ShWpkh => lwk_common::Singlesig::ShWpkh,
+        }
+    }
+}
+
+#[derive(uniffi::Enum)]
+pub enum DescriptorBlindingKey {
+    Slip77,
+    Slip77Rand,
+    Elip151,
+}
+
+impl From<DescriptorBlindingKey> for lwk_common::DescriptorBlindingKey {
+    fn from(blinding_key: DescriptorBlindingKey) -> Self {
+        match blinding_key {
+            DescriptorBlindingKey::Slip77 => lwk_common::DescriptorBlindingKey::Slip77,
+            DescriptorBlindingKey::Slip77Rand => lwk_common::DescriptorBlindingKey::Slip77Rand,
+            DescriptorBlindingKey::Elip151 => lwk_common::DescriptorBlindingKey::Elip151,
+        }
+    }
+}
+
 /// wrapper over [`lwk_common::Bip`]
 #[derive(uniffi::Object)]
 pub struct Bip {
@@ -67,12 +99,19 @@ impl Signer {
     }
 
     pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
-        // TODO: make script_variant and blinding_variant parameters
+        self.singlesig_desc(Singlesig::Wpkh, DescriptorBlindingKey::Slip77)
+    }
 
-        let script_variant = lwk_common::Singlesig::Wpkh;
-        let blinding_variant = lwk_common::DescriptorBlindingKey::Slip77;
-        let desc_str = lwk_common::singlesig_desc(&self.inner, script_variant, blinding_variant)?;
-
+    pub fn singlesig_desc(
+        &self,
+        script_variant: Singlesig,
+        blinding_variant: DescriptorBlindingKey,
+    ) -> Result<Arc<WolletDescriptor>, LwkError> {
+        let desc_str = lwk_common::singlesig_desc(
+            &self.inner,
+            script_variant.into(),
+            blinding_variant.into(),
+        )?;
         WolletDescriptor::new(&desc_str)
     }
 

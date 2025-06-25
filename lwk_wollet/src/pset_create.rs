@@ -169,7 +169,7 @@ impl Wollet {
             pset.add_asset_metadata(asset, &AssetMetadata::new(contract, issuance_prevout));
             // TODO: handle blinded issuance
             let issuance_blinded = false;
-            pset.add_token_metadata(token, &TokenMetadata::new(token, issuance_blinded));
+            pset.add_token_metadata(token, &TokenMetadata::new(asset, issuance_blinded));
         }
 
         Ok((asset, token))

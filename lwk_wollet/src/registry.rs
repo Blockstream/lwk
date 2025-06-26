@@ -547,17 +547,21 @@ mod tests {
         assert!(asset_ids(&tx.input[0], &contract).is_err());
     }
 
-    #[tokio::test]
-    async fn test_registry_cache_hardcoded() {
+    #[test]
+    fn test_registry_cache_hardcoded() {
         let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
-        let cache = RegistryCache::new(registry, &[], 1).await;
+        let cache = RegistryCache::new_hardcoded(registry);
         // policy assets of regtest(default)/testnet/mainnet network are hard coded
         let regtest_asset_id = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).unwrap();
         let testnet_asset_id = AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).unwrap();
         let mainnet_asset_id = AssetId::from_str(LIQUID_POLICY_ASSET_STR).unwrap();
+        let usdt_asset_id =
+            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+                .unwrap();
         assert!(cache.get(regtest_asset_id).is_some());
         assert!(cache.get(testnet_asset_id).is_some());
         assert!(cache.get(mainnet_asset_id).is_some());
+        assert!(cache.get(usdt_asset_id).is_some());
     }
 
     #[ignore = "require internet connection"]

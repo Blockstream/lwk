@@ -115,10 +115,21 @@ pub struct RegistryCache {
     cache: HashMap<AssetId, RegistryData>,
 }
 
+fn init_cache() -> HashMap<AssetId, RegistryData> {
+    let mut cache = HashMap::new();
+    cache.extend([lbtc(), tlbtc(), rlbtc()]);
+    cache
+}
+
 impl RegistryCache {
+    pub fn new_hardcoded(registry: Registry) -> Self {
+        Self {
+            inner: registry,
+            cache: init_cache(),
+        }
+    }
     pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
-        let mut cache = HashMap::new();
-        cache.extend([lbtc(), tlbtc(), rlbtc()]);
+        let mut cache = init_cache();
         let keys = cache.keys().cloned().collect::<Vec<_>>();
 
         let registry_clone = registry.clone();

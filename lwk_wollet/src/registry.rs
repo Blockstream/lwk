@@ -117,7 +117,7 @@ pub struct RegistryCache {
 
 fn init_cache() -> HashMap<AssetId, RegistryData> {
     let mut cache = HashMap::new();
-    cache.extend([lbtc(), tlbtc(), rlbtc()]);
+    cache.extend([lbtc(), tlbtc(), rlbtc(), usdt()]);
     cache
 }
 
@@ -328,13 +328,13 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     Ok(ContractHash::from_raw_hash(hash))
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct TxIn {
     pub txid: Txid,
     pub vin: u32,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct RegistryData {
     pub contract: Contract,
     pub issuance_txin: TxIn,
@@ -419,6 +419,33 @@ fn rlbtc() -> (AssetId, RegistryData) {
     (asset_id, data)
 }
 
+fn usdt() -> (AssetId, RegistryData) {
+    let asset_id =
+        AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+            .expect("static");
+    let data = RegistryData {
+        contract: Contract {
+            entity: Entity::Domain("tether.to".to_string()),
+            issuer_pubkey: vec![
+                3, 55, 204, 238, 192, 190, 234, 2, 50, 235, 225, 76, 186, 1, 151, 169, 251, 212,
+                95, 207, 46, 201, 70, 116, 157, 233, 32, 231, 20, 52, 194, 185, 4,
+            ],
+            name: "Tether USD".to_string(),
+            precision: 8,
+            ticker: "USDt".to_string(),
+            version: 0,
+        },
+        issuance_txin: TxIn {
+            txid: Txid::from_str(
+                "abb4080d91849e933ee2ed65da6b436f7c385cf363fb4aa08399f1e27c58ff3d",
+            )
+            .expect("static"),
+            vin: 0,
+        },
+    };
+    (asset_id, data)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,6 +467,10 @@ mod tests {
         let registry = blocking::Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
         let registry_data = registry.fetch(tether_asset_id).unwrap();
         assert_eq!(registry_data.contract.ticker, "USDt");
+
+        let hard_coded_usdt = usdt();
+        assert_eq!(hard_coded_usdt.0, tether_asset_id);
+        assert_eq!(hard_coded_usdt.1, registry_data);
     }
 
     #[test]

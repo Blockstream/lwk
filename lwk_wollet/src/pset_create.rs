@@ -239,7 +239,10 @@ pub(crate) fn validate_address(address: &str, network: ElementsNetwork) -> Resul
 
 #[cfg(test)]
 mod test {
-    use crate::{pset_create::validate_address, ElementsNetwork};
+    use crate::{pset_create::validate_address, ElementsNetwork, Update, WolletDescriptor};
+
+    use super::*;
+    use crate::NoPersist;
 
     #[test]
     fn test_validate() {
@@ -250,5 +253,43 @@ mod test {
 
         let network = ElementsNetwork::Liquid;
         assert!(validate_address(testnet_address, network).is_err())
+    }
+
+    #[test]
+    fn test_add_input_exceeds_limit() {
+        let wollet = test_wollet_with_many_transactions();
+
+        let mut pset = PartiallySignedTransaction::default();
+        let mut inp_txout_sec = HashMap::new();
+        let mut inp_weight = 0usize;
+        let dummy_utxo = wollet.utxos().unwrap()[0].clone();
+        for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+            let res = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+            assert!(res.is_ok());
+        }
+        let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+
+        match result {
+            Err(Error::TooManyInputs(count)) => {
+                assert_eq!(count, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS);
+            }
+            _ => panic!("Expected TooManyInputs error"),
+        }
+    }
+
+    // duplicated from tests/test_wollet.rs
+    pub fn test_wollet_with_many_transactions() -> Wollet {
+        let update = lwk_test_util::update_test_vector_many_transactions();
+        let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
+        let descriptor: WolletDescriptor = descriptor.parse().unwrap();
+        let update = Update::deserialize(&update).unwrap();
+        let mut wollet = Wollet::new(
+            ElementsNetwork::LiquidTestnet,
+            std::sync::Arc::new(NoPersist {}),
+            descriptor,
+        )
+        .unwrap();
+        wollet.apply_update(update).unwrap();
+        wollet
     }
 }

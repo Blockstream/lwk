@@ -5,16 +5,16 @@ use crate::{types::AssetId, Address, Txid};
 /// Represent a test environment with an elements node and an electrum server.
 /// useful for testing only, wrapper over [`lwk_test_util::TestElectrumServer`]
 #[derive(uniffi::Object)]
-pub struct TestEnv {
+pub struct LwkTestEnv {
     inner: lwk_test_util::TestElectrumServer,
 }
 
 #[uniffi::export]
-impl TestEnv {
+impl LwkTestEnv {
     #[allow(clippy::new_without_default)]
     #[uniffi::constructor]
-    pub fn new() -> TestEnv {
-        TestEnv {
+    pub fn new() -> LwkTestEnv {
+        LwkTestEnv {
             inner: lwk_test_util::setup_with_esplora(),
         }
     }

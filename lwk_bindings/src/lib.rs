@@ -52,7 +52,7 @@ pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use precision::Precision;
 pub use pset::{Pset, PsetInput};
 pub use pset_details::{Issuance, PsetDetails};
-pub use test_env::TestEnv;
+pub use test_env::LwkTestEnv;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
 

@@ -1,7 +1,7 @@
 from lwk import *
 
 # Start nodes
-node = TestEnv()
+node = LwkTestEnv()
 
 network = Network.regtest_default()
 policy_asset = network.policy_asset()

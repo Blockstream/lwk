@@ -1,6 +1,6 @@
 from lwk import *
 
-t = TestEnv() # launch electrs and elementsd
+t = LwkTestEnv() # launch electrs and elementsd
 
 assert(t.height() == 101)
 

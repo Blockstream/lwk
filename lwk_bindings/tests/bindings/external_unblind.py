@@ -1,7 +1,7 @@
 from lwk import *
 
 # Start nodes
-node = TestEnv()
+node = LwkTestEnv()
 
 # Create wallet
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")

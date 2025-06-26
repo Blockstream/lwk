@@ -1,6 +1,6 @@
 from lwk import *
 
-node = TestEnv() # launch electrs and elementsd
+node = LwkTestEnv() # launch electrs and elementsd
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.regtest_default()

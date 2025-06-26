@@ -1,6 +1,6 @@
 from lwk import *
 
-node = TestEnv() # launch electrs and elementsd
+node = LwkTestEnv() # launch electrs and elementsd
 
 # (maker) Create a new wallet with LBTC
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")

@@ -8,7 +8,7 @@ use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::registry::Contract;
 use crate::wollet::Wollet;
-use crate::ElementsNetwork;
+use crate::{ElementsNetwork, EC};
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -113,21 +113,21 @@ impl Wollet {
 
         // Needed by ledger
         let mut rng = rand::thread_rng();
-        let secp = elements::secp256k1_zkp::Secp256k1::new();
+        let secp = &EC;
         use elements::secp256k1_zkp::{RangeProof, SurjectionProof};
         use elements::{BlindAssetProofs, BlindValueProofs};
 
         input.asset = Some(utxo.unblinded.asset);
         input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
             &mut rng,
-            &secp,
+            secp,
             utxo.unblinded.asset,
             utxo.unblinded.asset_bf,
         )?));
         input.amount = Some(utxo.unblinded.value);
         input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
             &mut rng,
-            &secp,
+            secp,
             utxo.unblinded.value,
             value_comm,
             asset_gen,

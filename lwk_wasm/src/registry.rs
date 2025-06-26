@@ -106,6 +106,13 @@ impl Registry {
         Ok(cache.into())
     }
 
+    #[wasm_bindgen(js_name = defaultHardcodedForNetwork)]
+    pub fn default_hardcoded_for_network(network: &Network) -> Result<Self, Error> {
+        let registry = lwk_wollet::registry::Registry::default_for_network(network.into())?;
+        let cache = RegistryCache::new_hardcoded(registry);
+        Ok(cache.into())
+    }
+
     #[wasm_bindgen(js_name = fetchWithTx)]
     pub async fn fetch_with_tx(
         &self,

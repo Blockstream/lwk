@@ -13,6 +13,8 @@ use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
+
 #[derive(Debug, Serialize, Deserialize)]
 // We make issuance and reissuance are mutually exclusive for simplicity
 pub enum IssuanceRequest {
@@ -74,6 +76,10 @@ impl Wollet {
         inp_weight: &mut usize,
         utxo: &WalletTxOut,
     ) -> Result<usize, Error> {
+        if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+            return Err(Error::TooManyInputs(pset.inputs().len()));
+        }
+
         let mut input = Input::from_prevout(utxo.outpoint);
         let mut txout = self.get_txout(&utxo.outpoint)?;
         let (Some(value_comm), Some(asset_gen)) =

@@ -148,4 +148,12 @@ impl RegistryData {
     pub fn ticker(&self) -> String {
         self.inner.ticker().to_string()
     }
+
+    pub fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    pub fn domain(&self) -> String {
+        self.inner.domain().to_string()
+    }
 }

@@ -348,6 +348,16 @@ impl RegistryData {
     pub fn ticker(&self) -> &str {
         &self.contract.ticker
     }
+
+    pub fn name(&self) -> &str {
+        &self.contract.name
+    }
+
+    pub fn domain(&self) -> &str {
+        match &self.contract.entity {
+            Entity::Domain(domain) => domain,
+        }
+    }
 }
 
 /// Create a RegistryData mock for Liquid Bitcoin
@@ -579,5 +589,19 @@ mod tests {
         let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
         let cache_2 = RegistryCache::new(registry, &[], 1).await;
         assert!(cache_2.get(asset_id).is_none());
+    }
+
+    #[test]
+    fn test_registry_cache_getters() {
+        let registry = Registry::default_for_network(ElementsNetwork::default_regtest()).unwrap();
+        let cache = RegistryCache::new_hardcoded(registry);
+        let usdt_asset_id =
+            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+                .unwrap();
+        let data = cache.get(usdt_asset_id).unwrap();
+        assert_eq!(data.ticker(), "USDt");
+        assert_eq!(data.precision(), 8);
+        assert_eq!(data.name(), "Tether USD");
+        assert_eq!(data.domain(), "tether.to");
     }
 }

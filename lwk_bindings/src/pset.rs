@@ -163,4 +163,16 @@ mod tests {
         assert!(pset_in.issuance_asset().is_none());
         assert!(pset_in.issuance_token().is_none());
     }
+
+    #[test]
+    fn pset_combine() {
+        let psets = lwk_test_util::psets_to_combine().1;
+        let psets: Vec<Pset> = psets.into_iter().map(Into::into).collect();
+        psets[0].finalize().unwrap_err(); // not enough signatures
+
+        let pset01 = psets[0].combine(&psets[1]).unwrap();
+        pset01.finalize().unwrap_err(); // not enough signatures
+        let pset012 = pset01.combine(&psets[2]).unwrap();
+        pset012.finalize().unwrap(); // enough signatures
+    }
 }

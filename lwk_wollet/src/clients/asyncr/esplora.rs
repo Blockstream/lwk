@@ -571,12 +571,15 @@ impl EsploraClient {
         let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
-        let mut stream = iter(txs_to_download.iter().cloned())
+        let download_stream = iter(txs_to_download.iter().cloned())
             .map(|txid| async move {
                 let tx = self.get_transaction(txid).await?;
                 Ok::<(Txid, elements::Transaction), Error>((txid, tx))
             })
             .buffer_unordered(self.concurrency);
+        let local_stream =
+            iter(store.cache.all_txs.iter()).map(|(txid, tx)| Ok((*txid, tx.clone())));
+        let mut stream = download_stream.chain(local_stream);
 
         while let Some(result) = stream.next().await {
             match result {

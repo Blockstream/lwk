@@ -725,9 +725,6 @@ impl TxBuilder {
 
         // Assets inputs and outputs
         let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
-        if !assets.is_empty() && self.selected_utxos.is_some() {
-            return Err(Error::ManualCoinSelectionOnlyLbtc);
-        }
         for asset in assets {
             let mut satoshi_out = 0;
             let mut satoshi_in = 0;
@@ -745,13 +742,25 @@ impl TxBuilder {
                 satoshi_in += utxo.unblinded.value;
             }
 
-            // Add more asset utxos
-            if satoshi_in < satoshi_out {
-                for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
+            if let Some(ref coins) = self.selected_utxos {
+                // Add only selected asset utxos
+                for coin in coins {
+                    let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
+                    if utxo.unblinded.asset != asset {
+                        continue;
+                    }
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;
-                    if satoshi_in >= satoshi_out {
-                        break;
+                }
+            } else {
+                // Add more asset utxos until we cover the amount to send
+                if satoshi_in < satoshi_out {
+                    for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
+                        wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
+                        satoshi_in += utxo.unblinded.value;
+                        if satoshi_in >= satoshi_out {
+                            break;
+                        }
                     }
                 }
             }
@@ -797,7 +806,7 @@ impl TxBuilder {
                 for coin in coins {
                     let utxo = utxos.get(&coin).ok_or(Error::MissingWalletUtxo(coin))?;
                     if utxo.unblinded.asset != policy_asset {
-                        return Err(Error::ManualCoinSelectionOnlyLbtc);
+                        continue;
                     }
                     wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;

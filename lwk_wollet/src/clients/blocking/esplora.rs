@@ -41,6 +41,13 @@ impl EsploraClient {
         })
     }
 
+    pub fn new_with_builder(builder: asyncr::EsploraClientBuilder) -> Result<Self, Error> {
+        Ok(Self {
+            rt: Runtime::new()?,
+            client: builder.build(),
+        })
+    }
+
     /// Do not encrypt the descriptor when using the "waterfalls" endpoint
     pub fn waterfalls_avoid_encryption(&mut self) {
         self.client.waterfalls_avoid_encryption = true;

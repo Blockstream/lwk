@@ -58,6 +58,14 @@ impl Pset {
         Ok(pset.into())
     }
 
+    /// Get the unique id of the PSET as defined by [BIP-370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#unique-identification)
+    ///
+    /// The unique id is the txid of the PSET with sequence numbers of inputs set to 0
+    pub fn unique_id(&self) -> Result<Txid, LwkError> {
+        let txid = self.inner.unique_id()?;
+        Ok(txid.into())
+    }
+
     pub fn inputs(&self) -> Vec<Arc<PsetInput>> {
         self.inner
             .inputs()
@@ -174,5 +182,19 @@ mod tests {
         pset01.finalize().unwrap_err(); // not enough signatures
         let pset012 = pset01.combine(&psets[2]).unwrap();
         pset012.finalize().unwrap(); // enough signatures
+    }
+
+    #[test]
+    fn pset_unique_id() {
+        let psets = lwk_test_util::psets_to_combine().1;
+        let psets: Vec<Pset> = psets.into_iter().map(Into::into).collect();
+
+        let unique_id = psets[0].unique_id().unwrap();
+        for pset in psets.iter().skip(1) {
+            assert_eq!(unique_id, pset.unique_id().unwrap());
+
+            // sequence number is 0xffffffff, unique id set it to 0 before computing the hash, so txid is different
+            assert_ne!(unique_id, *pset.extract_tx().unwrap().txid());
+        }
     }
 }

@@ -47,7 +47,11 @@ impl WolletDescriptor {
     }
 
     /// Derive a scriptpubkey
-    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Arc<Script>, LwkError> {
+    pub fn script_pubkey(
+        &self,
+        ext_int: Chain,
+        index: Option<u32>,
+    ) -> Result<Arc<Script>, LwkError> {
         self.inner
             .script_pubkey(ext_int.into(), index)
             .map_err(Into::into)
@@ -86,12 +90,16 @@ mod tests {
         assert!(!desc.is_mainnet());
 
         assert_eq!(
-            desc.script_pubkey(Chain::External, 0).unwrap().to_string(),
+            desc.script_pubkey(Chain::External, Some(0))
+                .unwrap()
+                .to_string(),
             "0014d0c4a3ef09e997b6e99e397e518fe3e41a118ca1"
         );
 
         assert_eq!(
-            desc.script_pubkey(Chain::Internal, 0).unwrap().to_string(),
+            desc.script_pubkey(Chain::Internal, Some(0))
+                .unwrap()
+                .to_string(),
             "00142f34aa1cf00a53b055a291a03a7d45f0a6988b52"
         );
     }

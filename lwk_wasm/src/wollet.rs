@@ -53,7 +53,7 @@ impl Wollet {
         let definite_desc = self
             .inner
             .wollet_descriptor()
-            .definite_descriptor(lwk_wollet::Chain::External, index)?;
+            .definite_descriptor(lwk_wollet::Chain::External, Some(index))?;
         let mut full_path: Vec<u32> = vec![];
         definite_desc.for_each_key(|k| {
             if let Some(path) = k.full_derivation_path() {

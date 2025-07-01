@@ -178,7 +178,7 @@ impl WolletDescriptor {
 
         // Use the Elements network address parameters
         let params = network.address_params();
-        let address = self.address(index, params)?;
+        let address = self.address(Some(index), params)?;
         let address_str = address.to_string();
         let hash = elements::hashes::sha256::Hash::hash(address_str.as_bytes());
         let hash_hex = hash.to_string();
@@ -264,7 +264,7 @@ impl WolletDescriptor {
 
     pub fn change(
         &self,
-        index: u32,
+        index: Option<u32>,
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
         self.inner_address(index, params, Chain::Internal)
@@ -278,18 +278,44 @@ impl WolletDescriptor {
 
     pub fn address(
         &self,
-        index: u32,
+        index: Option<u32>,
         params: &'static AddressParams,
     ) -> Result<Address, crate::error::Error> {
         self.inner_address(index, params, Chain::External)
     }
 
-    pub(crate) fn inner_address(
+    /// Here we validate the provided presence or absence of an index in comparison to the presence or absence of a wildcard
+    /// at_derivation_index always expect an index even if there is no wildcard, and we return 0 for that case.
+    fn validate_index(&self, index: Option<u32>) -> Result<u32, crate::error::Error> {
+        let has_wildcard = self.0.descriptor.has_wildcard();
+        if has_wildcard && index.is_none() {
+            return Err(crate::error::Error::WildcardWithoutIndex);
+        } else if !has_wildcard && index.is_some() {
+            return Err(crate::error::Error::IndexWithoutWildcard);
+        };
+        Ok(index.unwrap_or(0))
+    }
+
+    pub(crate) fn max_weight_to_satisfy(&self) -> Result<usize, crate::error::Error> {
+        let has_wildcard = self.0.descriptor.has_wildcard();
+        let index = if has_wildcard { Some(0) } else { None };
+
+        Ok(self
+            .definite_descriptor(Chain::External, index)?
+            .max_weight_to_satisfy()?)
+    }
+    pub(crate) fn has_wildcard(&self) -> bool {
+        self.0.descriptor.has_wildcard()
+    }
+
+    fn inner_address(
         &self,
-        index: u32,
+        index: Option<u32>,
         params: &'static AddressParams,
         ext_int: Chain,
     ) -> Result<Address, crate::error::Error> {
+        let index = self.validate_index(index)?;
+
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .0
@@ -298,7 +324,12 @@ impl WolletDescriptor {
     }
 
     /// Get a scriptpubkey
-    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, crate::error::Error> {
+    pub fn script_pubkey(
+        &self,
+        ext_int: Chain,
+        index: Option<u32>,
+    ) -> Result<Script, crate::error::Error> {
+        let index = self.validate_index(index)?;
         let v = self.0.descriptor.clone().into_single_descriptors()?;
         let d = match ext_int {
             Chain::External => v.first().expect("at least on descriptor"),
@@ -311,8 +342,9 @@ impl WolletDescriptor {
     pub fn definite_descriptor(
         &self,
         ext_int: Chain,
-        index: u32,
+        index: Option<u32>,
     ) -> Result<Descriptor<DefiniteDescriptorKey>, crate::Error> {
+        let index = self.validate_index(index)?;
         let desc = self.inner_descriptor_if_available(ext_int);
         Ok(desc.descriptor().at_derivation_index(index)?)
     }
@@ -321,8 +353,9 @@ impl WolletDescriptor {
     pub(crate) fn ct_definite_descriptor(
         &self,
         ext_int: Chain,
-        index: u32,
+        index: Option<u32>,
     ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, crate::Error> {
+        let index = self.validate_index(index)?;
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .0
@@ -357,7 +390,7 @@ impl WolletDescriptor {
         fed_desc: BtcDescriptor<bitcoin::PublicKey>,
     ) -> Result<bitcoin::Address, crate::error::Error> {
         let our_desc = self
-            .definite_descriptor(Chain::External, index)?
+            .definite_descriptor(Chain::External, Some(index))?
             .derived_descriptor(&EC)?;
         let pegin = elements_miniscript::descriptor::pegin::Pegin::new(fed_desc, our_desc);
         let pegin_script = pegin.bitcoin_witness_script(&EC)?;
@@ -645,12 +678,12 @@ mod test {
         let d = WolletDescriptor::from_str(&d).unwrap();
         let params = &elements::AddressParams::ELEMENTS;
 
-        let a = d.address(1, params).unwrap().script_pubkey();
-        let s = d.script_pubkey(Chain::External, 1).unwrap();
+        let a = d.address(Some(1), params).unwrap().script_pubkey();
+        let s = d.script_pubkey(Chain::External, Some(1)).unwrap();
         assert_eq!(a, s);
 
-        let a = d.change(2, params).unwrap().script_pubkey();
-        let s = d.script_pubkey(Chain::Internal, 2).unwrap();
+        let a = d.change(Some(2), params).unwrap().script_pubkey();
+        let s = d.script_pubkey(Chain::Internal, Some(2)).unwrap();
         assert_eq!(a, s);
     }
 

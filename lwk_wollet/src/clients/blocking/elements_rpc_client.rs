@@ -99,10 +99,10 @@ impl ElementsRpcClient {
         let mut spk_map = HashMap::new();
         let mut address_map = HashMap::new();
         for i in 0..range {
-            let address = desc.address(i, params)?;
+            let address = desc.address(Some(i), params)?;
             let spk_ext = address.script_pubkey();
             address_map.insert(spk_ext.clone(), address);
-            let change = desc.change(i, params)?;
+            let change = desc.change(Some(i), params)?;
             let spk_int = change.script_pubkey();
             address_map.insert(spk_int.clone(), change);
             spk_map.insert(spk_ext, (Chain::External, i));

@@ -233,9 +233,7 @@ impl Wollet {
         let config = Config::new(network)?;
 
         let store = Store::default();
-        let max_weight_to_satisfy = descriptor
-            .definite_descriptor(Chain::External, 0)?
-            .max_weight_to_satisfy()?;
+        let max_weight_to_satisfy = descriptor.max_weight_to_satisfy()?;
         let mut wollet = Wollet {
             store,
             config,
@@ -351,7 +349,7 @@ impl Wollet {
         let address = self
             .descriptor
             .address(index, self.config.address_params())?;
-        Ok(AddressResult::new(address, index))
+        Ok(AddressResult::new(address, index.unwrap_or(0))) // TODO
     }
 
     /// Get a wallet pegin address
@@ -366,7 +364,7 @@ impl Wollet {
         index: Option<u32>,
         fed_desc: BtcDescriptor<bitcoin::PublicKey>,
     ) -> Result<BitcoinAddressResult, Error> {
-        let index = self.unwrap_or_last_unused(index);
+        let index = self.unwrap_or_last_unused(index).expect("TODO");
         let network = match self.network() {
             ElementsNetwork::Liquid => bitcoin::Network::Bitcoin,
             ElementsNetwork::LiquidTestnet => bitcoin::Network::Testnet,
@@ -379,14 +377,18 @@ impl Wollet {
 
     /// Returns the given `index` unwrapped if Some, otherwise
     /// takes the last unused external index of the wallet
-    fn unwrap_or_last_unused(&self, index: Option<u32>) -> u32 {
+    fn unwrap_or_last_unused(&self, index: Option<u32>) -> Option<u32> {
+        if !self.descriptor.has_wildcard() {
+            return None;
+        }
         match index {
-            Some(i) => i,
-            None => self
-                .store
-                .cache
-                .last_unused_external
-                .load(atomic::Ordering::Relaxed),
+            Some(i) => Some(i),
+            None => Some(
+                self.store
+                    .cache
+                    .last_unused_external
+                    .load(atomic::Ordering::Relaxed),
+            ),
         }
     }
 
@@ -409,7 +411,7 @@ impl Wollet {
 
         let address = self
             .descriptor
-            .change(index, self.config.address_params())?;
+            .change(Some(index), self.config.address_params())?;
         Ok(AddressResult::new(address, index))
     }
 
@@ -745,7 +747,8 @@ impl Wollet {
         script_pubkey: &Script,
     ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
         let (ext_int, utxo_index) = self.index(script_pubkey)?;
-        self.descriptor.definite_descriptor(ext_int, utxo_index)
+        self.descriptor
+            .definite_descriptor(ext_int, Some(utxo_index))
     }
 
     /// Add the PSET details with respect to the wallet

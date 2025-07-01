@@ -192,7 +192,9 @@ mod tests {
         );
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
         let desc: WolletDescriptor = desc.try_into().unwrap();
-        let addr1 = desc.address(0, &AddressParams::LIQUID_TESTNET).unwrap();
+        let addr1 = desc
+            .address(Some(0), &AddressParams::LIQUID_TESTNET)
+            .unwrap();
 
         let store = Store::default();
 

@@ -159,9 +159,6 @@ pub enum Error {
     #[error("Invalid issuer pubkey")]
     InvalidIssuerPubkey,
 
-    #[error("Descriptor without wildcard not supported")]
-    UnsupportedDescriptorWithoutWildcard,
-
     #[error(
         "Multipath descriptor must have only the external/internal multipath (eg '.../<0;1>/*')"
     )]
@@ -230,6 +227,12 @@ pub enum Error {
 
     #[error("Number of transaction inputs ({0}) exceeds maximum allowed input count of 256")]
     TooManyInputs(usize),
+
+    #[error("The used descriptor has a wildcard but no index was provided")]
+    WildcardWithoutIndex,
+
+    #[error("The used descriptor does not have a wildcard but an index was provided")]
+    IndexWithoutWildcard,
 }
 
 // cannot derive automatically with this error because of trait bound

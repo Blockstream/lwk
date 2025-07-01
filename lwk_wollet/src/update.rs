@@ -273,7 +273,8 @@ fn compute_blinding_pubkey_if_missing(
         let blinding_pubkey = match maybe_blinding_pubkey {
             Some(pubkey) => pubkey,
             None => {
-                let desc = wollet_descriptor.ct_definite_descriptor(chain, child_number.into())?;
+                let desc =
+                    wollet_descriptor.ct_definite_descriptor(chain, Some(child_number.into()))?;
                 // TODO: derive the blinding pubkey from the descriptor blinding key and scriptpubkey
                 //       (needs function in elements-miniscript)
 

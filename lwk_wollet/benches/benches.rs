@@ -49,7 +49,7 @@ pub fn address(c: &mut Criterion) {
 
             b.iter(|| {
                 let address = d
-                    .address(0, ElementsNetwork::LiquidTestnet.address_params())
+                    .address(Some(0), ElementsNetwork::LiquidTestnet.address_params())
                     .unwrap();
                 black_box(address);
             });

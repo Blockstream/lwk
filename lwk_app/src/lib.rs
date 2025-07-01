@@ -433,7 +433,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let addr = wollet.address(r.index)?;
             let definite_desc = wollet
                 .wollet_descriptor()
-                .definite_descriptor(lwk_wollet::Chain::External, addr.index())?;
+                .definite_descriptor(lwk_wollet::Chain::External, Some(addr.index()))?;
 
             let text_qr = r
                 .with_text_qr

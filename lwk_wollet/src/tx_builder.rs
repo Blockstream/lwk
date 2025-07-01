@@ -715,6 +715,8 @@ impl TxBuilder {
 
         let mut inp_weight = 0;
 
+        let utxos = wollet.utxos_map()?;
+
         let policy_asset = self.network().policy_asset();
         let (addressees_lbtc, addressees_asset): (Vec<_>, Vec<_>) = self
             .recipients
@@ -745,8 +747,8 @@ impl TxBuilder {
 
             // Add more asset utxos
             if satoshi_in < satoshi_out {
-                for utxo in wollet.asset_utxos(&asset)? {
-                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+                for utxo in utxos.values().filter(|u| u.unblinded.asset == asset) {
+                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;
                     if satoshi_in >= satoshi_out {
                         break;
@@ -792,8 +794,6 @@ impl TxBuilder {
 
         match self.selected_utxos {
             Some(coins) => {
-                let utxos = wollet.utxos_map()?;
-
                 for coin in coins {
                     let utxo = utxos.get(&coin).ok_or(Error::MissingWalletUtxo(coin))?;
                     if utxo.unblinded.asset != policy_asset {
@@ -805,8 +805,8 @@ impl TxBuilder {
             }
             None => {
                 // FIXME: For implementation simplicity now we always add all L-BTC inputs
-                for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
-                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+                for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
+                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                     satoshi_in += utxo.unblinded.value;
                 }
             }
@@ -868,7 +868,10 @@ impl TxBuilder {
                         Some((idx, u)) => (*idx, u.asset_bf),
                         None => {
                             // Add an input sending the token,
-                            let utxos_token = wollet.asset_utxos(&token)?;
+                            let utxos_token: Vec<_> = utxos
+                                .values()
+                                .filter(|u| u.unblinded.asset == token)
+                                .collect();
                             let utxo_token =
                                 utxos_token
                                     .first()

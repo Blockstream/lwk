@@ -128,26 +128,29 @@ impl EsploraClient {
         heights: &[Height],
         height_blockhash: &HashMap<Height, BlockHash>,
     ) -> Result<Vec<elements::BlockHeader>, Error> {
-        let mut result = vec![];
-        for height in heights.iter() {
-            let block_hash = match height_blockhash.get(height) {
-                Some(block_hash) => *block_hash,
-                None => {
-                    let block_height = format!("{}/block-height/{}", self.base_url, height);
-                    let response = get_with_retry(&self.client, &block_height).await?;
-                    BlockHash::from_str(&response.text().await?)?
-                }
-            };
+        let stream = iter(heights.iter().cloned())
+            .map(|height| async move {
+                let block_hash = match height_blockhash.get(&height) {
+                    Some(block_hash) => *block_hash,
+                    None => {
+                        let block_height = format!("{}/block-height/{}", self.base_url, height);
+                        let response = get_with_retry(&self.client, &block_height).await?;
+                        BlockHash::from_str(&response.text().await?)?
+                    }
+                };
 
-            let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-            let response = get_with_retry(&self.client, &block_header).await?;
-            let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
+                let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
+                let response = get_with_retry(&self.client, &block_header).await?;
+                let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
 
-            let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
+                let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
 
-            result.push(header);
-        }
-        Ok(result)
+                Ok::<elements::BlockHeader, Error>(header)
+            })
+            .buffered(self.concurrency);
+
+        let results: Vec<Result<elements::BlockHeader, Error>> = stream.collect().await;
+        results.into_iter().collect()
     }
 
     // examples:

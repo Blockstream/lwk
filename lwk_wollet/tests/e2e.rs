@@ -17,7 +17,7 @@ use lwk_test_util::*;
 use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
-use test_wollet::{generate_signer, test_client_electrum, TestWollet};
+use test_wollet::{generate_signer, test_client_electrum, wait_for_tx, TestWollet};
 
 #[test]
 fn liquid_send_jade_signer() {
@@ -2883,4 +2883,100 @@ fn test_non_std_legacy_multisig() {
     assert_eq!(recv_wallet.balance(&asset), 10_000);
     assert!(recv_wallet.balance_btc() > 0);
     assert_eq!(wallet.balance_btc(), 0);
+}
+
+#[test]
+fn test_sync_high_index() {
+    // TODO: extend to test also with Esplora and Electrum
+    // This test was reported as a waterfalls issue, but it actually affects also the other clients
+    // (tested locally) ideally we should extend this test to also be run for the other clients.
+    let network = ElementsNetwork::default_regtest();
+
+    // Start Waterfalls
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let mut client =
+        clients::blocking::EsploraClient::new_waterfalls(test_env.base_url(), network).unwrap();
+
+    // Signer
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+
+    // Descriptor 1
+    let d1 = format!("ct(slip77({}),elwsh(pkh({}/*)))", slip77_key, xpub);
+    let d1: WolletDescriptor = d1.parse().unwrap();
+
+    // Descriptor 2
+    let d2 = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let d2: WolletDescriptor = d2.parse().unwrap();
+
+    // Wallet 1: receives from node, sends 2 outputs to w2 in the same tx
+    let mut w1 = Wollet::without_persist(network, d1.clone()).unwrap();
+    // Wallet 2: generates 2 addresses and receive
+    let mut w2 = Wollet::without_persist(network, d2.clone()).unwrap();
+    // Wallet 3: syncs with low index first, has not generated the high index address
+    let mut w3 = Wollet::without_persist(network, d2.clone()).unwrap();
+
+    // w1 receive funds from node
+    let addr = w1.address(None).unwrap();
+
+    let txid = test_env.send_to(addr.address(), 10000);
+    wait_for_tx(&mut w1, &mut client, &txid);
+
+    // w1 sends to w2 on 2 addresses
+    let addr0 = w2.address(Some(0)).unwrap();
+    let addr50 = w2.address(Some(50)).unwrap();
+
+    let mut pset = w1
+        .tx_builder()
+        .add_lbtc_recipient(addr0.address(), 10)
+        .unwrap()
+        .add_lbtc_recipient(addr50.address(), 50)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = w1.finalize(&mut pset).unwrap();
+    let txid = client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut w1, &mut client, &txid);
+
+    // w3 scans with low index (0)
+    let update = client.full_scan_to_index(&w3, 0).unwrap();
+    if let Some(update) = update {
+        w3.apply_update(update).unwrap();
+    }
+
+    // w3 only sees the first unblinded output (expected)
+    let txs = w3.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    assert_eq!(1, txs[0].outputs.iter().filter(|o| o.is_some()).count());
+
+    // w3 scans again with a higher index
+    let update = client.full_scan_to_index(&w3, 100).unwrap();
+    if let Some(update) = update {
+        w3.apply_update(update).unwrap();
+    }
+
+    // w3 only sees the first unblinded output (unexpected!)
+    let txs = w3.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    assert_eq!(1, txs[0].outputs.iter().filter(|o| o.is_some()).count());
+
+    // w2 scans with a high index (note that it hasn't scanned with a low index before)
+    let update = client.full_scan_to_index(&w2, 100).unwrap();
+    if let Some(update) = update {
+        w2.apply_update(update).unwrap();
+    }
+
+    // w2 sees both outputs unblinded
+    let txs = w2.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    assert_eq!(2, txs[0].outputs.iter().filter(|o| o.is_some()).count());
+
+    rt.block_on(test_env.shutdown());
 }

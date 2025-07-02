@@ -723,6 +723,15 @@ impl TxBuilder {
             .into_iter()
             .partition(|a| a.asset == policy_asset);
 
+        // Get selected utxos (manual coin selection)
+        let mut selected_utxos = vec![];
+        if let Some(ref coins) = self.selected_utxos {
+            for coin in coins {
+                let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
+                selected_utxos.push(utxo);
+            }
+        }
+
         // Assets that belongs to this transaction
         // all the ones with a recipient
         let mut assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
@@ -730,11 +739,8 @@ impl TxBuilder {
         for utxo in &self.external_utxos {
             assets.insert(utxo.unblinded.asset);
         }
-        if let Some(ref coins) = self.selected_utxos {
-            for coin in coins {
-                let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
-                assets.insert(utxo.unblinded.asset);
-            }
+        for utxo in &selected_utxos {
+            assets.insert(utxo.unblinded.asset);
         }
         // Policy asset is handled separately below
         assets.remove(&policy_asset);
@@ -756,10 +762,9 @@ impl TxBuilder {
                 satoshi_in += utxo.unblinded.value;
             }
 
-            if let Some(ref coins) = self.selected_utxos {
+            if self.selected_utxos.is_some() {
                 // Add only selected asset utxos
-                for coin in coins {
-                    let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
+                for utxo in &selected_utxos {
                     if utxo.unblinded.asset != asset {
                         continue;
                     }
@@ -815,23 +820,19 @@ impl TxBuilder {
             satoshi_in += utxo.unblinded.value;
         }
 
-        match self.selected_utxos {
-            Some(coins) => {
-                for coin in coins {
-                    let utxo = utxos.get(&coin).ok_or(Error::MissingWalletUtxo(coin))?;
-                    if utxo.unblinded.asset != policy_asset {
-                        continue;
-                    }
-                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
-                    satoshi_in += utxo.unblinded.value;
+        if self.selected_utxos.is_some() {
+            for utxo in &selected_utxos {
+                if utxo.unblinded.asset != policy_asset {
+                    continue;
                 }
+                wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
+                satoshi_in += utxo.unblinded.value;
             }
-            None => {
-                // FIXME: For implementation simplicity now we always add all L-BTC inputs
-                for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
-                    wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
-                    satoshi_in += utxo.unblinded.value;
-                }
+        } else {
+            // FIXME: For implementation simplicity now we always add all L-BTC inputs
+            for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
+                wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
+                satoshi_in += utxo.unblinded.value;
             }
         }
 

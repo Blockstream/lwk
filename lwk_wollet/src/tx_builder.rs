@@ -280,6 +280,7 @@ impl TxBuilder {
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
+        contract: Option<Contract>,
     ) -> Result<Self, Error> {
         if !matches!(self.issuance_request, IssuanceRequest::None) {
             return Err(Error::IssuanceAlreadySet);
@@ -298,6 +299,7 @@ impl TxBuilder {
             satoshi_to_reissue,
             asset_receiver,
             issuance_tx,
+            contract,
         );
         Ok(self)
     }
@@ -851,7 +853,13 @@ impl TxBuilder {
                     wollet.add_output(&mut pset, &addressee)?;
                 }
             }
-            IssuanceRequest::Reissuance(asset, satoshi_asset, address_asset, issuance_tx) => {
+            IssuanceRequest::Reissuance(
+                asset,
+                satoshi_asset,
+                address_asset,
+                issuance_tx,
+                _contract,
+            ) => {
                 let issuance = if let Some(issuance_tx) = issuance_tx {
                     extract_issuances(&issuance_tx)
                         .iter()
@@ -861,6 +869,7 @@ impl TxBuilder {
                 } else {
                     wollet.issuance(&asset)?
                 };
+
                 let token = issuance.token;
                 // Find or add input for the token
                 let (idx, token_asset_bf) =
@@ -1121,6 +1130,7 @@ impl<'a> WolletTxBuilder<'a> {
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
+        contract: Option<Contract>,
     ) -> Result<Self, Error> {
         Ok(Self {
             wollet: self.wollet,
@@ -1129,6 +1139,7 @@ impl<'a> WolletTxBuilder<'a> {
                 satoshi_to_reissue,
                 asset_receiver,
                 issuance_tx,
+                contract,
             )?,
         })
     }

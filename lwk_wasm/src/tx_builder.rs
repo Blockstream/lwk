@@ -134,6 +134,7 @@ impl TxBuilder {
         satoshi_to_reissue: u64,
         asset_receiver: Option<Address>,
         issuance_tx: Option<Transaction>,
+        contract: Option<Contract>,
     ) -> Result<TxBuilder, Error> {
         Ok(self
             .inner
@@ -142,6 +143,7 @@ impl TxBuilder {
                 satoshi_to_reissue,
                 asset_receiver.map(Into::into),
                 issuance_tx.map(Into::into),
+                contract.map(Into::into),
             )?
             .into())
     }

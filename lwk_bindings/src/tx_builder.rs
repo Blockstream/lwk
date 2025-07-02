@@ -139,6 +139,7 @@ impl TxBuilder {
         satoshi_to_reissue: u64,
         asset_receiver: Option<Arc<Address>>,
         issuance_tx: Option<Arc<Transaction>>,
+        contract: Option<Arc<Contract>>,
     ) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;
@@ -147,6 +148,7 @@ impl TxBuilder {
             satoshi_to_reissue,
             asset_receiver.map(|e| e.as_ref().into()),
             issuance_tx.map(|e| e.as_ref().into()),
+            contract.map(|e| e.as_ref().into()),
         )?;
         *lock = Some(new_inner);
         Ok(())

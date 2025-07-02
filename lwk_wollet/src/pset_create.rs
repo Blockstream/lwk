@@ -19,7 +19,13 @@ const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 pub enum IssuanceRequest {
     None,
     Issuance(u64, Option<Address>, u64, Option<Address>, Option<Contract>),
-    Reissuance(AssetId, u64, Option<Address>, Option<Transaction>),
+    Reissuance(
+        AssetId,
+        u64,
+        Option<Address>,
+        Option<Transaction>,
+        Option<Contract>,
+    ),
 }
 
 impl Wollet {

@@ -1036,6 +1036,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                     r.satoshi_asset,
                     r.address_asset.map(|a| Address::from_str(&a)).transpose()?,
                     issuance_tx,
+                    None, // TODO: add contract here instead of calling add_contracts
                 )?
                 .fee_rate(r.fee_rate)
                 .finish()?;

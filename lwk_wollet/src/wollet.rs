@@ -1193,6 +1193,21 @@ mod tests {
     }
 
     #[test]
+    fn test_desc_no_wildcard_with_index() {
+        let k = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
+        let x = "tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M";
+        let desc = format!("ct(slip77({k}),elwpkh({x}))");
+        let w = new_wollet(&desc);
+        let a = w.address(None).unwrap();
+        assert_eq!(a.address().to_string(), "tlq1qqtkq6nptvwfycgsvkclsg8uyslwy9pn5mmw6049nmqq02y7l9330a6vmsc5zdfq2xtpyc7tct5rtr80rlvrk7jll6mc5gjfup");
+        let e = w.address(Some(0)).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "Cannot use derivation index when the descriptor has no wildcard"
+        );
+    }
+
+    #[test]
     fn fixed_addresses_test() {
         let expected = [
             "lq1qqvxk052kf3qtkxmrakx50a9gc3smqad2ync54hzntjt980kfej9kkfe0247rp5h4yzmdftsahhw64uy8pzfe7cpg4fgykm7cv", //  network: Liquid variant: Wpkh blinding_variant: Slip77

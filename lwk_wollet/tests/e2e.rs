@@ -2251,6 +2251,27 @@ fn test_manual_coin_selection() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    // Two assets and LBTC
+    let mut pset = w
+        .tx_builder()
+        .set_wallet_utxos(vec![
+            asset_utxo.outpoint,
+            lbtc_utxo.outpoint,
+            token_utxo.outpoint,
+        ])
+        .add_recipient(&node_address, 1, asset)
+        .unwrap()
+        .add_recipient(&node_address, 1, token)
+        .unwrap()
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 3);
+    assert_eq!(pset.outputs().len(), 5); // asset recipient, asset change, token recipient, lbtc change, fees
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
 }
 
 #[ignore = "This test connects to liquid testnet"]

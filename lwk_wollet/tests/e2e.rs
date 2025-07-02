@@ -2829,3 +2829,94 @@ fn test_non_std_legacy_multisig() {
     assert!(recv_wallet.balance_btc() > 0);
     assert_eq!(wallet.balance_btc(), 0);
 }
+
+#[test]
+fn test_reissue_contract_metadata_in_pset() {
+    let server = setup_with_esplora();
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let mut wallet = TestWollet::new(client, &desc);
+
+    wallet.fund_btc(&server);
+
+    // Issue an asset with a contract
+    let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":2,\"ticker\":\"TEST\",\"version\":0}";
+    let contract = Contract::from_str(contract).unwrap();
+
+    let mut pset = wallet
+        .tx_builder()
+        .issue_asset(1000, None, 1, None, Some(contract.clone()))
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&AnySigner::Software(signer.clone()), &mut pset);
+    let txid = wallet.send(&mut pset);
+    let tx = wallet.get_tx(&txid);
+
+    let issuance = wallet
+        .wollet
+        .issuances()
+        .unwrap()
+        .into_iter()
+        .find(|i| !i.is_reissuance)
+        .unwrap();
+    let asset = issuance.asset;
+
+    // Test 1: Reissue WITHOUT issuance_tx and contract - no metadata should be added
+    let pset_no_contract = wallet
+        .tx_builder()
+        .reissue_asset(asset, 500, None, None, None)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // No asset metadata should be present
+    assert!(pset_no_contract.get_asset_metadata(asset).is_none());
+    assert!(pset_no_contract
+        .get_token_metadata(issuance.token)
+        .is_none());
+
+    // Test 2: Reissue WITH issuance_tx but without contract - still no metadata
+    let pset_tx_only = wallet
+        .tx_builder()
+        .reissue_asset(asset, 500, None, Some(tx.tx.clone()), None)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Still no asset metadata should be present
+    assert!(pset_tx_only.get_asset_metadata(asset).is_none());
+    assert!(pset_tx_only.get_token_metadata(issuance.token).is_none());
+
+    // Test 3: Reissue WITH both issuance_tx AND contract - metadata should be present
+    let pset_with_contract = wallet
+        .tx_builder()
+        .reissue_asset(asset, 500, None, Some(tx.tx.clone()), Some(contract))
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Asset metadata should be present
+    let asset_metadata = pset_with_contract
+        .get_asset_metadata(asset)
+        .unwrap()
+        .unwrap();
+    // assert_eq!(asset_metadata.asset_id(), &asset);
+
+    // Token metadata should be present
+    let token_metadata = pset_with_contract
+        .get_token_metadata(issuance.token)
+        .unwrap()
+        .unwrap();
+    assert_eq!(token_metadata.asset_id(), &asset);
+    assert!(!token_metadata.issuance_blinded());
+
+    // The contract data should be embedded in the asset metadata
+    let contract_str = asset_metadata.contract();
+    assert!(contract_str.contains("Test"));
+    assert!(contract_str.contains("TEST"));
+    assert!(contract_str.contains("test.com"));
+}

@@ -2210,14 +2210,19 @@ fn test_manual_coin_selection() {
         .unwrap_err();
     assert!(matches!(err, Error::MissingWalletUtxo(_)));
 
-    let signers = [&AnySigner::Software(signer)];
-    let (asset, _) = w.issueasset(&signers, 10, 1, None, None);
+    let signers = [&AnySigner::Software(signer.clone())];
+    let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
     server.elementsd_generate(1);
     let utxos = w.wollet.utxos().unwrap();
     assert_eq!(utxos.len(), 3);
     let asset_utxo = &utxos[1];
     assert_eq!(asset_utxo.unblinded.value, 10);
     assert_eq!(asset_utxo.unblinded.asset, asset);
+    let token_utxo = &utxos[2];
+    assert_eq!(token_utxo.unblinded.value, 1);
+    assert_eq!(token_utxo.unblinded.asset, token);
+    let lbtc_utxo = &utxos[0];
+    assert_eq!(lbtc_utxo.unblinded.asset, policy_asset);
 
     let err = w
         .tx_builder()

@@ -347,6 +347,7 @@ impl Wollet {
     /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
         if index.is_some() && !self.descriptor.has_wildcard() {
+            // TODO: this error should be upstreamed to at_derivation_index https://github.com/rust-bitcoin/rust-miniscript/issues/829
             return Err(Error::IndexWithoutWildcard);
         }
 

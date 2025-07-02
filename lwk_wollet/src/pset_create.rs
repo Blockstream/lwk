@@ -10,12 +10,11 @@ use crate::registry::Contract;
 use crate::wollet::Wollet;
 use crate::{ElementsNetwork, EC};
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 // We make issuance and reissuance are mutually exclusive for simplicity
 pub enum IssuanceRequest {
     None,

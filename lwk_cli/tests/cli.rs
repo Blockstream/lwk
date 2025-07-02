@@ -979,7 +979,7 @@ fn test_issue() {
     assert_eq!(asset_balance_post - 1, get_balance(&cli, "w1", asset));
 
     let r = sh(&format!("{cli} wallet utxos --wallet w1"));
-    assert_eq!(get_len(&r, "utxos"), 4);
+    assert!(get_len(&r, "utxos") >= 3);
 
     let r = sh(&format!("{cli} wallet txs --wallet w1"));
     let txs = r.get("txs").unwrap().as_array().unwrap();

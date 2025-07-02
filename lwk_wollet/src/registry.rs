@@ -338,6 +338,13 @@ pub struct TxIn {
 pub struct RegistryData {
     pub contract: Contract,
     pub issuance_txin: TxIn,
+    pub issuance_prevout: IssuancePrevout,
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct IssuancePrevout {
+    pub txid: Txid,
+    pub vout: u32,
 }
 
 impl RegistryData {
@@ -379,6 +386,13 @@ fn lbtc() -> (AssetId, RegistryData) {
             .expect("static"),
             vin: 0,
         },
+        issuance_prevout: IssuancePrevout {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .expect("static"),
+            vout: 0,
+        },
     };
     (asset_id, data)
 }
@@ -402,6 +416,13 @@ fn tlbtc() -> (AssetId, RegistryData) {
             .expect("static"),
             vin: 0,
         },
+        issuance_prevout: IssuancePrevout {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .expect("static"),
+            vout: 0,
+        },
     };
     (asset_id, data)
 }
@@ -424,6 +445,13 @@ fn rlbtc() -> (AssetId, RegistryData) {
             )
             .expect("static"),
             vin: 0,
+        },
+        issuance_prevout: IssuancePrevout {
+            txid: Txid::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .expect("static"),
+            vout: 0,
         },
     };
     (asset_id, data)
@@ -451,6 +479,13 @@ fn usdt() -> (AssetId, RegistryData) {
             )
             .expect("static"),
             vin: 0,
+        },
+        issuance_prevout: IssuancePrevout {
+            txid: Txid::from_str(
+                "9596d259270ef5bac0020435e6d859aea633409483ba64e232b8ba04ce288668",
+            )
+            .expect("static"),
+            vout: 0,
         },
     };
     (asset_id, data)
@@ -579,12 +614,19 @@ mod tests {
     async fn test_registry_cache() {
         let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
         let asset_id =
-            AssetId::from_str("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2")
+            AssetId::from_str("18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec")
                 .unwrap();
         let cache = RegistryCache::new(registry, &[asset_id], 1).await;
         let data = cache.get(asset_id).unwrap();
-        assert_eq!(data.contract.ticker, "USDt");
+        assert_eq!(data.contract.ticker, "EURx");
         assert_eq!(data.contract.precision, 8);
+
+        assert_eq!(
+            data.issuance_prevout.txid,
+            Txid::from_str("fdbeae738138cafedea4931a281f0347c133f1b279f0ef1f09ea2ca898364966")
+                .unwrap()
+        );
+        assert_eq!(data.issuance_prevout.vout, 0);
 
         let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
         let cache_2 = RegistryCache::new(registry, &[], 1).await;

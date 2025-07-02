@@ -142,7 +142,7 @@ impl RegistryCache {
         }
     }
     pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
-        let (mut cache, token_cache) = init_cache();
+        let (mut cache, mut token_cache) = init_cache();
         let keys = cache.keys().cloned().collect::<Vec<_>>();
 
         let registry_clone = registry.clone();
@@ -155,6 +155,9 @@ impl RegistryCache {
 
         while let Some((asset_id, data)) = stream.next().await {
             if let Some(data) = data {
+                if let Ok(token_id) = data.token_id() {
+                    token_cache.insert(token_id, asset_id);
+                }
                 cache.insert(asset_id, data);
             }
         }

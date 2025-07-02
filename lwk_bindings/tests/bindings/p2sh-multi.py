@@ -41,9 +41,9 @@ wollet = Wollet(network, desc, datadir=None)
 blinding_privkey = SecretKey.from_bytes(bytes.fromhex("7777777777777777777777777777777777777777777777777777777777777777"))
 # from test_non_std_legacy_multisig
 addr_no_std = Address("AzpuC21jFoqV5ueVkYvda8F5EJRb2mEUUnT7vPVhSSUk1AznrKCwnDxwSjtkvuAr5C9nB5HESd9oETe1")
-# This has the same script pubkey for wollet.address(0)
+# This has the same script pubkey for wollet.address(None)
 # But has blinding pukey corresponding to blinding_privkey 77..77
-addr_from_desc = wollet.address(0).address()
+addr_from_desc = wollet.address(None).address()
 assert str(addr_no_std) != str(addr_from_desc)
 assert str(addr_no_std.script_pubkey()) == str(addr_from_desc.script_pubkey())
 

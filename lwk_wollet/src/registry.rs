@@ -113,24 +113,36 @@ pub struct Registry {
 
 pub struct RegistryCache {
     inner: Registry,
+
+    /// contains the cached registry data
     cache: HashMap<AssetId, RegistryData>,
+
+    /// for every asset, we compute the token_id and cache it here
+    token_cache: HashMap<AssetId, AssetId>, // token_id -> asset_id
 }
 
-fn init_cache() -> HashMap<AssetId, RegistryData> {
+fn init_cache() -> (HashMap<AssetId, RegistryData>, HashMap<AssetId, AssetId>) {
     let mut cache = HashMap::new();
-    cache.extend([lbtc(), tlbtc(), rlbtc(), usdt()]);
-    cache
+    let mut token_cache = HashMap::new();
+    let usdt = usdt();
+    let usdt_token = usdt.1.token_id().expect("static");
+    token_cache.insert(usdt_token, usdt.0);
+    cache.extend([lbtc(), tlbtc(), rlbtc(), usdt]);
+
+    (cache, token_cache)
 }
 
 impl RegistryCache {
     pub fn new_hardcoded(registry: Registry) -> Self {
+        let (cache, token_cache) = init_cache();
         Self {
             inner: registry,
-            cache: init_cache(),
+            cache,
+            token_cache,
         }
     }
     pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
-        let mut cache = init_cache();
+        let (mut cache, token_cache) = init_cache();
         let keys = cache.keys().cloned().collect::<Vec<_>>();
 
         let registry_clone = registry.clone();
@@ -150,6 +162,7 @@ impl RegistryCache {
         Self {
             inner: registry,
             cache,
+            token_cache,
         }
     }
 

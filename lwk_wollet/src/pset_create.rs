@@ -24,14 +24,6 @@ pub enum IssuanceRequest {
 }
 
 impl Wollet {
-    pub(crate) fn asset_utxos(&self, asset: &AssetId) -> Result<Vec<WalletTxOut>, Error> {
-        Ok(self
-            .utxos()?
-            .into_iter()
-            .filter(|utxo| &utxo.unblinded.asset == asset)
-            .collect())
-    }
-
     fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
         Ok(self
             .store

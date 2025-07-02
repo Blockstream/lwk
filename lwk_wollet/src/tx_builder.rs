@@ -512,6 +512,8 @@ impl TxBuilder {
         let mut last_unused_external = wollet.address(None)?.index();
         let mut rng = thread_rng();
 
+        let utxos = wollet.utxos_map()?;
+
         let [input] = pset.inputs() else {
             return Err(Error::LiquidexError(LiquidexError::TakerInvalidParams));
         };
@@ -568,8 +570,11 @@ impl TxBuilder {
         if maker_output_asset != wollet.policy_asset() {
             let satoshi_out = maker_output_satoshi;
             let mut satoshi_in = 0;
-            for utxo in wollet.asset_utxos(&maker_output_asset)? {
-                wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+            for utxo in utxos
+                .values()
+                .filter(|u| u.unblinded.asset == maker_output_asset)
+            {
+                wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                 let surj_input = elements::SurjectionInput::from_txout_secrets(utxo.unblinded);
                 input_domain.push(surj_input.surjection_target(&EC).expect("from secrets"));
                 satoshi_in += utxo.unblinded.value;
@@ -608,8 +613,11 @@ impl TxBuilder {
         }
 
         // FIXME: For implementation simplicity now we always add all L-BTC inputs
-        for utxo in wollet.asset_utxos(&wollet.policy_asset())? {
-            wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &utxo)?;
+        for utxo in utxos
+            .values()
+            .filter(|u| u.unblinded.asset == wollet.policy_asset())
+        {
+            wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
             let surj_input = elements::SurjectionInput::from_txout_secrets(utxo.unblinded);
             input_domain.push(surj_input.surjection_target(&EC).expect("from secrets"));
             satoshi_in += utxo.unblinded.value;

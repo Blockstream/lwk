@@ -2224,24 +2224,33 @@ fn test_manual_coin_selection() {
     let lbtc_utxo = &utxos[0];
     assert_eq!(lbtc_utxo.unblinded.asset, policy_asset);
 
+    // Asset manual coin selection
+    // If some utxos are selected, no other utxos are added
+    // So if you only add asset utxos, you get an insufficient funds error
+    // (not enought LBTC)
     let err = w
         .tx_builder()
-        .add_recipient(&node_address, 200_000, policy_asset)
-        .unwrap()
         .set_wallet_utxos(vec![asset_utxo.outpoint])
-        .finish()
-        .unwrap_err();
-    println!("err: {}", err);
-    //assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));
-    let err = w
-        .tx_builder()
-        .add_recipient(&node_address, 200_000, asset)
+        .add_recipient(&node_address, 1, asset)
         .unwrap()
-        .set_wallet_utxos(vec![utxos[0].outpoint])
         .finish()
         .unwrap_err();
-    println!("err: {}", err);
-    //assert!(matches!(err, Error::ManualCoinSelectionOnlyLbtc));
+    assert!(matches!(err, Error::InsufficientFunds { .. }));
+
+    // One asset and LBTC
+    let mut pset = w
+        .tx_builder()
+        .set_wallet_utxos(vec![asset_utxo.outpoint, lbtc_utxo.outpoint])
+        .add_recipient(&node_address, 1, asset)
+        .unwrap()
+        .finish()
+        .unwrap();
+    assert_eq!(pset.inputs().len(), 2);
+    assert_eq!(pset.outputs().len(), 4); // asset recipient, asset change, lbtc change, fees
+    signer.sign(&mut pset).unwrap();
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let tx = serialize(&tx);
+    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
 }
 
 #[ignore = "This test connects to liquid testnet"]

@@ -1474,6 +1474,15 @@ mod tests {
         assets_map.insert(asset_id, AppAsset::RegistryAsset(asset_data.clone()));
         assets_map.insert(token_id, AppAsset::ReissuanceToken(asset_data.clone()));
 
+        // TODO: check with a test vector, this is the value generated once the entropy fn has been introduced
+        assert_eq!(
+            asset_data.entropy().unwrap(),
+            [
+                246, 117, 58, 147, 49, 238, 254, 149, 30, 173, 173, 99, 251, 157, 220, 73, 16, 39,
+                72, 67, 153, 90, 118, 180, 236, 207, 166, 53, 173, 215, 201, 113
+            ],
+        );
+
         // Add contracts
         add_contracts(&mut pset, assets_map.iter());
 

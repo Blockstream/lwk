@@ -723,8 +723,22 @@ impl TxBuilder {
             .into_iter()
             .partition(|a| a.asset == policy_asset);
 
-        // Assets inputs and outputs
-        let assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
+        // Assets that belongs to this transaction
+        // all the ones with a recipient
+        let mut assets: HashSet<_> = addressees_asset.iter().map(|a| a.asset).collect();
+        // and all the ones of utxos that are being added
+        for utxo in &self.external_utxos {
+            assets.insert(utxo.unblinded.asset);
+        }
+        if let Some(ref coins) = self.selected_utxos {
+            for coin in coins {
+                let utxo = utxos.get(coin).ok_or(Error::MissingWalletUtxo(*coin))?;
+                assets.insert(utxo.unblinded.asset);
+            }
+        }
+        // Policy asset is handled separately below
+        assets.remove(&policy_asset);
+
         for asset in assets {
             let mut satoshi_out = 0;
             let mut satoshi_in = 0;

@@ -230,6 +230,9 @@ pub enum Error {
 
     #[error("Number of transaction inputs ({0}) exceeds maximum allowed input count of 256")]
     TooManyInputs(usize),
+
+    #[error("Cannot use derivation index when the descriptor has no wildcard")]
+    IndexWithoutWildcard,
 }
 
 // cannot derive automatically with this error because of trait bound

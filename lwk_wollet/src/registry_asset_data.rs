@@ -1,4 +1,4 @@
-use elements::{AssetId, OutPoint, Transaction};
+use elements::{AssetId, OutPoint, Transaction, TxIn};
 
 use crate::{asset_ids, Contract, Error};
 
@@ -62,5 +62,18 @@ impl RegistryAssetData {
 
     pub fn issuance_tx(&self) -> &Transaction {
         &self.issuance_tx
+    }
+
+    pub fn txin(&self) -> &TxIn {
+        &self.issuance_tx.input[self.issuance_vin as usize]
+    }
+
+    pub fn entropy(&self) -> Result<[u8; 32], Error> {
+        let entropy = AssetId::generate_asset_entropy(
+            self.txin().previous_output,
+            self.contract.contract_hash()?,
+        )
+        .to_byte_array();
+        Ok(entropy)
     }
 }

@@ -346,6 +346,10 @@ impl Wollet {
     /// If Some return the address at the given index,
     /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<AddressResult, Error> {
+        if index.is_some() && !self.descriptor.has_wildcard() {
+            return Err(Error::IndexWithoutWildcard);
+        }
+
         let index = self.unwrap_or_last_unused(index);
 
         let address = self

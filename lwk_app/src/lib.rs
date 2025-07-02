@@ -1391,10 +1391,10 @@ fn amp2userkey(signer: &AnySigner) -> Result<String, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{AppAsset, RegistryAssetData};
+    use crate::state::AppAsset;
     use lwk_wollet::elements::pset::{elip100::PSET_HWW_PREFIX, PartiallySignedTransaction};
     use lwk_wollet::elements::AssetId;
-    use lwk_wollet::Contract;
+    use lwk_wollet::{Contract, RegistryAssetData};
     use std::collections::HashMap;
     use std::net::TcpListener;
     use std::str::FromStr;

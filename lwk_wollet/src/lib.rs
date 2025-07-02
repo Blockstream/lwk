@@ -101,6 +101,7 @@ pub mod pegin;
 mod persister;
 mod pset_create;
 pub mod registry;
+mod registry_asset_data;
 mod store;
 mod tx_builder;
 mod update;
@@ -119,6 +120,7 @@ pub use crate::model::{
 pub use crate::pegin::fed_peg_script;
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity};
+pub use crate::registry_asset_data::RegistryAssetData;
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
 pub use crate::util::EC;

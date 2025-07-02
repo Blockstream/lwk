@@ -515,7 +515,7 @@ fn multiple_descriptors() {
 
     let mut pset = wallet_t
         .tx_builder()
-        .reissue_asset(*asset, satoshi_ar, Some(address_a), None)
+        .reissue_asset(*asset, satoshi_ar, Some(address_a), None, None)
         .unwrap()
         .finish()
         .unwrap();
@@ -582,7 +582,7 @@ fn multiple_descriptors() {
     let address_a = wallet_a.address();
     let mut pset = wallet_nt
         .tx_builder()
-        .reissue_asset(*asset, satoshi_ar, Some(address_a), Some(issuance_tx))
+        .reissue_asset(*asset, satoshi_ar, Some(address_a), Some(issuance_tx), None)
         .unwrap()
         .finish()
         .unwrap();
@@ -728,7 +728,7 @@ fn create_pset_error() {
 
     let err = wallet
         .tx_builder()
-        .reissue_asset(asset, satoshi_a, None, None)
+        .reissue_asset(asset, satoshi_a, None, None, None)
         .unwrap()
         .finish()
         .unwrap_err();
@@ -739,7 +739,7 @@ fn create_pset_error() {
     // so it can't reissue the asset.
     let err = wallet2
         .tx_builder()
-        .reissue_asset(asset, satoshi_a, None, None)
+        .reissue_asset(asset, satoshi_a, None, None, None)
         .unwrap()
         .finish()
         .unwrap_err();
@@ -750,7 +750,7 @@ fn create_pset_error() {
     let tx: Transaction = deserialize(&Vec::<u8>::from_hex(tx_hex).unwrap()).unwrap();
     let err = wallet2
         .tx_builder()
-        .reissue_asset(asset, satoshi_a, None, Some(tx))
+        .reissue_asset(asset, satoshi_a, None, Some(tx), None)
         .unwrap()
         .finish()
         .unwrap_err();
@@ -2730,7 +2730,7 @@ fn test_issuance_amount_limits() {
     let amount = 21_000_000 * 100_000_000;
     let mut pset = wallet
         .tx_builder()
-        .reissue_asset(asset, amount, None, None)
+        .reissue_asset(asset, amount, None, None, None)
         .unwrap()
         .finish()
         .unwrap();
@@ -2739,7 +2739,7 @@ fn test_issuance_amount_limits() {
 
     let reissue_error = wallet
         .tx_builder()
-        .reissue_asset(asset, amount_over_btc_max, None, None)
+        .reissue_asset(asset, amount_over_btc_max, None, None, None)
         .unwrap_err();
 
     assert_eq!(

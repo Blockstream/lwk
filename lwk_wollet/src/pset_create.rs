@@ -8,7 +8,7 @@ use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::registry::Contract;
 use crate::wollet::Wollet;
-use crate::{ElementsNetwork, EC};
+use crate::{ElementsNetwork, RegistryAssetData, EC};
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use std::collections::HashMap;
 
@@ -193,6 +193,7 @@ impl Wollet {
         satoshi_asset: u64,
         token_asset_bf: &AssetBlindingFactor,
         entropy: &[u8; 32],
+        registry_asset_data: Option<RegistryAssetData>,
     ) -> Result<(), Error> {
         let input = pset
             .inputs_mut()
@@ -203,6 +204,18 @@ impl Wollet {
         input.issuance_blinding_nonce = Some(nonce);
         input.issuance_asset_entropy = Some(*entropy);
         input.blinded_issuance = Some(0x00);
+
+        if let Some(registry_asset_data) = registry_asset_data.as_ref() {
+            let issuance_prevout = registry_asset_data.issuance_prevout();
+            let contract = registry_asset_data.contract_str();
+            let asset_id = registry_asset_data.asset_id();
+            let token_id = registry_asset_data.token_id();
+            pset.add_asset_metadata(asset_id, &AssetMetadata::new(contract, issuance_prevout));
+            // TODO: handle blinded issuance
+            let issuance_blinded = false;
+            pset.add_token_metadata(token_id, &TokenMetadata::new(asset_id, issuance_blinded));
+        }
+
         Ok(())
     }
 

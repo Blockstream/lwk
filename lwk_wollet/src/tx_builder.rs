@@ -14,7 +14,8 @@ use crate::{
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
     pset_create::{validate_address, IssuanceRequest},
-    Contract, ElementsNetwork, Error, LiquidexProposal, UnvalidatedRecipient, Wollet, EC,
+    Contract, ElementsNetwork, Error, LiquidexProposal, RegistryAssetData, UnvalidatedRecipient,
+    Wollet, EC,
 };
 
 pub fn extract_issuances(tx: &Transaction) -> Vec<IssuanceDetails> {
@@ -858,16 +859,23 @@ impl TxBuilder {
                 satoshi_asset,
                 address_asset,
                 issuance_tx,
-                _contract,
+                contract,
             ) => {
-                let issuance = if let Some(issuance_tx) = issuance_tx {
-                    extract_issuances(&issuance_tx)
+                let issuance = if let Some(issuance_tx) = issuance_tx.as_ref() {
+                    extract_issuances(issuance_tx)
                         .iter()
                         .find(|i| i.asset == asset)
                         .ok_or_else(|| Error::MissingIssuance)?
                         .clone()
                 } else {
                     wollet.issuance(&asset)?
+                };
+
+                let registry_asset_data = match (contract, issuance_tx) {
+                    (Some(contract), Some(issuance_tx)) => {
+                        Some(RegistryAssetData::new(asset, issuance_tx, contract)?)
+                    }
+                    _ => None,
                 };
 
                 let token = issuance.token;
@@ -913,6 +921,7 @@ impl TxBuilder {
                     satoshi_asset,
                     &token_asset_bf,
                     &issuance.entropy,
+                    registry_asset_data,
                 )?;
 
                 let addressee = match address_asset {

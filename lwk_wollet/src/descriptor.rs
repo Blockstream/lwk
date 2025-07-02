@@ -378,6 +378,10 @@ impl WolletDescriptor {
         }
         Ok(result)
     }
+
+    pub fn has_wildcard(&self) -> bool {
+        self.0.descriptor.has_wildcard()
+    }
 }
 
 // try to parse as multiline descriptor as exported in green

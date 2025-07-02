@@ -11,6 +11,7 @@ use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
+use elements::hashes::sha256::Midstate;
 use elements::{Transaction, Txid};
 use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
@@ -365,6 +366,32 @@ impl RegistryData {
             Entity::Domain(domain) => domain,
         }
     }
+
+    pub fn issuance_prevout(&self) -> OutPoint {
+        OutPoint {
+            txid: self.issuance_prevout.txid,
+            vout: self.issuance_prevout.vout,
+        }
+    }
+
+    pub fn entropy(&self) -> Result<Midstate, Error> {
+        Ok(AssetId::generate_asset_entropy(
+            self.issuance_prevout(),
+            self.contract.contract_hash()?,
+        ))
+    }
+
+    pub fn asset_id(&self) -> Result<AssetId, Error> {
+        let entropy = self.entropy()?;
+        Ok(AssetId::from_entropy(entropy))
+    }
+
+    pub fn token_id(&self) -> Result<AssetId, Error> {
+        let entropy = self.entropy()?;
+        Ok(AssetId::reissuance_token_from_entropy(
+            entropy, false, // TODO
+        ))
+    }
 }
 
 /// Create a RegistryData mock for Liquid Bitcoin
@@ -620,6 +647,10 @@ mod tests {
         let data = cache.get(asset_id).unwrap();
         assert_eq!(data.contract.ticker, "EURx");
         assert_eq!(data.contract.precision, 8);
+        assert_eq!(
+            data.contract.contract_hash().unwrap().to_string(),
+            "e90594cf35ff894158967d4bec6df0b4f2841818ea5df6a94ca8ef50e9546a27"
+        );
 
         assert_eq!(
             data.issuance_prevout.txid,
@@ -627,6 +658,15 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(data.issuance_prevout.vout, 0);
+        assert_eq!(
+            data.entropy().unwrap().to_string(),
+            "86889dde3fa2fbc8dc75134497be8eaac5e43297f39fa95740626c9c4e9dedf2", // shown on block explorer https://blockstream.info/liquid/tx/a6a340e26ab72139c896c38690489a94e79e580336e9607efde8418f49e6daf7?expand
+        );
+        assert_eq!(data.asset_id().unwrap().to_string(), asset_id.to_string());
+        assert_eq!(
+            data.token_id().unwrap().to_string(),
+            "e7bf681db0ea93c31cfb4d9d540295ef43d9148835a46d5b286d756852803ff4"
+        );
 
         let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
         let cache_2 = RegistryCache::new(registry, &[], 1).await;

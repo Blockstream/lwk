@@ -43,9 +43,9 @@ use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
-use lwk_wollet::LiquidexProposal;
 use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
+use lwk_wollet::{LiquidexProposal, RegistryAssetData};
 use serde_json::Value;
 
 use crate::method::Method;
@@ -553,7 +553,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate);
             let mut tx = builder.finish()?;
 
-            add_contracts(&mut tx, s.assets.iter());
+            add_contracts(&mut tx, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -574,7 +574,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut tx, s.assets.iter());
+            add_contracts(&mut tx, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1040,7 +1040,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut pset, s.assets.iter());
+            add_contracts(&mut pset, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1060,7 +1060,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut pset, s.assets.iter());
+            add_contracts(&mut pset, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1324,25 +1324,19 @@ fn signer_details(name: &str, signer: &AppSigner) -> Result<response::SignerDeta
 
 fn add_contracts<'a>(
     pset: &mut PartiallySignedTransaction,
-    assets: impl Iterator<Item = (&'a AssetId, &'a AppAsset)>,
+    assets: impl Iterator<Item = &'a RegistryAssetData>,
 ) {
     let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
-    for (_, asset) in assets {
-        if let AppAsset::RegistryAsset(registry_data) = asset {
-            // Policy asset and reissuance tokens do not require the contract
-            let asset_id = asset.asset_id();
-            if assets_in_pset.contains(&asset_id) {
-                if let Some(metadata) = asset.asset_metadata() {
-                    pset.add_asset_metadata(asset_id, &metadata);
-                    let token_id = registry_data.reissuance_token();
-                    // TODO: handle blinded issuance
-                    let issuance_blinded = false;
-                    pset.add_token_metadata(
-                        token_id,
-                        &TokenMetadata::new(asset_id, issuance_blinded),
-                    );
-                }
-            }
+    for registry_data in assets {
+        // Policy asset and reissuance tokens do not require the contract
+        let asset_id = registry_data.asset_id();
+        if assets_in_pset.contains(&asset_id) {
+            let metadata = registry_data.asset_metadata();
+            pset.add_asset_metadata(asset_id, &metadata);
+            let token_id = registry_data.reissuance_token();
+            // TODO: handle blinded issuance
+            let issuance_blinded = false;
+            pset.add_token_metadata(token_id, &TokenMetadata::new(asset_id, issuance_blinded));
         }
     }
 }
@@ -1484,7 +1478,7 @@ mod tests {
         );
 
         // Add contracts
-        add_contracts(&mut pset, assets_map.iter());
+        add_contracts(&mut pset, [&asset_data].into_iter());
 
         // Ensure the asset metadata records are fully re-created
         assert_eq!(

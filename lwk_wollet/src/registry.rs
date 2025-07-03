@@ -12,6 +12,7 @@ use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::hashes::sha256::Midstate;
+use elements::pset::elip100::AssetMetadata;
 use elements::{Transaction, Txid};
 use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
@@ -615,6 +616,10 @@ impl RegistryAssetData {
         )
         .to_byte_array();
         Ok(entropy)
+    }
+
+    pub fn asset_metadata(&self) -> AssetMetadata {
+        AssetMetadata::new(self.contract_str(), self.issuance_prevout())
     }
 }
 

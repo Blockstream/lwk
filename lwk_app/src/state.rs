@@ -688,6 +688,13 @@ impl State {
         Ok(requests)
     }
 
+    pub fn registry_asset_data(&self) -> impl Iterator<Item = &RegistryAssetData> {
+        self.assets.iter().filter_map(|(_, a)| match a {
+            AppAsset::RegistryAsset(r) => Some(r),
+            _ => None,
+        })
+    }
+
     /// Get an available signer identified by name.
     ///
     /// In some cases, like with a jade not currently linked, it may try to connect to it first

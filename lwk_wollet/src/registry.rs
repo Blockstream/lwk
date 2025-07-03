@@ -173,6 +173,14 @@ impl RegistryCache {
         self.cache.get(&asset_id).cloned()
     }
 
+    /// Return the asset metadata related to the given token id,
+    /// in other words `token_id` is the reissuance token of the returned asset
+    pub fn get_asset_of_token(&self, token_id: AssetId) -> Option<RegistryData> {
+        self.token_cache
+            .get(&token_id)
+            .and_then(|asset_id| self.cache.get(asset_id).cloned())
+    }
+
     pub async fn fetch_with_tx(
         &self,
         asset_id: AssetId,

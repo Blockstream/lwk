@@ -646,6 +646,15 @@ fn string_to_static_str(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
 
+pub fn descriptor_pset_usdt_no_contracts() -> &'static str {
+    include_str!("../test_data/pset_usdt/desc")
+}
+
+/// Pset created with descriptor [`descriptor_pset_usdt_no_contracts`] containing mainnet USDt but without contract info
+pub fn pset_usdt_no_contracts() -> &'static str {
+    include_str!("../test_data/pset_usdt/pset_usdt_no_contracts.base64")
+}
+
 fn bitcoind_getnewaddress(client: &Client, kind: Option<&str>) -> bitcoin::Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client

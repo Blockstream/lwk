@@ -324,11 +324,15 @@ impl TxBuilder {
 
     /// Switch to manual coin selection by giving a list of internal UTXOs to use.
     ///
+    /// All passed UTXOs are added to the transaction.
+    /// No other wallet UTXO is added to the transaction, caller is supposed to add enough UTXOs to
+    /// cover for all recipients and fees.
+    ///
     /// This method never fails, any error will be raised in [`TxBuilder::finish`].
     ///
     /// Possible errors:
     /// * OutPoint doesn't belong to the wallet
-    /// * The OutPoint is not L-BTC (this restriction will be removed in the future)
+    /// * Insufficient funds (remember to include L-BTC utxos for fees)
     pub fn set_wallet_utxos(mut self, utxos: Vec<OutPoint>) -> Self {
         self.selected_utxos = Some(utxos);
         self

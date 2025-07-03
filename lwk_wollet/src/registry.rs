@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 
@@ -13,6 +13,8 @@ use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::hashes::sha256::Midstate;
 use elements::pset::elip100::AssetMetadata;
+use elements::pset::elip100::TokenMetadata;
+use elements::pset::PartiallySignedTransaction;
 use elements::{Transaction, Txid};
 use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
@@ -541,6 +543,25 @@ fn usdt() -> (AssetId, RegistryData) {
         },
     };
     (asset_id, data)
+}
+
+pub fn add_contracts<'a>(
+    pset: &mut PartiallySignedTransaction,
+    assets: impl Iterator<Item = &'a RegistryAssetData>,
+) {
+    let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
+    for registry_data in assets {
+        // Policy asset and reissuance tokens do not require the contract
+        let asset_id = registry_data.asset_id();
+        if assets_in_pset.contains(&asset_id) {
+            let metadata = registry_data.asset_metadata();
+            pset.add_asset_metadata(asset_id, &metadata);
+            let token_id = registry_data.reissuance_token();
+            // TODO: handle blinded issuance
+            let issuance_blinded = false;
+            pset.add_token_metadata(token_id, &TokenMetadata::new(asset_id, issuance_blinded));
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

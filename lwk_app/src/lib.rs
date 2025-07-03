@@ -37,15 +37,15 @@ use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
-use lwk_wollet::elements::pset::elip100::TokenMetadata;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
+use lwk_wollet::registry::add_contracts;
+use lwk_wollet::LiquidexProposal;
 use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
-use lwk_wollet::{LiquidexProposal, RegistryAssetData};
 use serde_json::Value;
 
 use crate::method::Method;
@@ -1320,25 +1320,6 @@ fn signer_details(name: &str, signer: &AppSigner) -> Result<response::SignerDeta
         mnemonic: signer.mnemonic(),
         type_: signer.type_(),
     })
-}
-
-fn add_contracts<'a>(
-    pset: &mut PartiallySignedTransaction,
-    assets: impl Iterator<Item = &'a RegistryAssetData>,
-) {
-    let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
-    for registry_data in assets {
-        // Policy asset and reissuance tokens do not require the contract
-        let asset_id = registry_data.asset_id();
-        if assets_in_pset.contains(&asset_id) {
-            let metadata = registry_data.asset_metadata();
-            pset.add_asset_metadata(asset_id, &metadata);
-            let token_id = registry_data.reissuance_token();
-            // TODO: handle blinded issuance
-            let issuance_blinded = false;
-            pset.add_token_metadata(token_id, &TokenMetadata::new(asset_id, issuance_blinded));
-        }
-    }
 }
 
 fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {

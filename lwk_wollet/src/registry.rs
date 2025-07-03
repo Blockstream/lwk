@@ -202,36 +202,40 @@ impl RegistryCache {
     pub fn registry_asset_data(&self) -> Vec<RegistryAssetData> {
         let mut result = vec![];
         for registry_data in self.cache.values() {
-            let mut dummy_inputs: Vec<elements::TxIn> = vec![];
-            let dummy_input = elements::TxIn {
-                previous_output: OutPoint::new(
-                    registry_data.issuance_prevout.txid,
-                    registry_data.issuance_prevout.vout,
-                ),
-                is_pegin: false,
-                script_sig: Script::new(),
-                sequence: Sequence::MAX,
-                asset_issuance: AssetIssuance::default(),
-                witness: TxInWitness::default(),
-            };
+            if let (Ok(asset_id), Ok(token_id)) =
+                (registry_data.asset_id(), registry_data.token_id())
+            {
+                let mut dummy_inputs: Vec<elements::TxIn> = vec![];
+                let dummy_input = elements::TxIn {
+                    previous_output: OutPoint::new(
+                        registry_data.issuance_prevout.txid,
+                        registry_data.issuance_prevout.vout,
+                    ),
+                    is_pegin: false,
+                    script_sig: Script::new(),
+                    sequence: Sequence::MAX,
+                    asset_issuance: AssetIssuance::default(),
+                    witness: TxInWitness::default(),
+                };
 
-            for _ in 0..registry_data.issuance_txin.vin + 1 {
-                dummy_inputs.push(dummy_input.clone());
+                for _ in 0..registry_data.issuance_txin.vin + 1 {
+                    dummy_inputs.push(dummy_input.clone());
+                }
+                let dummy_tx = Transaction {
+                    version: 0,
+                    lock_time: LockTime::ZERO,
+                    input: dummy_inputs,
+                    output: vec![],
+                };
+                let registry_asset_data = RegistryAssetData {
+                    asset_id,
+                    token_id,
+                    issuance_vin: registry_data.issuance_txin.vin,
+                    issuance_tx: dummy_tx.clone(),
+                    contract: registry_data.contract.clone(),
+                };
+                result.push(registry_asset_data);
             }
-            let dummy_tx = Transaction {
-                version: 0,
-                lock_time: LockTime::ZERO,
-                input: dummy_inputs,
-                output: vec![],
-            };
-            let registry_asset_data = RegistryAssetData {
-                asset_id: registry_data.asset_id().unwrap(),
-                token_id: registry_data.token_id().unwrap(),
-                issuance_vin: registry_data.issuance_txin.vin,
-                issuance_tx: dummy_tx.clone(),
-                contract: registry_data.contract.clone(),
-            };
-            result.push(registry_asset_data);
         }
 
         result

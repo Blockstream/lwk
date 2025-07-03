@@ -1192,6 +1192,7 @@ impl<'a> WolletTxBuilder<'a> {
         })
     }
 
+    /// Wrapper of [`TxBuilder::set_wallet_utxos()`]
     pub fn set_wallet_utxos(self, utxos: Vec<OutPoint>) -> Self {
         Self {
             wollet: self.wollet,

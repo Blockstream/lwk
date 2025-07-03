@@ -124,6 +124,7 @@ pub fn id_to_fingerprint(id: &XKeyIdentifier) -> Fingerprint {
 }
 
 pub enum AppAsset {
+    #[allow(dead_code)]
     /// The policy asset (L-BTC)
     PolicyAsset(AssetId),
 
@@ -155,7 +156,7 @@ impl AppAsset {
         }
     }
 
-    pub fn asset_metadata(&self) -> Option<AssetMetadata> {
+    pub fn _asset_metadata(&self) -> Option<AssetMetadata> {
         match self {
             AppAsset::PolicyAsset(_) => None,
             AppAsset::RegistryAsset(d) => {
@@ -167,7 +168,7 @@ impl AppAsset {
         }
     }
 
-    pub fn asset_id(&self) -> AssetId {
+    pub fn _asset_id(&self) -> AssetId {
         match self {
             AppAsset::PolicyAsset(asset) => *asset,
             AppAsset::RegistryAsset(d) => d.asset_id(),

@@ -655,6 +655,10 @@ pub fn pset_usdt_no_contracts() -> &'static str {
     include_str!("../test_data/pset_usdt/pset_usdt_no_contracts.base64")
 }
 
+pub fn pset_usdt_with_contract() -> &'static str {
+    include_str!("../test_data/pset_usdt/pset_usdt_with_contract.base64")
+}
+
 fn bitcoind_getnewaddress(client: &Client, kind: Option<&str>) -> bitcoin::Address {
     let kind = kind.unwrap_or("p2sh-segwit");
     let addr: Value = client

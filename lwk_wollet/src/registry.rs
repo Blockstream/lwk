@@ -882,5 +882,14 @@ mod tests {
 
         assert!(pset.get_asset_metadata(usdt_asset_id).is_some());
         assert!(pset.get_token_metadata(usdt_token_id).is_some());
+
+        let pset_with_contract =
+            PartiallySignedTransaction::from_str(lwk_test_util::pset_usdt_with_contract()).unwrap();
+        assert!(pset_with_contract
+            .get_asset_metadata(usdt_asset_id)
+            .is_some());
+        assert!(pset_with_contract
+            .get_token_metadata(usdt_token_id)
+            .is_some());
     }
 }

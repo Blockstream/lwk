@@ -44,6 +44,18 @@ pub fn test_client_electrum(url: &str) -> ElectrumClient {
     ElectrumClient::new(&electrum_url).unwrap()
 }
 
+pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, txid: &Txid) {
+    for _ in 0..120 {
+        sync(wollet, client);
+        let list = wollet.transactions().unwrap();
+        if list.iter().any(|e| &e.txid == txid) {
+            return;
+        }
+        thread::sleep(Duration::from_millis(500));
+    }
+    panic!("Wallet does not have {} in its list", txid);
+}
+
 impl<C: BlockchainBackend> TestWollet<C> {
     pub fn new(mut client: C, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();
@@ -108,15 +120,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
 
     /// Wait until tx appears in tx list (max 1 min)
     fn wait_for_tx(&mut self, txid: &Txid) {
-        for _ in 0..120 {
-            sync(&mut self.wollet, &mut self.client);
-            let list = self.wollet.transactions().unwrap();
-            if list.iter().any(|e| &e.txid == txid) {
-                return;
-            }
-            thread::sleep(Duration::from_millis(500));
-        }
-        panic!("Wallet does not have {} in its list", txid);
+        wait_for_tx(&mut self.wollet, &mut self.client, txid);
     }
 
     /// Wait until the wallet has the transaction, although it might not be in the tx list

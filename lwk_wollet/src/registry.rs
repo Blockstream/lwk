@@ -859,4 +859,24 @@ mod tests {
         assert_eq!(data.name(), "Tether USD");
         assert_eq!(data.domain(), "tether.to");
     }
+
+    #[test]
+    fn test_add_contracts() {
+        let (usdt_asset_id, data) = usdt();
+        let usdt_token_id = data.token_id().unwrap();
+        let mut pset =
+            PartiallySignedTransaction::from_str(lwk_test_util::pset_usdt_no_contracts()).unwrap();
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let cache = RegistryCache::new_hardcoded(registry);
+        let assets = cache.registry_asset_data();
+        assert!(cache.get(usdt_asset_id).is_some());
+
+        assert!(pset.get_asset_metadata(usdt_asset_id).is_none());
+        assert!(pset.get_token_metadata(usdt_token_id).is_none());
+
+        add_contracts(&mut pset, assets.iter());
+
+        assert!(pset.get_asset_metadata(usdt_asset_id).is_some());
+        assert!(pset.get_token_metadata(usdt_token_id).is_some());
+    }
 }

@@ -37,12 +37,12 @@ use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::{FromHex, ToHex};
-use lwk_wollet::elements::pset::elip100::TokenMetadata;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements::{Address, AssetId, OutPoint, Txid};
 use lwk_wollet::elements_miniscript::descriptor::{Descriptor, DescriptorType, WshInner};
 use lwk_wollet::elements_miniscript::miniscript::decode::Terminal;
 use lwk_wollet::elements_miniscript::{DescriptorPublicKey, ForEachKey};
+use lwk_wollet::registry::add_contracts;
 use lwk_wollet::LiquidexProposal;
 use lwk_wollet::Wollet;
 use lwk_wollet::WolletDescriptor;
@@ -553,7 +553,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate);
             let mut tx = builder.finish()?;
 
-            add_contracts(&mut tx, s.assets.iter());
+            add_contracts(&mut tx, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -574,7 +574,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut tx, s.assets.iter());
+            add_contracts(&mut tx, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1040,7 +1040,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut pset, s.assets.iter());
+            add_contracts(&mut pset, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1060,7 +1060,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .fee_rate(r.fee_rate)
                 .finish()?;
 
-            add_contracts(&mut pset, s.assets.iter());
+            add_contracts(&mut pset, s.registry_asset_data());
             Response::result(
                 request.id,
                 serde_json::to_value(response::Pset {
@@ -1322,31 +1322,6 @@ fn signer_details(name: &str, signer: &AppSigner) -> Result<response::SignerDeta
     })
 }
 
-fn add_contracts<'a>(
-    pset: &mut PartiallySignedTransaction,
-    assets: impl Iterator<Item = (&'a AssetId, &'a AppAsset)>,
-) {
-    let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
-    for (_, asset) in assets {
-        if let AppAsset::RegistryAsset(registry_data) = asset {
-            // Policy asset and reissuance tokens do not require the contract
-            let asset_id = asset.asset_id();
-            if assets_in_pset.contains(&asset_id) {
-                if let Some(metadata) = asset.asset_metadata() {
-                    pset.add_asset_metadata(asset_id, &metadata);
-                    let token_id = registry_data.reissuance_token();
-                    // TODO: handle blinded issuance
-                    let issuance_blinded = false;
-                    pset.add_token_metadata(
-                        token_id,
-                        &TokenMetadata::new(asset_id, issuance_blinded),
-                    );
-                }
-            }
-        }
-    }
-}
-
 fn convert_utxo(u: &lwk_wollet::WalletTxOut) -> response::Utxo {
     response::Utxo {
         txid: u.outpoint.txid.to_string(),
@@ -1391,10 +1366,10 @@ fn amp2userkey(signer: &AnySigner) -> Result<String, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{AppAsset, RegistryAssetData};
+    use crate::state::AppAsset;
     use lwk_wollet::elements::pset::{elip100::PSET_HWW_PREFIX, PartiallySignedTransaction};
     use lwk_wollet::elements::AssetId;
-    use lwk_wollet::Contract;
+    use lwk_wollet::{Contract, RegistryAssetData};
     use std::collections::HashMap;
     use std::net::TcpListener;
     use std::str::FromStr;
@@ -1474,8 +1449,17 @@ mod tests {
         assets_map.insert(asset_id, AppAsset::RegistryAsset(asset_data.clone()));
         assets_map.insert(token_id, AppAsset::ReissuanceToken(asset_data.clone()));
 
+        // TODO: check with a test vector, this is the value generated once the entropy fn has been introduced
+        assert_eq!(
+            asset_data.entropy().unwrap(),
+            [
+                246, 117, 58, 147, 49, 238, 254, 149, 30, 173, 173, 99, 251, 157, 220, 73, 16, 39,
+                72, 67, 153, 90, 118, 180, 236, 207, 166, 53, 173, 215, 201, 113
+            ],
+        );
+
         // Add contracts
-        add_contracts(&mut pset, assets_map.iter());
+        add_contracts(&mut pset, [&asset_data].into_iter());
 
         // Ensure the asset metadata records are fully re-created
         assert_eq!(

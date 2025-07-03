@@ -233,6 +233,12 @@ pub enum Error {
 
     #[error("Cannot use derivation index when the descriptor has no wildcard")]
     IndexWithoutWildcard,
+
+    #[error("Given contract does not commit to asset '{0}'")]
+    InvalidContractForAsset(String),
+
+    #[error("Given transaction does not contain issuance of asset '{0}'")]
+    InvalidIssuanceTxtForAsset(String),
 }
 
 // cannot derive automatically with this error because of trait bound

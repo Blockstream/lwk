@@ -80,12 +80,6 @@ pub enum Error {
     #[error("Asset '{0}' does not exist")]
     AssetNotExist(String),
 
-    #[error("Given transaction does not contain issuance of asset '{0}'")]
-    InvalidIssuanceTxtForAsset(String),
-
-    #[error("Given contract does not commit to asset '{0}'")]
-    InvalidContractForAsset(String),
-
     #[error("Asset '{0}' already inserted")]
     AssetAlreadyInserted(String),
 

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 
@@ -12,7 +12,10 @@ use crate::error::Error;
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::hashes::sha256::Midstate;
-use elements::{Transaction, Txid};
+use elements::pset::elip100::AssetMetadata;
+use elements::pset::elip100::TokenMetadata;
+use elements::pset::PartiallySignedTransaction;
+use elements::{AssetIssuance, LockTime, Script, Sequence, Transaction, TxInWitness, Txid};
 use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
@@ -191,6 +194,51 @@ impl RegistryCache {
 
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         self.inner.post(data).await
+    }
+
+    /// Returns a list of registry asset data but with a dummy tx for the issuance tx
+    /// because it's used for adding contracts to the pset and the full transaction is not needed there.
+    /// TODO: fix this ugly hack
+    pub fn registry_asset_data(&self) -> Vec<RegistryAssetData> {
+        let mut result = vec![];
+        for registry_data in self.cache.values() {
+            if let (Ok(asset_id), Ok(token_id)) =
+                (registry_data.asset_id(), registry_data.token_id())
+            {
+                let mut dummy_inputs: Vec<elements::TxIn> = vec![];
+                let dummy_input = elements::TxIn {
+                    previous_output: OutPoint::new(
+                        registry_data.issuance_prevout.txid,
+                        registry_data.issuance_prevout.vout,
+                    ),
+                    is_pegin: false,
+                    script_sig: Script::new(),
+                    sequence: Sequence::MAX,
+                    asset_issuance: AssetIssuance::default(),
+                    witness: TxInWitness::default(),
+                };
+
+                for _ in 0..registry_data.issuance_txin.vin + 1 {
+                    dummy_inputs.push(dummy_input.clone());
+                }
+                let dummy_tx = Transaction {
+                    version: 0,
+                    lock_time: LockTime::ZERO,
+                    input: dummy_inputs,
+                    output: vec![],
+                };
+                let registry_asset_data = RegistryAssetData {
+                    asset_id,
+                    token_id,
+                    issuance_vin: registry_data.issuance_txin.vin,
+                    issuance_tx: dummy_tx.clone(),
+                    contract: registry_data.contract.clone(),
+                };
+                result.push(registry_asset_data);
+            }
+        }
+
+        result
     }
 }
 
@@ -542,6 +590,105 @@ fn usdt() -> (AssetId, RegistryData) {
     (asset_id, data)
 }
 
+pub fn add_contracts<'a>(
+    pset: &mut PartiallySignedTransaction,
+    assets: impl Iterator<Item = &'a RegistryAssetData>,
+) {
+    let assets_in_pset: HashSet<_> = pset.outputs().iter().filter_map(|o| o.asset).collect();
+    for registry_data in assets {
+        // Policy asset and reissuance tokens do not require the contract
+        let asset_id = registry_data.asset_id();
+        if assets_in_pset.contains(&asset_id) {
+            let metadata = registry_data.asset_metadata();
+            pset.add_asset_metadata(asset_id, &metadata);
+            let token_id = registry_data.reissuance_token();
+            // TODO: handle blinded issuance
+            let issuance_blinded = false;
+            pset.add_token_metadata(token_id, &TokenMetadata::new(asset_id, issuance_blinded));
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RegistryAssetData {
+    asset_id: AssetId,
+    token_id: AssetId,
+    issuance_vin: u32,
+    issuance_tx: Transaction,
+    contract: Contract,
+}
+
+impl RegistryAssetData {
+    pub fn new(
+        asset_id: AssetId,
+        issuance_tx: Transaction,
+        contract: Contract,
+    ) -> Result<Self, Error> {
+        for (vin, txin) in issuance_tx.input.iter().enumerate() {
+            let (asset_id_txin, token_id) = txin.issuance_ids();
+            if asset_id_txin == asset_id {
+                let (asset_id_contract, token_id_contract) = asset_ids(txin, &contract)?;
+                if asset_id_contract != asset_id || token_id_contract != token_id {
+                    return Err(Error::InvalidContractForAsset(asset_id.to_string()));
+                }
+                return Ok(Self {
+                    asset_id,
+                    token_id,
+                    issuance_vin: vin as u32,
+                    issuance_tx,
+                    contract,
+                });
+            }
+        }
+        Err(Error::InvalidIssuanceTxtForAsset(asset_id.to_string()))
+    }
+
+    pub fn contract_str(&self) -> String {
+        serde_json::to_string(&self.contract).expect("contract")
+    }
+
+    pub fn contract(&self) -> &Contract {
+        &self.contract
+    }
+
+    pub fn issuance_prevout(&self) -> OutPoint {
+        self.issuance_tx.input[self.issuance_vin as usize].previous_output
+    }
+
+    pub fn reissuance_token(&self) -> AssetId {
+        self.token_id
+    }
+
+    pub fn token_id(&self) -> AssetId {
+        self.token_id
+    }
+
+    pub fn asset_id(&self) -> AssetId {
+        self.asset_id
+    }
+
+    pub fn issuance_tx(&self) -> &Transaction {
+        &self.issuance_tx
+    }
+
+    pub fn txin(&self) -> &elements::TxIn {
+        &self.issuance_tx.input[self.issuance_vin as usize]
+    }
+
+    pub fn entropy(&self) -> Result<[u8; 32], Error> {
+        let entropy = AssetId::generate_asset_entropy(
+            self.txin().previous_output,
+            self.contract.contract_hash()?,
+        )
+        .to_byte_array();
+        Ok(entropy)
+    }
+
+    pub fn asset_metadata(&self) -> AssetMetadata {
+        AssetMetadata::new(self.contract_str(), self.issuance_prevout())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -715,5 +862,25 @@ mod tests {
         assert_eq!(data.precision(), 8);
         assert_eq!(data.name(), "Tether USD");
         assert_eq!(data.domain(), "tether.to");
+    }
+
+    #[test]
+    fn test_add_contracts() {
+        let (usdt_asset_id, data) = usdt();
+        let usdt_token_id = data.token_id().unwrap();
+        let mut pset =
+            PartiallySignedTransaction::from_str(lwk_test_util::pset_usdt_no_contracts()).unwrap();
+        let registry = Registry::default_for_network(ElementsNetwork::Liquid).unwrap();
+        let cache = RegistryCache::new_hardcoded(registry);
+        let assets = cache.registry_asset_data();
+        assert!(cache.get(usdt_asset_id).is_some());
+
+        assert!(pset.get_asset_metadata(usdt_asset_id).is_none());
+        assert!(pset.get_token_metadata(usdt_token_id).is_none());
+
+        add_contracts(&mut pset, assets.iter());
+
+        assert!(pset.get_asset_metadata(usdt_asset_id).is_some());
+        assert!(pset.get_token_metadata(usdt_token_id).is_some());
     }
 }

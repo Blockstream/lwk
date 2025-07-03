@@ -11,14 +11,14 @@ use lwk_rpc_model::request;
 use lwk_signer::AnySigner;
 use lwk_signer::SwSigner;
 use lwk_tiny_jrpc::Request;
-use lwk_wollet::asset_ids;
 use lwk_wollet::bitcoin::bip32::{Fingerprint, Xpub};
 use lwk_wollet::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements::encode::serialize;
 use lwk_wollet::elements::hex::ToHex;
 use lwk_wollet::elements::pset::elip100::AssetMetadata;
-use lwk_wollet::elements::{Address, AssetId, OutPoint, Transaction, Txid};
+use lwk_wollet::elements::{Address, AssetId, Transaction, Txid};
 use lwk_wollet::Contract;
+use lwk_wollet::RegistryAssetData;
 use lwk_wollet::Wollet;
 use serde::Serialize;
 
@@ -123,58 +123,8 @@ pub fn id_to_fingerprint(id: &XKeyIdentifier) -> Fingerprint {
     id[0..4].try_into().expect("4 is the fingerprint length")
 }
 
-#[derive(Debug, Clone)]
-pub struct RegistryAssetData {
-    asset_id: AssetId,
-    token_id: AssetId,
-    issuance_vin: u32,
-    issuance_tx: Transaction,
-    contract: Contract,
-}
-
-impl RegistryAssetData {
-    pub fn new(
-        asset_id: AssetId,
-        issuance_tx: Transaction,
-        contract: Contract,
-    ) -> Result<Self, Error> {
-        for (vin, txin) in issuance_tx.input.iter().enumerate() {
-            let (asset_id_txin, token_id) = txin.issuance_ids();
-            if asset_id_txin == asset_id {
-                let (asset_id_contract, token_id_contract) = asset_ids(txin, &contract)?;
-                if asset_id_contract != asset_id || token_id_contract != token_id {
-                    return Err(Error::InvalidContractForAsset(asset_id.to_string()));
-                }
-                return Ok(Self {
-                    asset_id,
-                    token_id,
-                    issuance_vin: vin as u32,
-                    issuance_tx,
-                    contract,
-                });
-            }
-        }
-        Err(Error::InvalidIssuanceTxtForAsset(asset_id.to_string()))
-    }
-
-    pub fn contract_str(&self) -> String {
-        serde_json::to_string(&self.contract).expect("contract")
-    }
-
-    pub fn contract(&self) -> &Contract {
-        &self.contract
-    }
-
-    pub fn issuance_prevout(&self) -> OutPoint {
-        self.issuance_tx.input[self.issuance_vin as usize].previous_output
-    }
-
-    pub fn reissuance_token(&self) -> AssetId {
-        self.token_id
-    }
-}
-
 pub enum AppAsset {
+    #[allow(dead_code)]
     /// The policy asset (L-BTC)
     PolicyAsset(AssetId),
 
@@ -189,9 +139,9 @@ impl AppAsset {
     pub fn name(&self) -> String {
         match self {
             AppAsset::PolicyAsset(_) => "liquid bitcoin".into(),
-            AppAsset::RegistryAsset(d) => d.contract.name.clone(),
+            AppAsset::RegistryAsset(d) => d.contract().name.clone(),
             AppAsset::ReissuanceToken(d) => {
-                format!("reissuance token for {}", d.contract.name)
+                format!("reissuance token for {}", d.contract().name)
             }
         }
     }
@@ -199,14 +149,14 @@ impl AppAsset {
     pub fn ticker(&self) -> String {
         match self {
             AppAsset::PolicyAsset(_) => "L-BTC".into(),
-            AppAsset::RegistryAsset(d) => d.contract.ticker.clone(),
+            AppAsset::RegistryAsset(d) => d.contract().ticker.clone(),
             AppAsset::ReissuanceToken(d) => {
-                format!("reissuance token for {}", d.contract.ticker)
+                format!("reissuance token for {}", d.contract().ticker)
             }
         }
     }
 
-    pub fn asset_metadata(&self) -> Option<AssetMetadata> {
+    pub fn _asset_metadata(&self) -> Option<AssetMetadata> {
         match self {
             AppAsset::PolicyAsset(_) => None,
             AppAsset::RegistryAsset(d) => {
@@ -218,17 +168,17 @@ impl AppAsset {
         }
     }
 
-    pub fn asset_id(&self) -> AssetId {
+    pub fn _asset_id(&self) -> AssetId {
         match self {
             AppAsset::PolicyAsset(asset) => *asset,
-            AppAsset::RegistryAsset(d) => d.asset_id,
-            AppAsset::ReissuanceToken(d) => d.token_id,
+            AppAsset::RegistryAsset(d) => d.asset_id(),
+            AppAsset::ReissuanceToken(d) => d.token_id(),
         }
     }
 
     pub fn issuance_tx(&self) -> Option<Transaction> {
         match self {
-            AppAsset::RegistryAsset(d) => Some(d.issuance_tx.clone()),
+            AppAsset::RegistryAsset(d) => Some(d.issuance_tx().clone()),
             _ => None,
         }
     }
@@ -237,9 +187,9 @@ impl AppAsset {
         match self {
             AppAsset::RegistryAsset(a) => {
                 let params = request::AssetInsert {
-                    asset_id: a.asset_id.to_string(),
+                    asset_id: a.asset_id().to_string(),
                     contract: a.contract_str(),
-                    issuance_tx: serialize(&a.issuance_tx).to_hex(),
+                    issuance_tx: serialize(a.issuance_tx()).to_hex(),
                 };
                 Some(Request {
                     jsonrpc: "2.0".into(),
@@ -556,7 +506,7 @@ impl State {
             .insert(asset_id, AppAsset::RegistryAsset(data.clone()));
         self.assets
             .0
-            .insert(data.token_id, AppAsset::ReissuanceToken(data));
+            .insert(data.token_id(), AppAsset::ReissuanceToken(data));
         Ok(())
     }
 
@@ -737,6 +687,13 @@ impl State {
         }
 
         Ok(requests)
+    }
+
+    pub fn registry_asset_data(&self) -> impl Iterator<Item = &RegistryAssetData> {
+        self.assets.iter().filter_map(|(_, a)| match a {
+            AppAsset::RegistryAsset(r) => Some(r),
+            _ => None,
+        })
     }
 
     /// Get an available signer identified by name.

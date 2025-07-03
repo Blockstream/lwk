@@ -2,7 +2,8 @@ use lwk_wollet::{elements, registry::RegistryCache};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
-    blockdata::asset_id::AssetIds, AssetId, Contract, Error, EsploraClient, Network, Transaction,
+    blockdata::asset_id::AssetIds, AssetId, Contract, Error, EsploraClient, Network, Pset,
+    Transaction,
 };
 
 #[wasm_bindgen]
@@ -143,6 +144,13 @@ impl Registry {
         self.inner
             .get_asset_of_token((*token_id).into())
             .map(Into::into)
+    }
+
+    #[wasm_bindgen(js_name = addContracts)]
+    pub fn add_contracts(&self, pset: Pset) -> Result<Pset, Error> {
+        let mut pset: elements::pset::PartiallySignedTransaction = pset.into();
+        lwk_wollet::registry::add_contracts(&mut pset, self.inner.registry_asset_data().iter());
+        Ok(pset.into())
     }
 }
 

@@ -2978,5 +2978,12 @@ fn test_sync_high_index() {
     assert_eq!(txs.len(), 1);
     assert_eq!(2, txs[0].outputs.iter().filter(|o| o.is_some()).count());
 
+    // w3 unblinds all txout again
+    w3.reunblind().unwrap();
+    // w3 now sees everything
+    let txs = w3.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+    assert_eq!(2, txs[0].outputs.iter().filter(|o| o.is_some()).count());
+
     rt.block_on(test_env.shutdown());
 }

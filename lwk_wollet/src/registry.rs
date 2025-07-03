@@ -15,7 +15,7 @@ use elements::hashes::sha256::Midstate;
 use elements::pset::elip100::AssetMetadata;
 use elements::pset::elip100::TokenMetadata;
 use elements::pset::PartiallySignedTransaction;
-use elements::{Transaction, Txid};
+use elements::{LockTime, Transaction, Txid};
 use futures::{stream, StreamExt};
 use once_cell::sync::Lazy;
 use regex_lite::Regex;
@@ -194,6 +194,28 @@ impl RegistryCache {
 
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         self.inner.post(data).await
+    }
+
+    /// Returns a list of registry asset data but with a dummy tx for the issuance tx
+    /// because it's used for adding contracts to the pset and the transaction is not needed there.
+    /// TODO: fix this ugly hack
+    pub fn registry_asset_data(&self) -> Vec<RegistryAssetData> {
+        let dummy_tx = Transaction {
+            version: 0,
+            lock_time: LockTime::ZERO,
+            input: vec![],
+            output: vec![],
+        };
+        self.cache
+            .values()
+            .map(|data| RegistryAssetData {
+                asset_id: data.asset_id().unwrap(),
+                token_id: data.token_id().unwrap(),
+                issuance_vin: data.issuance_txin.vin,
+                issuance_tx: dummy_tx.clone(),
+                contract: data.contract.clone(),
+            })
+            .collect()
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::bitcoin::bip32::Fingerprint;
-use crate::clients::LastUnused;
+use crate::clients::{try_unblind, LastUnused};
 use crate::config::{Config, ElementsNetwork};
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
@@ -26,7 +26,7 @@ use elements_miniscript::{
 use fxhash::FxHasher;
 use lwk_common::{burn_script, pset_balance, pset_issuances, pset_signatures, PsetDetails};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{atomic, Arc};
@@ -584,6 +584,26 @@ impl Wollet {
             }
         }
         Ok(utxos)
+    }
+
+    /// Attempt to unblind transaction outputs again
+    ///
+    /// In some quite particular situations, the wollet might have not unblinded some of
+    /// its transaction outputs. This function allows to attempt to unblind them again.
+    pub fn reunblind(&mut self) -> Result<(), Error> {
+        for (txid, tx) in self.store.cache.all_txs.iter() {
+            for (vout, txout) in tx.output.iter().enumerate() {
+                if self.store.cache.paths.contains_key(&txout.script_pubkey) {
+                    let outpoint = OutPoint::new(*txid, vout as u32);
+                    if let Entry::Vacant(e) = self.store.cache.unblinded.entry(outpoint) {
+                        if let Ok(unblinded) = try_unblind(txout.clone(), &self.descriptor) {
+                            e.insert(unblinded);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn balance_from_utxos(

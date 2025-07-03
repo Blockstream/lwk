@@ -658,6 +658,12 @@ mod tests {
         assert!(cache.get(testnet_asset_id).is_some());
         assert!(cache.get(mainnet_asset_id).is_some());
         assert!(cache.get(usdt_asset_id).is_some());
+
+        let token_id =
+            AssetId::from_str("59fe4d2127ba9f16bd6850a3e6271a166e7ed2e1669f6c107d655791c94ee98f")
+                .unwrap();
+        let asset_id = cache.get_asset_of_token(token_id).unwrap();
+        assert_eq!(asset_id.asset_id().unwrap(), usdt_asset_id);
     }
 
     #[ignore = "require internet connection"]

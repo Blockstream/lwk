@@ -137,6 +137,13 @@ impl Registry {
     pub fn get(&self, asset_id: &AssetId) -> Option<RegistryData> {
         self.inner.get((*asset_id).into()).map(|data| data.into())
     }
+
+    #[wasm_bindgen(js_name = getAssetOfToken)]
+    pub fn get_asset_of_token(&self, token_id: &AssetId) -> Option<RegistryData> {
+        self.inner
+            .get_asset_of_token((*token_id).into())
+            .map(Into::into)
+    }
 }
 
 #[wasm_bindgen]

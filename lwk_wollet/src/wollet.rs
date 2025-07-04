@@ -546,6 +546,25 @@ impl Wollet {
         Ok(utxos)
     }
 
+    /// Get the transaction outputs that the wallet was unable to unbind
+    ///
+    /// In some particular situation they can be unblinded with `crate::Wollet::reunblind`.
+    pub fn txos_cannot_unblind(&self) -> Result<Vec<OutPoint>, Error> {
+        let mut txos = vec![];
+        for (txid, tx) in self.store.cache.all_txs.iter() {
+            for (vout, o) in tx.output.iter().enumerate() {
+                let outpoint = OutPoint::new(*txid, vout as u32);
+                if !o.script_pubkey.is_empty()
+                    && self.store.cache.paths.contains_key(&o.script_pubkey)
+                    && !self.store.cache.unblinded.contains_key(&outpoint)
+                {
+                    txos.push(outpoint);
+                }
+            }
+        }
+        Ok(txos)
+    }
+
     /// Return UTXOs unblinded with a custom blinding key
     ///
     /// They can be spent using [`crate::TxBuilder::add_external_utxos()`]

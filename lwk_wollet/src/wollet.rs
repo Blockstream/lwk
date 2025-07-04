@@ -609,7 +609,8 @@ impl Wollet {
     ///
     /// In some quite particular situations, the wollet might have not unblinded some of
     /// its transaction outputs. This function allows to attempt to unblind them again.
-    pub fn reunblind(&mut self) -> Result<(), Error> {
+    pub fn reunblind(&mut self) -> Result<Vec<OutPoint>, Error> {
+        let mut txos = vec![];
         for (txid, tx) in self.store.cache.all_txs.iter() {
             for (vout, txout) in tx.output.iter().enumerate() {
                 if self.store.cache.paths.contains_key(&txout.script_pubkey) {
@@ -617,12 +618,13 @@ impl Wollet {
                     if let Entry::Vacant(e) = self.store.cache.unblinded.entry(outpoint) {
                         if let Ok(unblinded) = try_unblind(txout.clone(), &self.descriptor) {
                             e.insert(unblinded);
+                            txos.push(outpoint);
                         }
                     }
                 }
             }
         }
-        Ok(())
+        Ok(txos)
     }
 
     pub(crate) fn balance_from_utxos(

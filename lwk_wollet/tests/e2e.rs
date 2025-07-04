@@ -2967,6 +2967,9 @@ fn test_sync_high_index() {
     assert_eq!(txs.len(), 1);
     assert_eq!(1, txs[0].outputs.iter().filter(|o| o.is_some()).count());
 
+    // w3 sees an output that it cannot unblind
+    assert_eq!(1, w3.txos_cannot_unblind().unwrap().len());
+
     // w2 scans with a high index (note that it hasn't scanned with a low index before)
     let update = client.full_scan_to_index(&w2, 100).unwrap();
     if let Some(update) = update {
@@ -2984,6 +2987,9 @@ fn test_sync_high_index() {
     let txs = w3.transactions().unwrap();
     assert_eq!(txs.len(), 1);
     assert_eq!(2, txs[0].outputs.iter().filter(|o| o.is_some()).count());
+
+    // Output was unblinded, w3 does not see outputs that it cannot unblind anymore
+    assert_eq!(0, w3.txos_cannot_unblind().unwrap().len());
 
     rt.block_on(test_env.shutdown());
 }

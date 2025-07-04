@@ -548,7 +548,7 @@ impl Wollet {
 
     /// Get the transaction outputs that the wallet was unable to unbind
     ///
-    /// In some particular situation they can be unblinded with `crate::Wollet::reunblind`.
+    /// In some particular situation they can be unblinded with [`crate::Wollet::reunblind()`].
     pub fn txos_cannot_unblind(&self) -> Result<Vec<OutPoint>, Error> {
         let mut txos = vec![];
         for (txid, tx) in self.store.cache.all_txs.iter() {

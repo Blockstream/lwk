@@ -2982,7 +2982,8 @@ fn test_sync_high_index() {
     assert_eq!(2, txs[0].outputs.iter().filter(|o| o.is_some()).count());
 
     // w3 unblinds all txout again
-    w3.reunblind().unwrap();
+    let unblinded_txos = w3.reunblind().unwrap();
+    assert_eq!(1, unblinded_txos.len());
     // w3 now sees everything
     let txs = w3.transactions().unwrap();
     assert_eq!(txs.len(), 1);
@@ -2990,6 +2991,7 @@ fn test_sync_high_index() {
 
     // Output was unblinded, w3 does not see outputs that it cannot unblind anymore
     assert_eq!(0, w3.txos_cannot_unblind().unwrap().len());
+    assert_eq!(0, w3.reunblind().unwrap().len());
 
     rt.block_on(test_env.shutdown());
 }

@@ -546,6 +546,41 @@ impl Wollet {
         Ok(utxos)
     }
 
+    /// Extract the wallet UTXOs that a PSET is creating
+    ///
+    /// This function returns [`crate::model::ExternalUtxo`]s so it possible to spend them (using
+    /// [`crate::TxBuilder::add_external_utxos()`]) without broadcasting the transaction.
+    pub fn extract_wallet_utxos(
+        &self,
+        pset: &PartiallySignedTransaction,
+    ) -> Result<Vec<ExternalUtxo>, Error> {
+        let mut utxos = vec![];
+        let tx = pset.extract_tx()?;
+        let txid = tx.txid();
+        for (vout, output) in pset.outputs().iter().enumerate() {
+            if self.store.cache.paths.contains_key(&output.script_pubkey) {
+                let outpoint = OutPoint::new(txid, vout as u32);
+                // FIXME: also extract explicit utxos
+                let txout = output.to_txout();
+                if let Ok(unblinded) = try_unblind(txout.clone(), &self.descriptor) {
+                    let tx_ = if self.is_segwit() {
+                        None
+                    } else {
+                        Some(tx.clone())
+                    };
+                    utxos.push(ExternalUtxo {
+                        outpoint,
+                        txout,
+                        tx: tx_,
+                        unblinded,
+                        max_weight_to_satisfy: self.max_weight_to_satisfy,
+                    });
+                }
+            }
+        }
+        Ok(utxos)
+    }
+
     /// Get the transaction outputs that the wallet was unable to unbind
     ///
     /// In some particular situation they can be unblinded with [`crate::Wollet::reunblind()`].

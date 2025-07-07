@@ -184,4 +184,16 @@ impl Wollet {
             .map(Arc::new)
             .collect())
     }
+
+    /// Extract the wallet UTXOs that a PSET is creating
+    pub fn extract_wallet_utxos(&self, pset: &Pset) -> Result<Vec<Arc<ExternalUtxo>>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .extract_wallet_utxos(&pset.inner())?
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect())
+    }
 }

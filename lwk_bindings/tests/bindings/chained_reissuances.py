@@ -83,6 +83,8 @@ for _ in range(1, n_reissuances):
     previous_utxos = wm.extract_wallet_utxos(psets[-1])
     b = network.tx_builder()
     b.add_external_utxos(previous_utxos)
+    # Prevent tx builder from adding more wallet utxos, those have been
+    # added in the 1st PSET so they would be double spent here.
     b.set_wallet_utxos([])
     b.reissue_asset(asset_id, reissue_sats, ws.address(0).address(), None)
     pset = b.finish(wm)

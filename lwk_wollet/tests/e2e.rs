@@ -2995,3 +2995,63 @@ fn test_sync_high_index() {
 
     rt.block_on(test_env.shutdown());
 }
+
+#[test]
+fn test_chain_tx() {
+    // Create a chain of transaction spending the outputs of the previous one, while the previous
+    // transaction is still unspent
+    let server = setup();
+
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(&server);
+
+    let node_addr = server.elementsd_getnewaddress();
+
+    // Create 1st tx
+    let mut pset0 = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let previous_utxos = wallet.wollet.extract_wallet_utxos(&pset0).unwrap();
+    assert_eq!(previous_utxos.len(), 1);
+
+    // Create 2nd tx
+    // Note: we need to set "wallet utxos" with a empty vec so no current wallet utxos are added,
+    // these are the utxos spent in the first transaction, so using them would "invalidate" the 2nd
+    // tx.
+    let mut pset1 = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 1_001)
+        .unwrap()
+        .add_external_utxos(previous_utxos)
+        .unwrap()
+        .set_wallet_utxos(vec![])
+        .finish()
+        .unwrap();
+
+    // Sign all txs
+    for pset in [&mut pset0, &mut pset1] {
+        let sigs = signer.sign(pset).unwrap();
+        assert!(sigs > 0);
+    }
+
+    // Broadcast all txs
+    for pset in [&mut pset0, &mut pset1] {
+        let tx = wallet.wollet.finalize(pset).unwrap();
+        let txid = wallet.client.broadcast(&tx).unwrap();
+        wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
+    }
+
+    let txs = wallet.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 3);
+}

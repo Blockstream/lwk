@@ -562,7 +562,7 @@ impl Wollet {
                 let outpoint = OutPoint::new(txid, vout as u32);
                 // FIXME: also extract explicit utxos
                 let txout = output.to_txout();
-                if let Ok(unblinded) = try_unblind(txout.clone(), &self.descriptor) {
+                if let Ok(unblinded) = try_unblind(&txout, &self.descriptor) {
                     let tx_ = if self.is_segwit() {
                         None
                     } else {
@@ -651,7 +651,7 @@ impl Wollet {
                 if self.store.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, vout as u32);
                     if let Entry::Vacant(e) = self.store.cache.unblinded.entry(outpoint) {
-                        if let Ok(unblinded) = try_unblind(txout.clone(), &self.descriptor) {
+                        if let Ok(unblinded) = try_unblind(txout, &self.descriptor) {
                             e.insert(unblinded);
                             txos.push(outpoint);
                         }

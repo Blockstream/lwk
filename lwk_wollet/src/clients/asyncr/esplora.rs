@@ -594,7 +594,7 @@ impl EsploraClient {
                             let vout = i as u32;
                             let outpoint = OutPoint { txid, vout };
 
-                            match try_unblind(output.clone(), descriptor) {
+                            match try_unblind(output, descriptor) {
                                     Ok(unblinded) => unblinds.push((outpoint, unblinded)),
                                     Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                                 }

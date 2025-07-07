@@ -285,7 +285,7 @@ pub trait BlockchainBackend {
                         vout,
                     };
 
-                    match try_unblind(output.clone(), descriptor) {
+                    match try_unblind(output, descriptor) {
                             Ok(unblinded) => unblinds.push((outpoint, unblinded)),
                             Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
                         }

@@ -115,7 +115,7 @@ impl ElementsRpcClient {
                 .get(&u.script_pubkey)
                 .ok_or_else(|| Error::ElementsRpcUnexpectedReturn("scantxoutset".into()))?;
             let txout = self.get_txout(&outpoint, u.height)?;
-            let unblinded = try_unblind(txout, desc)?;
+            let unblinded = try_unblind(&txout, desc)?;
             let address =
                 Address::from_script(&u.script_pubkey, None, self.network.address_params())
                     .expect("used descriptors have addresses"); // TODO: get blinding key

@@ -148,6 +148,9 @@ pub use bitcoincore_rpc;
 #[cfg(feature = "electrum")]
 pub use crate::clients::blocking::electrum_client::UrlError;
 
+#[cfg(feature = "test_wallet")]
+pub use crate::wollet::test_wallet;
+
 pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};

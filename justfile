@@ -68,15 +68,15 @@ ios-sim: x86_64-apple-ios aarch64-apple-ios-sim
 
 # Build x86_64-apple-ios
 x86_64-apple-ios:
-    cargo build --release --target x86_64-apple-ios -p lwk_bindings
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target x86_64-apple-ios -p lwk_bindings
 
 # Build aarch64-apple-ios
 aarch64-apple-ios:
-    cargo build --release --target aarch64-apple-ios -p lwk_bindings
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios -p lwk_bindings
 
 # Build aarch64-apple-ios-sim
 aarch64-apple-ios-sim:
-    cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings
+    IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-ios-sim -p lwk_bindings
 
 # Build the swift framework (works only on mac)
 swift: ios ios-sim

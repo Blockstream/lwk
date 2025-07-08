@@ -6,6 +6,9 @@ description = "Liquid Wallet Kit - Docker containers for tests environment"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_containers"
 
+[lib]
+test = false
+
 [dependencies]
 bitcoin = "0.32"
 rand = "0.8.5"

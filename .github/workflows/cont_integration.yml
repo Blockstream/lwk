@@ -39,7 +39,7 @@ jobs:
       runs-on: macos-14
       steps:
         - uses: actions/checkout@v4
-        - uses: dtolnay/rust-toolchain@1.81.0
+        - uses: dtolnay/rust-toolchain@1.85.0
           with:
             targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim
         - uses: extractions/setup-just@v2

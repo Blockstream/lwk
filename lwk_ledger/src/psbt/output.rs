@@ -19,8 +19,8 @@ const PSBT_OUT_TAP_INTERNAL_KEY: u8 = 0x05;
 const PSBT_OUT_TAP_TREE: u8 = 0x06;
 /// Type: Taproot Key BIP 32 Derivation Path PSBT_OUT_TAP_BIP32_DERIVATION = 0x07
 const PSBT_OUT_TAP_BIP32_DERIVATION: u8 = 0x07;
-/// Type: Proprietary Use Type PSET_IN_PROPRIETARY = 0xFC
-//const PSET_OUT_PROPRIETARY: u8 = 0xFC;
+// /// Type: Proprietary Use Type PSET_IN_PROPRIETARY = 0xFC
+// const PSET_OUT_PROPRIETARY: u8 = 0xFC;
 
 /// Elements
 /// The 33 byte Value Commitment for this output. This is mutually

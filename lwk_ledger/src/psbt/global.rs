@@ -22,8 +22,8 @@ const PSET_GLOBAL_TX_MODIFIABLE: u8 = 0x06;
 
 /// Type: Version Number PSET_GLOBAL_VERSION = 0xFB
 const PSET_GLOBAL_VERSION: u8 = 0xFB;
-/// Type: Proprietary Use Type PSET_GLOBAL_PROPRIETARY = 0xFC
-//const PSET_GLOBAL_PROPRIETARY: u8 = 0xFC;
+// /// Type: Proprietary Use Type PSET_GLOBAL_PROPRIETARY = 0xFC
+// const PSET_GLOBAL_PROPRIETARY: u8 = 0xFC;
 
 /// Proprietary fields in elements
 /// Type: Global Scalars used in range proofs = 0x00

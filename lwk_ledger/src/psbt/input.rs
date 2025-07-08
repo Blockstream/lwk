@@ -51,8 +51,8 @@ const PSBT_IN_TAP_BIP32_DERIVATION: u8 = 0x16;
 const PSBT_IN_TAP_INTERNAL_KEY: u8 = 0x17;
 /// Type: Taproot Merkle Root PSBT_IN_TAP_MERKLE_ROOT = 0x18
 const PSBT_IN_TAP_MERKLE_ROOT: u8 = 0x18;
-/// Type: Proprietary Use Type PSET_IN_PROPRIETARY = 0xFC
-//const PSET_IN_PROPRIETARY: u8 = 0xFC;
+// /// Type: Proprietary Use Type PSET_IN_PROPRIETARY = 0xFC
+// const PSET_IN_PROPRIETARY: u8 = 0xFC;
 
 // Elements Proprietary types:
 /// Issuance Value: The explicit little endian 64-bit integer

@@ -114,7 +114,7 @@ impl WalletPolicy {
         res.extend_from_slice(&(self.name.len() as u8).to_be_bytes());
         res.extend_from_slice(self.name.as_bytes());
         res.extend(encode::serialize(&VarInt(
-            self.descriptor_template.as_bytes().len() as u64,
+            self.descriptor_template.len() as u64
         )));
 
         if self.version == Version::V2 {

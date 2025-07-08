@@ -49,6 +49,10 @@ impl Script {
     pub fn asm(&self) -> String {
         self.inner.asm()
     }
+
+    pub fn is_provably_unspendable(&self) -> bool {
+        self.inner.is_provably_unspendable()
+    }
 }
 
 #[uniffi::export]

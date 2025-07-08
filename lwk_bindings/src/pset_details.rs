@@ -135,7 +135,7 @@ impl Issuance {
     }
 
     pub fn prev_vout(&self) -> Option<u32> {
-        self.inner.prev_vout().map(Into::into)
+        self.inner.prev_vout()
     }
 
     pub fn prev_txid(&self) -> Option<Arc<Txid>> {
@@ -159,11 +159,11 @@ impl Issuance {
     }
 
     pub fn asset_satoshi(&self) -> Option<u64> {
-        self.inner.asset_satoshi().map(Into::into)
+        self.inner.asset_satoshi()
     }
 
     pub fn token_satoshi(&self) -> Option<u64> {
-        self.inner.token_satoshi().map(Into::into)
+        self.inner.token_satoshi()
     }
 }
 
@@ -191,7 +191,7 @@ impl Recipient {
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value.map(Into::into)
+        self.inner.value
     }
 
     pub fn address(&self) -> Option<Arc<Address>> {

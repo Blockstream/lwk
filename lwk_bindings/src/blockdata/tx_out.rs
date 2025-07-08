@@ -40,7 +40,7 @@ impl TxOut {
 
     /// If explicit returns the value, if confidential [None]
     pub fn value(&self) -> Option<u64> {
-        self.inner.value.explicit().map(Into::into)
+        self.inner.value.explicit()
     }
 
     /// Unblind the output

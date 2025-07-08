@@ -146,7 +146,7 @@ impl Issuance {
 
     #[wasm_bindgen(js_name = prevVout)]
     pub fn prev_vout(&self) -> Option<u32> {
-        self.inner.prev_vout().map(Into::into)
+        self.inner.prev_vout()
     }
 
     #[wasm_bindgen(js_name = prevTxid)]
@@ -172,7 +172,7 @@ impl Recipient {
     }
 
     pub fn value(&self) -> Option<u64> {
-        self.inner.value.map(Into::into)
+        self.inner.value
     }
 
     pub fn address(&self) -> Option<Address> {

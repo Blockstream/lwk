@@ -6,4 +6,7 @@ description = "Liquid Wallet Kit - Hardware Wallet Interface"
 license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_hwi"
 
+[lib]
+test = false
+
 [dependencies]

@@ -1096,6 +1096,24 @@ pub fn derive_script_and_blinding_key(
     ))
 }
 
+#[cfg(feature = "test_wallet")]
+impl Wollet {
+    pub fn test_wallet() -> Result<(lwk_signer::SwSigner, Self), Error> {
+        use lwk_common::Signer;
+        use std::str::FromStr;
+
+        let signer = lwk_signer::SwSigner::random(false)?.0;
+        let desc = signer
+            .wpkh_slip77_descriptor()
+            .map_err(|e| Error::Generic(e))?;
+        let desc = WolletDescriptor::from_str(&desc)?;
+        Ok((
+            signer,
+            Wollet::new(ElementsNetwork::default_regtest(), NoPersist::new(), desc)?,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::hash_map::DefaultHasher;

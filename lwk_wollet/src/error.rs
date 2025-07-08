@@ -239,6 +239,10 @@ pub enum Error {
 
     #[error("Given transaction does not contain issuance of asset '{0}'")]
     InvalidIssuanceTxtForAsset(String),
+
+    #[cfg(feature = "test_wallet")]
+    #[error(transparent)]
+    SignerError(#[from] lwk_signer::NewError),
 }
 
 // cannot derive automatically with this error because of trait bound

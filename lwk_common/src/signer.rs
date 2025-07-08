@@ -72,4 +72,12 @@ pub trait Signer {
         };
         Ok(xpub.network == bitcoin::NetworkKind::Main)
     }
+
+    fn wpkh_slip77_descriptor(&self) -> Result<String, String> {
+        crate::singlesig_desc(
+            self,
+            crate::Singlesig::Wpkh,
+            crate::DescriptorBlindingKey::Slip77,
+        )
+    }
 }

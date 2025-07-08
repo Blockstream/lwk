@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::Signer;
 
 // TODO impl error handling
-pub fn singlesig_desc<S: Signer>(
+pub fn singlesig_desc<S: Signer + ?Sized>(
     signer: &S,
     script_variant: Singlesig,
     blinding_variant: DescriptorBlindingKey,

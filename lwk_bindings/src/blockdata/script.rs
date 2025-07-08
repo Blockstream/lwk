@@ -85,5 +85,8 @@ mod tests {
         );
 
         assert!(is_provably_segwit(&script, &None));
+
+        let burn = Script::new(&"6a".parse().unwrap()).unwrap();
+        assert!(burn.is_provably_unspendable());
     }
 }

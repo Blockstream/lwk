@@ -1,5 +1,6 @@
 use crate::AssetId;
 use lwk_wollet::elements;
+use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`elements::TxOutSecrets`]
@@ -42,6 +43,12 @@ impl TxOutSecrets {
             .parse()
             .expect("value_bf to_string creates valid hex")
     }
+
+    #[wasm_bindgen(js_name = isExplicit)]
+    pub fn is_explicit(&self) -> bool {
+        self.inner.asset_bf == AssetBlindingFactor::zero()
+            && self.inner.value_bf == ValueBlindingFactor::zero()
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]
@@ -66,6 +73,7 @@ mod tests {
         )
         .into();
 
+        assert!(txoutsecrets_explicit.is_explicit());
         assert_eq!(txoutsecrets_explicit.value(), 1000);
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex);
         assert_eq!(

@@ -2,6 +2,6 @@
 
 mod esplora;
 
+pub use crate::clients::EsploraClientBuilder;
 pub use esplora::async_sleep;
 pub use esplora::EsploraClient;
-pub use esplora::EsploraClientBuilder;

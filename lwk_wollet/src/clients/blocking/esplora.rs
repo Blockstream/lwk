@@ -4,13 +4,22 @@ use std::collections::{HashMap, HashSet};
 use tokio::runtime::Runtime;
 
 use crate::{
-    clients::{asyncr, Capability, Data, History},
+    clients::{asyncr, Capability, Data, EsploraClientBuilder, History},
     store::Height,
     wollet::WolletState,
     ElementsNetwork, Error, WolletDescriptor,
 };
 
 use super::BlockchainBackend;
+
+impl EsploraClientBuilder {
+    pub fn build_blocking(self) -> Result<EsploraClient, Error> {
+        Ok(EsploraClient {
+            rt: Runtime::new()?,
+            client: EsploraClientBuilder::build(self),
+        })
+    }
+}
 
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
@@ -35,7 +44,7 @@ impl EsploraClient {
     pub fn new_waterfalls(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,
-            client: asyncr::EsploraClientBuilder::new(url, network)
+            client: EsploraClientBuilder::new(url, network)
                 .waterfalls(true)
                 .build(),
         })

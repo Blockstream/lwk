@@ -47,6 +47,15 @@ impl TxOutSecrets {
     }
 }
 
+impl TxOutSecrets {
+    fn asset_generator(&self) -> Generator {
+        let asset = self.inner.asset.into_inner().to_byte_array();
+        let abf = self.inner.asset_bf.into_inner();
+        let asset_tag = Tag::from(asset);
+        Generator::new_blinded(&EC, asset_tag, abf)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

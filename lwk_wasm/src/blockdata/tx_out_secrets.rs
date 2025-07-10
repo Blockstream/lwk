@@ -1,8 +1,8 @@
 use crate::AssetId;
 use lwk_wollet::elements;
-use lwk_wollet::EC;
 use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use lwk_wollet::elements::secp256k1_zkp::{Generator, Tag};
+use lwk_wollet::EC;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`elements::TxOutSecrets`]
@@ -51,6 +51,21 @@ impl TxOutSecrets {
         self.inner.asset_bf == AssetBlindingFactor::zero()
             && self.inner.value_bf == ValueBlindingFactor::zero()
     }
+
+    /// Get the asset commitment
+    ///
+    /// If the output is explicit, returns the empty string
+    #[wasm_bindgen(js_name = assetCommitment)]
+    pub fn asset_commitment(&self) -> String {
+        if self.is_explicit() {
+            "".parse().expect("empty string")
+        } else {
+            self.asset_generator()
+                .to_string()
+                .parse()
+                .expect("from pedersen commitment")
+        }
+    }
 }
 
 impl TxOutSecrets {
@@ -95,5 +110,6 @@ mod tests {
             txoutsecrets_explicit.asset_blinding_factor().to_string(),
             zero_hex
         );
+        assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
     }
 }

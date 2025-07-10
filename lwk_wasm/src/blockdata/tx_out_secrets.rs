@@ -58,7 +58,7 @@ impl TxOutSecrets {
     #[wasm_bindgen(js_name = assetCommitment)]
     pub fn asset_commitment(&self) -> String {
         if self.is_explicit() {
-            "".parse().expect("empty string")
+            "".to_string()
         } else {
             self.asset_generator()
                 .to_string()
@@ -73,7 +73,7 @@ impl TxOutSecrets {
     #[wasm_bindgen(js_name = valueCommitment)]
     pub fn value_commitment(&self) -> String {
         if self.is_explicit() {
-            "".parse().expect("empty string")
+            "".to_string()
         } else {
             let value = self.inner.value;
             let vbf = self.inner.value_bf.into_inner();

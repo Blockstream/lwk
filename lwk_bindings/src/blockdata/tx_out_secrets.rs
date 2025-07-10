@@ -40,6 +40,11 @@ impl TxOutSecrets {
             .parse()
             .expect("value_bf to_string creates valid hex")
     }
+
+    pub fn is_explicit(&self) -> bool {
+        self.inner.asset_bf == AssetBlindingFactor::zero()
+            && self.inner.value_bf == ValueBlindingFactor::zero()
+    }
 }
 
 #[cfg(test)]

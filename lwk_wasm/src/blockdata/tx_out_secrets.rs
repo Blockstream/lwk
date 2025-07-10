@@ -122,11 +122,11 @@ mod tests {
         assert_eq!(txoutsecrets_explicit.value(), 1000);
         assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex);
         assert_eq!(
-            txoutsecrets_explicit.value_blinding_factor().to_string(),
+            txoutsecrets_explicit.asset_blinding_factor().to_string(),
             zero_hex
         );
         assert_eq!(
-            txoutsecrets_explicit.asset_blinding_factor().to_string(),
+            txoutsecrets_explicit.value_blinding_factor().to_string(),
             zero_hex
         );
         assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");

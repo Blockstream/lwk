@@ -46,33 +46,35 @@ impl TxOutSecrets {
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
+    use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+    use elements::AssetId;
     use lwk_wollet::elements;
+    use std::str::FromStr;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
     fn tx_out_secrets() {
+        let zero_hex = "0000000000000000000000000000000000000000000000000000000000000000";
+        let asset_hex = "1111111111111111111111111111111111111111111111111111111111111111";
+
         // TODO use abf and vbf different from zero
-        let elements_tx_out_secrets = elements::TxOutSecrets::new(
-            elements::AssetId::default(),
-            elements::confidential::AssetBlindingFactor::zero(),
+        let txoutsecrets_explicit: crate::TxOutSecrets = elements::TxOutSecrets::new(
+            AssetId::from_str(asset_hex).unwrap(),
+            AssetBlindingFactor::zero(),
             1000,
-            elements::confidential::ValueBlindingFactor::zero(),
-        );
-        let tx_out_secrets: crate::TxOutSecrets = elements_tx_out_secrets.into();
+            ValueBlindingFactor::zero(),
+        )
+        .into();
 
-        assert_eq!(tx_out_secrets.value(), 1000);
+        assert_eq!(txoutsecrets_explicit.value(), 1000);
+        assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex);
         assert_eq!(
-            tx_out_secrets.value_blinding_factor().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
-
-        assert_eq!(
-            tx_out_secrets.asset().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
+            txoutsecrets_explicit.value_blinding_factor().to_string(),
+            zero_hex
         );
         assert_eq!(
-            tx_out_secrets.asset_blinding_factor().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
+            txoutsecrets_explicit.asset_blinding_factor().to_string(),
+            zero_hex
         );
     }
 }

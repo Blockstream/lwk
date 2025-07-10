@@ -22,7 +22,7 @@ pub mod blocking;
 
 pub mod asyncr;
 
-/// A builder for the [`EsploraClient`]
+/// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
 pub struct EsploraClientBuilder {
     base_url: String,
     waterfalls: bool,

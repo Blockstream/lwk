@@ -98,6 +98,7 @@ impl TxOutSecrets {
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+    use elements::hex::FromHex;
     use elements::AssetId;
     use lwk_wollet::elements;
     use std::str::FromStr;
@@ -130,5 +131,31 @@ mod tests {
         );
         assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
         assert_eq!(txoutsecrets_explicit.value_commitment().to_string(), "");
+
+        let abf_hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let vbf_hex = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let vc_hex = "08b3bfb93e411bf83c5095c44c5f1a8fa9da4bf5978b20dacff7fe594b896d352a";
+        let ac_hex = "0b9bccef298a184a714e09656fe1596ab1a5b7e70b5d7b71ef0cb7d069a755cd3e";
+        let txoutsecrets_blinded: crate::TxOutSecrets = elements::TxOutSecrets::new(
+            AssetId::from_str(asset_hex).unwrap(),
+            AssetBlindingFactor::from_hex(abf_hex).unwrap(),
+            1000,
+            ValueBlindingFactor::from_hex(vbf_hex).unwrap(),
+        )
+        .into();
+
+        assert!(!txoutsecrets_blinded.is_explicit());
+        assert_eq!(txoutsecrets_blinded.value(), 1000);
+        assert_eq!(txoutsecrets_blinded.asset().to_string(), asset_hex,);
+        assert_eq!(
+            txoutsecrets_blinded.asset_blinding_factor().to_string(),
+            abf_hex,
+        );
+        assert_eq!(
+            txoutsecrets_blinded.value_blinding_factor().to_string(),
+            vbf_hex,
+        );
+        assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);
+        assert_eq!(txoutsecrets_blinded.value_commitment().to_string(), vc_hex);
     }
 }

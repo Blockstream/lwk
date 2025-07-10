@@ -45,6 +45,20 @@ impl TxOutSecrets {
         self.inner.asset_bf == AssetBlindingFactor::zero()
             && self.inner.value_bf == ValueBlindingFactor::zero()
     }
+
+    /// Get the asset commitment
+    ///
+    /// If the output is explicit, returns the empty string
+    pub fn asset_commitment(&self) -> Hex {
+        if self.is_explicit() {
+            "".parse().expect("empty string")
+        } else {
+            self.asset_generator()
+                .to_string()
+                .parse()
+                .expect("from pedersen commitment")
+        }
+    }
 }
 
 impl TxOutSecrets {

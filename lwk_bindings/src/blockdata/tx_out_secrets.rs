@@ -1,3 +1,7 @@
+use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
+use lwk_wollet::EC;
+
 use crate::types::{AssetId, Hex};
 
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]

@@ -89,30 +89,32 @@ impl TxOutSecrets {
 
 #[cfg(test)]
 mod tests {
+    use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+    use elements::hex::FromHex;
+    use elements::AssetId;
+    use std::str::FromStr;
 
     #[test]
     fn tx_out_secrets() {
-        let elements_tx_out_secrets = elements::TxOutSecrets::new(
-            elements::AssetId::default(),
-            elements::confidential::AssetBlindingFactor::zero(),
+        let zero_hex = "0000000000000000000000000000000000000000000000000000000000000000";
+        let asset_hex = "1111111111111111111111111111111111111111111111111111111111111111";
+        let abf_hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let vbf_hex = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        let txoutsecrets_explicit: crate::TxOutSecrets = elements::TxOutSecrets::new(
+            AssetId::from_str(asset_hex).unwrap(),
+            AssetBlindingFactor::zero(),
             1000,
-            elements::confidential::ValueBlindingFactor::zero(),
-        );
-        let tx_out_secrets: crate::TxOutSecrets = elements_tx_out_secrets.into();
+            ValueBlindingFactor::zero(),
+        )
+        .into();
 
-        assert_eq!(tx_out_secrets.value(), 1000);
-        assert_eq!(
-            tx_out_secrets.value_bf().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
-
-        assert_eq!(
-            tx_out_secrets.asset().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        assert_eq!(
-            tx_out_secrets.asset_bf().to_string(),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
+        assert!(txoutsecrets_explicit.is_explicit());
+        assert_eq!(txoutsecrets_explicit.value(), 1000);
+        assert_eq!(txoutsecrets_explicit.asset().to_string(), asset_hex,);
+        assert_eq!(txoutsecrets_explicit.value_bf().to_string(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.asset_bf().to_string(), zero_hex,);
+        assert_eq!(txoutsecrets_explicit.asset_commitment().to_string(), "");
+        assert_eq!(txoutsecrets_explicit.value_commitment().to_string(), "");
     }
 }

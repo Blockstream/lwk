@@ -1,8 +1,8 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use crate::clients::LastUnused;
 use crate::clients::{try_unblind, Capability, History};
+use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::BlindingPublicKey;
 use crate::{
     clients::Data,
@@ -656,65 +656,7 @@ impl EsploraClient {
     }
 }
 
-/// A builder for the [`EsploraClient`]
-pub struct EsploraClientBuilder {
-    base_url: String,
-    waterfalls: bool,
-    network: ElementsNetwork,
-    headers: HashMap<String, String>,
-    timeout: Option<u8>,
-    concurrency: Option<usize>,
-}
-
 impl EsploraClientBuilder {
-    /// Create a new [`EsploraClientBuilder`]
-    pub fn new(base_url: &str, network: ElementsNetwork) -> Self {
-        Self {
-            base_url: base_url.trim_end_matches('/').to_string(),
-            waterfalls: false,
-            network,
-            headers: HashMap::new(),
-            timeout: None,
-            concurrency: None,
-        }
-    }
-
-    /// If `waterfalls` is true, it expects the server support the descriptor endpoint, which avoids several roundtrips
-    /// during the scan and for this reason is much faster. To achieve so, the "bitcoin descriptor" part is shared with
-    /// the server. All of the address are shared with the server anyway even without the waterfalls scan, but in
-    /// separate calls, and in this case future addresses cannot be derived.
-    /// In both cases, the server can see transactions that are involved in the wallet but it knows nothing about the
-    /// assets and amount exchanged due to the nature of confidential transactions.
-    pub fn waterfalls(mut self, waterfalls: bool) -> Self {
-        self.waterfalls = waterfalls;
-        self
-    }
-
-    /// Set a timeout in seconds for requests
-    pub fn timeout(mut self, timeout: u8) -> Self {
-        self.timeout = Some(timeout);
-        self
-    }
-
-    /// Set the concurrency level for requests, default is 1.
-    /// Concurrency can't be 0, if 0 is passed 1 will be used.
-    pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = Some(concurrency.max(1)); // 0 would hang the executor
-        self
-    }
-
-    /// Set the HTTP request headers for each request
-    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
-        self.headers = headers;
-        self
-    }
-
-    /// Add a HTTP header to set on each request
-    pub fn header(mut self, key: String, val: String) -> Self {
-        self.headers.insert(key, val);
-        self
-    }
-
     /// Consume the builder and build a new [`EsploraClient`]
     pub fn build(self) -> EsploraClient {
         let headers = (&self.headers).try_into().expect("Expected valid headers");

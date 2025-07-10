@@ -9,6 +9,36 @@ use crate::{LwkError, Network, Transaction, Txid, Update, Wollet};
 pub struct EsploraClient {
     inner: Mutex<blocking::EsploraClient>,
 }
+#[derive(uniffi::Record)]
+pub struct EsploraClientBuilder {
+    base_url: String,
+    network: Arc<Network>,
+    #[uniffi(default = false)]
+    waterfalls: bool,
+    #[uniffi(default = None)]
+    concurrency: Option<u32>,
+    #[uniffi(default = None)]
+    timeout: Option<u8>,
+}
+
+impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
+    fn from(builder: EsploraClientBuilder) -> Self {
+        let mut result = lwk_wollet::clients::EsploraClientBuilder::new(
+            &builder.base_url,
+            builder.network.as_ref().clone().into(),
+        );
+        if builder.waterfalls {
+            result = result.waterfalls(true);
+        }
+        if let Some(concurrency) = builder.concurrency {
+            result = result.concurrency(concurrency as usize);
+        }
+        if let Some(timeout) = builder.timeout {
+            result = result.timeout(timeout);
+        }
+        result
+    }
+}
 
 #[uniffi::export]
 impl EsploraClient {
@@ -27,6 +57,15 @@ impl EsploraClient {
         let client = blocking::EsploraClient::new_waterfalls(url, network.into())?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
+        }))
+    }
+
+    #[uniffi::constructor]
+    pub fn from_builder(builder: EsploraClientBuilder) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self {
+            inner: Mutex::new(
+                lwk_wollet::clients::EsploraClientBuilder::from(builder).build_blocking()?,
+            ),
         }))
     }
 

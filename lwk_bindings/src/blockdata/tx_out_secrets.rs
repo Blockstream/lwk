@@ -59,6 +59,23 @@ impl TxOutSecrets {
                 .expect("from pedersen commitment")
         }
     }
+
+    /// Get the value commitment
+    ///
+    /// If the output is explicit, returns the empty string
+    pub fn value_commitment(&self) -> Hex {
+        if self.is_explicit() {
+            "".parse().expect("empty string")
+        } else {
+            let value = self.inner.value;
+            let vbf = self.inner.value_bf.into_inner();
+
+            PedersenCommitment::new(&EC, value, vbf, self.asset_generator())
+                .to_string()
+                .parse()
+                .expect("from pedersen commitment")
+        }
+    }
 }
 
 impl TxOutSecrets {

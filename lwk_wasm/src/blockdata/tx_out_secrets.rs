@@ -1,6 +1,8 @@
 use crate::AssetId;
 use lwk_wollet::elements;
+use lwk_wollet::EC;
 use lwk_wollet::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
+use lwk_wollet::elements::secp256k1_zkp::{Generator, Tag};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`elements::TxOutSecrets`]
@@ -48,6 +50,15 @@ impl TxOutSecrets {
     pub fn is_explicit(&self) -> bool {
         self.inner.asset_bf == AssetBlindingFactor::zero()
             && self.inner.value_bf == ValueBlindingFactor::zero()
+    }
+}
+
+impl TxOutSecrets {
+    fn asset_generator(&self) -> Generator {
+        let asset = self.inner.asset.into_inner().to_byte_array();
+        let abf = self.inner.asset_bf.into_inner();
+        let asset_tag = Tag::from(asset);
+        Generator::new_blinded(&EC, asset_tag, abf)
     }
 }
 

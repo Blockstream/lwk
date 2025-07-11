@@ -42,6 +42,7 @@ pub struct EsploraClient {
     tip_hash_url: String,
     broadcast_url: String,
     waterfalls: bool,
+    utxo_only: bool,
     waterfalls_server_recipient: Option<Recipient>,
     concurrency: usize,
 
@@ -475,6 +476,7 @@ impl EsploraClient {
                 .query(&[("descriptor", desc.clone())])
                 .query(&[("page", page.to_string())])
                 .query(&[("to_index", to_index.to_string())])
+                .query(&[("utxo_only", self.utxo_only.to_string())])
                 .send()
                 .await?;
             let status = response.status().as_u16();
@@ -673,6 +675,7 @@ impl EsploraClientBuilder {
             tip_hash_url: format!("{}/blocks/tip/hash", self.base_url),
             broadcast_url: format!("{}/tx", self.base_url),
             waterfalls: self.waterfalls,
+            utxo_only: self.utxo_only,
             waterfalls_server_recipient: None,
             waterfalls_avoid_encryption: false,
             network: self.network,

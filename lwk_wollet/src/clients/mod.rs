@@ -26,6 +26,7 @@ pub mod asyncr;
 pub struct EsploraClientBuilder {
     base_url: String,
     waterfalls: bool,
+    utxo_only: bool,
     network: ElementsNetwork,
     headers: HashMap<String, String>,
     timeout: Option<u8>,
@@ -38,6 +39,7 @@ impl EsploraClientBuilder {
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             waterfalls: false,
+            utxo_only: false,
             network,
             headers: HashMap::new(),
             timeout: None,
@@ -53,6 +55,11 @@ impl EsploraClientBuilder {
     /// assets and amount exchanged due to the nature of confidential transactions.
     pub fn waterfalls(mut self, waterfalls: bool) -> Self {
         self.waterfalls = waterfalls;
+        self
+    }
+
+    pub fn utxo_only(mut self, utxo_only: bool) -> Self {
+        self.utxo_only = utxo_only;
         self
     }
 

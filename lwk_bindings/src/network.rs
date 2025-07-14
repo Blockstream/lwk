@@ -8,7 +8,7 @@ use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
 pub struct Network {
-    inner: lwk_wollet::ElementsNetwork,
+    pub(crate) inner: lwk_wollet::ElementsNetwork,
 }
 
 impl Display for Network {

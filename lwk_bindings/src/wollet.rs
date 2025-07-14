@@ -146,6 +146,14 @@ impl Wollet {
         Ok(Arc::new(details.into()))
     }
 
+    /// Add wallet details to the PSET
+    pub fn add_details(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
+        let mut pset = pset.inner();
+        let wollet = self.inner.lock()?;
+        wollet.add_details(&mut pset)?;
+        Ok(Arc::new(pset.into()))
+    }
+
     /// Note this a test method but we are not feature gating in test because we need it in
     /// destination language examples
     pub fn wait_for_tx(

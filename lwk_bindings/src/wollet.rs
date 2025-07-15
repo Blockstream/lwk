@@ -154,6 +154,11 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
+    /// Whether the wallet is segwit
+    pub fn is_segwit(&self) -> Result<bool, LwkError> {
+        Ok(self.inner.lock()?.is_segwit())
+    }
+
     /// Note this a test method but we are not feature gating in test because we need it in
     /// destination language examples
     pub fn wait_for_tx(

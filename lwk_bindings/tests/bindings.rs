@@ -15,5 +15,6 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/manual_coin_selection.py",
     "tests/bindings/liquidex.py",
     "tests/bindings/p2sh-multi.py",
-    "tests/bindings/chained_reissuances.py"
+    "tests/bindings/chained_reissuances.py",
+    "tests/bindings/external_utxos.py"
 );

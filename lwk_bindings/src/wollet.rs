@@ -159,6 +159,11 @@ impl Wollet {
         Ok(self.inner.lock()?.is_segwit())
     }
 
+    /// Max weight to satisfy for inputs belonging to this wallet
+    pub fn max_weight_to_satisfy(&self) -> Result<u32, LwkError> {
+        Ok(self.inner.lock()?.max_weight_to_satisfy() as u32)
+    }
+
     /// Note this a test method but we are not feature gating in test because we need it in
     /// destination language examples
     pub fn wait_for_tx(

@@ -1,6 +1,6 @@
 [project]
 name = "lwk"
-version = "0.10.0"
+version = "0.10.1"
 description = "Liquid Wallet Kit"
 keywords = ["liquid", "elements", "wallet"]
 readme = "README-wheel.md"

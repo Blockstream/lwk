@@ -15,6 +15,12 @@ impl From<elements::TxOutSecrets> for TxOutSecrets {
     }
 }
 
+impl From<&TxOutSecrets> for elements::TxOutSecrets {
+    fn from(value: &TxOutSecrets) -> Self {
+        value.inner
+    }
+}
+
 #[uniffi::export]
 impl TxOutSecrets {
     pub fn asset(&self) -> AssetId {

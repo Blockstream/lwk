@@ -20,7 +20,7 @@ use elements::{
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use futures::stream::{iter, StreamExt};
-use reqwest::Response;
+use reqwest::{Response, StatusCode};
 use serde::Deserialize;
 use std::sync::atomic::AtomicUsize;
 use std::{
@@ -511,24 +511,12 @@ impl EsploraClient {
         if descriptor.is_elip151() {
             return Err(Error::UsingWaterfallsWithElip151);
         }
-        let desc = descriptor.bitcoin_descriptor_without_key_origin();
-        let desc = if self.waterfalls_avoid_encryption {
-            desc
-        } else {
-            match self.waterfalls_encrypted_descriptors.get(&desc) {
-                Some(encrypted_descriptor) => encrypted_descriptor.clone(),
-                None => {
-                    let recipient = self.waterfalls_server_recipient().await?;
-                    let encrypted_descriptor = encrypt(&desc, recipient)?;
-                    self.waterfalls_encrypted_descriptors
-                        .insert(desc, encrypted_descriptor.clone());
-                    encrypted_descriptor
-                }
-            }
-        };
+        let base_desc = descriptor.bitcoin_descriptor_without_key_origin();
 
         let mut page = 0;
         let mut data = Data::default();
+        let mut retry_count = 0;
+        const MAX_RETRIES: usize = 1;
 
         loop {
             self.requests
@@ -538,11 +526,27 @@ impl EsploraClient {
             log::debug!(
                 "Requesting URL: {}?descriptor={}&page={}&to_index={}&utxo_only={}",
                 descriptor_url,
-                url_encode_descriptor(&desc),
+                url_encode_descriptor(&base_desc),
                 page,
                 to_index,
                 self.utxo_only
             );
+
+            let desc = base_desc.clone();
+            let desc = if self.waterfalls_avoid_encryption {
+                desc
+            } else {
+                match self.waterfalls_encrypted_descriptors.get(&desc) {
+                    Some(encrypted_descriptor) => encrypted_descriptor.clone(),
+                    None => {
+                        let recipient = self.waterfalls_server_recipient().await?;
+                        let encrypted_descriptor = encrypt(&desc, recipient)?;
+                        self.waterfalls_encrypted_descriptors
+                            .insert(desc, encrypted_descriptor.clone());
+                        encrypted_descriptor
+                    }
+                }
+            };
 
             let response = self
                 .client
@@ -553,10 +557,19 @@ impl EsploraClient {
                 .query(&[("utxo_only", self.utxo_only.to_string())])
                 .send()
                 .await?;
-            let status = response.status().as_u16();
+
+            let status = response.status();
             let body = response.text().await?;
 
-            if status != 200 {
+            if status != StatusCode::OK {
+                if status == StatusCode::UNPROCESSABLE_ENTITY && retry_count < MAX_RETRIES {
+                    // This can be caused by a change in server recipient.
+                    // Clear the recipeient and descriptor cache and force a retry
+                    self.waterfalls_encrypted_descriptors.clear();
+                    self.waterfalls_server_recipient = None;
+                    retry_count += 1;
+                    continue;
+                }
                 return Err(Error::Generic(body));
             }
 

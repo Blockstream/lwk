@@ -194,6 +194,25 @@ impl TxBuilder {
         self.add_unvalidated_recipient(&rec)
     }
 
+    /// Add explicit output
+    pub fn add_explicit_recipient(
+        mut self,
+        address: &Address,
+        satoshi: u64,
+        asset: AssetId,
+    ) -> Result<Self, Error> {
+        if address.blinding_pubkey.is_some() {
+            return Err(Error::NotExplicitAddress);
+        }
+        self.recipients.push(Recipient {
+            satoshi,
+            script_pubkey: address.script_pubkey(),
+            blinding_pubkey: None,
+            asset,
+        });
+        Ok(self)
+    }
+
     /// Fee rate in sats/kvb
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(mut self, fee_rate: Option<f32>) -> Self {

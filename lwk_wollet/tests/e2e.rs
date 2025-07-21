@@ -3086,8 +3086,7 @@ fn test_explicit_send() {
     let recipient = &details.balance.recipients[0];
     assert_eq!(recipient.asset, Some(lbtc));
     assert_eq!(recipient.value, Some(1_000));
-    // TODO: make set correct address here
-    assert!(recipient.address.is_none());
+    assert_eq!(recipient.address, Some(addr_explicit));
 
     // Sign tx
     let sigs = signer.sign(&mut pset).unwrap();

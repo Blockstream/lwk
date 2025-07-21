@@ -3097,4 +3097,29 @@ fn test_explicit_send() {
     wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
 
     let _tx = wallet.wollet.transaction(&txid).unwrap();
+
+    // Send explicit to self
+    let mut addr_explicit = wallet.address();
+    addr_explicit.blinding_pubkey = None;
+
+    let mut pset = wallet
+        .tx_builder()
+        .add_explicit_recipient(&addr_explicit, 1_000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // TODO: allow to get details
+    let err = wallet.wollet.get_details(&pset).unwrap_err();
+    assert_eq!(err.to_string(), "Output #0 is not blinded");
+
+    // Sign tx
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    let txid = wallet.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
+
+    let _tx = wallet.wollet.transaction(&txid).unwrap();
 }

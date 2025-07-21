@@ -5,6 +5,7 @@
 
 pub mod address;
 pub mod address_result;
+pub mod block_header;
 pub mod external_utxo;
 pub mod out_point;
 pub mod script;

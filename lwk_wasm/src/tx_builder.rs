@@ -104,6 +104,20 @@ impl TxBuilder {
             .into()
     }
 
+    /// Add explicit recipient
+    #[wasm_bindgen(js_name = addExplicitRecipient)]
+    pub fn add_explicit_recipient(
+        self,
+        address: Address,
+        satoshi: u64,
+        asset: &AssetId,
+    ) -> Result<TxBuilder, Error> {
+        Ok(self
+            .inner
+            .add_explicit_recipient(&address.into(), satoshi, (*asset).into())?
+            .into())
+    }
+
     /// Issue an asset, wrapper of [`lwk_wollet::TxBuilder::issue_asset()`]
     #[wasm_bindgen(js_name = issueAsset)]
     pub fn issue_asset(

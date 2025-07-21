@@ -110,6 +110,19 @@ impl TxBuilder {
         self.add_validated_recipient(recipient)
     }
 
+    /// Add explicit recipient
+    pub fn add_explicit_recipient(
+        &self,
+        address: &Address,
+        satoshi: u64,
+        asset: &AssetId,
+    ) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock = Some(inner.add_explicit_recipient(&(address.into()), satoshi, (*asset).into())?);
+        Ok(())
+    }
+
     /// Issue an asset, wrapper of [`lwk_wollet::TxBuilder::issue_asset()`]
     pub fn issue_asset(
         &self,

@@ -216,10 +216,9 @@ pub fn pset_balance(
 
         if !is_mine(&output.script_pubkey, descriptor, &output.bip32_derivation).unwrap_or(false) {
             // external recipients
-
-            let address = output.blinding_key.as_ref().and_then(|k| {
-                elements::Address::from_script(&output.script_pubkey, Some(k.inner), params)
-            });
+            let blinding_pubkey = output.blinding_key.as_ref().map(|k| k.inner);
+            let address =
+                elements::Address::from_script(&output.script_pubkey, blinding_pubkey, params);
             let recipient = Recipient {
                 address,
                 vout: idx as u32,

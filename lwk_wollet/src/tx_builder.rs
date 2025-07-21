@@ -1127,6 +1127,21 @@ impl<'a> WolletTxBuilder<'a> {
         })
     }
 
+    /// Wrapper of [`TxBuilder::add_explicit_recipient()`]
+    pub fn add_explicit_recipient(
+        self,
+        address: &Address,
+        satoshi: u64,
+        asset_id: AssetId,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            wollet: self.wollet,
+            inner: self
+                .inner
+                .add_explicit_recipient(address, satoshi, asset_id)?,
+        })
+    }
+
     /// Wrapper of [`TxBuilder::fee_rate()`]
     pub fn fee_rate(self, fee_rate: Option<f32>) -> Self {
         Self {

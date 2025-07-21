@@ -36,7 +36,7 @@ pub struct Wollet {
     pub(crate) config: Config,
     pub(crate) store: Store,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
-    descriptor: WolletDescriptor,
+    pub(crate) descriptor: WolletDescriptor,
     // cached value
     max_weight_to_satisfy: usize,
 }

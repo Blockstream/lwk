@@ -1,3 +1,4 @@
+use crate::clients::try_unblind;
 use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
@@ -139,6 +140,39 @@ impl Update {
 }
 
 impl Wollet {
+    pub fn apply_transaction(&mut self, tip: BlockHeader, tx: Transaction) -> Result<(), Error> {
+        let mut unblinds = vec![];
+        let txid = tx.txid();
+        for (vout, output) in tx.output.iter().enumerate() {
+            if self.store.cache.paths.contains_key(&output.script_pubkey) {
+                let outpoint = OutPoint::new(txid, vout as u32);
+                match try_unblind(output, &self.descriptor) {
+                    Ok(unblinded) => {
+                        unblinds.push((outpoint, unblinded));
+                    }
+                    Err(_) => {
+                        log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint);
+                    }
+                }
+            }
+        }
+
+        let update = Update {
+            version: 2,
+            wollet_status: self.status(),
+            new_txs: DownloadTxResult {
+                txs: vec![(txid, tx)],
+                unblinds,
+            },
+            txid_height_new: vec![(txid, None)],
+            txid_height_delete: vec![],
+            timestamps: vec![],
+            scripts_with_blinding_pubkey: vec![],
+            tip,
+        };
+
+        self.apply_update(update)
+    }
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
         self.apply_update_inner(update, true)
     }

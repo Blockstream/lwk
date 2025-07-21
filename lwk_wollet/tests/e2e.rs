@@ -3055,3 +3055,47 @@ fn test_chain_tx() {
     let txs = wallet.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 3);
 }
+
+#[test]
+fn test_explicit_send() {
+    // Send an explicit output
+    let server = setup();
+
+    let slip77_key = generate_slip77();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(&server);
+
+    let lbtc = wallet.policy_asset();
+    let mut addr_explicit = server.elementsd_getnewaddress();
+    addr_explicit.blinding_pubkey = None;
+
+    let mut pset = wallet
+        .tx_builder()
+        .add_explicit_recipient(&addr_explicit, 1_000, lbtc)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let details = wallet.wollet.get_details(&pset).unwrap();
+    let recipient = &details.balance.recipients[0];
+    assert_eq!(recipient.asset, Some(lbtc));
+    assert_eq!(recipient.value, Some(1_000));
+    // TODO: make set correct address here
+    assert!(recipient.address.is_none());
+
+    // Sign tx
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    let txid = wallet.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
+
+    let _tx = wallet.wollet.transaction(&txid).unwrap();
+}

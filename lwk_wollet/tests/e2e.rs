@@ -3123,3 +3123,55 @@ fn test_explicit_send() {
 
     let _tx = wallet.wollet.transaction(&txid).unwrap();
 }
+
+#[test]
+fn test_finalize_diff_sighashes() {
+    // Finalize a transaction with an input signed with different sighashes
+    let server = setup();
+
+    let view_key = generate_view_key();
+    let s1 = generate_signer();
+    let s2 = generate_signer();
+    let xpub1 = s1.xpub();
+    let xpub2 = s2.xpub();
+    let desc_str = format!("ct({view_key},elwsh(multi(2,{xpub1}/<0;1>/*,{xpub2}/<0;1>/*)))");
+
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wallet = TestWollet::new(client, &desc_str);
+
+    wallet.fund_btc(&server);
+
+    let addr = server.elementsd_getnewaddress();
+    let mut pset = wallet
+        .tx_builder()
+        .add_lbtc_recipient(&addr, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Note: a PSET/PSBT input have a unique sighash type, even in the case it requires multiple
+    // signatures, which might be done with different sighashes.
+    // So for this test we need to edit the PSET before signing it with a different sighash.
+
+    // Signer1 signs with sighash "all" (default)
+    let sigs = s1.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // Signer 2 signs with a different sighash ("single | anyonecanpay")
+    let input = &mut pset.inputs_mut()[0];
+    use elements::{pset::PsbtSighashType, EcdsaSighashType};
+    input.sighash_type = Some(PsbtSighashType::from_u32(
+        EcdsaSighashType::SinglePlusAnyoneCanPay.as_u32(),
+    ));
+    let sigs = s2.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // TODO: handle this case
+    let err = wallet.wollet.finalize(&mut pset).unwrap_err();
+    assert!(err
+        .to_string()
+        .contains("WrongSighashFlag { required: SinglePlusAnyoneCanPay, got: All"));
+    // let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    // let txid = wallet.client.broadcast(&tx).unwrap();
+    // wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
+}

@@ -3241,3 +3241,33 @@ fn test_skip_signing_utxo() {
     let txid = w.client.broadcast(&tx).unwrap();
     wait_for_tx(&mut w.wollet, &mut w.client, &txid);
 }
+
+#[test]
+fn test_skip_fee() {
+    // Create a trasaction with no fee output
+    let server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+    let s = AnySigner::Software(signer);
+
+    w.fund_btc(&server);
+    let (asset_id, _) = w.issueasset(&[&s], 10, 1, None, None);
+
+    let addr = w.address();
+    let pset = w
+        .tx_builder()
+        .add_recipient(&addr, 1, asset_id)
+        .unwrap()
+        .skip_fee()
+        .finish()
+        .unwrap();
+
+    assert_eq!(pset.inputs().len(), 1);
+    assert_eq!(pset.outputs().len(), 2);
+    assert!(!pset.outputs()[0].to_txout().is_fee());
+    assert!(!pset.outputs()[1].to_txout().is_fee());
+}

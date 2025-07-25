@@ -108,6 +108,7 @@ pub struct TxBuilder {
     issuance_request: IssuanceRequest,
     drain_lbtc: bool,
     drain_to: Option<Address>,
+    skip_fee: bool,
     external_utxos: Vec<ExternalUtxo>,
 
     selected_utxos: Option<Vec<OutPoint>>,
@@ -128,6 +129,7 @@ impl TxBuilder {
             issuance_request: IssuanceRequest::None,
             drain_lbtc: false,
             drain_to: None,
+            skip_fee: false,
             external_utxos: vec![],
             selected_utxos: None,
             is_liquidex_make: false,
@@ -319,6 +321,15 @@ impl TxBuilder {
             issuance_tx,
         );
         Ok(self)
+    }
+
+    /// Do not add fee output and (extra) fee inputs
+    ///
+    /// This option does not produce a balanced PSET,
+    /// PSET should be balanced when fee will be added
+    pub fn skip_fee(mut self) -> Self {
+        self.skip_fee = true;
+        self
     }
 
     /// Select all available L-BTC inputs
@@ -862,6 +873,11 @@ impl TxBuilder {
         } else {
             // FIXME: For implementation simplicity now we always add all L-BTC inputs
             for utxo in utxos.values().filter(|u| u.unblinded.asset == policy_asset) {
+                if self.skip_fee && satoshi_out >= satoshi_in {
+                    // If we don't have to add the fee, add just enough LBTC inputs to cover for
+                    // the recipients
+                    break;
+                }
                 wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                 satoshi_in += utxo.unblinded.value;
             }
@@ -975,6 +991,17 @@ impl TxBuilder {
                 };
                 wollet.add_output(&mut pset, &addressee)?;
             }
+        }
+
+        if self.skip_fee {
+            let mut rng = thread_rng();
+            pset.blind_non_last(&mut rng, &EC, &inp_txout_sec)?;
+
+            // TODO: refactor to share this common path
+            // Add details to the pset from our descriptor, like bip32derivation and keyorigin
+            wollet.add_details(&mut pset)?;
+
+            return Ok(pset);
         }
 
         // Add a temporary fee, and always add a change or drain output,
@@ -1205,6 +1232,14 @@ impl<'a> WolletTxBuilder<'a> {
                 issuance_tx,
             )?,
         })
+    }
+
+    /// Wrapper of [`TxBuilder::skip_fee()`]
+    pub fn skip_fee(self) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.skip_fee(),
+        }
     }
 
     /// Wrapper of [`TxBuilder::drain_lbtc_wallet()`]

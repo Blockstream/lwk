@@ -3175,3 +3175,69 @@ fn test_finalize_diff_sighashes() {
     // let txid = wallet.client.broadcast(&tx).unwrap();
     // wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
 }
+
+#[test]
+fn test_skip_signing_utxo() {
+    // In some cases signers might want to sign certain utxos
+    // and might NOT want to sign some other ones.
+    // This test explains how this can be done with LWK:
+    // we edit the PSET and we set the input "bip32_derivation"
+    // to the empty map, removing references to the signer
+    // fingerprint in the input.
+    let server = setup();
+
+    let signer = generate_signer();
+    let fp = signer.fingerprint();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+
+    w.fund_btc(&server);
+    w.fund_btc(&server);
+
+    // Send all funds
+    let pset = w.tx_builder().drain_lbtc_wallet().finish().unwrap();
+
+    assert_eq!(pset.inputs().len(), 2);
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    assert_eq!(details.sig_details[0].missing_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details[1].missing_signature[0].1 .0, fp);
+
+    // Sign first input only
+    let mut pset1 = pset.clone();
+    let input2 = &mut pset1.inputs_mut()[1];
+    input2.bip32_derivation = std::collections::BTreeMap::new();
+
+    let sigs = signer.sign(&mut pset1).unwrap();
+    assert!(sigs > 0);
+
+    let details = w.wollet.get_details(&pset1).unwrap();
+    assert_eq!(details.sig_details[0].has_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details[1].missing_signature.len(), 0);
+
+    // Sign second input only
+    let mut pset2 = pset.clone();
+    let input1 = &mut pset2.inputs_mut()[0];
+    input1.bip32_derivation = std::collections::BTreeMap::new();
+
+    let sigs = signer.sign(&mut pset2).unwrap();
+    assert!(sigs > 0);
+
+    let details = w.wollet.get_details(&pset2).unwrap();
+    assert_eq!(details.sig_details[0].missing_signature.len(), 0);
+    assert_eq!(details.sig_details[1].has_signature[0].1 .0, fp);
+
+    // Combine PSETs
+    let mut pset = w.wollet.combine(&vec![pset1, pset2]).unwrap();
+
+    let details = w.wollet.get_details(&pset).unwrap();
+    assert_eq!(details.sig_details[0].has_signature[0].1 .0, fp);
+    assert_eq!(details.sig_details[1].has_signature[0].1 .0, fp);
+
+    // Broadcast
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let txid = w.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut w.wollet, &mut w.client, &txid);
+}

@@ -878,6 +878,7 @@ impl TxBuilder {
                 contract,
             ) => {
                 // At least a L-BTC input for the fee was added.
+                // FIXME: this is no longer true
                 let idx = 0;
                 let (asset, token) =
                     wollet.set_issuance(&mut pset, idx, satoshi_asset, satoshi_token, contract)?;

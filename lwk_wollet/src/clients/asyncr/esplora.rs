@@ -478,7 +478,17 @@ impl EsploraClient {
                 .query(&[("to_index", to_index.to_string())])
                 .query(&[("utxo_only", self.utxo_only.to_string())])
                 .send()
-                .await?;
+                .await;
+
+            let response = match response {
+                Ok(response) => response,
+                Err(e) => {
+                    // an outdated server recipient key could be the reason for the error, so we clear it
+                    self.waterfalls_server_recipient = None;
+                    return Err(e.into());
+                }
+            };
+
             let status = response.status().as_u16();
             let body = response.text().await?;
 

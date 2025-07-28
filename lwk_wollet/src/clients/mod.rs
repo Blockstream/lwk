@@ -153,6 +153,8 @@ pub struct History {
 
     /// The block hash of the block including the transaction, if available
     pub block_timestamp: Option<Timestamp>,
+
+    pub v: i32,
 }
 
 pub fn try_unblind(output: &TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {

@@ -252,6 +252,7 @@ impl From<GetHistoryRes> for History {
             height: value.height,
             block_hash: None,
             block_timestamp: None,
+            v: 0,
         }
     }
 }

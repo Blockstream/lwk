@@ -18,6 +18,7 @@ use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
     Script, Txid,
 };
+use elements::{AssetIssuance, LockTime, Sequence, TxInWitness};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use futures::stream::{iter, StreamExt};
 use reqwest::Response;
@@ -260,7 +261,7 @@ impl EsploraClient {
             height_blockhash,
             height_timestamp,
             tip,
-            unspent: _,
+            unspent,
         } = if self.waterfalls {
             match self
                 .get_history_waterfalls(&descriptor, wollet, index)
@@ -285,9 +286,15 @@ impl EsploraClient {
         };
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self
+        let mut new_txs = self
             .download_txs(&history_txs_id, &scripts, store, &descriptor)
             .await?;
+
+        if self.utxo_only {
+            let tx = create_dummy_tx(&unspent, &new_txs);
+            new_txs.txs.push((tx.txid(), tx));
+        }
+
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()
             .filter_map(|e| *e)
@@ -491,6 +498,16 @@ impl EsploraClient {
 
             let waterfalls_result: WaterfallsResult = serde_json::from_str(&body)?;
 
+            if self.utxo_only {
+                let unspent = waterfalls_result
+                    .txs_seen
+                    .values()
+                    .flatten()
+                    .flatten()
+                    .map(|h| OutPoint::new(h.txid, (h.v - 1) as u32)); // TODO
+                data.unspent.extend(unspent);
+            }
+
             for (desc, chain_history) in waterfalls_result.txs_seen.iter() {
                 let desc: elements_miniscript::Descriptor<DescriptorPublicKey> = desc.parse()?;
 
@@ -661,6 +678,45 @@ impl EsploraClient {
     }
 }
 
+// Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent
+fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements::Transaction {
+    let mut all_outputs: HashSet<OutPoint> = new_txs
+        .txs
+        .iter()
+        .map(|(txid, tx)| {
+            tx.output
+                .iter()
+                .enumerate()
+                .map(|(i, _)| OutPoint::new(*txid, i as u32))
+        })
+        .flatten()
+        .collect();
+    all_outputs.retain(|o| !unspent.contains(o));
+    let spent_outputs = all_outputs;
+
+    let inputs = spent_outputs
+        .iter()
+        .map(|o| elements::TxIn {
+            previous_output: o.clone(),
+            script_sig: elements::Script::default(),
+            sequence: Sequence::MAX,
+            is_pegin: false,
+            asset_issuance: AssetIssuance::default(),
+            witness: TxInWitness::default(),
+        })
+        .collect();
+
+    let outputs = vec![];
+
+    let tx = elements::Transaction {
+        version: 1,
+        input: inputs,
+        output: outputs,
+        lock_time: LockTime::ZERO,
+    };
+    tx
+}
+
 impl EsploraClientBuilder {
     /// Consume the builder and build a new [`EsploraClient`]
     pub fn build(self) -> Result<EsploraClient, Error> {
@@ -754,6 +810,7 @@ impl From<EsploraTx> for History {
             height: value.status.block_height.unwrap_or(-1),
             block_hash: value.status.block_hash,
             block_timestamp: None,
+            v: 0,
         }
     }
 }

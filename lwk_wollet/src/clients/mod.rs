@@ -9,7 +9,7 @@ use elements::{
     confidential::{Asset, Nonce, Value},
     Script, TxOut, TxOutSecrets,
 };
-use elements::{BlockHash, Txid};
+use elements::{BlockHash, OutPoint, Txid};
 use lwk_common::derive_blinding_key;
 use serde::Deserialize;
 use std::{
@@ -126,6 +126,7 @@ pub struct Data {
     pub height_blockhash: HashMap<Height, BlockHash>,
     pub height_timestamp: HashMap<Height, Timestamp>,
     pub tip: Option<BlockHash>,
+    pub unspent: Vec<OutPoint>,
 }
 
 /// Capabilities that can be supported by a [`blocking::BlockchainBackend`]

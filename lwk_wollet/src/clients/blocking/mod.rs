@@ -176,6 +176,7 @@ pub trait BlockchainBackend {
             height_blockhash,
             height_timestamp: _height_timestamp,
             tip: _,
+            unspent: _,
         } = if self.capabilities().contains(&Capability::Waterfalls) {
             match self.get_history_waterfalls(&descriptor, state, index) {
                 Ok(d) => d,

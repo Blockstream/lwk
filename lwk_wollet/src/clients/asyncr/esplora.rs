@@ -260,6 +260,7 @@ impl EsploraClient {
             height_blockhash,
             height_timestamp,
             tip,
+            unspent: _,
         } = if self.waterfalls {
             match self
                 .get_history_waterfalls(&descriptor, wollet, index)

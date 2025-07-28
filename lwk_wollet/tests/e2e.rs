@@ -3258,7 +3258,7 @@ fn test_skip_fee() {
     let (asset_id, _) = w.issueasset(&[&s], 10, 1, None, None);
 
     let addr = w.address();
-    let pset = w
+    let mut pset = w
         .tx_builder()
         .add_recipient(&addr, 1, asset_id)
         .unwrap()
@@ -3270,4 +3270,97 @@ fn test_skip_fee() {
     assert_eq!(pset.outputs().len(), 2);
     assert!(!pset.outputs()[0].to_txout().is_fee());
     assert!(!pset.outputs()[1].to_txout().is_fee());
+
+    // Simulate a service that pays for the fee
+    // Service receives a PSET and adds inputs and outputs to pay for the fee
+    let signer_fee = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer_fee.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wf = TestWollet::new(client, &desc);
+
+    wf.fund_btc(&server);
+
+    // Add input
+    use elements::pset::{Input, Output};
+    use elements::Script;
+    use std::collections::HashMap;
+
+    let lbtc = w.policy_asset();
+    let mut inp_txout_sec = HashMap::new();
+    let utxo = wf
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == lbtc)
+        .unwrap();
+
+    let mut input = Input::from_prevout(utxo.outpoint);
+    let mut txout = {
+        let tx = wf.wollet.transaction(&utxo.outpoint.txid).unwrap().unwrap();
+        tx.tx.output[utxo.outpoint.vout as usize].clone()
+    };
+    input.in_utxo_rangeproof = txout.witness.rangeproof.take();
+    input.witness_utxo = Some(txout);
+
+    pset.add_input(input);
+    let input_idx = pset.inputs().len() - 1;
+    inp_txout_sec.insert(input_idx, utxo.unblinded);
+
+    // Remove the blinder index for exisiting outputs
+    for idx in 0..pset.n_outputs() {
+        let output = &mut pset.outputs_mut()[idx];
+        output.blinder_index = None;
+    }
+
+    // TODO: calibrate fee
+    let fee = 100;
+    // Add change
+    let addr = wf.address();
+    let output = Output {
+        script_pubkey: addr.script_pubkey(),
+        amount: Some(utxo.unblinded.value - fee),
+        asset: Some(lbtc),
+        blinding_key: addr.blinding_pubkey.map(|pk| bitcoin::PublicKey::new(pk)),
+        blinder_index: Some(input_idx as u32),
+        ..Default::default()
+    };
+    pset.add_output(output);
+
+    // Add fee
+    let fee_output = Output::new_explicit(Script::default(), fee, lbtc, None);
+    pset.add_output(fee_output);
+
+    // Blind transaction
+    let mut rng = rand::thread_rng();
+    pset.blind_last(&mut rng, &EC, &inp_txout_sec).unwrap();
+
+    // Add details to the pset from our descriptor, like bip32derivation and keyorigin
+    wf.wollet.add_details(&mut pset).unwrap();
+
+    // Fee Service Sign
+    let sigs = signer_fee.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // Initial wallet sign
+    let sigs = s.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // Broadcast
+    let tx = wf.wollet.finalize(&mut pset).unwrap();
+
+    let mut utxos = vec![];
+    for i in pset.inputs() {
+        let txout = i.witness_utxo.as_ref().unwrap().clone();
+        utxos.push(txout);
+    }
+    tx.verify_tx_amt_proofs(&EC, &utxos).expect("verification");
+    // FIXME: leo this does not work
+    // Currently exposed rust-elements surjection proof methods are incompatible with the flow we
+    // have in mind. This is due to how the surjection proof are being created. Verification
+    // expects to also check the other input, which was not there for tx proof creation.
+
+    let txid = wf.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut w.wollet, &mut w.client, &txid);
 }

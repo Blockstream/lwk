@@ -153,7 +153,7 @@ fn default_blockheader() -> BlockHeader {
 }
 
 impl Wollet {
-    pub fn apply_transaction(&mut self, tx: Transaction) -> Result<(), Error> {
+    fn apply_transaction_inner(&mut self, tx: Transaction, do_persist: bool) -> Result<(), Error> {
         let mut unblinds = vec![];
         let txid = tx.txid();
         for (vout, output) in tx.output.iter().enumerate() {
@@ -184,7 +184,7 @@ impl Wollet {
             tip: default_blockheader(),
         };
 
-        self.apply_update(update)
+        self.apply_update_inner(update, do_persist)
     }
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
         self.apply_update_inner(update, true)
@@ -304,6 +304,14 @@ impl Wollet {
         }
 
         Ok(())
+    }
+
+    pub fn apply_transaction(&mut self, tx: Transaction) -> Result<(), Error> {
+        self.apply_transaction_inner(tx, true)
+    }
+
+    pub fn apply_transaction_no_persist(&mut self, tx: Transaction) -> Result<(), Error> {
+        self.apply_transaction_inner(tx, false)
     }
 }
 

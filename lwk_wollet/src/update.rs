@@ -152,6 +152,7 @@ fn default_blockheader() -> BlockHeader {
     }
 }
 
+/// Update the wallet state from blockchain data
 impl Wollet {
     fn apply_transaction_inner(&mut self, tx: Transaction, do_persist: bool) -> Result<(), Error> {
         let mut unblinds = vec![];

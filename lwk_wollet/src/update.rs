@@ -222,15 +222,18 @@ impl Wollet {
         let scripts_with_blinding_pubkey =
             compute_blinding_pubkey_if_missing(scripts_with_blinding_pubkey, descriptor)?;
 
-        if tip.height + 1 < store.cache.tip.0 {
-            // Checking we are not applying an old update while giving enough space for a single block reorg
-            return Err(Error::UpdateHeightTooOld {
-                update_tip_height: tip.height,
-                store_tip_height: store.cache.tip.0,
-            });
+        if tip != default_blockheader() {
+            if tip.height + 1 < store.cache.tip.0 {
+                // Checking we are not applying an old update while giving enough space for a single block reorg
+                return Err(Error::UpdateHeightTooOld {
+                    update_tip_height: tip.height,
+                    store_tip_height: store.cache.tip.0,
+                });
+            }
+
+            store.cache.tip = (tip.height, tip.block_hash());
         }
 
-        store.cache.tip = (tip.height, tip.block_hash());
         store.cache.unblinded.extend(new_txs.unblinds);
         store.cache.all_txs.extend(new_txs.txs);
         store

@@ -16,7 +16,7 @@ impl EsploraClientBuilder {
     pub fn build_blocking(self) -> Result<EsploraClient, Error> {
         Ok(EsploraClient {
             rt: Runtime::new()?,
-            client: EsploraClientBuilder::build(self),
+            client: EsploraClientBuilder::build(self)?,
         })
     }
 }
@@ -46,7 +46,8 @@ impl EsploraClient {
             rt: Runtime::new()?,
             client: EsploraClientBuilder::new(url, network)
                 .waterfalls(true)
-                .build(),
+                .build()
+                .expect("cannot fail with this configuration"),
         })
     }
 

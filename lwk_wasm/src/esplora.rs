@@ -22,7 +22,8 @@ impl EsploraClient {
         let inner = asyncr::EsploraClientBuilder::new(url, network.into())
             .waterfalls(waterfalls)
             .concurrency(concurrency)
-            .build();
+            .build()
+            .expect("cannot fail with this configuration");
         Self { inner }
     }
 

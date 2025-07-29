@@ -57,7 +57,9 @@ impl EsploraClient {
     ///
     /// To specify different options use the [`EsploraClientBuilder`]
     pub fn new(network: ElementsNetwork, url: &str) -> Self {
-        EsploraClientBuilder::new(url, network).build()
+        EsploraClientBuilder::new(url, network)
+            .build()
+            .expect("cannot fail with this configuration")
     }
 
     pub(crate) async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
@@ -660,7 +662,12 @@ impl EsploraClient {
 
 impl EsploraClientBuilder {
     /// Consume the builder and build a new [`EsploraClient`]
-    pub fn build(self) -> EsploraClient {
+    pub fn build(self) -> Result<EsploraClient, Error> {
+        if !self.waterfalls && self.utxo_only {
+            return Err(Error::Generic(
+                "UTXO only can be used only with waterfalls".to_string(),
+            ));
+        }
         let headers = (&self.headers).try_into().expect("Expected valid headers");
         let mut builder = reqwest::Client::builder().default_headers(headers);
         // See https://github.com/seanmonstar/reqwest/issues/1135
@@ -669,7 +676,7 @@ impl EsploraClientBuilder {
             builder = builder.timeout(std::time::Duration::from_secs(timeout as u64));
         }
         let client = builder.build().expect("Failed to create client"); // TODO: handle error but note that this is equivalent to the new() which panics
-        EsploraClient {
+        Ok(EsploraClient {
             client,
             base_url: self.base_url.clone(),
             tip_hash_url: format!("{}/blocks/tip/hash", self.base_url),
@@ -680,7 +687,7 @@ impl EsploraClientBuilder {
             waterfalls_avoid_encryption: false,
             network: self.network,
             concurrency: self.concurrency.unwrap_or(1),
-        }
+        })
     }
 }
 

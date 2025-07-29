@@ -1051,7 +1051,8 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
         let mut client = clients::asyncr::EsploraClientBuilder::new(url, network)
             .waterfalls(waterfalls)
             .concurrency(4)
-            .build();
+            .build()
+            .unwrap();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(update).unwrap();
         let first_scan = start.elapsed();
@@ -1098,7 +1099,8 @@ async fn test_esplora_wasm_local_waterfalls() {
     let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
     let mut client = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
         .waterfalls(true)
-        .build();
+        .build()
+        .unwrap();
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();

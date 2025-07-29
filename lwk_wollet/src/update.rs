@@ -153,7 +153,7 @@ fn default_blockheader() -> BlockHeader {
 }
 
 impl Wollet {
-    pub fn apply_transaction(&mut self, tip: BlockHeader, tx: Transaction) -> Result<(), Error> {
+    pub fn apply_transaction(&mut self, tx: Transaction) -> Result<(), Error> {
         let mut unblinds = vec![];
         let txid = tx.txid();
         for (vout, output) in tx.output.iter().enumerate() {
@@ -181,7 +181,7 @@ impl Wollet {
             txid_height_delete: vec![],
             timestamps: vec![],
             scripts_with_blinding_pubkey: vec![],
-            tip,
+            tip: default_blockheader(),
         };
 
         self.apply_update(update)

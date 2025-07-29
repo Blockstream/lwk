@@ -10,9 +10,11 @@ use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use base64::prelude::*;
 use elements::bitcoin::bip32::ChildNumber;
+use elements::bitcoin::hashes::Hash;
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::encode::{Decodable, Encodable};
-use elements::{BlockHeader, TxInWitness, TxOutWitness};
+use elements::hash_types::TxMerkleNode;
+use elements::{BlockExtData, BlockHash, BlockHeader, TxInWitness, TxOutWitness};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -136,6 +138,17 @@ impl Update {
             .decode(base64)
             .map_err(|e| Error::Generic(e.to_string()))?;
         Self::deserialize_decrypted(&vec, desc)
+    }
+}
+
+fn default_blockheader() -> BlockHeader {
+    BlockHeader {
+        version: 0,
+        prev_blockhash: BlockHash::all_zeros(),
+        merkle_root: TxMerkleNode::all_zeros(),
+        time: 0,
+        height: 0,
+        ext: BlockExtData::default(),
     }
 }
 

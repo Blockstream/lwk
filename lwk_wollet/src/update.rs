@@ -323,10 +323,26 @@ impl Wollet {
         Ok(())
     }
 
+    /// Apply a transaction to the wallet state
+    ///
+    /// Wallet transactions are normally obtained using [`crate::clients::blocking::BlockchainBackend::full_scan()`]
+    /// and applying the resulting [`crate::Update`] with [`Wollet::apply_update()`]. However a
+    /// full scan involves network calls and it can take a significant amount of time.
+    ///
+    /// If the caller does not want to wait for a full scan containing the transaction, it can
+    /// apply the transaction to the wallet state using this function.
+    ///
+    /// Note: if this transaction is *not* returned by a next full scan, after [`Wollet::apply_update()`] it will disappear from the
+    /// transactions list, will not be included in balance computations, and by the remaining
+    /// wollet methods.
+    ///
+    /// Calling this method, might cause [`Wollet::apply_update()`] to fail with a
+    /// [`Error::UpdateOnDifferentStatus`], make sure to either avoid it or handle the error properly.
     pub fn apply_transaction(&mut self, tx: Transaction) -> Result<(), Error> {
         self.apply_transaction_inner(tx, true)
     }
 
+    /// Same as [`Wollet::apply_transaction()`] but only apply the update in memory, without persisting it.
     pub fn apply_transaction_no_persist(&mut self, tx: Transaction) -> Result<(), Error> {
         self.apply_transaction_inner(tx, false)
     }

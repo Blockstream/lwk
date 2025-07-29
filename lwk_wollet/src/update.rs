@@ -187,10 +187,26 @@ impl Wollet {
 
         self.apply_update_inner(update, do_persist)
     }
+
+    /// Apply an update containing blockchain data
+    ///
+    /// To update the wallet you need to first obtain the blockchain data relevant for the wallet.
+    /// This can be done using [`crate::clients::blocking::BlockchainBackend::full_scan()`], which
+    /// returns an [`crate::Update`] that contains new transaction and other data relevant for the
+    /// wallet.
+    /// The update must then be applied to the [`crate::Wollet`] so that wollet methods such as
+    /// [`crate::Wollet::balance()`] or [`crate::Wollet::transactions()`] include the new data.
+    ///
+    /// However getting blockchain data involves network calls, so between the full scan start and
+    /// when the update is applied it might elapse a significant amount of time.
+    /// In that interval, applying any update, or any transaction using [`Wollet::apply_transaction()`],
+    /// will cause this function to return a [`Error::UpdateOnDifferentStatus`].
+    /// Callers should either avoid applying updates and transactions, or they can catch the error and wait for a new full scan to be completed and applied.
     pub fn apply_update(&mut self, update: Update) -> Result<(), Error> {
         self.apply_update_inner(update, true)
     }
 
+    /// Same as [`Wollet::apply_update()`] but only apply the update in memory, without persisting it.
     pub fn apply_update_no_persist(&mut self, update: Update) -> Result<(), Error> {
         self.apply_update_inner(update, false)
     }

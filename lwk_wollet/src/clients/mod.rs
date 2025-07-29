@@ -154,6 +154,8 @@ pub struct History {
     /// The block hash of the block including the transaction, if available
     pub block_timestamp: Option<Timestamp>,
 
+    /// The 1-based index of the output of the transaction. available only in utxo scan, otherwise 0.
+    #[serde(default)]
     pub v: i32,
 }
 

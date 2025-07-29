@@ -46,8 +46,7 @@ impl EsploraClient {
             rt: Runtime::new()?,
             client: EsploraClientBuilder::new(url, network)
                 .waterfalls(true)
-                .build()
-                .expect("cannot fail with this configuration"),
+                .build()?,
         })
     }
 

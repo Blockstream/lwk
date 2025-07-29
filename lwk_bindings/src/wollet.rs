@@ -4,8 +4,8 @@ use crate::desc::WolletDescriptor;
 use crate::network::Network;
 use crate::types::{AssetId, SecretKey};
 use crate::{
-    AddressResult, ExternalUtxo, ForeignPersisterLink, LwkError, Pset, PsetDetails, Txid, Update,
-    WalletTx, WalletTxOut,
+    AddressResult, ExternalUtxo, ForeignPersisterLink, LwkError, Pset, PsetDetails, Transaction,
+    Txid, Update, WalletTx, WalletTxOut,
 };
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -76,6 +76,12 @@ impl Wollet {
     pub fn apply_update(&self, update: &Update) -> Result<(), LwkError> {
         let mut wollet = self.inner.lock()?;
         wollet.apply_update(update.clone().into())?;
+        Ok(())
+    }
+
+    pub fn apply_transaction(&self, tx: &Transaction) -> Result<(), LwkError> {
+        let mut wollet = self.inner.lock()?;
+        wollet.apply_transaction(tx.clone().into())?;
         Ok(())
     }
 

@@ -26,6 +26,7 @@ mod wollet;
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;
+pub use blockdata::block_header::BlockHeader;
 pub use blockdata::external_utxo::ExternalUtxo;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;

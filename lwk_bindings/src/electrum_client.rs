@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use lwk_wollet::clients::blocking::BlockchainBackend;
 
-use crate::{LwkError, Transaction, Txid, Update, Wollet};
+use crate::{BlockHeader, LwkError, Transaction, Txid, Update, Wollet};
 
 /// Wrapper over [`lwk_wollet::ElectrumClient`]
 #[derive(uniffi::Object, Debug)]
@@ -58,5 +58,10 @@ impl ElectrumClient {
         };
         let mut tx = self.inner.lock()?.get_transactions(&[txid.into()])?;
         Ok(Arc::new(Transaction::from(tx.pop().ok_or_else(err)?)))
+    }
+
+    pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
+        let tip = self.inner.lock()?.tip()?;
+        Ok(Arc::new(tip.into()))
     }
 }

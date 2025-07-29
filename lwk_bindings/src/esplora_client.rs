@@ -2,12 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use lwk_wollet::clients::blocking::{self, BlockchainBackend};
 
-use crate::{LwkError, Network, Transaction, Txid, Update, Wollet};
+use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet};
 
 /// Wrapper over [`blocking::EsploraClient`]
 #[derive(uniffi::Object, Debug)]
 pub struct EsploraClient {
-    inner: Mutex<blocking::EsploraClient>,
+    pub(crate) inner: Mutex<blocking::EsploraClient>,
 }
 #[derive(uniffi::Record)]
 pub struct EsploraClientBuilder {
@@ -90,5 +90,11 @@ impl EsploraClient {
             .lock()?
             .full_scan_to_index(&wollet.state(), index)?;
         Ok(update.map(Into::into).map(Arc::new))
+    }
+
+    /// See [`BlockchainBackend::tip`]
+    pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
+        let tip = self.inner.lock()?.tip()?;
+        Ok(Arc::new(tip.into()))
     }
 }

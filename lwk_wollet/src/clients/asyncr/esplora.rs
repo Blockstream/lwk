@@ -890,4 +890,13 @@ mod tests {
             .unwrap();
         assert!(!histories.is_empty())
     }
+
+    #[test]
+    fn test_esplora_client_builder_error() {
+        let client = crate::asyncr::EsploraClientBuilder::new("", ElementsNetwork::Liquid)
+            .waterfalls(false)
+            .utxo_only(true)
+            .build();
+        assert!(client.is_err());
+    }
 }

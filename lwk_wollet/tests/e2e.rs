@@ -2330,6 +2330,97 @@ fn test_update_v2_after_old_updates() {
     assert_eq!(wollet.transactions().unwrap().len(), 64);
 }
 
+#[test]
+fn test_update_transaction() {
+    // Get a transaction in the wallet before it's returned by the blockchain client
+    let server = setup();
+
+    let view_key = generate_view_key();
+    let signer = generate_signer();
+    let xpub = signer.xpub();
+    let desc_str = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc_str);
+
+    w.fund_btc(&server);
+
+    let node_addr = server.elementsd_getnewaddress();
+    let mut pset = w
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+
+    // Apply the transaction to the wallet
+    w.wollet.apply_transaction(tx.clone()).unwrap();
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 2);
+
+    // A full scan now will make the transaction disappear
+    let update = w.client.full_scan(&w.wollet).unwrap().unwrap();
+    w.wollet.apply_update(update).unwrap();
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 1);
+
+    // After the transaction is broadcast, it will be obtained by a full scan
+    let txid = w.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut w.wollet, &mut w.client, &txid);
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 2);
+
+    // Applying the transaction again does nothing
+    w.wollet.apply_transaction(tx.clone()).unwrap();
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 2);
+
+    // However applying a transaction after a full scan has started,
+    // but before it has been applied causes apply_update to fail
+
+    // Create tx
+    let mut pset = w
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 1_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let _txid = w.client.broadcast(&tx).unwrap();
+
+    // Start the full scan
+    let update = w.client.full_scan(&w.wollet).unwrap().unwrap();
+
+    // Apply the transaction
+    w.wollet.apply_transaction(tx.clone()).unwrap();
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 3);
+
+    // Attempt to apply the update
+    let err = w.wollet.apply_update(update).unwrap_err();
+    assert!(err
+        .to_string()
+        .contains("Update created on a wallet with status"));
+
+    // Note that this error is transient, and follwing full scan/apply update will work
+    let update = w.client.full_scan(&w.wollet).unwrap().unwrap();
+    w.wollet.apply_update(update).unwrap();
+
+    let txs = w.wollet.transactions().unwrap();
+    assert_eq!(txs.len(), 3);
+}
+
 fn liquidex<C: BlockchainBackend>(
     wallet_maker: &mut TestWollet<C>,
     signer_maker: &AnySigner,

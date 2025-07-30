@@ -18,13 +18,20 @@ impl AsRef<asyncr::EsploraClient> for EsploraClient {
 impl EsploraClient {
     /// Creates a client, wrapper of [`asyncr::EsploraClient`]
     #[wasm_bindgen(constructor)]
-    pub fn new(network: &Network, url: &str, waterfalls: bool, concurrency: usize) -> Self {
+    pub fn new(
+        network: &Network,
+        url: &str,
+        waterfalls: bool,
+        concurrency: usize,
+        utxo_only: bool,
+    ) -> Result<Self, Error> {
         let inner = asyncr::EsploraClientBuilder::new(url, network.into())
             .waterfalls(waterfalls)
             .concurrency(concurrency)
+            .utxo_only(utxo_only)
             .build()
-            .expect("cannot fail with this configuration");
-        Self { inner }
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(Self { inner })
     }
 
     #[wasm_bindgen(js_name = fullScan)]

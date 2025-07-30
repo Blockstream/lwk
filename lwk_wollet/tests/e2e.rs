@@ -3334,3 +3334,108 @@ fn test_skip_signing_utxo() {
     let txid = w.client.broadcast(&tx).unwrap();
     wait_for_tx(&mut w.wollet, &mut w.client, &txid);
 }
+
+#[test]
+fn test_fee_service() {
+    // User uses a Fee Service to pay for its transactions fees
+    let server = setup();
+
+    // User wallet, that will never hold LBTC
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+
+    // Fee Service wallet, that pays for fee for user
+    let signer_fee = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer_fee.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wf = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    wf.fund_btc(&server);
+
+    // Issue an asset and send it to the user
+    let signers_fee = [&AnySigner::Software(signer_fee.clone())];
+    let (asset, _token) = wf.issueasset(&signers_fee, 10, 1, None, None);
+    let txid = wf.send_asset(&signers_fee, &w.address(), &asset, None);
+    wait_for_tx(&mut w.wollet, &mut w.client, &txid);
+
+    assert_eq!(w.balance(&asset), 10);
+    assert_eq!(w.balance(&lbtc), 0);
+
+    // User wants to send a transaction, since it does not have LBTC,
+    // it will rely on the Fee Service to pay the fees.
+
+    // User gets a UTXO from the Fee Service
+    let fee_utxo = wf
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == lbtc)
+        .unwrap();
+    let fee_utxo = wf.make_external(&fee_utxo);
+
+    // User also gets an address from the Fee Service
+    let addr_fs = wf.address();
+
+    // User construct a transaction using this external utxo
+    let mut pset = w
+        .tx_builder()
+        // Send asset back to self
+        .add_recipient(&w.address(), 10, asset)
+        .unwrap()
+        // Add Fee Service utxo for fees
+        .add_external_utxos(vec![fee_utxo])
+        .unwrap()
+        // Send all (change) LBTC to the Fee Service
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(addr_fs)
+        .finish()
+        .unwrap();
+
+    // User shares PSET with Fee Service
+
+    // Fee Service adds data related to its wallet to the PSET
+    wf.wollet.add_details(&mut pset).unwrap();
+    let details = wf.wollet.get_details(&pset).unwrap();
+
+    // Fee Service checks that the PSET is reasonable for it
+
+    // From a Fee Service perspective, transaction only spends the exact fee amount
+    let fee = &details.balance.fee;
+    let balances = &details.balance.balances;
+    assert_eq!(balances.len(), 1);
+    assert_eq!(balances.get(&lbtc).unwrap() + (*fee as i64), 0);
+
+    // Fee rate is less that 0.02 sats/vB
+    let fee_rate = compute_fee_rate(&pset);
+    assert!(fee_rate < 200.0);
+
+    // Fee Service signs a single (singlesig) input
+    let mut input_to_sign = 0;
+    for input in details.sig_details {
+        if let [(_, (fingerprint, _))] = input.missing_signature[..] {
+            if fingerprint == signer_fee.fingerprint() {
+                input_to_sign += 1;
+            }
+        }
+    }
+    assert_eq!(input_to_sign, 1);
+
+    // Fee Service cosigns and returns the PSET to the user
+    let sigs = signer_fee.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // User signs the asset input
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // User broadcast the transaction
+    let tx = w.wollet.finalize(&mut pset).unwrap();
+    let txid = w.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut w.wollet, &mut w.client, &txid);
+}

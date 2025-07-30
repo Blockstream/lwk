@@ -710,7 +710,6 @@ fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements
 
     let outputs = vec![];
 
-    
     elements::Transaction {
         version: 1,
         input: inputs,

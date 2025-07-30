@@ -1103,9 +1103,7 @@ impl Wollet {
         use std::str::FromStr;
 
         let signer = lwk_signer::SwSigner::random(false)?.0;
-        let desc = signer
-            .wpkh_slip77_descriptor()
-            .map_err(|e| Error::Generic(e))?;
+        let desc = signer.wpkh_slip77_descriptor().map_err(Error::Generic)?;
         let desc = WolletDescriptor::from_str(&desc)?;
         Ok((
             signer,

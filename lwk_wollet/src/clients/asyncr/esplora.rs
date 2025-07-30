@@ -686,13 +686,12 @@ fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements
     let mut all_outputs: HashSet<OutPoint> = new_txs
         .txs
         .iter()
-        .map(|(txid, tx)| {
+        .flat_map(|(txid, tx)| {
             tx.output
                 .iter()
                 .enumerate()
                 .map(|(i, _)| OutPoint::new(*txid, i as u32))
         })
-        .flatten()
         .collect();
     all_outputs.retain(|o| !unspent.contains(o));
     let spent_outputs = all_outputs;
@@ -700,7 +699,7 @@ fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements
     let inputs = spent_outputs
         .iter()
         .map(|o| elements::TxIn {
-            previous_output: o.clone(),
+            previous_output: *o,
             script_sig: elements::Script::default(),
             sequence: Sequence::MAX,
             is_pegin: false,
@@ -711,13 +710,13 @@ fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements
 
     let outputs = vec![];
 
-    let tx = elements::Transaction {
+    
+    elements::Transaction {
         version: 1,
         input: inputs,
         output: outputs,
         lock_time: LockTime::ZERO,
-    };
-    tx
+    }
 }
 
 impl EsploraClientBuilder {

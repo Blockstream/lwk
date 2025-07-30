@@ -58,6 +58,9 @@ impl EsploraClientBuilder {
         self
     }
 
+    /// Experimental: if true, the client will only fetch transactions with unspent outputs.
+    /// The resulting balance will be the same as a full scan, but the scan will be faster
+    /// at the cost of not having the full transaciton history.
     pub fn utxo_only(mut self, utxo_only: bool) -> Self {
         self.utxo_only = utxo_only;
         self

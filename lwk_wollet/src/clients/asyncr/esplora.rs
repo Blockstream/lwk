@@ -678,7 +678,10 @@ impl EsploraClient {
     }
 }
 
-// Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent
+// Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent.
+//
+// We may need to return a vec of transactions if some kind of transaction limits arise.
+// TODO: Add only outpoints the wallet owns.
 fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements::Transaction {
     let mut all_outputs: HashSet<OutPoint> = new_txs
         .txs

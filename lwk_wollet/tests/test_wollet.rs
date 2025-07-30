@@ -310,7 +310,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         address: &Address,
         asset: &AssetId,
         fee_rate: Option<f32>,
-    ) {
+    ) -> Txid {
         let balance_before = self.balance(asset);
         let satoshi: u64 = 10;
         let mut pset = self
@@ -341,9 +341,10 @@ impl<C: BlockchainBackend> TestWollet<C> {
             self.sign(signer, &mut pset);
         }
         assert_fee_rate(compute_fee_rate(&pset), fee_rate);
-        self.send(&mut pset);
+        let txid = self.send(&mut pset);
         let balance_after = self.balance(asset);
         assert!(balance_before > balance_after);
+        txid
     }
 
     pub fn send_many(

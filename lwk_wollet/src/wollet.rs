@@ -906,9 +906,20 @@ impl Wollet {
         let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
         if let Err(errors) = result {
             if !errors.is_empty() && errors.len() == pset.inputs().len() {
-                // Failed to finalize all inputs
-                // TODO: do not use Generic
-                return Err(Error::Generic(format!("{:?}", errors)));
+                // In some case "finalize" finalizes all inputs but return some error
+                let seems_finalized = |i: &elements::pset::Input| -> bool {
+                    i.partial_sigs.is_empty()
+                        && (!i
+                            .final_script_witness
+                            .as_ref()
+                            .is_some_and(|v| v.is_empty())
+                            || !i.final_script_sig.as_ref().is_some_and(|v| v.is_empty()))
+                };
+                if !pset.inputs().iter().all(seems_finalized) {
+                    // Failed to finalize all inputs
+                    // TODO: do not use Generic
+                    return Err(Error::Generic(format!("{:?}", errors)));
+                }
             }
             // If some inputs have been finalized ignore the other errors
         }

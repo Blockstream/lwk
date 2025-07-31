@@ -1190,7 +1190,7 @@ async fn test_esplora_waterfalls_utxo_only() {
         .transactions()
         .unwrap()
         .iter()
-        .all(|tx| tx.outputs.len() > 0));
+        .all(|tx| !tx.outputs.is_empty()));
 }
 
 #[cfg(feature = "esplora")]

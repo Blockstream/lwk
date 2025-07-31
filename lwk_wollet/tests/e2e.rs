@@ -2695,6 +2695,98 @@ fn test_liquidex() {
 }
 
 #[test]
+fn test_delayed_signing() {
+    // Simulate a swap with an AMP asset sent by the maker
+    // This means that the second signer signs the PSET only
+    // when the transaction is completed.
+    let server = setup();
+
+    let ss1 = generate_signer();
+    let sm1 = generate_signer();
+    let sm2 = generate_signer();
+
+    // Wallet single sig
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, ss1.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut ws = TestWollet::new(client, &desc);
+
+    // Wallet multi sig
+    let view_key = generate_view_key();
+    let desc = format!(
+        "ct({},elwsh(multi(2,{}/*,{}/*)))",
+        view_key,
+        sm1.xpub(),
+        sm2.xpub(),
+    );
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut wm = TestWollet::new(client, &desc);
+
+    let ss1 = AnySigner::Software(ss1);
+    let sm1 = AnySigner::Software(sm1);
+    let sm2 = AnySigner::Software(sm2);
+
+    ws.fund_btc(&server);
+    wm.fund_btc(&server);
+
+    let (asset_1, _) = ws.issueasset(&[&ss1], 10, 1, None, None);
+    let (asset_2, _) = wm.issueasset(&[&sm1, &sm2], 10, 1, None, None);
+
+    assert_eq!(ws.balance(&asset_1), 10);
+    assert_eq!(ws.balance(&asset_2), 0);
+    assert_eq!(wm.balance(&asset_1), 0);
+    assert_eq!(wm.balance(&asset_2), 10);
+
+    // Multisig wallet create LiquiDEX proposal
+    let addr_m = wm.address_result(None).address().clone();
+    let utxo_m = wm
+        .wollet
+        .utxos()
+        .unwrap()
+        .into_iter()
+        .find(|u| u.unblinded.asset == asset_2)
+        .unwrap()
+        .outpoint;
+    let mut pset = wm
+        .tx_builder()
+        .liquidex_make(utxo_m, &addr_m, 10, asset_1)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Sign with a single signer
+    // The other will only sign later
+    let sigs = sm1.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // Create proposal
+    let proposal = LiquidexProposal::from_pset(&pset).unwrap();
+    let txid = proposal.needed_tx().unwrap();
+    let tx = wm.wollet.transaction(&txid).unwrap().unwrap().tx;
+    let proposal = proposal.validate(tx).unwrap();
+
+    // Singlesig wallet takes the LiquiDEX proposal
+    let mut pset = ws
+        .tx_builder()
+        .liquidex_take(vec![proposal])
+        .unwrap()
+        .fee_rate(Some(200.0)) // TODO: liquidex take underestimate the fee
+        .finish()
+        .unwrap();
+
+    let sigs = ss1.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    // 2nd multisig signer signs only the full transaction
+    wm.wollet.add_details(&mut pset).unwrap();
+    let sigs = sm2.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    let txid = ws.send(&mut pset);
+    wait_for_tx(&mut wm.wollet, &mut wm.client, &txid);
+}
+
+#[test]
 fn test_no_wildcard_with_path_after() {
     let server = setup_with_esplora();
 

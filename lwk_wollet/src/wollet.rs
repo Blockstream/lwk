@@ -902,8 +902,42 @@ impl Wollet {
     }
 
     pub fn finalize(&self, pset: &mut PartiallySignedTransaction) -> Result<Transaction, Error> {
+        // elements-miniscript does not finalize PSET inputs if they have signature with different
+        // sighashes. To workaround this, if necessary we replace the sighash in the signatures
+        // with the sighash set in the PSET input. Then we finalize the PSET and later we replace
+        // the sighashes with the original ones.
+        let mut original_sigs = vec![];
+        for i in pset.inputs_mut() {
+            let sighash = i.sighash_type.map(|s| s.to_u32()).unwrap_or(1) as u8;
+            if i.partial_sigs.len() > 1 {
+                for sig in i.partial_sigs.values_mut() {
+                    let sig_len = sig.len();
+                    if sig_len > 0 && sig[sig_len - 1] != sighash {
+                        original_sigs.push(sig.clone());
+                        sig[sig_len - 1] = sighash;
+                    }
+                }
+            }
+        }
+
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
+
+        // Replace the original sighashes in the finalized signatures
+        for original_sig in original_sigs {
+            for i in pset.inputs_mut() {
+                // TODO: also for pre-segwit inputs
+                if let Some(witness) = &mut i.final_script_witness {
+                    for e in witness.iter_mut() {
+                        let len = original_sig.len();
+                        if e.len() == len && e[0..(len - 1)] == original_sig[0..(len - 1)] {
+                            *e = original_sig.clone();
+                        }
+                    }
+                }
+            }
+        }
+
         if let Err(errors) = result {
             if !errors.is_empty() && errors.len() == pset.inputs().len() {
                 // In some case "finalize" finalizes all inputs but return some error

@@ -3259,14 +3259,9 @@ fn test_finalize_diff_sighashes() {
     let sigs = s2.sign(&mut pset).unwrap();
     assert!(sigs > 0);
 
-    // TODO: handle this case
-    let err = wallet.wollet.finalize(&mut pset).unwrap_err();
-    assert!(err
-        .to_string()
-        .contains("WrongSighashFlag { required: SinglePlusAnyoneCanPay, got: All"));
-    // let tx = wallet.wollet.finalize(&mut pset).unwrap();
-    // let txid = wallet.client.broadcast(&tx).unwrap();
-    // wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    let txid = wallet.client.broadcast(&tx).unwrap();
+    wait_for_tx(&mut wallet.wollet, &mut wallet.client, &txid);
 }
 
 #[test]

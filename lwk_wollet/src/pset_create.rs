@@ -33,7 +33,7 @@ impl Wollet {
             .clone())
     }
 
-    fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
+    pub(crate) fn get_txout(&self, outpoint: &OutPoint) -> Result<TxOut, Error> {
         Ok(self
             .get_tx(&outpoint.txid)?
             .output

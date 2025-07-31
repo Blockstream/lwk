@@ -10,7 +10,7 @@ use elements::{
     pset::PartiallySignedTransaction,
     secp256k1_zkp, AssetId, BlindValueProofs, BlockHash, Transaction, Txid,
 };
-use elements_miniscript::psbt;
+use elements_miniscript::psbt::PsbtExt;
 
 use crate::{Error, EC};
 
@@ -155,7 +155,18 @@ impl LiquidexProposal<Unvalidated> {
     pub fn from_pset(pset: &PartiallySignedTransaction) -> Result<Self, Error> {
         // We need to put the signature(s) in the proposal, so we need to finalize the pset
         let mut pset = pset.clone();
-        psbt::finalize(&mut pset, &EC, BlockHash::all_zeros())?;
+        // genesis_hash is only used for BIP341 (taproot) sighash computation
+        let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
+        if result.is_err() {
+            // In some cases we still want to fill the witness and script sig
+            // XXX leo improve desc
+            // return Err(Error::Generic(format!("{:?}", result)));
+            let input = &mut pset.inputs_mut()[0];
+            let pk = input.partial_sigs.keys().next().unwrap().to_bytes();
+            let sig = input.partial_sigs.values().next().unwrap().to_vec();
+            let script = input.witness_script.as_ref().unwrap().to_bytes();
+            input.final_script_witness = Some(vec![pk, sig, script]);
+        }
 
         let tx = pset.extract_tx()?;
         let [input] = pset.inputs() else {
@@ -321,8 +332,23 @@ impl LiquidexProposal<Validated> {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
         // Input is signed and finalized, set the script sig and witness
-        pset_input.final_script_sig = Some(txin.script_sig.clone());
-        pset_input.final_script_witness = Some(txin.witness.script_witness.clone());
+        // Find
+        // Under some conditions, we want to get the signature back to their PSET place
+        // XXX leo find those
+        if false {
+            pset_input.final_script_sig = Some(txin.script_sig.clone());
+            pset_input.final_script_witness = Some(txin.witness.script_witness.clone());
+        } else {
+            let pk =
+                elements::bitcoin::PublicKey::from_slice(&txin.witness.script_witness[0]).unwrap();
+            let sig = &txin.witness.script_witness[1];
+            let witness_script = &txin.witness.script_witness[2];
+            pset_input.partial_sigs.insert(pk, sig.to_vec());
+            //pset_input.witness_script = Some(elements::encode::deserialize(witness_script)?);
+            pset_input.witness_script = Some(witness_script.to_hex().parse()?);
+            pset_input.final_script_sig = None;
+            pset_input.final_script_witness = None;
+        }
 
         pset_input.amount = Some(input.satoshi);
         pset_input.asset = Some(input.asset);

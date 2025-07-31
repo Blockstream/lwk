@@ -1085,6 +1085,116 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
 
 #[cfg(feature = "esplora")]
 #[tokio::test]
+async fn test_esplora_waterfalls_utxo_only() {
+    use clients::asyncr::{self, async_sleep};
+
+    init_logging();
+    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
+    let test_env = waterfalls::test_env::launch(exe).await;
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+
+    let desc = WolletDescriptor::from_str(&desc).unwrap();
+
+    let network = ElementsNetwork::default_regtest();
+    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut client = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
+        .waterfalls(true)
+        .build()
+        .unwrap();
+
+    let mut wollet_utxo_only = Wollet::without_persist(network, desc.clone()).unwrap();
+    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
+        .waterfalls(true)
+        .utxo_only(true)
+        .build()
+        .unwrap();
+
+    let address = wollet.address(None).unwrap();
+    test_env.send_to(address.address(), 1_000_000);
+    async_sleep(2_000).await;
+
+    // check both wallets have the same balance
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .await
+        .unwrap()
+        .unwrap();
+    wollet_utxo_only.apply_update(update).unwrap();
+    assert_eq!(
+        format!("{:?}", wollet.balance().unwrap()),
+        "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 1000000}"
+    );
+    assert_eq!(
+        wollet.balance().unwrap(),
+        wollet_utxo_only.balance().unwrap()
+    );
+    assert_eq!(wollet.utxos().unwrap().len(), 1);
+    assert_eq!(wollet_utxo_only.utxos().unwrap().len(), 1);
+    assert_eq!(
+        wollet.transactions().unwrap(),
+        wollet_utxo_only.transactions().unwrap()
+    );
+
+    // spend from wollet and sync again both wallets
+    let address = test_env.get_new_address(None);
+    let mut pset = wollet
+        .tx_builder()
+        .add_lbtc_recipient(&address, 100_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    signer.sign(&mut pset).unwrap();
+    let pset_details = wollet.get_details(&pset).unwrap();
+
+    let tx = wollet.finalize(&mut pset).unwrap();
+
+    client.broadcast(&tx).await.unwrap();
+
+    test_env.node_generate(1).await; // TODO: remove this
+    async_sleep(2_000).await;
+
+    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    wollet.apply_update(update).unwrap();
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .await
+        .unwrap()
+        .unwrap();
+    wollet_utxo_only.apply_update(update).unwrap();
+
+    assert_eq!(
+        format!("{:?}", wollet.balance().unwrap()),
+        format!(
+            "{{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: {}}}",
+            1_000_000 - pset_details.balance.fee - 100_000
+        )
+    );
+    assert_eq!(
+        wollet.balance().unwrap(),
+        wollet_utxo_only.balance().unwrap()
+    );
+
+    assert_eq!(wollet.utxos().unwrap().len(), 1);
+    assert_eq!(wollet_utxo_only.utxos().unwrap().len(), 1);
+
+    assert_eq!(wollet_utxo_only.transactions().unwrap().len(), 1);
+    assert_eq!(wollet.transactions().unwrap().len(), 2);
+
+    // ensure the dummy tx is not in the transactions list, the dummy_tx has zero outputs.
+    assert!(wollet_utxo_only
+        .transactions()
+        .unwrap()
+        .iter()
+        .all(|tx| tx.outputs.len() > 0));
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
 async fn test_esplora_wasm_local_waterfalls() {
     use clients::asyncr::{self, async_sleep};
 

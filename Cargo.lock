@@ -2784,6 +2784,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "prefix_uvarint"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e506d59806fa96ce3495fdc7ff9ee8f26f2b65e6019dda11c8b35dd73c050a12"
+dependencies = [
+ "bytes",
+]
+
+[[package]]
 name = "proc-macro-error-attr2"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4393,9 +4402,9 @@ dependencies = [
 
 [[package]]
 name = "waterfalls"
-version = "0.8.3"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81377a05e2a3d006bc4c3690659f372570122bfc3527ea9cabcd22296ddf45ab"
+checksum = "779db9be7c4af7380519f9bd069b1477cf79fa14c26f1f2f14c5a4e7073ff6fd"
 dependencies = [
  "age",
  "anyhow",
@@ -4415,6 +4424,7 @@ dependencies = [
  "lazy_static",
  "log",
  "minicbor",
+ "prefix_uvarint",
  "prometheus",
  "reqwest",
  "serde",

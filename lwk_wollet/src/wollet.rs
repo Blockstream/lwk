@@ -833,7 +833,23 @@ impl Wollet {
     pub fn add_details(&self, pset: &mut PartiallySignedTransaction) -> Result<(), Error> {
         let pset_clone = pset.clone();
         for (idx, input) in pset_clone.inputs().iter().enumerate() {
-            if let Some(txout) = input.witness_utxo.as_ref() {
+            // TODO: refactor and improve mutability handling
+            let input_mut = &mut pset.inputs_mut()[idx];
+
+            // For wallet (u)txos, add the witness utxo if needed
+            let outpoint = OutPoint::new(input.previous_txid, input.previous_output_index);
+            if let Ok(txout) = self.get_txout(&outpoint) {
+                if input
+                    .witness_utxo
+                    .as_ref()
+                    .is_none_or(|u| u.script_pubkey.is_empty())
+                {
+                    input_mut.witness_utxo = Some(txout.clone());
+                    // TODO: remove rangeproof?
+                }
+            }
+
+            if let Some(txout) = input_mut.witness_utxo.as_ref() {
                 match self.definite_descriptor(&txout.script_pubkey) {
                     Ok(desc) => {
                         pset.update_input_with_descriptor(idx, &desc)?;

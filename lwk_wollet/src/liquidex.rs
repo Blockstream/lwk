@@ -95,6 +95,13 @@ impl LiquidexTxOutSecrets {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+struct LiquidexExtra {
+    // XXX: (leo) use String ?
+    partial_sigs: std::collections::BTreeMap<elements::bitcoin::PublicKey, Vec<u8>>,
+    witness_script: Vec<u8>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validated;
 
@@ -119,6 +126,9 @@ pub struct LiquidexProposal<S> {
     inputs: Vec<LiquidexTxOutSecrets>,
     outputs: Vec<LiquidexTxOutSecrets>,
     scalars: Vec<secp256k1_zkp::Tweak>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    extra: Vec<LiquidexExtra>,
 
     #[serde(skip)]
     data: PhantomData<S>,
@@ -157,6 +167,7 @@ impl LiquidexProposal<Unvalidated> {
         let mut pset = pset.clone();
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
+        let mut extra = vec![];
         if result.is_err() {
             // In some cases we still want to fill the witness and script sig
             // XXX leo improve desc
@@ -166,6 +177,10 @@ impl LiquidexProposal<Unvalidated> {
             let sig = input.partial_sigs.values().next().unwrap().to_vec();
             let script = input.witness_script.as_ref().unwrap().to_bytes();
             input.final_script_witness = Some(vec![pk, sig, script]);
+            extra.push(LiquidexExtra {
+                partial_sigs: input.partial_sigs.clone(),
+                witness_script: input.witness_script.as_ref().unwrap().to_bytes(),
+            })
         }
 
         let tx = pset.extract_tx()?;
@@ -225,6 +240,7 @@ impl LiquidexProposal<Unvalidated> {
             inputs: vec![input],
             outputs: vec![output],
             scalars: pset.global.scalars.clone(),
+            extra,
             data: PhantomData,
         })
     }
@@ -254,6 +270,7 @@ impl LiquidexProposal<Unvalidated> {
             inputs: self.inputs,
             outputs: self.outputs,
             scalars: self.scalars,
+            extra: self.extra,
             data: PhantomData,
         }
     }
@@ -331,23 +348,25 @@ impl LiquidexProposal<Validated> {
         if txin.script_sig.is_empty() && txin.witness.script_witness.is_empty() {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
-        // Input is signed and finalized, set the script sig and witness
-        // Find
-        // Under some conditions, we want to get the signature back to their PSET place
-        // XXX leo find those
-        if false {
-            pset_input.final_script_sig = Some(txin.script_sig.clone());
-            pset_input.final_script_witness = Some(txin.witness.script_witness.clone());
-        } else {
+
+        if let Some(extra) = self.extra.first() {
+            /*
             let pk =
                 elements::bitcoin::PublicKey::from_slice(&txin.witness.script_witness[0]).unwrap();
             let sig = &txin.witness.script_witness[1];
             let witness_script = &txin.witness.script_witness[2];
             pset_input.partial_sigs.insert(pk, sig.to_vec());
+             * */
             //pset_input.witness_script = Some(elements::encode::deserialize(witness_script)?);
-            pset_input.witness_script = Some(witness_script.to_hex().parse()?);
+            // Input was not finalized, set the partial signatures
+            pset_input.partial_sigs = extra.partial_sigs.clone();
+            pset_input.witness_script = Some(extra.witness_script.to_hex().parse()?);
             pset_input.final_script_sig = None;
             pset_input.final_script_witness = None;
+        } else {
+            // Input is signed and finalized, set the script sig and witness
+            pset_input.final_script_sig = Some(txin.script_sig.clone());
+            pset_input.final_script_witness = Some(txin.witness.script_witness.clone());
         }
 
         pset_input.amount = Some(input.satoshi);

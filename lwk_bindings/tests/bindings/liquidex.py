@@ -33,6 +33,7 @@ builder = network.tx_builder()
 utxo = maker.utxos()[0].outpoint()
 builder.liquidex_make(utxo, maker.address(None).address(), issued_asset_units, asset)
 pset = builder.finish(maker)
+assert pset.inputs()[0].sighash() == 131
 signed_pset = signer.sign(pset)
 
 # (maker) Create the proposal  and convert it to string to pass it to the taker
@@ -59,6 +60,7 @@ assert output_asset == asset
 builder2 = network.tx_builder()
 builder2.liquidex_take([validated_proposal])
 pset2 = builder2.finish(taker)
+assert pset2.inputs()[1].sighash() == 1
 signed_pset2 = signer2.sign(pset2)
 
 # (taker) Finalize and broadcast the transaction

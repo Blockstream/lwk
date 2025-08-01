@@ -127,8 +127,8 @@ pub struct LiquidexProposal<S> {
     outputs: Vec<LiquidexTxOutSecrets>,
     scalars: Vec<secp256k1_zkp::Tweak>,
 
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    extra: Vec<LiquidexExtra>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra: Option<Vec<LiquidexExtra>>,
 
     #[serde(skip)]
     data: PhantomData<S>,
@@ -167,17 +167,18 @@ impl LiquidexProposal<Unvalidated> {
         let mut pset = pset.clone();
         // genesis_hash is only used for BIP341 (taproot) sighash computation
         let result = pset.finalize_mut(&EC, BlockHash::all_zeros());
-        let mut extra = vec![];
-        if result.is_err() {
+        let extra = if result.is_err() {
             // In some cases we still want to fill the witness and script sig
             // XXX leo improve desc
             // return Err(Error::Generic(format!("{:?}", result)));
             let input = &pset.inputs()[0]; // XXX leo
-            extra.push(LiquidexExtra {
+            Some(vec![LiquidexExtra {
                 partial_sigs: input.partial_sigs.clone(),
                 witness_script: input.witness_script.clone().unwrap_or_default().to_bytes(),
-            })
-        }
+            }])
+        } else {
+            None
+        };
 
         let tx = pset.extract_tx()?;
         let [input] = pset.inputs() else {
@@ -189,7 +190,7 @@ impl LiquidexProposal<Unvalidated> {
         if pset.global.scalars.len() != 1 {
             return Err(Error::LiquidexError(LiquidexError::UnexpectedScalars));
         }
-        if extra.is_empty()
+        if extra.as_ref().is_some_and(|v| v.is_empty())
             && input.final_script_sig.is_none()
             && input.final_script_witness.is_none()
         {
@@ -344,14 +345,14 @@ impl LiquidexProposal<Validated> {
         let input = &self.inputs[0];
         // Add input
         let mut pset_input = elements::pset::Input::from_txin(txin.clone());
-        if self.extra.is_empty()
+        if self.extra.as_ref().is_some_and(|v| v.is_empty())
             && txin.script_sig.is_empty()
             && txin.witness.script_witness.is_empty()
         {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
 
-        if let Some(extra) = self.extra.first() {
+        if let Some(Some(extra)) = self.extra.as_ref().map(|v| v.first()) {
             // Input was not finalized, set the partial signatures
             pset_input.partial_sigs = extra.partial_sigs.clone();
             // XXX leo improve conversion

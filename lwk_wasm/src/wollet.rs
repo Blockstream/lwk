@@ -1,6 +1,6 @@
 use crate::blockdata::asset_id::AssetIds;
 use crate::{
-    AddressResult, Error, Network, Pset, PsetDetails, Update, WalletTx, WalletTxOut,
+    AddressResult, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx, WalletTxOut,
     WolletDescriptor,
 };
 use lwk_jade::derivation_path_to_vec;
@@ -69,6 +69,11 @@ impl Wollet {
     #[wasm_bindgen(js_name = applyUpdate)]
     pub fn apply_update(&mut self, update: &Update) -> Result<(), Error> {
         Ok(self.inner.apply_update(update.into())?)
+    }
+
+    #[wasm_bindgen(js_name = applyTransaction)]
+    pub fn apply_transaction(&mut self, tx: &Transaction) -> Result<(), Error> {
+        Ok(self.inner.apply_transaction(tx.clone().into())?)
     }
 
     pub fn balance(&self) -> Result<JsValue, Error> {

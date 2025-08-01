@@ -172,11 +172,10 @@ impl LiquidexProposal<Unvalidated> {
             // In some cases we still want to fill the witness and script sig
             // XXX leo improve desc
             // return Err(Error::Generic(format!("{:?}", result)));
-            let input = &pset.inputs()[0];  // XXX leo
-            // input.final_script_witness = Some(vec![vec![]]);
+            let input = &pset.inputs()[0]; // XXX leo
             extra.push(LiquidexExtra {
                 partial_sigs: input.partial_sigs.clone(),
-                witness_script: input.witness_script.as_ref().unwrap().to_bytes(),
+                witness_script: input.witness_script.clone().unwrap_or_default().to_bytes(),
             })
         }
 
@@ -190,7 +189,10 @@ impl LiquidexProposal<Unvalidated> {
         if pset.global.scalars.len() != 1 {
             return Err(Error::LiquidexError(LiquidexError::UnexpectedScalars));
         }
-        if extra.is_empty() && input.final_script_sig.is_none() && input.final_script_witness.is_none() {
+        if extra.is_empty()
+            && input.final_script_sig.is_none()
+            && input.final_script_witness.is_none()
+        {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
 
@@ -342,7 +344,10 @@ impl LiquidexProposal<Validated> {
         let input = &self.inputs[0];
         // Add input
         let mut pset_input = elements::pset::Input::from_txin(txin.clone());
-        if self.extra.is_empty() && txin.script_sig.is_empty() && txin.witness.script_witness.is_empty() {
+        if self.extra.is_empty()
+            && txin.script_sig.is_empty()
+            && txin.witness.script_witness.is_empty()
+        {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
 

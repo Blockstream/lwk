@@ -141,6 +141,11 @@ impl PsetInput {
             .has_issuance()
             .then(|| Arc::new(lwk_common::Issuance::new(&self.inner).into()))
     }
+
+    /// Input sighash
+    pub fn sighash(&self) -> u32 {
+        self.inner.sighash_type.map(|s| s.to_u32()).unwrap_or(1)
+    }
 }
 
 #[cfg(test)]

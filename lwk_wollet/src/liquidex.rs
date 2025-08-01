@@ -172,11 +172,8 @@ impl LiquidexProposal<Unvalidated> {
             // In some cases we still want to fill the witness and script sig
             // XXX leo improve desc
             // return Err(Error::Generic(format!("{:?}", result)));
-            let input = &mut pset.inputs_mut()[0];
-            let pk = input.partial_sigs.keys().next().unwrap().to_bytes();
-            let sig = input.partial_sigs.values().next().unwrap().to_vec();
-            let script = input.witness_script.as_ref().unwrap().to_bytes();
-            input.final_script_witness = Some(vec![pk, sig, script]);
+            let input = &pset.inputs()[0];  // XXX leo
+            // input.final_script_witness = Some(vec![vec![]]);
             extra.push(LiquidexExtra {
                 partial_sigs: input.partial_sigs.clone(),
                 witness_script: input.witness_script.as_ref().unwrap().to_bytes(),
@@ -193,7 +190,7 @@ impl LiquidexProposal<Unvalidated> {
         if pset.global.scalars.len() != 1 {
             return Err(Error::LiquidexError(LiquidexError::UnexpectedScalars));
         }
-        if input.final_script_sig.is_none() && input.final_script_witness.is_none() {
+        if extra.is_empty() && input.final_script_sig.is_none() && input.final_script_witness.is_none() {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
 
@@ -345,24 +342,15 @@ impl LiquidexProposal<Validated> {
         let input = &self.inputs[0];
         // Add input
         let mut pset_input = elements::pset::Input::from_txin(txin.clone());
-        if txin.script_sig.is_empty() && txin.witness.script_witness.is_empty() {
+        if self.extra.is_empty() && txin.script_sig.is_empty() && txin.witness.script_witness.is_empty() {
             return Err(Error::LiquidexError(LiquidexError::MissingSignature));
         }
 
         if let Some(extra) = self.extra.first() {
-            /*
-            let pk =
-                elements::bitcoin::PublicKey::from_slice(&txin.witness.script_witness[0]).unwrap();
-            let sig = &txin.witness.script_witness[1];
-            let witness_script = &txin.witness.script_witness[2];
-            pset_input.partial_sigs.insert(pk, sig.to_vec());
-             * */
-            //pset_input.witness_script = Some(elements::encode::deserialize(witness_script)?);
             // Input was not finalized, set the partial signatures
             pset_input.partial_sigs = extra.partial_sigs.clone();
+            // XXX leo improve conversion
             pset_input.witness_script = Some(extra.witness_script.to_hex().parse()?);
-            pset_input.final_script_sig = None;
-            pset_input.final_script_witness = None;
         } else {
             // Input is signed and finalized, set the script sig and witness
             pset_input.final_script_sig = Some(txin.script_sig.clone());

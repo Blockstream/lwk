@@ -8,6 +8,12 @@ pub struct Amp0<S: Stream> {
     stream: S,
 }
 
+impl<S: Stream> Amp0<S> {
+    pub async fn new(stream: S) -> Result<Self, Error> {
+        Ok(Self { stream })
+    }
+}
+
 impl Amp0<WebSocketClient> {
     pub async fn with_network(network: Network) -> Result<Self, Error> {
         let url = match network {

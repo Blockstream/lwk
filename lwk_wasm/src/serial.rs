@@ -1,4 +1,4 @@
-use lwk_jade::asyncr::Stream;
+use lwk_common::Stream;
 use serde::Serialize;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::js_sys::Uint8Array;
@@ -88,6 +88,8 @@ impl WebSerial {
 }
 
 impl Stream for WebSerial {
+    type Error = lwk_jade::Error;
+
     async fn read(&self, buf: &mut [u8]) -> Result<usize, lwk_jade::Error> {
         let promise = self.reader.read();
         let result = wasm_bindgen_futures::JsFuture::from(promise)

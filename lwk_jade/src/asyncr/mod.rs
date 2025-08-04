@@ -15,7 +15,7 @@ use crate::sign_liquid_tx::{SignLiquidTxParams, TxInputParams};
 use crate::{json_to_cbor, try_parse_response, vec_to_derivation_path, Error, Result};
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
 use elements_miniscript::slip77;
-use lwk_common::Network;
+use lwk_common::{Network, Stream};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
 use tokio::sync::Mutex;
@@ -37,36 +37,45 @@ pub struct Jade<S: Stream> {
     multisigs_details: Mutex<Option<Vec<RegisteredMultisigDetails>>>,
 }
 
-pub trait Stream {
-    fn read(&self, buf: &mut [u8]) -> impl std::future::Future<Output = Result<usize>>;
-    fn write(&self, data: &[u8]) -> impl std::future::Future<Output = Result<()>>;
+/// Newtype wrapper for TcpStream to implement Stream trait
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug)]
+pub struct JadeTcpStream(pub Mutex<tokio::net::TcpStream>);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl JadeTcpStream {
+    pub fn new(stream: tokio::net::TcpStream) -> Self {
+        Self(Mutex::new(stream))
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl Stream for Mutex<tokio::net::TcpStream> {
+impl Stream for JadeTcpStream {
+    type Error = Error;
+
     async fn read(&self, buf: &mut [u8]) -> Result<usize> {
         use tokio::io::AsyncReadExt;
 
-        let mut stream = self.lock().await;
+        let mut stream = self.0.lock().await;
         Ok(stream.read(buf).await?)
     }
 
     async fn write(&self, data: &[u8]) -> Result<()> {
         use tokio::io::AsyncWriteExt;
 
-        let mut stream = self.lock().await;
+        let mut stream = self.0.lock().await;
         Ok(stream.write_all(data).await?)
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl Jade<Mutex<tokio::net::TcpStream>> {
+impl Jade<JadeTcpStream> {
     pub fn new_tcp(stream: tokio::net::TcpStream, network: Network) -> Self {
-        Jade::new(Mutex::new(stream), network)
+        Jade::new(JadeTcpStream::new(stream), network)
     }
 }
 
-impl<S: Stream> Jade<S> {
+impl<S: Stream<Error = Error>> Jade<S> {
     pub fn new(stream: S, network: Network) -> Self {
         Self {
             stream,

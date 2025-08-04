@@ -35,6 +35,18 @@ pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
 pub use crate::signer::Signer;
 
+/// A trait for async read/write operations used by hardware wallet connections
+pub trait Stream {
+    /// The error type returned by read and write operations
+    type Error: std::error::Error + Send + Sync + 'static;
+
+    /// Read data from the stream into the provided buffer
+    fn read(&self, buf: &mut [u8])
+        -> impl std::future::Future<Output = Result<usize, Self::Error>>;
+    /// Write data to the stream
+    fn write(&self, data: &[u8]) -> impl std::future::Future<Output = Result<(), Self::Error>>;
+}
+
 use elements::confidential::{Asset, Value};
 use elements_miniscript::confidential::bare::tweak_private_key;
 use elements_miniscript::confidential::Key;

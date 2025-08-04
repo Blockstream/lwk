@@ -2,8 +2,7 @@ use std::{collections::HashMap, str::FromStr, sync::OnceLock};
 
 use crate::jade::Singlesig;
 use crate::{signer::FakeSigner, Bip, Error, Network, Pset, WolletDescriptor, Xpub};
-use lwk_common::{DescriptorBlindingKey, Signer};
-use lwk_jade::asyncr::Stream;
+use lwk_common::{DescriptorBlindingKey, Signer, Stream};
 use lwk_jade::{asyncr, protocol::GetXpubParams};
 use lwk_jade::{
     derivation_path_to_vec,
@@ -68,6 +67,8 @@ impl WebSocketSerial {
 }
 
 impl Stream for WebSocketSerial {
+    type Error = lwk_jade::Error;
+
     async fn read(&self, buf: &mut [u8]) -> Result<usize, lwk_jade::Error> {
         // Try to read from buffer first
         loop {

@@ -9,7 +9,7 @@ use crate::{
 
 use super::{Jade, Stream};
 
-impl<S: Stream> Jade<S> {
+impl<S: Stream<Error = Error>> Jade<S> {
     /// Sign a pset from a Jade
     pub async fn sign(&self, pset: &mut PartiallySignedTransaction) -> Result<u32, Error> {
         let my_fingerprint = self.fingerprint().await?;

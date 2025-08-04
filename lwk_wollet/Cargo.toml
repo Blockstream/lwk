@@ -53,6 +53,9 @@ fxhash = "0.2.1"
 
 age = { version = "0.11.0", optional = true }
 url = "2.5.2"
+tokio-tungstenite = { version = "0.24.0", optional = true, features = [
+    "rustls-tls-webpki-roots",
+] }
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -92,14 +95,15 @@ waterfalls = { version = "0.9.0", default-features = false, features = [
 criterion = "0.5.1"
 
 [features]
-default = ["esplora", "electrum", "elements_rpc", "amp2"]
-serial = ["lwk_jade/serial"]                              # this is a dev-dep feature
+default = ["esplora", "electrum", "elements_rpc", "amp2", "amp0"]
+serial = ["lwk_jade/serial"]                                      # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]
 amp2 = ["reqwest"]
+amp0 = ["tokio-tungstenite"]
 
 [[test]]
 name = "e2e"

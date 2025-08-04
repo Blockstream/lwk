@@ -88,8 +88,11 @@
 //! # }
 //! ```
 
+#[cfg(feature = "amp0")]
+pub mod amp0;
 #[cfg(feature = "amp2")]
 pub mod amp2;
+
 pub mod clients;
 mod config;
 mod descriptor;

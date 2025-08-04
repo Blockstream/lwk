@@ -26,8 +26,11 @@ mod serial;
 mod signer;
 mod tx_builder;
 mod update;
+
+// TODO serial is not logically needed here, but it brings in web_sys dep
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod websocket;
+
 mod wollet;
 mod xpub;
 

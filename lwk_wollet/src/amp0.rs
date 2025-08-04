@@ -12,6 +12,59 @@ impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })
     }
+
+    pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
+        // Step 1: Send WAMP HELLO message
+        let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
+        self.stream
+            .write(hello_msg.as_bytes())
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to send HELLO: {}", e)))?;
+
+        // Step 2: Wait for WELCOME response
+        let mut buf = vec![0u8; 10000];
+        let bytes_read = tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            self.stream.read(&mut buf),
+        )
+        .await
+        .map_err(|_| Error::Generic("WELCOME timeout after 10 seconds".to_string()))?
+        .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
+
+        let welcome_response = String::from_utf8_lossy(&buf[..bytes_read]);
+        println!("WELCOME response: {}", welcome_response);
+
+        // Verify it's a WELCOME message (should start with [2,...)
+        if !welcome_response.trim_start().starts_with("[2,") {
+            return Err(Error::Generic(format!(
+                "Expected WELCOME message, got: {}",
+                welcome_response
+            )));
+        }
+
+        // Step 3: Send login call
+        let login_msg = format!(
+            r#"[48, 1, {{}}, "com.greenaddress.login.watch_only_v2", ["custom", {{"username": "{}", "password": "{}", "minimal": true}}, "websocat-client/1.0", true]]"#,
+            username, password
+        );
+        self.stream
+            .write(login_msg.as_bytes())
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to send login: {}", e)))?;
+
+        // Step 4: Wait for login response (success or error)
+        let mut response_buf = vec![0u8; 10000];
+        let response_bytes = tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            self.stream.read(&mut response_buf),
+        )
+        .await
+        .map_err(|_| Error::Generic("Login response timeout after 10 seconds".to_string()))?
+        .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
+
+        let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
+        Ok(login_response.to_string())
+    }
 }
 
 impl Amp0<WebSocketClient> {
@@ -27,7 +80,7 @@ impl Amp0<WebSocketClient> {
         };
 
         Ok(Self {
-            stream: WebSocketClient::connect(url)
+            stream: WebSocketClient::connect_wamp(url)
                 .await
                 .map_err(|e| Error::Generic(e.to_string()))?,
         })
@@ -272,6 +325,33 @@ mod tests {
         assert!(
             result.is_err(),
             "Connection should fail for non-existent URL"
+        );
+    }
+
+    /// Test Amp0 login functionality with proper WAMP protocol flow
+    /// This test demonstrates the complete WAMP handshake + login flow
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[tokio::test]
+    #[ignore] // Requires network connectivity
+    async fn test_amp0_login() {
+        let amp0 = Amp0::with_network(Network::Liquid)
+            .await
+            .expect("Failed to connect to WebSocket");
+
+        // Test with invalid credentials - should get proper error response, not timeout
+        let response = amp0
+            .login("invalid-user", "invalid-password")
+            .await
+            .expect("Should get a response (even if it's an error)");
+
+        println!("Login response: {}", response);
+
+        // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
+        assert!(!response.is_empty(), "Response should not be empty");
+        assert!(
+            response.contains("com.greenaddress.error") || response.contains("error"),
+            "Response should contain error information, got: {}",
+            response
         );
     }
 }

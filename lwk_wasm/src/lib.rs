@@ -26,6 +26,8 @@ mod serial;
 mod signer;
 mod tx_builder;
 mod update;
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+mod websocket;
 mod wollet;
 mod xpub;
 

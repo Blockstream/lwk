@@ -8,6 +8,26 @@ pub struct Amp0<S: Stream> {
     stream: S,
 }
 
+impl Amp0<WebSocketClient> {
+    pub async fn with_network(network: Network) -> Result<Self, Error> {
+        let url = match network {
+            Network::Liquid => "wss://green-liquid-mainnet.blockstream.com/v2/ws/",
+            Network::TestnetLiquid => "wss://green-liquid-testnet.blockstream.com/v2/ws/",
+            Network::LocaltestLiquid => {
+                return Err(Error::Generic(
+                    "LocaltestLiquid is not supported".to_string(),
+                ));
+            }
+        };
+
+        Ok(Self {
+            stream: WebSocketClient::connect(url)
+                .await
+                .map_err(|e| Error::Generic(e.to_string()))?,
+        })
+    }
+}
+
 /// WebSocket client for non-WASM environments using tokio-tungstenite
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 pub struct WebSocketClient {

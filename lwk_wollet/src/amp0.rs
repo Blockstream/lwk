@@ -1,6 +1,11 @@
 use lwk_common::{Network, Stream};
+use scrypt::{scrypt, Params};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use pbkdf2::pbkdf2;
+use sha2::Sha512;
+use hmac::Hmac;
+use hex;
 
 use crate::Error;
 
@@ -11,6 +16,53 @@ pub struct Amp0<S: Stream> {
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })
+    }
+
+    pub fn get_entropy(&self, username: &str, password: &str) -> [u8; 32] {
+        // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
+        let watch_only_salt = vec![0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
+        let salt_string: &[u8] = &watch_only_salt;
+        let size = username.len() as u32;
+        let mut size_bytes = [0u8; 4];
+        size_bytes.copy_from_slice(&size.to_le_bytes());
+
+        let payload:Vec<u8> = [size_bytes.as_slice(), username.as_bytes(), password.as_bytes()].concat();
+        println!("get_entropy payload: {:?}", payload);
+
+        let mut output = [0u8; 32];
+        let params = Params::new(14, 8, 8, 32).unwrap();
+        scrypt(payload.as_slice(), salt_string, &params, &mut output).unwrap();
+        println!("get_entropy entropy: {:?}", output);
+
+        output
+    }
+
+    pub fn encrypt_credentials(&self, username: &str, password: &str) -> (String, String) {
+        let entropy = self.get_entropy(username, password);
+        // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
+        
+        // Calculate u_blob and p_blob using PBKDF2-HMAC-SHA512-256
+        let mut u_blob = [0u8; 32];
+        let mut p_blob = [0u8; 32];
+
+        let wo_seed_u = vec![0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
+        let wo_seed_p = vec![0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
+        
+        let _ = pbkdf2::<Hmac<Sha512>>(
+            &entropy,
+            wo_seed_u.as_slice(),
+            2048,
+            &mut u_blob
+        );
+        
+        let _ = pbkdf2::<Hmac<Sha512>>(
+            &entropy,
+            wo_seed_p.as_slice(),
+            2048,
+            &mut p_blob
+        );
+        
+        (hex::encode(u_blob), hex::encode(p_blob))
     }
 
     pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
@@ -344,8 +396,6 @@ mod tests {
             .await
             .expect("Should get a response (even if it's an error)");
 
-        println!("Login response: {}", response);
-
         // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
         assert!(!response.is_empty(), "Response should not be empty");
         assert!(
@@ -353,5 +403,25 @@ mod tests {
             "Response should contain error information, got: {}",
             response
         );
+    }
+
+    /// Test Amp0 login utils
+    /// This test demonstrates the complete WAMP handshake + login flow
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[tokio::test]
+    async fn test_amp0_login_utils() {
+        let amp0 = Amp0::with_network(Network::Liquid)
+            .await
+            .expect("Failed to connect to WebSocket");
+
+        let (encrypted_username, encrypted_password) = amp0.encrypt_credentials("userleo456", "userleo456");
+
+        //println!("Login response: {}", response);
+        println!("Encrypted username: {}", encrypted_username);
+        println!("Encrypted password: {}", encrypted_password);
+
+        assert_eq!(encrypted_username, "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b");
+        assert_eq!(encrypted_password, "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d");
+
     }
 }

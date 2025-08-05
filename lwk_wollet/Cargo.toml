@@ -43,6 +43,11 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
     "rustls-tls",
 ] }
 
+scrypt = "0.11.0"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
 
 #registry
 idna = "1"

@@ -1,11 +1,11 @@
+use hex;
+use hmac::Hmac;
 use lwk_common::{Network, Stream};
+use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params};
+use sha2::Sha512;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use pbkdf2::pbkdf2;
-use sha2::Sha512;
-use hmac::Hmac;
-use hex;
 
 use crate::Error;
 
@@ -13,55 +13,58 @@ pub struct Amp0<S: Stream> {
     stream: S,
 }
 
+pub const WATCH_ONLY_SALT: [u8; 8] = [0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
+pub const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
+pub const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
+
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })
     }
 
-    pub fn get_entropy(&self, username: &str, password: &str) -> [u8; 32] {
+    pub fn get_entropy(&self, username: &str, password: &str) -> [u8; 64] {
         // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
-        let watch_only_salt = vec![0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
-        let salt_string: &[u8] = &watch_only_salt;
-        let size = username.len() as u32;
-        let mut size_bytes = [0u8; 4];
-        size_bytes.copy_from_slice(&size.to_le_bytes());
+        let salt_string: &[u8] = &WATCH_ONLY_SALT;
 
-        let payload:Vec<u8> = [size_bytes.as_slice(), username.as_bytes(), password.as_bytes()].concat();
-        println!("get_entropy payload: {:?}", payload);
+        let u_p = format!("{}{}", username, password);
+        let mut entropy = vec![0u8; 4 + u_p.len()];
 
-        let mut output = [0u8; 32];
-        let params = Params::new(14, 8, 8, 32).unwrap();
-        scrypt(payload.as_slice(), salt_string, &params, &mut output).unwrap();
+        // Write username length as 32-bit integer
+        let username_len = username.len() as u32;
+        entropy[0..4].copy_from_slice(&username_len.to_le_bytes());
+
+        // Copy concatenated username and password
+        entropy[4..].copy_from_slice(u_p.as_bytes());
+
+        println!("get_entropy payload: {:?}", entropy);
+
+        let mut output = [0u8; 64];
+        let params = Params::new(
+            14  , // log_n (2^14 = 16384 iterations)
+            8,  // r (block size)
+            8,  // p (parallelization)
+            64  // output length in bytes
+        );
+        scrypt(&entropy, salt_string, &params.unwrap(), &mut output).unwrap();
         println!("get_entropy entropy: {:?}", output);
 
         output
     }
 
     pub fn encrypt_credentials(&self, username: &str, password: &str) -> (String, String) {
+
         let entropy = self.get_entropy(username, password);
+        println!("encrypt_credentials entropy: {:?}", hex::encode(entropy));
+
         // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
-        
+
         // Calculate u_blob and p_blob using PBKDF2-HMAC-SHA512-256
         let mut u_blob = [0u8; 32];
         let mut p_blob = [0u8; 32];
 
-        let wo_seed_u = vec![0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
-        let wo_seed_p = vec![0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
-        
-        let _ = pbkdf2::<Hmac<Sha512>>(
-            &entropy,
-            wo_seed_u.as_slice(),
-            2048,
-            &mut u_blob
-        );
-        
-        let _ = pbkdf2::<Hmac<Sha512>>(
-            &entropy,
-            wo_seed_p.as_slice(),
-            2048,
-            &mut p_blob
-        );
-        
+        let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_U, 2048, &mut u_blob);
+        let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_P, 2048, &mut p_blob);
+
         (hex::encode(u_blob), hex::encode(p_blob))
     }
 
@@ -96,7 +99,7 @@ impl<S: Stream> Amp0<S> {
 
         // Step 3: Send login call
         let login_msg = format!(
-            r#"[48, 1, {{}}, "com.greenaddress.login.watch_only_v2", ["custom", {{"username": "{}", "password": "{}", "minimal": true}}, "websocat-client/1.0", true]]"#,
+            r#"[48, 1, {{}}, "com.greenaddress.login.watch_only_v2", ["custom", {{"username": "{}", "password": "{}", "minimal": "true"}}, "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3", true]]"#,
             username, password
         );
         self.stream
@@ -385,7 +388,7 @@ mod tests {
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
-    async fn test_amp0_login() {
+    async fn test_amp0_fail_login() {
         let amp0 = Amp0::with_network(Network::Liquid)
             .await
             .expect("Failed to connect to WebSocket");
@@ -405,6 +408,25 @@ mod tests {
         );
     }
 
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[tokio::test]
+    #[ignore] // Requires network connectivity
+    async fn test_amp0_ok_login() {
+        let amp0 = Amp0::with_network(Network::Liquid)
+            .await
+            .expect("Failed to connect to WebSocket");
+
+        // TODO: temporary test with already hashed credentials
+        let response = amp0
+            .login(
+                "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b",
+                "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d",
+            )
+            .await
+            .expect("Should get a response (even if it's an error)");
+        assert!(response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
+    }
+
     /// Test Amp0 login utils
     /// This test demonstrates the complete WAMP handshake + login flow
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
@@ -414,14 +436,20 @@ mod tests {
             .await
             .expect("Failed to connect to WebSocket");
 
-        let (encrypted_username, encrypted_password) = amp0.encrypt_credentials("userleo456", "userleo456");
+        let (encrypted_username, encrypted_password) =
+            amp0.encrypt_credentials("userleo456", "userleo456");
 
         //println!("Login response: {}", response);
         println!("Encrypted username: {}", encrypted_username);
         println!("Encrypted password: {}", encrypted_password);
 
-        assert_eq!(encrypted_username, "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b");
-        assert_eq!(encrypted_password, "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d");
-
+        assert_eq!(
+            encrypted_username,
+            "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b"
+        );
+        assert_eq!(
+            encrypted_password,
+            "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d"
+        );
     }
 }

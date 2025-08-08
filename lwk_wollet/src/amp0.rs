@@ -21,51 +21,6 @@ impl<S: Stream> Amp0<S> {
         Ok(Self { stream })
     }
 
-    pub fn get_entropy(&self, username: &str, password: &str) -> [u8; 64] {
-        // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
-        let salt_string: &[u8] = &WATCH_ONLY_SALT;
-
-        let u_p = format!("{}{}", username, password);
-        let mut entropy = vec![0u8; 4 + u_p.len()];
-
-        // Write username length as 32-bit integer
-        let username_len = username.len() as u32;
-        entropy[0..4].copy_from_slice(&username_len.to_le_bytes());
-
-        // Copy concatenated username and password
-        entropy[4..].copy_from_slice(u_p.as_bytes());
-
-        println!("get_entropy payload: {:?}", entropy);
-
-        let mut output = [0u8; 64];
-        let params = Params::new(
-            14, // log_n (2^14 = 16384 iterations)
-            8,  // r (block size)
-            8,  // p (parallelization)
-            64, // output length in bytes
-        );
-        scrypt(&entropy, salt_string, &params.unwrap(), &mut output).unwrap();
-        println!("get_entropy entropy: {:?}", output);
-
-        output
-    }
-
-    pub fn encrypt_credentials(&self, username: &str, password: &str) -> (String, String) {
-        let entropy = self.get_entropy(username, password);
-        println!("encrypt_credentials entropy: {:?}", hex::encode(&entropy));
-
-        // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
-
-        // Calculate u_blob and p_blob using PBKDF2-HMAC-SHA512-256
-        let mut u_blob = [0u8; 32];
-        let mut p_blob = [0u8; 32];
-
-        let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_U, 2048, &mut u_blob);
-        let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_P, 2048, &mut p_blob);
-
-        (hex::encode(&u_blob), hex::encode(&p_blob))
-    }
-
     pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
         // Step 1: Send WAMP HELLO message
         let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
@@ -118,6 +73,51 @@ impl<S: Stream> Amp0<S> {
         let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
         Ok(login_response.to_string())
     }
+}
+
+pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {
+    // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
+    let salt_string: &[u8] = &WATCH_ONLY_SALT;
+
+    let u_p = format!("{}{}", username, password);
+    let mut entropy = vec![0u8; 4 + u_p.len()];
+
+    // Write username length as 32-bit integer
+    let username_len = username.len() as u32;
+    entropy[0..4].copy_from_slice(&username_len.to_le_bytes());
+
+    // Copy concatenated username and password
+    entropy[4..].copy_from_slice(u_p.as_bytes());
+
+    println!("get_entropy payload: {:?}", entropy);
+
+    let mut output = [0u8; 64];
+    let params = Params::new(
+        14, // log_n (2^14 = 16384 iterations)
+        8,  // r (block size)
+        8,  // p (parallelization)
+        64, // output length in bytes
+    );
+    scrypt(&entropy, salt_string, &params.unwrap(), &mut output).unwrap();
+    println!("get_entropy entropy: {:?}", output);
+
+    output
+}
+
+pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
+    let entropy = get_entropy(username, password);
+    println!("encrypt_credentials entropy: {:?}", hex::encode(&entropy));
+
+    // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
+
+    // Calculate u_blob and p_blob using PBKDF2-HMAC-SHA512-256
+    let mut u_blob = [0u8; 32];
+    let mut p_blob = [0u8; 32];
+
+    let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_U, 2048, &mut u_blob);
+    let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_P, 2048, &mut p_blob);
+
+    (hex::encode(&u_blob), hex::encode(&p_blob))
 }
 
 impl Amp0<WebSocketClient> {
@@ -430,12 +430,8 @@ mod tests {
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[tokio::test]
     async fn test_amp0_login_utils() {
-        let amp0 = Amp0::with_network(Network::Liquid)
-            .await
-            .expect("Failed to connect to WebSocket");
-
         let (encrypted_username, encrypted_password) =
-            amp0.encrypt_credentials("userleo456", "userleo456");
+            encrypt_credentials("userleo456", "userleo456");
 
         //println!("Login response: {}", response);
         println!("Encrypted username: {}", encrypted_username);

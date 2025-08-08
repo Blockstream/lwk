@@ -21,7 +21,26 @@ impl<S: Stream> Amp0<S> {
         Ok(Self { stream })
     }
 
-    pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
+    pub async fn login_with_clear_credentials(
+        &self,
+        clear_username: &str,
+        clear_password: &str,
+    ) -> Result<String, Error> {
+        let (hashed_username, hashed_password) =
+            encrypt_credentials(clear_username, clear_password);
+        self.login(&hashed_username, &hashed_password).await
+    }
+
+    /// Login to the Green Address API
+    ///
+    /// This method takes already hashed username and password, use [`Self::login_with_clear_credentials`] to hash the username and password.
+    ///
+    /// Since username and password hashing is computationally heavy, it's recommended to use [`encrypt_credentials()`] to hash the username and password and cache it for following logins.
+    pub async fn login(
+        &self,
+        hashed_username: &str,
+        hashed_password: &str,
+    ) -> Result<String, Error> {
         // Step 1: Send WAMP HELLO message
         let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
         self.stream
@@ -53,7 +72,7 @@ impl<S: Stream> Amp0<S> {
         // Step 3: Send login call
         let login_msg = format!(
             r#"[48, 1, {{}}, "com.greenaddress.login.watch_only_v2", ["custom", {{"username": "{}", "password": "{}", "minimal": "true"}}, "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3", true]]"#,
-            username, password
+            hashed_username, hashed_password
         );
         self.stream
             .write(login_msg.as_bytes())
@@ -414,12 +433,8 @@ mod tests {
             .await
             .expect("Failed to connect to WebSocket");
 
-        // TODO: temporary test with already hashed credentials
         let response = amp0
-            .login(
-                "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b",
-                "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d",
-            )
+            .login_with_clear_credentials("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
         assert!(response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));

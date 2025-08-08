@@ -3544,3 +3544,20 @@ fn test_fee_service() {
     let txid = w.client.broadcast(&tx).unwrap();
     wait_for_tx(&mut w.wollet, &mut w.client, &txid);
 }
+
+/// Test Amp0 login utils, it's in integration tests because hashing is heavy and it takes more than a second which is our limit for unit tests.
+#[cfg(feature = "amp0")]
+#[test]
+fn test_amp0_login_utils() {
+    let (encrypted_username, encrypted_password) =
+        amp0::encrypt_credentials("userleo456", "userleo456");
+
+    assert_eq!(
+        encrypted_username,
+        "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b"
+    );
+    assert_eq!(
+        encrypted_password,
+        "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d"
+    );
+}

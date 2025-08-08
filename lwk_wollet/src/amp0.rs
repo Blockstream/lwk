@@ -439,22 +439,4 @@ mod tests {
             .expect("Should get a response (even if it's an error)");
         assert!(response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
     }
-
-    /// Test Amp0 login utils
-    /// This test demonstrates the complete WAMP handshake + login flow
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
-    #[tokio::test]
-    async fn test_amp0_login_utils() {
-        let (encrypted_username, encrypted_password) =
-            encrypt_credentials("userleo456", "userleo456");
-
-        assert_eq!(
-            encrypted_username,
-            "a3c7f7de9a34bcab4554f7cedf6046e041eeb3a9211466d92ecaa9763ac3557b"
-        );
-        assert_eq!(
-            encrypted_password,
-            "f3ac0f33fe97412a39ebb5d11d111961a754ecbbbdf12c71342adb7022ae3a2d"
-        );
-    }
 }

@@ -59,7 +59,6 @@ impl<S: Stream> Amp0<S> {
         .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
 
         let welcome_response = String::from_utf8_lossy(&buf[..bytes_read]);
-        println!("WELCOME response: {}", welcome_response);
 
         // Verify it's a WELCOME message (should start with [2,...)
         if !welcome_response.trim_start().starts_with("[2,") {
@@ -108,8 +107,6 @@ pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {
     // Copy concatenated username and password
     entropy[4..].copy_from_slice(u_p.as_bytes());
 
-    println!("get_entropy payload: {:?}", entropy);
-
     let mut output = [0u8; 64];
     let params = Params::new(
         14, // log_n (2^14 = 16384 iterations)
@@ -124,14 +121,12 @@ pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {
         &mut output,
     )
     .expect("`output.len() > 0 && output.len() <= (2^32 - 1) * 32`.");
-    println!("get_entropy entropy: {:?}", output);
 
     output
 }
 
 pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     let entropy = get_entropy(username, password);
-    println!("encrypt_credentials entropy: {:?}", hex::encode(&entropy));
 
     // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
 
@@ -372,7 +367,6 @@ mod tests {
 
         // Convert response to string and verify it's a WELCOME message
         let response_str = String::from_utf8_lossy(&response_buffer[..bytes_read]);
-        println!("Received response: {}", response_str);
 
         // Parse as JSON and verify structure
         let response_json: serde_json::Value =
@@ -453,10 +447,6 @@ mod tests {
     async fn test_amp0_login_utils() {
         let (encrypted_username, encrypted_password) =
             encrypt_credentials("userleo456", "userleo456");
-
-        //println!("Login response: {}", response);
-        println!("Encrypted username: {}", encrypted_username);
-        println!("Encrypted password: {}", encrypted_password);
 
         assert_eq!(
             encrypted_username,

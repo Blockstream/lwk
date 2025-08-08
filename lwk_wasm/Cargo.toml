@@ -24,6 +24,7 @@ lwk_ledger = { version = "0.10.0", default-features = false, features = [
 lwk_wollet = { version = "0.10.0", default-features = false, features = [
     "esplora",
     "amp2",
+    "amp0",
 ] }
 lwk_common = "0.10.0"
 

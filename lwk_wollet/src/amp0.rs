@@ -58,6 +58,8 @@ impl<S: Stream> Amp0<S> {
 
         // Step 2: Wait for WELCOME response
         let mut buf = vec![0u8; 10000];
+
+        #[cfg(not(target_arch = "wasm32"))]
         let bytes_read = tokio::time::timeout(
             std::time::Duration::from_secs(10),
             self.stream.read(&mut buf),
@@ -65,6 +67,13 @@ impl<S: Stream> Amp0<S> {
         .await
         .map_err(|_| Error::Generic("WELCOME timeout after 10 seconds".to_string()))?
         .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
+
+        #[cfg(target_arch = "wasm32")]
+        let bytes_read = self
+            .stream
+            .read(&mut buf)
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
 
         let welcome_response = String::from_utf8_lossy(&buf[..bytes_read]);
 
@@ -101,6 +110,8 @@ impl<S: Stream> Amp0<S> {
 
         // Step 4: Wait for login response (success or error)
         let mut response_buf = vec![0u8; 10000];
+
+        #[cfg(not(target_arch = "wasm32"))]
         let response_bytes = tokio::time::timeout(
             std::time::Duration::from_secs(10),
             self.stream.read(&mut response_buf),
@@ -108,6 +119,13 @@ impl<S: Stream> Amp0<S> {
         .await
         .map_err(|_| Error::Generic("Login response timeout after 10 seconds".to_string()))?
         .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
+
+        #[cfg(target_arch = "wasm32")]
+        let response_bytes = self
+            .stream
+            .read(&mut response_buf)
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
 
         let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
 

@@ -1,6 +1,9 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+mod amp0;
+
 mod amp2;
 mod bip;
 mod blockdata;
@@ -61,6 +64,10 @@ pub use registry::{AssetMeta, Registry, RegistryPost};
 pub use signer::Signer;
 pub use tx_builder::TxBuilder;
 pub use update::Update;
+
+#[cfg(all(feature = "serial", target_arch = "wasm32"))]
+pub use websocket::WebSocketSerial;
+
 pub use wollet::Wollet;
 pub use xpub::Xpub;
 

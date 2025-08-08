@@ -161,17 +161,19 @@ pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     (hex::encode(&u_blob), hex::encode(&p_blob))
 }
 
+pub fn default_url(network: Network) -> Result<&'static str, Error> {
+    match network {
+        Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
+        Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
+        Network::LocaltestLiquid => Err(Error::Generic(
+            "LocaltestLiquid is not supported".to_string(),
+        )),
+    }
+}
+
 impl Amp0<WebSocketClient> {
     pub async fn with_network(network: Network) -> Result<Self, Error> {
-        let url = match network {
-            Network::Liquid => "wss://green-liquid-mainnet.blockstream.com/v2/ws/",
-            Network::TestnetLiquid => "wss://green-liquid-testnet.blockstream.com/v2/ws/",
-            Network::LocaltestLiquid => {
-                return Err(Error::Generic(
-                    "LocaltestLiquid is not supported".to_string(),
-                ));
-            }
-        };
+        let url = default_url(network)?;
 
         Ok(Self {
             stream: WebSocketClient::connect_wamp(url)

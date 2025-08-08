@@ -21,22 +21,23 @@ impl<S: Stream> Amp0<S> {
         Ok(Self { stream })
     }
 
-    pub async fn login_with_clear_credentials(
-        &self,
-        clear_username: &str,
-        clear_password: &str,
-    ) -> Result<String, Error> {
+    /// Login to the Green Address API with clear credentials performing the hashing internally.
+    pub async fn login(&self, clear_username: &str, clear_password: &str) -> Result<String, Error> {
         let (hashed_username, hashed_password) =
             encrypt_credentials(clear_username, clear_password);
-        self.login(&hashed_username, &hashed_password).await
+        self.login_with_hashed_credentials(&hashed_username, &hashed_password)
+            .await
     }
 
-    /// Login to the Green Address API
+    /// Login to the Green Address API with pre-hashed credentials
     ///
-    /// This method takes already hashed username and password, use [`Self::login_with_clear_credentials`] to hash the username and password.
+    /// This method takes already hashed username and password. Since username and password
+    /// hashing is computationally heavy (requires hundreds of milliseconds), it's recommended
+    /// to use [`encrypt_credentials()`] to hash the username and password once and cache the
+    /// result for subsequent logins to improve performance.
     ///
-    /// Since username and password hashing is computationally heavy, it's recommended to use [`encrypt_credentials()`] to hash the username and password and cache it for following logins.
-    pub async fn login(
+    /// For convenience, use [`Self::login`] to automatically hash clear credentials.
+    pub async fn login_with_hashed_credentials(
         &self,
         hashed_username: &str,
         hashed_password: &str,
@@ -434,7 +435,7 @@ mod tests {
             .expect("Failed to connect to WebSocket");
 
         let response = amp0
-            .login_with_clear_credentials("userleo456", "userleo456")
+            .login("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
         assert!(response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));

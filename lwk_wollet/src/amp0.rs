@@ -74,12 +74,25 @@ impl<S: Stream> Amp0<S> {
         }
 
         // Step 3: Send login call
-        let login_msg = format!(
-            r#"[48, 1, {{}}, "com.greenaddress.login.watch_only_v2", ["custom", {{"username": "{}", "password": "{}", "minimal": "true"}}, "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3", true]]"#,
-            hashed_username, hashed_password
-        );
+        let login_msg = serde_json::json!([
+            48,
+            1,
+            {},
+            "com.greenaddress.login.watch_only_v2",
+            [
+                "custom",
+                {
+                    "username": hashed_username,
+                    "password": hashed_password,
+                    "minimal": "true"
+                },
+                "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3",
+                true
+            ]
+        ]);
+
         self.stream
-            .write(login_msg.as_bytes())
+            .write(login_msg.to_string().as_bytes())
             .await
             .map_err(|e| Error::Generic(format!("Failed to send login: {}", e)))?;
 

@@ -3,7 +3,10 @@ use lwk_common::{Network, Stream};
 use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params};
 use sha2::Sha512;
+
+#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use std::sync::Arc;
+#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use tokio::sync::Mutex;
 
 use crate::{hex, Error};
@@ -171,6 +174,7 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
     }
 }
 
+#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 impl Amp0<WebSocketClient> {
     pub async fn with_network(network: Network) -> Result<Self, Error> {
         let url = default_url(network)?;

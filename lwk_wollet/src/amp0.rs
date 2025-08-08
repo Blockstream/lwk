@@ -117,7 +117,13 @@ pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {
         8,  // p (parallelization)
         64, // output length in bytes
     );
-    scrypt(&entropy, salt_string, &params.unwrap(), &mut output).unwrap();
+    scrypt(
+        &entropy,
+        salt_string,
+        &params.expect("script parameters defined statically"),
+        &mut output,
+    )
+    .expect("`output.len() > 0 && output.len() <= (2^32 - 1) * 32`.");
     println!("get_entropy entropy: {:?}", output);
 
     output

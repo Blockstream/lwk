@@ -1,4 +1,3 @@
-use hex;
 use hmac::Hmac;
 use lwk_common::{Network, Stream};
 use pbkdf2::pbkdf2;
@@ -7,7 +6,7 @@ use sha2::Sha512;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::Error;
+use crate::{hex, Error};
 
 pub struct Amp0<S: Stream> {
     stream: S,
@@ -40,10 +39,10 @@ impl<S: Stream> Amp0<S> {
 
         let mut output = [0u8; 64];
         let params = Params::new(
-            14  , // log_n (2^14 = 16384 iterations)
+            14, // log_n (2^14 = 16384 iterations)
             8,  // r (block size)
             8,  // p (parallelization)
-            64  // output length in bytes
+            64, // output length in bytes
         );
         scrypt(&entropy, salt_string, &params.unwrap(), &mut output).unwrap();
         println!("get_entropy entropy: {:?}", output);
@@ -52,9 +51,8 @@ impl<S: Stream> Amp0<S> {
     }
 
     pub fn encrypt_credentials(&self, username: &str, password: &str) -> (String, String) {
-
         let entropy = self.get_entropy(username, password);
-        println!("encrypt_credentials entropy: {:?}", hex::encode(entropy));
+        println!("encrypt_credentials entropy: {:?}", hex::encode(&entropy));
 
         // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
 
@@ -65,7 +63,7 @@ impl<S: Stream> Amp0<S> {
         let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_U, 2048, &mut u_blob);
         let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_P, 2048, &mut p_blob);
 
-        (hex::encode(u_blob), hex::encode(p_blob))
+        (hex::encode(&u_blob), hex::encode(&p_blob))
     }
 
     pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {

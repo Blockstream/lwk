@@ -2340,7 +2340,6 @@ dependencies = [
  "elements-miniscript",
  "futures",
  "fxhash",
- "hex",
  "hmac",
  "idna",
  "js-sys",

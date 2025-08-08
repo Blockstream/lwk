@@ -156,3 +156,15 @@ pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};
 
 pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey;
+
+pub(crate) mod hex {
+    use elements::{hashes::hex::DisplayHex, hex::Error, hex::FromHex};
+
+    pub fn encode(data: &[u8]) -> String {
+        data.to_lower_hex_string()
+    }
+
+    pub fn _decode(data: &str) -> Result<Vec<u8>, Error> {
+        Vec::<u8>::from_hex(data)
+    }
+}

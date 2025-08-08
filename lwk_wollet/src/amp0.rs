@@ -22,7 +22,11 @@ impl<S: Stream> Amp0<S> {
     }
 
     /// Login to the Green Address API with clear credentials performing the hashing internally.
-    pub async fn login(&self, clear_username: &str, clear_password: &str) -> Result<String, Error> {
+    pub async fn login(
+        &self,
+        clear_username: &str,
+        clear_password: &str,
+    ) -> Result<serde_json::Value, Error> {
         let (hashed_username, hashed_password) =
             encrypt_credentials(clear_username, clear_password);
         self.login_with_hashed_credentials(&hashed_username, &hashed_password)
@@ -41,7 +45,7 @@ impl<S: Stream> Amp0<S> {
         &self,
         hashed_username: &str,
         hashed_password: &str,
-    ) -> Result<String, Error> {
+    ) -> Result<serde_json::Value, Error> {
         // Step 1: Send WAMP HELLO message
         let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
         self.stream
@@ -90,7 +94,10 @@ impl<S: Stream> Amp0<S> {
         .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
 
         let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
-        Ok(login_response.to_string())
+
+        // Parse the response as JSON
+        serde_json::from_str(&login_response)
+            .map_err(|e| Error::Generic(format!("Failed to parse login response as JSON: {}", e)))
     }
 }
 
@@ -418,11 +425,12 @@ mod tests {
             .expect("Should get a response (even if it's an error)");
 
         // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
-        assert!(!response.is_empty(), "Response should not be empty");
+        let response_str = response.to_string();
+        assert!(!response_str.is_empty(), "Response should not be empty");
         assert!(
-            response.contains("com.greenaddress.error") || response.contains("error"),
+            response_str.contains("com.greenaddress.error") || response_str.contains("error"),
             "Response should contain error information, got: {}",
-            response
+            response_str
         );
     }
 
@@ -438,6 +446,7 @@ mod tests {
             .login("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
-        assert!(response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
+        let response_str = response.to_string();
+        assert!(response_str.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
     }
 }

@@ -87,6 +87,24 @@ pub struct Amp0Ext<S: Stream> {
     last_index: Option<u32>,
 }
 
+impl<S: Stream> Amp0Ext<S> {
+    /// Create an AMP0 context
+    ///
+    /// `username` and `password` are the watch-only credentials as they're used in Blockstream
+    /// Apps or with GDK.
+    ///
+    /// `amp_id` is a AMP0 subaccount GAID belonging to the wallet.
+    /// If empty, the first AMP0 subaccount is used.
+    pub async fn new(
+        stream: S,
+        username: &str,
+        password: &str,
+        amp_id: &str,
+    ) -> Result<Self, Error> {
+        todo!();
+    }
+}
+
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })

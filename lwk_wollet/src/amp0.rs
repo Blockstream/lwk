@@ -24,6 +24,8 @@ use tokio::sync::Mutex;
 use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
 use crate::{hex, Error};
+use elements::pset::PartiallySignedTransaction;
+use elements::Txid;
 
 pub struct Amp0<S: Stream> {
     stream: S,
@@ -122,6 +124,12 @@ impl<S: Stream> Amp0Ext<S> {
         // get address from lwk
         // check they match (unconfidential)
         // update last index
+        todo!();
+    }
+
+    /// Ask AMP0 server to cosign and broadcast the transaction
+    pub async fn send(pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+        // vault.send_raw_tx
         todo!();
     }
 }

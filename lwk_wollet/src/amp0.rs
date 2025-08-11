@@ -113,6 +113,13 @@ impl<S: Stream> Amp0Ext<S> {
         // if needed upload authorized assets confidential addresses
         todo!();
     }
+
+    /// Get an address
+    ///
+    /// If `index` is None, a new address is returned.
+    pub async fn address(&self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+        todo!();
+    }
 }
 
 impl<S: Stream> Amp0<S> {

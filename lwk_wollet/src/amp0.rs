@@ -74,6 +74,19 @@ pub struct LoginData {
     pub subaccounts: Vec<GreenSubaccount>,
 }
 
+// TODO: rename Amp0 to Amp0Inner
+/// Context for actions related to an AMP0 (sub)account
+pub struct Amp0Ext<S: Stream> {
+    /// LWK watch-only wallet
+    wollet: crate::Wollet,
+
+    /// Green-backend actions
+    amp0: Amp0<S>,
+
+    /// Last returned address index
+    last_index: Option<u32>,
+}
+
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })

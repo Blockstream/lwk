@@ -118,6 +118,10 @@ impl<S: Stream> Amp0Ext<S> {
     ///
     /// If `index` is None, a new address is returned.
     pub async fn address(&self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+        // vault.fund
+        // get address from lwk
+        // check they match (unconfidential)
+        // update last index
         todo!();
     }
 }

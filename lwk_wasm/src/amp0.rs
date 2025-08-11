@@ -1,6 +1,5 @@
-use crate::{Error, WebSocketSerial};
+use crate::{Error, Network, WebSocketSerial};
 
-use lwk_common::Network;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::amp0::Amp0`]
@@ -10,11 +9,19 @@ pub struct Amp0 {
 }
 #[wasm_bindgen]
 impl Amp0 {
-    pub async fn new_testnet() -> Result<Self, Error> {
-        let url = lwk_wollet::amp0::default_url(Network::TestnetLiquid)?;
+    pub async fn new_with_network(network: Network) -> Result<Self, Error> {
+        let url = lwk_wollet::amp0::default_url(network.into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
         let inner = lwk_wollet::amp0::Amp0::new(websocket_serial).await?;
         Ok(Self { inner })
+    }
+
+    pub async fn new_testnet() -> Result<Self, Error> {
+        Self::new_with_network(Network::testnet()).await
+    }
+
+    pub async fn new_mainnet() -> Result<Self, Error> {
+        Self::new_with_network(Network::mainnet()).await
     }
 
     pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
@@ -43,13 +50,10 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_amp0_login() {
-        let amp0 = Amp0::new_testnet().await.unwrap();
+        let amp0 = Amp0::new_mainnet().await.unwrap();
         let login_response = amp0.login("userleo456", "userleo456").await.unwrap();
 
-        // TODO: this fails at the moment
-        // assert!(login_response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
-
-        assert_eq!(login_response, ""); // just to see return value
+        assert!(login_response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
     }
 
     #[wasm_bindgen_test]

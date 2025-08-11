@@ -101,6 +101,16 @@ impl<S: Stream> Amp0Ext<S> {
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
+        // connect to ga-backend
+        // login.watch_only_v2
+        // parse login data
+        // get amp account
+        // get blob
+        // decrypt blob
+        // parse blob
+        // compute wallet descriptor
+        // ? set last index
+        // if needed upload authorized assets confidential addresses
         todo!();
     }
 }

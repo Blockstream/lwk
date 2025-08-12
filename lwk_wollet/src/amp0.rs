@@ -2,8 +2,8 @@ use hmac::Hmac;
 use lwk_common::{Network, Stream};
 use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params};
+use serde::{Deserialize, Serialize};
 use sha2::Sha512;
-use serde::Deserialize;
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use std::sync::Arc;
@@ -21,7 +21,7 @@ pub const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72];
 pub const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
 
 /// Green subaccount data returned at login
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct GreenSubaccount {
     /// Subaccount pointer
     pub pointer: u32,
@@ -43,7 +43,7 @@ pub struct GreenSubaccount {
 /// Login Data returned by Green backend
 ///
 /// Only the content that we use
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LoginData {
     /// Derivation path used to derive the Green server xpub
     ///
@@ -57,7 +57,7 @@ pub struct LoginData {
     pub wo_blob_key: String,
 
     /// Wallet subaccounts
-    pub subaccounts: Vec<GreenSubaccount>
+    pub subaccounts: Vec<GreenSubaccount>,
 }
 
 impl<S: Stream> Amp0<S> {
@@ -70,7 +70,7 @@ impl<S: Stream> Amp0<S> {
         &self,
         clear_username: &str,
         clear_password: &str,
-    ) -> Result<serde_json::Value, Error> {
+    ) -> Result<LoginData, Error> {
         let (hashed_username, hashed_password) =
             encrypt_credentials(clear_username, clear_password);
         self.login_with_hashed_credentials(&hashed_username, &hashed_password)
@@ -89,7 +89,7 @@ impl<S: Stream> Amp0<S> {
         &self,
         hashed_username: &str,
         hashed_password: &str,
-    ) -> Result<serde_json::Value, Error> {
+    ) -> Result<LoginData, Error> {
         // Step 1: Send WAMP HELLO message
         let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
         self.stream
@@ -170,8 +170,30 @@ impl<S: Stream> Amp0<S> {
 
         let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
 
-        // Parse the response as JSON
-        serde_json::from_str(&login_response)
+        // Login response has this format
+        // [
+        //   50,
+        //   1,
+        //   {...},
+        //   [login_data]
+        // ]
+        let v: serde_json::Value = serde_json::from_str(&login_response).map_err(|e| {
+            Error::Generic(format!("Failed to parse login response as JSON: {}", e))
+        })?;
+
+        let Some(v) = v.as_array() else {
+            return Err(Error::Generic("Unexpected response format".to_string()));
+        };
+        let [_, _, _, ref v] = v[..] else {
+            return Err(Error::Generic("Unexpected response format".to_string()));
+        };
+        let Some(v) = v.as_array() else {
+            return Err(Error::Generic("Unexpected response format".to_string()));
+        };
+        let [ref v] = v[..] else {
+            return Err(Error::Generic("Unexpected response format".to_string()));
+        };
+        serde_json::from_value(v.clone())
             .map_err(|e| Error::Generic(format!("Failed to parse login response as JSON: {}", e)))
     }
 }
@@ -501,7 +523,7 @@ mod tests {
             .expect("Should get a response (even if it's an error)");
 
         // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
-        let response_str = response.to_string();
+        let response_str = format!("{:?}", response);
         assert!(!response_str.is_empty(), "Response should not be empty");
         assert!(
             response_str.contains("com.greenaddress.error") || response_str.contains("error"),
@@ -522,7 +544,7 @@ mod tests {
             .login("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
-        let response_str = response.to_string();
+        let response_str = format!("{:?}", response);
         println!("{}", response_str);
         assert!(response_str.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
     }

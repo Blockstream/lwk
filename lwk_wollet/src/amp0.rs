@@ -547,8 +547,16 @@ mod tests {
             .login("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
-        let response_str = format!("{:?}", response);
-        println!("{}", response_str);
-        assert!(response_str.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
+        println!("{:?}", response);
+
+        assert_eq!(response.gait_path.len(), 128);
+        assert_eq!(response.wo_blob_key.len(), 128);
+        assert_eq!(response.subaccounts.len(), 1);
+        assert_eq!(response.subaccounts[0].type_, "2of2_no_recovery");
+        assert_eq!(response.subaccounts[0].pointer, 1);
+        assert_eq!(
+            response.subaccounts[0].gaid,
+            "GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"
+        );
     }
 }

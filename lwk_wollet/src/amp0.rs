@@ -186,9 +186,7 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
         Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
-        Network::LocaltestLiquid => Err(Error::Generic(
-            "LocaltestLiquid is not supported".to_string(),
-        )),
+        Network::LocaltestLiquid => Ok("ws://localhost:8080/v2/ws"),
     }
 }
 
@@ -484,6 +482,7 @@ mod tests {
             .await
             .expect("Should get a response (even if it's an error)");
         let response_str = response.to_string();
+        println!("{}", response_str);
         assert!(response_str.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));
     }
 }

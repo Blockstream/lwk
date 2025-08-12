@@ -25,7 +25,8 @@ impl Amp0 {
     }
 
     pub async fn login(&self, username: &str, password: &str) -> Result<String, Error> {
-        Ok(self.inner.login(username, password).await?.to_string())
+        let login_data = self.inner.login(username, password).await?;
+        Ok(serde_json::to_string(&login_data)?)
     }
 }
 

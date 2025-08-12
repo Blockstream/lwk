@@ -169,6 +169,10 @@ impl<S: Stream> Amp0<S> {
             .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
 
         let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
+        let err = Error::Generic(format!(
+            "Unexpected login data response: {}",
+            login_response
+        ));
 
         // Login response has this format
         // [
@@ -177,24 +181,23 @@ impl<S: Stream> Amp0<S> {
         //   {...},
         //   [login_data]
         // ]
-        let v: serde_json::Value = serde_json::from_str(&login_response).map_err(|e| {
-            Error::Generic(format!("Failed to parse login response as JSON: {}", e))
-        })?;
-
+        // TODO: improve parsing of wamp msg pack responses
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&login_response) else {
+            return Err(err);
+        };
         let Some(v) = v.as_array() else {
-            return Err(Error::Generic("Unexpected response format".to_string()));
+            return Err(err);
         };
         let [_, _, _, ref v] = v[..] else {
-            return Err(Error::Generic("Unexpected response format".to_string()));
+            return Err(err);
         };
         let Some(v) = v.as_array() else {
-            return Err(Error::Generic("Unexpected response format".to_string()));
+            return Err(err);
         };
         let [ref v] = v[..] else {
-            return Err(Error::Generic("Unexpected response format".to_string()));
+            return Err(err);
         };
-        serde_json::from_value(v.clone())
-            .map_err(|e| Error::Generic(format!("Failed to parse login response as JSON: {}", e)))
+        serde_json::from_value(v.clone()).map_err(|_| err)
     }
 }
 
@@ -520,7 +523,7 @@ mod tests {
         let response = amp0
             .login("invalid-user", "invalid-password")
             .await
-            .expect("Should get a response (even if it's an error)");
+            .unwrap_err();
 
         // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
         let response_str = format!("{:?}", response);

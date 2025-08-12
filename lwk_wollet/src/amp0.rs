@@ -3,6 +3,7 @@ use lwk_common::{Network, Stream};
 use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params};
 use sha2::Sha512;
+use serde::Deserialize;
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use std::sync::Arc;
@@ -18,6 +19,26 @@ pub struct Amp0<S: Stream> {
 pub const WATCH_ONLY_SALT: [u8; 8] = [0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
 pub const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
 pub const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
+
+/// Green subaccount data returned at login
+#[derive(Debug, Deserialize)]
+pub struct GreenSubaccount {
+    /// Subaccount pointer
+    pub pointer: u32,
+
+    /// Subaccount type
+    ///
+    /// We're only interested in type "2of2_no_recovery"
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    /// Green Address ID, aka AMP ID
+    #[serde(rename = "receiving_id")]
+    pub gaid: String,
+
+    /// Number of confidential addresses that should be uploaded for this subaccounts
+    pub required_ca: u32,
+}
 
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {

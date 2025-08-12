@@ -40,6 +40,26 @@ pub struct GreenSubaccount {
     pub required_ca: u32,
 }
 
+/// Login Data returned by Green backend
+///
+/// Only the content that we use
+#[derive(Debug, Deserialize)]
+pub struct LoginData {
+    /// Derivation path used to derive the Green server xpub
+    ///
+    /// 128 hex chars
+    pub gait_path: String,
+
+    /// Key used to encrypt/decrypt the blob
+    ///
+    /// 128 hex chars
+    /// Note: this key is itself encrypted
+    pub wo_blob_key: String,
+
+    /// Wallet subaccounts
+    pub subaccounts: Vec<GreenSubaccount>
+}
+
 impl<S: Stream> Amp0<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })

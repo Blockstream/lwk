@@ -303,6 +303,29 @@ pub fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     Ok(plaintext)
 }
 
+pub fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
+    // decompress
+    // bytes 0 to 4 are prefix
+    // bytes 4 to 8 are ignored
+    let mut d = ZlibDecoder::new(&blob[8..]);
+    let mut v = vec![];
+    d.read_to_end(&mut v)?;
+
+    // messagePack to json
+    let mut cursor = std::io::Cursor::new(v);
+    let value = rmpv::decode::read_value(&mut cursor)?;
+    Ok(value)
+}
+
+/// Useful content from the client blob
+pub struct BlobContent {
+    /// Wallet "master"/descriptor blinding key (always slip77)
+    pub slip77_key: String,
+
+    /// Wallet xpubs and their derivation paths
+    pub xpubs: HashMap<Xpub, Vec<u32>>,
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

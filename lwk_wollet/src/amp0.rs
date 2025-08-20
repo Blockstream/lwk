@@ -720,4 +720,43 @@ mod tests {
             "GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"
         );
     }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[test]
+    fn test_amp0_decrypt_blob() {
+        // Target value to match
+        let expected_descriptor = "ct(slip77(8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6),elsh(wsh(multi(2,xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA/3/3320/60546/15157/41212/14985/38799/25816/12131/13561/54922/2852/56496/53096/60883/33605/54091/38661/40920/32654/56040/43253/45144/11278/64888/46277/8839/7065/20066/31815/30779/10369/43255/1/*,[ffffffff/3h/1h]xpub69mdgvyMbhUaD7XFqmjNfo7RdCnW2w1xfEmNn7DV5XYqwPSKkcgMtqQ7T776MCBNXWZrkqwx6NArqE34WCBW86CdMgLesYtnvjSaLSMy2Xc/1/*))))";
+
+        // Watch-only credentials
+        let username = "userleo456";
+        let password = "userleo456";
+
+        // Values from login data
+        let amp_subaccount = 1;
+        let server_xpub = "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA";
+        let gait_path = "0cf8ec823b35a0fc3a89978f64d82f6334f9d68a0b24dcb0cf68edd38345d34b97059fd87f8edae8a8f5b0582c0efd78b4c522871b994e627c47783b2881a8f7";
+        let wo_blob_key_hex = "e55785016af0cf58e2c4fc735ec16f460afe7c5138b335455b4fea7ec1fa1fe4066930e67aed687fef8c1f418ee6e43c7e29a37bed8551a36e1456d9a3b24621";
+
+        // Values from get client blob
+        let wo_blob = "rVxR0vu5UkNE5cDwSXQxlhpe52TM+02SJ66v9n4KgVHCNAYhNSsaubJMQMJKKx6BVaS/T8NnVeb+O5JF2zq/eEMC62+dLClpSAo28U5El0DhvkcunYVcWhUZ9kZido0tiJeDYMi3ZNuPgUlqRW6vrWsPcQ+2165Ti9Pt7MJEdrzgLblilszOEeWofatwdlJKyO4yB0LrnxDErSyQ18Zok9KRqjE0yteNidbuZDABfjsLOuaq1Q67QUhIvbXjL4vY98+z255+Z9AzVKyh1HUQKv2czh6/h/fL99PhLLmZKWa49fXB2mM1oP1kdEm8BdrAQHsRtRB6DJfIVy3YeaUNMxs/hYV24TV75uxT8EEdC2gn5hjl2EJNW7HuFY7dFXQbS8qbV/0PK7mHA5VndVJnQ/w7NBlGTia1RkgvGIsY01Z5Yv4IBY1gyE8gjCYCwYWkEbeoY2qQsgscikmr73b1gJWbuyr7gcD6KXAfBrIO7GQS7Ra8dq/RwaKHEQy9bdzWEm9/8nd7uUYCmFcI3zNzYnDm05U8Z5RXVE6WcH/sga7dDljPFhGIsRqPkG/V4UfhxYd8n2uwPL+oXomI08mIealuO0bJ2Lgyn1EZLrmYGpaEoulOUlCO6XkngFglAKynqP1LGzi/2S7TjdFfNm9mnPEzH0hKfoSCPV5ifJ77Uw83AwA48xT9SywWlhxcgI0MhL3ndYHItf8uMpRh1F3Zp0FV5+bTORBsa8diyyNvDgOq1d/lknzw8d0bPam8oWFF9lTMG+QGSQ==";
+
+        let enc_key = decrypt_blob_key(username, password, wo_blob_key_hex).unwrap();
+        assert_eq!(
+            hex::encode(&enc_key),
+            "a8496f85a204e72276265b5620b4f307bc29f5f71c600de4c4a97b373dbc621e"
+        );
+
+        let plaintext = decrypt_blob(&enc_key, wo_blob).unwrap();
+        assert_eq!(hex::encode(&plaintext[..4]), "01000000");
+
+        let value = parse_value(&plaintext).unwrap();
+        let blob = parse_blob(value).unwrap();
+        assert_eq!(
+            &blob.slip77_key,
+            "8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6"
+        );
+
+        let desc = amp_descriptor(blob, amp_subaccount, server_xpub, gait_path).unwrap();
+        assert_eq!(desc, expected_descriptor);
+    }
 }

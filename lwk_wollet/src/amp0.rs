@@ -389,6 +389,26 @@ impl BlobContent {
     }
 }
 
+pub fn amp_descriptor(
+    blob: BlobContent,
+    amp_subaccount: u32,
+    server_key: &str,
+    gait_path: &str,
+) -> Result<String, Error> {
+    let server_xpub = derive_server_xpub(server_key, gait_path, amp_subaccount)?;
+
+    // TODO: find user fingerprint
+    let fingerprint = "ffffffff";
+    let user_keyorigin = format!("[{fingerprint}/3h/{amp_subaccount}h]");
+    // TODO: improve error
+    let user_xpub = blob
+        .find_xpub(amp_subaccount)
+        .ok_or_else(|| Error::Generic("Invalid AMP subaccount".into()))?;
+    let slip77_key = blob.slip77_key;
+    let desc = format!("ct(slip77({slip77_key}),elsh(wsh(multi(2,{server_xpub}/*,{user_keyorigin}{user_xpub}/1/*))))");
+    Ok(desc)
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

@@ -376,6 +376,19 @@ pub fn derive_server_xpub(
     Ok(format!("{xpub}/3/{server_path}/{amp_subaccount}"))
 }
 
+impl BlobContent {
+    fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
+        for (k, v) in &self.xpubs {
+            if let [cn1, cn2] = v[..] {
+                if cn1 == (3 + 2u32.pow(31)) && cn2 == (amp_subaccount + 2u32.pow(31)) {
+                    return Some(*k);
+                }
+            }
+        }
+        None
+    }
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

@@ -326,6 +326,38 @@ pub struct BlobContent {
     pub xpubs: HashMap<Xpub, Vec<u32>>,
 }
 
+pub fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
+    let value = value
+        .as_array()
+        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+    // 1st element is version (4), but we don't bother checking it here
+
+    // 5th element is the slip77 key
+    #[derive(Deserialize)]
+    struct Slip77 {
+        key: String,
+    }
+    let key = value
+        .get(4)
+        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+    let slip77: Slip77 = rmpv::ext::from_value(key.clone())?;
+    if slip77.key.len() < 64 {
+        return Err(Error::Generic("Invalid slip77 key".into()));
+    }
+    let slip77_key = slip77.key[(slip77.key.len() - 64)..].to_string();
+
+    // 6th elements is watch-only which contains the xpubs
+    let map = value
+        .get(5)
+        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+    let watch_only: HashMap<String, rmpv::Value> = rmpv::ext::from_value(map.clone())?;
+    let xpubs = watch_only
+        .get("xpubs")
+        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+    let xpubs: HashMap<Xpub, Vec<u32>> = rmpv::ext::from_value(xpubs.clone())?;
+    Ok(BlobContent { slip77_key, xpubs })
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

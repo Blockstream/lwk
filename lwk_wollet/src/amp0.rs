@@ -281,6 +281,28 @@ pub fn decrypt_blob_key(
     Ok(enc_key)
 }
 
+pub fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
+    let wo_blob = BASE64_STANDARD
+        .decode(blob64)
+        .map_err(|e| Error::Generic(e.to_string()))?;
+
+    if enc_key.len() != 32 {
+        return Err(Error::Generic("Invalid encryption key length".into()));
+    }
+    // panicks on length mismatch
+    let key = Key::<Aes256Gcm>::from_slice(enc_key);
+    let cipher = Aes256Gcm::new(key);
+
+    let nonce: [u8; 12] = wo_blob[..12]
+        .try_into()
+        .map_err(|_| Error::Generic("Invalid nonce".to_string()))?;
+    let nonce = Nonce::from_slice(&nonce);
+    let plaintext = cipher.decrypt(nonce, &wo_blob[12..])?;
+    // plaintext should start with [1, 0, 0, 0] but it's not worth checking it here
+    // as it might break after if someone sets the blob without this prefix
+    Ok(plaintext)
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

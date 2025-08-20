@@ -111,7 +111,7 @@ elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]
 amp2 = ["reqwest"]
-amp0 = ["tokio-tungstenite", "scrypt", "pbkdf2", "sha2", "hmac"]
+amp0 = ["tokio-tungstenite", "scrypt", "pbkdf2", "sha2", "hmac", "aes", "cbc", "aes-gcm", "flate2", "rmpv"]
 
 [[test]]
 name = "e2e"

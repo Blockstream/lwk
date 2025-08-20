@@ -358,6 +358,24 @@ pub fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
     Ok(BlobContent { slip77_key, xpubs })
 }
 
+pub fn derive_server_xpub(
+    xpub: &str,
+    gait_path: &str,
+    amp_subaccount: u32,
+) -> Result<String, Error> {
+    // TODO: replace xpub with network
+    // TODO: find server fingerprint
+    // TODO: derive the server key instead of having this crazy long path
+    let gait_path_bytes = hex::_decode(gait_path)?;
+    let gait_path: Vec<_> = gait_path_bytes
+        .chunks(2)
+        .map(|chunk| u32::from_be_bytes([0, 0, chunk[0], chunk[1]]).to_string())
+        .collect();
+
+    let server_path = gait_path.join("/");
+    Ok(format!("{xpub}/3/{server_path}/{amp_subaccount}"))
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

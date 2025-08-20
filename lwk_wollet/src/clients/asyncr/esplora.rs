@@ -96,6 +96,8 @@ impl EsploraClient {
         // TODO: check that the transaction contains some signatures
 
         let tx_hex = tx.serialize().to_hex();
+        self.requests
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let response = self
             .client
             .post(&self.broadcast_url)
@@ -216,6 +218,8 @@ impl EsploraClient {
         let mut result = vec![];
         for address_batch in addresses.chunks(50) {
             let url = format!("{}/v2/waterfalls", self.base_url);
+            self.requests
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let response = self
                 .client
                 .get(&url)
@@ -447,6 +451,8 @@ impl EsploraClient {
             Some(r) => Ok(r.clone()),
             None => {
                 let url = format!("{}/v1/server_recipient", self.base_url);
+                self.requests
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let response = self.client.get(&url).send().await?;
                 let status = response.status().as_u16();
                 let body = response.text().await?;
@@ -484,6 +490,8 @@ impl EsploraClient {
         let mut data = Data::default();
 
         loop {
+            self.requests
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let response = self
                 .client
                 .get(&descriptor_url)
@@ -688,6 +696,8 @@ impl EsploraClient {
     async fn get_with_retry(&self, url: &str) -> Result<Response, Error> {
         let mut attempt = 0;
         loop {
+            self.requests
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let response = self.client.get(url).send().await?;
 
             let level = if response.status() == 200 {

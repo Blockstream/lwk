@@ -994,6 +994,37 @@ async fn wait_update_with_txs(
     panic!("update didn't arrive");
 }
 
+#[cfg(feature = "esplora")]
+#[tokio::test]
+async fn test_esplora_requests_counter() {
+    use std::collections::HashMap;
+
+    let server = setup_with_esplora();
+    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+
+    let mut client =
+        clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &esplora_url);
+
+    // Initially, no requests should have been made
+    assert_eq!(client.requests(), 0);
+
+    // Make a request to get the tip - this should increment the counter
+    let _tip = client.tip().await.unwrap();
+    assert!(client.requests() > 0);
+    let requests_after_tip = client.requests();
+
+    // Make another request to get headers - this should increment the counter more
+    let _headers = client.get_headers(&[0], &HashMap::new()).await.unwrap();
+    assert!(client.requests() > requests_after_tip);
+    let requests_after_headers = client.requests();
+
+    // Make another tip request - this should increment the counter further
+    let _tip2 = client.tip().await.unwrap();
+    assert!(client.requests() > requests_after_headers);
+
+    println!("Total requests made: {}", client.requests());
+}
+
 #[ignore = "require network calls"]
 #[cfg(feature = "esplora")]
 #[tokio::test]

@@ -1,9 +1,20 @@
+use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Key, Nonce,
+};
+use base64::prelude::*;
+use elements::bitcoin::bip32::Xpub;
+use flate2::read::ZlibDecoder;
 use hmac::Hmac;
 use lwk_common::{Network, Stream};
 use pbkdf2::pbkdf2;
+use rmpv;
 use scrypt::{scrypt, Params};
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
+use std::collections::HashMap;
+use std::io::Read;
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use std::sync::Arc;

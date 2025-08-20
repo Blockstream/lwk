@@ -23,6 +23,7 @@ use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use futures::stream::{iter, StreamExt};
 use reqwest::Response;
 use serde::Deserialize;
+use std::sync::atomic::AtomicUsize;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -51,6 +52,9 @@ pub struct EsploraClient {
     pub(crate) waterfalls_avoid_encryption: bool,
 
     network: ElementsNetwork,
+
+    /// Number of network requests made by this client
+    requests: AtomicUsize,
 }
 
 impl EsploraClient {
@@ -676,6 +680,10 @@ impl EsploraClient {
             HashSet::new()
         }
     }
+
+    pub fn requests(&self) -> usize {
+        self.requests.load(std::sync::atomic::Ordering::Relaxed)
+    }
 }
 
 // Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent.
@@ -745,6 +753,7 @@ impl EsploraClientBuilder {
             waterfalls_avoid_encryption: false,
             network: self.network,
             concurrency: self.concurrency.unwrap_or(1),
+            requests: AtomicUsize::new(0),
         })
     }
 }

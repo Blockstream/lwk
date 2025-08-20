@@ -260,6 +260,27 @@ pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     (hex::encode(&u_blob), hex::encode(&p_blob))
 }
 
+pub fn decrypt_blob_key(
+    username: &str,
+    password: &str,
+    wo_blob_key_hex: &str,
+) -> Result<Vec<u8>, Error> {
+    let entropy = get_entropy(username, password);
+    let mut wo_aes_key = [0u8; 32];
+    let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_K, 2048, &mut wo_aes_key);
+
+    let data = hex::_decode(wo_blob_key_hex)?;
+
+    let iv: [u8; 16] = data[..16]
+        .try_into()
+        .map_err(|_| Error::Generic("Invalid IV".to_string()))?;
+    let enc_key = cbc::Decryptor::<aes::Aes256>::new(&wo_aes_key.into(), &iv.into())
+        .decrypt_padded_vec_mut::<Pkcs7>(&data[16..])
+        .map_err(|e| Error::Generic(e.to_string()))?;
+
+    Ok(enc_key)
+}
+
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

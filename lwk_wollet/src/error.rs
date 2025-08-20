@@ -246,6 +246,12 @@ pub enum Error {
     #[cfg(feature = "test_wallet")]
     #[error(transparent)]
     SignerError(#[from] lwk_signer::NewError),
+
+    #[error(transparent)]
+    RmpvDecodeError(#[from] rmpv::decode::Error),
+
+    #[error(transparent)]
+    RmpvExtError(#[from] rmpv::ext::Error),
 }
 
 // cannot derive automatically with this error because of trait bound

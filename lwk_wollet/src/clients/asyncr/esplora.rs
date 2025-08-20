@@ -68,7 +68,7 @@ impl EsploraClient {
     }
 
     pub(crate) async fn last_block_hash(&mut self) -> Result<elements::BlockHash, crate::Error> {
-        let response = get_with_retry(&self.client, &self.tip_hash_url).await?;
+        let response = self.get_with_retry(&self.tip_hash_url).await?;
         Ok(BlockHash::from_str(&response.text().await?)?)
     }
 
@@ -81,7 +81,7 @@ impl EsploraClient {
 
     async fn header(&mut self, last_block_hash: BlockHash) -> Result<elements::BlockHeader, Error> {
         let header_url = format!("{}/block/{}/header", self.base_url, last_block_hash);
-        let response = get_with_retry(&self.client, &header_url).await?;
+        let response = self.get_with_retry(&header_url).await?;
         let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
 
         let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -113,7 +113,7 @@ impl EsploraClient {
 
     pub(crate) async fn get_transaction(&self, txid: Txid) -> Result<elements::Transaction, Error> {
         let tx_url = format!("{}/tx/{}/raw", self.base_url, txid);
-        let response = get_with_retry(&self.client, &tx_url).await?;
+        let response = self.get_with_retry(&tx_url).await?;
         let tx = elements::Transaction::consensus_decode(&response.bytes().await?[..])?;
 
         Ok(tx)
@@ -142,13 +142,13 @@ impl EsploraClient {
                     Some(block_hash) => *block_hash,
                     None => {
                         let block_height = format!("{}/block-height/{}", self.base_url, height);
-                        let response = get_with_retry(&self.client, &block_height).await?;
+                        let response = self.get_with_retry(&block_height).await?;
                         BlockHash::from_str(&response.text().await?)?
                     }
                 };
 
                 let block_header = format!("{}/block/{}/header", self.base_url, block_hash);
-                let response = get_with_retry(&self.client, &block_header).await?;
+                let response = self.get_with_retry(&block_header).await?;
                 let header_bytes = Vec::<u8>::from_hex(&response.text().await?)?;
 
                 let header = elements::BlockHeader::consensus_decode(&header_bytes[..])?;
@@ -192,7 +192,7 @@ impl EsploraClient {
         for address in addresses.iter() {
             let url = format!("{}/address/{}/txs", self.base_url, address);
             // TODO must handle paging -> https://github.com/blockstream/esplora/blob/master/API.md#addresses
-            let response = get_with_retry(&self.client, &url).await?;
+            let response = self.get_with_retry(&url).await?;
 
             // TODO going through string and then json is not as efficient as it could be but we prioritize debugging for now
             let text = response.text().await?;
@@ -684,6 +684,43 @@ impl EsploraClient {
     pub fn requests(&self) -> usize {
         self.requests.load(std::sync::atomic::Ordering::Relaxed)
     }
+
+    async fn get_with_retry(&self, url: &str) -> Result<Response, Error> {
+        let mut attempt = 0;
+        loop {
+            let response = self.client.get(url).send().await?;
+
+            let level = if response.status() == 200 {
+                log::Level::Trace
+            } else {
+                log::Level::Info
+            };
+            log::log!(
+                level,
+                "{} status_code:{} - body bytes:{:?}",
+                &url,
+                response.status(),
+                response.content_length(),
+            );
+
+            // 429 Too many requests
+            // 503 Service Temporarily Unavailable
+            if response.status() == 429 || response.status() == 503 {
+                if attempt > 6 {
+                    log::warn!("{url} tried 6 times, failing");
+                    return Err(Error::Generic("Too many retry".to_string()));
+                }
+                let secs = 1 << attempt;
+
+                log::debug!("{url} waiting {secs}");
+
+                async_sleep(secs * 1000).await;
+                attempt += 1;
+            } else {
+                return Ok(response);
+            }
+        }
+    }
 }
 
 // Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent.
@@ -755,43 +792,6 @@ impl EsploraClientBuilder {
             concurrency: self.concurrency.unwrap_or(1),
             requests: AtomicUsize::new(0),
         })
-    }
-}
-
-async fn get_with_retry(client: &reqwest::Client, url: &str) -> Result<Response, Error> {
-    let mut attempt = 0;
-    loop {
-        let response = client.get(url).send().await?;
-
-        let level = if response.status() == 200 {
-            log::Level::Trace
-        } else {
-            log::Level::Info
-        };
-        log::log!(
-            level,
-            "{} status_code:{} - body bytes:{:?}",
-            &url,
-            response.status(),
-            response.content_length(),
-        );
-
-        // 429 Too many requests
-        // 503 Service Temporarily Unavailable
-        if response.status() == 429 || response.status() == 503 {
-            if attempt > 6 {
-                log::warn!("{url} tried 6 times, failing");
-                return Err(Error::Generic("Too many retry".to_string()));
-            }
-            let secs = 1 << attempt;
-
-            log::debug!("{url} waiting {secs}");
-
-            async_sleep(secs * 1000).await;
-            attempt += 1;
-        } else {
-            return Ok(response);
-        }
     }
 }
 
@@ -877,8 +877,8 @@ mod tests {
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{}/block/{}/raw", base_url, hash);
-        let client = reqwest::Client::new();
-        let response = super::get_with_retry(&client, &url).await.unwrap();
+        let client = EsploraClient::new(ElementsNetwork::Liquid, base_url);
+        let response = client.get_with_retry(&url).await.unwrap();
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()
     }
 

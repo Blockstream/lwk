@@ -151,7 +151,7 @@ impl FeeService {
         println!("Fee service UTXO value: {} sats", fee_utxo_value);
         
         // Convert to external UTXO format
-        let external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
+        let _external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
         
         // Get fee service address for LBTC change
         let fee_service_address = self.get_address()?;
@@ -331,6 +331,244 @@ impl FeeService {
         Ok(txid)
     }
 
+    /// Process a transaction on the server side
+    /// This function emulates what the fee service server would do:
+    /// - Receives user's asset UTXOs and transaction details
+    /// - Constructs the PSET with server's LBTC UTXO for fees
+    /// - Signs the server's inputs
+    /// - Returns the partially signed PSET
+    fn process_server_wallet(
+        &mut self,
+        user_asset_utxos: Vec<ExternalUtxo>,
+        recipient: &Address,
+        amount: u64,
+        asset_id: AssetId,
+        fee_in_asset: u64,
+        user_change_address: &Address,
+    ) -> Result<elements::pset::PartiallySignedTransaction, Box<dyn std::error::Error>> {
+        println!("\n=== Server Side Processing ===");
+        
+        // Check fee service has LBTC for fees
+        let lbtc = self.wollet.policy_asset();
+        let fee_service_balance = self.wollet.balance().unwrap_or_default().get(&lbtc).copied().unwrap_or(0);
+        println!("Server LBTC balance: {} sats", fee_service_balance);
+        
+        if fee_service_balance == 0 {
+            return Err("Server has no LBTC to pay transaction fees".into());
+        }
+        
+        // Get fee service LBTC UTXO
+        let fee_utxo = self.wollet
+            .utxos()?
+            .into_iter()
+            .find(|u| u.unblinded.asset == lbtc)
+            .ok_or("Server has no LBTC UTXO available")?;
+        
+        println!("Server UTXO value: {} sats", fee_utxo.unblinded.value);
+        
+        // Convert to external UTXO format
+        let _external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
+        
+        // Get fee service address for receiving fee payment and LBTC change
+        let fee_service_address = self.get_address()?;
+        
+        // Calculate total asset input value from user's UTXOs
+        let total_asset_input: u64 = user_asset_utxos.iter()
+            .map(|utxo| utxo.unblinded.value)
+            .sum();
+        
+        // Calculate asset change
+        let asset_change = total_asset_input - amount - fee_in_asset;
+        println!("Asset input total: {} units", total_asset_input);
+        println!("Asset change to user: {} units", asset_change);
+        
+        // Build the transaction from server's perspective
+        // The server only manages its own LBTC UTXO
+        let mut tx_builder = self.wollet
+            .tx_builder()
+            // Send asset to recipient
+            .add_recipient(&recipient, amount, asset_id)?;
+        
+        // Add asset change back to user if any
+        if asset_change > 0 {
+            tx_builder = tx_builder.add_recipient(&user_change_address, asset_change, asset_id)?;
+        }
+        
+        // Only add fee payment if fee_in_asset > 0
+        if fee_in_asset > 0 {
+            tx_builder = tx_builder.add_recipient(&fee_service_address, fee_in_asset, asset_id)?;
+        }
+        
+        let mut pset = tx_builder
+            // Add user's asset UTXOs as external inputs (server won't select them as wallet utxos)
+            .add_external_utxos(user_asset_utxos)?
+            // Only select the server's LBTC UTXO for fee payment
+            .set_wallet_utxos(vec![fee_utxo.outpoint])
+            // Drain all LBTC back to fee service
+            .drain_lbtc_wallet()
+            .drain_lbtc_to(fee_service_address.clone())
+            .finish()?;
+        
+        // Add details from wallet for signing
+        self.wollet.add_details(&mut pset)?;
+        let fee_sigs = self.signer.sign(&mut pset)?;
+        println!("Server signed {} inputs", fee_sigs);
+        
+        Ok(pset)
+    }
+
+    /// Send an asset from user wallet using fee service to pay transaction fees
+    /// This split approach separates app and server responsibilities:
+    /// - App side: Prepares user wallet and asset UTXOs
+    /// - Server side: Constructs PSET and signs its inputs
+    /// - App side: Signs user inputs and broadcasts
+    pub fn send_emulating_app_plus_server(
+        &mut self,
+        user_mnemonic: &str,
+        user_descriptor: &str,
+        asset_id: &str,
+        amount: u64,
+        recipient_address: &str,
+        fee_in_asset: u64,
+    ) -> Result<Txid, Box<dyn std::error::Error>> {
+        println!("=== Fee Service Transaction (App + Server Split) ===");
+        println!("This example shows the separation between:");
+        println!("- App side: User wallet management and signing");
+        println!("- Server side: Fee service PSET construction and signing\n");
+        
+        // Parse inputs
+        let asset_id: AssetId = asset_id.parse()?;
+        let recipient: Address = recipient_address.parse()?;
+        
+        println!("Transaction details:");
+        println!("- Asset ID: {}", asset_id);
+        println!("- Amount to recipient: {} units", amount);
+        println!("- Fee to service: {} units", fee_in_asset);
+        println!("- Recipient: {}", recipient_address);
+        
+        // ========== APP SIDE: Step 1 - Initialize user wallet ==========
+        println!("\n=== App Side: Step 1 - Initialize User Wallet ===");
+        let user_signer = SwSigner::new(user_mnemonic, false)?;
+        let user_descriptor = user_descriptor.parse()?;
+        let mut user_wollet = Wollet::new(self.network, NoPersist::new(), user_descriptor)?;
+        
+        // Sync user wallet
+        let update = self.electrum_client.full_scan(&user_wollet)?;
+        if let Some(update) = update {
+            user_wollet.apply_update(update)?;
+        }
+        println!("User wallet synced");
+        
+        // ========== APP SIDE: Step 2 - Get asset UTXOs ==========
+        println!("\n=== App Side: Step 2 - Get Asset UTXOs ===");
+        let user_balance = user_wollet.balance()?;
+        let user_asset_balance = user_balance.get(&asset_id).copied().unwrap_or(0);
+        println!("User asset balance: {} units", user_asset_balance);
+        
+        let total_asset_needed = amount + fee_in_asset;
+        if user_asset_balance < total_asset_needed {
+            return Err(format!(
+                "Insufficient asset balance. Available: {} units, Required: {} units (amount: {} + fee: {})",
+                user_asset_balance, total_asset_needed, amount, fee_in_asset
+            ).into());
+        }
+        
+        // Get user's asset UTXOs
+        let user_utxos = user_wollet
+            .utxos()?
+            .into_iter()
+            .filter(|u| u.unblinded.asset == asset_id)
+            .collect::<Vec<_>>();
+        
+        // Convert to external UTXOs
+        let mut external_user_utxos = vec![];
+        let mut selected_value = 0u64;
+        for utxo in &user_utxos {
+            // Get the full transaction
+            let transactions = self.electrum_client.get_transactions(&[utxo.outpoint.txid])?;
+            let tx = transactions.into_iter().next()
+                .ok_or("Transaction not found")?;
+            
+            // Extract the specific output
+            let txout = tx.output.get(utxo.outpoint.vout as usize)
+                .ok_or("Invalid output index")?
+                .clone();
+            
+            // For non-segwit descriptors, include full transaction
+            let full_tx = if user_wollet.is_segwit() {
+                None
+            } else {
+                Some(tx)
+            };
+            
+            let external_utxo = ExternalUtxo {
+                outpoint: utxo.outpoint,
+                txout,
+                tx: full_tx,
+                unblinded: utxo.unblinded.clone(),
+                max_weight_to_satisfy: user_wollet.max_weight_to_satisfy(),
+            };
+            
+            external_user_utxos.push(external_utxo);
+            selected_value += utxo.unblinded.value;
+            
+            // Stop when we have enough
+            if selected_value >= total_asset_needed {
+                break;
+            }
+        }
+        
+        println!("Selected {} asset UTXOs with total value: {} units", 
+                 external_user_utxos.len(), selected_value);
+        
+        // Get user change address
+        let user_change_address = user_wollet.address(None)?;
+        let user_change_addr = user_change_address.address().clone();
+        
+        // ========== APP SIDE: Step 3 - Send details to server ==========
+        println!("\n=== App Side: Step 3 - Send Details to Server ===");
+        println!("Sending to server:");
+        println!("- User's asset UTXOs");
+        println!("- Recipient address: {}", recipient_address);
+        println!("- Amount: {} units", amount);
+        println!("- Fee in asset: {} units", fee_in_asset);
+        println!("- User change address: {}", user_change_addr);
+        
+        // Sync server wallet before processing
+        let update = self.electrum_client.full_scan(&self.wollet)?;
+        if let Some(update) = update {
+            self.wollet.apply_update(update)?;
+        }
+        
+        // ========== SERVER SIDE: Step 4 - Process and create PSET ==========
+        let mut pset = self.process_server_wallet(
+            external_user_utxos,
+            &recipient,
+            amount,
+            asset_id,
+            fee_in_asset,
+            &user_change_addr,
+        )?;
+        
+        // ========== APP SIDE: Step 5 - Sign and broadcast ==========
+        println!("\n=== App Side: Step 5 - Sign and Broadcast ===");
+        println!("Received partially signed PSET from server");
+        
+        // Add user wallet details and sign
+        user_wollet.add_details(&mut pset)?;
+        let user_sigs = user_signer.sign(&mut pset)?;
+        println!("App signed {} inputs", user_sigs);
+        
+        // Finalize and broadcast
+        let tx = user_wollet.finalize(&mut pset)?;
+        let txid = self.electrum_client.broadcast(&tx)?;
+        
+        println!("\n✅ Transaction broadcast successfully!");
+        println!("TXID: {}", txid);
+        
+        Ok(txid)
+    }
+
     /// Send an asset from user wallet using fee service to pay transaction fees
     /// This unified approach creates a single PSET where:
     /// - User sends asset to recipient
@@ -452,10 +690,10 @@ impl FeeService {
         
         // Add details from both wallets for signing
         self.wollet.add_details(&mut pset)?;
+        let fee_sigs = self.signer.sign(&mut pset)?;
         user_wollet.add_details(&mut pset)?;
         
         // Both parties sign their respective inputs
-        let fee_sigs = self.signer.sign(&mut pset)?;
         let user_sigs = user_signer.sign(&mut pset)?;
         println!("Fee service signed {} inputs, User signed {} inputs", fee_sigs, user_sigs);
         
@@ -510,6 +748,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command line arguments
     let args: Vec<String> = env::args().collect();
     let use_unified = args.contains(&"unified".to_string());
+    let use_split_server = args.contains(&"splited_server".to_string());
     
     // Parse fee amount if provided after "unified"
     let mut fee_from_args: Option<u64> = None;
@@ -519,23 +758,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
+    // Parse fee amount if provided after "splited_server"
+    let mut split_fee_from_args: Option<u64> = None;
+    if let Some(pos) = args.iter().position(|arg| arg == "splited_server") {
+        if let Some(fee_str) = args.get(pos + 1) {
+            split_fee_from_args = fee_str.parse().ok();
+        }
+    }
+    
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("\nUsage: cargo run -p lwk_wollet --features electrum --example fee_service [OPTIONS]");
         println!("\nOptions:");
-        println!("  -- unified [FEE]   Use unified PSET approach (user pays fee service with asset)");
-        println!("                     FEE: Amount of asset to pay as fee (default: from keys.env or 2)");
-        println!("                     If FEE is 0, no fee payment to service is included");
-        println!("               Default: Use PSET merging approach");
+        println!("  -- unified [FEE]         Use unified PSET approach (user pays fee service with asset)");
+        println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 2)");
+        println!("                           If FEE is 0, no fee payment to service is included");
+        println!("  -- splited_server [FEE]  Use split app/server approach with clear separation");
+        println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 0)");
+        println!("                 Default: Use PSET merging approach");
         println!("\nExamples:");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified 0");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified 5");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- splited_server");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- splited_server 3");
         return Ok(());
     }
     
     if use_unified {
         println!("\nUsing unified PSET approach...");
+    } else if use_split_server {
+        println!("\nUsing split app/server approach...");
     } else {
         println!("\nUsing PSET merging approach...");
     }
@@ -641,6 +894,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Asset fee for service: {} units", fee_in_asset);
         
         fee_service.send_asset_with_fee_service_unified(
+            user_mnemonic,
+            user_descriptor,
+            asset_id,
+            amount,
+            recipient_address,
+            fee_in_asset,
+        )
+    } else if use_split_server {
+        // Get fee_in_asset from command line args, then env vars, then default
+        let fee_in_asset: u64 = split_fee_from_args
+            .or_else(|| env_vars.get("fee_in_asset").and_then(|s| s.parse().ok()))
+            .unwrap_or(0); // Default: 0 units of asset as fee
+        
+        println!("Asset fee for service: {} units", fee_in_asset);
+        
+        fee_service.send_emulating_app_plus_server(
             user_mnemonic,
             user_descriptor,
             asset_id,

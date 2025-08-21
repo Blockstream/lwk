@@ -52,6 +52,7 @@ cbc = { version = "0.1", optional = true, features = ["alloc"] }
 aes-gcm = { version = "0.10", optional = true }
 flate2 = { version = "1.1", optional = true }
 rmpv = { version = "1.3", optional = true, features = ["with-serde"] }
+rmp-serde = { version = "1.3", optional = true }
 
 #registry
 idna = "1"
@@ -111,7 +112,7 @@ elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]
 amp2 = ["reqwest"]
-amp0 = ["tokio-tungstenite", "scrypt", "pbkdf2", "sha2", "hmac", "aes", "cbc", "aes-gcm", "flate2", "rmpv"]
+amp0 = ["tokio-tungstenite", "scrypt", "pbkdf2", "sha2", "hmac", "aes", "cbc", "aes-gcm", "flate2", "rmpv", "rmp-serde"]
 
 [[test]]
 name = "e2e"

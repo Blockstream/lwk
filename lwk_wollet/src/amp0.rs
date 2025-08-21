@@ -228,6 +228,29 @@ impl<S: Stream> Amp0<S> {
         let login_data: LoginData = rmpv::ext::from_value(v)?;
         Ok(login_data)
     }
+
+    /// Get the base64 encoded client blob
+    pub async fn get_blob(&self) -> Result<String, Error> {
+        let request = WampId::generate();
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.get_client_blob".to_owned(),
+            arguments: Some(vec![0.into()]),
+            arguments_kw: None,
+        };
+        let v = self.call(msg).await?;
+
+        #[allow(unused)]
+        #[derive(Deserialize)]
+        struct BlobData {
+            blob: String,
+            hmac: String,
+            sequence: u32,
+        }
+        let blob_data: BlobData = rmpv::ext::from_value(v)?;
+        Ok(blob_data.blob)
+    }
 }
 
 pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {

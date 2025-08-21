@@ -79,6 +79,47 @@ impl<S: Stream> Amp0<S> {
         Ok(Self { stream })
     }
 
+    async fn call(&self, msg: Msg) -> Result<rmpv::Value, Error> {
+        let msg = serde_json::to_vec(&msg)?;
+        self.stream
+            .write(&msg)
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to do call: {}", e)))?;
+
+        // Wait for response
+        let mut response_buf = vec![0u8; 10000];
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let response_bytes = tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            self.stream.read(&mut response_buf),
+        )
+        .await
+        .map_err(|_| Error::Generic("Response timeout after 10 seconds".to_string()))?
+        .map_err(|e| Error::Generic(format!("Failed to read response: {}", e)))?;
+
+        #[cfg(target_arch = "wasm32")]
+        let response_bytes = self
+            .stream
+            .read(&mut response_buf)
+            .await
+            .map_err(|e| Error::Generic(format!("Failed to read response: {}", e)))?;
+
+        if let Ok(Msg::Result {
+            request: _,
+            arguments: Some(args),
+            ..
+        }) = serde_json::from_slice(&response_buf[..response_bytes])
+        {
+            // TODO: verify request id is correct
+            if let [v, ..] = &args[..] {
+                return Ok(v.clone());
+            }
+        }
+        let response = String::from_utf8_lossy(&response_buf[..response_bytes]);
+        Err(Error::Generic(format!("call failed, got: {}", response)))
+    }
+
     /// Login to the Green Address API with clear credentials performing the hashing internally.
     pub async fn login(
         &self,
@@ -183,46 +224,9 @@ impl<S: Stream> Amp0<S> {
             arguments: Some(args),
             arguments_kw: None,
         };
-        let msg = serde_json::to_vec(&msg)?;
-
-        self.stream
-            .write(&msg)
-            .await
-            .map_err(|e| Error::Generic(format!("Failed to send login: {}", e)))?;
-
-        // Step 4: Wait for login response (success or error)
-        let mut response_buf = vec![0u8; 10000];
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let response_bytes = tokio::time::timeout(
-            std::time::Duration::from_secs(10),
-            self.stream.read(&mut response_buf),
-        )
-        .await
-        .map_err(|_| Error::Generic("Login response timeout after 10 seconds".to_string()))?
-        .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
-
-        #[cfg(target_arch = "wasm32")]
-        let response_bytes = self
-            .stream
-            .read(&mut response_buf)
-            .await
-            .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
-
-        if let Ok(Msg::Result {
-            request: _,
-            arguments: Some(args),
-            ..
-        }) = serde_json::from_slice(&response_buf[..response_bytes])
-        {
-            // TODO: verify request id is correct
-            if let [v, ..] = &args[..] {
-                let login_data: LoginData = rmpv::ext::from_value(v.clone())?;
-                return Ok(login_data);
-            }
-        }
-        let response = String::from_utf8_lossy(&response_buf[..response_bytes]);
-        Err(Error::Generic(format!("Failed login, got: {}", response)))
+        let v = self.call(msg).await?;
+        let login_data: LoginData = rmpv::ext::from_value(v)?;
+        Ok(login_data)
     }
 }
 

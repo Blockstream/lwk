@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use std::collections::HashMap;
 use std::io::Read;
+use std::str::FromStr;
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use std::sync::Arc;
@@ -24,6 +25,7 @@ use tokio::sync::Mutex;
 use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
 use crate::{hex, Error};
+use crate::{ElementsNetwork, Wollet, WolletDescriptor};
 use elements::pset::PartiallySignedTransaction;
 use elements::Txid;
 
@@ -78,12 +80,19 @@ pub struct LoginData {
 
 // TODO: rename Amp0 to Amp0Inner
 /// Context for actions related to an AMP0 (sub)account
+#[allow(unused)]
 pub struct Amp0Ext<S: Stream> {
     /// LWK watch-only wallet
-    wollet: crate::Wollet,
+    wollet: Wollet,
 
     /// Green-backend actions
     amp0: Amp0<S>,
+
+    /// Network
+    network: ElementsNetwork,
+
+    /// AMP subaccount
+    amp_subaccount: u32,
 
     /// Last returned address index
     last_index: Option<u32>,
@@ -98,28 +107,64 @@ impl<S: Stream> Amp0Ext<S> {
     /// `amp_id` is a AMP0 subaccount GAID belonging to the wallet.
     /// If empty, the first AMP0 subaccount is used.
     pub async fn new(
-        stream: S,
+        amp0: Amp0<S>,
+        network: ElementsNetwork,
         username: &str,
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
+        let server_xpub = match network {
+            ElementsNetwork::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
+            _ => todo!(),
+        };
         // connect to ga-backend
         // login.watch_only_v2
         // parse login data
+        let login_data = amp0.login(username, password).await?;
+
         // get amp account
+        assert!(amp_id.is_empty());
+        // TODO: allow amp_id
+        let amp_subaccount = login_data
+            .subaccounts
+            .iter()
+            .find(|s| s.type_ == "2of2_no_recovery")
+            .ok_or_else(|| Error::Generic("Missing AMP subaccount".into()))?
+            .pointer;
+
         // get blob
+        let blob = amp0.get_blob().await?;
         // decrypt blob
+        let wo_blob_key_hex = &login_data.wo_blob_key;
+        let enc_key = decrypt_blob_key(username, password, wo_blob_key_hex)?;
+        let plaintext = decrypt_blob(&enc_key, &blob)?;
         // parse blob
+        let value = parse_value(&plaintext)?;
+        let blob = parse_blob(value)?;
         // compute wallet descriptor
-        // ? set last index
-        // if needed upload authorized assets confidential addresses
-        todo!();
+        let gait_path = &login_data.gait_path;
+        let desc = amp_descriptor(blob, amp_subaccount, server_xpub, gait_path)?;
+
+        let wd = WolletDescriptor::from_str(&desc)?;
+        // TODO: allow persistence
+        let wollet = Wollet::without_persist(network, wd)?;
+
+        // get last index
+        let (last_index, _script) = amp0.get_new_address(amp_subaccount).await?;
+        // TODO: if needed upload authorized assets confidential addresses
+        Ok(Self {
+            wollet,
+            amp0,
+            network,
+            amp_subaccount,
+            last_index: Some(last_index),
+        })
     }
 
     /// Get an address
     ///
     /// If `index` is None, a new address is returned.
-    pub async fn address(&self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+    pub async fn address(&self, _index: Option<u32>) -> Result<crate::AddressResult, Error> {
         // vault.fund
         // get address from lwk
         // check they match (unconfidential)
@@ -128,7 +173,7 @@ impl<S: Stream> Amp0Ext<S> {
     }
 
     /// Ask AMP0 server to cosign and broadcast the transaction
-    pub async fn send(pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+    pub async fn send(_pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
         // vault.send_raw_tx
         todo!();
     }

@@ -193,36 +193,20 @@ impl<S: Stream> Amp0<S> {
             .await
             .map_err(|e| Error::Generic(format!("Failed to read login response: {}", e)))?;
 
-        let login_response = String::from_utf8_lossy(&response_buf[..response_bytes]);
-        let err = Error::Generic(format!(
-            "Unexpected login data response: {}",
-            login_response
-        ));
-
-        // Login response has this format
-        // [
-        //   50,
-        //   1,
-        //   {...},
-        //   [login_data]
-        // ]
-        // TODO: improve parsing of wamp msg pack responses
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(&login_response) else {
-            return Err(err);
-        };
-        let Some(v) = v.as_array() else {
-            return Err(err);
-        };
-        let [_, _, _, ref v] = v[..] else {
-            return Err(err);
-        };
-        let Some(v) = v.as_array() else {
-            return Err(err);
-        };
-        let [ref v] = v[..] else {
-            return Err(err);
-        };
-        serde_json::from_value(v.clone()).map_err(|_| err)
+        if let Ok(Msg::Result {
+            request: _,
+            arguments: Some(args),
+            ..
+        }) = serde_json::from_slice(&response_buf[..response_bytes])
+        {
+            // TODO: verify request id is correct
+            if let [v, ..] = &args[..] {
+                let login_data: LoginData = rmpv::ext::from_value(v.clone())?;
+                return Ok(login_data);
+            }
+        }
+        let response = String::from_utf8_lossy(&response_buf[..response_bytes]);
+        Err(Error::Generic(format!("Failed login, got: {}", response)))
     }
 }
 

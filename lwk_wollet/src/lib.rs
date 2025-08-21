@@ -108,6 +108,7 @@ mod store;
 mod tx_builder;
 mod update;
 mod util;
+mod wamp;
 mod wollet;
 
 pub use crate::clients::{Capability, History};

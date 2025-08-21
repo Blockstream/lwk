@@ -251,6 +251,36 @@ impl<S: Stream> Amp0<S> {
         let blob_data: BlobData = rmpv::ext::from_value(v)?;
         Ok(blob_data.blob)
     }
+
+    /// Get a new address
+    pub async fn get_new_address(
+        &self,
+        amp_subaccount: u32,
+    ) -> Result<(u32, elements::Script), Error> {
+        let request = WampId::generate();
+        let args = vec![amp_subaccount.into(), true.into(), "p2wsh".into()];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.vault.fund".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        let v = self.call(msg).await?;
+
+        #[allow(unused)]
+        #[derive(Deserialize)]
+        struct AddressData {
+            branch: u32,
+            subaccount: u32,
+            pointer: u32,
+            script: elements::Script,
+            addr_type: String,
+        }
+        let data: AddressData = rmpv::ext::from_value(v)?;
+        // TODO: check branch 1, subacccount equals amp_subaccount, addr_type p2wsh
+        Ok((data.pointer, data.script))
+    }
 }
 
 pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {

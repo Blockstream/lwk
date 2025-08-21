@@ -21,8 +21,10 @@ impl fmt::Display for WampId {
     }
 }
 
+#[allow(unused)]
 static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+#[allow(unused)]
 impl WampId {
     pub fn generate() -> Self {
         WampId(REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1)
@@ -67,6 +69,7 @@ pub enum Arg {
     None,
 }
 
+#[allow(unused)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 /// All roles a client can be
 pub enum ClientRole {
@@ -80,6 +83,7 @@ pub enum ClientRole {
     Subscriber,
 }
 
+#[allow(unused)]
 impl ClientRole {
     /// Returns the string repesentation of the role
     pub fn to_str(&self) -> &'static str {

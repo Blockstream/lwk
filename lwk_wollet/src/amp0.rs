@@ -748,7 +748,6 @@ mod tests {
             .login("userleo456", "userleo456")
             .await
             .expect("Should get a response (even if it's an error)");
-        println!("{:?}", response);
 
         assert_eq!(response.gait_path.len(), 128);
         assert_eq!(response.wo_blob_key.len(), 128);
@@ -759,5 +758,7 @@ mod tests {
             response.subaccounts[0].gaid,
             "GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"
         );
+
+        let _blob = amp0.get_blob().await.unwrap();
     }
 }

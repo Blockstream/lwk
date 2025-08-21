@@ -21,6 +21,7 @@ use std::sync::Arc;
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use tokio::sync::Mutex;
 
+use crate::wamp::common::{Arg, ClientRole, WampDict};
 use crate::wamp::message::Msg;
 use crate::{hex, Error};
 
@@ -104,9 +105,19 @@ impl<S: Stream> Amp0<S> {
         hashed_password: &str,
     ) -> Result<LoginData, Error> {
         // Step 1: Send WAMP HELLO message
-        let hello_msg = r#"[1, "realm1", {"roles": {"caller": {"features": {}}}}]"#;
+        let mut details = WampDict::new();
+        let mut roles = WampDict::new();
+        let mut features = WampDict::new();
+        features.insert("features".into(), Arg::Dict(WampDict::new()));
+        roles.insert(ClientRole::Caller.to_str().into(), Arg::Dict(features));
+        details.insert("roles".into(), Arg::Dict(roles));
+        let msg = Msg::Hello {
+            realm: "realm1".into(),
+            details,
+        };
+        let msg = serde_json::to_vec(&msg)?;
         self.stream
-            .write(hello_msg.as_bytes())
+            .write(&msg)
             .await
             .map_err(|e| Error::Generic(format!("Failed to send HELLO: {}", e)))?;
 

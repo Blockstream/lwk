@@ -899,4 +899,26 @@ mod tests {
         let amp_subaccount = 1;
         let (_pointer, _script) = amp0.get_new_address(amp_subaccount).await.unwrap();
     }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[tokio::test]
+    #[ignore] // Requires network connectivity
+    async fn test_amp0_ext() {
+        let amp0 = Amp0::with_network(Network::Liquid).await.unwrap();
+
+        let amp0ext = Amp0Ext::new(
+            amp0,
+            ElementsNetwork::Liquid,
+            "userleo456",
+            "userleo456",
+            "",
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(amp0ext.amp_subaccount, 1);
+        assert!(amp0ext.last_index.unwrap() > 20);
+        let desc = amp0ext.wollet.descriptor().to_string();
+        println!("{}", desc);
+    }
 }

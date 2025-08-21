@@ -21,6 +21,7 @@ use std::sync::Arc;
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use tokio::sync::Mutex;
 
+use crate::wamp::message::Msg;
 use crate::{hex, Error};
 
 pub struct Amp0<S: Stream> {
@@ -128,13 +129,14 @@ impl<S: Stream> Amp0<S> {
             .await
             .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
 
-        let welcome_response = String::from_utf8_lossy(&buf[..bytes_read]);
+        if let Ok(Msg::Welcome { .. }) = serde_json::from_slice(&buf[..bytes_read]) {
+            // Got a welcome response as expected
+        } else {
+            let response = String::from_utf8_lossy(&buf[..bytes_read]);
 
-        // Verify it's a WELCOME message (should start with [2,...)
-        if !welcome_response.trim_start().starts_with("[2,") {
             return Err(Error::Generic(format!(
                 "Expected WELCOME message, got: {}",
-                welcome_response
+                response
             )));
         }
 

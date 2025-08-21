@@ -1,10 +1,14 @@
 extern crate lwk_wollet;
 
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::Path;
 use lwk_common::Signer;
 use lwk_signer::SwSigner;
 use lwk_wollet::{
     clients::blocking::BlockchainBackend,
-    elements::{Address, AssetId, Txid},
+    elements::{Address, AssetId, Txid, Script},
     ElectrumClient, ElementsNetwork, ExternalUtxo, NoPersist, Wollet, WolletDescriptor,
 };
 
@@ -74,7 +78,7 @@ impl FeeService {
 
     /// Send an asset from user wallet using fee service to pay transaction fees
     /// This is the core functionality: user can send assets without needing LBTC
-    pub fn send_asset_with_fee_service(
+    pub fn send_asset_with_fee_service_merging_psets(
         &mut self,
         user_mnemonic: &str,
         user_descriptor: &str,
@@ -119,9 +123,15 @@ impl FeeService {
                 user_asset_balance, amount
             ).into());
         }
+
+        // Check fee service wallet has the asset
+        let fee_balance = self.wollet.balance()?;
+        let fee_asset_balance = fee_balance.get(&asset_id).copied().unwrap_or(0);
+        println!("Fee service asset balance: {} units", fee_asset_balance);
         
         // Check fee service has LBTC for fees
         let lbtc = self.wollet.policy_asset();
+        println!("Fee service LBTC asset id: {}", lbtc);
         let fee_service_balance = self.wollet.balance().unwrap_or_default().get(&lbtc).copied().unwrap_or(0);
         println!("Fee service LBTC balance: {} sats", fee_service_balance);
         
@@ -163,20 +173,288 @@ impl FeeService {
         let lbtc_change_amount = fee_utxo_value - estimated_fee;
         println!("LBTC change to fee service: {} sats", lbtc_change_amount);
         
-        // Create transaction: user sends asset, fee service provides LBTC UTXO for fees
-        let mut pset = user_wollet
+        // Get user's asset UTXOs
+        let user_utxos = user_wollet
+            .utxos()?
+            .into_iter()
+            .filter(|u| u.unblinded.asset == asset_id)
+            .collect::<Vec<_>>();
+        
+        if user_utxos.is_empty() {
+            return Err("User has no UTXOs for the specified asset".into());
+        }
+        
+        // Convert user UTXOs to external format for fee service wallet
+        let mut external_user_utxos = vec![];
+        let mut user_utxo_value = 0u64;
+        for utxo in &user_utxos {
+            // Get the full transaction
+            let transactions = self.electrum_client.get_transactions(&[utxo.outpoint.txid])?;
+            let tx = transactions.into_iter().next()
+                .ok_or("Transaction not found")?;
+            
+            // Extract the specific output
+            let txout = tx.output.get(utxo.outpoint.vout as usize)
+                .ok_or("Invalid output index")?
+                .clone();
+            
+            // For non-segwit descriptors, include full transaction
+            let full_tx = if user_wollet.is_segwit() {
+                None
+            } else {
+                Some(tx)
+            };
+            
+            let external_utxo = ExternalUtxo {
+                outpoint: utxo.outpoint,
+                txout,
+                tx: full_tx,
+                unblinded: utxo.unblinded.clone(),
+                max_weight_to_satisfy: user_wollet.max_weight_to_satisfy(),
+            };
+            
+            external_user_utxos.push(external_utxo);
+            user_utxo_value += utxo.unblinded.value;
+            
+            // Stop when we have enough
+            if user_utxo_value >= amount {
+                break;
+            }
+        }
+        
+        if user_utxo_value < amount {
+            return Err(format!(
+                "Insufficient asset balance. Available: {} units, Required: {} units",
+                user_utxo_value, amount
+            ).into());
+        }
+        
+        // Create transaction from fee service wallet perspective
+        let mut pset = self.wollet
             .tx_builder()
-            .add_recipient(&recipient, amount, asset_id)?
             // Add explicit LBTC change recipient for fee service
             .add_lbtc_recipient(&fee_service_address, lbtc_change_amount)?
-            // Add Fee Service UTXO for fees
-            .add_external_utxos(vec![external_fee_utxo])?
+            // Use fee service's LBTC UTXO for fees[]
+            .add_external_utxos(external_user_utxos)?
+            .finish()?;
+
+        // Get asset UTXOs from user wallet for manual selection
+        let mut selected_value = 0u64;
+        let mut user_asset_utxos = vec![];
+        for utxo in &user_utxos {
+            user_asset_utxos.push(utxo.outpoint);
+            selected_value += utxo.unblinded.value;
+            if selected_value >= amount {
+                break;
+            }
+        }
+        
+        // Create transaction 2 from user wallet perspective
+        let mut pset_user = user_wollet
+            .tx_builder()
+            .add_recipient(&recipient, amount, asset_id)?
+            // Manual selection of user's asset UTXOs
+            .set_wallet_utxos(user_asset_utxos)
             .finish()?;
             
-        // Add fee service details for signing
+        // Add both wallets' details for signing
         self.wollet.add_details(&mut pset)?;
+        user_wollet.add_details(&mut pset_user)?;
         
         // Fee service signs its LBTC input
+        let fee_sigs = self.signer.sign(&mut pset)?;
+        let user_sigs = user_signer.sign(&mut pset_user)?;
+        println!("Fee service signed {} inputs, User signed {} inputs", fee_sigs, user_sigs);
+        
+        // Merge the two PSETs
+        println!("Merging PSETs...");
+        
+        // Create a new combined PSET
+        let mut combined_pset = elements::pset::PartiallySignedTransaction::new_v2();
+        
+        // Add all inputs from both PSETs
+        for input in pset.inputs() {
+            combined_pset.add_input(input.clone());
+        }
+        for input in pset_user.inputs() {
+            combined_pset.add_input(input.clone());
+        }
+        
+        // Add all outputs from both PSETs
+        // First, add recipient output from user PSET
+        for output in pset_user.outputs() {
+            combined_pset.add_output(output.clone());
+        }
+        
+        // Then add LBTC change output from fee service PSET
+        for output in pset.outputs() {
+            combined_pset.add_output(output.clone());
+        }
+        
+        // Add fee output
+        // let fee_output = elements::pset::Output {
+        //     amount: Some(estimated_fee),
+        //     amount_comm: None,
+        //     asset: Some(self.wollet.policy_asset()),
+        //     asset_comm: None,
+        //     script_pubkey: Script::default(),
+        //     value_rangeproof: None,
+        //     ecdh_pubkey: None,
+        //     blinder_index: None,
+        //     blind_value_proof: None,
+        //     ..Default::default()
+        // };
+        // combined_pset.add_output(fee_output);
+        
+        println!("Combined PSET has {} inputs and {} outputs", 
+                 combined_pset.n_inputs(), combined_pset.n_outputs());
+        
+        // Add details from both wallets to the combined PSET
+        self.wollet.add_details(&mut combined_pset)?;
+        user_wollet.add_details(&mut combined_pset)?;
+        
+        // Try to finalize with both wallets
+        let finalized = match self.wollet.finalize(&mut combined_pset) {
+            Ok(tx) => tx,
+            Err(_) => {
+                // If fee service wallet can't finalize, try with user wallet
+                user_wollet.finalize(&mut combined_pset)?
+            }
+        };
+        
+        // Broadcast the transaction
+        let txid = self.electrum_client.broadcast(&finalized)?;
+        
+        println!("Transaction sent successfully!");
+        println!("TXID: {}", txid);
+        
+        Ok(txid)
+    }
+
+    /// Send an asset from user wallet using fee service to pay transaction fees
+    /// This unified approach creates a single PSET where:
+    /// - User sends asset to recipient
+    /// - User pays fee service with some asset units
+    /// - Fee service provides LBTC for transaction fees
+    pub fn send_asset_with_fee_service_unified(
+        &mut self,
+        user_mnemonic: &str,
+        user_descriptor: &str,
+        asset_id: &str,
+        amount: u64,
+        recipient_address: &str,
+        fee_in_asset: u64,  // How much asset to pay the fee service
+    ) -> Result<Txid, Box<dyn std::error::Error>> {
+        // Parse inputs
+        let asset_id: AssetId = asset_id.parse()?;
+        let recipient: Address = recipient_address.parse()?;
+        
+        println!("=== Fee Service Transaction (Unified PSET) ===");
+        println!("Asset ID: {}", asset_id);
+        println!("Amount to recipient: {} units", amount);
+        println!("Fee to service: {} units", fee_in_asset);
+        println!("Recipient: {}", recipient_address);
+        
+        // Create user wallet
+        let user_signer = SwSigner::new(user_mnemonic, false)?;
+        let user_descriptor = user_descriptor.parse()?;
+        let mut user_wollet = Wollet::new(self.network, NoPersist::new(), user_descriptor)?;
+        
+        // Sync both wallets
+        let update = self.electrum_client.full_scan(&self.wollet)?;
+        if let Some(update) = update {
+            self.wollet.apply_update(update)?;
+        }
+        
+        let update = self.electrum_client.full_scan(&user_wollet)?;
+        if let Some(update) = update {
+            user_wollet.apply_update(update)?;
+        }
+        
+        // Check user has enough asset
+        let user_balance = user_wollet.balance()?;
+        let user_asset_balance = user_balance.get(&asset_id).copied().unwrap_or(0);
+        println!("User asset balance: {} units", user_asset_balance);
+        
+        let total_asset_needed = amount + fee_in_asset;
+        if user_asset_balance < total_asset_needed {
+            return Err(format!(
+                "Insufficient asset balance. Available: {} units, Required: {} units (amount: {} + fee: {})",
+                user_asset_balance, total_asset_needed, amount, fee_in_asset
+            ).into());
+        }
+        
+        // Check fee service has LBTC for fees
+        let lbtc = self.wollet.policy_asset();
+        let fee_service_balance = self.wollet.balance().unwrap_or_default().get(&lbtc).copied().unwrap_or(0);
+        println!("Fee service LBTC balance: {} sats", fee_service_balance);
+        
+        if fee_service_balance == 0 {
+            return Err("Fee service has no LBTC to pay transaction fees".into());
+        }
+        
+        // Get fee service LBTC UTXO
+        let fee_utxo = self.wollet
+            .utxos()?
+            .into_iter()
+            .find(|u| u.unblinded.asset == lbtc)
+            .ok_or("Fee service has no LBTC UTXO available")?;
+        
+        println!("Fee service UTXO value: {} sats", fee_utxo.unblinded.value);
+        
+        // Convert to external UTXO format
+        let external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
+        
+        // Get fee service addresses
+        let fee_service_address = self.get_address()?;
+        
+        // Get user's asset UTXOs
+        let user_utxos = user_wollet
+            .utxos()?
+            .into_iter()
+            .filter(|u| u.unblinded.asset == asset_id)
+            .collect::<Vec<_>>();
+        
+        // Select asset UTXOs
+        let mut selected_value = 0u64;
+        let mut user_asset_utxos = vec![];
+        for utxo in &user_utxos {
+            user_asset_utxos.push(utxo.outpoint);
+            selected_value += utxo.unblinded.value;
+            if selected_value >= total_asset_needed {
+                break;
+            }
+        }
+        
+        println!("Selected {} asset UTXOs with total value: {} units", 
+                 user_asset_utxos.len(), selected_value);
+        
+        // Create unified transaction from user wallet
+        let mut tx_builder = user_wollet
+            .tx_builder()
+            // Send asset to recipient
+            .add_recipient(&recipient, amount, asset_id)?;
+        
+        // Only add fee payment if fee_in_asset > 0
+        if fee_in_asset > 0 {
+            tx_builder = tx_builder.add_recipient(&fee_service_address, fee_in_asset, asset_id)?;
+        }
+        
+        let mut pset = tx_builder
+            // Select user's asset UTXOs
+            .set_wallet_utxos(user_asset_utxos)
+            // Add fee service's LBTC UTXO
+            .add_external_utxos(vec![external_fee_utxo])?
+            // Drain all LBTC back to fee service
+            .drain_lbtc_wallet()
+            .drain_lbtc_to(fee_service_address.clone())
+            .finish()?;
+        
+        // Add details from both wallets for signing
+        self.wollet.add_details(&mut pset)?;
+        user_wollet.add_details(&mut pset)?;
+        
+        // Both parties sign their respective inputs
         let fee_sigs = self.signer.sign(&mut pset)?;
         let user_sigs = user_signer.sign(&mut pset)?;
         println!("Fee service signed {} inputs, User signed {} inputs", fee_sigs, user_sigs);
@@ -192,34 +470,132 @@ impl FeeService {
     }
 }
 
+/// Load environment variables from keys.env file
+fn load_env_file(file_path: &str) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+    let mut env_vars = HashMap::new();
+    
+    if !Path::new(file_path).exists() {
+        return Err(format!("Environment file {} not found", file_path).into());
+    }
+    
+    let contents = fs::read_to_string(file_path)?;
+    
+    for line in contents.lines() {
+        let line = line.trim();
+        
+        // Skip empty lines and comments
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        
+        // Split on first '=' to handle values that might contain '='
+        if let Some(eq_pos) = line.find('=') {
+            let key = line[..eq_pos].trim().to_string();
+            let value = line[eq_pos + 1..].trim();
+            
+            // Remove quotes if present
+            let value = value.trim_matches('"').trim_matches('\'').to_string();
+            
+            env_vars.insert(key, value);
+        }
+    }
+    
+    Ok(env_vars)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Fee Service Example");
-    println!("This demonstrates how a fee service allows users to send assets without having LBTC in his wallet to pay the fees.\n");
+    println!("This demonstrates how a fee service allows users to send assets without having LBTC in his wallet to pay the fees.");
+    
+    // Parse command line arguments
+    let args: Vec<String> = env::args().collect();
+    let use_unified = args.contains(&"unified".to_string());
+    
+    // Parse fee amount if provided after "unified"
+    let mut fee_from_args: Option<u64> = None;
+    if let Some(pos) = args.iter().position(|arg| arg == "unified") {
+        if let Some(fee_str) = args.get(pos + 1) {
+            fee_from_args = fee_str.parse().ok();
+        }
+    }
+    
+    if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
+        println!("\nUsage: cargo run -p lwk_wollet --features electrum --example fee_service [OPTIONS]");
+        println!("\nOptions:");
+        println!("  -- unified [FEE]   Use unified PSET approach (user pays fee service with asset)");
+        println!("                     FEE: Amount of asset to pay as fee (default: from keys.env or 2)");
+        println!("                     If FEE is 0, no fee payment to service is included");
+        println!("               Default: Use PSET merging approach");
+        println!("\nExamples:");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified 0");
+        println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified 5");
+        return Ok(());
+    }
+    
+    if use_unified {
+        println!("\nUsing unified PSET approach...");
+    } else {
+        println!("\nUsing PSET merging approach...");
+    }
+    
+    // Load environment variables from keys.env
+    let env_file_path = "lwk_wollet/examples/keys.env";
+    println!("Loading configuration from {}...", env_file_path);
+    
+    let env_vars = match load_env_file(env_file_path) {
+        Ok(vars) => vars,
+        Err(e) => {
+            println!("❌ ERROR: Failed to load {}: {}", env_file_path, e);
+            println!("\nPlease create a keys.env file with the following variables:");
+            println!("fee_service_mnemonic=\"your fee service mnemonic here\"");
+            println!("fee_service_descriptor=\"your fee service descriptor here\"");
+            println!("user_mnemonic=\"your user mnemonic here\"");
+            println!("user_descriptor=\"your user descriptor here\"");
+            println!("asset_id=\"your asset id here\"");
+            println!("amount=10");
+            println!("recipient_address=\"recipient address here\"");
+            println!("fee_in_asset=2  # Optional: for -- unified mode, how many asset units to pay as fee");
+            return Ok(());
+        }
+    };
     
     // Example wallets 
     let dummy_mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let dummy_descriptor = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+    let _dummy_descriptor = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
 
     // Fee service wallet needs to have LBTC to pay the fees.
-    let fee_service_mnemonic = dummy_mnemonic; // Replace with your own for testing
-    let fee_service_descriptor = dummy_descriptor; // Replace with your own for testing
+    let fee_service_mnemonic = env_vars.get("fee_service_mnemonic")
+        .ok_or("fee_service_mnemonic not found in keys.env")?;
+    let fee_service_descriptor = env_vars.get("fee_service_descriptor")
+        .ok_or("fee_service_descriptor not found in keys.env")?;
 
     // User wallet needs to have the asset to send.
-    let user_mnemonic = dummy_mnemonic; // Replace with your own for testing
-    let user_descriptor = dummy_descriptor; // Replace with your own for testing
+    let user_mnemonic = env_vars.get("user_mnemonic")
+        .ok_or("user_mnemonic not found in keys.env")?;
+    let user_descriptor = env_vars.get("user_descriptor")
+        .ok_or("user_descriptor not found in keys.env")?;
 
     // Transaction parameters
-    // You will need an issued asset to send. You can issue one with lwk_cli for testnet. Or use USDT for mainnet.
-    let dummy_asset_id = "0000000000000000000000000000000000000000000000000000000000000000";
-    let asset_id = dummy_asset_id; // Replace with your own asset ID
-    let amount = 10;
-    let recipient_address = "tlq1qqtwyzvawpx8lz2ghhkufzc5d79j3rvgse9hkt9l53j3dfs86jek7kc45ksdvzfgrt95hfag5sypkw72p3gzq2v7k5mt7ug8n6";
-    let electrum_url = "ssl://elements-testnet.blockstream.info:50002";
+    let asset_id = env_vars.get("asset_id")
+        .ok_or("asset_id not found in keys.env")?;
+    let amount: u64 = env_vars.get("amount")
+        .ok_or("amount not found in keys.env")?
+        .parse()
+        .map_err(|_| "Invalid amount value in keys.env")?;
+    let recipient_address = env_vars.get("recipient_address")
+        .ok_or("recipient_address not found in keys.env")?;
+    
+    // Default values that can be overridden
+    let electrum_url = env_vars.get("electrum_url")
+        .map(|s| s.as_str())
+        .unwrap_or("ssl://elements-testnet.blockstream.info:50002");
     let network = ElementsNetwork::LiquidTestnet;
 
     // Validate that dummy values have been replaced
-    if fee_service_mnemonic == dummy_mnemonic || user_mnemonic == dummy_mnemonic {
-        println!("❌ ERROR: You must replace the dummy wallet values with real ones!\n");
+    if fee_service_mnemonic == &dummy_mnemonic || user_mnemonic == &dummy_mnemonic {
+        println!("❌ ERROR: You must replace the dummy wallet values with real ones in keys.env!\n");
         println!("To run this example, you need to:");
         println!("1. Create two wallets using lwk_cli:");
         println!("   - Fee service wallet: Must have LBTC to pay transaction fees");
@@ -230,7 +606,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("3. Fund the fee service wallet with LBTC");
         println!("4. Issue an asset to the user wallet (or send existing assets):");
         println!("   lwk_cli wallet issue --wallet <name> --satoshi-asset <amount> --satoshi-token 0\n");
-        println!("5. Replace the dummy values in this file:");
+        println!("5. Update the values in keys.env:");
         println!("   - fee_service_mnemonic");
         println!("   - fee_service_descriptor");
         println!("   - user_mnemonic");
@@ -239,13 +615,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let dummy_asset_id = "0000000000000000000000000000000000000000000000000000000000000000";
     if asset_id == dummy_asset_id {
-        println!("❌ ERROR: You must replace the dummy asset_id with a real one!\n");
+        println!("❌ ERROR: You must replace the dummy asset_id with a real one in keys.env!\n");
         println!("To get an asset ID:");
         println!("1. Issue an asset using lwk_cli:");
         println!("   lwk_cli wallet issue --wallet <user-wallet> --satoshi-asset 1000 --satoshi-token 0\n");
         println!("2. Or use an existing asset like USDT on mainnet");
-        println!("3. Replace the asset_id variable with your asset ID");
+        println!("3. Update the asset_id value in keys.env");
         return Ok(());
     }
 
@@ -255,13 +632,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Fee service address: {}", fee_service.get_address()?);
     println!("\n=== Sending Asset with Fee Service ===");
     
-    match fee_service.send_asset_with_fee_service(
-        user_mnemonic,
-        user_descriptor,
-        asset_id,
-        amount,
-        recipient_address,
-    ) {
+    let result = if use_unified {
+        // Get fee_in_asset from command line args, then env vars, then default
+        let fee_in_asset: u64 = fee_from_args
+            .or_else(|| env_vars.get("fee_in_asset").and_then(|s| s.parse().ok()))
+            .unwrap_or(0); // Default: 0 units of asset as fee
+        
+        println!("Asset fee for service: {} units", fee_in_asset);
+        
+        fee_service.send_asset_with_fee_service_unified(
+            user_mnemonic,
+            user_descriptor,
+            asset_id,
+            amount,
+            recipient_address,
+            fee_in_asset,
+        )
+    } else {
+        fee_service.send_asset_with_fee_service_merging_psets(
+            user_mnemonic,
+            user_descriptor,
+            asset_id,
+            amount,
+            recipient_address,
+        )
+    };
+    
+    match result {
         Ok(txid) => println!("✅ Success! TXID: {}", txid),
         Err(e) => println!("❌ Error: {}", e),
     }

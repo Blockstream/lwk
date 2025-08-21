@@ -21,7 +21,7 @@ use std::sync::Arc;
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use tokio::sync::Mutex;
 
-use crate::wamp::common::{Arg, ClientRole, WampDict};
+use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
 use crate::{hex, Error};
 
@@ -152,25 +152,41 @@ impl<S: Stream> Amp0<S> {
         }
 
         // Step 3: Send login call
-        let login_msg = serde_json::json!([
-            48,
-            1,
-            {},
-            "com.greenaddress.login.watch_only_v2",
-            [
-                "custom",
-                {
-                    "username": hashed_username,
-                    "password": hashed_password,
-                    "minimal": "true"
-                },
-                "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3",
-                true
-            ]
-        ]);
+        #[derive(Serialize)]
+        struct Credentials {
+            username: String,
+            password: String,
+            minimal: String,
+        }
+        let credentials = Credentials {
+            username: hashed_username.into(),
+            password: hashed_password.into(),
+            minimal: "true".into(),
+        };
+
+        fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
+            let value = rmp_serde::encode::to_vec_named(value)?;
+            Ok(rmp_serde::decode::from_slice(&value)?)
+        }
+
+        let request = WampId::generate();
+        let args = vec![
+            "custom".into(),
+            to_value(&credentials)?,
+            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+            true.into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.watch_only_v2".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        let msg = serde_json::to_vec(&msg)?;
 
         self.stream
-            .write(login_msg.to_string().as_bytes())
+            .write(&msg)
             .await
             .map_err(|e| Error::Generic(format!("Failed to send login: {}", e)))?;
 

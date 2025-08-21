@@ -252,6 +252,12 @@ pub enum Error {
 
     #[error(transparent)]
     RmpvExtError(#[from] rmpv::ext::Error),
+
+    #[error(transparent)]
+    RmpSerdeDecodeError(#[from] rmp_serde::decode::Error),
+
+    #[error(transparent)]
+    RmpSerdeEncodeError(#[from] rmp_serde::encode::Error),
 }
 
 // cannot derive automatically with this error because of trait bound

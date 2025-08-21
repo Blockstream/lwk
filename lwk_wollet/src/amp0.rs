@@ -790,5 +790,8 @@ mod tests {
         );
 
         let _blob = amp0.get_blob().await.unwrap();
+
+        let amp_subaccount = 1;
+        let (_pointer, _script) = amp0.get_new_address(amp_subaccount).await.unwrap();
     }
 }

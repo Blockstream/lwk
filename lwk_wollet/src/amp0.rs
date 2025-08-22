@@ -95,7 +95,7 @@ pub struct Amp0Ext<S: Stream> {
     amp_subaccount: u32,
 
     /// Last returned address index
-    last_index: Option<u32>,
+    last_index: u32,
 }
 
 impl<S: Stream> Amp0Ext<S> {
@@ -157,19 +157,32 @@ impl<S: Stream> Amp0Ext<S> {
             amp0,
             network,
             amp_subaccount,
-            last_index: Some(last_index),
+            last_index,
         })
     }
 
     /// Get an address
     ///
     /// If `index` is None, a new address is returned.
-    pub async fn address(&self, _index: Option<u32>) -> Result<crate::AddressResult, Error> {
-        // vault.fund
-        // get address from lwk
-        // check they match (unconfidential)
-        // update last index
-        todo!();
+    pub async fn address(&mut self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+        match index {
+            Some(i) => {
+                if i > self.last_index {
+                    return Err(Error::Generic("Address index too high".into()));
+                }
+                Ok(self.wollet.address(index)?)
+            }
+            None => {
+                // Get a new address from Green server
+                let (pointer, _script) = self.amp0.get_new_address(self.amp_subaccount).await?;
+                // Get address from the LWK wollet
+                let addr = self.wollet.address(Some(pointer))?;
+                // TODO: check that script and addr match
+                // Update last index
+                self.last_index = pointer;
+                Ok(addr)
+            }
+        }
     }
 
     /// Ask AMP0 server to cosign and broadcast the transaction
@@ -917,7 +930,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(amp0ext.amp_subaccount, 1);
-        assert!(amp0ext.last_index.unwrap() > 20);
+        assert!(amp0ext.last_index > 20);
         let desc = amp0ext.wollet.descriptor().to_string();
         println!("{}", desc);
     }

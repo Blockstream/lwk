@@ -123,11 +123,7 @@ impl FeeService {
 
     /// Send an asset from user wallet using fee service to pay transaction fees
     /// This is the core functionality: user can send assets without needing LBTC
-    /// 
-    /// WARNING: This PSET merging approach is complex and error-prone.
-    /// Consider using send_asset_with_fee_service_unified() or
-    /// send_emulating_app_plus_server() for cleaner implementations.
-    pub fn send_asset_with_fee_service_merging_psets(
+    pub fn send_asset_with_fee_service(
         &mut self,
         user_mnemonic: &str,
         user_descriptor: &str,
@@ -139,8 +135,7 @@ impl FeeService {
         let asset_id: AssetId = asset_id.parse()?;
         let recipient: Address = recipient_address.parse()?;
         
-        println!("=== Fee Service Transaction (PSET Merging) ===");
-        println!("⚠️  WARNING: This approach is complex and error-prone. Consider using other methods.");
+        println!("=== Fee Service Transaction ===");
         println!("Asset ID: {}", asset_id);
         println!("Amount: {} units", amount);
         println!("Recipient: {}", recipient_address);
@@ -173,15 +168,14 @@ impl FeeService {
                 user_asset_balance, amount
             ).into());
         }
-
-        // Check fee service wallet has the asset
+        
+        // Check fee service asset balance
         let fee_balance = self.wollet.balance()?;
         let fee_asset_balance = fee_balance.get(&asset_id).copied().unwrap_or(0);
         println!("Fee service asset balance: {} units", fee_asset_balance);
         
         // Check fee service has LBTC for fees
         let lbtc = self.wollet.policy_asset();
-        println!("Fee service LBTC asset id: {}", lbtc);
         let fee_service_balance = self.wollet.balance().unwrap_or_default().get(&lbtc).copied().unwrap_or(0);
         println!("Fee service LBTC balance: {} sats", fee_service_balance);
         
@@ -199,6 +193,9 @@ impl FeeService {
         // Store the UTXO value for change calculation
         let fee_utxo_value = fee_utxo.unblinded.value;
         println!("Fee service UTXO value: {} sats", fee_utxo_value);
+        
+        // Convert to external UTXO format
+        let external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
         
         // Get fee service address for LBTC change
         let fee_service_address = self.get_address()?;
@@ -220,107 +217,27 @@ impl FeeService {
         let lbtc_change_amount = fee_utxo_value - estimated_fee;
         println!("LBTC change to fee service: {} sats", lbtc_change_amount);
         
-        // Get user's asset UTXOs
-        let user_utxos = user_wollet
-            .utxos()?
-            .into_iter()
-            .filter(|u| u.unblinded.asset == asset_id)
-            .collect::<Vec<_>>();
-        
-        if user_utxos.is_empty() {
-            return Err("User has no UTXOs for the specified asset".into());
-        }
-        
-        // Convert user UTXOs to external format for fee service wallet
-        let (external_user_utxos, user_utxo_value) = self.convert_user_utxos_to_external(&user_utxos, &user_wollet, amount)?;
-        
-        if user_utxo_value < amount {
-            return Err(format!(
-                "Insufficient asset balance. Available: {} units, Required: {} units",
-                user_utxo_value, amount
-            ).into());
-        }
-        
-        // Create transaction from fee service wallet perspective
-        let mut pset = self.wollet
-            .tx_builder()
-            // Add explicit LBTC change recipient for fee service
-            .add_lbtc_recipient(&fee_service_address, lbtc_change_amount)?
-            // Use fee service's LBTC UTXO for fees[]
-            .add_external_utxos(external_user_utxos)?
-            .finish()?;
-
-        // Get asset UTXOs from user wallet for manual selection
-        let mut selected_value = 0u64;
-        let mut user_asset_utxos = vec![];
-        for utxo in &user_utxos {
-            user_asset_utxos.push(utxo.outpoint);
-            selected_value += utxo.unblinded.value;
-            if selected_value >= amount {
-                break;
-            }
-        }
-        
-        // Create transaction 2 from user wallet perspective
-        let mut pset_user = user_wollet
+        // Create transaction: user sends asset, fee service provides LBTC UTXO for fees
+        let mut pset = user_wollet
             .tx_builder()
             .add_recipient(&recipient, amount, asset_id)?
-            // Manual selection of user's asset UTXOs
-            .set_wallet_utxos(user_asset_utxos)
+            // Add explicit LBTC change recipient for fee service
+            .add_lbtc_recipient(&fee_service_address, lbtc_change_amount)?
+            // Add Fee Service UTXO for fees
+            .add_external_utxos(vec![external_fee_utxo])?
             .finish()?;
             
-        // Add both wallets' details for signing
+        // Add fee service details for signing
         self.wollet.add_details(&mut pset)?;
-        user_wollet.add_details(&mut pset_user)?;
         
         // Fee service signs its LBTC input
         let fee_sigs = self.signer.sign(&mut pset)?;
-        let user_sigs = user_signer.sign(&mut pset_user)?;
+        let user_sigs = user_signer.sign(&mut pset)?;
         println!("Fee service signed {} inputs, User signed {} inputs", fee_sigs, user_sigs);
         
-        // Merge the two PSETs
-        println!("Merging PSETs...");
-        
-        // Create a new combined PSET
-        let mut combined_pset = elements::pset::PartiallySignedTransaction::new_v2();
-        
-        // Add all inputs from both PSETs
-        for input in pset.inputs() {
-            combined_pset.add_input(input.clone());
-        }
-        for input in pset_user.inputs() {
-            combined_pset.add_input(input.clone());
-        }
-        
-        // Add all outputs from both PSETs
-        // First, add recipient output from user PSET
-        for output in pset_user.outputs() {
-            combined_pset.add_output(output.clone());
-        }
-        
-        // Then add LBTC change output from fee service PSET
-        for output in pset.outputs() {
-            combined_pset.add_output(output.clone());
-        }
-        
-        println!("Combined PSET has {} inputs and {} outputs", 
-                 combined_pset.n_inputs(), combined_pset.n_outputs());
-        
-        // Add details from both wallets to the combined PSET
-        self.wollet.add_details(&mut combined_pset)?;
-        user_wollet.add_details(&mut combined_pset)?;
-        
-        // Try to finalize with both wallets
-        let finalized = match self.wollet.finalize(&mut combined_pset) {
-            Ok(tx) => tx,
-            Err(_) => {
-                // If fee service wallet can't finalize, try with user wallet
-                user_wollet.finalize(&mut combined_pset)?
-            }
-        };
-        
-        // Broadcast the transaction
-        let txid = self.electrum_client.broadcast(&finalized)?;
+        // Finalize and broadcast
+        let tx = user_wollet.finalize(&mut pset)?;
+        let txid = self.electrum_client.broadcast(&tx)?;
         
         println!("Transaction sent successfully!");
         println!("TXID: {}", txid);
@@ -725,15 +642,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
-    if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
+    if args.contains(&"help".to_string()) || args.contains(&"-h".to_string()) {
         println!("\nUsage: cargo run -p lwk_wollet --features electrum --example fee_service [OPTIONS]");
         println!("\nOptions:");
-        println!("  -- unified [FEE]         Use unified PSET approach (RECOMMENDED for production)");
+        println!("  -- unified [FEE]         Use unified PSET approach (with optional fee payment)");
         println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 2)");
         println!("                           If FEE is 0, no fee payment to service is included");
         println!("  -- splited_server [FEE]  Use split app/server approach (BEST for learning)");
         println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 0)");
-        println!("                 Default: Use PSET merging approach (NOT RECOMMENDED - complex)");
+        println!("                 Default: Basic fee service approach with manual fee calculation");
         println!("\nExamples:");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified");
@@ -749,7 +666,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if use_split_server {
         println!("\nUsing split app/server approach...");
     } else {
-        println!("\nUsing PSET merging approach...");
+        println!("\nUsing basic fee service approach...");
     }
     
     // Load environment variables from keys.env
@@ -877,7 +794,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fee_in_asset,
         )
     } else {
-        fee_service.send_asset_with_fee_service_merging_psets(
+        // Basic approach - no fee payment
+        fee_service.send_asset_with_fee_service(
             user_mnemonic,
             user_descriptor,
             asset_id,

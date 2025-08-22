@@ -8,7 +8,7 @@ use lwk_common::Signer;
 use lwk_signer::SwSigner;
 use lwk_wollet::{
     clients::blocking::BlockchainBackend,
-    elements::{Address, AssetId, Txid, Script},
+    elements::{Address, AssetId, Txid},
     ElectrumClient, ElementsNetwork, ExternalUtxo, NoPersist, Wollet, WolletDescriptor,
 };
 
@@ -39,14 +39,11 @@ impl FeeService {
         })
     }
 
-
-
     /// Get a new address from the fee service
     pub fn get_address(&self) -> Result<Address, Box<dyn std::error::Error>> {
         let address_result = self.wollet.address(None)?;
         Ok(address_result.address().clone())
     }
-
 
     /// Convert internal UTXO to external format for use by other wallets
     fn make_external_utxo(&self, utxo: &lwk_wollet::WalletTxOut) -> Result<ExternalUtxo, Box<dyn std::error::Error>> {
@@ -76,8 +73,60 @@ impl FeeService {
         })
     }
 
+    /// Convert user's UTXOs to external format for use by other wallets
+    fn convert_user_utxos_to_external(
+        &self,
+        user_utxos: &[lwk_wollet::WalletTxOut],
+        user_wollet: &Wollet,
+        required_amount: u64,
+    ) -> Result<(Vec<ExternalUtxo>, u64), Box<dyn std::error::Error>> {
+        let mut external_utxos = vec![];
+        let mut selected_value = 0u64;
+        
+        for utxo in user_utxos {
+            // Get the full transaction
+            let transactions = self.electrum_client.get_transactions(&[utxo.outpoint.txid])?;
+            let tx = transactions.into_iter().next()
+                .ok_or("Transaction not found")?;
+            
+            // Extract the specific output
+            let txout = tx.output.get(utxo.outpoint.vout as usize)
+                .ok_or("Invalid output index")?
+                .clone();
+            
+            // For non-segwit descriptors, include full transaction
+            let full_tx = if user_wollet.is_segwit() {
+                None
+            } else {
+                Some(tx)
+            };
+            
+            let external_utxo = ExternalUtxo {
+                outpoint: utxo.outpoint,
+                txout,
+                tx: full_tx,
+                unblinded: utxo.unblinded.clone(),
+                max_weight_to_satisfy: user_wollet.max_weight_to_satisfy(),
+            };
+            
+            external_utxos.push(external_utxo);
+            selected_value += utxo.unblinded.value;
+            
+            // Stop when we have enough
+            if selected_value >= required_amount {
+                break;
+            }
+        }
+        
+        Ok((external_utxos, selected_value))
+    }
+
     /// Send an asset from user wallet using fee service to pay transaction fees
     /// This is the core functionality: user can send assets without needing LBTC
+    /// 
+    /// WARNING: This PSET merging approach is complex and error-prone.
+    /// Consider using send_asset_with_fee_service_unified() or
+    /// send_emulating_app_plus_server() for cleaner implementations.
     pub fn send_asset_with_fee_service_merging_psets(
         &mut self,
         user_mnemonic: &str,
@@ -90,7 +139,8 @@ impl FeeService {
         let asset_id: AssetId = asset_id.parse()?;
         let recipient: Address = recipient_address.parse()?;
         
-        println!("=== Fee Service Transaction ===");
+        println!("=== Fee Service Transaction (PSET Merging) ===");
+        println!("⚠️  WARNING: This approach is complex and error-prone. Consider using other methods.");
         println!("Asset ID: {}", asset_id);
         println!("Amount: {} units", amount);
         println!("Recipient: {}", recipient_address);
@@ -150,9 +200,6 @@ impl FeeService {
         let fee_utxo_value = fee_utxo.unblinded.value;
         println!("Fee service UTXO value: {} sats", fee_utxo_value);
         
-        // Convert to external UTXO format
-        let _external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
-        
         // Get fee service address for LBTC change
         let fee_service_address = self.get_address()?;
         
@@ -185,42 +232,7 @@ impl FeeService {
         }
         
         // Convert user UTXOs to external format for fee service wallet
-        let mut external_user_utxos = vec![];
-        let mut user_utxo_value = 0u64;
-        for utxo in &user_utxos {
-            // Get the full transaction
-            let transactions = self.electrum_client.get_transactions(&[utxo.outpoint.txid])?;
-            let tx = transactions.into_iter().next()
-                .ok_or("Transaction not found")?;
-            
-            // Extract the specific output
-            let txout = tx.output.get(utxo.outpoint.vout as usize)
-                .ok_or("Invalid output index")?
-                .clone();
-            
-            // For non-segwit descriptors, include full transaction
-            let full_tx = if user_wollet.is_segwit() {
-                None
-            } else {
-                Some(tx)
-            };
-            
-            let external_utxo = ExternalUtxo {
-                outpoint: utxo.outpoint,
-                txout,
-                tx: full_tx,
-                unblinded: utxo.unblinded.clone(),
-                max_weight_to_satisfy: user_wollet.max_weight_to_satisfy(),
-            };
-            
-            external_user_utxos.push(external_utxo);
-            user_utxo_value += utxo.unblinded.value;
-            
-            // Stop when we have enough
-            if user_utxo_value >= amount {
-                break;
-            }
-        }
+        let (external_user_utxos, user_utxo_value) = self.convert_user_utxos_to_external(&user_utxos, &user_wollet, amount)?;
         
         if user_utxo_value < amount {
             return Err(format!(
@@ -291,21 +303,6 @@ impl FeeService {
             combined_pset.add_output(output.clone());
         }
         
-        // Add fee output
-        // let fee_output = elements::pset::Output {
-        //     amount: Some(estimated_fee),
-        //     amount_comm: None,
-        //     asset: Some(self.wollet.policy_asset()),
-        //     asset_comm: None,
-        //     script_pubkey: Script::default(),
-        //     value_rangeproof: None,
-        //     ecdh_pubkey: None,
-        //     blinder_index: None,
-        //     blind_value_proof: None,
-        //     ..Default::default()
-        // };
-        // combined_pset.add_output(fee_output);
-        
         println!("Combined PSET has {} inputs and {} outputs", 
                  combined_pset.n_inputs(), combined_pset.n_outputs());
         
@@ -365,9 +362,6 @@ impl FeeService {
             .ok_or("Server has no LBTC UTXO available")?;
         
         println!("Server UTXO value: {} sats", fee_utxo.unblinded.value);
-        
-        // Convert to external UTXO format
-        let _external_fee_utxo = self.make_external_utxo(&fee_utxo)?;
         
         // Get fee service address for receiving fee payment and LBTC change
         let fee_service_address = self.get_address()?;
@@ -481,42 +475,7 @@ impl FeeService {
             .collect::<Vec<_>>();
         
         // Convert to external UTXOs
-        let mut external_user_utxos = vec![];
-        let mut selected_value = 0u64;
-        for utxo in &user_utxos {
-            // Get the full transaction
-            let transactions = self.electrum_client.get_transactions(&[utxo.outpoint.txid])?;
-            let tx = transactions.into_iter().next()
-                .ok_or("Transaction not found")?;
-            
-            // Extract the specific output
-            let txout = tx.output.get(utxo.outpoint.vout as usize)
-                .ok_or("Invalid output index")?
-                .clone();
-            
-            // For non-segwit descriptors, include full transaction
-            let full_tx = if user_wollet.is_segwit() {
-                None
-            } else {
-                Some(tx)
-            };
-            
-            let external_utxo = ExternalUtxo {
-                outpoint: utxo.outpoint,
-                txout,
-                tx: full_tx,
-                unblinded: utxo.unblinded.clone(),
-                max_weight_to_satisfy: user_wollet.max_weight_to_satisfy(),
-            };
-            
-            external_user_utxos.push(external_utxo);
-            selected_value += utxo.unblinded.value;
-            
-            // Stop when we have enough
-            if selected_value >= total_asset_needed {
-                break;
-            }
-        }
+        let (external_user_utxos, selected_value) = self.convert_user_utxos_to_external(&user_utxos, &user_wollet, total_asset_needed)?;
         
         println!("Selected {} asset UTXOs with total value: {} units", 
                  external_user_utxos.len(), selected_value);
@@ -769,12 +728,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("\nUsage: cargo run -p lwk_wollet --features electrum --example fee_service [OPTIONS]");
         println!("\nOptions:");
-        println!("  -- unified [FEE]         Use unified PSET approach (user pays fee service with asset)");
+        println!("  -- unified [FEE]         Use unified PSET approach (RECOMMENDED for production)");
         println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 2)");
         println!("                           If FEE is 0, no fee payment to service is included");
-        println!("  -- splited_server [FEE]  Use split app/server approach with clear separation");
+        println!("  -- splited_server [FEE]  Use split app/server approach (BEST for learning)");
         println!("                           FEE: Amount of asset to pay as fee (default: from keys.env or 0)");
-        println!("                 Default: Use PSET merging approach");
+        println!("                 Default: Use PSET merging approach (NOT RECOMMENDED - complex)");
         println!("\nExamples:");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service");
         println!("  cargo run -p lwk_wollet --features electrum --example fee_service -- unified");

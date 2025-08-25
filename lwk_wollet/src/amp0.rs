@@ -101,7 +101,15 @@ pub struct LoginData {
 /// </div>
 #[allow(unused)]
 pub struct Amp0Ext<S: Stream> {
-    /// LWK watch-only wallet
+    /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
+    ///
+    /// <div class="warning">
+    /// <b>WARNING:</b>
+    ///
+    /// Do not use [`Wollet::address()`] and sync with [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`].
+    ///
+    /// See [`Amp0Ext`] for more details.
+    /// </div>
     pub wollet: Wollet,
 
     /// Green-backend actions

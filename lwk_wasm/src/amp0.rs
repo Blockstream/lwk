@@ -36,6 +36,30 @@ pub fn encrypt_credentials(username: &str, password: &str) -> String {
     format!("{}:{}", u, p)
 }
 
+/// Wrapper of [`lwk_wollet::amp0::Amp0Ext`]
+#[wasm_bindgen]
+pub struct Amp0Ext {
+    inner: lwk_wollet::amp0::Amp0Ext<WebSocketSerial>,
+}
+
+#[wasm_bindgen]
+impl Amp0Ext {
+    async fn new_with_network(
+        network: Network,
+        username: &str,
+        password: &str,
+        amp_id: &str,
+    ) -> Result<Self, Error> {
+        let url = lwk_wollet::amp0::default_url(network.into())?;
+        let websocket_serial = WebSocketSerial::new_wamp(url).await?;
+        let amp0 = lwk_wollet::amp0::Amp0::new(websocket_serial).await?;
+        let inner =
+            lwk_wollet::amp0::Amp0Ext::new(amp0, network.into(), username, password, amp_id)
+                .await?;
+        Ok(Self { inner })
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

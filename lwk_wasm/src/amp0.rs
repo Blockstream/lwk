@@ -40,6 +40,7 @@ pub fn encrypt_credentials(username: &str, password: &str) -> String {
 #[wasm_bindgen]
 pub struct Amp0Ext {
     inner: lwk_wollet::amp0::Amp0Ext<WebSocketSerial>,
+    network: Network,
 }
 
 #[wasm_bindgen]
@@ -56,7 +57,7 @@ impl Amp0Ext {
         let inner =
             lwk_wollet::amp0::Amp0Ext::new(amp0, network.into(), username, password, amp_id)
                 .await?;
-        Ok(Self { inner })
+        Ok(Self { inner, network })
     }
 
     pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {

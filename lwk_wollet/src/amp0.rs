@@ -127,6 +127,19 @@ pub struct Amp0Ext<S: Stream> {
     pub last_index: u32,
 }
 
+#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+impl Amp0Ext<WebSocketClient> {
+    pub async fn new_with_network(
+        network: Network,
+        username: &str,
+        password: &str,
+        amp_id: &str,
+    ) -> Result<Self, Error> {
+        let amp0 = Amp0::with_network(network).await?;
+        Self::new(amp0, network, username, password, amp_id).await
+    }
+}
+
 impl<S: Stream> Amp0Ext<S> {
     /// Create an AMP0 context
     ///

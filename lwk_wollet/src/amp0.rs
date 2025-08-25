@@ -83,7 +83,7 @@ pub struct LoginData {
 #[allow(unused)]
 pub struct Amp0Ext<S: Stream> {
     /// LWK watch-only wallet
-    wollet: Wollet,
+    pub wollet: Wollet,
 
     /// Green-backend actions
     amp0: Amp0<S>,

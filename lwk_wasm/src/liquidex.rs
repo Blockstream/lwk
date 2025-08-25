@@ -112,13 +112,12 @@ impl ValidatedLiquidexProposal {
 }
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
-    use lwk_wollet::{elements::hex::FromHex, elements_miniscript::descriptor};
     use serde_json::Value;
     use std::str::FromStr;
     use wasm_bindgen_test::*;
 
-    use super::{UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
-    use crate::{Address, Network, TxBuilder, Wollet, WolletDescriptor};
+    use super::UnvalidatedLiquidexProposal;
+    use crate::{Network, TxBuilder, Wollet, WolletDescriptor};
 
     #[wasm_bindgen_test]
     fn test_liquidex_proposal() {
@@ -177,7 +176,7 @@ mod tests {
             crate::AssetId::new("38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5")
                 .unwrap();
 
-        let mut builder = TxBuilder::new(&network);
+        let builder = TxBuilder::new(&network);
         let pset_maker = builder
             .liquidex_make(utxo, addr, 1, wanted_asset)
             .unwrap()
@@ -213,7 +212,7 @@ mod tests {
             crate::Update::deserialize_decrypted_base64(update_base64, &descriptor).unwrap();
         wollet.apply_update(&update).unwrap();
 
-        let mut builder = TxBuilder::new(&network);
+        let builder = TxBuilder::new(&network);
         let pset_taker = builder
             .liquidex_take([proposal].to_vec())
             .unwrap()

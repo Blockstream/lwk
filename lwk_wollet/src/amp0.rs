@@ -116,7 +116,7 @@ pub struct Amp0Ext<S: Stream> {
     amp0: Amp0<S>,
 
     /// Network
-    network: ElementsNetwork,
+    network: Network,
 
     /// AMP subaccount
     amp_subaccount: u32,
@@ -137,13 +137,13 @@ impl<S: Stream> Amp0Ext<S> {
     /// If empty, the first AMP0 subaccount is used.
     pub async fn new(
         amp0: Amp0<S>,
-        network: ElementsNetwork,
+        network: Network,
         username: &str,
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
-        let server_xpub = match network {
-            ElementsNetwork::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
+        let (elements_network, server_xpub) = match network {
+            Network::Liquid => (ElementsNetwork::Liquid, "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA"),
             _ => todo!(),
         };
         // connect to ga-backend
@@ -176,7 +176,7 @@ impl<S: Stream> Amp0Ext<S> {
 
         let wd = WolletDescriptor::from_str(&desc)?;
         // TODO: allow persistence
-        let wollet = Wollet::without_persist(network, wd)?;
+        let wollet = Wollet::without_persist(elements_network, wd)?;
 
         // get last index
         let (last_index, _script) = amp0.get_new_address(amp_subaccount).await?;
@@ -948,15 +948,9 @@ mod tests {
     async fn test_amp0_ext() {
         let amp0 = Amp0::with_network(Network::Liquid).await.unwrap();
 
-        let mut amp0ext = Amp0Ext::new(
-            amp0,
-            ElementsNetwork::Liquid,
-            "userleo456",
-            "userleo456",
-            "",
-        )
-        .await
-        .unwrap();
+        let mut amp0ext = Amp0Ext::new(amp0, Network::Liquid, "userleo456", "userleo456", "")
+            .await
+            .unwrap();
 
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);

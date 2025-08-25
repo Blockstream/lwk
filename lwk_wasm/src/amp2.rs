@@ -70,7 +70,6 @@ mod tests {
     use super::*;
     use wasm_bindgen_test::*;
 
-    use crate::WolletDescriptor;
     wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]

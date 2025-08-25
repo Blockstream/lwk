@@ -2,16 +2,13 @@
 //!
 //! A Peg-in is a way to convert bitcoin (BTC) on the mainchain to liquid bitcoin (L-BTC).
 
-use std::collections::HashMap;
-
 use elements::{bitcoin, BlockHeader};
-
-use crate::{ElementsNetwork, Error};
 
 /// Returns the height of the block containing full federation parameters
 ///
 /// For example in liquid only headers with `(height % 20160) == 0` contains full parameters
-fn height_with_fed_peg_script(network: ElementsNetwork, current_tip: u32) -> u32 {
+#[cfg(not(target_arch = "wasm32"))]
+fn height_with_fed_peg_script(network: crate::ElementsNetwork, current_tip: u32) -> u32 {
     // GetValidFedpegScripts # function in elements codebase for valid pegin scripts
 
     (current_tip / network.dynamic_epoch_length()) * network.dynamic_epoch_length()
@@ -30,14 +27,14 @@ pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fetch_last_full_header<B: crate::clients::blocking::BlockchainBackend>(
     client: &B,
-    network: ElementsNetwork,
+    network: crate::ElementsNetwork,
     current_tip: u32,
-) -> Result<BlockHeader, Error> {
+) -> Result<BlockHeader, crate::Error> {
     let height = height_with_fed_peg_script(network, current_tip);
-    let mut headers = client.get_headers(&[height], &HashMap::new())?;
+    let mut headers = client.get_headers(&[height], &std::collections::HashMap::new())?;
     headers
         .pop()
-        .ok_or(Error::Generic("No headers returned".to_string()))
+        .ok_or(crate::Error::Generic("No headers returned".to_string()))
 }
 
 #[cfg(test)]

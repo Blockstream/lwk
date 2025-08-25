@@ -648,15 +648,19 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
 }
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+async fn stream_with_network(network: Network) -> Result<WebSocketClient, Error> {
+    let url = default_url(network)?;
+    let stream = WebSocketClient::connect_wamp(url)
+        .await
+        .map_err(|e| Error::Generic(e.to_string()))?;
+    Ok(stream)
+}
+
+#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 impl Amp0<WebSocketClient> {
     pub async fn with_network(network: Network) -> Result<Self, Error> {
-        let url = default_url(network)?;
-
-        Ok(Self {
-            stream: WebSocketClient::connect_wamp(url)
-                .await
-                .map_err(|e| Error::Generic(e.to_string()))?,
-        })
+        let stream = stream_with_network(network).await?;
+        Ok(Self { stream })
     }
 }
 

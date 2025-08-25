@@ -4,11 +4,11 @@ use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::amp0::Amp0`]
 #[wasm_bindgen]
-pub struct Amp0 {
+pub struct Amp0Inner {
     inner: lwk_wollet::amp0::Amp0<WebSocketSerial>,
 }
 #[wasm_bindgen]
-impl Amp0 {
+impl Amp0Inner {
     pub async fn new_with_network(network: Network) -> Result<Self, Error> {
         let url = lwk_wollet::amp0::default_url(network.into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
@@ -107,12 +107,12 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_amp0_just_connect() {
-        let _amp0 = Amp0::new_testnet().await.unwrap();
+        let _amp0 = Amp0Inner::new_testnet().await.unwrap();
     }
 
     #[wasm_bindgen_test]
     async fn test_amp0_login() {
-        let amp0 = Amp0::new_mainnet().await.unwrap();
+        let amp0 = Amp0Inner::new_mainnet().await.unwrap();
         let login_response = amp0.login("userleo456", "userleo456").await.unwrap();
 
         assert!(login_response.contains("GA2zxWdhAYtREeYCVFTGRhHQmYMPAP"));

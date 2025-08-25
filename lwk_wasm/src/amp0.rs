@@ -60,23 +60,32 @@ impl Amp0Ext {
         Ok(Self { inner, network })
     }
 
+    /// Create a new AMP0 context for testnet
     pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::testnet(), username, password, amp_id).await
     }
 
+    /// Create a new AMP0 context for mainnet
     pub async fn new_mainnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::mainnet(), username, password, amp_id).await
     }
 
+    /// Index of the last returned address
+    ///
+    /// Use this and [`crate::EsploraClient::full_scan_to_index()`] to sync the `Wollet`
     pub fn last_index(&self) -> u32 {
         self.inner.last_index
     }
 
+    /// Get an address
+    ///
+    /// If `index` is None, a new address is returned.
     pub async fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
         let address_result = self.inner.address(index).await?;
         Ok(address_result.into())
     }
 
+    /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
     pub fn wollet(&self) -> Result<crate::Wollet, Error> {
         Ok(crate::Wollet::new(
             &self.network,

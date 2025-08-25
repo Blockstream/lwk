@@ -122,5 +122,22 @@ mod tests {
         let addr = amp0.address(None).await.unwrap();
         assert_eq!(addr.index(), last_index + 1);
         assert_eq!(amp0.last_index(), last_index + 1);
+
+        // Sync the wollet
+        let mut wollet = amp0.wollet().unwrap();
+
+        let network = Network::mainnet();
+        let mut client = network.default_esplora_client();
+        let update = client.full_scan(&wollet).await.unwrap().unwrap();
+
+        wollet.apply_update(&update).unwrap();
+        let balance = wollet.balance().unwrap();
+        use std::collections::HashMap;
+        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
+            serde_wasm_bindgen::from_value(balance).unwrap();
+        let lbtc = lwk_wollet::ElementsNetwork::Liquid.policy_asset();
+        let mut expected = HashMap::new();
+        expected.insert(lbtc, 0);
+        assert_eq!(balance, expected);
     }
 }

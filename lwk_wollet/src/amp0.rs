@@ -29,7 +29,7 @@ use crate::{ElementsNetwork, Wollet, WolletDescriptor};
 use elements::pset::PartiallySignedTransaction;
 use elements::Txid;
 
-pub struct Amp0<S: Stream> {
+pub struct Amp0Inner<S: Stream> {
     stream: S,
 }
 
@@ -113,7 +113,7 @@ pub struct Amp0Ext<S: Stream> {
     pub wollet: Wollet,
 
     /// Green-backend actions
-    amp0: Amp0<S>,
+    amp0: Amp0Inner<S>,
 
     /// Network
     network: Network,
@@ -160,7 +160,7 @@ impl<S: Stream> Amp0Ext<S> {
             _ => todo!(),
         };
         // connect to ga-backend
-        let amp0 = Amp0::new(stream).await?;
+        let amp0 = Amp0Inner::new(stream).await?;
         // login.watch_only_v2
         // parse login data
         let login_data = amp0.login(username, password).await?;
@@ -235,7 +235,7 @@ impl<S: Stream> Amp0Ext<S> {
     }
 }
 
-impl<S: Stream> Amp0<S> {
+impl<S: Stream> Amp0Inner<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })
     }
@@ -658,7 +658,7 @@ async fn stream_with_network(network: Network) -> Result<WebSocketClient, Error>
 }
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
-impl Amp0<WebSocketClient> {
+impl Amp0Inner<WebSocketClient> {
     pub async fn with_network(network: Network) -> Result<Self, Error> {
         let stream = stream_with_network(network).await?;
         Ok(Self { stream })
@@ -905,13 +905,13 @@ mod tests {
         );
     }
 
-    /// Test Amp0 login functionality with proper WAMP protocol flow
+    /// Test Amp0Inner login functionality with proper WAMP protocol flow
     /// This test demonstrates the complete WAMP handshake + login flow
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_fail_login() {
-        let amp0 = Amp0::with_network(Network::Liquid)
+        let amp0 = Amp0Inner::with_network(Network::Liquid)
             .await
             .expect("Failed to connect to WebSocket");
 
@@ -935,7 +935,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ok_login() {
-        let amp0 = Amp0::with_network(Network::Liquid)
+        let amp0 = Amp0Inner::with_network(Network::Liquid)
             .await
             .expect("Failed to connect to WebSocket");
 

@@ -5,14 +5,14 @@ use wasm_bindgen::prelude::*;
 /// Wrapper of [`lwk_wollet::amp0::Amp0`]
 #[wasm_bindgen]
 pub struct Amp0Inner {
-    inner: lwk_wollet::amp0::Amp0<WebSocketSerial>,
+    inner: lwk_wollet::amp0::Amp0Inner<WebSocketSerial>,
 }
 #[wasm_bindgen]
 impl Amp0Inner {
     pub async fn new_with_network(network: Network) -> Result<Self, Error> {
         let url = lwk_wollet::amp0::default_url(network.into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
-        let inner = lwk_wollet::amp0::Amp0::new(websocket_serial).await?;
+        let inner = lwk_wollet::amp0::Amp0Inner::new(websocket_serial).await?;
         Ok(Self { inner })
     }
 

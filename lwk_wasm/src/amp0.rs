@@ -66,6 +66,10 @@ impl Amp0Ext {
     pub async fn new_mainnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::mainnet(), username, password, amp_id).await
     }
+
+    pub fn last_index(&self) -> u32 {
+        self.inner.last_index
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

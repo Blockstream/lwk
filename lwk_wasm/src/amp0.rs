@@ -105,10 +105,14 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_amp0ext() {
-        let amp0 = Amp0Ext::new_mainnet("userleo456", "userleo456", "")
+        let mut amp0 = Amp0Ext::new_mainnet("userleo456", "userleo456", "")
             .await
             .unwrap();
         let last_index = amp0.last_index();
         assert!(last_index > 20);
+
+        let addr = amp0.address(None).await.unwrap();
+        assert_eq!(addr.index(), last_index + 1);
+        assert_eq!(amp0.last_index(), last_index + 1);
     }
 }

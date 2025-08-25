@@ -963,11 +963,10 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext() {
-        let amp0 = Amp0::with_network(Network::Liquid).await.unwrap();
-
-        let mut amp0ext = Amp0Ext::new(amp0, Network::Liquid, "userleo456", "userleo456", "")
-            .await
-            .unwrap();
+        let mut amp0ext =
+            Amp0Ext::new_with_network(Network::Liquid, "userleo456", "userleo456", "")
+                .await
+                .unwrap();
 
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);

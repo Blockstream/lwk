@@ -38,13 +38,13 @@ pub fn encrypt_credentials(username: &str, password: &str) -> String {
 
 /// Wrapper of [`lwk_wollet::amp0::Amp0Ext`]
 #[wasm_bindgen]
-pub struct Amp0Ext {
+pub struct Amp0 {
     inner: lwk_wollet::amp0::Amp0Ext<WebSocketSerial>,
     network: Network,
 }
 
 #[wasm_bindgen]
-impl Amp0Ext {
+impl Amp0 {
     pub async fn new_with_network(
         network: Network,
         username: &str,
@@ -126,7 +126,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_amp0ext() {
-        let mut amp0 = Amp0Ext::new_mainnet("userleo456", "userleo456", "")
+        let mut amp0 = Amp0::new_mainnet("userleo456", "userleo456", "")
             .await
             .unwrap();
         let last_index = amp0.last_index();

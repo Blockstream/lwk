@@ -76,6 +76,13 @@ impl Amp0Ext {
         let address_result = self.inner.address(index).await?;
         Ok(address_result.into())
     }
+
+    pub fn wollet(&self) -> Result<crate::Wollet, Error> {
+        Ok(crate::Wollet::new(
+            &self.network,
+            &self.inner.wollet.wollet_descriptor().into(),
+        )?)
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

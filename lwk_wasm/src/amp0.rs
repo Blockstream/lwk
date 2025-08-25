@@ -58,6 +58,14 @@ impl Amp0Ext {
                 .await?;
         Ok(Self { inner })
     }
+
+    pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
+        Self::new_with_network(Network::testnet(), username, password, amp_id).await
+    }
+
+    pub async fn new_mainnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
+        Self::new_with_network(Network::mainnet(), username, password, amp_id).await
+    }
 }
 
 #[cfg(all(test, target_arch = "wasm32"))]

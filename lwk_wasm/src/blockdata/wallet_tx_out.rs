@@ -95,7 +95,6 @@ impl OptionWalletTxOut {
 mod tests {
     use super::WalletTxOut;
     use lwk_wollet::elements::{self, hex::ToHex};
-    use std::str::FromStr;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]

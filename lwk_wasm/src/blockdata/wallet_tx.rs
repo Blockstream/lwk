@@ -77,7 +77,6 @@ mod tests {
     use crate::WalletTx;
     use lwk_wollet::elements::{self, hex::FromHex, pset::serialize::Deserialize};
     use std::collections::HashMap;
-    use std::str::FromStr;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]

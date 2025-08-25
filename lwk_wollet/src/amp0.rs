@@ -131,7 +131,7 @@ impl<S: Stream> Amp0Ext<S> {
     /// Create an AMP0 context
     ///
     /// `username` and `password` are the watch-only credentials as they're used in Blockstream
-    /// Apps or with GDK.
+    /// App or with GDK.
     ///
     /// `amp_id` is a AMP0 subaccount GAID belonging to the wallet.
     /// If empty, the first AMP0 subaccount is used.

@@ -681,6 +681,7 @@ impl EsploraClient {
         Ok(result)
     }
 
+    #[allow(unused)]
     pub(crate) fn capabilities(&self) -> HashSet<Capability> {
         if self.waterfalls {
             vec![Capability::Waterfalls].into_iter().collect()
@@ -782,6 +783,9 @@ impl EsploraClientBuilder {
             ));
         }
         let headers = (&self.headers).try_into().expect("Expected valid headers");
+        #[cfg(target_arch = "wasm32")]
+        let builder = reqwest::Client::builder().default_headers(headers);
+        #[cfg(not(target_arch = "wasm32"))]
         let mut builder = reqwest::Client::builder().default_headers(headers);
         // See https://github.com/seanmonstar/reqwest/issues/1135
         #[cfg(not(target_arch = "wasm32"))]

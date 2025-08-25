@@ -89,10 +89,10 @@ pub struct LoginData {
 ///
 /// Callers must be careful with the following:
 /// * <b>Addresses: </b>
-///   to get addresses instead of using [`Wollet::address()`] use [`Amp0Ext::address()`]. This ensures
+///   to get addresses instead of using [`Wollet::address()`] use [`Amp0::address()`]. This ensures
 ///   that all addresses used are correctly monitored by the AMP0 server.
 /// * <b>Syncing: </b>
-///   to sync the AMP0 `Wollet` [`Amp0Ext::wollet`], use [`Amp0Ext::last_index`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
+///   to sync the AMP0 `Wollet` [`Amp0::wollet`], use [`Amp0::last_index`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
 ///
 /// <i>
 /// Failing to do the above might lead to inconsistent states, where funds are not shown or they
@@ -100,7 +100,7 @@ pub struct LoginData {
 /// </i>
 /// </div>
 #[allow(unused)]
-pub struct Amp0Ext<S: Stream> {
+pub struct Amp0<S: Stream> {
     /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
     ///
     /// <div class="warning">
@@ -108,7 +108,7 @@ pub struct Amp0Ext<S: Stream> {
     ///
     /// Do not use [`Wollet::address()`] and sync with [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`].
     ///
-    /// See [`Amp0Ext`] for more details.
+    /// See [`Amp0`] for more details.
     /// </div>
     pub wollet: Wollet,
 
@@ -128,7 +128,7 @@ pub struct Amp0Ext<S: Stream> {
 }
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
-impl Amp0Ext<WebSocketClient> {
+impl Amp0<WebSocketClient> {
     pub async fn new_with_network(
         network: Network,
         username: &str,
@@ -140,7 +140,7 @@ impl Amp0Ext<WebSocketClient> {
     }
 }
 
-impl<S: Stream> Amp0Ext<S> {
+impl<S: Stream> Amp0<S> {
     /// Create an AMP0 context
     ///
     /// `username` and `password` are the watch-only credentials as they're used in Blockstream
@@ -965,7 +965,7 @@ mod tests {
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext() {
         let mut amp0ext =
-            Amp0Ext::new_with_network(Network::Liquid, "userleo456", "userleo456", "")
+            Amp0::new_with_network(Network::Liquid, "userleo456", "userleo456", "")
                 .await
                 .unwrap();
 

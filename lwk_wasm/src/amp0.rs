@@ -36,10 +36,10 @@ pub fn encrypt_credentials(username: &str, password: &str) -> String {
     format!("{}:{}", u, p)
 }
 
-/// Wrapper of [`lwk_wollet::amp0::Amp0Ext`]
+/// Wrapper of [`lwk_wollet::amp0::Amp0`]
 #[wasm_bindgen]
 pub struct Amp0 {
-    inner: lwk_wollet::amp0::Amp0Ext<WebSocketSerial>,
+    inner: lwk_wollet::amp0::Amp0<WebSocketSerial>,
     network: Network,
 }
 
@@ -53,7 +53,7 @@ impl Amp0 {
     ) -> Result<Self, Error> {
         let url = lwk_wollet::amp0::default_url(network.into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
-        let inner = lwk_wollet::amp0::Amp0Ext::new(
+        let inner = lwk_wollet::amp0::Amp0::new(
             websocket_serial,
             network.into(),
             username,

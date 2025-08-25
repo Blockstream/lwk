@@ -45,7 +45,7 @@ pub struct Amp0Ext {
 
 #[wasm_bindgen]
 impl Amp0Ext {
-    async fn new_with_network(
+    pub async fn new_with_network(
         network: Network,
         username: &str,
         password: &str,

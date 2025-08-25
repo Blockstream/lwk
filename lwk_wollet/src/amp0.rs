@@ -121,7 +121,9 @@ pub struct Amp0Ext<S: Stream> {
     /// AMP subaccount
     amp_subaccount: u32,
 
-    /// Last returned address index
+    /// Index of the last returned address.
+    ///
+    /// Use this and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`] to sync the `Wollet`
     pub last_index: u32,
 }
 

@@ -135,8 +135,8 @@ impl Amp0Ext<WebSocketClient> {
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
-        let amp0 = Amp0::with_network(network).await?;
-        Self::new(amp0, network, username, password, amp_id).await
+        let stream = stream_with_network(network).await?;
+        Self::new(stream, network, username, password, amp_id).await
     }
 }
 
@@ -149,7 +149,7 @@ impl<S: Stream> Amp0Ext<S> {
     /// `amp_id` is a AMP0 subaccount GAID belonging to the wallet.
     /// If empty, the first AMP0 subaccount is used.
     pub async fn new(
-        amp0: Amp0<S>,
+        stream: S,
         network: Network,
         username: &str,
         password: &str,
@@ -160,6 +160,7 @@ impl<S: Stream> Amp0Ext<S> {
             _ => todo!(),
         };
         // connect to ga-backend
+        let amp0 = Amp0::new(stream).await?;
         // login.watch_only_v2
         // parse login data
         let login_data = amp0.login(username, password).await?;

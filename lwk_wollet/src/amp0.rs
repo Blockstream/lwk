@@ -89,10 +89,10 @@ pub struct LoginData {
 ///
 /// Callers must be careful with the following:
 /// * <b>Addresses: </b>
-/// to get addresses instead of using [`Wollet::address()`] use [`Amp0Ext::address()`]. This ensures
-/// that all addresses used are correctly monitored by the AMP0 server.
+///   to get addresses instead of using [`Wollet::address()`] use [`Amp0Ext::address()`]. This ensures
+///   that all addresses used are correctly monitored by the AMP0 server.
 /// * <b>Syncing: </b>
-/// to sync the AMP0 `Wollet` [`Amp0Ext::wollet`], use [`Amp0Ext::last_index`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
+///   to sync the AMP0 `Wollet` [`Amp0Ext::wollet`], use [`Amp0Ext::last_index`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
 ///
 /// <i>
 /// Failing to do the above might lead to inconsistent states, where funds are not shown or they

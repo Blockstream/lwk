@@ -95,7 +95,7 @@ pub struct Amp0Ext<S: Stream> {
     amp_subaccount: u32,
 
     /// Last returned address index
-    last_index: u32,
+    pub last_index: u32,
 }
 
 impl<S: Stream> Amp0Ext<S> {

@@ -1,4 +1,4 @@
-use crate::{Error, Network, WebSocketSerial};
+use crate::{AddressResult, Error, Network, WebSocketSerial};
 
 use wasm_bindgen::prelude::*;
 
@@ -69,6 +69,11 @@ impl Amp0Ext {
 
     pub fn last_index(&self) -> u32 {
         self.inner.last_index
+    }
+
+    pub async fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
+        let address_result = self.inner.address(index).await?;
+        Ok(address_result.into())
     }
 }
 

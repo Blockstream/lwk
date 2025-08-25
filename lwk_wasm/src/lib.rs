@@ -116,7 +116,6 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_data() {
         let network = Network::testnet();
-        let mut client = network.default_esplora_client();
 
         let mnemonic = crate::Mnemonic::new(include_str!(
             "../test_data/update_with_mnemonic/mnemonic.txt"

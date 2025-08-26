@@ -229,7 +229,7 @@ impl<S: Stream> Amp0<S> {
     }
 
     /// Ask AMP0 server to cosign and broadcast the transaction
-    pub async fn send(_pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+    pub async fn send(&self, _pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
         // vault.send_raw_tx
         todo!();
     }
@@ -832,6 +832,46 @@ impl Stream for WebSocketClient {
             write_stream.send(Message::Binary(data.to_vec())).await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod blocking {
+    use super::*;
+    use tokio::runtime::Runtime;
+
+    pub struct Amp0 {
+        rt: Runtime,
+        inner: super::Amp0<super::WebSocketClient>,
+    }
+
+    impl Amp0 {
+        pub fn last_index(&self) -> u32 {
+            self.inner.last_index
+        }
+
+        // TODO: wollet or wollet_descriptor
+
+        pub fn new(
+            network: Network,
+            username: &str,
+            password: &str,
+            amp_id: &str,
+        ) -> Result<Self, Error> {
+            let rt = Runtime::new()?;
+            let inner = rt.block_on(super::Amp0::<WebSocketClient>::new_with_network(
+                network, username, password, amp_id,
+            ))?;
+            Ok(Amp0 { rt, inner })
+        }
+
+        pub fn address(&mut self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+            self.rt.block_on(self.inner.address(index))
+        }
+
+        pub fn send(&self, pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+            self.rt.block_on(self.inner.send(pset))
+        }
     }
 }
 

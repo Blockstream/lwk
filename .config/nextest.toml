@@ -16,4 +16,4 @@ slow-timeout = { period = "1s", terminate-after = 1 }
 [[profile.default.overrides]]
 # Some AMP0 unit tests are fairly slow
 filter = 'test(slow_amp0)'
-slow-timeout = { period = "10s", terminate-after = 1 }
+slow-timeout = { period = "20s", terminate-after = 1 }

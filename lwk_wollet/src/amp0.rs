@@ -129,6 +129,7 @@ pub struct Amp0<S: Stream> {
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 impl Amp0<WebSocketClient> {
+    /// Create a new AMP0 context
     pub async fn new_with_network(
         network: Network,
         username: &str,

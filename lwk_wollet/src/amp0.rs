@@ -29,18 +29,18 @@ use crate::{ElementsNetwork, Wollet, WolletDescriptor};
 use elements::pset::PartiallySignedTransaction;
 use elements::Txid;
 
-pub struct Amp0Inner<S: Stream> {
+struct Amp0Inner<S: Stream> {
     stream: S,
 }
 
-pub const WATCH_ONLY_SALT: [u8; 8] = [0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
-pub const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
-pub const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
-pub const WO_SEED_K: [u8; 8] = [0x03, 0x77, 0x6f, 0x5f, 0x62, 0x6C, 0x6f, 0x62]; // [3]'wo_blob'
+const WATCH_ONLY_SALT: [u8; 8] = [0x5f, 0x77, 0x6f, 0x5f, 0x73, 0x61, 0x6c, 0x74]; // '_wo_salt'
+const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // [1]'wo_user'
+const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
+const WO_SEED_K: [u8; 8] = [0x03, 0x77, 0x6f, 0x5f, 0x62, 0x6C, 0x6f, 0x62]; // [3]'wo_blob'
 
 /// Green subaccount data returned at login
 #[derive(Debug, Deserialize, Serialize)]
-pub struct GreenSubaccount {
+struct GreenSubaccount {
     /// Subaccount pointer
     pub pointer: u32,
 
@@ -62,7 +62,7 @@ pub struct GreenSubaccount {
 ///
 /// Only the content that we use
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LoginData {
+struct LoginData {
     /// Derivation path used to derive the Green server xpub
     ///
     /// 128 hex chars
@@ -78,7 +78,6 @@ pub struct LoginData {
     pub subaccounts: Vec<GreenSubaccount>,
 }
 
-// TODO: rename Amp0 to Amp0Inner
 /// Context for actions related to an AMP0 (sub)account
 ///
 /// <div class="warning">
@@ -445,7 +444,7 @@ impl<S: Stream> Amp0Inner<S> {
     }
 }
 
-pub fn get_entropy(username: &str, password: &str) -> [u8; 64] {
+fn get_entropy(username: &str, password: &str) -> [u8; 64] {
     // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
     let salt_string: &[u8] = &WATCH_ONLY_SALT;
 
@@ -590,11 +589,7 @@ pub fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
     Ok(BlobContent { slip77_key, xpubs })
 }
 
-pub fn derive_server_xpub(
-    xpub: &str,
-    gait_path: &str,
-    amp_subaccount: u32,
-) -> Result<String, Error> {
+fn derive_server_xpub(xpub: &str, gait_path: &str, amp_subaccount: u32) -> Result<String, Error> {
     // TODO: replace xpub with network
     // TODO: find server fingerprint
     // TODO: derive the server key instead of having this crazy long path
@@ -641,7 +636,7 @@ pub fn amp_descriptor(
     Ok(desc)
 }
 
-pub fn default_url(network: Network) -> Result<&'static str, Error> {
+fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
         Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),
@@ -660,7 +655,8 @@ async fn stream_with_network(network: Network) -> Result<WebSocketClient, Error>
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 impl Amp0Inner<WebSocketClient> {
-    pub async fn with_network(network: Network) -> Result<Self, Error> {
+    #[allow(unused)]
+    async fn with_network(network: Network) -> Result<Self, Error> {
         let stream = stream_with_network(network).await?;
         Ok(Self { stream })
     }

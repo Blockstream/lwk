@@ -60,7 +60,7 @@ impl Amp0 {
     pub fn wollet(&self) -> Result<crate::Wollet, Error> {
         Ok(crate::Wollet::new(
             &self.network,
-            &self.inner.wollet.wollet_descriptor().into(),
+            &self.inner.wollet_descriptor().into(),
         )?)
     }
 }

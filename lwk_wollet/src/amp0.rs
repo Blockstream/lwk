@@ -101,7 +101,7 @@ struct LoginData {
 #[allow(unused)]
 pub struct Amp0<S: Stream> {
     /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
-    pub wollet: Wollet,
+    wollet: Wollet,
 
     /// Green-backend actions
     amp0: Amp0Inner<S>,

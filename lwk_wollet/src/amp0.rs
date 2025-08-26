@@ -476,7 +476,7 @@ fn get_entropy(username: &str, password: &str) -> [u8; 64] {
     output
 }
 
-pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
+fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     let entropy = get_entropy(username, password);
 
     // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/ga_session.cpp#L222
@@ -491,7 +491,7 @@ pub fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     (hex::encode(&u_blob), hex::encode(&p_blob))
 }
 
-pub fn decrypt_blob_key(
+fn decrypt_blob_key(
     username: &str,
     password: &str,
     wo_blob_key_hex: &str,
@@ -512,7 +512,7 @@ pub fn decrypt_blob_key(
     Ok(enc_key)
 }
 
-pub fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
+fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     let wo_blob = BASE64_STANDARD
         .decode(blob64)
         .map_err(|e| Error::Generic(e.to_string()))?;
@@ -534,7 +534,7 @@ pub fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     Ok(plaintext)
 }
 
-pub fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
+fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
     // decompress
     // bytes 0 to 4 are prefix
     // bytes 4 to 8 are ignored
@@ -549,7 +549,7 @@ pub fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
 }
 
 /// Useful content from the client blob
-pub struct BlobContent {
+struct BlobContent {
     /// Wallet "master"/descriptor blinding key (always slip77)
     pub slip77_key: String,
 
@@ -557,7 +557,7 @@ pub struct BlobContent {
     pub xpubs: HashMap<Xpub, Vec<u32>>,
 }
 
-pub fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
+fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
     let value = value
         .as_array()
         .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
@@ -616,7 +616,7 @@ impl BlobContent {
     }
 }
 
-pub fn amp_descriptor(
+fn amp_descriptor(
     blob: BlobContent,
     amp_subaccount: u32,
     server_key: &str,

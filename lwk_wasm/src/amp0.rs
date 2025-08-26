@@ -45,6 +45,7 @@ pub struct Amp0 {
 
 #[wasm_bindgen]
 impl Amp0 {
+    /// Create a new AMP0 context for the specified network
     pub async fn new_with_network(
         network: Network,
         username: &str,

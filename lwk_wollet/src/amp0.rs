@@ -120,10 +120,8 @@ pub struct Amp0<S: Stream> {
     /// AMP subaccount
     amp_subaccount: u32,
 
-    /// Index of the last returned address.
-    ///
-    /// Use this and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`] to sync the `Wollet`
-    pub last_index: u32,
+    /// Index of the last returned address
+    last_index: u32,
 }
 
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
@@ -202,6 +200,13 @@ impl<S: Stream> Amp0<S> {
             amp_subaccount,
             last_index,
         })
+    }
+
+    /// Index of the last returned address.
+    ///
+    /// Use this and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`] to sync the `Wollet`
+    pub fn last_index(&self) -> u32 {
+        self.last_index
     }
 
     /// Get an address

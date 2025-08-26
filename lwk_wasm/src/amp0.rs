@@ -45,7 +45,7 @@ impl Amp0 {
     ///
     /// Use this and [`crate::EsploraClient::full_scan_to_index()`] to sync the `Wollet`
     pub fn last_index(&self) -> u32 {
-        self.inner.last_index
+        self.inner.last_index()
     }
 
     /// Get an address

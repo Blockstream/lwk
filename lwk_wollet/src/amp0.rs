@@ -636,7 +636,7 @@ fn amp_descriptor(
     Ok(desc)
 }
 
-fn default_url(network: Network) -> Result<&'static str, Error> {
+pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),
         Network::TestnetLiquid => Ok("wss://green-liquid-testnet.blockstream.com/v2/ws/"),

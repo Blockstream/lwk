@@ -101,14 +101,6 @@ struct LoginData {
 #[allow(unused)]
 pub struct Amp0<S: Stream> {
     /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
-    ///
-    /// <div class="warning">
-    /// <b>WARNING:</b>
-    ///
-    /// Do not use [`Wollet::address()`] and sync with [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`].
-    ///
-    /// See [`Amp0`] for more details.
-    /// </div>
     pub wollet: Wollet,
 
     /// Green-backend actions
@@ -207,6 +199,19 @@ impl<S: Stream> Amp0<S> {
     /// Use this and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`] to sync the `Wollet`
     pub fn last_index(&self) -> u32 {
         self.last_index
+    }
+
+    /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
+    ///
+    /// <div class="warning">
+    /// <b>WARNING:</b>
+    ///
+    /// Do not derive addresses using [`WolletDescriptor::address()`] or [`Wollet::address()`].
+    ///
+    /// See [`Amp0`] for more details.
+    /// </div>
+    pub fn wollet_descriptor(&self) -> WolletDescriptor {
+        self.wollet.wollet_descriptor()
     }
 
     /// Get an address

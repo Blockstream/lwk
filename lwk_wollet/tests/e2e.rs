@@ -18,6 +18,7 @@ use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
 use test_wollet::{generate_signer, test_client_electrum, wait_for_tx, TestWollet};
+use waterfalls::{be, Family};
 
 #[test]
 fn liquid_send_jade_signer() {
@@ -1121,7 +1122,7 @@ async fn test_esplora_waterfalls_utxo_only() {
 
     init_logging();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = waterfalls::test_env::launch(exe).await;
+    let test_env = waterfalls::test_env::launch(exe, Family::Elements).await;
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -1144,7 +1145,7 @@ async fn test_esplora_waterfalls_utxo_only() {
         .unwrap();
 
     let address = wollet.address(None).unwrap();
-    test_env.send_to(address.address(), 1_000_000);
+    test_env.send_to(&to_be(address.address()), 1_000_000);
     async_sleep(2_000).await;
 
     // check both wallets have the same balance
@@ -1173,6 +1174,7 @@ async fn test_esplora_waterfalls_utxo_only() {
 
     // spend from wollet and sync again both wallets
     let address = test_env.get_new_address(None);
+    let address = address.elements().unwrap();
     let mut pset = wollet
         .tx_builder()
         .add_lbtc_recipient(&address, 100_000)
@@ -1231,7 +1233,7 @@ async fn test_esplora_wasm_local_waterfalls() {
 
     init_logging();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = waterfalls::test_env::launch(exe).await;
+    let test_env = waterfalls::test_env::launch(exe, Family::Elements).await;
 
     let desc = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs";
     let desc = WolletDescriptor::from_str(desc).unwrap();
@@ -1252,7 +1254,9 @@ async fn test_esplora_wasm_local_waterfalls() {
     );
 
     let address = wollet.address(None).unwrap();
-    let txid = test_env.send_to(address.address(), 1_000_000);
+    let txid = test_env
+        .send_to(&to_be(address.address()), 1_000_000)
+        .elements();
 
     async_sleep(2_000).await;
 
@@ -2011,7 +2015,7 @@ fn test_waterfalls_esplora() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
 
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
 
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
@@ -2033,7 +2037,7 @@ fn test_waterfalls_esplora() {
 
     let sats = 1_000;
     let address = wollet.address(None).unwrap();
-    let _txid = test_env.send_to(address.address(), sats);
+    let _txid = test_env.send_to(&to_be(address.address()), sats);
 
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
@@ -2041,6 +2045,7 @@ fn test_waterfalls_esplora() {
     assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
 
     let address = test_env.get_new_address(None);
+    let address = address.elements().unwrap();
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
@@ -2222,7 +2227,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     init_logging();
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
     let url = format!("{}/blocks/tip/hash", test_env.base_url());
     let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
 
@@ -2243,7 +2248,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
 
     let satoshi = 1_000_000;
-    let txid = test_env.send_to(&address_after_gap_limit, satoshi);
+    let txid = test_env.send_to(&to_be(&address_after_gap_limit), satoshi);
     rt.block_on(test_env.node_generate(1));
 
     // custom wait_for_tx using custom gap limit
@@ -2256,7 +2261,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
             .transactions()
             .unwrap()
             .iter()
-            .any(|tx| tx.txid == txid);
+            .any(|tx| tx.txid == txid.elements());
         if tx_found {
             break;
         }
@@ -2788,12 +2793,12 @@ fn test_no_wildcard_waterfalls() {
     let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
     let desc: WolletDescriptor = desc.parse().unwrap();
     let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
 
     let address = wollet.address(None).unwrap();
-    let _txid = test_env.send_to(address.address(), 10000);
+    let _txid = test_env.send_to(&to_be(address.address()), 10000);
     std::thread::sleep(std::time::Duration::from_secs(10));
 
     let mut waterfalls_client =
@@ -3129,7 +3134,7 @@ fn test_sync_high_index() {
     // Start Waterfalls
     let rt = tokio::runtime::Runtime::new().unwrap();
     let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe));
+    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
     let mut client =
         clients::blocking::EsploraClient::new_waterfalls(test_env.base_url(), network).unwrap();
 
@@ -3156,8 +3161,8 @@ fn test_sync_high_index() {
     // w1 receive funds from node
     let addr = w1.address(None).unwrap();
 
-    let txid = test_env.send_to(addr.address(), 10000);
-    wait_for_tx(&mut w1, &mut client, &txid);
+    let txid = test_env.send_to(&to_be(addr.address()), 10000);
+    wait_for_tx(&mut w1, &mut client, &txid.elements());
 
     // w1 sends to w2 on 2 addresses
     let addr0 = w2.address(Some(0)).unwrap();
@@ -3574,4 +3579,8 @@ fn test_fee_service() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let txid = w.client.broadcast(&tx).unwrap();
     wait_for_tx(&mut w.wollet, &mut w.client, &txid);
+}
+
+fn to_be(addr: &elements::Address) -> be::Address {
+    be::Address::Elements(addr.clone())
 }

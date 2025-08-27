@@ -98,21 +98,33 @@ lwk_test_util = { version = "0.10.0" }
 
 tempfile = "3.8.0"
 
-waterfalls = { version = "0.9.0", default-features = false, features = [
+waterfalls = { version = "0.9.3", default-features = false, features = [
     "test_env",
 ] }
 criterion = "0.5.1"
 
 [features]
 default = ["esplora", "electrum", "elements_rpc", "amp2", "amp0"]
-serial = ["lwk_jade/serial"]                                      # this is a dev-dep feature
+serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
 elements_rpc = ["bitcoincore-rpc"]
 bindings = []
 test_wallet = ["lwk_signer"]
 amp2 = ["reqwest"]
-amp0 = ["tokio-tungstenite", "scrypt", "pbkdf2", "sha2", "hmac", "aes", "cbc", "aes-gcm", "flate2", "rmpv", "rmp-serde"]
+amp0 = [
+    "tokio-tungstenite",
+    "scrypt",
+    "pbkdf2",
+    "sha2",
+    "hmac",
+    "aes",
+    "cbc",
+    "aes-gcm",
+    "flate2",
+    "rmpv",
+    "rmp-serde",
+]
 
 [[test]]
 name = "e2e"

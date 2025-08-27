@@ -1529,6 +1529,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex-simd"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f7685beb53fc20efc2605f32f5d51e9ba18b8ef237961d1760169d2290d3bee"
+dependencies = [
+ "outref",
+ "vsimd",
+]
+
+[[package]]
 name = "hex_lit"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2183,6 +2193,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
+name = "lrumap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1251ce8e8f9909600e127dcbe74ac50d8464e6685cf5953d37df7a741dbf9e9d"
+
+[[package]]
 name = "lwk_app"
 version = "0.10.0"
 dependencies = [
@@ -2703,6 +2719,12 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
+
+[[package]]
+name = "outref"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
 
 [[package]]
 name = "parking_lot"
@@ -4456,6 +4478,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
+name = "vsimd"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
+
+[[package]]
 name = "walkdir"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4586,9 +4614,9 @@ dependencies = [
 
 [[package]]
 name = "waterfalls"
-version = "0.9.0"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "779db9be7c4af7380519f9bd069b1477cf79fa14c26f1f2f14c5a4e7073ff6fd"
+checksum = "c4836b5e91a73269b77b299db65ac6b6587b172df9ee494810f85c2b042a597f"
 dependencies = [
  "age",
  "anyhow",
@@ -4601,13 +4629,15 @@ dependencies = [
  "env_logger",
  "form_urlencoded",
  "fxhash",
- "hex",
+ "hex-simd",
  "http-body-util",
  "hyper",
  "hyper-util",
  "lazy_static",
  "log",
+ "lrumap",
  "minicbor",
+ "miniscript",
  "prefix_uvarint",
  "prometheus",
  "reqwest",

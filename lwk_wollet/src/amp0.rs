@@ -1,3 +1,5 @@
+//! Manage AMP0 wallets.
+
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
 use aes_gcm::{
     aead::{Aead, KeyInit},

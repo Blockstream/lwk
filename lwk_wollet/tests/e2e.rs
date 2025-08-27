@@ -3126,6 +3126,7 @@ fn test_non_std_legacy_multisig() {
 
 #[test]
 fn test_sync_high_index() {
+    init_logging();
     // TODO: extend to test also with Esplora and Electrum
     // This test was reported as a waterfalls issue, but it actually affects also the other clients
     // (tested locally) ideally we should extend this test to also be run for the other clients.

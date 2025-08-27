@@ -206,7 +206,7 @@ impl<S: Stream> Amp0<S> {
     /// <div class="warning">
     /// <b>WARNING:</b>
     ///
-    /// Do not derive addresses using [`WolletDescriptor::address()`] or [`Wollet::address()`].
+    /// Do not derive addresses using [`WolletDescriptor::address()`] or [`crate::Wollet::address()`].
     ///
     /// See [`Amp0`] for more details.
     /// </div>

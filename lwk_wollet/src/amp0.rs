@@ -1078,10 +1078,46 @@ mod tests {
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
-    async fn test_amp0_ext() {
+    async fn test_amp0_ext_mainnet() {
         let mut amp0ext = Amp0::new_with_network(Network::Liquid, "userleo456", "userleo456", "")
             .await
             .unwrap();
+
+        assert_eq!(amp0ext.amp_subaccount, 1);
+        assert!(amp0ext.last_index > 20);
+        let desc = amp0ext.wollet_descriptor().to_string();
+        println!("{}", desc);
+
+        // Get a new address
+        let last_index = amp0ext.last_index;
+        let addr = amp0ext.address(None).await.unwrap();
+        println!("{:?}", addr);
+        assert_eq!(addr.index(), last_index + 1);
+        // Last index increased
+        assert_eq!(amp0ext.last_index, last_index + 1);
+
+        // Get a previous address
+        let addr_prev = amp0ext.address(Some(amp0ext.last_index)).await.unwrap();
+        assert_eq!(addr.address(), addr_prev.address());
+        // Lasts index did not increased
+        assert_eq!(amp0ext.last_index, last_index + 1);
+
+        // Get a future address
+        let err = amp0ext
+            .address(Some(amp0ext.last_index + 1))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("Address index too high"));
+    }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[tokio::test]
+    #[ignore] // Requires network connectivity
+    async fn test_amp0_ext_testnet() {
+        let mut amp0ext =
+            Amp0::new_with_network(Network::TestnetLiquid, "userleo3456", "userleo3456", "")
+                .await
+                .unwrap();
 
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);

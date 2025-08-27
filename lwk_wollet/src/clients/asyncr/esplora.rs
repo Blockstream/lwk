@@ -46,6 +46,13 @@ pub struct EsploraClient {
     waterfalls: bool,
     utxo_only: bool,
     waterfalls_server_recipient: Option<Recipient>,
+
+    /// Map of a descriptor to its encrypted descriptor.
+    /// This is used to avoid encrypting the descriptor field at every requst, which cause
+    /// to have a different URL for each request (different salt) which cause http caching to be ineffective.
+    /// It's a map because the same client can be used with effectively different descriptor.
+    waterfalls_encrypted_descriptors: HashMap<String, String>,
+
     concurrency: usize,
 
     /// Avoid encrypting the descriptor field
@@ -480,10 +487,16 @@ impl EsploraClient {
         let desc = if self.waterfalls_avoid_encryption {
             desc
         } else {
-            let recipient = self.waterfalls_server_recipient().await?;
-
-            // TODO ideally the encrypted descriptor should be cached and reused, so that caching can be leveraged
-            encrypt(&desc, recipient)?
+            match self.waterfalls_encrypted_descriptors.get(&desc) {
+                Some(encrypted_descriptor) => encrypted_descriptor.clone(),
+                None => {
+                    let recipient = self.waterfalls_server_recipient().await?;
+                    let encrypted_descriptor = encrypt(&desc, recipient)?;
+                    self.waterfalls_encrypted_descriptors
+                        .insert(desc, encrypted_descriptor.clone());
+                    encrypted_descriptor
+                }
+            }
         };
 
         let mut page = 0;
@@ -805,6 +818,7 @@ impl EsploraClientBuilder {
             network: self.network,
             concurrency: self.concurrency.unwrap_or(1),
             requests: AtomicUsize::new(0),
+            waterfalls_encrypted_descriptors: HashMap::new(),
         })
     }
 }

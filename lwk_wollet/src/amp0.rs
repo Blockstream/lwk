@@ -25,7 +25,7 @@ use tokio::sync::Mutex;
 use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
 use crate::{hex, Error};
-use crate::{ElementsNetwork, Wollet, WolletDescriptor};
+use crate::{AddressResult, WolletDescriptor};
 use elements::pset::PartiallySignedTransaction;
 use elements::Txid;
 
@@ -88,10 +88,10 @@ struct LoginData {
 ///
 /// Callers must be careful with the following:
 /// * <b>Addresses: </b>
-///   to get addresses instead of using [`Wollet::address()`] use [`Amp0::address()`]. This ensures
+///   to get addresses use [`Amp0::address()`]. This ensures
 ///   that all addresses used are correctly monitored by the AMP0 server.
 /// * <b>Syncing: </b>
-///   to sync the AMP0 `Wollet` [`Amp0::wollet`], use [`Amp0::last_index`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
+///   to sync the AMP0 [`crate::Wollet`], use [`Amp0::last_index()`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
 ///
 /// <i>
 /// Failing to do the above might lead to inconsistent states, where funds are not shown or they
@@ -100,8 +100,8 @@ struct LoginData {
 /// </div>
 #[allow(unused)]
 pub struct Amp0<S: Stream> {
-    /// The LWK watch-only wallet corresponding to the AMP0 (sub)account.
-    wollet: Wollet,
+    /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
+    wollet_descriptor: WolletDescriptor,
 
     /// Green-backend actions
     amp0: Amp0Inner<S>,
@@ -145,8 +145,8 @@ impl<S: Stream> Amp0<S> {
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
-        let (elements_network, server_xpub) = match network {
-            Network::Liquid => (ElementsNetwork::Liquid, "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA"),
+        let server_xpub = match network {
+            Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
             _ => todo!(),
         };
         // connect to ga-backend
@@ -178,15 +178,13 @@ impl<S: Stream> Amp0<S> {
         let gait_path = &login_data.gait_path;
         let desc = amp_descriptor(blob, amp_subaccount, server_xpub, gait_path)?;
 
-        let wd = WolletDescriptor::from_str(&desc)?;
-        // TODO: allow persistence
-        let wollet = Wollet::without_persist(elements_network, wd)?;
+        let wollet_descriptor = WolletDescriptor::from_str(&desc)?;
 
         // get last index
         let (last_index, _script) = amp0.get_new_address(amp_subaccount).await?;
         // TODO: if needed upload authorized assets confidential addresses
         Ok(Self {
-            wollet,
+            wollet_descriptor,
             amp0,
             network,
             amp_subaccount,
@@ -211,29 +209,34 @@ impl<S: Stream> Amp0<S> {
     /// See [`Amp0`] for more details.
     /// </div>
     pub fn wollet_descriptor(&self) -> WolletDescriptor {
-        self.wollet.wollet_descriptor()
+        self.wollet_descriptor.clone()
     }
 
     /// Get an address
     ///
     /// If `index` is None, a new address is returned.
-    pub async fn address(&mut self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+    pub async fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
         match index {
             Some(i) => {
                 if i > self.last_index {
                     return Err(Error::Generic("Address index too high".into()));
                 }
-                Ok(self.wollet.address(index)?)
+                let address = self
+                    .wollet_descriptor
+                    .address(i, self.network.address_params())?;
+                Ok(AddressResult::new(address, i))
             }
             None => {
                 // Get a new address from Green server
                 let (pointer, _script) = self.amp0.get_new_address(self.amp_subaccount).await?;
                 // Get address from the LWK wollet
-                let addr = self.wollet.address(Some(pointer))?;
+                let address = self
+                    .wollet_descriptor
+                    .address(pointer, self.network.address_params())?;
                 // TODO: check that script and addr match
                 // Update last index
                 self.last_index = pointer;
-                Ok(addr)
+                Ok(AddressResult::new(address, pointer))
             }
         }
     }
@@ -875,7 +878,7 @@ pub mod blocking {
             Ok(Amp0 { rt, inner })
         }
 
-        pub fn address(&mut self, index: Option<u32>) -> Result<crate::AddressResult, Error> {
+        pub fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
             self.rt.block_on(self.inner.address(index))
         }
 
@@ -1074,7 +1077,7 @@ mod tests {
 
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);
-        let desc = amp0ext.wollet.descriptor().to_string();
+        let desc = amp0ext.wollet_descriptor().to_string();
         println!("{}", desc);
 
         // Get a new address

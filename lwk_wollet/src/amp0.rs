@@ -863,7 +863,9 @@ pub mod blocking {
             self.inner.last_index
         }
 
-        // TODO: wollet or wollet_descriptor
+        pub fn wollet_descriptor(&self) -> WolletDescriptor {
+            self.inner.wollet_descriptor()
+        }
 
         pub fn new(
             network: Network,

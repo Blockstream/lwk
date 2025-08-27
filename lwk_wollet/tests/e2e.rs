@@ -1177,7 +1177,7 @@ async fn test_esplora_waterfalls_utxo_only() {
     let address = address.elements().unwrap();
     let mut pset = wollet
         .tx_builder()
-        .add_lbtc_recipient(&address, 100_000)
+        .add_lbtc_recipient(address, 100_000)
         .unwrap()
         .finish()
         .unwrap();

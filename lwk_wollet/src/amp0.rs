@@ -149,6 +149,7 @@ impl<S: Stream> Amp0<S> {
     ) -> Result<Self, Error> {
         let server_xpub = match network {
             Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
+            Network::TestnetLiquid => "tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24",
             _ => todo!(),
         };
         // connect to ga-backend

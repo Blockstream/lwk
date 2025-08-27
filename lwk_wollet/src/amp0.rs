@@ -851,11 +851,13 @@ impl Stream for WebSocketClient {
     }
 }
 
+/// Amp0 blocking module
 #[cfg(not(target_arch = "wasm32"))]
 pub mod blocking {
     use super::*;
     use tokio::runtime::Runtime;
 
+    /// Blocking version of [`super::Amp0`]
     pub struct Amp0 {
         rt: Runtime,
         inner: super::Amp0<super::WebSocketClient>,

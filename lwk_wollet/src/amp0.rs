@@ -651,6 +651,7 @@ fn amp_descriptor(
     Ok(desc)
 }
 
+/// Default URL for Green Backend
 pub fn default_url(network: Network) -> Result<&'static str, Error> {
     match network {
         Network::Liquid => Ok("wss://green-liquid-mainnet.blockstream.com/v2/ws/"),

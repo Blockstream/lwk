@@ -48,3 +48,43 @@ impl Amp0 {
         Ok(Arc::new(self.inner.lock()?.send(pset.as_ref())?.into()))
     }
 }
+
+/// Wrapper over [`lwk_wollet::amp0::Amp0Pset`]
+#[derive(uniffi::Object)]
+pub struct Amp0Pset {
+    inner: lwk_wollet::amp0::Amp0Pset,
+}
+
+impl From<lwk_wollet::amp0::Amp0Pset> for Amp0Pset {
+    fn from(inner: lwk_wollet::amp0::Amp0Pset) -> Self {
+        Self { inner }
+    }
+}
+
+impl AsRef<lwk_wollet::amp0::Amp0Pset> for Amp0Pset {
+    fn as_ref(&self) -> &lwk_wollet::amp0::Amp0Pset {
+        &self.inner
+    }
+}
+
+#[uniffi::export]
+impl Amp0Pset {
+    /// Construct a PSET to use with AMP0
+    #[uniffi::constructor]
+    pub fn new(pset: &Pset, blinding_nonces: Vec<String>) -> Result<Arc<Self>, LwkError> {
+        let pset = pset.as_ref().clone();
+        let inner = lwk_wollet::amp0::Amp0Pset::new(pset, blinding_nonces)?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Get the PSET
+    pub fn pset(&self) -> Result<Pset, LwkError> {
+        let pset = self.inner.pset().clone();
+        Ok(pset.into())
+    }
+
+    /// Get blinding nonces
+    pub fn blinding_nonces(&self) -> Result<Vec<String>, LwkError> {
+        Ok(self.inner.blinding_nonces().to_vec())
+    }
+}

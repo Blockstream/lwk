@@ -1224,6 +1224,8 @@ async fn test_esplora_waterfalls_utxo_only() {
         .unwrap()
         .iter()
         .all(|tx| !tx.outputs.is_empty()));
+
+    test_env.shutdown().await;
 }
 
 #[cfg(feature = "esplora")]
@@ -1297,6 +1299,8 @@ async fn test_esplora_wasm_local_waterfalls() {
         wollet.transactions().unwrap().is_empty(),
         "different blinding key should have no txs"
     );
+
+    test_env.shutdown().await;
 }
 
 #[test]
@@ -2273,6 +2277,8 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
 
     let balance = wollet.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
+
+    rt.block_on(test_env.shutdown());
 }
 
 #[test]
@@ -2810,6 +2816,8 @@ fn test_no_wildcard_waterfalls() {
 
     let waterfalls_txs = wollet.transactions().unwrap();
     assert_eq!(waterfalls_txs.len(), 1);
+
+    rt.block_on(test_env.shutdown());
 }
 
 #[test]

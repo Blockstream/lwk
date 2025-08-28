@@ -1276,7 +1276,7 @@ async fn test_esplora_wasm_local_waterfalls() {
     wollet.apply_update(update).unwrap();
 
     let tx = wollet.transaction(&txid).unwrap().unwrap();
-    assert_eq!(tx.height.unwrap(), 3);
+    assert_eq!(tx.height.unwrap(), 103);
     let balance = wollet.balance().unwrap();
 
     let mut wollet =

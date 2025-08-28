@@ -3593,3 +3593,41 @@ fn test_fee_service() {
 fn to_be(addr: &elements::Address) -> be::Address {
     be::Address::Elements(addr.clone())
 }
+
+fn unblind_with_shared_secret(
+    txout: &elements::TxOut,
+    shared_secret: elements::secp256k1_zkp::SecretKey,
+) -> elements::TxOutSecrets {
+    use elements::{
+        confidential::{AssetBlindingFactor, ValueBlindingFactor},
+        AssetId,
+    };
+
+    let commitment = txout.value.commitment().unwrap();
+    let additional_generator = txout.asset.commitment().unwrap();
+    let rangeproof = txout.witness.rangeproof.as_ref().unwrap();
+
+    let (opening, _) = rangeproof
+        .rewind(
+            &lwk_wollet::EC,
+            commitment,
+            shared_secret,
+            txout.script_pubkey.as_bytes(),
+            additional_generator,
+        )
+        .unwrap();
+
+    let (asset, asset_bf) = opening.message.as_ref().split_at(32);
+    let asset = AssetId::from_slice(asset).unwrap();
+    let asset_bf = AssetBlindingFactor::from_slice(&asset_bf[..32]).unwrap();
+
+    let value = opening.value;
+    let value_bf = ValueBlindingFactor::from_slice(&opening.blinding_factor[..32]).unwrap();
+
+    elements::TxOutSecrets {
+        asset,
+        asset_bf,
+        value,
+        value_bf,
+    }
+}

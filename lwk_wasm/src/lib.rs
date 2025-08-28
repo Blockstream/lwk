@@ -38,7 +38,7 @@ mod wollet;
 mod xpub;
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
-pub use amp0::Amp0;
+pub use amp0::{Amp0, Amp0Pset};
 pub use amp2::{Amp2, Amp2Descriptor};
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};

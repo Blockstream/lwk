@@ -731,6 +731,15 @@ impl TxBuilder {
         Ok(pset)
     }
 
+    /// Finish building the transaction for AMP0
+    #[cfg(feature = "amp0")]
+    pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
+        // TODO: compute blinding nonces using the ephemeral keys once available
+        let blinding_nonces = vec![];
+        let pset = self.finish(wollet)?;
+        crate::amp0::Amp0Pset::new(pset, blinding_nonces)
+    }
+
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         if self.is_liquidex_make {
@@ -1066,6 +1075,12 @@ impl<'a> WolletTxBuilder<'a> {
     /// Consume this builder and create a transaction
     pub fn finish(self) -> Result<PartiallySignedTransaction, Error> {
         self.inner.finish(self.wollet)
+    }
+
+    /// Consume this builder and create a transaction for AMP0
+    #[cfg(feature = "amp0")]
+    pub fn finish_for_amp0(self) -> Result<crate::amp0::Amp0Pset, Error> {
+        self.inner.finish_for_amp0(self.wollet)
     }
 
     /// Wrapper of [`TxBuilder::add_recipient()`]

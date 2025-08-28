@@ -44,7 +44,7 @@ impl Amp0 {
     }
 
     /// Ask AMP0 server to cosign and broadcast the transaction
-    pub fn send(&self, pset: &Pset) -> Result<Arc<Txid>, LwkError> {
+    pub fn send(&self, pset: &Amp0Pset) -> Result<Arc<Txid>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.send(pset.as_ref())?.into()))
     }
 }

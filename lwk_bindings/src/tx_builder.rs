@@ -55,6 +55,14 @@ impl TxBuilder {
         Ok(inner.finish(&wollet)?.into())
     }
 
+    /// Build the transaction
+    pub fn finish_for_amp0(&self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let wollet = wollet.inner_wollet()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        Ok(inner.finish_for_amp0(&wollet)?.into())
+    }
+
     /// Fee rate in sats/kvb
     /// Multiply sats/vb value by 1000 i.e. 1.0 sat/byte = 1000.0 sat/kvb
     pub fn fee_rate(&self, rate: Option<f32>) -> Result<(), LwkError> {

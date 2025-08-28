@@ -42,6 +42,12 @@ impl TxBuilder {
         Ok(self.inner.finish(wollet.as_ref())?.into())
     }
 
+    /// Build the transaction for AMP0
+    #[cfg(all(feature = "serial", target_arch = "wasm32"))]
+    pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
+        Ok(self.inner.finish_for_amp0(wollet.as_ref())?.into())
+    }
+
     /// Set the fee rate
     #[wasm_bindgen(js_name = feeRate)]
     pub fn fee_rate(self, fee_rate: Option<f32>) -> TxBuilder {

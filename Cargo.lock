@@ -1068,9 +1068,22 @@ dependencies = [
 
 [[package]]
 name = "elements"
-version = "0.25.2"
+version = "0.25.3"
+source = "git+https://github.com/apoelstra/rust-elements.git?branch=2025-08%2Fsemver-0.25#0a6729e8b3a906f47540070410e50f5a2018e397"
+dependencies = [
+ "bech32 0.11.0",
+ "bitcoin",
+ "elements 0.26.1",
+ "secp256k1-zkp",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "elements"
+version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81b2569d3495bfdfce36c504fd4d78752ff4a7699f8a33e6f3ee523bddf9f6ad"
+checksum = "9d562b364c5d2aced40b01b3f73fc968311787e6813957593d4ffa94cd8733e3"
 dependencies = [
  "bech32 0.11.0",
  "bitcoin",
@@ -1082,11 +1095,10 @@ dependencies = [
 [[package]]
 name = "elements-miniscript"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "571fa105690f83c7833df2109eb2e14ca0e62d633d2624ffcb166ff18a3da870"
+source = "git+https://github.com/leocomandini/elements-miniscript.git?branch=test-semver-0.25#efe72ed551fa61f0c5c0f14e4fa8a35a7145dedf"
 dependencies = [
  "bitcoin",
- "elements",
+ "elements 0.25.3",
  "miniscript",
  "serde",
 ]
@@ -2226,7 +2238,7 @@ dependencies = [
 name = "lwk_bindings"
 version = "0.10.0"
 dependencies = [
- "elements",
+ "elements 0.25.3",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",
@@ -2244,7 +2256,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "ctrlc",
- "elements",
+ "elements 0.25.3",
  "env_logger",
  "log",
  "lwk_app",
@@ -2262,7 +2274,7 @@ name = "lwk_common"
 version = "0.10.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
+ "elements 0.25.3",
  "elements-miniscript",
  "getrandom 0.2.15",
  "qr_code",
@@ -2290,7 +2302,7 @@ name = "lwk_jade"
 version = "0.10.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
+ "elements 0.25.3",
  "elements-miniscript",
  "hex",
  "log",
@@ -2417,7 +2429,7 @@ dependencies = [
  "cbc",
  "criterion",
  "electrum-client",
- "elements",
+ "elements 0.25.3",
  "elements-miniscript",
  "flate2",
  "futures",
@@ -4615,8 +4627,7 @@ dependencies = [
 [[package]]
 name = "waterfalls"
 version = "0.9.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b739e2fc2c36123e50f789ccbb418b1f00bc1756a1572f7da15b635ca1f18e"
+source = "git+https://github.com/leocomandini/waterfalls.git?branch=test-semver-0.25#da0e915fb41f435aaa2480e071a34ddb30c8f18a"
 dependencies = [
  "age",
  "anyhow",
@@ -4624,7 +4635,7 @@ dependencies = [
  "bitcoin",
  "bitcoind",
  "clap",
- "elements",
+ "elements 0.25.3",
  "elements-miniscript",
  "env_logger",
  "form_urlencoded",

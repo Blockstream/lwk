@@ -3631,3 +3631,50 @@ fn unblind_with_shared_secret(
         value_bf,
     }
 }
+
+#[ignore = "does not work yet"]
+#[test]
+fn test_blinding_nonces() {
+    // Construct a trnasaction and obtain the blinding nonces
+    let server = setup();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&server.electrs.electrum_url);
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    w.fund_btc(&server);
+
+    let node_addr = server.elementsd_getnewaddress();
+    let amp0pset = w
+        .tx_builder()
+        .add_recipient(&node_addr, 1000, lbtc)
+        .unwrap()
+        .finish_for_amp0()
+        .unwrap();
+    let mut pset = amp0pset.pset().clone();
+    let blinding_nonces = amp0pset.blinding_nonces();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    w.send(&mut pset);
+
+    // Check that the blinding nonces unblind the transaction
+    let mut num_blinded = 0;
+    for (idx, output) in pset.outputs().iter().enumerate() {
+        let txout = output.to_txout();
+        if txout.is_partially_blinded() {
+            let shared_secret =
+                elements::secp256k1_zkp::SecretKey::from_str(&blinding_nonces[idx]).unwrap();
+            let txoutsecrets = unblind_with_shared_secret(&txout, shared_secret);
+            assert_eq!(txoutsecrets.asset, lbtc);
+            num_blinded += 1;
+        } else {
+            assert!(blinding_nonces[idx].is_empty());
+        }
+    }
+    assert_eq!(num_blinded, 2);
+}

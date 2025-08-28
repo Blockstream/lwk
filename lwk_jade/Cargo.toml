@@ -20,13 +20,15 @@ rand = "0.8.5"
 serde = "1"
 serde_bytes = "0.11.12"
 serde_json = "1"
-elements = { version = "0.25.0", features = ["base64", "serde"] }
+#elements = { version = "0.25.0", features = ["base64", "serde"] }
+elements = { git = "https://github.com/apoelstra/rust-elements.git", branch = "2025-08/semver-0.25", features = ["base64", "serde"] }
 serialport = { version = "4.2.1", optional = true }
 thiserror = "1"
 
 log = "0.4.22"
 
-elements-miniscript = "0.4"
+#elements-miniscript = "0.4"
+elements-miniscript = { git = "https://github.com/leocomandini/elements-miniscript.git", branch = "test-semver-0.25" }
 
 reqwest = { version = "0.12", default-features = false, features = [
     "charset",

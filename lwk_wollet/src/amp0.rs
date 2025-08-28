@@ -896,6 +896,41 @@ pub mod blocking {
     }
 }
 
+/// A PSET to use with AMP0
+///
+/// When asking AMP0 to cosign, the caller must pass some extra data that does not belong to the
+/// PSET. This struct holds and manage the necessary data.
+///
+/// If you're not dealing with AMP0, do not use this struct.
+pub struct Amp0Pset {
+    pset: PartiallySignedTransaction,
+    blinding_nonces: Vec<String>,
+}
+
+impl Amp0Pset {
+    /// Construct a PSET to use with AMP0
+    pub fn new(
+        pset: PartiallySignedTransaction,
+        blinding_nonces: Vec<String>,
+    ) -> Result<Self, Error> {
+        // TODO: verify pset and blinding nonces are consistent
+        Ok(Self {
+            pset,
+            blinding_nonces,
+        })
+    }
+
+    /// Get the PSET
+    pub fn pset(&self) -> &PartiallySignedTransaction {
+        &self.pset
+    }
+
+    /// Get the blinding nonces
+    pub fn blinding_nonces(&self) -> &[String] {
+        &self.blinding_nonces
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

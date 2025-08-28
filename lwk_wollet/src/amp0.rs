@@ -245,7 +245,7 @@ impl<S: Stream> Amp0<S> {
     }
 
     /// Ask AMP0 server to cosign and broadcast the transaction
-    pub async fn send(&self, _pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+    pub async fn send(&self, _pset: &Amp0Pset) -> Result<Txid, Error> {
         // vault.send_raw_tx
         todo!();
     }
@@ -890,7 +890,7 @@ pub mod blocking {
             self.rt.block_on(self.inner.address(index))
         }
 
-        pub fn send(&self, pset: &PartiallySignedTransaction) -> Result<Txid, Error> {
+        pub fn send(&self, pset: &Amp0Pset) -> Result<Txid, Error> {
             self.rt.block_on(self.inner.send(pset))
         }
     }

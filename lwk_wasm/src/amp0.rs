@@ -65,6 +65,44 @@ impl Amp0 {
     }
 }
 
+/// Wrapper of [`lwk_wollet::amp0::Amp0Pset`]
+#[wasm_bindgen]
+pub struct Amp0Pset {
+    inner: lwk_wollet::amp0::Amp0Pset,
+}
+
+impl From<lwk_wollet::amp0::Amp0Pset> for Amp0Pset {
+    fn from(inner: lwk_wollet::amp0::Amp0Pset) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<Amp0Pset> for lwk_wollet::amp0::Amp0Pset {
+    fn from(pset: Amp0Pset) -> Self {
+        pset.inner
+    }
+}
+
+#[wasm_bindgen]
+impl Amp0Pset {
+    /// Creates a `Amp0Pset`
+    #[wasm_bindgen(constructor)]
+    pub fn new(pset: crate::Pset, blinding_nonces: Vec<String>) -> Result<Self, Error> {
+        let inner = lwk_wollet::amp0::Amp0Pset::new(pset.into(), blinding_nonces)?;
+        Ok(Self { inner })
+    }
+
+    /// Get the PSET
+    pub fn pset(&self) -> crate::Pset {
+        self.inner.pset().clone().into()
+    }
+
+    /// Get the blinding nonces
+    pub fn blinding_nonces(&self) -> Vec<String> {
+        self.inner.blinding_nonces().to_vec()
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

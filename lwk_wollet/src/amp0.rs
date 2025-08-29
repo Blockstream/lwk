@@ -649,8 +649,10 @@ fn amp_descriptor(
 ) -> Result<String, Error> {
     let server_xpub = derive_server_xpub(server_key, gait_path, amp_subaccount)?;
 
-    // TODO: find user fingerprint
-    let fingerprint = "ffffffff";
+    let master_xpub = blob
+        .find_master_xpub()
+        .ok_or_else(|| Error::Generic("Missing master xpub".into()))?;
+    let fingerprint = master_xpub.fingerprint();
     let user_keyorigin = format!("[{fingerprint}/3h/{amp_subaccount}h]");
     // TODO: improve error
     let user_xpub = blob
@@ -1084,7 +1086,7 @@ mod tests {
         use elements::hashes::hex::DisplayHex;
 
         // Target value to match
-        let expected_descriptor = "ct(slip77(8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6),elsh(wsh(multi(2,xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA/3/3320/60546/15157/41212/14985/38799/25816/12131/13561/54922/2852/56496/53096/60883/33605/54091/38661/40920/32654/56040/43253/45144/11278/64888/46277/8839/7065/20066/31815/30779/10369/43255/1/*,[ffffffff/3h/1h]xpub69mdgvyMbhUaD7XFqmjNfo7RdCnW2w1xfEmNn7DV5XYqwPSKkcgMtqQ7T776MCBNXWZrkqwx6NArqE34WCBW86CdMgLesYtnvjSaLSMy2Xc/1/*))))";
+        let expected_descriptor = "ct(slip77(8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6),elsh(wsh(multi(2,xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA/3/3320/60546/15157/41212/14985/38799/25816/12131/13561/54922/2852/56496/53096/60883/33605/54091/38661/40920/32654/56040/43253/45144/11278/64888/46277/8839/7065/20066/31815/30779/10369/43255/1/*,[aea13085/3h/1h]xpub69mdgvyMbhUaD7XFqmjNfo7RdCnW2w1xfEmNn7DV5XYqwPSKkcgMtqQ7T776MCBNXWZrkqwx6NArqE34WCBW86CdMgLesYtnvjSaLSMy2Xc/1/*))))";
 
         // Watch-only credentials
         let username = "userleo456";

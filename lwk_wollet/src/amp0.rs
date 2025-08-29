@@ -1215,5 +1215,10 @@ mod tests {
             println!("Address: {:?}", addr);
             panic!("Send some tLBTC to {}", addr.address());
         }
+
+        use lwk_signer::SwSigner;
+        let mnemonic =
+            "affair south beef width exact fiscal produce furnace glide kingdom access month";
+        let _signer = SwSigner::new(mnemonic, false).unwrap();
     }
 }

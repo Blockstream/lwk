@@ -649,8 +649,9 @@ fn amp_descriptor(
 ) -> Result<String, Error> {
     let server_xpub = derive_server_xpub(server_key, gait_path, amp_subaccount)?;
 
-    // TODO: find user fingerprint
-    let fingerprint = "ffffffff";
+    let master_xpub = blob.find_master_xpub()
+        .ok_or_else(|| Error::Generic("Missing master xpub".into()))?;
+    let fingerprint = master_xpub.fingerprint();
     let user_keyorigin = format!("[{fingerprint}/3h/{amp_subaccount}h]");
     // TODO: improve error
     let user_xpub = blob

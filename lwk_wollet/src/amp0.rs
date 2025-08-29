@@ -1180,4 +1180,36 @@ mod tests {
             .unwrap_err();
         assert!(err.to_string().contains("Address index too high"));
     }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[ignore] // Requires network connectivity
+    #[test]
+    fn test_amp0_sign() {
+        use crate::clients::blocking::{BlockchainBackend, EsploraClient};
+        use crate::{ElementsNetwork, Wollet};
+
+        let mut amp0 =
+            blocking::Amp0::new(Network::TestnetLiquid, "userleo3456", "userleo3456", "").unwrap();
+
+        let network = ElementsNetwork::LiquidTestnet;
+        let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        let mut wollet = Wollet::without_persist(network, amp0.wollet_descriptor()).unwrap();
+        let mut client = EsploraClient::new_waterfalls(url, network).unwrap();
+
+        let update = client
+            .full_scan_to_index(&wollet, amp0.last_index())
+            .unwrap();
+        if let Some(update) = update {
+            wollet.apply_update(update).unwrap();
+        }
+
+        let balance = wollet.balance().unwrap();
+        println!("Balance: {:?}", balance);
+        let lbtc = wollet.policy_asset();
+        if balance.get(&lbtc).unwrap_or(&0) < &500 {
+            let addr = amp0.address(None).unwrap();
+            println!("Address: {:?}", addr);
+            panic!("Send some tLBTC to {}", addr.address());
+        }
+    }
 }

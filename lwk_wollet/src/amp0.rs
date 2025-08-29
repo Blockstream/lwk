@@ -1198,37 +1198,62 @@ mod tests {
         use crate::clients::blocking::{BlockchainBackend, EsploraClient};
         use crate::{ElementsNetwork, Wollet};
 
-        let mut amp0 =
-            blocking::Amp0::new(Network::TestnetLiquid, "userleo3456", "userleo3456", "").unwrap();
+        // let mut amp0 =
+        //     blocking::Amp0::new(Network::TestnetLiquid, "userleo3456", "userleo3456", "").unwrap();
 
         let network = ElementsNetwork::LiquidTestnet;
         let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
-        let mut wollet = Wollet::without_persist(network, amp0.wollet_descriptor()).unwrap();
+        let wd = "ct(slip77(29d621405c29fac275ef0e502931223c9ed3d888f7998526deaba7be6131cc02),elsh(wsh(multi(2,tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24/3/43823/46379/64489/9901/49985/58125/53897/12235/30078/46825/29553/13516/50376/31548/23504/17695/3667/56597/56279/54865/12806/49986/36647/56214/6312/49621/8053/650/5305/17799/2073/50826/1/*,[3f0f1694/3'/1']tpubDA9GDAo3JyS2UU1NZyq9x3YpvjAQCmwr5yBnvP2fz6jjHNLWPSQQ9RcCvtY2hNj4JjUeSBC25RjpBtLaBKXJaCoYe9P3dkabmsVmiru3J27/1/*))))#4qxxlpys";
+        let wd = WolletDescriptor::from_str(wd).unwrap();
+
+        // let wd = amp0.wollet_descriptor();
+        // println!("wd: {}", wd.to_string());
+        let mut wollet = Wollet::without_persist(network, wd).unwrap();
+        // let mut wollet = Wollet::without_persist(network, amp0.wollet_descriptor()).unwrap();
         let mut client = EsploraClient::new_waterfalls(url, network).unwrap();
 
-        fn sync(wollet: &mut Wollet, client: &mut EsploraClient, amp0: &blocking::Amp0) {
+        // fn sync(wollet: &mut Wollet, client: &mut EsploraClient, amp0: &blocking::Amp0) {
+        fn sync(wollet: &mut Wollet, client: &mut EsploraClient) {
             let update = client
-                .full_scan_to_index(wollet, amp0.last_index())
+                // .full_scan_to_index(wollet, amp0.last_index())
+                .full_scan_to_index(wollet, 50)
                 .unwrap();
             if let Some(update) = update {
                 wollet.apply_update(update).unwrap();
             }
         }
 
-        sync(&mut wollet, &mut client, &amp0);
+        // sync(&mut wollet, &mut client, &amp0);
+        sync(&mut wollet, &mut client);
 
         let balance = wollet.balance().unwrap();
         println!("Balance: {:?}", balance);
         let lbtc = wollet.policy_asset();
         if balance.get(&lbtc).unwrap_or(&0) < &500 {
-            let addr = amp0.address(None).unwrap();
+            // let addr = amp0.address(None).unwrap();
+            let addr = wollet.address(Some(0)).unwrap();
             println!("Address: {:?}", addr);
             panic!("Send some tLBTC to {}", addr.address());
         }
 
         use lwk_signer::SwSigner;
+        use lwk_common::Signer;
         let mnemonic =
             "affair south beef width exact fiscal produce furnace glide kingdom access month";
-        let _signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+
+        let amp0pset = wollet
+            .tx_builder()
+            .drain_lbtc_wallet()
+            .finish_for_amp0()
+            .unwrap();
+        let mut pset = amp0pset.pset().clone();
+        let blinding_nonces = amp0pset.blinding_nonces();
+        println!("bn: {:?}", blinding_nonces);
+
+        let sigs = signer.sign(&mut pset).unwrap();
+        assert!(sigs > 0);
+
+        // w.send(&mut pset);
     }
 }

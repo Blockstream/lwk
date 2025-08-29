@@ -1196,12 +1196,16 @@ mod tests {
         let mut wollet = Wollet::without_persist(network, amp0.wollet_descriptor()).unwrap();
         let mut client = EsploraClient::new_waterfalls(url, network).unwrap();
 
-        let update = client
-            .full_scan_to_index(&wollet, amp0.last_index())
-            .unwrap();
-        if let Some(update) = update {
-            wollet.apply_update(update).unwrap();
+        fn sync(wollet: &mut Wollet, client: &mut EsploraClient, amp0: &blocking::Amp0) {
+            let update = client
+                .full_scan_to_index(wollet, amp0.last_index())
+                .unwrap();
+            if let Some(update) = update {
+                wollet.apply_update(update).unwrap();
+            }
         }
+
+        sync(&mut wollet, &mut client, &amp0);
 
         let balance = wollet.balance().unwrap();
         println!("Balance: {:?}", balance);

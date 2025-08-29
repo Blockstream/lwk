@@ -630,6 +630,15 @@ impl BlobContent {
         }
         None
     }
+
+    fn find_master_xpub(&self) -> Option<Xpub> {
+        for (k, v) in &self.xpubs {
+            if v.is_empty() {
+                return Some(*k);
+            }
+        }
+        None
+    }
 }
 
 fn amp_descriptor(

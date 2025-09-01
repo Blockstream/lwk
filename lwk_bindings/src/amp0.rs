@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 // use crate::{LwkError, Pset, WolletDescriptor};
-use crate::{AddressResult, LwkError, Network, Pset, Txid, WolletDescriptor};
+use crate::{AddressResult, LwkError, Network, Pset, Transaction, WolletDescriptor};
 
 /// Wrapper over [`lwk_wollet::amp0::blocking::Amp0`]
 #[derive(uniffi::Object)]
@@ -43,9 +43,9 @@ impl Amp0 {
         Ok(Arc::new(self.inner.lock()?.address(index)?.into()))
     }
 
-    /// Ask AMP0 server to cosign and broadcast the transaction
-    pub fn send(&self, pset: &Amp0Pset) -> Result<Arc<Txid>, LwkError> {
-        Ok(Arc::new(self.inner.lock()?.send(pset.as_ref())?.into()))
+    /// Ask AMP0 server to cosign
+    pub fn sign(&self, pset: &Amp0Pset) -> Result<Arc<Transaction>, LwkError> {
+        Ok(Arc::new(self.inner.lock()?.sign(pset.as_ref())?.into()))
     }
 }
 

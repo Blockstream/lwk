@@ -29,7 +29,7 @@ use crate::wamp::message::Msg;
 use crate::{hex, Error};
 use crate::{AddressResult, WolletDescriptor};
 use elements::pset::PartiallySignedTransaction;
-use elements::Txid;
+use elements::Transaction;
 
 struct Amp0Inner<S: Stream> {
     stream: S,
@@ -244,9 +244,9 @@ impl<S: Stream> Amp0<S> {
         }
     }
 
-    /// Ask AMP0 server to cosign and broadcast the transaction
-    pub async fn send(&self, _pset: &Amp0Pset) -> Result<Txid, Error> {
-        // vault.send_raw_tx
+    /// Ask AMP0 server to cosign
+    pub async fn sign(&self, _pset: &Amp0Pset) -> Result<Transaction, Error> {
+        // delayed_signature
         todo!();
     }
 }
@@ -901,8 +901,8 @@ pub mod blocking {
             self.rt.block_on(self.inner.address(index))
         }
 
-        pub fn send(&self, pset: &Amp0Pset) -> Result<Txid, Error> {
-            self.rt.block_on(self.inner.send(pset))
+        pub fn sign(&self, pset: &Amp0Pset) -> Result<Transaction, Error> {
+            self.rt.block_on(self.inner.sign(pset))
         }
     }
 }

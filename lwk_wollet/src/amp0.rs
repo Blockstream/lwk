@@ -24,12 +24,18 @@ use std::sync::Arc;
 #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
 use tokio::sync::Mutex;
 
+use crate::hashes::Hash;
 use crate::wamp::common::{Arg, ClientRole, WampDict, WampId};
 use crate::wamp::message::Msg;
+use crate::EC;
 use crate::{hex, Error};
 use crate::{AddressResult, WolletDescriptor};
+use elements::encode::{deserialize, serialize};
+use elements::hex::{FromHex, ToHex};
 use elements::pset::PartiallySignedTransaction;
+use elements::BlockHash;
 use elements::Transaction;
+use elements_miniscript::psbt::PsbtExt;
 
 struct Amp0Inner<S: Stream> {
     stream: S,
@@ -255,9 +261,77 @@ impl<S: Stream> Amp0<S> {
     }
 
     /// Ask AMP0 server to cosign
-    pub async fn sign(&self, _pset: &Amp0Pset) -> Result<Transaction, Error> {
-        // delayed_signature
-        todo!();
+    pub async fn sign(&self, amp0pset: &Amp0Pset) -> Result<Transaction, Error> {
+        let blinding_nonces = amp0pset.blinding_nonces().to_vec();
+
+        // "finalize" the PSET for Green/AMP0
+        let mut pset = amp0pset.pset().clone();
+        let mut scripts = vec![];
+
+        // Dummy signature to use a placeholder
+        let dummy_hex = "304402207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f02207f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01";
+        let dummy = Vec::<u8>::from_hex(dummy_hex)?;
+
+        for input in pset.inputs_mut() {
+            // FIXME: ignore/handle non Green/AMP0 inputs
+            for pk in input.bip32_derivation.keys() {
+                if !input.partial_sigs.contains_key(pk) {
+                    input.partial_sigs.insert(*pk, dummy.clone());
+                }
+            }
+
+            // Extract the witness scripts (required by the cosigning API)
+            let script = input
+                .witness_script
+                .as_ref()
+                .map(|s| s.to_hex())
+                .unwrap_or_default();
+            scripts.push(script);
+        }
+
+        let _ = pset.finalize_mut(&EC, BlockHash::all_zeros());
+
+        let tx = pset.extract_tx()?;
+        let tx_hex = serialize(&tx).to_hex();
+
+        #[derive(serde::Serialize)]
+        struct DelayedSignatureRequest {
+            tx: String,
+            blinding_nonces: Vec<String>,
+            scripts: Vec<String>,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct DelayedSignatureResponse {
+            result: bool,
+            error: String,
+            tx: Option<String>,
+        }
+
+        let body = DelayedSignatureRequest {
+            tx: tx_hex,
+            blinding_nonces,
+            scripts,
+        };
+
+        let j: DelayedSignatureResponse = reqwest::Client::new()
+            .post(format!("{}/delayed_signature", self.http_url()))
+            .json(&body)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        if !j.result {
+            return Err(Error::Generic(format!(
+                "delayed_signature: error: {}",
+                j.error
+            )));
+        }
+
+        let tx = j.tx.unwrap_or_default();
+        let tx: Transaction = deserialize(&Vec::<u8>::from_hex(&tx)?)?;
+        Ok(tx)
     }
 }
 

@@ -382,7 +382,10 @@ impl TxBuilder {
     }
 
     /// Finish building a transaction that can be converted to a LiquiDEX proposal
-    fn finish_liquidex_make(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
+    fn finish_liquidex_make(
+        self,
+        wollet: &Wollet,
+    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
         // Create PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
@@ -517,11 +520,15 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        Ok(pset)
+        // TODO: blinding nonces
+        Ok((pset, vec![]))
     }
 
     /// Finish building a transaction that takes LiquiDEX proposals
-    fn finish_liquidex_take(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
+    fn finish_liquidex_take(
+        self,
+        wollet: &Wollet,
+    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
         let [proposal] = self.liquidex_proposals.as_slice() else {
             return Err(Error::LiquidexError(LiquidexError::TakerInvalidParams));
         };
@@ -728,7 +735,8 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        Ok(pset)
+        // TODO: blinding nonces
+        Ok((pset, vec![]))
     }
 
     /// Finish building the transaction for AMP0
@@ -742,6 +750,14 @@ impl TxBuilder {
 
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
+        let (pset, _blinding_nonces) = self.finish_inner(wollet)?;
+        Ok(pset)
+    }
+
+    pub fn finish_inner(
+        self,
+        wollet: &Wollet,
+    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
@@ -1048,11 +1064,14 @@ impl TxBuilder {
         // Blind the transaction
         let mut rng = thread_rng();
         pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+        // TODO: once we update to elements 26 get the ephemeral private keys and compute the
+        // blinding nonces
+        let blinding_nonces = vec![];
 
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        Ok(pset)
+        Ok((pset, blinding_nonces))
     }
 }
 

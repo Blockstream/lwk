@@ -244,6 +244,16 @@ impl<S: Stream> Amp0<S> {
         }
     }
 
+    // Green backend http URL
+    #[allow(unused)]
+    fn http_url(&self) -> &'static str {
+        match self.network {
+            Network::Liquid => "https://green-liquid-mainnet.blockstream.com",
+            Network::TestnetLiquid => "https://green-liquid-testnet.blockstream.com",
+            Network::LocaltestLiquid => "http://127.0.0.1:9908",
+        }
+    }
+
     /// Ask AMP0 server to cosign
     pub async fn sign(&self, _pset: &Amp0Pset) -> Result<Transaction, Error> {
         // delayed_signature

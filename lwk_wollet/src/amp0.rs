@@ -1201,4 +1201,87 @@ mod tests {
             .unwrap_err();
         assert!(err.to_string().contains("Address index too high"));
     }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[test]
+    #[ignore] // Requires network connectivity and local Green backend
+    fn test_amp0_sign() {
+        use super::*;
+        use crate::clients::blocking::BlockchainBackend;
+        use crate::{ElectrumClient, ElectrumUrl};
+        use crate::{ElementsNetwork, Wollet};
+        use lwk_common::Network;
+        use lwk_common::Signer;
+        use lwk_signer::SwSigner;
+
+        let mnemonic =
+            "affair south beef width exact fiscal produce furnace glide kingdom access month";
+        let username = "userleo3456";
+        let password = "userleo3456";
+        let amp_id = "";
+        let url = "localhost:19002";
+
+        let network = Network::LocaltestLiquid;
+        let elements_network = ElementsNetwork::default_regtest();
+
+        let electrum_url = ElectrumUrl::new(url, false, false).unwrap();
+        let mut client = ElectrumClient::new(&electrum_url).unwrap();
+
+        let amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();
+
+        let wd = amp0.wollet_descriptor();
+        let mut wollet = Wollet::without_persist(elements_network, wd).unwrap();
+
+        fn sync(wollet: &mut Wollet, client: &mut impl BlockchainBackend, amp0: &blocking::Amp0) {
+            let update = client
+                .full_scan_to_index(wollet, amp0.last_index())
+                .unwrap();
+            if let Some(update) = update {
+                wollet.apply_update(update).unwrap();
+            }
+        }
+
+        sync(&mut wollet, &mut client, &amp0);
+
+        // Check we have enough funds to send a transaction
+        let balance = wollet.balance().unwrap();
+        println!("Balance: {:?}", balance);
+        let lbtc = wollet.policy_asset();
+        let balance_before = *balance.get(&lbtc).unwrap_or(&0);
+        // if balance.get(&lbtc).unwrap_or(&0) < &500 {
+        if balance_before < 500 {
+            let addr = wollet.address(Some(0)).unwrap();
+            println!("Address: {:?}", addr);
+            panic!("Send some tLBTC to {}", addr.address());
+        }
+
+        // Construct a PSET sending LBTC back to the wallet
+        let amp0pset = wollet
+            .tx_builder()
+            .drain_lbtc_wallet()
+            .finish_for_amp0()
+            .unwrap();
+        let mut pset = amp0pset.pset().clone();
+        let blinding_nonces = amp0pset.blinding_nonces();
+
+        // User signs the PSET
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let sigs = signer.sign(&mut pset).unwrap();
+        assert!(sigs > 0);
+
+        // Reconstruct the Amp0 PSET with the PSET signed by the user
+        let amp0pset = Amp0Pset::new(pset, blinding_nonces.to_vec()).unwrap();
+
+        // AMP0 signs
+        let tx = amp0.sign(&amp0pset).unwrap();
+
+        // Broadcast the transaction
+        let _txid = client.broadcast(&tx).unwrap();
+
+        // Apply the transaction
+        wollet.apply_transaction(tx).unwrap();
+
+        let balance_after = *wollet.balance().unwrap().get(&lbtc).unwrap();
+        assert!(balance_after < balance_before);
+    }
 }

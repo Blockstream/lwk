@@ -1280,7 +1280,7 @@ mod tests {
     #[test]
     #[ignore] // Requires network connectivity
     fn test_amp0_sign_testnet() {
-        amp0_sign(true)
+        amp0_sign(false)
     }
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]

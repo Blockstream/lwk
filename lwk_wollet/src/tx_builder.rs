@@ -742,9 +742,7 @@ impl TxBuilder {
     /// Finish building the transaction for AMP0
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
-        // TODO: compute blinding nonces using the ephemeral keys once available
-        let blinding_nonces = vec![];
-        let pset = self.finish(wollet)?;
+        let (pset, blinding_nonces) = self.finish_inner(wollet)?;
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 

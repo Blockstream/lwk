@@ -1278,12 +1278,23 @@ mod tests {
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[test]
-    #[ignore] // Requires network connectivity and local Green backend
-    fn test_amp0_sign() {
+    #[ignore] // Requires network connectivity
+    fn test_amp0_sign_testnet() {
+        amp0_sign(true)
+    }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[test]
+    #[ignore] // Requires local Green backend
+    fn test_amp0_sign_regtest() {
+        amp0_sign(true)
+    }
+
+    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    fn amp0_sign(regtest: bool) {
         use super::*;
         use crate::clients::blocking::BlockchainBackend;
-        use crate::{ElectrumClient, ElectrumUrl};
-        use crate::{ElementsNetwork, Wollet};
+        use crate::{ElectrumClient, ElementsNetwork, Wollet};
         use lwk_common::Network;
         use lwk_common::Signer;
         use lwk_signer::SwSigner;
@@ -1293,12 +1304,22 @@ mod tests {
         let username = "userleo3456";
         let password = "userleo3456";
         let amp_id = "";
-        let url = "localhost:19002";
 
-        let network = Network::LocaltestLiquid;
-        let elements_network = ElementsNetwork::default_regtest();
+        let (network, elements_network, url) = if regtest {
+            (
+                Network::LocaltestLiquid,
+                ElementsNetwork::default_regtest(),
+                "tcp://localhost:19002",
+            )
+        } else {
+            (
+                Network::TestnetLiquid,
+                ElementsNetwork::LiquidTestnet,
+                "ssl://elements-testnet.blockstream.info:50002",
+            )
+        };
 
-        let electrum_url = ElectrumUrl::new(url, false, false).unwrap();
+        let electrum_url = url.parse().unwrap();
         let mut client = ElectrumClient::new(&electrum_url).unwrap();
 
         let amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();

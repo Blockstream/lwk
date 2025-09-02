@@ -1300,9 +1300,9 @@ mod tests {
         use lwk_signer::SwSigner;
 
         let mnemonic =
-            "affair south beef width exact fiscal produce furnace glide kingdom access month";
-        let username = "userleo3456";
-        let password = "userleo3456";
+            "idea bind tissue wood february mention unable collect expand stuff snap stock";
+        let username = "userleo34567";
+        let password = "userleo34567";
         let amp_id = "";
 
         let (network, elements_network, url) = if regtest {

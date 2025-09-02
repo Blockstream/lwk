@@ -1253,6 +1253,11 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.to_string().contains("Address index too high"));
+
+        // Address with index 0 is not monitored by Green backend
+        // and it must not be used.
+        let err = amp0ext.address(Some(0)).await.unwrap_err();
+        assert!(err.to_string().contains("Invalid address index for AMP0"));
     }
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]

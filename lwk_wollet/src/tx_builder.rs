@@ -1061,10 +1061,76 @@ impl TxBuilder {
 
         // Blind the transaction
         let mut rng = thread_rng();
-        pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        // TODO: once we update to elements 26 get the ephemeral private keys and compute the
-        // blinding nonces
-        let blinding_nonces = vec![];
+
+        // TODO: use the next line once we can use elements26 only
+        // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+        let (blind_secrets, mut pset) = {
+            use elements26::confidential::{
+                AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
+            };
+            use elements26::pset::PartiallySignedTransaction as Pset26;
+            use std::str::FromStr;
+            let mut pset26 = Pset26::from_str(&pset.to_string()).expect("from elements25");
+            let inp_txout_sec: HashMap<usize, elements26::TxOutSecrets> = inp_txout_sec
+                .iter()
+                .map(|(i, s)| {
+                    let asset = elements26::AssetId::from_slice(s.asset.into_inner().as_ref())
+                        .expect("from elements25");
+                    let abf = Abf26::from_slice(s.asset_bf.into_inner().as_ref())
+                        .expect("from elements25");
+                    let vbf = Vbf26::from_slice(s.value_bf.into_inner().as_ref())
+                        .expect("from elements25");
+                    let value = s.value;
+                    let s = elements26::TxOutSecrets::new(asset, abf, value, vbf);
+                    (*i, s)
+                })
+                .collect();
+            let blind_secrets = pset26
+                .blind_last(&mut rng, &EC, &inp_txout_sec)
+                .map_err(|e| Error::Generic(format!("elements26 blind error: {}", e)))?;
+            // erase all non witness utxo surjection and range proofs
+            // this appears to be necessary for pre-segwit inputs
+            for input in pset26.inputs_mut() {
+                if let Some(ref mut tx) = &mut input.non_witness_utxo {
+                    for output in &mut tx.output {
+                        output.witness = Default::default();
+                    }
+                }
+            }
+            let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
+                .expect("from elements25");
+            (blind_secrets, pset25)
+        };
+
+        let mut m = HashMap::new();
+        for (ct_location, (_abf, _vbf, eph_sk)) in blind_secrets.iter() {
+            // these are outputs not inputs...
+            if let elements26::CtLocation {
+                input_index,
+                ty: elements26::CtLocationType::Input,
+            } = ct_location
+            {
+                m.insert(input_index, eph_sk);
+            }
+        }
+
+        let mut blinding_nonces = vec![];
+        for idx in 0..pset.n_outputs() {
+            let bn = if let Some(eph_sk) = m.get(&idx) {
+                let blinding_pubkey = pset.outputs()[idx]
+                    .blinding_key
+                    .ok_or_else(|| Error::Generic("Missing blinding key".into()))?;
+                let (_nonce, shared_secret) = elements::confidential::Nonce::with_ephemeral_sk(
+                    &EC,
+                    **eph_sk,
+                    &blinding_pubkey.inner,
+                );
+                shared_secret.display_secret().to_string()
+            } else {
+                "".to_string()
+            };
+            blinding_nonces.push(bn);
+        }
 
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;

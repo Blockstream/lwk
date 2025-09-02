@@ -1319,7 +1319,6 @@ mod tests {
         println!("Balance: {:?}", balance);
         let lbtc = wollet.policy_asset();
         let balance_before = *balance.get(&lbtc).unwrap_or(&0);
-        // if balance.get(&lbtc).unwrap_or(&0) < &500 {
         if balance_before < 500 {
             let addr = wollet.address(Some(0)).unwrap();
             println!("Address: {:?}", addr);

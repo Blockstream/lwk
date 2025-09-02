@@ -1080,13 +1080,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "elements"
+version = "0.26.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d562b364c5d2aced40b01b3f73fc968311787e6813957593d4ffa94cd8733e3"
+dependencies = [
+ "bech32 0.11.0",
+ "bitcoin",
+ "secp256k1-zkp",
+ "serde_json",
+]
+
+[[package]]
 name = "elements-miniscript"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "571fa105690f83c7833df2109eb2e14ca0e62d633d2624ffcb166ff18a3da870"
 dependencies = [
  "bitcoin",
- "elements",
+ "elements 0.25.2",
  "miniscript",
  "serde",
 ]
@@ -2226,7 +2238,7 @@ dependencies = [
 name = "lwk_bindings"
 version = "0.10.0"
 dependencies = [
- "elements",
+ "elements 0.25.2",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",
@@ -2244,7 +2256,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "ctrlc",
- "elements",
+ "elements 0.25.2",
  "env_logger",
  "log",
  "lwk_app",
@@ -2262,7 +2274,7 @@ name = "lwk_common"
 version = "0.10.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
+ "elements 0.25.2",
  "elements-miniscript",
  "getrandom 0.2.15",
  "qr_code",
@@ -2290,7 +2302,7 @@ name = "lwk_jade"
 version = "0.10.0"
 dependencies = [
  "base64 0.21.7",
- "elements",
+ "elements 0.25.2",
  "elements-miniscript",
  "hex",
  "log",
@@ -2417,7 +2429,8 @@ dependencies = [
  "cbc",
  "criterion",
  "electrum-client",
- "elements",
+ "elements 0.25.2",
+ "elements 0.26.1",
  "elements-miniscript",
  "flate2",
  "futures",
@@ -4624,7 +4637,7 @@ dependencies = [
  "bitcoin",
  "bitcoind",
  "clap",
- "elements",
+ "elements 0.25.2",
  "elements-miniscript",
  "env_logger",
  "form_urlencoded",

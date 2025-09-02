@@ -227,6 +227,9 @@ impl<S: Stream> Amp0<S> {
     pub async fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
         match index {
             Some(i) => {
+                if i == 0 {
+                    return Err(Error::Generic("Invalid address index for AMP0".into()));
+                }
                 if i > self.last_index {
                     return Err(Error::Generic("Address index too high".into()));
                 }

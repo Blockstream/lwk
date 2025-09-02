@@ -1298,7 +1298,7 @@ mod tests {
         let electrum_url = url.parse().unwrap();
         let mut client = ElectrumClient::new(&electrum_url).unwrap();
 
-        let amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();
+        let mut amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();
 
         let wd = amp0.wollet_descriptor();
         let mut wollet = Wollet::without_persist(elements_network, wd).unwrap();
@@ -1320,7 +1320,7 @@ mod tests {
         let lbtc = wollet.policy_asset();
         let balance_before = *balance.get(&lbtc).unwrap_or(&0);
         if balance_before < 500 {
-            let addr = wollet.address(Some(0)).unwrap();
+            let addr = amp0.address(Some(1)).unwrap();
             println!("Address: {:?}", addr);
             panic!("Send some tLBTC to {}", addr.address());
         }

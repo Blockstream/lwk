@@ -83,6 +83,12 @@ impl From<Amp0Pset> for lwk_wollet::amp0::Amp0Pset {
     }
 }
 
+impl AsRef<lwk_wollet::amp0::Amp0Pset> for Amp0Pset {
+    fn as_ref(&self) -> &lwk_wollet::amp0::Amp0Pset {
+        &self.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Amp0Pset {
     /// Creates a `Amp0Pset`

@@ -1354,7 +1354,8 @@ mod tests {
         let tx = amp0.sign(&amp0pset).unwrap();
 
         // Broadcast the transaction
-        let _txid = client.broadcast(&tx).unwrap();
+        let txid = client.broadcast(&tx).unwrap();
+        println!("txid: {}", txid);
 
         // Apply the transaction
         wollet.apply_transaction(tx).unwrap();

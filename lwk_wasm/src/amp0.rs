@@ -1,4 +1,4 @@
-use crate::{AddressResult, Error, Network, WebSocketSerial};
+use crate::{AddressResult, Error, Network, Transaction, WebSocketSerial};
 
 use wasm_bindgen::prelude::*;
 
@@ -62,6 +62,12 @@ impl Amp0 {
             &self.network,
             &self.inner.wollet_descriptor().into(),
         )?)
+    }
+
+    /// Ask AMP0 server to cosign
+    pub async fn sign(&self, amp0pset: &Amp0Pset) -> Result<Transaction, Error> {
+        let tx = self.inner.sign(amp0pset.as_ref()).await?;
+        Ok(tx.into())
     }
 }
 

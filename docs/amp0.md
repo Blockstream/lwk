@@ -79,5 +79,19 @@ To receive funds you need an address, you can get addresses with `Amp0::address(
 For more details see the above warnings sections.
 
 ### Monitor
+LWK allows to monitor Liquid wallets, including AMP0 accounts.
+
+First you get the AMP0 descriptor with `Amp0::wollet_descriptor()`.
+You then create a wallet with `Wollet::new()`.
+
+Once you have the AMP0 `Wollet`, you can get `Wollet::transactions()`, `Wollet::balance()` and other information.
+
+LWK wallets needs to be updated with new data from the Liquid blockchain.
+First create a blockchain client, for insance `EsploraClient::new`.
+Then get an update with `BlockchainBackend::full_scan_to_index()` passing the value returned by Amp0::last_index()`.
+Finally update the wallet with `Wollet::apply_update()`.
+
+⚠️ For AMP0 wallets, do not sync the wallet with `BlockchainBackend::full_scan()`, otherwise some funds might not show up.
+For more details see the above warnings sections.
 
 ### Send

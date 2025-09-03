@@ -48,9 +48,24 @@ To overcome this, when syncing AMP0 account wallets, callers must:
 
 ## Setup
 
-TODO: setup with blockstream App (sreen)
+To complete the setup procedure you can use:
+* [Blockstream App](https://blockstream.com/app/), or
+* [`green_cli`](https://github.com/Blockstream/green_cli/), or
+* [GDK](https://github.com/blockstream/gdk) directly (e.g. with the released python wheels)
 
-Alternative you can setup the AMP account using `green_cli`.
+You need to:
+1. Create a Liquid wallet (backup its mnemonic/seed)
+2. Create a AMP account (AMP ID)
+3. Create a Liquid Watch-Only (username and password)
+
+Note that you can create the Liquid wallet using a Jade.
+
+Now that you have:
+* Mnemonic/seed (or Jade)
+* AMP ID
+* Watch-Only credentials (username and password)
+
+You're ready to use AMP0 with LWK.
 
 ## AMP0 daily operations
 

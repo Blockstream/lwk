@@ -23,7 +23,7 @@ Then you can:
 
 Using AMP0 with LWK you can keep the signer separated and operate it accoriding to the desired degree of security and isolation.
 
-## Warnings
+## ⚠️ Warnings
 
 AMP0 is based on a legacy system and it has some pitfalls.
 We put some mechanism in order to make it harder to do the wrong thing, anyway callers should be careful when getting new addresses and syncing the wallet.

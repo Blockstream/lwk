@@ -742,19 +742,20 @@ impl TxBuilder {
     /// Finish building the transaction for AMP0
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
-        let (pset, blinding_nonces) = self.finish_inner(wollet)?;
+        let (pset, blinding_nonces) = self.finish_inner(wollet, true)?;
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
-        let (pset, _blinding_nonces) = self.finish_inner(wollet)?;
+        let (pset, _blinding_nonces) = self.finish_inner(wollet, false)?;
         Ok(pset)
     }
 
     pub fn finish_inner(
         self,
         wollet: &Wollet,
+        for_amp0: bool,
     ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
@@ -1064,7 +1065,7 @@ impl TxBuilder {
 
         // TODO: use the next line once we can use elements26 only
         // let blind_secrets = pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
-        let (blind_secrets, mut pset) = {
+        let (blind_secrets, mut pset) = if for_amp0 {
             use elements26::confidential::{
                 AssetBlindingFactor as Abf26, ValueBlindingFactor as Vbf26,
             };
@@ -1100,6 +1101,10 @@ impl TxBuilder {
             let pset25 = elements::pset::PartiallySignedTransaction::from_str(&pset26.to_string())
                 .expect("from elements25");
             (blind_secrets, pset25)
+        } else {
+            let blind_secrets = std::collections::BTreeMap::new();
+            pset.blind_last(&mut rng, &EC, &inp_txout_sec)?;
+            (blind_secrets, pset)
         };
 
         let mut m = HashMap::new();

@@ -752,7 +752,7 @@ impl TxBuilder {
         Ok(pset)
     }
 
-    pub fn finish_inner(
+    fn finish_inner(
         self,
         wollet: &Wollet,
         for_amp0: bool,

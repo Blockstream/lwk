@@ -73,6 +73,10 @@ LWK allows to manage created AMP0 accounts.
 You can receive funds, monitor transactions and send to other wallets.
 
 ### Receive
+To receive funds you need an address, you can get addresses with `Amp0::address()`.
+
+⚠️ For AMP0 wallets, do not use `Wollet::address()` or `WolletDescriptor::address()`, using them can lead to loss of funds.
+For more details see the above warnings sections.
 
 ### Monitor
 

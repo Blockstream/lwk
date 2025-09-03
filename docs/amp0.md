@@ -45,3 +45,17 @@ So it can happen that some transactions are not returned, and the wallet balance
 To overcome this, when syncing AMP0 account wallets, callers must:
 * get the last address index returned, using `Amp0::last_index()`
 * and then use `BlockchainBackend::full_scan_to_index()` to sync up to that index
+
+## Setup
+
+TODO: setup with blockstream App (sreen)
+
+Alternative you can setup the AMP account using `green_cli`.
+
+## AMP0 daily operations
+
+### Receive
+
+### Monitor
+
+### Send

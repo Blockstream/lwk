@@ -69,6 +69,9 @@ You're ready to use AMP0 with LWK.
 
 ## AMP0 daily operations
 
+LWK allows to manage created AMP0 accounts.
+You can receive funds, monitor transactions and send to other wallets.
+
 ### Receive
 
 ### Monitor

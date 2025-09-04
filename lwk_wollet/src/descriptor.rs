@@ -161,10 +161,6 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
 }
 
 impl WolletDescriptor {
-    pub fn confidential_descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        &self.inner
-    }
-
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
         &self.inner.descriptor
     }

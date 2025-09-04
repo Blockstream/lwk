@@ -54,3 +54,10 @@ signer = Signer(mnemonic, network)
 # Sign with the user key
 pset = amp0pset.pset()
 pset = signer.sign(pset)
+
+# Ask AMP0 to cosign
+amp0pset = Amp0Pset(pset, amp0pset.blinding_nonces())
+tx = amp0.sign(amp0pset)
+
+# Broadcast
+txid = client.broadcast(tx)

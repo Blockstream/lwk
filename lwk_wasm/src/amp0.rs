@@ -153,13 +153,13 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    #[ignore] // Takes too long and cosign does not work (delayed_signature enpoint needs CORS)
+    #[ignore] // Takes too long
     async fn test_amp0_e2e() {
         use crate::{Mnemonic, Signer, TxBuilder};
         use std::collections::HashMap;
 
         let network = Network::testnet();
-        let mut amp0 = Amp0::new_testnet("userleo34567", "userleo34567", "")
+        let mut amp0 = Amp0::new_testnet("userleo345678", "userleo345678", "")
             .await
             .unwrap();
 
@@ -201,7 +201,7 @@ mod tests {
 
         // User signs
         let mnemonic = Mnemonic::new(
-            "idea bind tissue wood february mention unable collect expand stuff snap stock",
+            "student lady today genius gentle zero satoshi book just link gauge tooth",
         )
         .unwrap();
         let signer = Signer::new(&mnemonic, &network).unwrap();

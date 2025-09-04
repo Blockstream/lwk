@@ -1326,10 +1326,9 @@ mod tests {
         use lwk_common::Signer;
         use lwk_signer::SwSigner;
 
-        let mnemonic =
-            "idea bind tissue wood february mention unable collect expand stuff snap stock";
-        let username = "userleo34567";
-        let password = "userleo34567";
+        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
+        let username = "userleo345678";
+        let password = "userleo345678";
         let amp_id = "";
 
         let (network, elements_network, url) = if regtest {

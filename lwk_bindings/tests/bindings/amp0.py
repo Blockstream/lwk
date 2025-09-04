@@ -1,13 +1,13 @@
 from lwk import *
 
 # AMP0 credentials
-username = "userleo34567"
-password = "userleo34567"
+username = "userleo345678"
+password = "userleo345678"
 # AMP ID
 amp_id = ""
 
 # BIP39 mnemonic corresponding to the AMP0 account
-mnemonic = Mnemonic("idea bind tissue wood february mention unable collect expand stuff snap stock")
+mnemonic = Mnemonic("student lady today genius gentle zero satoshi book just link gauge tooth")
 
 network = Network.testnet()
 url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
@@ -17,7 +17,7 @@ amp0 = Amp0(network, username, password, amp_id)
 
 # Get an address
 addr1 = str(amp0.address(1).address())
-assert addr1 == 'vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR'
+assert addr1 == "vjU8ft8T5MX2X6DorpqwELknV2H27dhsLUwDAWHbhTpQT4FHtedrEUauYgjFa4w8nbK9eybQWB4EqRZh"
 
 # Create wollet
 wollet_descriptor = amp0.wollet_descriptor()

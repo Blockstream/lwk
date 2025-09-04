@@ -30,3 +30,15 @@ last_index = amp0.last_index()
 assert last_index > 20
 update = client.full_scan_to_index(wollet, last_index)
 wollet.apply_update(update)
+
+# Get the wallet transactions
+txs = wollet.transactions()
+assert len(txs) > 0
+
+# Get the balance
+balance = wollet.balance()
+lbtc = network.policy_asset()
+lbtc_balance = balance.get(lbtc, 0)
+if lbtc_balance < 500:
+    print(f"Balance is insufficient to make a transaction, send some tLBTC to {addr1}")
+    quit()

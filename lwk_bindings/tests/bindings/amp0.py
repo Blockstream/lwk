@@ -18,3 +18,7 @@ amp0 = Amp0(network, username, password, amp_id)
 # Get an address
 addr1 = str(amp0.address(1).address())
 assert addr1 == 'vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR'
+
+# Create wollet
+wollet_descriptor = amp0.wollet_descriptor()
+wollet = Wollet(network, wollet_descriptor, None)

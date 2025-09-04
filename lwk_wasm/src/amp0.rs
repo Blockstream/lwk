@@ -151,4 +151,66 @@ mod tests {
         expected.insert(lbtc, 0);
         assert_eq!(balance, expected);
     }
+
+    #[wasm_bindgen_test]
+    #[ignore] // Takes too long and cosign does not work (delayed_signature enpoint needs CORS)
+    async fn test_amp0_e2e() {
+        use crate::{Mnemonic, Signer, TxBuilder};
+        use std::collections::HashMap;
+
+        let network = Network::testnet();
+        let mut amp0 = Amp0::new_testnet("userleo34567", "userleo34567", "")
+            .await
+            .unwrap();
+
+        // Get an address
+        let addr = amp0.address(Some(1)).await.unwrap().address();
+
+        // Create wollet
+        let mut wollet = amp0.wollet().unwrap();
+
+        // Sync the wollet
+        let mut client = network.default_esplora_client();
+        let last_index = amp0.last_index();
+        let update = client
+            .full_scan_to_index(&wollet, last_index)
+            .await
+            .unwrap()
+            .unwrap();
+        wollet.apply_update(&update).unwrap();
+
+        // Get balance
+        let balance = wollet.balance().unwrap();
+        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
+            serde_wasm_bindgen::from_value(balance).unwrap();
+        let lbtc = lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset();
+        let lbtc_balance = balance.get(&lbtc).unwrap_or(&0);
+        if *lbtc_balance < 500 {
+            println!(
+                "Balance is insufficient to make a transaction, send some tLBTC to {}",
+                addr
+            );
+            return;
+        }
+
+        // Create transaction
+        let amp0pset = TxBuilder::new(&network)
+            .drain_lbtc_wallet()
+            .finish_for_amp0(&wollet)
+            .unwrap();
+
+        // User signs
+        let mnemonic = Mnemonic::new(
+            "idea bind tissue wood february mention unable collect expand stuff snap stock",
+        )
+        .unwrap();
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+        let pset = signer.sign(amp0pset.pset()).unwrap();
+
+        // Amp0 cosign
+        let amp0pset = Amp0Pset::new(pset, amp0pset.blinding_nonces()).unwrap();
+        let tx = amp0.sign(&amp0pset).await.unwrap();
+        // Broadcast
+        let _txid = client.broadcast_tx(&tx).await.unwrap();
+    }
 }

@@ -42,3 +42,8 @@ lbtc_balance = balance.get(lbtc, 0)
 if lbtc_balance < 500:
     print(f"Balance is insufficient to make a transaction, send some tLBTC to {addr1}")
     quit()
+
+# Create a (redeposit) transaction
+b = network.tx_builder()
+b.drain_lbtc_wallet()  # send all to self
+amp0pset = b.finish_for_amp0(wollet)

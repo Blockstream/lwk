@@ -28,7 +28,7 @@ sha256t_hash_newtype! {
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
-pub struct WolletDescriptor(pub ConfidentialDescriptor<DescriptorPublicKey>);
+pub struct WolletDescriptor(ConfidentialDescriptor<DescriptorPublicKey>);
 
 impl Display for WolletDescriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -159,6 +159,10 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
 }
 
 impl WolletDescriptor {
+    pub fn confidential_descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
+        &self.0
+    }
+
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
         &self.0.descriptor
     }

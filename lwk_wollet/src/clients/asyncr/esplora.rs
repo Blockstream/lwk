@@ -554,7 +554,7 @@ impl EsploraClient {
                         waterfalls_result.page as u32 * WATERFALLS_MAX_ADDRESSES as u32 + i as u32,
                     );
                     let ct_desc = ConfidentialDescriptor {
-                        key: descriptor.0.key.clone(),
+                        key: descriptor.confidential_descriptor().key.clone(),
                         descriptor: desc.clone(),
                     };
                     let (script, blinding_pubkey, cached) =

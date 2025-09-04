@@ -103,7 +103,7 @@ Then instead of using `TxBuilder::finish`, use `TxBuilder::finish_for_amp0`.
 This creates an `Amp0Pset` which contains the PSET and the `blinding_nonces`, some extra data needed by the AMP0 cosigner.
 
 Now you need to interact with secret key material (🔑) corresponding to this AMP0 account.
-Create a signer, using `SWSigner` or `Jade` and sign the PSET with the signer, using `Singer::sign`.
+Create a signer, using `SWSigner` or `Jade` and sign the PSET with the signer, using `Signer::sign`.
 
 Once the PSET is signed, you need to have it cosigned by AMP0.
 Construct an `Amp0Pset` using the signed PSET and the `blinding_nonces` obtained before.

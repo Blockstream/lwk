@@ -38,6 +38,12 @@ impl From<Transaction> for elements::Transaction {
     }
 }
 
+impl AsRef<elements::Transaction> for Transaction {
+    fn as_ref(&self) -> &elements::Transaction {
+        &self.inner
+    }
+}
+
 #[wasm_bindgen]
 impl Transaction {
     /// Creates a `Transaction`

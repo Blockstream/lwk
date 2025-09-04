@@ -30,6 +30,8 @@ sha256t_hash_newtype! {
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
 pub struct WolletDescriptor {
     inner: ConfidentialDescriptor<DescriptorPublicKey>,
+    #[cfg(feature = "amp0")]
+    is_amp0: bool,
 }
 
 impl Display for WolletDescriptor {
@@ -82,15 +84,26 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
             }
         }
 
+        #[cfg(feature = "amp0")]
+        let is_amp0 = false;
+
         // Support legacy p2sh multisig
         if let elements_miniscript::descriptor::DescriptorType::Sh = desc.descriptor.desc_type() {
             if desc.descriptor.to_string().starts_with("elsh(multi(") {
-                return Ok(WolletDescriptor { inner: desc });
+                return Ok(WolletDescriptor {
+                    inner: desc,
+                    #[cfg(feature = "amp0")]
+                    is_amp0,
+                });
             }
         }
 
         match desc.descriptor.desc_type().segwit_version() {
-            Some(WitnessVersion::V0) => Ok(WolletDescriptor { inner: desc }),
+            Some(WitnessVersion::V0) => Ok(WolletDescriptor {
+                inner: desc,
+                #[cfg(feature = "amp0")]
+                is_amp0,
+            }),
             _ => Err(Self::Error::UnsupportedDescriptorNonV0),
         }
     }
@@ -250,7 +263,11 @@ impl WolletDescriptor {
             key: self.inner.key.clone(),
             descriptor,
         };
-        WolletDescriptor { inner }
+        WolletDescriptor {
+            inner,
+            #[cfg(feature = "amp0")]
+            is_amp0: self.is_amp0,
+        }
     }
 
     pub fn single_bitcoin_descriptors(&self) -> Vec<String> {

@@ -205,7 +205,7 @@ impl Wollet {
             //
             // This is quite conservative and might cause some address reuse, but it ensures
             // that the tx builder does not use addresses that are not monitored by the server.
-            *index = std::cmp::min(std::cmp::max(*index, 1), 20);
+            *index = (*index).clamp(1, 20);
         }
     }
 

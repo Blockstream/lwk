@@ -15,7 +15,7 @@ use elements_miniscript::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::EC;
+use crate::{Error, EC};
 
 sha256t_hash_newtype! {
     /// The tag of the hash
@@ -87,7 +87,7 @@ fn desc_is_amp0(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> bool {
 }
 
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
-    type Error = crate::error::Error;
+    type Error = Error;
 
     fn try_from(desc: ConfidentialDescriptor<DescriptorPublicKey>) -> Result<Self, Self::Error> {
         if let Key::Bare(_) = &desc.key {
@@ -150,7 +150,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
 }
 
 impl FromStr for WolletDescriptor {
-    type Err = crate::error::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         ConfidentialDescriptor::<DescriptorPublicKey>::from_str(s)?.try_into()
@@ -228,7 +228,7 @@ impl WolletDescriptor {
     ///
     /// On regtest and testnet you can have exactly the same descriptor, by accepting the network we create different identifiers for these networks.
     /// This is done also to create different identifiers on custom networks.
-    pub fn dwid(&self, network: lwk_common::Network) -> Result<String, crate::error::Error> {
+    pub fn dwid(&self, network: lwk_common::Network) -> Result<String, Error> {
         let index = (1 << 31) - 1; // 2^31 - 1
 
         // Use the Elements network address parameters
@@ -322,11 +322,7 @@ impl WolletDescriptor {
         v
     }
 
-    pub fn change(
-        &self,
-        index: u32,
-        params: &'static AddressParams,
-    ) -> Result<Address, crate::error::Error> {
+    pub fn change(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
         self.inner_address(index, params, Chain::Internal)
     }
 
@@ -336,11 +332,7 @@ impl WolletDescriptor {
         Aes256GcmSiv::new(key)
     }
 
-    pub fn address(
-        &self,
-        index: u32,
-        params: &'static AddressParams,
-    ) -> Result<Address, crate::error::Error> {
+    pub fn address(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
         self.inner_address(index, params, Chain::External)
     }
 
@@ -349,16 +341,16 @@ impl WolletDescriptor {
         index: u32,
         params: &'static AddressParams,
         ext_int: Chain,
-    ) -> Result<Address, crate::error::Error> {
+    ) -> Result<Address, Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .inner
             .at_derivation_index(index)?
-            .address(&crate::EC, params)?)
+            .address(&EC, params)?)
     }
 
     /// Get a scriptpubkey
-    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, crate::error::Error> {
+    pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, Error> {
         let v = self.inner.descriptor.clone().into_single_descriptors()?;
         let d = match ext_int {
             Chain::External => v.first().expect("at least on descriptor"),
@@ -372,7 +364,7 @@ impl WolletDescriptor {
         &self,
         ext_int: Chain,
         index: u32,
-    ) -> Result<Descriptor<DefiniteDescriptorKey>, crate::Error> {
+    ) -> Result<Descriptor<DefiniteDescriptorKey>, Error> {
         let desc = self.inner_descriptor_if_available(ext_int);
         Ok(desc.descriptor().at_derivation_index(index)?)
     }
@@ -382,7 +374,7 @@ impl WolletDescriptor {
         &self,
         ext_int: Chain,
         index: u32,
-    ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, crate::Error> {
+    ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .inner
@@ -391,7 +383,7 @@ impl WolletDescriptor {
 
     /// Try also to parse it as a non-multipath descriptor specified on 2 lines,
     /// like the format exported by the Green Wallet
-    pub fn from_str_relaxed(desc: &str) -> Result<WolletDescriptor, crate::Error> {
+    pub fn from_str_relaxed(desc: &str) -> Result<WolletDescriptor, Error> {
         match WolletDescriptor::from_str(desc) {
             Ok(d) => Ok(d),
             Err(e) => parse_multiline(desc).ok_or(e),
@@ -415,7 +407,7 @@ impl WolletDescriptor {
         index: u32,
         network: bitcoin::Network,
         fed_desc: BtcDescriptor<bitcoin::PublicKey>,
-    ) -> Result<bitcoin::Address, crate::error::Error> {
+    ) -> Result<bitcoin::Address, Error> {
         let our_desc = self
             .definite_descriptor(Chain::External, index)?
             .derived_descriptor(&EC)?;
@@ -427,7 +419,7 @@ impl WolletDescriptor {
 
     pub(crate) fn as_single_descriptors(
         &self,
-    ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, crate::Error> {
+    ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, Error> {
         let descriptors = self.inner.descriptor.clone().into_single_descriptors()?;
         let mut result = Vec::with_capacity(descriptors.len());
         for descriptor in descriptors {

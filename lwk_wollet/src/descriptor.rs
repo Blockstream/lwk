@@ -869,5 +869,13 @@ mod test {
         assert!(!wd_singlesig.is_amp0());
         assert!(wd_amp0_test.is_amp0());
         assert!(wd_amp0_main.is_amp0());
+
+        let params = &elements::AddressParams::ELEMENTS;
+        let expected_err =
+            "Cannot generate address for AMP0 wallets using this call, use Amp0::address()";
+        let err = wd_amp0_test.address(1, params).unwrap_err();
+        assert_eq!(err.to_string(), expected_err);
+        let err = wd_amp0_main.address(1, params).unwrap_err();
+        assert_eq!(err.to_string(), expected_err);
     }
 }

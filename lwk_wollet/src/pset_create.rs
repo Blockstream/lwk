@@ -192,7 +192,13 @@ impl Wollet {
         Ok(())
     }
 
-    fn sanitize_index(&self, index: &mut u32) {
+    fn addressee_inner(
+        &self,
+        satoshi: u64,
+        asset: AssetId,
+        last_unused: &mut u32,
+        is_change: bool,
+    ) -> Result<Recipient, Error> {
         #[cfg(feature = "amp0")]
         if self.descriptor.is_amp0() {
             // For AMP0 we never want to use addresses that are not monitored by the server.
@@ -205,8 +211,21 @@ impl Wollet {
             //
             // This is quite conservative and might cause some address reuse, but it ensures
             // that the tx builder does not use addresses that are not monitored by the server.
-            *index = (*index).clamp(1, 20);
+            *last_unused = (*last_unused).clamp(1, 20);
+
+            let params = self.network().address_params();
+            let address = self.descriptor.amp0_address(*last_unused, params)?;
+            *last_unused += 1;
+            return Ok(Recipient::from_address(satoshi, &address, asset));
         }
+
+        let address = if is_change {
+            self.change(Some(*last_unused))?
+        } else {
+            self.address(Some(*last_unused))?
+        };
+        *last_unused += 1;
+        Ok(Recipient::from_address(satoshi, address.address(), asset))
     }
 
     pub(crate) fn addressee_change(
@@ -215,10 +234,7 @@ impl Wollet {
         asset: AssetId,
         last_unused: &mut u32,
     ) -> Result<Recipient, Error> {
-        self.sanitize_index(last_unused);
-        let address = self.change(Some(*last_unused))?;
-        *last_unused += 1;
-        Ok(Recipient::from_address(satoshi, address.address(), asset))
+        self.addressee_inner(satoshi, asset, last_unused, true)
     }
 
     pub(crate) fn addressee_external(
@@ -227,10 +243,7 @@ impl Wollet {
         asset: AssetId,
         last_unused: &mut u32,
     ) -> Result<Recipient, Error> {
-        self.sanitize_index(last_unused);
-        let address = self.address(Some(*last_unused))?;
-        *last_unused += 1;
-        Ok(Recipient::from_address(satoshi, address.address(), asset))
+        self.addressee_inner(satoshi, asset, last_unused, false)
     }
 }
 

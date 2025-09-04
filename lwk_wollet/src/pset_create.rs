@@ -192,12 +192,30 @@ impl Wollet {
         Ok(())
     }
 
+    fn sanitize_index(&self, index: &mut u32) {
+        #[cfg(feature = "amp0")]
+        if self.descriptor.is_amp0() {
+            // For AMP0 we never want to use addresses that are not monitored by the server.
+            // We never want to use:
+            // * index 0
+            // * indexes greater than "last_index" returned by the server
+            //
+            // GDK at login uploads 20 addresses for AMP0 accounts, so as long as we're in
+            // the [1,20] range we're fine.
+            //
+            // This is quite conservative and might cause some address reuse, but it ensures
+            // that the tx builder does not use addresses that are not monitored by the server.
+            *index = std::cmp::min(std::cmp::max(*index, 1), 20);
+        }
+    }
+
     pub(crate) fn addressee_change(
         &self,
         satoshi: u64,
         asset: AssetId,
         last_unused: &mut u32,
     ) -> Result<Recipient, Error> {
+        self.sanitize_index(last_unused);
         let address = self.change(Some(*last_unused))?;
         *last_unused += 1;
         Ok(Recipient::from_address(satoshi, address.address(), asset))
@@ -209,6 +227,7 @@ impl Wollet {
         asset: AssetId,
         last_unused: &mut u32,
     ) -> Result<Recipient, Error> {
+        self.sanitize_index(last_unused);
         let address = self.address(Some(*last_unused))?;
         *last_unused += 1;
         Ok(Recipient::from_address(satoshi, address.address(), asset))

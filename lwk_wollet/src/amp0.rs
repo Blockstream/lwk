@@ -234,7 +234,7 @@ impl<S: Stream> Amp0<S> {
                 }
                 let address = self
                     .wollet_descriptor
-                    .address(i, self.network.address_params())?;
+                    .amp0_address(i, self.network.address_params())?;
                 Ok(AddressResult::new(address, i))
             }
             None => {
@@ -243,7 +243,7 @@ impl<S: Stream> Amp0<S> {
                 // Get address from the LWK wollet
                 let address = self
                     .wollet_descriptor
-                    .address(pointer, self.network.address_params())?;
+                    .amp0_address(pointer, self.network.address_params())?;
                 // TODO: check that script and addr match
                 // Update last index
                 self.last_index = pointer;

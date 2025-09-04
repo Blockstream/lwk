@@ -349,6 +349,18 @@ impl WolletDescriptor {
             .address(&EC, params)?)
     }
 
+    #[cfg(feature = "amp0")]
+    pub(crate) fn amp0_address(
+        &self,
+        index: u32,
+        params: &'static AddressParams,
+    ) -> Result<Address, Error> {
+        Ok(self
+            .inner
+            .at_derivation_index(index)?
+            .address(&EC, params)?)
+    }
+
     /// Get a scriptpubkey
     pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, Error> {
         let v = self.inner.descriptor.clone().into_single_descriptors()?;

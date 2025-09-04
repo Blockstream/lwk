@@ -22,3 +22,11 @@ assert addr1 == 'vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3b
 # Create wollet
 wollet_descriptor = amp0.wollet_descriptor()
 wollet = Wollet(network, wollet_descriptor, None)
+
+# Sync the wallet
+client = EsploraClient.new_waterfalls(url, network)
+
+last_index = amp0.last_index()
+assert last_index > 20
+update = client.full_scan_to_index(wollet, last_index)
+wollet.apply_update(update)

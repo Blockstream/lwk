@@ -258,6 +258,10 @@ pub enum Error {
 
     #[error(transparent)]
     RmpSerdeEncodeError(#[from] rmp_serde::encode::Error),
+
+    #[cfg(feature = "amp0")]
+    #[error("Cannot generate address for AMP0 wallets using this call, use Amp0::address()")]
+    Amp0AddressError,
 }
 
 // cannot derive automatically with this error because of trait bound

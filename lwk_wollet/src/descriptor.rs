@@ -46,6 +46,46 @@ impl std::hash::Hash for WolletDescriptor {
     }
 }
 
+#[cfg(feature = "amp0")]
+fn desc_is_amp0(desc: &ConfidentialDescriptor<DescriptorPublicKey>) -> bool {
+    use crate::amp0;
+    use elements_miniscript::descriptor::{ShInner, Wildcard, WshInner};
+    use elements_miniscript::miniscript::decode::Terminal;
+
+    // ct(slip77(...),elsh(wsh(multi(2,server_xpub,user_xpub))))
+    if let Key::Slip77(_) = desc.key {
+        if let Descriptor::Sh(sh) = &desc.descriptor {
+            if let ShInner::Wsh(wsh) = sh.as_inner() {
+                if let WshInner::Ms(ms) = wsh.as_inner() {
+                    if let Terminal::Multi(2, pks) = &ms.node {
+                        if let [DescriptorPublicKey::XPub(xkey), _] = &pks[..] {
+                            // server xpub [fp/3/gaitpath/amp_subaccount]xpub/*
+                            // user xpub   [fp/3'/amp_subaccount']xpub/* (not checked)
+                            if xkey.wildcard == Wildcard::Unhardened
+                                && xkey.derivation_path.is_empty()
+                            {
+                                if let Some((fingerprint, server_path)) = &xkey.origin {
+                                    let fp = fingerprint.to_string();
+                                    let cn = ChildNumber::Normal { index: 3 };
+                                    if server_path.len() == 34
+                                        && server_path[0] == cn
+                                        && (fp == amp0::AMP0_FINGERPRINT_MAINNET
+                                            || fp == amp0::AMP0_FINGERPRINT_TESTNET
+                                            || fp == amp0::AMP0_FINGERPRINT_REGTEST)
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     type Error = crate::error::Error;
 
@@ -85,7 +125,7 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
         }
 
         #[cfg(feature = "amp0")]
-        let is_amp0 = false;
+        let is_amp0 = desc_is_amp0(&desc);
 
         // Support legacy p2sh multisig
         if let elements_miniscript::descriptor::DescriptorType::Sh = desc.descriptor.desc_type() {
@@ -819,8 +859,7 @@ mod test {
         let wd_amp0_main = WolletDescriptor::from_str(desc_amp0_mainnet).unwrap();
 
         assert!(!wd_singlesig.is_amp0());
-        // TODO: actually set is_amp0
-        assert!(!wd_amp0_test.is_amp0());
-        assert!(!wd_amp0_main.is_amp0());
+        assert!(wd_amp0_test.is_amp0());
+        assert!(wd_amp0_main.is_amp0());
     }
 }

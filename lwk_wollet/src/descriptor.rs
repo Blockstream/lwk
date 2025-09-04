@@ -342,6 +342,10 @@ impl WolletDescriptor {
         params: &'static AddressParams,
         ext_int: Chain,
     ) -> Result<Address, Error> {
+        #[cfg(feature = "amp0")]
+        if self.is_amp0 {
+            return Err(Error::Amp0AddressError);
+        }
         Ok(self
             .inner_descriptor_if_available(ext_int)
             .inner

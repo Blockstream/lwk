@@ -687,18 +687,48 @@ fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
     Ok(BlobContent { slip77_key, xpubs })
 }
 
+fn server_master_xpub(network: &Network) -> Xpub {
+    use elements::bitcoin::bip32::{ChainCode, ChildNumber, Fingerprint};
+    use elements::bitcoin::network::NetworkKind;
+    use elements::bitcoin::secp256k1::PublicKey;
+
+    // Values from GDK
+    let (public_key, chain_code, network_kind) = match network {
+        Network::Liquid => (
+            "02c408c3bb8a3d526103fb93246f54897bdd997904d3e18295b49a26965cb41b7f",
+            "02721cc509aa0c2f4a90628e9da0391b196abeabc6393ed4789dd6222c43c489",
+            NetworkKind::Main,
+        ),
+        Network::TestnetLiquid => (
+            "02c47d84a5b256ee3c29df89642d14b6ed73d17a2b8af0aca18f6f1900f1633533",
+            "c660eec6d9c536f4121854146da22e02d4c91d72af004d41729b9a592f0788e5",
+            NetworkKind::Test,
+        ),
+        Network::LocaltestLiquid => (
+            "036307e560072ed6ce0aa5465534fb5c258a2ccfbc257f369e8e7a181b16d897b3",
+            "b60befcc619bb1c212732770fe181f2f1aa824ab89f8aab49f2e13e3a56f0f04",
+            NetworkKind::Test,
+        ),
+    };
+    let public_key = PublicKey::from_str(public_key).expect("hardcoded");
+    let chain_code = ChainCode::from_str(chain_code).expect("hardcoded");
+
+    Xpub {
+        network: network_kind,
+        depth: 0,
+        parent_fingerprint: Fingerprint::default(),
+        child_number: ChildNumber::Normal { index: 0 },
+        public_key,
+        chain_code,
+    }
+}
+
 fn derive_server_xpub(
     network: &Network,
     gait_path: &str,
     amp_subaccount: u32,
 ) -> Result<String, Error> {
-    let xpub = match network {
-        Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
-        Network::TestnetLiquid => "tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24",
-        Network::LocaltestLiquid => "tpubD6NzVbkrYhZ4Y9k7T65kw2Sx9z67CzZr2Hi7w2pkKutUvm25ryvL79PqQTtDvAaYacd4z5NQTMmdJ37t8VbMVZbDY1z2rqUKLRNpVW6rGC3",
-    };
-    // TODO: create Xpub from pubkey and chaincode
-    let xpub: Xpub = xpub.parse()?;
+    let xpub = server_master_xpub(network);
     let fingerprint = xpub.fingerprint();
     let gait_path_bytes = hex::_decode(gait_path)?;
     let gait_path: Vec<_> = gait_path_bytes

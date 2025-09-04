@@ -28,17 +28,19 @@ sha256t_hash_newtype! {
 
 #[derive(Debug, Clone)]
 /// A wrapper that contains only the subset of CT descriptors handled by wollet
-pub struct WolletDescriptor(ConfidentialDescriptor<DescriptorPublicKey>);
+pub struct WolletDescriptor {
+    inner: ConfidentialDescriptor<DescriptorPublicKey>,
+}
 
 impl Display for WolletDescriptor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.0, f)
+        Display::fmt(&self.inner, f)
     }
 }
 
 impl std::hash::Hash for WolletDescriptor {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.to_string().hash(state);
+        self.inner.to_string().hash(state);
     }
 }
 
@@ -83,12 +85,12 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
         // Support legacy p2sh multisig
         if let elements_miniscript::descriptor::DescriptorType::Sh = desc.descriptor.desc_type() {
             if desc.descriptor.to_string().starts_with("elsh(multi(") {
-                return Ok(WolletDescriptor(desc));
+                return Ok(WolletDescriptor { inner: desc });
             }
         }
 
         match desc.descriptor.desc_type().segwit_version() {
-            Some(WitnessVersion::V0) => Ok(WolletDescriptor(desc)),
+            Some(WitnessVersion::V0) => Ok(WolletDescriptor { inner: desc }),
             _ => Err(Self::Error::UnsupportedDescriptorNonV0),
         }
     }
@@ -160,11 +162,11 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
 
 impl WolletDescriptor {
     pub fn confidential_descriptor(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        &self.0
+        &self.inner
     }
 
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
-        &self.0.descriptor
+        &self.inner.descriptor
     }
 
     /// Return a deterministic wallet identifier (DWID).
@@ -204,8 +206,8 @@ impl WolletDescriptor {
 
     /// Return wether the descriptor has a blinding key derived with [Elip151](https://github.com/ElementsProject/ELIPs/blob/main/elip-0151.mediawiki)
     pub fn is_elip151(&self) -> bool {
-        if let Ok(elip151_key) = Key::from_elip151(&self.0.descriptor) {
-            elip151_key == self.0.key
+        if let Ok(elip151_key) = Key::from_elip151(&self.inner.descriptor) {
+            elip151_key == self.inner.key
         } else {
             false
         }
@@ -213,7 +215,7 @@ impl WolletDescriptor {
 
     /// Strip key origin information from the bitcoin descriptor and return it without checksum
     pub fn bitcoin_descriptor_without_key_origin(&self) -> String {
-        let desc = self.0.descriptor.to_string();
+        let desc = self.inner.descriptor.to_string();
         let mut result = String::with_capacity(desc.len());
         let mut skip = false;
         for c in desc.chars() {
@@ -234,7 +236,7 @@ impl WolletDescriptor {
     /// external descriptor accordint to `int_or_ext`
     fn inner_descriptor_if_available(&self, ext_int: Chain) -> WolletDescriptor {
         let mut descriptors = self
-            .0
+            .inner
             .descriptor
             .clone()
             .into_single_descriptors()
@@ -248,17 +250,18 @@ impl WolletDescriptor {
                 Chain::Internal => descriptors.remove(1),
             }
         };
-        WolletDescriptor(ConfidentialDescriptor {
-            key: self.0.key.clone(),
+        let inner = ConfidentialDescriptor {
+            key: self.inner.key.clone(),
             descriptor,
-        })
+        };
+        WolletDescriptor { inner }
     }
 
     pub fn single_bitcoin_descriptors(&self) -> Vec<String> {
         let d = self.inner_descriptor_if_available(Chain::External);
         let d = to_bitcoin_descriptor(&d.descriptor().to_string());
         let mut v = vec![d];
-        if self.0.descriptor.is_multipath() {
+        if self.inner.descriptor.is_multipath() {
             let d = self.inner_descriptor_if_available(Chain::Internal);
             let d = to_bitcoin_descriptor(&d.descriptor().to_string());
             v.push(d);
@@ -296,14 +299,14 @@ impl WolletDescriptor {
     ) -> Result<Address, crate::error::Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
-            .0
+            .inner
             .at_derivation_index(index)?
             .address(&crate::EC, params)?)
     }
 
     /// Get a scriptpubkey
     pub fn script_pubkey(&self, ext_int: Chain, index: u32) -> Result<Script, crate::error::Error> {
-        let v = self.0.descriptor.clone().into_single_descriptors()?;
+        let v = self.inner.descriptor.clone().into_single_descriptors()?;
         let d = match ext_int {
             Chain::External => v.first().expect("at least on descriptor"),
             Chain::Internal => v.last().expect("at least on descriptor"),
@@ -329,7 +332,7 @@ impl WolletDescriptor {
     ) -> Result<ConfidentialDescriptor<DefiniteDescriptorKey>, crate::Error> {
         Ok(self
             .inner_descriptor_if_available(ext_int)
-            .0
+            .inner
             .at_derivation_index(index)?)
     }
 
@@ -372,11 +375,11 @@ impl WolletDescriptor {
     pub(crate) fn as_single_descriptors(
         &self,
     ) -> Result<Vec<ConfidentialDescriptor<DescriptorPublicKey>>, crate::Error> {
-        let descriptors = self.0.descriptor.clone().into_single_descriptors()?;
+        let descriptors = self.inner.descriptor.clone().into_single_descriptors()?;
         let mut result = Vec::with_capacity(descriptors.len());
         for descriptor in descriptors {
             result.push(ConfidentialDescriptor {
-                key: self.0.key.clone(),
+                key: self.inner.key.clone(),
                 descriptor,
             });
         }
@@ -384,7 +387,7 @@ impl WolletDescriptor {
     }
 
     pub fn has_wildcard(&self) -> bool {
-        self.0.descriptor.has_wildcard()
+        self.inner.descriptor.has_wildcard()
     }
 }
 
@@ -425,7 +428,7 @@ fn to_bitcoin_descriptor(s: &str) -> String {
 
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
     fn as_ref(&self) -> &ConfidentialDescriptor<DescriptorPublicKey> {
-        &self.0
+        &self.inner
     }
 }
 

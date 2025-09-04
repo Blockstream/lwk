@@ -37,6 +37,10 @@ use elements::BlockHash;
 use elements::Transaction;
 use elements_miniscript::psbt::PsbtExt;
 
+pub const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
+pub const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
+pub const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
+
 struct Amp0Inner<S: Stream> {
     stream: S,
 }
@@ -1401,5 +1405,17 @@ mod tests {
 
         let balance_after = *wollet.balance().unwrap().get(&lbtc).unwrap();
         assert!(balance_after < balance_before);
+    }
+
+    #[test]
+    fn amp0_fingerprint() {
+        let xpub = server_master_xpub(&Network::Liquid);
+        assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_MAINNET);
+
+        let xpub = server_master_xpub(&Network::TestnetLiquid);
+        assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_TESTNET);
+
+        let xpub = server_master_xpub(&Network::LocaltestLiquid);
+        assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_REGTEST);
     }
 }

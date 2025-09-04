@@ -403,6 +403,7 @@ impl WolletDescriptor {
         self.inner.descriptor.has_wildcard()
     }
 
+    /// Whether this descriptor is a AMP0 descriptor
     #[cfg(feature = "amp0")]
     pub fn is_amp0(&self) -> bool {
         self.is_amp0

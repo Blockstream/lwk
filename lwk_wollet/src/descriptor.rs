@@ -408,6 +408,18 @@ impl WolletDescriptor {
     pub fn is_amp0(&self) -> bool {
         self.is_amp0
     }
+
+    /// Mark the descriptor as not AMP0
+    ///
+    /// Calling this function improperly might lead to loss of funds.
+    /// Do not call this function unless you know what you are doing.
+    ///
+    /// The chance that someone will actually need this function is
+    /// extremely unlikely.
+    #[cfg(feature = "amp0")]
+    pub fn dangerous_this_wallet_is_not_amp0(&mut self) {
+        self.is_amp0 = false;
+    }
 }
 
 // try to parse as multiline descriptor as exported in green

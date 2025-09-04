@@ -6,7 +6,7 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 use base64::prelude::*;
-use elements::bitcoin::bip32::Xpub;
+use elements::bitcoin::bip32::{DerivationPath, Xpub};
 use flate2::read::ZlibDecoder;
 use hmac::Hmac;
 use lwk_common::{Network, Stream};
@@ -692,21 +692,27 @@ fn derive_server_xpub(
     gait_path: &str,
     amp_subaccount: u32,
 ) -> Result<String, Error> {
-    // TODO: find server fingerprint
-    // TODO: derive the server key instead of having this crazy long path
     let xpub = match network {
         Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
         Network::TestnetLiquid => "tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24",
         Network::LocaltestLiquid => "tpubD6NzVbkrYhZ4Y9k7T65kw2Sx9z67CzZr2Hi7w2pkKutUvm25ryvL79PqQTtDvAaYacd4z5NQTMmdJ37t8VbMVZbDY1z2rqUKLRNpVW6rGC3",
     };
+    // TODO: create Xpub from pubkey and chaincode
+    let xpub: Xpub = xpub.parse()?;
+    let fingerprint = xpub.fingerprint();
     let gait_path_bytes = hex::_decode(gait_path)?;
     let gait_path: Vec<_> = gait_path_bytes
         .chunks(2)
         .map(|chunk| u32::from_be_bytes([0, 0, chunk[0], chunk[1]]).to_string())
         .collect();
 
-    let server_path = gait_path.join("/");
-    Ok(format!("{xpub}/3/{server_path}/{amp_subaccount}"))
+    let gait_path = gait_path.join("/");
+    let server_path = format!("3/{gait_path}/{amp_subaccount}");
+
+    let derivation_path = DerivationPath::from_str(&server_path)?;
+    let derived_xpub = xpub.derive_pub(&EC, &derivation_path)?;
+
+    Ok(format!("[{fingerprint}/{server_path}]{derived_xpub}"))
 }
 
 impl BlobContent {
@@ -1176,7 +1182,7 @@ mod tests {
         use elements::hashes::hex::DisplayHex;
 
         // Target value to match
-        let expected_descriptor = "ct(slip77(8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6),elsh(wsh(multi(2,xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA/3/3320/60546/15157/41212/14985/38799/25816/12131/13561/54922/2852/56496/53096/60883/33605/54091/38661/40920/32654/56040/43253/45144/11278/64888/46277/8839/7065/20066/31815/30779/10369/43255/1/*,[aea13085/3h/1h]xpub69mdgvyMbhUaD7XFqmjNfo7RdCnW2w1xfEmNn7DV5XYqwPSKkcgMtqQ7T776MCBNXWZrkqwx6NArqE34WCBW86CdMgLesYtnvjSaLSMy2Xc/1/*))))";
+        let expected_descriptor = "ct(slip77(8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6),elsh(wsh(multi(2,[0557d83a/3/3320/60546/15157/41212/14985/38799/25816/12131/13561/54922/2852/56496/53096/60883/33605/54091/38661/40920/32654/56040/43253/45144/11278/64888/46277/8839/7065/20066/31815/30779/10369/43255/1]xpub7DNqsKDE71pikazVtZgBqxccgbcYrmUmURBcg8uZuf7wEvUxkZeAHEgSQ3GMMmpkVRWru4cu5QDkWxqaokEjRpcxGw6Rust4nBz7UH1NGPq/*,[aea13085/3h/1h]xpub69mdgvyMbhUaD7XFqmjNfo7RdCnW2w1xfEmNn7DV5XYqwPSKkcgMtqQ7T776MCBNXWZrkqwx6NArqE34WCBW86CdMgLesYtnvjSaLSMy2Xc/1/*))))";
 
         // Watch-only credentials
         let username = "userleo456";

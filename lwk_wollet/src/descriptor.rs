@@ -402,6 +402,11 @@ impl WolletDescriptor {
     pub fn has_wildcard(&self) -> bool {
         self.inner.descriptor.has_wildcard()
     }
+
+    #[cfg(feature = "amp0")]
+    pub fn is_amp0(&self) -> bool {
+        self.is_amp0
+    }
 }
 
 // try to parse as multiline descriptor as exported in green

@@ -47,3 +47,10 @@ if lbtc_balance < 500:
 b = network.tx_builder()
 b.drain_lbtc_wallet()  # send all to self
 amp0pset = b.finish_for_amp0(wollet)
+
+# Create the signer
+signer = Signer(mnemonic, network)
+
+# Sign with the user key
+pset = amp0pset.pset()
+pset = signer.sign(pset)

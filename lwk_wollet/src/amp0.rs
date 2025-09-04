@@ -153,11 +153,6 @@ impl<S: Stream> Amp0<S> {
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
-        let server_xpub = match network {
-            Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
-            Network::TestnetLiquid => "tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24",
-            Network::LocaltestLiquid => "tpubD6NzVbkrYhZ4Y9k7T65kw2Sx9z67CzZr2Hi7w2pkKutUvm25ryvL79PqQTtDvAaYacd4z5NQTMmdJ37t8VbMVZbDY1z2rqUKLRNpVW6rGC3",
-        };
         // connect to ga-backend
         let amp0 = Amp0Inner::new(stream).await?;
         // login.watch_only_v2
@@ -185,7 +180,7 @@ impl<S: Stream> Amp0<S> {
         let blob = parse_blob(value)?;
         // compute wallet descriptor
         let gait_path = &login_data.gait_path;
-        let desc = amp_descriptor(blob, amp_subaccount, server_xpub, gait_path)?;
+        let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path)?;
 
         let wollet_descriptor = WolletDescriptor::from_str(&desc)?;
 
@@ -692,10 +687,18 @@ fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
     Ok(BlobContent { slip77_key, xpubs })
 }
 
-fn derive_server_xpub(xpub: &str, gait_path: &str, amp_subaccount: u32) -> Result<String, Error> {
-    // TODO: replace xpub with network
+fn derive_server_xpub(
+    network: &Network,
+    gait_path: &str,
+    amp_subaccount: u32,
+) -> Result<String, Error> {
     // TODO: find server fingerprint
     // TODO: derive the server key instead of having this crazy long path
+    let xpub = match network {
+        Network::Liquid => "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA",
+        Network::TestnetLiquid => "tpubD6NzVbkrYhZ4YKB74cMgKEpwByD7UWLXt2MxRdwwaQtgrw6E3YPQgSRkaxMWnpDXKtX5LvRmY5mT8FkzCtJcEQ1YhN1o8CU2S5gy9TDFc24",
+        Network::LocaltestLiquid => "tpubD6NzVbkrYhZ4Y9k7T65kw2Sx9z67CzZr2Hi7w2pkKutUvm25ryvL79PqQTtDvAaYacd4z5NQTMmdJ37t8VbMVZbDY1z2rqUKLRNpVW6rGC3",
+    };
     let gait_path_bytes = hex::_decode(gait_path)?;
     let gait_path: Vec<_> = gait_path_bytes
         .chunks(2)
@@ -731,10 +734,10 @@ impl BlobContent {
 fn amp_descriptor(
     blob: BlobContent,
     amp_subaccount: u32,
-    server_key: &str,
+    network: &Network,
     gait_path: &str,
 ) -> Result<String, Error> {
-    let server_xpub = derive_server_xpub(server_key, gait_path, amp_subaccount)?;
+    let server_xpub = derive_server_xpub(network, gait_path, amp_subaccount)?;
 
     let master_xpub = blob
         .find_master_xpub()
@@ -1181,7 +1184,7 @@ mod tests {
 
         // Values from login data
         let amp_subaccount = 1;
-        let server_xpub = "xpub661MyMwAqRbcEZr3uYPEEP4X2bRmYXmxrcLMH8YEwLAFxonVGqstpNywBvwkUDCEZA1cd6fsLgKvb6iZP5yUtLc3G3L8WynChNJznHLaVrA";
+        let network = Network::Liquid;
         let gait_path = "0cf8ec823b35a0fc3a89978f64d82f6334f9d68a0b24dcb0cf68edd38345d34b97059fd87f8edae8a8f5b0582c0efd78b4c522871b994e627c47783b2881a8f7";
         let wo_blob_key_hex = "e55785016af0cf58e2c4fc735ec16f460afe7c5138b335455b4fea7ec1fa1fe4066930e67aed687fef8c1f418ee6e43c7e29a37bed8551a36e1456d9a3b24621";
 
@@ -1204,7 +1207,7 @@ mod tests {
             "8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6"
         );
 
-        let desc = amp_descriptor(blob, amp_subaccount, server_xpub, gait_path).unwrap();
+        let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path).unwrap();
         assert_eq!(desc, expected_descriptor);
     }
 

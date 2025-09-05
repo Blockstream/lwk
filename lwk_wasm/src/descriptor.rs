@@ -72,6 +72,12 @@ impl WolletDescriptor {
     pub fn is_mainnet(&self) -> bool {
         self.inner.is_mainnet()
     }
+
+    /// Whether the descriptor is AMP0
+    #[wasm_bindgen(js_name = isAmp0)]
+    pub fn is_amp0(&self) -> bool {
+        self.inner.is_amp0()
+    }
 }
 
 impl std::fmt::Display for WolletDescriptor {

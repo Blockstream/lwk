@@ -42,7 +42,7 @@ Using AMP0 with LWK you can keep the signer separated and operate it accoriding 
 To complete the setup procedure you can use:
 * [Blockstream App](https://blockstream.com/app/), or
 * [`green_cli`](https://github.com/Blockstream/green_cli/), or
-* [GDK](https://github.com/blockstream/gdk) directly (e.g. with the released python wheels)
+* [GDK](https://github.com/blockstream/gdk) directly (e.g. with this [script](gdk-amp0.py))
 
 You need to:
 1. Create a Liquid wallet (backup its mnemonic/seed)

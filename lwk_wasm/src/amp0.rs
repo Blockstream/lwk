@@ -48,6 +48,11 @@ impl Amp0 {
         self.inner.last_index()
     }
 
+    /// AMP ID
+    pub fn amp_id(&self) -> String {
+        self.inner.amp_id().into()
+    }
+
     /// Get an address
     ///
     /// If `index` is None, a new address is returned.

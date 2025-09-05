@@ -33,28 +33,9 @@ Then you can:
 
 Using AMP0 with LWK you can keep the signer separated and operate it accoriding to the desired degree of security and isolation.
 
-## ⚠️ Warnings
-
-AMP0 is based on a legacy system and it has some pitfalls.
-We put some mechanism in order to make it harder to do the wrong thing, anyway callers should be careful when getting new addresses and syncing the wallet.
-
-### Getting new addresses
-AMP0 server only monitors addresses that have been returned by the server.
-If you send funds to an address that was not returned by the server, the AMP0 server will not cosign transactions spending that inputs.
-Which means that those funds are lost (!), since AMP0 accounts are 2of2.
-
-To avoid getting in these dangerous situations, for AMP0 accounts, callers:
-* must NOT get addresses from `Wollet::address()` or `WolletDescriptor::address()`
-* must only get addresses from `Amp0::address()`
-
-### Syncing the wallet
-AMP0 accounts do not have the concept of `GAP_LIMIT` and they can have several unused address in a row.
-The default scanning mechanism when it sees enough unused addresses in a row it stops.
-So it can happen that some transactions are not returned, and the wallet balance could be incorrect.
-
-To overcome this, when syncing AMP0 account wallets, callers must:
-* get the last address index returned, using `Amp0::last_index()`
-* and then use `BlockchainBackend::full_scan_to_index()` to sync up to that index
+> [!WARNING]
+> ⚠️ AMP0 is based on a legacy system and it has some pitfalls.
+> We put some mechanism in order to make it harder to do the wrong thing, anyway callers should be careful when getting new addresses and syncing the wallet.
 
 ## Setup
 
@@ -85,8 +66,11 @@ You can receive funds, monitor transactions and send to other wallets.
 ### Receive
 To receive funds you need an address, you can get addresses with `Amp0::address()`.
 
-⚠️ For AMP0 wallets, do not use `Wollet::address()` or `WolletDescriptor::address()`, using them can lead to loss of funds.
-For more details see the above warnings sections.
+> [!WARNING]
+> ⚠️ For AMP0 wallets, do not use `Wollet::address()` or `WolletDescriptor::address()`, using them can lead to loss of funds.
+> AMP0 server only monitors addresses that have been returned by the server.
+> If you send funds to an address that was not returned by the server, the AMP0 server will not cosign transactions spending that inputs.
+> Which means that those funds are lost (!), since AMP0 accounts are 2of2.
 
 ### Monitor
 LWK allows to monitor Liquid wallets, including AMP0 accounts.
@@ -101,8 +85,11 @@ First create a blockchain client, for insance `EsploraClient::new`.
 Then get an update with `BlockchainBackend::full_scan_to_index()` passing the value returned by Amp0::last_index()`.
 Finally update the wallet with `Wollet::apply_update()`.
 
-⚠️ For AMP0 wallets, do not sync the wallet with `BlockchainBackend::full_scan()`, otherwise some funds might not show up.
-For more details see the above warnings sections.
+> [!WARNING]
+> ⚠️ For AMP0 wallets, do not sync the wallet with `BlockchainBackend::full_scan()`, otherwise some funds might not show up.
+> AMP0 accounts do not have the concept of `GAP_LIMIT` and they can have several unused address in a row.
+> The default scanning mechanism when it sees enough unused addresses in a row it stops.
+> So it can happen that some transactions are not returned, and the wallet balance could be incorrect.
 
 ### Send
 For AMP0 you can follow the standard LWK transaction flow, with few small differences.

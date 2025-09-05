@@ -165,6 +165,11 @@ impl Wollet {
         Ok(self.inner.lock()?.is_segwit())
     }
 
+    /// Whether the wallet is AMP0
+    pub fn is_amp0(&self) -> Result<bool, LwkError> {
+        Ok(self.inner.lock()?.is_amp0())
+    }
+
     /// Max weight to satisfy for inputs belonging to this wallet
     pub fn max_weight_to_satisfy(&self) -> Result<u32, LwkError> {
         Ok(self.inner.lock()?.max_weight_to_satisfy() as u32)

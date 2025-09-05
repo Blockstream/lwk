@@ -1362,6 +1362,10 @@ mod tests {
 
         let mut amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();
 
+        if !regtest {
+            assert_eq!(amp0.amp_id(), "GATu95iW5LAgaQu8XpSREDMMDFE2e");
+        }
+
         let wd = amp0.wollet_descriptor();
         let mut wollet = Wollet::without_persist(elements_network, wd).unwrap();
 

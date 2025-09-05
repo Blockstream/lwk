@@ -137,6 +137,12 @@ impl Wollet {
     pub fn never_scanned(&self) -> bool {
         self.inner.never_scanned()
     }
+
+    /// Whether the wallet is AMP0
+    #[wasm_bindgen(js_name = isAmp0)]
+    pub fn is_amp0(&self) -> bool {
+        self.inner.is_amp0()
+    }
 }
 
 /// Wrapper of [`lwk_wollet::Tip`]

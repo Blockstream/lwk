@@ -47,12 +47,7 @@ You need to:
 2. Create a AMP account (AMP ID)
 3. Create a Liquid Watch-Only (username and password)
 
-Now that you have:
-* Mnemonic/seed (or Jade)
-* AMP ID
-* Watch-Only credentials (username and password)
-
-You're ready to use AMP0 with LWK.
+Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
 
 ## AMP0 daily operations
 

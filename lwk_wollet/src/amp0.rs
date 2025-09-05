@@ -210,6 +210,11 @@ impl<S: Stream> Amp0<S> {
         self.last_index
     }
 
+    /// Account AMP ID
+    pub fn amp_id(&self) -> &str {
+        &self.amp_id
+    }
+
     /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
     ///
     /// <div class="warning">
@@ -1011,6 +1016,10 @@ pub mod blocking {
     impl Amp0 {
         pub fn last_index(&self) -> u32 {
             self.inner.last_index
+        }
+
+        pub fn amp_id(&self) -> &str {
+            &self.inner.amp_id
         }
 
         pub fn wollet_descriptor(&self) -> WolletDescriptor {

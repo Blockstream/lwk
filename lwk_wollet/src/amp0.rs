@@ -1267,21 +1267,31 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext_mainnet() {
-        amp0_addr(Network::Liquid, "userleo456", "userleo456").await
+        amp0_addr(Network::Liquid, "userleo456", "userleo456", "").await
     }
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext_testnet() {
-        amp0_addr(Network::TestnetLiquid, "userleo3456", "userleo3456").await
+        amp0_addr(
+            Network::TestnetLiquid,
+            "userleo3456",
+            "userleo3456",
+            "GA2g7wuT1j4PMPriUGRWhHTcGxMEWV",
+        )
+        .await
     }
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
-    async fn amp0_addr(network: Network, username: &str, password: &str) {
-        let mut amp0ext = Amp0::new_with_network(network, username, password, "")
+    async fn amp0_addr(network: Network, username: &str, password: &str, amp_id: &str) {
+        let mut amp0ext = Amp0::new_with_network(network, username, password, amp_id)
             .await
             .unwrap();
+
+        if !amp_id.is_empty() {
+            assert_eq!(amp0ext.amp_id(), amp_id);
+        }
 
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);

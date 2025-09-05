@@ -40,16 +40,14 @@ Using AMP0 with LWK you can keep the signer separated and operate it accoriding 
 ## Setup
 
 To complete the setup procedure you can use:
-* [Blockstream App](https://blockstream.com/app/), or
-* [`green_cli`](https://github.com/Blockstream/green_cli/), or
-* [GDK](https://github.com/blockstream/gdk) directly (e.g. with this [script](gdk-amp0.py))
+* [Blockstream App](https://blockstream.com/app/) (easiest, GUI, mobile, desktop, Jade support), or
+* [`green_cli`](https://github.com/Blockstream/green_cli/) (CLI, Jade support), or
+* [GDK](https://github.com/blockstream/gdk) directly (fastest, [example](gdk-amp0.py))
 
 You need to:
 1. Create a Liquid wallet (backup its mnemonic/seed)
 2. Create a AMP account (AMP ID)
 3. Create a Liquid Watch-Only (username and password)
-
-Note that you can create the Liquid wallet using a Jade.
 
 Now that you have:
 * Mnemonic/seed (or Jade)

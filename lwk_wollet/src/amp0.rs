@@ -167,11 +167,10 @@ impl<S: Stream> Amp0<S> {
         let login_data = amp0.login(username, password).await?;
 
         // get amp account
-        assert!(amp_id.is_empty());
         let subaccount = login_data
             .subaccounts
             .iter()
-            .find(|s| s.type_ == "2of2_no_recovery")
+            .find(|s| s.type_ == "2of2_no_recovery" && (amp_id.is_empty() || s.gaid == amp_id))
             .ok_or_else(|| Error::Generic("Missing AMP subaccount".into()))?;
         let amp_subaccount = subaccount.pointer;
         let amp_id = subaccount.gaid.clone();

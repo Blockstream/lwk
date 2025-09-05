@@ -255,6 +255,11 @@ impl Wollet {
             .is_some()
     }
 
+    /// Whether the wallet is AMP0
+    pub fn is_amp0(&self) -> bool {
+        self.descriptor.is_amp0()
+    }
+
     /// Max weight to satisfy for inputs belonging to this wallet
     pub fn max_weight_to_satisfy(&self) -> usize {
         self.max_weight_to_satisfy

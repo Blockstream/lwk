@@ -194,16 +194,8 @@ impl WolletState for Wollet {
     fn last_unused(&self) -> LastUnused {
         // TODO use LastUnused internally in Wollet
         LastUnused {
-            internal: self
-                .store
-                .cache
-                .last_unused_internal
-                .load(atomic::Ordering::Relaxed),
-            external: self
-                .store
-                .cache
-                .last_unused_external
-                .load(atomic::Ordering::Relaxed),
+            internal: self.last_unused_internal(),
+            external: self.last_unused_external(),
         }
     }
 
@@ -383,16 +375,22 @@ impl Wollet {
         Ok(BitcoinAddressResult::new(address, index))
     }
 
+    pub(crate) fn last_unused_external(&self) -> u32 {
+        let cache = &self.store.cache;
+        cache.last_unused_external.load(atomic::Ordering::Relaxed)
+    }
+
+    pub(crate) fn last_unused_internal(&self) -> u32 {
+        let cache = &self.store.cache;
+        cache.last_unused_internal.load(atomic::Ordering::Relaxed)
+    }
+
     /// Returns the given `index` unwrapped if Some, otherwise
     /// takes the last unused external index of the wallet
     fn unwrap_or_last_unused(&self, index: Option<u32>) -> u32 {
         match index {
             Some(i) => i,
-            None => self
-                .store
-                .cache
-                .last_unused_external
-                .load(atomic::Ordering::Relaxed),
+            None => self.last_unused_external(),
         }
     }
 
@@ -406,11 +404,7 @@ impl Wollet {
     pub fn change(&self, index: Option<u32>) -> Result<AddressResult, Error> {
         let index = match index {
             Some(i) => i,
-            None => self
-                .store
-                .cache
-                .last_unused_internal
-                .load(atomic::Ordering::Relaxed),
+            None => self.last_unused_internal(),
         };
 
         let address = self

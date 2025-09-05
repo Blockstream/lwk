@@ -5,15 +5,13 @@
 AMP0 is based on a legacy system and it does not fit the LWK model perfectly.
 Despite that _LWK has partial support for AMP0_.
 
-LWK allows to:
-* Receive on AMP0 accounts
-* Monitor AMP0 accounts
-* Send from AMP0 accounts
-
-LWK does NOT allow to:
-* create AMP0 accounts
-* issue, reissue and burn AMP0 assets
-* interact with the AMP0 issuer interface
+|                                 | LWK | GDK | AMP0 API |
+|---------------------------------| :-: | :-: | :------: |
+|Create AMP0 accounts             | ❌ | ✅ | ❌ |
+|Receive on AMP0 accounts         | ✅ | ✅ | ❌ |
+|Monitor AMP0 accounts            | ✅ | ✅ | ❌ |
+|issue, reissue, burn AMP0 assets | ❌ | ❌ | ✅ |
+|set restriction for AMP0 assets  | ❌ | ❌ | ✅ |
 
 If you need full support for AMP0, use [GDK](https://github.com/blockstream/gdk) and the AMP0 issuer API.
 

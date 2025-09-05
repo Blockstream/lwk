@@ -124,6 +124,9 @@ pub struct Amp0<S: Stream> {
     /// AMP subaccount
     amp_subaccount: u32,
 
+    /// AMP ID
+    amp_id: String,
+
     /// Index of the last returned address
     last_index: u32,
 }
@@ -165,13 +168,13 @@ impl<S: Stream> Amp0<S> {
 
         // get amp account
         assert!(amp_id.is_empty());
-        // TODO: allow amp_id
-        let amp_subaccount = login_data
+        let subaccount = login_data
             .subaccounts
             .iter()
             .find(|s| s.type_ == "2of2_no_recovery")
-            .ok_or_else(|| Error::Generic("Missing AMP subaccount".into()))?
-            .pointer;
+            .ok_or_else(|| Error::Generic("Missing AMP subaccount".into()))?;
+        let amp_subaccount = subaccount.pointer;
+        let amp_id = subaccount.gaid.clone();
 
         // get blob
         let blob = amp0.get_blob().await?;
@@ -196,6 +199,7 @@ impl<S: Stream> Amp0<S> {
             amp0,
             network,
             amp_subaccount,
+            amp_id,
             last_index,
         })
     }

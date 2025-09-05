@@ -31,6 +31,11 @@ impl Amp0 {
         Ok(self.inner.lock()?.last_index())
     }
 
+    /// AMP ID
+    pub fn amp_id(&self) -> Result<String, LwkError> {
+        Ok(self.inner.lock()?.amp_id().into())
+    }
+
     /// Wollet descriptor
     pub fn wollet_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.wollet_descriptor().into()))

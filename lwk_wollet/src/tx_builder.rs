@@ -765,8 +765,8 @@ impl TxBuilder {
         // Init PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
-        let mut last_unused_internal = wollet.change(None)?.index();
-        let mut last_unused_external = wollet.address(None)?.index();
+        let mut last_unused_internal = wollet.last_unused_internal();
+        let mut last_unused_external = wollet.last_unused_external();
 
         let mut inp_weight = 0;
 

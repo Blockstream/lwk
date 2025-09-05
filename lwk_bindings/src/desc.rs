@@ -54,6 +54,11 @@ impl WolletDescriptor {
             .map(Into::into)
             .map(Arc::new)
     }
+
+    /// Whether the descriptor is AMP0
+    pub fn is_amp0(&self) -> bool {
+        self.inner.is_amp0()
+    }
 }
 
 impl fmt::Display for WolletDescriptor {

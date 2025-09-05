@@ -81,8 +81,8 @@ You then create a wallet with `Wollet::new()`.
 Once you have the AMP0 `Wollet`, you can get `Wollet::transactions()`, `Wollet::balance()` and other information.
 
 LWK wallets needs to be updated with new data from the Liquid blockchain.
-First create a blockchain client, for insance `EsploraClient::new`.
-Then get an update with `BlockchainBackend::full_scan_to_index()` passing the value returned by Amp0::last_index()`.
+First create a blockchain client, for insance `EsploraClient::new()`.
+Then get an update with `BlockchainBackend::full_scan_to_index()` passing the value returned by `Amp0::last_index()`.
 Finally update the wallet with `Wollet::apply_update()`.
 
 > [!WARNING]
@@ -94,16 +94,16 @@ Finally update the wallet with `Wollet::apply_update()`.
 ### Send
 For AMP0 you can follow the standard LWK transaction flow, with few small differences.
 
-Use the `TxBuilder`, add recipients `TxBuilder::add_recipient`, and use the other available methods if needed.
+Use the `TxBuilder`, add recipients `TxBuilder::add_recipient()`, and use the other available methods if needed.
 
-Then instead of using `TxBuilder::finish`, use `TxBuilder::finish_for_amp0`.
+Then instead of using `TxBuilder::finish()`, use `TxBuilder::finish_for_amp0()`.
 This creates an `Amp0Pset` which contains the PSET and the `blinding_nonces`, some extra data needed by the AMP0 cosigner.
 
 Now you need to interact with secret key material (🔑) corresponding to this AMP0 account.
-Create a signer, using `SWSigner` or `Jade` and sign the PSET with the signer, using `Signer::sign`.
+Create a signer, using `SWSigner` or `Jade` and sign the PSET with the signer, using `Signer::sign()`.
 
 Once the PSET is signed, you need to have it cosigned by AMP0.
 Construct an `Amp0Pset` using the signed PSET and the `blinding_nonces` obtained before.
-Call `Amp0::sign` passing the signed `Amp0Pset`.
+Call `Amp0::sign()` passing the signed `Amp0Pset`.
 
 If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can be broadcast, e.g. with `EsploraClient::broadcast()`.

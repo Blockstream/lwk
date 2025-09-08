@@ -44,6 +44,7 @@ impl TxBuilder {
 
     /// Build the transaction for AMP0
     #[cfg(all(feature = "serial", target_arch = "wasm32"))]
+    #[wasm_bindgen(js_name = finishForAmp0)]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
         Ok(self.inner.finish_for_amp0(wollet.as_ref())?.into())
     }

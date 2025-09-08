@@ -46,11 +46,13 @@ impl From<lwk_wollet::amp2::Amp2Descriptor> for Amp2Descriptor {
 
 #[wasm_bindgen]
 impl Amp2 {
+    #[wasm_bindgen(js_name = newTestnet)]
     pub fn new_testnet() -> Self {
         let inner = lwk_wollet::amp2::Amp2::new_testnet();
         Self { inner }
     }
 
+    #[wasm_bindgen(js_name = descriptorFromStr)]
     pub fn descriptor_from_str(&self, keyorigin_xpub: &str) -> Result<Amp2Descriptor, Error> {
         Ok(self.inner.descriptor_from_str(keyorigin_xpub)?.into())
     }

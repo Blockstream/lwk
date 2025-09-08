@@ -268,12 +268,24 @@ impl<S: Stream> Amp0<S> {
             }
             None => {
                 // Get a new address from Green server
-                let (pointer, _script) = self.amp0.get_new_address(self.amp_subaccount).await?;
+                let (pointer, script) = self.amp0.get_new_address(self.amp_subaccount).await?;
+                use elements::{script, Script, ScriptHash, WScriptHash};
+                let wsh = script::Builder::new()
+                    .push_int(0)
+                    .push_slice(&WScriptHash::hash(script.as_bytes())[..])
+                    .into_script();
+                let sh = ScriptHash::hash(wsh.as_bytes());
+                let spk = Script::new_p2sh(&sh);
+
                 // Get address from the LWK wollet
                 let address = self
                     .wollet_descriptor
                     .amp0_address(pointer, self.network.address_params())?;
-                // TODO: check that script and addr match
+
+                if address.script_pubkey() != spk {
+                    return Err(Error::Generic("Unexpected address".into()));
+                }
+
                 // Update last index
                 self.last_index = pointer;
                 Ok(AddressResult::new(address, pointer))

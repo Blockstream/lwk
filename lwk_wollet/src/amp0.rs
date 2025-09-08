@@ -577,7 +577,9 @@ impl<S: Stream> Amp0Inner<S> {
             addr_type: String,
         }
         let data: AddressData = rmpv::ext::from_value(v)?;
-        // TODO: check branch 1, subacccount equals amp_subaccount, addr_type p2wsh
+        if data.branch != 1 || data.subaccount != amp_subaccount || data.addr_type != "p2wsh" {
+            return Err(Error::Generic("Unexpected address data".into()));
+        }
         Ok((data.pointer, data.script))
     }
 

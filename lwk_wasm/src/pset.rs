@@ -82,11 +82,13 @@ impl From<&Input> for PsetInput {
 #[wasm_bindgen]
 impl PsetInput {
     /// Prevout TXID of the input
+    #[wasm_bindgen(js_name = previousTxid)]
     pub fn previous_txid(&self) -> Txid {
         self.inner.previous_txid.into()
     }
 
     /// Prevout vout of the input
+    #[wasm_bindgen(js_name = previousVout)]
     pub fn previous_vout(&self) -> u32 {
         self.inner.previous_output_index
     }

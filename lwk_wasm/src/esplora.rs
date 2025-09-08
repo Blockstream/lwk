@@ -65,6 +65,7 @@ impl EsploraClient {
         self.broadcast_tx(&tx).await
     }
 
+    #[wasm_bindgen(js_name = setWaterfallsServerRecipient)]
     pub async fn set_waterfalls_server_recipient(&mut self, recipient: &str) -> Result<(), Error> {
         let recipient: age::x25519::Recipient = recipient
             .parse()

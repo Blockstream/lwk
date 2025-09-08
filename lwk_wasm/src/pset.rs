@@ -126,6 +126,7 @@ impl From<&Output> for PsetOutput {
 
 #[wasm_bindgen]
 impl PsetOutput {
+    #[wasm_bindgen(js_name = scriptPubkey)]
     pub fn script_pubkey(&self) -> Script {
         self.inner.script_pubkey.clone().into()
     }

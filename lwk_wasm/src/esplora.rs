@@ -54,6 +54,7 @@ impl EsploraClient {
         Ok(update.map(Into::into))
     }
 
+    #[wasm_bindgen(js_name = broadcastTx)]
     pub async fn broadcast_tx(&mut self, tx: &Transaction) -> Result<Txid, Error> {
         let txid = self.inner.broadcast(tx.as_ref()).await?;
         Ok(txid.into())

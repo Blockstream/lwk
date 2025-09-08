@@ -197,15 +197,31 @@ impl<S: Stream> Amp0<S> {
 
         // get last index
         let (last_index, _script) = amp0.get_new_address(amp_subaccount).await?;
-        // TODO: if needed upload authorized assets confidential addresses
-        Ok(Self {
+
+        let mut amp0 = Self {
             wollet_descriptor,
             amp0,
             network,
             amp_subaccount,
             amp_id,
             last_index,
-        })
+        };
+
+        amp0.upload_ca(subaccount.required_ca).await?;
+
+        Ok(amp0)
+    }
+
+    async fn upload_ca(&mut self, required_ca: u32) -> Result<(), Error> {
+        if required_ca > 0 {
+            let mut addresses = vec![];
+            for _ in 0..required_ca {
+                let addr = self.address(None).await?;
+                addresses.push(addr.address().to_string());
+            }
+            self.amp0.upload_ca(self.amp_subaccount, &addresses).await?;
+        }
+        Ok(())
     }
 
     /// Index of the last returned address.
@@ -551,6 +567,23 @@ impl<S: Stream> Amp0Inner<S> {
         let data: AddressData = rmpv::ext::from_value(v)?;
         // TODO: check branch 1, subacccount equals amp_subaccount, addr_type p2wsh
         Ok((data.pointer, data.script))
+    }
+
+    /// Upload confidential addresses
+    pub async fn upload_ca(&self, amp_subaccount: u32, addresses: &[String]) -> Result<(), Error> {
+        let request = WampId::generate();
+        let args = vec![amp_subaccount.into(), to_value(&addresses)?];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.txs.upload_authorized_assets_confidential_address"
+                .to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        // Returns true or raise an error
+        let _ = self.call(msg).await?;
+        Ok(())
     }
 }
 

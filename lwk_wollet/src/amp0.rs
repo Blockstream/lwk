@@ -50,6 +50,11 @@ const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // 
 const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
 const WO_SEED_K: [u8; 8] = [0x03, 0x77, 0x6f, 0x5f, 0x62, 0x6C, 0x6f, 0x62]; // [3]'wo_blob'
 
+fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
+    let value = rmp_serde::encode::to_vec_named(value)?;
+    Ok(rmp_serde::decode::from_slice(&value)?)
+}
+
 /// Green subaccount data returned at login
 #[derive(Debug, Deserialize, Serialize)]
 struct GreenSubaccount {
@@ -475,11 +480,6 @@ impl<S: Stream> Amp0Inner<S> {
             password: hashed_password.into(),
             minimal: "true".into(),
         };
-
-        fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
-            let value = rmp_serde::encode::to_vec_named(value)?;
-            Ok(rmp_serde::decode::from_slice(&value)?)
-        }
 
         let request = WampId::generate();
         let args = vec![

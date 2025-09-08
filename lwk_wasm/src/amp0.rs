@@ -33,7 +33,7 @@ impl Amp0 {
     }
 
     /// Create a new AMP0 context for testnet
-    #[wasm_bindgen(js_name = netTestnet)]
+    #[wasm_bindgen(js_name = newTestnet)]
     pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::testnet(), username, password, amp_id).await
     }

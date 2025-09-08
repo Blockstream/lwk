@@ -12,6 +12,7 @@ pub struct Amp0 {
 #[wasm_bindgen]
 impl Amp0 {
     /// Create a new AMP0 context for the specified network
+    #[wasm_bindgen(js_name = newWithNetwork)]
     pub async fn new_with_network(
         network: Network,
         username: &str,
@@ -32,11 +33,13 @@ impl Amp0 {
     }
 
     /// Create a new AMP0 context for testnet
+    #[wasm_bindgen(js_name = netTestnet)]
     pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::testnet(), username, password, amp_id).await
     }
 
     /// Create a new AMP0 context for mainnet
+    #[wasm_bindgen(js_name = newMainnet)]
     pub async fn new_mainnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
         Self::new_with_network(Network::mainnet(), username, password, amp_id).await
     }
@@ -44,11 +47,13 @@ impl Amp0 {
     /// Index of the last returned address
     ///
     /// Use this and [`crate::EsploraClient::full_scan_to_index()`] to sync the `Wollet`
+    #[wasm_bindgen(js_name = lastIndex)]
     pub fn last_index(&self) -> u32 {
         self.inner.last_index()
     }
 
     /// AMP ID
+    #[wasm_bindgen(js_name = ampId)]
     pub fn amp_id(&self) -> String {
         self.inner.amp_id().into()
     }
@@ -115,6 +120,7 @@ impl Amp0Pset {
     }
 
     /// Get the blinding nonces
+    #[wasm_bindgen(js_name = blindingNonces)]
     pub fn blinding_nonces(&self) -> Vec<String> {
         self.inner.blinding_nonces().to_vec()
     }

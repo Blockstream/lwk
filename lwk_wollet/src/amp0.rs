@@ -384,6 +384,7 @@ impl<S: Stream> Amp0Inner<S> {
     }
 
     async fn call(&self, msg: Msg) -> Result<rmpv::Value, Error> {
+        let request_id = msg.request_id();
         let msg = serde_json::to_vec(&msg)?;
         self.stream
             .write(&msg)
@@ -410,12 +411,14 @@ impl<S: Stream> Amp0Inner<S> {
             .map_err(|e| Error::Generic(format!("Failed to read response: {}", e)))?;
 
         if let Ok(Msg::Result {
-            request: _,
+            request,
             arguments: Some(args),
             ..
         }) = serde_json::from_slice(&response_buf[..response_bytes])
         {
-            // TODO: verify request id is correct
+            if Some(request) != request_id {
+                return Err(Error::Generic("Unexpected request id".to_string()));
+            }
             if let [v, ..] = &args[..] {
                 return Ok(v.clone());
             }

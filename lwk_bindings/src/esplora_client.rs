@@ -19,6 +19,8 @@ pub struct EsploraClientBuilder {
     concurrency: Option<u32>,
     #[uniffi(default = None)]
     timeout: Option<u8>,
+    #[uniffi(default = false)]
+    utxo_only: bool,
 }
 
 impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
@@ -35,6 +37,9 @@ impl From<EsploraClientBuilder> for lwk_wollet::clients::EsploraClientBuilder {
         }
         if let Some(timeout) = builder.timeout {
             result = result.timeout(timeout);
+        }
+        if builder.utxo_only {
+            result = result.utxo_only(true);
         }
         result
     }

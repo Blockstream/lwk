@@ -117,7 +117,7 @@ build_cli:
 audit:
   extends: .base
   script:
-    - cargo audit
+    - cargo audit --deny yanked
 
 doc:
   extends: .base

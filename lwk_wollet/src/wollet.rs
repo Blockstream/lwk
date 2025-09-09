@@ -1121,21 +1121,36 @@ impl std::ops::Deref for Balance {
 }
 
 impl std::ops::Sub<Balance> for Balance {
-    type Output = Balance;
+    type Output = SignedBalance;
 
-    fn sub(self, other: Balance) -> Balance {
+    fn sub(self, other: Balance) -> SignedBalance {
         let all_keys: HashSet<_> = other.0.keys().chain(self.0.keys()).collect();
         let mut result = BTreeMap::new();
         for key in all_keys {
             result.insert(
                 *key,
-                self.0
-                    .get(&key)
-                    .unwrap_or(&0)
-                    .saturating_sub(*other.0.get(&key).unwrap_or(&0)),
+                self.0.get(&key).cloned().unwrap_or(0) as i64
+                    - other.0.get(&key).cloned().unwrap_or(0) as i64,
             );
         }
-        Balance(result)
+        SignedBalance(result)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignedBalance(BTreeMap<AssetId, i64>);
+
+impl AsRef<BTreeMap<AssetId, i64>> for SignedBalance {
+    fn as_ref(&self) -> &BTreeMap<AssetId, i64> {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for SignedBalance {
+    type Target = BTreeMap<AssetId, i64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -1585,7 +1600,7 @@ mod tests {
         let result2 = Balance(balance3) - Balance(balance4);
         assert_eq!(result2.get(&asset1), Some(&700));
         assert_eq!(result2.get(&asset2), Some(&500)); // Unchanged
-        assert_eq!(result2.get(&asset3), Some(&0)); // Treated as 0 - 100 = 0
+        assert_eq!(result2.get(&asset3), Some(&-100)); // 0 - 100 = -100
 
         // Test case 3: Subtraction resulting in zero
         let mut balance5 = BTreeMap::new();
@@ -1605,8 +1620,8 @@ mod tests {
 
         // Test case 5: Subtracting from empty balance
         let result5 = empty_balance - Balance(balance2);
-        assert_eq!(result5.get(&asset1), Some(&0));
-        assert_eq!(result5.get(&asset2), Some(&0));
+        assert_eq!(result5.get(&asset1), Some(&-300));
+        assert_eq!(result5.get(&asset2), Some(&-200));
 
         // Test case 6: Subtraction that would result in negative (testing the logic, though this shouldn't happen in practice)
         let mut balance7 = BTreeMap::new();
@@ -1616,9 +1631,8 @@ mod tests {
         balance8.insert(asset1, 300);
 
         let result6 = Balance(balance7) - Balance(balance8);
-        // This will result in 100 - 300 = 0 due to underflow protection in the subtraction logic
-        // The implementation uses wrapping_sub which would give a very large number, but the test shows the expected behavior
-        assert_eq!(result6.get(&asset1), Some(&0));
+        // This will result in 100 - 300 = -200
+        assert_eq!(result6.get(&asset1), Some(&-200));
     }
 
     // duplicated from tests/test_wollet.rs

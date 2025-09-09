@@ -1,10 +1,7 @@
 //! Manage AMP0 wallets.
 
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Key, Nonce,
-};
+use aes_gcm::{aead::Aead, Aes256Gcm, Key, Nonce};
 use base64::prelude::*;
 use elements::bitcoin::bip32::{DerivationPath, Xpub};
 use flate2::read::ZlibDecoder;
@@ -686,6 +683,7 @@ fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
         return Err(Error::Generic("Invalid encryption key length".into()));
     }
     // panicks on length mismatch
+    use aes_gcm::KeyInit;
     let key = Key::<Aes256Gcm>::from_slice(enc_key);
     let cipher = Aes256Gcm::new(key);
 

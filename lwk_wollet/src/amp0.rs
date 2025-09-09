@@ -33,8 +33,13 @@ use crate::{AddressResult, WolletDescriptor};
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
 use elements::pset::PartiallySignedTransaction;
+use elements::secp256k1_zkp::{Generator, PedersenCommitment, SecretKey};
 use elements::BlockHash;
 use elements::Transaction;
+use elements::{
+    confidential::{AssetBlindingFactor, ValueBlindingFactor},
+    AssetId, TxOut, TxOutSecrets,
+};
 use elements_miniscript::psbt::PsbtExt;
 
 pub const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
@@ -1116,7 +1121,36 @@ impl Amp0Pset {
         pset: PartiallySignedTransaction,
         blinding_nonces: Vec<String>,
     ) -> Result<Self, Error> {
-        // TODO: verify pset and blinding nonces are consistent
+        if pset.n_outputs() != blinding_nonces.len() {
+            return Err(Error::Generic("Invalid blinding nonces".into()));
+        }
+        for (idx, output) in pset.outputs().iter().enumerate() {
+            let txout = output.to_txout();
+            if txout.is_partially_blinded() {
+                let shared_secret = SecretKey::from_str(&blinding_nonces[idx])?;
+                let txoutsecrets = unblind_with_shared_secret(&txout, shared_secret)?;
+                let asset_comm = Generator::new_blinded(
+                    &EC,
+                    txoutsecrets.asset.into_inner().to_byte_array().into(),
+                    txoutsecrets.asset_bf.into_inner(),
+                );
+                let amount_comm = PedersenCommitment::new(
+                    &EC,
+                    txoutsecrets.value,
+                    txoutsecrets.value_bf.into_inner(),
+                    asset_comm,
+                );
+                if output.amount != Some(txoutsecrets.value)
+                    || output.asset != Some(txoutsecrets.asset)
+                    || output.amount_comm != Some(amount_comm)
+                    || output.asset_comm != Some(asset_comm)
+                {
+                    return Err(Error::Generic("Invalid blinding nonce".into()));
+                }
+            } else if !blinding_nonces[idx].is_empty() {
+                return Err(Error::Generic("Invalid blinding nonce".into()));
+            }
+        }
         Ok(Self {
             pset,
             blinding_nonces,
@@ -1132,6 +1166,47 @@ impl Amp0Pset {
     pub fn blinding_nonces(&self) -> &[String] {
         &self.blinding_nonces
     }
+}
+
+fn unblind_with_shared_secret(
+    txout: &TxOut,
+    shared_secret: SecretKey,
+) -> Result<TxOutSecrets, Error> {
+    let commitment = txout
+        .value
+        .commitment()
+        .ok_or_else(|| Error::Generic("Missing value commitment".into()))?;
+    let additional_generator = txout
+        .asset
+        .commitment()
+        .ok_or_else(|| Error::Generic("Missing asset commitment".into()))?;
+    let rangeproof = txout
+        .witness
+        .rangeproof
+        .as_ref()
+        .ok_or_else(|| Error::Generic("Missing rangeproof".into()))?;
+
+    let (opening, _) = rangeproof.rewind(
+        &EC,
+        commitment,
+        shared_secret,
+        txout.script_pubkey.as_bytes(),
+        additional_generator,
+    )?;
+
+    let (asset, asset_bf) = opening.message.as_ref().split_at(32);
+    let asset = AssetId::from_slice(asset)?;
+    let asset_bf = AssetBlindingFactor::from_slice(&asset_bf[..32])?;
+
+    let value = opening.value;
+    let value_bf = ValueBlindingFactor::from_slice(&opening.blinding_factor[..32])?;
+
+    Ok(TxOutSecrets {
+        asset,
+        asset_bf,
+        value,
+        value_bf,
+    })
 }
 
 #[cfg(test)]

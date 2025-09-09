@@ -1207,6 +1207,23 @@ fn unblind_with_shared_secret(
     })
 }
 
+#[allow(unused)]
+fn derive_gait_path(xpub: &Xpub) -> String {
+    // expected xpub is m/18241h
+    // chaincode + pubkey;
+    let mut input: Vec<u8> = vec![];
+    input.extend(xpub.chain_code.as_bytes());
+    input.extend(xpub.public_key.serialize());
+
+    let ga_key = b"GreenAddress.it HD wallet path";
+    use hmac::Mac;
+    let mut mac = Hmac::<Sha512>::new_from_slice(ga_key).expect("HMAC can take key of any size");
+    mac.update(&input);
+    let gait_path_bytes = mac.finalize().into_bytes();
+
+    hex::encode(&gait_path_bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

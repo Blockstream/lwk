@@ -1583,4 +1583,25 @@ mod tests {
         let xpub = server_master_xpub(&Network::LocaltestLiquid);
         assert_eq!(xpub.fingerprint().to_string(), AMP0_FINGERPRINT_REGTEST);
     }
+
+    #[test]
+    fn test_gait_path() {
+        use elements::bitcoin::bip32::{DerivationPath, Xpriv};
+        use elements::bitcoin::Network;
+
+        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
+        // From GDK logs
+        let gait_path_hex = "5856d4bbb94724768c337e1cc547b48df2b68068b9399f1c2d84f1a6c5824eb4788d3c17b2635cf8f90de4c2d3a2ba3284f6518d843f6801ac9894c033e4640f";
+
+        let mnemonic: bip39::Mnemonic = mnemonic.parse().unwrap();
+        let seed = mnemonic.to_seed("");
+        let master_xprv = Xpriv::new_master(Network::Testnet, &seed).unwrap();
+
+        // 18241 = 0x4741 = 'GA'
+        let register_path: DerivationPath = "m/18241h".parse().unwrap();
+        let xprv = master_xprv.derive_priv(&EC, &register_path).unwrap();
+        let xpub = Xpub::from_priv(&EC, &xprv);
+
+        assert_eq!(derive_gait_path(&xpub), gait_path_hex)
+    }
 }

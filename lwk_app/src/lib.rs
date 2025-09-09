@@ -526,6 +526,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let wollet = s.wollets.get_mut(&r.name)?;
             let mut balance = wollet
                 .balance()?
+                .as_ref()
+                .clone()
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v as i64))
                 .collect();

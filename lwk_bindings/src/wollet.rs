@@ -90,6 +90,8 @@ impl Wollet {
             .inner
             .lock()?
             .balance()?
+            .as_ref()
+            .clone()
             .into_iter()
             .map(|(k, v)| (k.into(), v))
             .collect();

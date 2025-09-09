@@ -662,20 +662,17 @@ impl Wollet {
         Ok(txos)
     }
 
-    pub(crate) fn balance_from_utxos(
-        &self,
-        utxos: &[WalletTxOut],
-    ) -> Result<BTreeMap<AssetId, u64>, Error> {
+    pub(crate) fn balance_from_utxos(&self, utxos: &[WalletTxOut]) -> Result<Balance, Error> {
         let mut r = BTreeMap::new();
         r.entry(self.policy_asset()).or_insert(0);
         for u in utxos.iter() {
             *r.entry(u.unblinded.asset).or_default() += u.unblinded.value;
         }
-        Ok(r)
+        Ok(Balance(r))
     }
 
     /// Get the wallet balance
-    pub fn balance(&self) -> Result<BTreeMap<AssetId, u64>, Error> {
+    pub fn balance(&self) -> Result<Balance, Error> {
         let utxos = self.utxos()?;
         self.balance_from_utxos(&utxos)
     }
@@ -1103,6 +1100,24 @@ fn tx_outputs(
     (0..(tx.output.len() as u32))
         .map(|idx| txos.get(&OutPoint::new(txid, idx)).cloned())
         .collect()
+}
+
+/// Wallet balance wrapper
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Balance(BTreeMap<AssetId, u64>);
+
+impl AsRef<BTreeMap<AssetId, u64>> for Balance {
+    fn as_ref(&self) -> &BTreeMap<AssetId, u64> {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for Balance {
+    type Target = BTreeMap<AssetId, u64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 /// Blockchain tip

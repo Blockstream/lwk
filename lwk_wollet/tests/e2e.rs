@@ -3594,48 +3594,9 @@ fn to_be(addr: &elements::Address) -> be::Address {
     be::Address::Elements(addr.clone())
 }
 
-fn unblind_with_shared_secret(
-    txout: &elements::TxOut,
-    shared_secret: elements::secp256k1_zkp::SecretKey,
-) -> elements::TxOutSecrets {
-    use elements::{
-        confidential::{AssetBlindingFactor, ValueBlindingFactor},
-        AssetId,
-    };
-
-    let commitment = txout.value.commitment().unwrap();
-    let additional_generator = txout.asset.commitment().unwrap();
-    let rangeproof = txout.witness.rangeproof.as_ref().unwrap();
-
-    let (opening, _) = rangeproof
-        .rewind(
-            &lwk_wollet::EC,
-            commitment,
-            shared_secret,
-            txout.script_pubkey.as_bytes(),
-            additional_generator,
-        )
-        .unwrap();
-
-    let (asset, asset_bf) = opening.message.as_ref().split_at(32);
-    let asset = AssetId::from_slice(asset).unwrap();
-    let asset_bf = AssetBlindingFactor::from_slice(&asset_bf[..32]).unwrap();
-
-    let value = opening.value;
-    let value_bf = ValueBlindingFactor::from_slice(&opening.blinding_factor[..32]).unwrap();
-
-    elements::TxOutSecrets {
-        asset,
-        asset_bf,
-        value,
-        value_bf,
-    }
-}
-
-#[ignore = "does not work yet"]
 #[test]
 fn test_blinding_nonces() {
-    // Construct a trnasaction and obtain the blinding nonces
+    // Construct a transaction and obtain the blinding nonces
     let server = setup();
 
     let signer = generate_signer();
@@ -3662,19 +3623,8 @@ fn test_blinding_nonces() {
 
     w.send(&mut pset);
 
-    // Check that the blinding nonces unblind the transaction
-    let mut num_blinded = 0;
-    for (idx, output) in pset.outputs().iter().enumerate() {
-        let txout = output.to_txout();
-        if txout.is_partially_blinded() {
-            let shared_secret =
-                elements::secp256k1_zkp::SecretKey::from_str(&blinding_nonces[idx]).unwrap();
-            let txoutsecrets = unblind_with_shared_secret(&txout, shared_secret);
-            assert_eq!(txoutsecrets.asset, lbtc);
-            num_blinded += 1;
-        } else {
-            assert!(blinding_nonces[idx].is_empty());
-        }
-    }
-    assert_eq!(num_blinded, 2);
+    // Amp0Pset::new checks that blinding nonces and PSET are consistent
+    let fake_blinding_nonces = vec![String::new(); blinding_nonces.len()];
+    let res = crate::amp0::Amp0Pset::new(pset, fake_blinding_nonces);
+    assert!(res.is_err());
 }

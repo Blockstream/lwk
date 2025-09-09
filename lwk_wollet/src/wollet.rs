@@ -1120,6 +1120,25 @@ impl std::ops::Deref for Balance {
     }
 }
 
+impl std::ops::Sub<Balance> for Balance {
+    type Output = Balance;
+
+    fn sub(self, other: Balance) -> Balance {
+        let all_keys: HashSet<_> = other.0.keys().chain(self.0.keys()).collect();
+        let mut result = BTreeMap::new();
+        for key in all_keys {
+            result.insert(
+                *key,
+                self.0
+                    .get(&key)
+                    .unwrap_or(&0)
+                    .saturating_sub(*other.0.get(&key).unwrap_or(&0)),
+            );
+        }
+        Balance(result)
+    }
+}
+
 /// Blockchain tip
 pub struct Tip {
     height: Height,
@@ -1189,6 +1208,7 @@ mod tests {
     use elements_miniscript::descriptor::DescriptorSecretKey;
     use lwk_common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use lwk_signer::SwSigner;
+    use lwk_test_util;
 
     #[test]
     fn test_desc() {
@@ -1525,6 +1545,80 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_balance_subtraction() {
+        use std::collections::BTreeMap;
+
+        // Helper function to create AssetId from hex string
+        let a = |a| AssetId::from_str(a).unwrap();
+
+        // Use the policy asset from lwk_test_util as a base and create variations
+        let policy_asset = lwk_test_util::regtest_policy_asset();
+        let asset1 = policy_asset;
+        let asset2 = a("6f0279e9ed041c3d710a9f57d0c02928416460c4b722d5a6d002dcab7c5b5b5b");
+        let asset3 = a("7f0279e9ed041c3d710a9f57d0c02928416460c4b722d5a6d002dcab7c5b5b5b");
+
+        // Test case 1: Basic subtraction with same assets
+        let mut balance1 = BTreeMap::new();
+        balance1.insert(asset1, 1000);
+        balance1.insert(asset2, 500);
+
+        let mut balance2 = BTreeMap::new();
+        balance2.insert(asset1, 300);
+        balance2.insert(asset2, 200);
+
+        let result = Balance(balance1.clone()) - Balance(balance2.clone());
+        assert_eq!(result.get(&asset1), Some(&700));
+        assert_eq!(result.get(&asset2), Some(&300));
+
+        // Test case 2: Subtraction with different assets (some assets only in one balance)
+        let mut balance3 = BTreeMap::new();
+        balance3.insert(asset1, 1000);
+        balance3.insert(asset2, 500);
+
+        let mut balance4 = BTreeMap::new();
+        balance4.insert(asset1, 300);
+        balance4.insert(asset3, 100); // Different asset
+
+        let result2 = Balance(balance3) - Balance(balance4);
+        assert_eq!(result2.get(&asset1), Some(&700));
+        assert_eq!(result2.get(&asset2), Some(&500)); // Unchanged
+        assert_eq!(result2.get(&asset3), Some(&0)); // Treated as 0 - 100 = 0
+
+        // Test case 3: Subtraction resulting in zero
+        let mut balance5 = BTreeMap::new();
+        balance5.insert(asset1, 500);
+
+        let mut balance6 = BTreeMap::new();
+        balance6.insert(asset1, 500);
+
+        let result3 = Balance(balance5) - Balance(balance6);
+        assert_eq!(result3.get(&asset1), Some(&0));
+
+        // Test case 4: Empty balance subtraction
+        let empty_balance = Balance(BTreeMap::new());
+        let result4 = Balance(balance1) - empty_balance.clone();
+        assert_eq!(result4.get(&asset1), Some(&1000));
+        assert_eq!(result4.get(&asset2), Some(&500));
+
+        // Test case 5: Subtracting from empty balance
+        let result5 = empty_balance - Balance(balance2);
+        assert_eq!(result5.get(&asset1), Some(&0));
+        assert_eq!(result5.get(&asset2), Some(&0));
+
+        // Test case 6: Subtraction that would result in negative (testing the logic, though this shouldn't happen in practice)
+        let mut balance7 = BTreeMap::new();
+        balance7.insert(asset1, 100);
+
+        let mut balance8 = BTreeMap::new();
+        balance8.insert(asset1, 300);
+
+        let result6 = Balance(balance7) - Balance(balance8);
+        // This will result in 100 - 300 = 0 due to underflow protection in the subtraction logic
+        // The implementation uses wrapping_sub which would give a very large number, but the test shows the expected behavior
+        assert_eq!(result6.get(&asset1), Some(&0));
     }
 
     // duplicated from tests/test_wollet.rs

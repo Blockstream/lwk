@@ -7,7 +7,7 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_tiny_jrpc"
 
 [dependencies]
-jsonrpc = { version = "0.17.0" }
+jsonrpc = { version = "0.18.0" }
 anyhow = "1.0.75"
 serde = "1.0.188"
 serde_derive = "1.0.188"

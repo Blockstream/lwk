@@ -460,7 +460,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedd23ae0fd321affb4bbbc36126c6f49a32818dc6b979395d24da8c9d4e80ee"
 dependencies = [
  "bitcoincore-rpc-json",
- "jsonrpc 0.18.0",
+ "jsonrpc",
  "log",
  "serde",
  "serde_json",
@@ -2080,17 +2080,6 @@ dependencies = [
 
 [[package]]
 name = "jsonrpc"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a26d9104d516092f092d97448787505881fdb6518293b2d6500bf9c180c839dd"
-dependencies = [
- "base64 0.13.1",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "jsonrpc"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3662a38d341d77efecb73caf01420cfa5aa63c0253fd7bc05289ef9f6616e1bf"
@@ -2216,7 +2205,7 @@ version = "0.11.0"
 dependencies = [
  "enum-iterator",
  "home",
- "jsonrpc 0.17.0",
+ "jsonrpc",
  "log",
  "lwk_common",
  "lwk_jade",
@@ -2382,7 +2371,7 @@ name = "lwk_tiny_jrpc"
 version = "0.10.0"
 dependencies = [
  "anyhow",
- "jsonrpc 0.17.0",
+ "jsonrpc",
  "log",
  "serde",
  "serde_derive",

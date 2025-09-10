@@ -14,7 +14,7 @@ lwk_wollet = { version = "0.11.0" }
 lwk_rpc_model = { version = "0.10.0" }
 lwk_tiny_jrpc = { version = "0.10.0" }
 
-jsonrpc = { version = "0.17.0" }
+jsonrpc = { version = "0.18.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 secp256k1 = "0.27"

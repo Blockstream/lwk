@@ -11,7 +11,7 @@ use pbkdf2::pbkdf2;
 use rmpv;
 use scrypt::{scrypt, Params};
 use serde::{Deserialize, Serialize};
-use sha2::Sha512;
+use sha2::{Sha256, Sha512};
 use std::collections::HashMap;
 use std::io::Read;
 use std::str::FromStr;
@@ -1223,6 +1223,18 @@ fn derive_gait_path(xpub: &Xpub) -> String {
     let gait_path_bytes = mac.finalize().into_bytes();
 
     hex::encode(&gait_path_bytes)
+}
+
+#[allow(unused)]
+fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
+    let mut blob_keys = [0u8; 64];
+
+    let pubkey = client_secret_xpub.public_key.serialize();
+    let _ = pbkdf2::<Hmac<Sha512>>(&pubkey, &BLOB_SALT, 2048, &mut blob_keys);
+
+    let enc_key = blob_keys[..32].to_vec();
+    let hmac_key = blob_keys[32..].to_vec();
+    (enc_key, hmac_key)
 }
 
 #[cfg(test)]

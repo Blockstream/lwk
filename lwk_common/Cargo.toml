@@ -17,4 +17,4 @@ serde = "1"
 # avoid deps to the workspace
 
 [target.wasm32-unknown-unknown.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.2.15", features = ["js"] }

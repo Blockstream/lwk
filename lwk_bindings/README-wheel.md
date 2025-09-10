@@ -24,9 +24,16 @@ assert(str(network) == "Liquid")
 
 ## Examples
 
-* [List transactions](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
+* [List transactions](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/list_transactions.py) of a wpkh/slip77 wallet, also compute the UTXO only balance
 * [Send transaction](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
 * [Send asset](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
+* [Issue a Liquid asset](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/issue_asset.py)
 * [Custom persister](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
+* [AMP2](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/amp2.py) demonstrates Asset Management platform protocol integration
+* [External unblinding](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/external_unblind.py) shows how to unblind transaction data externally
+* [LiquiDEX](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/liquidex.py) demonstrates Liquid decentralized swap functionality
+* [Manual coin selection](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/manual_coin_selection.py) shows how to manually select coins for transactions
+* [Multisig](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/multisig.py) demonstrates multisignature wallet setup and usage
+* [PSET details](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/pset_details.py) shows how to inspect and work with Partially Signed Elements Transactions
 
 

@@ -16,4 +16,29 @@ wollet = Wollet(network, desc, datadir=None)
 update = client.full_scan(wollet)
 wollet.apply_update(update)
 
-assert(len(wollet.transactions()) >= 99)
+txs = wollet.transactions()
+assert(len(txs) >= 99)
+balance = wollet.balance()
+
+# Fetch transactions using waterfalls and utxos only
+b = EsploraClientBuilder(
+    base_url="https://waterfalls.liquidwebwallet.org/liquidtestnet/api",
+    network=network,
+    waterfalls=True,
+    utxo_only=True,
+)
+client_utxo_only = EsploraClient.from_builder(b)
+wollet_utxo_only = Wollet(network, desc, datadir=None)
+update = client_utxo_only.full_scan(wollet_utxo_only)
+wollet_utxo_only.apply_update(update)
+
+txs_utxo_only = wollet_utxo_only.transactions()
+assert(len(txs_utxo_only) < len(txs))
+balance_utxo_only = wollet_utxo_only.balance()
+
+# FIXME: lbtc balances should match
+lbtc = balance.pop(network.policy_asset())
+lbtc_utxo_only = balance_utxo_only.pop(network.policy_asset())
+assert(lbtc != lbtc_utxo_only)
+
+assert(balance == balance_utxo_only)

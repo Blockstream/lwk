@@ -1461,6 +1461,12 @@ mod tests {
 
         let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path).unwrap();
         assert_eq!(desc, expected_descriptor);
+
+        // Encrypt blob back
+        // let value = from_blob(&blob).unwrap();
+        // let plaintext = from_value(&value).unwrap();
+        let encrypted_blob = encrypt_blob(&enc_key, &plaintext).unwrap();
+        assert_eq!(decrypt_blob(&enc_key, &encrypted_blob).unwrap(), plaintext);
     }
 
     #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]

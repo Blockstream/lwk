@@ -43,7 +43,7 @@ pub struct EsploraClient {
     tip_hash_url: String,
     broadcast_url: String,
     waterfalls: bool,
-    utxo_only: bool,
+    pub(crate) utxo_only: bool,
     waterfalls_server_recipient: Option<Recipient>,
 
     /// Map of a descriptor to its encrypted descriptor.

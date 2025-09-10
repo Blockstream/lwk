@@ -56,6 +56,10 @@ pub trait BlockchainBackend {
         HashSet::new()
     }
 
+    fn utxo_only(&self) -> bool {
+        false
+    }
+
     fn get_history<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -176,7 +180,7 @@ pub trait BlockchainBackend {
             height_blockhash,
             height_timestamp: _height_timestamp,
             tip: _,
-            unspent: _,
+            unspent,
         } = if self.capabilities().contains(&Capability::Waterfalls) {
             match self.get_history_waterfalls(&descriptor, state, index) {
                 Ok(d) => d,
@@ -192,7 +196,13 @@ pub trait BlockchainBackend {
         let tip = self.tip()?;
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
-        let new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
+        let mut new_txs = self.download_txs(&history_txs_id, &scripts, state, &descriptor)?;
+
+        if self.utxo_only() {
+            let tx = create_dummy_tx(&unspent, &new_txs);
+            new_txs.txs.push((tx.txid(), tx));
+        }
+
         let history_txs_heights_plus_tip: HashSet<Height> = txid_height
             .values()
             .filter_map(|e| *e)

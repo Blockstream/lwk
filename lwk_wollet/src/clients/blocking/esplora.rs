@@ -108,6 +108,10 @@ impl BlockchainBackend for EsploraClient {
                 .get_history_waterfalls(descriptor, state, to_index),
         )
     }
+
+    fn utxo_only(&self) -> bool {
+        self.client.utxo_only
+    }
 }
 
 #[cfg(test)]

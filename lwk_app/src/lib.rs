@@ -815,7 +815,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .balance
                 .balances
                 .as_ref()
-                .into_iter()
+                .iter()
                 .map(|(k, v)| (k.to_string(), *v))
                 .collect();
             if r.with_tickers {

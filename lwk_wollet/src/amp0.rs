@@ -191,7 +191,7 @@ impl<S: Stream> Amp0<S> {
         let plaintext = decrypt_blob(&enc_key, &blob)?;
         // parse blob
         let value = parse_value(&plaintext)?;
-        let blob = parse_blob(value)?;
+        let blob = Blob::from_value(&value)?;
         // compute wallet descriptor
         let gait_path = &login_data.gait_path;
         let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path)?;
@@ -790,20 +790,21 @@ struct Blob {
 }
 
 impl Blob {
-    fn extract(&mut self) -> Result<(), Error> {
-        let slip77_key = self
+    fn from_value(value: &rmpv::Value) -> Result<Self, Error> {
+        let mut blob: Self = rmpv::ext::from_value(value.clone())?;
+        let slip77_key = blob
             .slip77key
             .get("key")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        self.slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
+        blob.slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
 
-        let xpubs = self
+        let xpubs = blob
             .watchonly
             .get("xpubs")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        self.xpubs = rmpv::ext::from_value(xpubs.clone())?;
+        blob.xpubs = rmpv::ext::from_value(xpubs.clone())?;
 
-        Ok(())
+        Ok(blob)
     }
 
     fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
@@ -825,12 +826,6 @@ impl Blob {
         }
         None
     }
-}
-
-fn parse_blob(value: rmpv::Value) -> Result<Blob, Error> {
-    let mut blob: Blob = rmpv::ext::from_value(value.clone()).expect("TODO leo");
-    blob.extract()?;
-    Ok(blob)
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {
@@ -1495,7 +1490,7 @@ mod tests {
         assert_eq!(plaintext[..4], [1, 0, 0, 0]);
 
         let value = parse_value(&plaintext).unwrap();
-        let blob = parse_blob(value.clone()).unwrap();
+        let blob = Blob::from_value(&value).unwrap();
         assert_eq!(
             &blob.slip77_key,
             "8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6"

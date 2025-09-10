@@ -702,6 +702,18 @@ fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     Ok(plaintext)
 }
 
+#[allow(unused)]
+fn encrypt_blob(enc_key: &[u8], plaintext: &[u8]) -> Result<String, Error> {
+    let cipher = blob_cipher(enc_key)?;
+
+    use aes_gcm::aead::{AeadCore, OsRng};
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let ciphertext = cipher.encrypt(&nonce, plaintext)?;
+    let mut wo_blob = nonce.to_vec();
+    wo_blob.extend(ciphertext);
+    Ok(BASE64_STANDARD.encode(&wo_blob))
+}
+
 fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
     // decompress
     // bytes 0 to 4 are prefix

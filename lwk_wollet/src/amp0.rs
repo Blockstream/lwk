@@ -728,6 +728,25 @@ fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
     Ok(value)
 }
 
+#[allow(unused)]
+fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
+    // json to messagePack
+    let mut v = Vec::new();
+    rmpv::encode::write_value(&mut v, value).expect("TODO: leo");
+
+    // compress
+    use flate2::{read::ZlibEncoder, Compression};
+    let mut cursor = std::io::Cursor::new(v);
+    let mut z = ZlibEncoder::new(cursor, Compression::best());
+    let mut compressed = Vec::new();
+    compressed.extend(vec![1, 0, 0, 0]);
+    // TODO: set correct value (len?)
+    compressed.extend(vec![0, 0, 0, 0]);
+    z.read_to_end(&mut compressed)?;
+
+    Ok(compressed)
+}
+
 /// Useful content from the client blob
 struct BlobContent {
     /// Wallet "master"/descriptor blinding key (always slip77)

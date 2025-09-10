@@ -46,6 +46,12 @@ impl std::ops::Sub<Balance> for Balance {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignedBalance(BTreeMap<AssetId, i64>);
 
+impl From<BTreeMap<AssetId, i64>> for SignedBalance {
+    fn from(map: BTreeMap<AssetId, i64>) -> Self {
+        Self(map)
+    }
+}
+
 impl AsRef<BTreeMap<AssetId, i64>> for SignedBalance {
     fn as_ref(&self) -> &BTreeMap<AssetId, i64> {
         &self.0

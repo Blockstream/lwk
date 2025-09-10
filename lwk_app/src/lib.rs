@@ -814,8 +814,9 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut balance: HashMap<String, i64> = details
                 .balance
                 .balances
+                .as_ref()
                 .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
+                .map(|(k, v)| (k.to_string(), *v))
                 .collect();
             if r.with_tickers {
                 balance = s.replace_id_with_ticker(balance);

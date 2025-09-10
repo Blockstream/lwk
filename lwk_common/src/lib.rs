@@ -301,7 +301,7 @@ pub fn pset_balance(
 
     Ok(PsetBalance {
         fee,
-        balances,
+        balances: balances.into(),
         recipients,
     })
 }

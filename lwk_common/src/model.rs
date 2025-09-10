@@ -5,12 +5,14 @@ use elements_miniscript::elements::bitcoin::{
 use elements_miniscript::elements::pset::Input;
 use elements_miniscript::elements::secp256k1_zkp::ZERO_TWEAK;
 use elements_miniscript::elements::{AssetId, AssetIssuance, OutPoint, Txid};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
+
+use crate::SignedBalance;
 
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
     pub fee: u64,
-    pub balances: BTreeMap<AssetId, i64>,
+    pub balances: SignedBalance,
 
     /// Outputs going out of the wallet
     pub recipients: Vec<Recipient>,

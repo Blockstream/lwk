@@ -2512,7 +2512,11 @@ fn test_update_transaction() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
 
     // Apply the transaction to the wallet
-    w.wollet.apply_transaction(tx.clone()).unwrap();
+    let net = w.wollet.apply_transaction(tx.clone()).unwrap();
+    assert_eq!(
+        format!("{:?}", net),
+        "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1026})"
+    );
 
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);
@@ -2532,7 +2536,11 @@ fn test_update_transaction() {
     assert_eq!(txs.len(), 2);
 
     // Applying the transaction again does nothing
-    w.wollet.apply_transaction(tx.clone()).unwrap();
+    let net = w.wollet.apply_transaction(tx.clone()).unwrap();
+    assert_eq!(
+        format!("{:?}", net),
+        "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 0})"
+    );
 
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);
@@ -2556,7 +2564,11 @@ fn test_update_transaction() {
     let update = w.client.full_scan(&w.wollet).unwrap().unwrap();
 
     // Apply the transaction
-    w.wollet.apply_transaction(tx.clone()).unwrap();
+    let net = w.wollet.apply_transaction(tx.clone()).unwrap();
+    assert_eq!(
+        format!("{:?}", net),
+        "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1026})"
+    );
 
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 3);

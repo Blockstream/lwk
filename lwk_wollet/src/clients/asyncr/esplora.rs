@@ -1,7 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use crate::clients::{try_unblind, Capability, History};
+use crate::clients::{create_dummy_tx, try_unblind, Capability, History};
 use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::BlindingPublicKey;
 use crate::{
@@ -18,7 +18,6 @@ use elements::{
     encode::Decodable, hashes::hex::FromHex, hex::ToHex, pset::serialize::Serialize, BlockHash,
     Script, Txid,
 };
-use elements::{AssetIssuance, LockTime, Sequence, TxInWitness};
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use futures::stream::{iter, StreamExt};
 use reqwest::Response;
@@ -744,46 +743,6 @@ impl EsploraClient {
                 return Ok(response);
             }
         }
-    }
-}
-
-// Creates a dummy tx having inputs spending all the outputs of the download transactions which are not unspent.
-//
-// We may need to return a vec of transactions if some kind of transaction limits arise.
-// TODO: Add only outpoints the wallet owns.
-fn create_dummy_tx(unspent: &[OutPoint], new_txs: &DownloadTxResult) -> elements::Transaction {
-    let mut all_outputs: HashSet<OutPoint> = new_txs
-        .txs
-        .iter()
-        .flat_map(|(txid, tx)| {
-            tx.output
-                .iter()
-                .enumerate()
-                .map(|(i, _)| OutPoint::new(*txid, i as u32))
-        })
-        .collect();
-    all_outputs.retain(|o| !unspent.contains(o));
-    let spent_outputs = all_outputs;
-
-    let inputs = spent_outputs
-        .iter()
-        .map(|o| elements::TxIn {
-            previous_output: *o,
-            script_sig: elements::Script::default(),
-            sequence: Sequence::MAX,
-            is_pegin: false,
-            asset_issuance: AssetIssuance::default(),
-            witness: TxInWitness::default(),
-        })
-        .collect();
-
-    let outputs = vec![];
-
-    elements::Transaction {
-        version: 1,
-        input: inputs,
-        output: outputs,
-        lock_time: LockTime::ZERO,
     }
 }
 

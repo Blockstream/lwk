@@ -36,9 +36,8 @@ txs_utxo_only = wollet_utxo_only.transactions()
 assert(len(txs_utxo_only) < len(txs))
 balance_utxo_only = wollet_utxo_only.balance()
 
-# FIXME: lbtc balances should match
 lbtc = balance.pop(network.policy_asset())
 lbtc_utxo_only = balance_utxo_only.pop(network.policy_asset())
-assert(lbtc != lbtc_utxo_only)
+assert(lbtc == lbtc_utxo_only)
 
 assert(balance == balance_utxo_only)

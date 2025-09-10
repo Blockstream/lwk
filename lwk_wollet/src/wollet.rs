@@ -1129,8 +1129,8 @@ impl std::ops::Sub<Balance> for Balance {
         for key in all_keys {
             result.insert(
                 *key,
-                self.0.get(&key).cloned().unwrap_or(0) as i64
-                    - other.0.get(&key).cloned().unwrap_or(0) as i64,
+                self.0.get(key).cloned().unwrap_or(0) as i64
+                    - other.0.get(key).cloned().unwrap_or(0) as i64,
             );
         }
         SignedBalance(result)
@@ -1223,7 +1223,6 @@ mod tests {
     use elements_miniscript::descriptor::DescriptorSecretKey;
     use lwk_common::{singlesig_desc, DescriptorBlindingKey, Singlesig};
     use lwk_signer::SwSigner;
-    use lwk_test_util;
 
     #[test]
     fn test_desc() {

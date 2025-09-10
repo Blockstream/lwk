@@ -3,7 +3,7 @@ use crate::descriptor::Chain;
 use crate::elements::{OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::store::{Height, Timestamp};
-use crate::wollet::WolletState;
+use crate::wollet::{SignedBalance, WolletState};
 use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
 use aes_gcm_siv::aead::generic_array::GenericArray;
@@ -154,7 +154,12 @@ fn default_blockheader() -> BlockHeader {
 
 /// Update the wallet state from blockchain data
 impl Wollet {
-    fn apply_transaction_inner(&mut self, tx: Transaction, do_persist: bool) -> Result<(), Error> {
+    fn apply_transaction_inner(
+        &mut self,
+        tx: Transaction,
+        do_persist: bool,
+    ) -> Result<SignedBalance, Error> {
+        let initial_balance = self.balance()?;
         let mut unblinds = vec![];
         let txid = tx.txid();
         for (vout, output) in tx.output.iter().enumerate() {
@@ -185,7 +190,9 @@ impl Wollet {
             tip: default_blockheader(),
         };
 
-        self.apply_update_inner(update, do_persist)
+        self.apply_update_inner(update, do_persist)?;
+        let final_balance = self.balance()?;
+        Ok(final_balance - initial_balance)
     }
 
     /// Apply an update containing blockchain data
@@ -338,12 +345,15 @@ impl Wollet {
     ///
     /// Calling this method, might cause [`Wollet::apply_update()`] to fail with a
     /// [`Error::UpdateOnDifferentStatus`], make sure to either avoid it or handle the error properly.
-    pub fn apply_transaction(&mut self, tx: Transaction) -> Result<(), Error> {
+    pub fn apply_transaction(&mut self, tx: Transaction) -> Result<SignedBalance, Error> {
         self.apply_transaction_inner(tx, true)
     }
 
     /// Same as [`Wollet::apply_transaction()`] but only apply the update in memory, without persisting it.
-    pub fn apply_transaction_no_persist(&mut self, tx: Transaction) -> Result<(), Error> {
+    pub fn apply_transaction_no_persist(
+        &mut self,
+        tx: Transaction,
+    ) -> Result<SignedBalance, Error> {
         self.apply_transaction_inner(tx, false)
     }
 }

@@ -73,7 +73,10 @@ impl Wollet {
 
     #[wasm_bindgen(js_name = applyTransaction)]
     pub fn apply_transaction(&mut self, tx: &Transaction) -> Result<(), Error> {
-        Ok(self.inner.apply_transaction(tx.clone().into())?)
+        Ok(self
+            .inner
+            .apply_transaction(tx.clone().into())
+            .map(|_| ())?)
     }
 
     pub fn balance(&self) -> Result<JsValue, Error> {

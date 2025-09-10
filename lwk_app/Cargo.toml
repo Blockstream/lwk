@@ -17,7 +17,7 @@ lwk_tiny_jrpc = { version = "0.10.0" }
 jsonrpc = { version = "0.18.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
-secp256k1 = "0.27"
+secp256k1 = "0.29.1"
 thiserror = "1"
 log = "0.4.22"
 rand = "0.8.5"

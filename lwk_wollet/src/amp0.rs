@@ -1472,7 +1472,7 @@ mod tests {
         assert_eq!(plaintext[..4], [1, 0, 0, 0]);
 
         let value = parse_value(&plaintext).unwrap();
-        let blob = parse_blob(value).unwrap();
+        let blob = parse_blob(value.clone()).unwrap();
         assert_eq!(
             &blob.slip77_key,
             "8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6"
@@ -1483,7 +1483,8 @@ mod tests {
 
         // Encrypt blob back
         // let value = from_blob(&blob).unwrap();
-        // let plaintext = from_value(&value).unwrap();
+        let plaintext_ = from_value(&value).unwrap();
+        assert_eq!(value, parse_value(&plaintext_).unwrap());
         let encrypted_blob = encrypt_blob(&enc_key, &plaintext).unwrap();
         assert_eq!(decrypt_blob(&enc_key, &encrypted_blob).unwrap(), plaintext);
     }

@@ -1629,4 +1629,27 @@ mod tests {
 
         assert_eq!(derive_gait_path(&xpub), gait_path_hex)
     }
+
+    #[test]
+    fn test_hmac() {
+        use elements::bitcoin::bip32::{DerivationPath, Xpriv};
+        use elements::bitcoin::Network;
+
+        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
+        // From GDK logs
+        let blob64 = "4O9yRhKbJQubAgJKrRW60pBc9JK5RhUb+GA8eDbG2H2ajnCYg4G2YMKBcCrAuemyNox0RYLS4qjeQG93wUlkpSenjeTdpyUXP68iavsQQi0744DYY7Owce5qaKZx2Uv1Z0a7Ta+DtEaVBpYi7a8MjOdw3u5pnFFq9H0pWweuWc2pz7Vj8GoruCzitSQaWdJ81P1nZZjaSpYclDlVU/nlvee4LXhMmNIAhNhFiZOOt0d/G3F/v1xdirWRwoZ38b5cP+ieeiqvwJ0GccGDr4qPqgC4w7pc6IK+PVUUmh9nyu5iVr/VRyn+uwv2QUl3jyPObqJ67qwV0LL2hL1aAkAraah1WXb2CZP4o947zAxb5hTkqPjqrXFEHjxW9IBkOSSo/1UKF4wnWtvrSvePeSZmWQffKQIfBXMB3RQE+E53bW2c1waD6DCwurdPQuiZJNe2WDKXsBRdwn548VLD91AyJYTLmP87H4X4TXDSo6HXLJfZf7r8qFMJhy4yFYgTWtrPun+9NsCZ2p1/AUAmihZWchsyC/O6hMP4iowJsW0TGZCeSWZTHSa8iKbnDj29vWKLd5DnQ0ePZTmi8wuJSKZy020mFp2czvT6qpBu3txLDuwrltLNMxSlcMaNi0rvICArM+E8v0lmdPlKLdkkvwAHjp8G5Dj+rv9qNvI84S2W/GBgugM0aLXefsn+PH+hxoi4m296ToHJiZhzr774pqgvEeiaUs4TXhVukJiupRUa3/EB37QyikreNZaLIw==";
+        let hmac64 = "OM/H4321wV0n+MQXln4UnL2uBBLgB7EScJ+ZuZEDNQU=";
+
+        let mnemonic: bip39::Mnemonic = mnemonic.parse().unwrap();
+        let seed = mnemonic.to_seed("");
+        let master_xprv = Xpriv::new_master(Network::Testnet, &seed).unwrap();
+
+        // 1885434739 = 0x70617373 = 'pass'
+        let client_secret_path: DerivationPath = "m/1885434739h".parse().unwrap();
+        let xprv = master_xprv.derive_priv(&EC, &client_secret_path).unwrap();
+        let client_secret_xpub = Xpub::from_priv(&EC, &xprv);
+
+        let (_enc_key, hmac_key) = derive_blob_keys(&client_secret_xpub);
+        assert_eq!(compute_hmac(&hmac_key, blob64).unwrap(), hmac64);
+    }
 }

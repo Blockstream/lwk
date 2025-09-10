@@ -1668,7 +1668,15 @@ mod tests {
         let xprv = master_xprv.derive_priv(&EC, &client_secret_path).unwrap();
         let client_secret_xpub = Xpub::from_priv(&EC, &xprv);
 
-        let (_enc_key, hmac_key) = derive_blob_keys(&client_secret_xpub);
+        let (enc_key, hmac_key) = derive_blob_keys(&client_secret_xpub);
         assert_eq!(compute_hmac(&hmac_key, blob64).unwrap(), hmac64);
+
+        let username = "userleo345678";
+        let password = "userleo345678";
+        let wo_blob_key_hex = encrypt_blob_key(username, password, &enc_key).unwrap();
+        assert_eq!(
+            decrypt_blob_key(username, password, &wo_blob_key_hex).unwrap(),
+            enc_key
+        );
     }
 }

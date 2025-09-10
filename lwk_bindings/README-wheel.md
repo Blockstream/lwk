@@ -29,6 +29,7 @@ assert(str(network) == "Liquid")
 * [Send asset](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
 * [Issue a Liquid asset](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/issue_asset.py)
 * [Custom persister](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/custom_persister.py), the caller code provide how the wallet updates are persisted
+* [AMP0](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/amp0.py) demonstrates Asset Management Platform version 0 integration
 * [AMP2](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/amp2.py) demonstrates Asset Management platform protocol integration
 * [External unblinding](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/external_unblind.py) shows how to unblind transaction data externally
 * [LiquiDEX](https://github.com/Blockstream/lwk/tree/master/lwk_bindings/tests/bindings/liquidex.py) demonstrates Liquid decentralized swap functionality

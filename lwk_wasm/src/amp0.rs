@@ -14,34 +14,37 @@ impl Amp0 {
     /// Create a new AMP0 context for the specified network
     #[wasm_bindgen(js_name = newWithNetwork)]
     pub async fn new_with_network(
-        network: Network,
+        network: &Network,
         username: &str,
         password: &str,
         amp_id: &str,
     ) -> Result<Self, Error> {
-        let url = lwk_wollet::amp0::default_url(network.into())?;
+        let url = lwk_wollet::amp0::default_url((*network).into())?;
         let websocket_serial = WebSocketSerial::new_wamp(url).await?;
         let inner = lwk_wollet::amp0::Amp0::new(
             websocket_serial,
-            network.into(),
+            (*network).into(),
             username,
             password,
             amp_id,
         )
         .await?;
-        Ok(Self { inner, network })
+        Ok(Self {
+            inner,
+            network: *network,
+        })
     }
 
     /// Create a new AMP0 context for testnet
     #[wasm_bindgen(js_name = newTestnet)]
     pub async fn new_testnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
-        Self::new_with_network(Network::testnet(), username, password, amp_id).await
+        Self::new_with_network(&Network::testnet(), username, password, amp_id).await
     }
 
     /// Create a new AMP0 context for mainnet
     #[wasm_bindgen(js_name = newMainnet)]
     pub async fn new_mainnet(username: &str, password: &str, amp_id: &str) -> Result<Self, Error> {
-        Self::new_with_network(Network::mainnet(), username, password, amp_id).await
+        Self::new_with_network(&Network::mainnet(), username, password, amp_id).await
     }
 
     /// Index of the last returned address

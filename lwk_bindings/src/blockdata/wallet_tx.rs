@@ -72,10 +72,8 @@ impl WalletTx {
 mod tests {
     use crate::WalletTx;
     use elements::{hex::FromHex, pset::serialize::Deserialize, Address};
-    use std::{
-        collections::{BTreeMap, HashMap},
-        str::FromStr,
-    };
+    use lwk_common::SignedBalance;
+    use std::{collections::HashMap, str::FromStr};
 
     #[test]
     fn wallet_tx() {
@@ -107,7 +105,7 @@ mod tests {
             tx: tx.clone(),
             txid: tx.txid(),
             height: Some(4),
-            balance: BTreeMap::new(),
+            balance: SignedBalance::default(),
             fee: 23,
             type_: "type".to_string(),
             timestamp: Some(124),

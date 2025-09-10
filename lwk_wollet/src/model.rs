@@ -6,9 +6,8 @@ use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
 use elements::bitcoin;
 
-use lwk_common::burn_script;
+use lwk_common::{burn_script, SignedBalance};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 
@@ -54,7 +53,7 @@ pub struct WalletTx {
     pub tx: Transaction,
     pub txid: Txid,
     pub height: Option<u32>,
-    pub balance: BTreeMap<AssetId, i64>,
+    pub balance: SignedBalance,
     pub fee: u64,
     pub type_: String,
     pub timestamp: Option<Timestamp>,

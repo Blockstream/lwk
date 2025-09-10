@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use elements::AssetId;
+use serde::{Deserialize, Serialize};
 
 /// Wallet balance wrapper
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,7 +44,8 @@ impl std::ops::Sub<Balance> for Balance {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(transparent)]
 pub struct SignedBalance(BTreeMap<AssetId, i64>);
 
 impl From<BTreeMap<AssetId, i64>> for SignedBalance {

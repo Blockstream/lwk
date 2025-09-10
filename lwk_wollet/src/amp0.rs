@@ -1249,6 +1249,25 @@ fn compute_hmac(hmac_key: &[u8], blob64: &str) -> Result<String, Error> {
     Ok(BASE64_STANDARD.encode(hmac_bytes))
 }
 
+#[allow(unused)]
+fn encrypt_blob_key(username: &str, password: &str, enc_key: &[u8]) -> Result<String, Error> {
+    let entropy = get_entropy(username, password);
+    let mut wo_aes_key = [0u8; 32];
+    let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_K, 2048, &mut wo_aes_key);
+
+    let mut iv = [0u8; 16];
+    use rand::{thread_rng, RngCore};
+    let mut rng = thread_rng();
+    rng.fill_bytes(&mut iv);
+    use aes::cipher::BlockEncryptMut;
+    let cyphertext = cbc::Encryptor::<aes::Aes256>::new(&wo_aes_key.into(), (&iv).into())
+        .encrypt_padded_vec_mut::<Pkcs7>(enc_key);
+
+    let mut blob_key = iv.to_vec();
+    blob_key.extend(cyphertext);
+    Ok(hex::encode(&blob_key))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

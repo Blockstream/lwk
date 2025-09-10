@@ -747,15 +747,6 @@ fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
     Ok(compressed)
 }
 
-/// Useful content from the client blob
-struct BlobContent {
-    /// Wallet "master"/descriptor blinding key (always slip77)
-    pub slip77_key: String,
-
-    /// Wallet xpubs and their derivation paths
-    pub xpubs: HashMap<Xpub, Vec<u32>>,
-}
-
 #[derive(Serialize, Deserialize)]
 struct Blob {
     version: u32,
@@ -791,28 +782,55 @@ struct Blob {
     _30: rmpv::Value,
     _31: rmpv::Value,
     _32: rmpv::Value,
+
+    #[serde(skip)]
+    xpubs: HashMap<Xpub, Vec<u32>>,
+    #[serde(skip)]
+    slip77_key: String,
 }
 
 impl Blob {
-    fn to_content(&self) -> Result<BlobContent, Error> {
+    fn extract(&mut self) -> Result<(), Error> {
         let slip77_key = self
             .slip77key
             .get("key")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        let slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
+        self.slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
 
         let xpubs = self
             .watchonly
             .get("xpubs")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        let xpubs: HashMap<Xpub, Vec<u32>> = rmpv::ext::from_value(xpubs.clone())?;
-        Ok(BlobContent { slip77_key, xpubs })
+        self.xpubs = rmpv::ext::from_value(xpubs.clone())?;
+
+        Ok(())
+    }
+
+    fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
+        for (k, v) in &self.xpubs {
+            if let [cn1, cn2] = v[..] {
+                if cn1 == (3 + 2u32.pow(31)) && cn2 == (amp_subaccount + 2u32.pow(31)) {
+                    return Some(*k);
+                }
+            }
+        }
+        None
+    }
+
+    fn find_master_xpub(&self) -> Option<Xpub> {
+        for (k, v) in &self.xpubs {
+            if v.is_empty() {
+                return Some(*k);
+            }
+        }
+        None
     }
 }
 
-fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
-    let blob: Blob = rmpv::ext::from_value(value.clone()).expect("TODO leo");
-    blob.to_content()
+fn parse_blob(value: rmpv::Value) -> Result<Blob, Error> {
+    let mut blob: Blob = rmpv::ext::from_value(value.clone()).expect("TODO leo");
+    blob.extract()?;
+    Ok(blob)
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {
@@ -873,30 +891,8 @@ fn derive_server_xpub(
     Ok(format!("[{fingerprint}/{server_path}]{derived_xpub}"))
 }
 
-impl BlobContent {
-    fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
-        for (k, v) in &self.xpubs {
-            if let [cn1, cn2] = v[..] {
-                if cn1 == (3 + 2u32.pow(31)) && cn2 == (amp_subaccount + 2u32.pow(31)) {
-                    return Some(*k);
-                }
-            }
-        }
-        None
-    }
-
-    fn find_master_xpub(&self) -> Option<Xpub> {
-        for (k, v) in &self.xpubs {
-            if v.is_empty() {
-                return Some(*k);
-            }
-        }
-        None
-    }
-}
-
 fn amp_descriptor(
-    blob: BlobContent,
+    blob: Blob,
     amp_subaccount: u32,
     network: &Network,
     gait_path: &str,

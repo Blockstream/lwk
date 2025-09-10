@@ -391,7 +391,7 @@ dependencies = [
  "bitcoin_hashes 0.14.0",
  "hex-conservative 0.2.1",
  "hex_lit",
- "secp256k1 0.29.1",
+ "secp256k1",
  "serde",
 ]
 
@@ -2216,7 +2216,7 @@ dependencies = [
  "rand",
  "reqwest",
  "schemars",
- "secp256k1 0.27.0",
+ "secp256k1",
  "serde",
  "serde_json",
  "tempfile",
@@ -2339,7 +2339,7 @@ dependencies = [
 name = "lwk_signer"
 version = "0.11.0"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.7",
  "bip39",
  "elements-miniscript",
  "lwk_common",
@@ -3490,32 +3490,14 @@ dependencies = [
 
 [[package]]
 name = "secp256k1"
-version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25996b82292a7a57ed3508f052cfff8640d38d32018784acd714758b43da9c8f"
-dependencies = [
- "secp256k1-sys 0.8.1",
-]
-
-[[package]]
-name = "secp256k1"
 version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
  "bitcoin_hashes 0.14.0",
  "rand",
- "secp256k1-sys 0.10.1",
+ "secp256k1-sys",
  "serde",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a129b9e9efbfb223753b9163c4ab3b13cff7fd9c7f010fbac25ab4099fa07e"
-dependencies = [
- "cc",
 ]
 
 [[package]]
@@ -3535,7 +3517,7 @@ checksum = "52a44aed3002b5ae975f8624c5df3a949cfbf00479e18778b6058fcd213b76e3"
 dependencies = [
  "bitcoin-private",
  "rand",
- "secp256k1 0.29.1",
+ "secp256k1",
  "secp256k1-zkp-sys",
  "serde",
 ]
@@ -3547,7 +3529,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57f08b2d0b143a22e07f798ae4f0ab20d5590d7c68e0d090f2088a48a21d1654"
 dependencies = [
  "cc",
- "secp256k1-sys 0.10.1",
+ "secp256k1-sys",
 ]
 
 [[package]]

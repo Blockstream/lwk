@@ -1650,7 +1650,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hmac() {
+    fn test_slow_amp0_hmac() {
         use elements::bitcoin::bip32::{DerivationPath, Xpriv};
         use elements::bitcoin::Network;
 

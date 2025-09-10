@@ -675,18 +675,22 @@ fn decrypt_blob_key(
     Ok(enc_key)
 }
 
-fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
-    let wo_blob = BASE64_STANDARD
-        .decode(blob64)
-        .map_err(|e| Error::Generic(e.to_string()))?;
-
+fn blob_cipher(enc_key: &[u8]) -> Result<Aes256Gcm, Error> {
     if enc_key.len() != 32 {
         return Err(Error::Generic("Invalid encryption key length".into()));
     }
     // panicks on length mismatch
     use aes_gcm::KeyInit;
     let key = Key::<Aes256Gcm>::from_slice(enc_key);
-    let cipher = Aes256Gcm::new(key);
+    Ok(Aes256Gcm::new(key))
+}
+
+fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
+    let wo_blob = BASE64_STANDARD
+        .decode(blob64)
+        .map_err(|e| Error::Generic(e.to_string()))?;
+
+    let cipher = blob_cipher(enc_key)?;
 
     let nonce: [u8; 12] = wo_blob[..12]
         .try_into()

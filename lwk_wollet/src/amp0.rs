@@ -1237,6 +1237,18 @@ fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
     (enc_key, hmac_key)
 }
 
+#[allow(unused)]
+fn compute_hmac(hmac_key: &[u8], blob64: &str) -> Result<String, Error> {
+    let blob = BASE64_STANDARD
+        .decode(blob64)
+        .map_err(|e| Error::Generic(e.to_string()))?;
+    use hmac::Mac;
+    let mut mac = Hmac::<Sha256>::new_from_slice(hmac_key).expect("HMAC can take key of any size");
+    mac.update(&blob);
+    let hmac_bytes = mac.finalize().into_bytes();
+    Ok(BASE64_STANDARD.encode(hmac_bytes))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

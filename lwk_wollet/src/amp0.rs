@@ -756,36 +756,63 @@ struct BlobContent {
     pub xpubs: HashMap<Xpub, Vec<u32>>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Blob {
+    version: u32,
+    sa_names: Option<HashMap<String, String>>,
+    tx_memos: rmpv::Value,
+    sa_hidden: rmpv::Value,
+    slip77key: HashMap<String, String>,
+    watchonly: HashMap<String, rmpv::Value>,
+    // Other reserved values
+    _07: rmpv::Value,
+    _08: rmpv::Value,
+    _09: rmpv::Value,
+    _10: rmpv::Value,
+    _11: rmpv::Value,
+    _12: rmpv::Value,
+    _13: rmpv::Value,
+    _14: rmpv::Value,
+    _15: rmpv::Value,
+    _16: rmpv::Value,
+    _17: rmpv::Value,
+    _18: rmpv::Value,
+    _19: rmpv::Value,
+    _20: rmpv::Value,
+    _21: rmpv::Value,
+    _22: rmpv::Value,
+    _23: rmpv::Value,
+    _24: rmpv::Value,
+    _25: rmpv::Value,
+    _26: rmpv::Value,
+    _27: rmpv::Value,
+    _28: rmpv::Value,
+    _29: rmpv::Value,
+    _30: rmpv::Value,
+    _31: rmpv::Value,
+    _32: rmpv::Value,
+}
+
+impl Blob {
+    fn to_content(&self) -> Result<BlobContent, Error> {
+        let slip77_key = self
+            .slip77key
+            .get("key")
+            .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+        let slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
+
+        let xpubs = self
+            .watchonly
+            .get("xpubs")
+            .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
+        let xpubs: HashMap<Xpub, Vec<u32>> = rmpv::ext::from_value(xpubs.clone())?;
+        Ok(BlobContent { slip77_key, xpubs })
+    }
+}
+
 fn parse_blob(value: rmpv::Value) -> Result<BlobContent, Error> {
-    let value = value
-        .as_array()
-        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-    // 1st element is version (4), but we don't bother checking it here
-
-    // 5th element is the slip77 key
-    #[derive(Deserialize)]
-    struct Slip77 {
-        key: String,
-    }
-    let key = value
-        .get(4)
-        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-    let slip77: Slip77 = rmpv::ext::from_value(key.clone())?;
-    if slip77.key.len() < 64 {
-        return Err(Error::Generic("Invalid slip77 key".into()));
-    }
-    let slip77_key = slip77.key[(slip77.key.len() - 64)..].to_string();
-
-    // 6th elements is watch-only which contains the xpubs
-    let map = value
-        .get(5)
-        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-    let watch_only: HashMap<String, rmpv::Value> = rmpv::ext::from_value(map.clone())?;
-    let xpubs = watch_only
-        .get("xpubs")
-        .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-    let xpubs: HashMap<Xpub, Vec<u32>> = rmpv::ext::from_value(xpubs.clone())?;
-    Ok(BlobContent { slip77_key, xpubs })
+    let blob: Blob = rmpv::ext::from_value(value.clone()).expect("TODO leo");
+    blob.to_content()
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {

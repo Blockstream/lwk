@@ -194,7 +194,7 @@ impl<S: Stream> Amp0<S> {
         let blob = Blob::from_value(&value)?;
         // compute wallet descriptor
         let gait_path = &login_data.gait_path;
-        let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path)?;
+        let desc = amp_descriptor(&blob, amp_subaccount, &network, gait_path)?;
 
         let wollet_descriptor = WolletDescriptor::from_str(&desc)?;
 
@@ -887,7 +887,7 @@ fn derive_server_xpub(
 }
 
 fn amp_descriptor(
-    blob: Blob,
+    blob: &Blob,
     amp_subaccount: u32,
     network: &Network,
     gait_path: &str,
@@ -903,7 +903,7 @@ fn amp_descriptor(
     let user_xpub = blob
         .find_xpub(amp_subaccount)
         .ok_or_else(|| Error::Generic("Invalid AMP subaccount".into()))?;
-    let slip77_key = blob.slip77_key;
+    let slip77_key = &blob.slip77_key;
     let desc = format!("ct(slip77({slip77_key}),elsh(wsh(multi(2,{server_xpub}/*,{user_keyorigin}{user_xpub}/1/*))))");
     Ok(desc)
 }
@@ -1496,7 +1496,7 @@ mod tests {
             "8280c0855f6e79fcce8712ddee830f04b6f75fc03ffc771a49d71499cce148b6"
         );
 
-        let desc = amp_descriptor(blob, amp_subaccount, &network, gait_path).unwrap();
+        let desc = amp_descriptor(&blob, amp_subaccount, &network, gait_path).unwrap();
         assert_eq!(desc, expected_descriptor);
 
         // Encrypt blob back

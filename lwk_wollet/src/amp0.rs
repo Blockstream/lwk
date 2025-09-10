@@ -807,6 +807,11 @@ impl Blob {
         Ok(blob)
     }
 
+    #[allow(unused)]
+    fn to_value(&self) -> Result<rmpv::Value, Error> {
+        Ok(rmpv::ext::to_value(self)?)
+    }
+
     fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
         for (k, v) in &self.xpubs {
             if let [cn1, cn2] = v[..] {
@@ -1500,7 +1505,7 @@ mod tests {
         assert_eq!(desc, expected_descriptor);
 
         // Encrypt blob back
-        // let value = from_blob(&blob).unwrap();
+        assert_eq!(value, blob.to_value().unwrap());
         let plaintext_ = from_value(&value).unwrap();
         assert_eq!(value, parse_value(&plaintext_).unwrap());
         let encrypted_blob = encrypt_blob(&enc_key, &plaintext).unwrap();

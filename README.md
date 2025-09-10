@@ -126,7 +126,7 @@ str(lwk.Network.mainnet())
 
 #### Python Examples
 
-* [List transactions](./lwk_bindings/tests/bindings/list_transactions.py) of a wpkh/slip77 wallet
+* [List transactions](./lwk_bindings/tests/bindings/list_transactions.py) of a wpkh/slip77 wallet, also compute the UTXO only balance
 * [Send transaction](./lwk_bindings/tests/bindings/send_transaction.py) of a wpkh/slip77 wallet in a regtest environment
 * [Send asset](./lwk_bindings/tests/bindings/send_asset.py) of a wpkh/slip77 wallet in a regtest environment
 * [Issue a Liquid asset](./lwk_bindings/tests/bindings/issue_asset.py)

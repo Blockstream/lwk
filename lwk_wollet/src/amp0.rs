@@ -6,7 +6,7 @@ use base64::prelude::*;
 use elements::bitcoin::bip32::{DerivationPath, Xpub};
 use flate2::read::ZlibDecoder;
 use hmac::Hmac;
-use lwk_common::{Network, Stream};
+use lwk_common::{Amp0SignerData, Network, Stream};
 use pbkdf2::pbkdf2;
 use rmpv;
 use scrypt::{scrypt, Params};
@@ -1765,16 +1765,17 @@ mod tests {
         let subaccount_xpub = "tpubDA9GDAo3JyS2TaEikypKnu21N8sjLfTawM5te2jy9poCbFvYmRwSCz7Hk3YQiuMyStm1suBGTEW21ztSkisovDnyqo5nK1CgSY3LJesEci7";
 
         let signer = SwSigner::new(mnemonic, false).unwrap();
-        let master_xpub = signer.xpub();
+        let signer_data = signer.amp0_signer_data().unwrap();
+        let master_xpub = signer_data.master_xpub();
         assert_eq!(master_public_key, master_xpub.public_key.to_hex());
         assert_eq!(master_chain_code, master_xpub.chain_code.to_hex());
-        let register_xpub = signer.amp0_register_xpub().unwrap();
+        let register_xpub = signer_data.register_xpub();
 
         assert_eq!(derive_gait_path(&register_xpub), gait_path_hex);
 
         let network = lwk_common::Network::LocaltestLiquid;
         assert_eq!(
-            signer.amp0_login_address(&network).unwrap().to_string(),
+            signer_data.login_address(&network).to_string(),
             login_address
         );
 

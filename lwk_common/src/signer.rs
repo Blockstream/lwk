@@ -97,20 +97,59 @@ pub mod amp0 {
     use elements::hex::ToHex;
     use elements::Address;
 
-    /// AMP0 signer methods
-    pub trait Amp0Signer: Signer {
-        /// Get AMP0 register xpub
-        fn amp0_register_xpub(&self) -> Result<Xpub, Self::Error> {
-            let path = DerivationPath::from_str("m/18241h").expect("static");
-            self.derive_xpub(&path)
+    /// Signer information necessary for full login to AMP0
+    #[allow(unused)]
+    pub struct Amp0SignerData {
+        // used for register and login_address
+        master_xpub: Xpub,
+        // used for gait path (not in the client blob)
+        register_xpub: Xpub,
+        // used for signing the login challenge
+        login_xpub: Xpub,
+        // used for encrypting the client blob
+        client_secret_xpub: Xpub,
+        // master blinding key (always slip77)
+        slip77_key: MasterBlindingKey,
+    }
+
+    impl Amp0SignerData {
+        pub fn master_xpub(&self) -> &Xpub {
+            &self.master_xpub
         }
 
-        /// Get AMP0 login address
-        fn amp0_login_address(&self, network: &Network) -> Result<Address, Self::Error> {
-            let xpub = self.xpub()?;
-            let pk = bitcoin::PublicKey::new(xpub.public_key);
+        pub fn register_xpub(&self) -> &Xpub {
+            &self.register_xpub
+        }
+
+        pub fn login_address(&self, network: &Network) -> Address {
+            let pk = bitcoin::PublicKey::new(self.master_xpub.public_key);
             let params = network.address_params();
-            Ok(Address::p2pkh(&pk, None, params))
+            Address::p2pkh(&pk, None, params)
+        }
+    }
+
+    /// AMP0 signer methods
+    pub trait Amp0Signer: Signer {
+        /// AMP0 signer data for login
+        fn amp0_signer_data(&self) -> Result<Amp0SignerData, Self::Error> {
+            let master_xpub = self.xpub()?;
+            let register_path = DerivationPath::from_str("m/18241h").expect("static");
+            let register_xpub = self.derive_xpub(&register_path)?;
+            // TODO: derive from master xpub
+            let login_path = DerivationPath::from_str("m/1195487518").expect("static");
+            let login_xpub = self.derive_xpub(&login_path)?;
+            let client_secret_path = DerivationPath::from_str("m/1885434739h").expect("static");
+            let client_secret_xpub = self.derive_xpub(&client_secret_path)?;
+
+            let slip77_key = self.slip77_master_blinding_key()?;
+
+            Ok(Amp0SignerData {
+                master_xpub,
+                register_xpub,
+                login_xpub,
+                client_secret_xpub,
+                slip77_key,
+            })
         }
 
         /// AMP0 sign login challenge

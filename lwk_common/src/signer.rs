@@ -96,5 +96,10 @@ pub mod amp0 {
 
     /// AMP0 signer methods
     pub trait Amp0Signer: Signer {
+        /// Get AMP0 register xpub
+        fn amp0_register_xpub(&self) -> Result<Xpub, Self::Error> {
+            let path = DerivationPath::from_str("m/18241h").expect("static");
+            self.derive_xpub(&path)
+        }
     }
 }

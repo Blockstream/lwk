@@ -107,9 +107,7 @@ pub mod amp0 {
 
         /// Get AMP0 login address
         fn amp0_login_address(&self, network: &Network) -> Result<Address, Self::Error> {
-            // TODO: store consts path in const
-            let path = DerivationPath::from_str("m/1195487518").expect("static");
-            let xpub = self.derive_xpub(&path)?;
+            let xpub = self.xpub()?;
             let pk = bitcoin::PublicKey::new(xpub.public_key);
             let params = network.address_params();
             Ok(Address::p2pkh(&pk, None, params))

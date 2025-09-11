@@ -94,6 +94,7 @@ pub trait Signer {
 pub mod amp0 {
     use super::*;
     use crate::Network;
+    use elements::hex::ToHex;
     use elements::Address;
 
     /// AMP0 signer methods
@@ -112,6 +113,23 @@ pub mod amp0 {
             let pk = bitcoin::PublicKey::new(xpub.public_key);
             let params = network.address_params();
             Ok(Address::p2pkh(&pk, None, params))
+        }
+
+        /// AMP0 sign login challenge
+        fn amp0_sign_challenge(&self, challenge: &str) -> Result<String, Self::Error> {
+            // TODO: validate challenge
+            let message = format!("greenaddress.it      login {challenge}");
+            let path = DerivationPath::from_str("m/1195487518").expect("static");
+            let sig = self.sign_message(&message, &path)?;
+            let der_sig = sig.signature.to_standard().serialize_der();
+            Ok(der_sig.to_hex())
+        }
+
+        /// AMP0 subaccount xpub
+        fn amp0_subaccount_xpub(&self, subaccount: u32) -> Result<Xpub, Self::Error> {
+            // TODO: return error if subaccount is > 2**31
+            let path = DerivationPath::from_str(&format!("m/3h/{}h", subaccount)).expect("TODO");
+            self.derive_xpub(&path)
         }
     }
 }

@@ -92,4 +92,9 @@ pub trait Signer {
 
 #[cfg(feature = "amp0")]
 pub mod amp0 {
+    use super::*;
+
+    /// AMP0 signer methods
+    pub trait Amp0Signer: Signer {
+    }
 }

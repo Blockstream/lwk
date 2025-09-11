@@ -35,6 +35,8 @@ pub use crate::network::Network;
 pub use crate::precision::Precision;
 pub use crate::qr::*;
 pub use crate::segwit::is_provably_segwit;
+#[cfg(feature = "amp0")]
+pub use crate::signer::amp0::Amp0Signer;
 pub use crate::signer::Signer;
 
 /// A trait for async read/write operations used by hardware wallet connections

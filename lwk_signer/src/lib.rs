@@ -11,6 +11,7 @@ pub use crate::software::{sign_with_seckey, NewError, SignError, SwSigner};
 pub use bip39;
 
 use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};
+use elements_miniscript::bitcoin::sign_message::MessageSignature;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use lwk_common::Signer;
@@ -68,6 +69,14 @@ impl Signer for AnySigner {
     fn fingerprint(&self) -> Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
     }
+
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        Signer::sign_message(&self, message, path)
+    }
 }
 
 impl Signer for &AnySigner {
@@ -120,6 +129,22 @@ impl Signer for &AnySigner {
 
             #[cfg(feature = "ledger")]
             AnySigner::Ledger(s, _) => s.fingerprint()?,
+        })
+    }
+
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        Ok(match self {
+            AnySigner::Software(s) => s.sign_message(message, path)?,
+
+            #[cfg(feature = "jade")]
+            AnySigner::Jade(s, _) => s.sign_message(message, path)?,
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(s, _) => s.sign_message(message, path)?,
         })
     }
 }

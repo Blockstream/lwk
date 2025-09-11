@@ -4,6 +4,7 @@ use elements::{
     bitcoin::{
         self,
         bip32::{ChildNumber, DerivationPath, Fingerprint, Xpub},
+        sign_message::MessageSignature,
         XKeyIdentifier,
     },
     pset::PartiallySignedTransaction,
@@ -80,4 +81,11 @@ pub trait Signer {
             crate::DescriptorBlindingKey::Slip77,
         )
     }
+
+    /// Sign a message using Bitcoin’s message signing format
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error>;
 }

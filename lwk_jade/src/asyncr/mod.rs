@@ -138,7 +138,7 @@ impl<S: Stream<Error = Error>> Jade<S> {
         self.send(Request::GetMasterBlindingKey(params)).await
     }
 
-    pub async fn sign_message(&self, params: SignMessageParams) -> Result<ByteBuf> {
+    pub async fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
         self.send(Request::SignMessage(params)).await
     }
 

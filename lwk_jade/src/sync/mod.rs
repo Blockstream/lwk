@@ -19,6 +19,7 @@ use crate::{
 };
 use connection::Connection;
 use elements::bitcoin::bip32::{DerivationPath, Fingerprint, Xpub};
+use elements::bitcoin::sign_message::MessageSignature;
 use elements::pset::PartiallySignedTransaction;
 use elements_miniscript::slip77::{self, MasterBlindingKey};
 use lwk_common::{Network, Signer};
@@ -106,7 +107,7 @@ impl Jade {
         self.send(Request::GetMasterBlindingKey(params))
     }
 
-    pub fn sign_message(&self, params: SignMessageParams) -> Result<ByteBuf> {
+    pub fn sign_message_inner(&self, params: SignMessageParams) -> Result<ByteBuf> {
         self.send(Request::SignMessage(params))
     }
 
@@ -423,6 +424,14 @@ impl Signer for &Jade {
             .map_err(|_| Self::Error::Slip77MasterBlindingKeyInvalidSize)?;
         Ok(slip77::MasterBlindingKey::from(array))
     }
+
+    fn sign_message(
+        &self,
+        _message: &str,
+        _path: &DerivationPath,
+    ) -> std::result::Result<MessageSignature, Self::Error> {
+        todo!(); // TODO: use sign_message_inner
+    }
 }
 
 impl Signer for Jade {
@@ -441,5 +450,13 @@ impl Signer for Jade {
 
     fn slip77_master_blinding_key(&self) -> std::result::Result<MasterBlindingKey, Self::Error> {
         Signer::slip77_master_blinding_key(&self)
+    }
+
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> std::result::Result<MessageSignature, Self::Error> {
+        Signer::sign_message(&self, message, path)
     }
 }

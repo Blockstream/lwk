@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{Bip, Error, Mnemonic, Network, Pset, WolletDescriptor, Xpub};
+use lwk_common::Signer as SignerTrait;
 use lwk_wollet::{
-    bitcoin::bip32, elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
+    bitcoin::bip32, bitcoin::sign_message::MessageSignature,
+    elements::pset::PartiallySignedTransaction, elements_miniscript::slip77,
 };
 use wasm_bindgen::prelude::*;
 
@@ -99,6 +101,14 @@ impl lwk_common::Signer for FakeSigner {
 
     fn slip77_master_blinding_key(&self) -> Result<slip77::MasterBlindingKey, Self::Error> {
         Ok(self.slip77)
+    }
+
+    fn sign_message(
+        &self,
+        _message: &str,
+        _path: &bip32::DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        unimplemented!()
     }
 }
 

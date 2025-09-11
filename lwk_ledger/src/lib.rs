@@ -42,6 +42,7 @@ use elements_miniscript::elements::bitcoin::bip32::{
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
 use elements_miniscript::elements::{
     bitcoin::key::PublicKey,
+    bitcoin::sign_message::MessageSignature,
     opcodes::{
         all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_16},
         All,
@@ -258,6 +259,14 @@ impl<T: Transport> Signer for &Ledger<T> {
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
         self.client.get_master_fingerprint().map_err(to_dbg)
     }
+
+    fn sign_message(
+        &self,
+        _message: &str,
+        _path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        todo!(); // TODO: use internal methods to implement
+    }
 }
 
 fn to_dbg(e: impl std::fmt::Debug) -> Error {
@@ -283,6 +292,14 @@ impl<T: Transport> Signer for Ledger<T> {
 
     fn fingerprint(&self) -> std::result::Result<Fingerprint, Self::Error> {
         Signer::fingerprint(&self)
+    }
+
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        Signer::sign_message(&self, message, path)
     }
 }
 

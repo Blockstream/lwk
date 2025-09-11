@@ -155,25 +155,6 @@ impl SwSigner {
     pub fn derive_xprv(&self, path: &DerivationPath) -> Result<Xpriv, SignError> {
         Ok(self.xprv.derive_priv(&self.secp, path)?)
     }
-
-    // TODO: move in trait Signer
-    pub fn sign_message(
-        &self,
-        message: &str,
-        path: &DerivationPath,
-    ) -> Result<MessageSignature, SignError> {
-        let digest = bitcoin::sign_message::signed_msg_hash(message);
-        let message = Message::from_digest_slice(digest.as_ref()).expect("digest is 32");
-        let derived = self.xprv.derive_priv(&self.secp, path)?;
-        let signature = self
-            .secp
-            .sign_ecdsa_recoverable(&message, &derived.private_key);
-        let signature = MessageSignature {
-            signature,
-            compressed: true,
-        };
-        Ok(signature)
-    }
 }
 
 #[allow(dead_code)]
@@ -256,6 +237,24 @@ impl Signer for SwSigner {
             .seed()
             .ok_or_else(|| SignError::DeterministicSlip77NotAvailable)?;
         Ok(MasterBlindingKey::from_seed(&seed[..]))
+    }
+
+    fn sign_message(
+        &self,
+        message: &str,
+        path: &DerivationPath,
+    ) -> Result<MessageSignature, Self::Error> {
+        let digest = bitcoin::sign_message::signed_msg_hash(message);
+        let message = Message::from_digest_slice(digest.as_ref()).expect("digest is 32");
+        let derived = self.xprv.derive_priv(&self.secp, path)?;
+        let signature = self
+            .secp
+            .sign_ecdsa_recoverable(&message, &derived.private_key);
+        let signature = MessageSignature {
+            signature,
+            compressed: true,
+        };
+        Ok(signature)
     }
 }
 

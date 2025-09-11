@@ -358,7 +358,7 @@ fn jade_sign_message() {
         path: vec![0],
         ae_host_commitment,
     };
-    let _signer_commitment: Vec<u8> = jade.jade.sign_message(params).unwrap().to_vec();
+    let _signer_commitment: Vec<u8> = jade.jade.sign_message_inner(params).unwrap().to_vec();
 
     let params = GetSignatureParams { ae_host_entropy };
     let signature = jade.jade.get_signature_for_msg(params).unwrap();

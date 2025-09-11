@@ -1744,4 +1744,50 @@ mod tests {
             enc_key
         );
     }
+
+    #[test]
+    fn test_amp0_signer() {
+        use lwk_common::Amp0Signer;
+        use lwk_signer::SwSigner;
+
+        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
+        // From GDK logs
+        let master_public_key =
+            "03f07921310eea86e351e5c6d9d8d65284b1cdbb67125c2baf6aef5ff65885582e";
+        let master_chain_code = "ff2842bb066b088825cbd4ad8267ba86e7d989ebf333465d0106ac632b317096";
+        let gait_path_hex = "5856d4bbb94724768c337e1cc547b48df2b68068b9399f1c2d84f1a6c5824eb4788d3c17b2635cf8f90de4c2d3a2ba3284f6518d843f6801ac9894c033e4640f";
+        let login_address = "2dofAJ9jV6MjS2NLMp17nVYVZL4Z5s8Sm47";
+
+        let challenge = "BZVE6";
+        let der_sig_hex = "30440220717c2a05640bb52eecb577fcf725c2e93e1efabd3a2a56450308340f0b17a6c2022051cf947d49315866540e6c2d2dcb3f2d25d4f3593cd9a2b53d449a9480d3e379";
+
+        let subaccount_num = 1;
+        let subaccount_xpub = "tpubDA9GDAo3JyS2TaEikypKnu21N8sjLfTawM5te2jy9poCbFvYmRwSCz7Hk3YQiuMyStm1suBGTEW21ztSkisovDnyqo5nK1CgSY3LJesEci7";
+
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let master_xpub = signer.xpub();
+        assert_eq!(master_public_key, master_xpub.public_key.to_hex());
+        assert_eq!(master_chain_code, master_xpub.chain_code.to_hex());
+        let register_xpub = signer.amp0_register_xpub().unwrap();
+
+        assert_eq!(derive_gait_path(&register_xpub), gait_path_hex);
+
+        let network = lwk_common::Network::LocaltestLiquid;
+        assert_eq!(
+            signer.amp0_login_address(&network).unwrap().to_string(),
+            login_address
+        );
+
+        assert_eq!(signer.amp0_sign_challenge(challenge).unwrap(), der_sig_hex);
+
+        let xpub = signer.amp0_subaccount_xpub(subaccount_num).unwrap();
+        let subaccount_xpub: Xpub = subaccount_xpub.parse().unwrap();
+        assert_eq!(xpub.public_key, subaccount_xpub.public_key);
+        assert_eq!(xpub.chain_code, subaccount_xpub.chain_code);
+
+        assert_eq!(xpub.network, subaccount_xpub.network);
+        assert_eq!(xpub.depth, subaccount_xpub.depth);
+        assert_eq!(xpub.child_number, subaccount_xpub.child_number);
+        // parent_fingerprint does not match because it skips hash computation
+    }
 }

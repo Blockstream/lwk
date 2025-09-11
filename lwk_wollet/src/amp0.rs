@@ -381,6 +381,106 @@ impl<S: Stream> Amp0<S> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+impl Amp0Connected<WebSocketClient> {
+    /// Connect and register to AMP0
+    pub async fn new_(network: Network, signer_data: Amp0SignerData) -> Result<Self, Error> {
+        let stream = stream_with_network(network).await?;
+        Self::new(stream, network, signer_data).await
+    }
+}
+
+/// Session connecting to AMP0
+pub struct Amp0Connected<S: Stream> {
+    amp0: Amp0Inner<S>,
+    network: Network,
+    signer_data: Amp0SignerData,
+}
+
+impl<S: Stream> Amp0Connected<S> {
+    /// Connect and register to AMP0
+    pub async fn new(
+        stream: S,
+        network: Network,
+        signer_data: Amp0SignerData,
+    ) -> Result<Self, Error> {
+        let amp0 = Amp0Inner::new(stream).await?;
+        let _master_xpub = signer_data.master_xpub();
+        let _gait_path = derive_gait_path(signer_data.register_xpub());
+        // com.greenaddress.login.register
+        Ok(Self {
+            amp0,
+            network,
+            signer_data,
+        })
+    }
+
+    /// Obtain a login challenge
+    ///
+    /// This must be signed with [`lwk_common::Amp0Signer::amp0_sign_challenge()`].
+    pub async fn get_challenge(&self) -> Result<String, Error> {
+        let _login_address = self.signer_data.login_address(&self.network);
+        // com.greenaddress.login.get_trezor_challenge
+        todo!();
+    }
+
+    /// Log in
+    ///
+    /// `sig` must be obtained from [`lwk_common::Amp0Signer::amp0_sign_challenge()`] called with the value returned
+    /// by [`Amp0Connected::get_challenge()`]
+    pub async fn login(self, _sig: &str) -> Result<Amp0LoggedIn<S>, Error> {
+        // com.greenaddress.login.authenticate
+        // parse login data
+        // com.greenaddress.login.get_client_blob
+        // construct blob
+        // encrypt blob
+        // set client blob
+        // com.greenaddress.login.set_client_blob
+        Ok(Amp0LoggedIn { amp0: self.amp0 })
+    }
+}
+
+/// Session logged in to AMP0
+#[allow(unused)]
+pub struct Amp0LoggedIn<S: Stream> {
+    amp0: Amp0Inner<S>,
+    // login_data: LoginData,
+    // blob: Blob,
+}
+
+impl<S: Stream> Amp0LoggedIn<S> {
+    /// List of AMP IDs
+    pub fn get_amp_ids(&self) -> Result<Vec<String>, Error> {
+        todo!();
+    }
+
+    /// Get the next account for AMP0 account creation
+    ///
+    /// This must be given to [`lwk_common::Amp0Signer::amp0_subaccount_xpub()`] to obtain the xpub to pass to
+    /// [`Amp0LoggedIn::create_amp0_account()`]
+    pub fn next_account(&self) -> Result<u32, Error> {
+        todo!();
+    }
+
+    /// Create a new AMP0 account
+    ///
+    /// `subaccount_xpub` must be obtained from [`lwk_common::Amp0Signer::amp0_subaccount_xpub()`] called with the value obtained from
+    /// [`Amp0LoggedIn::next_account()`]
+    pub async fn create_amp0_account(&self, _subaccount_xpub: &Xpub) -> Result<String, Error> {
+        // com.greenaddress.txs.create_subaccount_v2
+        // com.greenaddress.login.set_client_blob
+        todo!();
+    }
+
+    /// Create a new Watch-Only entry for this wallet
+    pub async fn create_watch_only(&self, _username: &str, _password: &str) -> Result<(), Error> {
+        // hash credentials
+        // com.greenaddress.addressbook.sync_custom
+        // com.greenaddress.login.set_client_blob
+        todo!();
+    }
+}
+
 impl<S: Stream> Amp0Inner<S> {
     pub async fn new(stream: S) -> Result<Self, Error> {
         Ok(Self { stream })

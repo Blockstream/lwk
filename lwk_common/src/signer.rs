@@ -89,3 +89,7 @@ pub trait Signer {
         path: &DerivationPath,
     ) -> Result<MessageSignature, Self::Error>;
 }
+
+#[cfg(feature = "amp0")]
+pub mod amp0 {
+}

@@ -20,9 +20,10 @@ base64 = "0.21.7"
 lwk_test_util = { version = "0.11.0" }
 
 [features]
-default = ["jade"]
+default = ["jade", "amp0"]
 jade = ["lwk_jade"]
 ledger = ["lwk_ledger"]
+amp0 = []
 
 [package.metadata.docs.rs]
 all-features = true

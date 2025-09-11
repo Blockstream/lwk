@@ -1926,7 +1926,7 @@ mod tests {
         assert_eq!(master_chain_code, master_xpub.chain_code.to_hex());
         let register_xpub = signer_data.register_xpub();
 
-        assert_eq!(derive_gait_path(&register_xpub), gait_path_hex);
+        assert_eq!(derive_gait_path(register_xpub), gait_path_hex);
 
         let network = lwk_common::Network::LocaltestLiquid;
         assert_eq!(
@@ -1945,5 +1945,35 @@ mod tests {
         assert_eq!(xpub.depth, subaccount_xpub.depth);
         assert_eq!(xpub.child_number, subaccount_xpub.child_number);
         // parent_fingerprint does not match because it skips hash computation
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    #[ignore] // not implemented yet
+    fn test_full_login() {
+        use super::*;
+        use lwk_common::Amp0Signer;
+        use lwk_common::Network;
+        use lwk_signer::SwSigner;
+
+        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
+        let username = "username";
+        let password = "password";
+
+        let network = Network::LocaltestLiquid;
+
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer_data = signer.amp0_signer_data().unwrap();
+        let amp0 = blocking::Amp0Connected::new(network, signer_data).unwrap();
+        let challenge = amp0.get_challenge().unwrap();
+        let sig = signer.amp0_sign_challenge(&challenge).unwrap();
+        let amp0 = amp0.login(&sig).unwrap();
+        let pointer = amp0.next_account().unwrap();
+        let account_xpub = signer.amp0_subaccount_xpub(pointer).unwrap();
+        let amp_id = amp0.create_amp0_account(&account_xpub).unwrap();
+        assert_eq!(&amp_id[..2], "GA");
+        amp0.create_watch_only(username, password).unwrap();
+
+        let _amp0 = blocking::Amp0::new(network, username, password, &amp_id).unwrap();
     }
 }

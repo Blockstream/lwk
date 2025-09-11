@@ -1259,6 +1259,61 @@ pub mod blocking {
             self.rt.block_on(self.inner.sign(pset))
         }
     }
+
+    /// Blocking version of [`super::Amp0Connected`]
+    pub struct Amp0Connected {
+        rt: Runtime,
+        inner: super::Amp0Connected<super::WebSocketClient>,
+    }
+
+    /// Blocking version of [`super::Amp0LoggedIn`]
+    pub struct Amp0LoggedIn {
+        rt: Runtime,
+        inner: super::Amp0LoggedIn<super::WebSocketClient>,
+    }
+
+    impl Amp0Connected {
+        pub fn new(network: Network, signer_data: super::Amp0SignerData) -> Result<Self, Error> {
+            let rt = Runtime::new()?;
+            let inner = rt.block_on(super::Amp0Connected::<WebSocketClient>::new_(
+                network,
+                signer_data,
+            ))?;
+            Ok(Amp0Connected { rt, inner })
+        }
+
+        pub fn get_challenge(&self) -> Result<String, Error> {
+            self.rt.block_on(self.inner.get_challenge())
+        }
+
+        pub fn login(self, sig: &str) -> Result<Amp0LoggedIn, Error> {
+            let amp0loggedin = self.rt.block_on(self.inner.login(sig))?;
+            Ok(Amp0LoggedIn {
+                rt: self.rt,
+                inner: amp0loggedin,
+            })
+        }
+    }
+
+    impl Amp0LoggedIn {
+        pub fn get_amp_ids(&self) -> Result<Vec<String>, Error> {
+            self.inner.get_amp_ids()
+        }
+
+        pub fn next_account(&self) -> Result<u32, Error> {
+            self.inner.next_account()
+        }
+
+        pub fn create_amp0_account(&self, subaccount_xpub: &Xpub) -> Result<String, Error> {
+            self.rt
+                .block_on(self.inner.create_amp0_account(subaccount_xpub))
+        }
+
+        pub fn create_watch_only(&self, username: &str, password: &str) -> Result<(), Error> {
+            self.rt
+                .block_on(self.inner.create_watch_only(username, password))
+        }
+    }
 }
 
 /// A PSET to use with AMP0

@@ -93,6 +93,8 @@ pub trait Signer {
 #[cfg(feature = "amp0")]
 pub mod amp0 {
     use super::*;
+    use crate::Network;
+    use elements::Address;
 
     /// AMP0 signer methods
     pub trait Amp0Signer: Signer {
@@ -100,6 +102,16 @@ pub mod amp0 {
         fn amp0_register_xpub(&self) -> Result<Xpub, Self::Error> {
             let path = DerivationPath::from_str("m/18241h").expect("static");
             self.derive_xpub(&path)
+        }
+
+        /// Get AMP0 login address
+        fn amp0_login_address(&self, network: &Network) -> Result<Address, Self::Error> {
+            // TODO: store consts path in const
+            let path = DerivationPath::from_str("m/1195487518").expect("static");
+            let xpub = self.derive_xpub(&path)?;
+            let pk = bitcoin::PublicKey::new(xpub.public_key);
+            let params = network.address_params();
+            Ok(Address::p2pkh(&pk, None, params))
         }
     }
 }

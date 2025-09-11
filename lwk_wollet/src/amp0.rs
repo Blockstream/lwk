@@ -12,7 +12,7 @@ use rmpv;
 use scrypt::{scrypt, Params};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Sha512};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::str::FromStr;
 
@@ -750,11 +750,11 @@ fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
 #[derive(Serialize, Deserialize)]
 struct Blob {
     version: u32,
-    sa_names: Option<HashMap<String, String>>,
+    sa_names: Option<BTreeMap<String, String>>,
     tx_memos: rmpv::Value,
     sa_hidden: rmpv::Value,
-    slip77key: HashMap<String, String>,
-    watchonly: HashMap<String, rmpv::Value>,
+    slip77key: BTreeMap<String, String>,
+    watchonly: BTreeMap<String, rmpv::Value>,
     // Other reserved values
     _07: rmpv::Value,
     _08: rmpv::Value,

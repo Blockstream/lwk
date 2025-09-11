@@ -1,9 +1,7 @@
 use lwk_wollet::{bitcoin::bip32::KeySource, elements};
-use serde::Serialize;
-use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
-use crate::{Address, AssetId, Error, Txid};
+use crate::{Address, AssetId, Balance, Txid};
 
 /// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetDetails`]
 #[wasm_bindgen]
@@ -96,9 +94,8 @@ impl PsetBalance {
     }
 
     /// The net balance for every asset with respect of the wallet asking the pset details
-    pub fn balances(&self) -> Result<JsValue, Error> {
-        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
-        Ok(self.inner.balances.serialize(&serializer)?)
+    pub fn balances(&self) -> Balance {
+        self.inner.balances.clone().into()
     }
 
     pub fn recipients(&self) -> Vec<Recipient> {

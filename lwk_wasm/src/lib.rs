@@ -5,6 +5,7 @@
 mod amp0;
 
 mod amp2;
+mod balance;
 mod bip;
 mod blockdata;
 mod contract;
@@ -40,6 +41,7 @@ mod xpub;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use amp0::{Amp0, Amp0Pset};
 pub use amp2::{Amp2, Amp2Descriptor};
+pub use balance::Balance;
 pub use bip::Bip;
 pub use blockdata::address::{Address, AddressResult};
 pub use blockdata::asset_id::{AssetId, AssetIds};

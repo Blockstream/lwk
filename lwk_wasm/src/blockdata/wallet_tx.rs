@@ -1,6 +1,4 @@
-use crate::{Error, OptionWalletTxOut, Transaction, Txid};
-use serde::Serialize;
-use serde_wasm_bindgen::Serializer;
+use crate::{Balance, OptionWalletTxOut, Transaction, Txid};
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::WalletTx`]
@@ -26,9 +24,8 @@ impl WalletTx {
         self.inner.height
     }
 
-    pub fn balance(&self) -> Result<JsValue, Error> {
-        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
-        Ok(self.inner.balance.serialize(&serializer)?)
+    pub fn balance(&self) -> Balance {
+        self.inner.balance.clone().into()
     }
 
     pub fn txid(&self) -> Txid {

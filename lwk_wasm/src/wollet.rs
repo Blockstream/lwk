@@ -1,13 +1,11 @@
 use crate::blockdata::asset_id::AssetIds;
 use crate::{
-    AddressResult, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx, WalletTxOut,
-    WolletDescriptor,
+    AddressResult, Balance, Error, Network, Pset, PsetDetails, Transaction, Update, WalletTx,
+    WalletTxOut, WolletDescriptor,
 };
 use lwk_jade::derivation_path_to_vec;
 use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements_miniscript::ForEachKey;
-use serde::Serialize;
-use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
 /// Wrapper of [`lwk_wollet::Wollet`]
@@ -79,10 +77,9 @@ impl Wollet {
             .map(|_| ())?)
     }
 
-    pub fn balance(&self) -> Result<JsValue, Error> {
+    pub fn balance(&self) -> Result<Balance, Error> {
         let balance = self.inner.balance()?;
-        let serializer = Serializer::new().serialize_large_number_types_as_bigints(true);
-        Ok(balance.serialize(&serializer)?)
+        Ok(balance.into())
     }
 
     #[wasm_bindgen(js_name = assetsOwned)]

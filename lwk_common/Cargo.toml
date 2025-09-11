@@ -16,5 +16,9 @@ thiserror = "1.0.48"
 serde = "1"
 # avoid deps to the workspace
 
+[features]
+default = ["amp0"]
+amp0 = []
+
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.2.15", features = ["js"] }

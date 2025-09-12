@@ -410,9 +410,9 @@ impl<S: Stream> Amp0Connected<S> {
         signer_data: Amp0SignerData,
     ) -> Result<Self, Error> {
         let amp0 = Amp0Inner::new(stream).await?;
-        let _master_xpub = signer_data.master_xpub();
-        let _gait_path = derive_gait_path(signer_data.register_xpub());
-        // com.greenaddress.login.register
+        let master_xpub = signer_data.master_xpub();
+        let gait_path = derive_gait_path(signer_data.register_xpub());
+        amp0.register(master_xpub, &gait_path).await?;
         Ok(Self {
             amp0,
             network,
@@ -682,6 +682,29 @@ impl<S: Stream> Amp0Inner<S> {
             options: WampDict::new(),
             procedure: "com.greenaddress.txs.upload_authorized_assets_confidential_address"
                 .to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        // Returns true or raise an error
+        let _ = self.call(msg).await?;
+        Ok(())
+    }
+
+    /// Register wallet
+    pub async fn register(&self, master_xpub: &Xpub, gait_path: &str) -> Result<(), Error> {
+        self.init_session().await?;
+
+        let request = WampId::generate();
+        let args = vec![
+            master_xpub.public_key.to_hex().into(),
+            master_xpub.chain_code.to_hex().into(),
+            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+            gait_path.into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.register".to_owned(),
             arguments: Some(args),
             arguments_kw: None,
         };

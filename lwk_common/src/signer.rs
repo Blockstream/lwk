@@ -121,10 +121,22 @@ pub mod amp0 {
             &self.register_xpub
         }
 
+        pub fn login_xpub(&self) -> &Xpub {
+            &self.login_xpub
+        }
+
+        pub fn client_secret_xpub(&self) -> &Xpub {
+            &self.client_secret_xpub
+        }
+
         pub fn login_address(&self, network: &Network) -> Address {
             let pk = bitcoin::PublicKey::new(self.master_xpub.public_key);
             let params = network.address_params();
             Address::p2pkh(&pk, None, params)
+        }
+
+        pub fn slip77_key(&self) -> &MasterBlindingKey {
+            &self.slip77_key
         }
     }
 

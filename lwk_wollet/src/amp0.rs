@@ -584,52 +584,7 @@ impl<S: Stream> Amp0Inner<S> {
         hashed_username: &str,
         hashed_password: &str,
     ) -> Result<LoginData, Error> {
-        // Step 1: Send WAMP HELLO message
-        let mut details = WampDict::new();
-        let mut roles = WampDict::new();
-        let mut features = WampDict::new();
-        features.insert("features".into(), Arg::Dict(WampDict::new()));
-        roles.insert(ClientRole::Caller.to_str().into(), Arg::Dict(features));
-        details.insert("roles".into(), Arg::Dict(roles));
-        let msg = Msg::Hello {
-            realm: "realm1".into(),
-            details,
-        };
-        let msg = serde_json::to_vec(&msg)?;
-        self.stream
-            .write(&msg)
-            .await
-            .map_err(|e| Error::Generic(format!("Failed to send HELLO: {}", e)))?;
-
-        // Step 2: Wait for WELCOME response
-        let mut buf = vec![0u8; 10000];
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let bytes_read = tokio::time::timeout(
-            std::time::Duration::from_secs(10),
-            self.stream.read(&mut buf),
-        )
-        .await
-        .map_err(|_| Error::Generic("WELCOME timeout after 10 seconds".to_string()))?
-        .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
-
-        #[cfg(target_arch = "wasm32")]
-        let bytes_read = self
-            .stream
-            .read(&mut buf)
-            .await
-            .map_err(|e| Error::Generic(format!("Failed to read WELCOME: {}", e)))?;
-
-        if let Ok(Msg::Welcome { .. }) = serde_json::from_slice(&buf[..bytes_read]) {
-            // Got a welcome response as expected
-        } else {
-            let response = String::from_utf8_lossy(&buf[..bytes_read]);
-
-            return Err(Error::Generic(format!(
-                "Expected WELCOME message, got: {}",
-                response
-            )));
-        }
+        self.init_session().await?;
 
         // Step 3: Send login call
         #[derive(Serialize)]

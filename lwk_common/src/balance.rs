@@ -40,6 +40,7 @@ impl std::ops::Sub<Balance> for Balance {
                     - other.0.get(key).cloned().unwrap_or(0) as i64,
             );
         }
+        result.retain(|_, v| *v != 0);
         SignedBalance(result)
     }
 }
@@ -124,7 +125,7 @@ mod tests {
         balance6.insert(asset1, 500);
 
         let result3 = Balance::from(balance5) - Balance::from(balance6);
-        assert_eq!(result3.get(&asset1), Some(&0));
+        assert_eq!(result3.get(&asset1), None);
 
         // Test case 4: Empty balance subtraction
         let empty_balance = Balance::from(BTreeMap::new());

@@ -1,5 +1,6 @@
 //! Manage AMP0 wallets.
 
+use aes::cipher::BlockEncryptMut;
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, Nonce};
 use base64::prelude::*;
@@ -8,6 +9,7 @@ use flate2::read::ZlibDecoder;
 use hmac::Hmac;
 use lwk_common::{Amp0SignerData, Network, Stream};
 use pbkdf2::pbkdf2;
+use rand::{thread_rng, RngCore};
 use rmpv;
 use scrypt::{scrypt, Params};
 use serde::{Deserialize, Serialize};
@@ -27,6 +29,9 @@ use crate::wamp::message::Msg;
 use crate::EC;
 use crate::{hex, Error};
 use crate::{AddressResult, WolletDescriptor};
+use elements::bitcoin::bip32::{ChainCode, ChildNumber, Fingerprint};
+use elements::bitcoin::network::NetworkKind;
+use elements::bitcoin::secp256k1::PublicKey;
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
 use elements::pset::PartiallySignedTransaction;
@@ -37,6 +42,7 @@ use elements::{
     confidential::{AssetBlindingFactor, ValueBlindingFactor},
     AssetId, TxOut, TxOutSecrets,
 };
+use elements::{script, Script, ScriptHash, WScriptHash};
 use elements_miniscript::psbt::PsbtExt;
 
 pub const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
@@ -272,7 +278,6 @@ impl<S: Stream> Amp0<S> {
             None => {
                 // Get a new address from Green server
                 let (pointer, script) = self.amp0.get_new_address(self.amp_subaccount).await?;
-                use elements::{script, Script, ScriptHash, WScriptHash};
                 let wsh = script::Builder::new()
                     .push_int(0)
                     .push_slice(&WScriptHash::hash(script.as_bytes())[..])
@@ -934,10 +939,6 @@ impl Blob {
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {
-    use elements::bitcoin::bip32::{ChainCode, ChildNumber, Fingerprint};
-    use elements::bitcoin::network::NetworkKind;
-    use elements::bitcoin::secp256k1::PublicKey;
-
     // Values from GDK
     let (public_key, chain_code, network_kind) = match network {
         Network::Liquid => (
@@ -1469,10 +1470,8 @@ fn encrypt_blob_key(username: &str, password: &str, enc_key: &[u8]) -> Result<St
     let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_K, 2048, &mut wo_aes_key);
 
     let mut iv = [0u8; 16];
-    use rand::{thread_rng, RngCore};
     let mut rng = thread_rng();
     rng.fill_bytes(&mut iv);
-    use aes::cipher::BlockEncryptMut;
     let cyphertext = cbc::Encryptor::<aes::Aes256>::new(&wo_aes_key.into(), (&iv).into())
         .encrypt_padded_vec_mut::<Pkcs7>(enc_key);
 

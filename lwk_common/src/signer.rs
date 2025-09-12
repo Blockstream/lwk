@@ -162,10 +162,10 @@ pub mod amp0 {
             Ok(der_sig.to_hex())
         }
 
-        /// AMP0 subaccount xpub
-        fn amp0_subaccount_xpub(&self, subaccount: u32) -> Result<Xpub, Self::Error> {
-            // TODO: return error if subaccount is > 2**31
-            let path = DerivationPath::from_str(&format!("m/3h/{}h", subaccount)).expect("TODO");
+        /// AMP0 account xpub
+        fn amp0_account_xpub(&self, account: u32) -> Result<Xpub, Self::Error> {
+            // TODO: return error if account is > 2**31
+            let path = DerivationPath::from_str(&format!("m/3h/{}h", account)).expect("TODO");
             self.derive_xpub(&path)
         }
     }

@@ -456,7 +456,7 @@ impl<S: Stream> Amp0LoggedIn<S> {
 
     /// Get the next account for AMP0 account creation
     ///
-    /// This must be given to [`lwk_common::Amp0Signer::amp0_subaccount_xpub()`] to obtain the xpub to pass to
+    /// This must be given to [`lwk_common::Amp0Signer::amp0_account_xpub()`] to obtain the xpub to pass to
     /// [`Amp0LoggedIn::create_amp0_account()`]
     pub fn next_account(&self) -> Result<u32, Error> {
         todo!();
@@ -464,9 +464,9 @@ impl<S: Stream> Amp0LoggedIn<S> {
 
     /// Create a new AMP0 account
     ///
-    /// `subaccount_xpub` must be obtained from [`lwk_common::Amp0Signer::amp0_subaccount_xpub()`] called with the value obtained from
+    /// `account_xpub` must be obtained from [`lwk_common::Amp0Signer::amp0_account_xpub()`] called with the value obtained from
     /// [`Amp0LoggedIn::next_account()`]
-    pub async fn create_amp0_account(&self, _subaccount_xpub: &Xpub) -> Result<String, Error> {
+    pub async fn create_amp0_account(&self, _account_xpub: &Xpub) -> Result<String, Error> {
         // com.greenaddress.txs.create_subaccount_v2
         // com.greenaddress.login.set_client_blob
         todo!();
@@ -1304,9 +1304,9 @@ pub mod blocking {
             self.inner.next_account()
         }
 
-        pub fn create_amp0_account(&self, subaccount_xpub: &Xpub) -> Result<String, Error> {
+        pub fn create_amp0_account(&self, account_xpub: &Xpub) -> Result<String, Error> {
             self.rt
-                .block_on(self.inner.create_amp0_account(subaccount_xpub))
+                .block_on(self.inner.create_amp0_account(account_xpub))
         }
 
         pub fn create_watch_only(&self, username: &str, password: &str) -> Result<(), Error> {
@@ -1917,7 +1917,7 @@ mod tests {
         let der_sig_hex = "30440220717c2a05640bb52eecb577fcf725c2e93e1efabd3a2a56450308340f0b17a6c2022051cf947d49315866540e6c2d2dcb3f2d25d4f3593cd9a2b53d449a9480d3e379";
 
         let subaccount_num = 1;
-        let subaccount_xpub = "tpubDA9GDAo3JyS2TaEikypKnu21N8sjLfTawM5te2jy9poCbFvYmRwSCz7Hk3YQiuMyStm1suBGTEW21ztSkisovDnyqo5nK1CgSY3LJesEci7";
+        let account_xpub = "tpubDA9GDAo3JyS2TaEikypKnu21N8sjLfTawM5te2jy9poCbFvYmRwSCz7Hk3YQiuMyStm1suBGTEW21ztSkisovDnyqo5nK1CgSY3LJesEci7";
 
         let signer = SwSigner::new(mnemonic, false).unwrap();
         let signer_data = signer.amp0_signer_data().unwrap();
@@ -1936,14 +1936,14 @@ mod tests {
 
         assert_eq!(signer.amp0_sign_challenge(challenge).unwrap(), der_sig_hex);
 
-        let xpub = signer.amp0_subaccount_xpub(subaccount_num).unwrap();
-        let subaccount_xpub: Xpub = subaccount_xpub.parse().unwrap();
-        assert_eq!(xpub.public_key, subaccount_xpub.public_key);
-        assert_eq!(xpub.chain_code, subaccount_xpub.chain_code);
+        let xpub = signer.amp0_account_xpub(subaccount_num).unwrap();
+        let account_xpub: Xpub = account_xpub.parse().unwrap();
+        assert_eq!(xpub.public_key, account_xpub.public_key);
+        assert_eq!(xpub.chain_code, account_xpub.chain_code);
 
-        assert_eq!(xpub.network, subaccount_xpub.network);
-        assert_eq!(xpub.depth, subaccount_xpub.depth);
-        assert_eq!(xpub.child_number, subaccount_xpub.child_number);
+        assert_eq!(xpub.network, account_xpub.network);
+        assert_eq!(xpub.depth, account_xpub.depth);
+        assert_eq!(xpub.child_number, account_xpub.child_number);
         // parent_fingerprint does not match because it skips hash computation
     }
 
@@ -1969,7 +1969,7 @@ mod tests {
         let sig = signer.amp0_sign_challenge(&challenge).unwrap();
         let amp0 = amp0.login(&sig).unwrap();
         let pointer = amp0.next_account().unwrap();
-        let account_xpub = signer.amp0_subaccount_xpub(pointer).unwrap();
+        let account_xpub = signer.amp0_account_xpub(pointer).unwrap();
         let amp_id = amp0.create_amp0_account(&account_xpub).unwrap();
         assert_eq!(&amp_id[..2], "GA");
         amp0.create_watch_only(username, password).unwrap();

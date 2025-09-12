@@ -461,8 +461,7 @@ impl<S: Stream> Amp0Connected<S> {
             let blob64 = self.amp0.get_blob().await?;
             let plaintext = decrypt_blob(&enc_key, &blob64)?;
             let value = parse_value(&plaintext)?;
-            let blob = Blob::from_value(&value)?;
-            blob
+            Blob::from_value(&value)?
         };
         // if needed upload confidential addressess
         // amp0.upload_ca(subaccount.required_ca).await?;
@@ -998,7 +997,7 @@ impl Blob {
     fn new(signer_data: &Amp0SignerData) -> Result<Self, Error> {
         let mut slip77key = BTreeMap::new();
         let slip77_str = signer_data.slip77_key().to_string();
-        slip77key.insert("key".into(), slip77_str.into());
+        slip77key.insert("key".into(), slip77_str);
         let mut watchonly = BTreeMap::new();
         let mut xpubs = BTreeMap::new();
         xpubs.insert(signer_data.master_xpub().to_string(), vec![]);

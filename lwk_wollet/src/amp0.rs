@@ -543,6 +543,22 @@ impl<S: Stream> Amp0Inner<S> {
         Err(Error::Generic(format!("call failed, got: {}", response)))
     }
 
+    /// Open a WAMP session
+    pub async fn init_session(&self) -> Result<(), Error> {
+        let mut details = WampDict::new();
+        let mut roles = WampDict::new();
+        let mut features = WampDict::new();
+        features.insert("features".into(), Arg::Dict(WampDict::new()));
+        roles.insert(ClientRole::Caller.to_str().into(), Arg::Dict(features));
+        details.insert("roles".into(), Arg::Dict(roles));
+        let msg = Msg::Hello {
+            realm: "realm1".into(),
+            details,
+        };
+        self.call(msg).await?;
+        Ok(())
+    }
+
     /// Login to the Green Address API with clear credentials performing the hashing internally.
     pub async fn login(
         &self,

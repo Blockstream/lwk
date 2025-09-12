@@ -504,6 +504,17 @@ impl EsploraClient {
         loop {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+            // Log the full URL including query parameters
+            log::debug!(
+                "Requesting URL: {}?descriptor={}&page={}&to_index={}&utxo_only={}",
+                descriptor_url,
+                url_encode_descriptor(&desc),
+                page,
+                to_index,
+                self.utxo_only
+            );
+
             let response = self
                 .client
                 .get(&descriptor_url)
@@ -853,13 +864,36 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
     Ok(result)
 }
 
+/// Simple URL encoding for common characters found in Bitcoin descriptors
+fn url_encode_descriptor(desc: &str) -> String {
+    desc.chars()
+        .map(|c| match c {
+            '(' => "%28".to_string(),
+            ')' => "%29".to_string(),
+            '[' => "%5B".to_string(),
+            ']' => "%5D".to_string(),
+            '{' => "%7B".to_string(),
+            '}' => "%7D".to_string(),
+            '/' => "%2F".to_string(),
+            '*' => "%2A".to_string(),
+            ',' => "%2C".to_string(),
+            '%' => "%25".to_string(),
+            '&' => "%26".to_string(),
+            '#' => "%23".to_string(),
+            '+' => "%2B".to_string(),
+            ' ' => "%20".to_string(),
+            c => c.to_string(),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{collections::HashMap, str::FromStr};
 
     use crate::{clients::asyncr::async_sleep, ElementsNetwork};
 
-    use super::EsploraClient;
+    use super::{url_encode_descriptor, EsploraClient};
     use elements::{encode::Decodable, BlockHash};
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
@@ -882,6 +916,31 @@ mod tests {
     async fn sleep_test() {
         // TODO this doesn't last a second when run, is it right?
         async_sleep(1).await;
+    }
+
+    #[test]
+    fn test_url_encode_descriptor() {
+        // Test basic descriptor encoding
+        let desc = "ct(slip77(key),elwpkh(xpub/*))";
+        let encoded = url_encode_descriptor(desc);
+        assert_eq!(encoded, "ct%28slip77%28key%29%2Celwpkh%28xpub%2F%2A%29%29");
+
+        // Test descriptor with brackets
+        let desc_with_brackets = "ct(key,elwpkh([fingerprint/path]xpub/*))";
+        let encoded_brackets = url_encode_descriptor(desc_with_brackets);
+        assert_eq!(
+            encoded_brackets,
+            "ct%28key%2Celwpkh%28%5Bfingerprint%2Fpath%5Dxpub%2F%2A%29%29"
+        );
+
+        // Test descriptor with curly braces
+        let desc_with_braces = "ct({key},elwpkh(xpub/*))";
+        let encoded_braces = url_encode_descriptor(desc_with_braces);
+        assert_eq!(encoded_braces, "ct%28%7Bkey%7D%2Celwpkh%28xpub%2F%2A%29%29");
+
+        // Test normal characters (should remain unchanged)
+        let normal = "ctabc123def";
+        assert_eq!(url_encode_descriptor(normal), "ctabc123def");
     }
 
     #[ignore]

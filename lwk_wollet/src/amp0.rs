@@ -98,7 +98,7 @@ struct LoginData {
     ///
     /// 128 hex chars
     /// Note: this key is itself encrypted
-    pub wo_blob_key: String,
+    pub wo_blob_key: Option<String>,
 
     /// Wallet subaccounts
     pub subaccounts: Vec<GreenSubaccount>,
@@ -192,8 +192,10 @@ impl<S: Stream> Amp0<S> {
         // get blob
         let blob = amp0.get_blob().await?;
         // decrypt blob
-        let wo_blob_key_hex = &login_data.wo_blob_key;
-        let enc_key = decrypt_blob_key(username, password, wo_blob_key_hex)?;
+        let wo_blob_key_hex = login_data
+            .wo_blob_key
+            .ok_or_else(|| Error::Generic("Missing wo_blob_key".into()))?;
+        let enc_key = decrypt_blob_key(username, password, &wo_blob_key_hex)?;
         let plaintext = decrypt_blob(&enc_key, &blob)?;
         // parse blob
         let value = parse_value(&plaintext)?;
@@ -1686,7 +1688,7 @@ mod tests {
             .expect("Should get a response (even if it's an error)");
 
         assert_eq!(response.gait_path.len(), 128);
-        assert_eq!(response.wo_blob_key.len(), 128);
+        assert_eq!(response.wo_blob_key.unwrap().len(), 128);
         assert_eq!(response.subaccounts.len(), 1);
         assert_eq!(response.subaccounts[0].type_, "2of2_no_recovery");
         assert_eq!(response.subaccounts[0].pointer, 1);

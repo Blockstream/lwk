@@ -753,6 +753,32 @@ impl<S: Stream> Amp0Inner<S> {
         let login_data: LoginData = rmpv::ext::from_value(v)?;
         Ok(login_data)
     }
+
+    /// Set blob
+    pub async fn set_blob(
+        &self,
+        blob64: &str,
+        hmac: &str,
+        previous_hmac: &str,
+    ) -> Result<(), Error> {
+        let request = WampId::generate();
+        let args = vec![
+            blob64.into(),
+            0.into(), // sequence
+            hmac.into(),
+            previous_hmac.into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.set_client_blob".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        // Returns true or raise an error
+        let _ = self.call(msg).await?;
+        Ok(())
+    }
 }
 
 fn get_entropy(username: &str, password: &str) -> [u8; 64] {

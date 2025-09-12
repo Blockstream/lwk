@@ -916,21 +916,51 @@ struct Blob {
 }
 
 impl Blob {
+    /// Create a new blob
+    fn new(signer_data: &Amp0SignerData) -> Result<Self, Error> {
+        let mut slip77key = BTreeMap::new();
+        let slip77_str = signer_data.slip77_key().to_string();
+        slip77key.insert("key".into(), slip77_str.into());
+        let mut watchonly = BTreeMap::new();
+        let mut xpubs = BTreeMap::new();
+        xpubs.insert(signer_data.master_xpub().to_string(), vec![]);
+        // TODO: use const
+        xpubs.insert(signer_data.login_xpub().to_string(), vec![1195487518u32]);
+        xpubs.insert(
+            signer_data.client_secret_xpub().to_string(),
+            vec![4032918387],
+        );
+        watchonly.insert("xpubs".into(), to_value(&xpubs)?);
+        let mut blob = Self {
+            version: 4,
+            slip77key,
+            watchonly,
+            ..Default::default()
+        };
+        blob.set_fields()?;
+        Ok(blob)
+    }
+
     fn from_value(value: &rmpv::Value) -> Result<Self, Error> {
         let mut blob: Self = rmpv::ext::from_value(value.clone())?;
-        let slip77_key = blob
+        blob.set_fields()?;
+        Ok(blob)
+    }
+
+    fn set_fields(&mut self) -> Result<(), Error> {
+        let slip77_key = self
             .slip77key
             .get("key")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        blob.slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
+        self.slip77_key = slip77_key[(slip77_key.len() - 64)..].to_string();
 
-        let xpubs = blob
+        let xpubs = self
             .watchonly
             .get("xpubs")
             .ok_or_else(|| Error::Generic("Unexpected value".into()))?;
-        blob.xpubs = rmpv::ext::from_value(xpubs.clone())?;
+        self.xpubs = rmpv::ext::from_value(xpubs.clone())?;
 
-        Ok(blob)
+        Ok(())
     }
 
     #[allow(unused)]

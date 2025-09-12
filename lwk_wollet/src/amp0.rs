@@ -731,6 +731,28 @@ impl<S: Stream> Amp0Inner<S> {
         let challenge: String = rmpv::ext::from_value(v)?;
         Ok(challenge)
     }
+
+    /// Authenticate
+    pub async fn authenticate(&self, sig: &str) -> Result<LoginData, Error> {
+        let request = WampId::generate();
+        let args = vec![
+            sig.into(),
+            true.into(), // minimal
+            "GA".into(), // path hex
+            "".into(),   // device id
+            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.authenticate".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        let v = self.call(msg).await?;
+        let login_data: LoginData = rmpv::ext::from_value(v)?;
+        Ok(login_data)
+    }
 }
 
 fn get_entropy(username: &str, password: &str) -> [u8; 64] {

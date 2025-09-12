@@ -102,6 +102,11 @@ struct LoginData {
 
     /// Wallet subaccounts
     pub subaccounts: Vec<GreenSubaccount>,
+
+    /// Blob hmac
+    ///
+    /// 32 bytes, base64 encoded
+    pub client_blob_hmac: String,
 }
 
 /// Context for actions related to an AMP0 (sub)account

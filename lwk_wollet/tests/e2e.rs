@@ -2537,10 +2537,7 @@ fn test_update_transaction() {
 
     // Applying the transaction again does nothing
     let net = w.wollet.apply_transaction(tx.clone()).unwrap();
-    assert_eq!(
-        format!("{:?}", net),
-        "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: 0})"
-    );
+    assert_eq!(format!("{:?}", net), "SignedBalance({})");
 
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);

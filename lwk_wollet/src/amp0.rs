@@ -16,9 +16,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::str::FromStr;
 
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex;
 
 use crate::hashes::Hash;
@@ -139,7 +139,7 @@ pub struct Amp0<S: Stream> {
     last_index: u32,
 }
 
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 impl Amp0<WebSocketClient> {
     /// Create a new AMP0 context
     pub async fn new_with_network(
@@ -1022,7 +1022,7 @@ pub fn default_url(network: Network) -> Result<&'static str, Error> {
     }
 }
 
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 async fn stream_with_network(network: Network) -> Result<WebSocketClient, Error> {
     let url = default_url(network)?;
     let stream = WebSocketClient::connect_wamp(url)
@@ -1031,7 +1031,7 @@ async fn stream_with_network(network: Network) -> Result<WebSocketClient, Error>
     Ok(stream)
 }
 
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 impl Amp0Inner<WebSocketClient> {
     #[allow(unused)]
     async fn with_network(network: Network) -> Result<Self, Error> {
@@ -1041,7 +1041,7 @@ impl Amp0Inner<WebSocketClient> {
 }
 
 /// WebSocket client for non-WASM environments using tokio-tungstenite
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct WebSocketClient {
     write_stream: Arc<
         Mutex<
@@ -1064,7 +1064,7 @@ pub struct WebSocketClient {
     >,
 }
 
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 impl WebSocketClient {
     /// Connect to a WebSocket URL
     pub async fn connect(url: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
@@ -1141,7 +1141,7 @@ impl WebSocketClient {
 }
 
 /// Custom error type for WebSocket operations
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, thiserror::Error)]
 pub enum WebSocketError {
     #[error("WebSocket error: {0}")]
@@ -1157,7 +1157,7 @@ pub enum WebSocketError {
 }
 
 /// Implement the Stream trait for WebSocketClient
-#[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 impl Stream for WebSocketClient {
     type Error = WebSocketError;
 
@@ -1487,7 +1487,7 @@ mod tests {
 
     /// Test WebSocket connection to Blockstream's Green Liquid mainnet endpoint
     /// This test demonstrates connecting to a real WebSocket server with WAMP protocol
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_websocket_client_wamp_connection() {
@@ -1537,7 +1537,7 @@ mod tests {
     }
 
     /// Test WebSocket client creation (without network)
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_websocket_client_creation() {
         // This test will fail since the URL doesn't exist, but it tests the API
@@ -1550,7 +1550,7 @@ mod tests {
 
     /// Test Amp0Inner login functionality with proper WAMP protocol flow
     /// This test demonstrates the complete WAMP handshake + login flow
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_fail_login() {
@@ -1574,7 +1574,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ok_login() {
@@ -1603,7 +1603,6 @@ mod tests {
         let (_pointer, _script) = amp0.get_new_address(amp_subaccount).await.unwrap();
     }
 
-    #[cfg(feature = "amp0")]
     #[test]
     fn test_slow_amp0_login_utils() {
         let (encrypted_username, encrypted_password) =
@@ -1619,7 +1618,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "amp0")]
     #[test]
     fn test_slow_amp0_decrypt_blob() {
         use elements::hashes::hex::DisplayHex;
@@ -1667,14 +1665,14 @@ mod tests {
         assert_eq!(decrypt_blob(&enc_key, &encrypted_blob).unwrap(), plaintext);
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext_mainnet() {
         amp0_addr(Network::Liquid, "userleo456", "userleo456", "").await
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     #[ignore] // Requires network connectivity
     async fn test_amp0_ext_testnet() {
@@ -1687,7 +1685,7 @@ mod tests {
         .await
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     async fn amp0_addr(network: Network, username: &str, password: &str, amp_id: &str) {
         let mut amp0ext = Amp0::new_with_network(network, username, password, amp_id)
             .await
@@ -1729,21 +1727,21 @@ mod tests {
         assert!(err.to_string().contains("Invalid address index for AMP0"));
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     #[ignore] // Requires network connectivity
     fn test_amp0_sign_testnet() {
         amp0_sign(false)
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     #[ignore] // Requires local Green backend
     fn test_amp0_sign_regtest() {
         amp0_sign(true)
     }
 
-    #[cfg(all(feature = "amp0", not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     fn amp0_sign(regtest: bool) {
         use super::*;
         use crate::clients::blocking::BlockchainBackend;

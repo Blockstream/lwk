@@ -1229,6 +1229,79 @@ async fn test_esplora_waterfalls_utxo_only() {
 }
 
 #[cfg(feature = "esplora")]
+async fn test_esplora_waterfalls_balance_comparison(
+    descriptor: &str,
+    esplora_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use clients::asyncr;
+
+    init_logging();
+
+    let desc = WolletDescriptor::from_str(descriptor)?;
+    let network = ElementsNetwork::LiquidTestnet;
+
+    let mut wollet = Wollet::without_persist(network, desc.clone())?;
+    let mut client = asyncr::EsploraClientBuilder::new(esplora_url, network)
+        .waterfalls(true)
+        .concurrency(4)
+        .build()?;
+
+    let mut wollet_utxo_only = Wollet::without_persist(network, desc.clone())?;
+    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(esplora_url, network)
+        .utxo_only(true)
+        .waterfalls(true)
+        .concurrency(4)
+        .build()?;
+
+    // Perform full scan on both wallets
+    let update = client.full_scan(&wollet).await?.unwrap();
+    wollet.apply_update(update)?;
+
+    let update = client_utxo_only
+        .full_scan(&wollet_utxo_only)
+        .await?
+        .unwrap();
+    wollet_utxo_only.apply_update(update)?;
+
+    let u1 = wollet.utxos()?;
+    let u2 = wollet_utxo_only.utxos()?;
+    assert_eq!(u1.len(), u2.len());
+    assert_eq!(u1, u2);
+
+    // Compare balances
+    let balance = wollet.balance()?;
+    let balance_utxo_only = wollet_utxo_only.balance()?;
+
+    assert_eq!(balance, balance_utxo_only);
+
+    Ok(())
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
+#[ignore]
+async fn test_esplora_waterfalls_testnet_utxo_only_1() {
+    let descriptor = "ct(slip77(4892ff8181d55103c9b0a3a0ec2eb384a7518c51a87d59a9da011ce671d6e657),elwpkh([8fd75c12/84'/1'/0']tpubDDkuNJ5AvNAgekVh7Y4sAkmCzKs7mySbuq1GSnpA3oM7XxkCWVnT7y8ZSbbHFYxQYkdxNdzinLKt6kBKSVYD75UEHduiVjNz24Ew8YgpS5E/<0;1>/*))#qfvkjcee";
+    let esplora_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+
+    test_esplora_waterfalls_balance_comparison(descriptor, esplora_url)
+        .await
+        .unwrap();
+}
+
+#[cfg(feature = "esplora")]
+#[tokio::test]
+#[ignore]
+async fn test_esplora_waterfalls_testnet_utxo_only_2() {
+    let descriptor = "ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp";
+    let esplora_url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+
+    test_esplora_waterfalls_balance_comparison(descriptor, esplora_url)
+        .await
+        .unwrap();
+}
+
+#[cfg(feature = "esplora")]
 #[tokio::test]
 async fn test_esplora_wasm_local_waterfalls() {
     use clients::asyncr::{self, async_sleep};

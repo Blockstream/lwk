@@ -439,15 +439,38 @@ impl<S: Stream> Amp0Connected<S> {
     ///
     /// `sig` must be obtained from [`lwk_common::Amp0Signer::amp0_sign_challenge()`] called with the value returned
     /// by [`Amp0Connected::get_challenge()`]
-    pub async fn login(self, _sig: &str) -> Result<Amp0LoggedIn<S>, Error> {
-        // com.greenaddress.login.authenticate
-        // parse login data
-        // com.greenaddress.login.get_client_blob
-        // construct blob
-        // encrypt blob
-        // set client blob
-        // com.greenaddress.login.set_client_blob
-        Ok(Amp0LoggedIn { amp0: self.amp0 })
+    pub async fn login(self, sig: &str) -> Result<Amp0LoggedIn<S>, Error> {
+        let login_data = self.amp0.authenticate(sig).await?;
+        // TODO: check that login data is consistent with what we passed
+        let (enc_key, hmac_key) = derive_blob_keys(self.signer_data.client_secret_xpub());
+        let zero_hmac_b64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        let blob = if login_data.client_blob_hmac == zero_hmac_b64 {
+            // No blob, create a new one
+            // construct blob
+            let blob = Blob::new(&self.signer_data)?;
+            // encrypt blob
+            let value = blob.to_value()?;
+            let plaintext = from_value(&value)?;
+            let blob64 = encrypt_blob(&enc_key, &plaintext)?;
+            let hmac = compute_hmac(&hmac_key, &blob64)?;
+            // set client blob
+            self.amp0.set_blob(&blob64, &hmac, zero_hmac_b64).await?;
+            blob
+        } else {
+            // Get the blob
+            let blob64 = self.amp0.get_blob().await?;
+            let plaintext = decrypt_blob(&enc_key, &blob64)?;
+            let value = parse_value(&plaintext)?;
+            let blob = Blob::from_value(&value)?;
+            blob
+        };
+        // if needed upload confidential addressess
+        // amp0.upload_ca(subaccount.required_ca).await?;
+        Ok(Amp0LoggedIn {
+            amp0: self.amp0,
+            login_data,
+            blob,
+        })
     }
 }
 
@@ -455,8 +478,8 @@ impl<S: Stream> Amp0Connected<S> {
 #[allow(unused)]
 pub struct Amp0LoggedIn<S: Stream> {
     amp0: Amp0Inner<S>,
-    // login_data: LoginData,
-    // blob: Blob,
+    login_data: LoginData,
+    blob: Blob,
 }
 
 impl<S: Stream> Amp0LoggedIn<S> {

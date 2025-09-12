@@ -40,7 +40,7 @@ use elements::BlockHash;
 use elements::Transaction;
 use elements::{
     confidential::{AssetBlindingFactor, ValueBlindingFactor},
-    AssetId, TxOut, TxOutSecrets,
+    Address, AssetId, TxOut, TxOutSecrets,
 };
 use elements::{script, Script, ScriptHash, WScriptHash};
 use elements_miniscript::psbt::PsbtExt;
@@ -424,9 +424,8 @@ impl<S: Stream> Amp0Connected<S> {
     ///
     /// This must be signed with [`lwk_common::Amp0Signer::amp0_sign_challenge()`].
     pub async fn get_challenge(&self) -> Result<String, Error> {
-        let _login_address = self.signer_data.login_address(&self.network);
-        // com.greenaddress.login.get_trezor_challenge
-        todo!();
+        let login_address = self.signer_data.login_address(&self.network);
+        self.amp0.get_challenge(&login_address).await
     }
 
     /// Log in
@@ -711,6 +710,26 @@ impl<S: Stream> Amp0Inner<S> {
         // Returns true or raise an error
         let _ = self.call(msg).await?;
         Ok(())
+    }
+
+    /// Get challenge
+    pub async fn get_challenge(&self, login_address: &Address) -> Result<String, Error> {
+        let request = WampId::generate();
+        let hw_nlocktime_support = true;
+        let args = vec![
+            login_address.to_string().into(),
+            hw_nlocktime_support.into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.login.get_trezor_challenge".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        let v = self.call(msg).await?;
+        let challenge: String = rmpv::ext::from_value(v)?;
+        Ok(challenge)
     }
 }
 

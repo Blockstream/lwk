@@ -36,39 +36,3 @@ Additionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.
 * **Native bindings** [PoC support](./lwk_bindings#readme) for Python, Kotlin and Swift, with many other language available soon using [uniffi](https://mozilla.github.io/uniffi-rs/)
 * **WASM** [`lwk_wasm`](./lwk_wasm) crate, see it in action in the [Liquid Web Wallet](https://liquidwebwallet.org/).
 * **JSON-RPC Server** support: all functions are exposed via JSON-RPC Server, making it easier to build your own frontend, GUI, or integration.
-
-## LWK Structure
-
-LWK functionalities are split into different component crates that might be useful independently.
-
-* [`lwk_cli`](./lwk_cli): a CLI tool to use LWK wallets.
-* [`lwk_wollet`](./lwk_wollet): library for watch-only wallets;
-  specify a CT descriptor, generate new addresses, get balance,
-  create PSETs and other actions.
-* [`lwk_signer`](./lwk_signer): interact with Liquid signers
-  to get your PSETs signed.
-* [`lwk_jade`](./lwk_jade): unlock Jade, get xpubs,
-  register multisig wallets, sign PSETs and more.
-* [`lwk_bindings`](./lwk_bindings): use LWK from other languages.
-* [`lwk_wasm`](./lwk_wasm): use LWK from WebAssembly.
-* and more:
-  common or ancillary components ([`lwk_common`](./lwk_common),
-  [`lwk_rpc_model`](./lwk_rpc_model), [`lwk_tiny_rpc`](./lwk_tiny_rpc),
-  [`lwk_app`](./lwk_app)),
-  future improvements ([`lwk_hwi`](./lwk_hwi)),
-  testing infrastructure ([`lwk_test_util`](./lwk_test_util),
-  [`lwk_containers`](./lwk_containers))
-
-For instance, mobile app devs might be interested mainly in
-`lwk_bindings`, `lwk_wollet` and `lwk_signer`.
-While backend developers might want to directly use `lwk_cli`
-in their systems.
-
-Internal crate dependencies are shown in this diagram: an arrow indicates "depends on" (when dotted the dependency is feature-activated, when blue is a dev-dependency):
-
-![Dep tree](docs/dep-tree.svg)
-
-(generated with `cargo depgraph --workspace-only --dev-deps`)
-
-## Getting started with LWK Development
-

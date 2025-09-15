@@ -531,11 +531,18 @@ impl<S: Stream> Amp0LoggedIn<S> {
     }
 
     /// Create a new Watch-Only entry for this wallet
-    pub async fn create_watch_only(&self, _username: &str, _password: &str) -> Result<(), Error> {
-        // hash credentials
-        // com.greenaddress.addressbook.sync_custom
-        // com.greenaddress.login.set_client_blob
-        todo!();
+    pub async fn create_watch_only(&mut self, username: &str, password: &str) -> Result<(), Error> {
+        let (hashed_username, hashed_password) = encrypt_credentials(username, password);
+        let wo_blob_key_hex = encrypt_blob_key(username, password, &self.enc_key)?;
+        self.amp0
+            .create_watch_only(&hashed_username, &hashed_password, &wo_blob_key_hex)
+            .await?;
+        self.blob.add_username(username)?;
+        let blob64 = self.blob.to_base64(&self.enc_key)?;
+        let hmac = compute_hmac(&self.hmac_key, &blob64)?;
+        self.amp0.set_blob(&blob64, &hmac, &self.hmac).await?;
+        self.hmac = hmac;
+        Ok(())
     }
 }
 
@@ -1566,7 +1573,7 @@ pub mod blocking {
                 .block_on(self.inner.create_amp0_account(pointer, account_xpub))
         }
 
-        pub fn create_watch_only(&self, username: &str, password: &str) -> Result<(), Error> {
+        pub fn create_watch_only(&mut self, username: &str, password: &str) -> Result<(), Error> {
             self.rt
                 .block_on(self.inner.create_watch_only(username, password))
         }

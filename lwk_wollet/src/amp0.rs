@@ -1166,6 +1166,16 @@ impl Blob {
 
         Ok(())
     }
+
+    fn add_username(&mut self, username: &str) -> Result<(), Error> {
+        use rmpv::Value;
+        if let Some(s) = self.watchonly.get_mut("username") {
+            *s = Value::from(username);
+        } else {
+            return Err(Error::Generic("Unexpected value".into()));
+        }
+        Ok(())
+    }
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {

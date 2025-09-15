@@ -484,7 +484,13 @@ pub struct Amp0LoggedIn<S: Stream> {
 impl<S: Stream> Amp0LoggedIn<S> {
     /// List of AMP IDs
     pub fn get_amp_ids(&self) -> Result<Vec<String>, Error> {
-        todo!();
+        Ok(self
+            .login_data
+            .subaccounts
+            .iter()
+            .filter(|s| s.type_ == "2of2_no_recovery")
+            .map(|s| s.gaid.to_string())
+            .collect())
     }
 
     /// Get the next account for AMP0 account creation

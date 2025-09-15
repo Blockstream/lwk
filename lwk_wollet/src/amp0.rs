@@ -2216,24 +2216,32 @@ mod tests {
         use lwk_common::Network;
         use lwk_signer::SwSigner;
 
-        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
-        let username = "username";
-        let password = "password";
-
         let network = Network::LocaltestLiquid;
 
-        let signer = SwSigner::new(mnemonic, false).unwrap();
+        // Create signer and watch only credentials
+        let (signer, _mnemonic) = SwSigner::random(false).unwrap();
+        let username = format!("user{}", signer.fingerprint());
+        let password = format!("pass{}", signer.fingerprint());
+
+        // Collect signer data
         let signer_data = signer.amp0_signer_data().unwrap();
+        // Connect to AMP0
         let amp0 = blocking::Amp0Connected::new(network, signer_data).unwrap();
+        // Obtain and sign the authentication challenge
         let challenge = amp0.get_challenge().unwrap();
         let sig = signer.amp0_sign_challenge(&challenge).unwrap();
-        let amp0 = amp0.login(&sig).unwrap();
+        // Login
+        let mut amp0 = amp0.login(&sig).unwrap();
+        // Create a new AMP0 account
         let pointer = amp0.next_account().unwrap();
         let account_xpub = signer.amp0_account_xpub(pointer).unwrap();
-        let amp_id = amp0.create_amp0_account(&account_xpub).unwrap();
+        let amp_id = amp0.create_amp0_account(pointer, &account_xpub).unwrap();
         assert_eq!(&amp_id[..2], "GA");
-        amp0.create_watch_only(username, password).unwrap();
+        assert!(amp0.get_amp_ids().unwrap().contains(&amp_id));
+        // Create watch only entries
+        amp0.create_watch_only(&username, &password).unwrap();
 
-        let _amp0 = blocking::Amp0::new(network, username, password, &amp_id).unwrap();
+        // Use watch only credentials to interact with AMP0
+        let _amp0 = blocking::Amp0::new(network, &username, &password, &amp_id).unwrap();
     }
 }

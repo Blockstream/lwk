@@ -102,34 +102,36 @@ mod tests {
             "tex1q6rz28mcfaxtmd6v789l9rrlrusdprr9p634wu8"
         );
 
+        println!("{}", address.qr_code_text().unwrap());
+
         let expected = "
 ███████████████████████████████████████████████
 ███████████████████████████████████████████████
 ███ ▄▄▄▄▄ █▄▄▀▄▄▄▀▀▄█▀ ▀  ▀▀  █  █  █ ▄▄▄▄▄ ███
 ███ █   █ █▀▀ ███▄██ ▄▀ ▀▄█▄█▄▄▀▀▀▄▄█ █   █ ███
-███ █▄▄▄█ █  ▄ ▄ ▀███▀█  ▀█▄▄▀▄██▄▀▀█ █▄▄▄█ ███
-███▄▄▄▄▄▄▄█ █ ▀ ▀ █▄█▄█ ▀ █▄█ █▄▀▄█▄█▄▄▄▄▄▄▄███
-███▄▀█▀ █▄▄ ▄▀▀▀█▄█▀▄ ▄▄█▄▄▀█▄ █ █▄█▄▄▄ ▄██▄███
-███ ▀▄██ ▄▄▀█▀▄ ▄ ▄▀▄▀▀▄   ▄▀▄▄▀▀ █ █▀█▄▀█▀▄███
-███  ▀▄█▄▄ █▀█▀▄▄▄█▀ █ ▄█▄█▀▄▀▄▀█  ▀ ▀█▄ ▀ ▀███
-███ ▄ ▄▀▄▄██▄ █▄▀    █ ▀▀  ▄███▄▄▀█▄▄▀ ▀ █▀████
-███  █ █▄▄    ▀▀▀█▄█▀███▄▄▀ ▄ ▄▀█▀▄▀▄▀▀▀█▀▀▀███
-███ █▀▀ ▄▄█▄█▄█▄██▀▄█▄▄▀ ▄▄  ▄█  ▀▀█  ██ █  ███
-███  █▄▄▀▄█   ▀▀ ▄▄ ▀▀█▀▀▀ ▀▄▀▄▀█▄▄█ █▄█▀ ▄▀███
-████ ▄▄█▄▄██▀▄ ▄▄▄▄▀██▄▄▀  ▄  █ ▀ █▄▄█▄▄█ █ ███
-███▄▄ ▀▀█▄█▀▄▀█▀█ ▀  ██▄█ ▀▄▄█▀▀▄▀▄▄▀█▀▄▀▄▄▄███
-███▄▄█▄▀█▄▀ ▄▀█▀▀█▀▄▄ ▄███ ▄▄▄▄ ▀█▀▀  ▀  █ ████
-███ ▄▀█ █▄ █ █  ▀ ▄▄ █▀▀▄▀▄▄ ▄█▄ ▄▀▄██▄█▀▀▀████
-█████▄ ▄ ▄█▄▀  ▀ ▄▀▀▀▄█▄▀▄█▀ ▀ ▀   ▀▀ ▀█  ▄████
-███▄▄████▄▄ ██ ▀ █  ██ █ █ ▄ █▀ ▀ ▀ ▄▄▄  ▀  ███
+███ █▄▄▄█ █ █  ▄▄████▀█  ▀█▄▄▀▄█▀ ▀▀█ █▄▄▄█ ███
+███▄▄▄▄▄▄▄█ ▀▄▀ ▀ █▄█▄█ ▀ █▄█ █▄▀ █▄█▄▄▄▄▄▄▄███
+███▄▀█▀ █▄▄ █ ███▀█▀▄ ▄▄█▄▄▀█▄ █ █▄█▄▄▄ ▄██▄███
+███ ▀▄██ ▄▄▀█▀██▄  █▄▀▀▄   ▄▀▄ ▄▀ █ █▀█▄▀█▀▄███
+███▄ ▀▄█▄▄ █▀█ ▄▄▄█▀ █ ▄█▄█▀▄▀█▀█  ▀ ▀█▄ ▀ ▀███
+███▀  ▄▀▄▄██▄ █▄▀    █ ▀▀  ▄███▄▄▀█▄▄▀ ▀ █▀████
+███ █▀██▄▄▄▀  ▀▀▀█▄█▀███▄▄▀ ▄ ▄▀█▀▄▀▄▀▀▀█▀▀▀███
+███ █▄  ▄▄█▄█▄█▄██▀▄█▄▄▀ ▄▄  ▄█  ▀▀█  ██ █  ███
+███  █▄▄▀▄█ ▄ ▀▀▄▄▄ ▀▀█▀▀▀ ▀▄▀▄▀█▄▄█ █▄█▀ ▄▀███
+████ ▄▄█▄▄██▀▀ ▄ ▄▄▀██▄▄▀  ▄  █  ▄█▄▄█▄▄█ █ ███
+███▄▄ ▀▀█▄█▀█ █ ████ ██▄█ ▀▄▄█▀ ▄▀▄▄▀█▀▄▀▄▄▄███
+███▄▄█▄▀█▄▀ ▄▀▄█▀█  ▄ ▄███ ▄▄▄ █▀██▀  ▀  █ ████
+███ ▄▀█ █▄ █ █▀ ▀ █▄ █▀▀▄▀▄▄ ▄█▄ ▄ ▄██▄█▀▀▀████
+█████▄   ▄█▄▀  ▀ ▄▀▀▀▄█▄▀▄█▀ ▀ ▀   ▀▀ ▀█  ▄████
+███▄▄█▄▄█▄▄ ██ ▀ █  ██ █ █ ▄ █▀ ▀ ▀ ▄▄▄  ▀  ███
 ███ ▄▄▄▄▄ █▄██▀█▄▀ ▀ ▀█▀█▀ ▄█▀█▄█▄█ █▄█  █▀▀███
-███ █   █ █▄██▀█  ▀██▄ █▀▄▄▄▄▄▄ ▀▀█  ▄ ▄███▄███
-███ █▄▄▄█ ███▄█▄█▄ █  █▄█▀▄██▀▄▄▀ ▀▄ ███▄   ███
-███▄▄▄▄▄▄▄█▄█▄█▄▄▄████▄▄█▄▄███▄▄▄█▄██▄█▄▄▄▄████
+███ █   █ █▄▀█▀█▄ ▀█▀▄ █▀▄▄▄▄▄▄ ▀▀█  ▄ ▄███▄███
+███ █▄▄▄█ ██ ▀█▄   █▄▀█▄█▀▄██▀▄▄▀▄▀▄▀███▄   ███
+███▄▄▄▄▄▄▄█▄█▄█▄▄▄█▄▄█▄▄█▄▄███▄█▄█▄██▄█▄▄▄▄████
 ███████████████████████████████████████████████";
 
         assert!(address.qr_code_text().unwrap().contains(expected.trim()));
 
-        assert_eq!(address.qr_code_uri(None).unwrap(), "data:image/bmp;base64,Qk2GAQAAAAAAAD4AAAAoAAAAKQAAACkAAAABAAEAAAAAAEgBAAAAAgAAAAIAAAIAAAACAAAA////AAAAAAD+rhsdLwAAAIIBYidDgAAAuitpGseAAAC6FxQO0AAAALqGM/j4gAAAghPrII2AAAD+hUGKrAAAAACdlV+PgAAAw5WVyv2AAAAUfcT/9gAAAD62KlcnAAAAqV5aRQcAAADLW8XukAAAAAmtIQ39AAAA0sDx+G0AAAA4q8MaVAAAAOJCysWLgAAAQFCHbgKAAAB2Pxvq2oAAAMT876hGgAAA2ueBU1MAAAC4AQzPZYAAAI6ot+xlgAAA0fxBqruAAADX4QbxQAAAAKgn3wI9AAAA9mvTjNQAAADhUNCr54AAANcOWlNNAAAAxKq3TqUAAACnH0+yiIAAAFi4oJQIAAAAi8J7NXyAAAAAvg4kAAAAAP6qqqq/gAAAgtYuIaCAAAC6/AzSLoAAALrgXA4ugAAAuiJqsa6AAACCIz/toIAAAP7clm2/gAAA");
+        assert_eq!(address.qr_code_uri(None).unwrap(), "data:image/bmp;base64,Qk2GAQAAAAAAAD4AAAAoAAAAKQAAACkAAAABAAEAAAAAAEgBAAAAAgAAAAIAAAIAAAACAAAA////AAAAAAD+rtsVLwAAAIJnIiVDgAAAuk9JGoeAAAC6U1QO0AAAALqGM/j4gAAAghPrII2AAAD+hUGKrAAAAACdlV+PgAAA25WVyv2AAAAcfcT/9gAAAD62KlcnAAAAqV5aRQcAAADLSsXvkAAAAAmloRT9AAAA0tHx8G0AAAA4qEMaVAAAAOIoSs2LgAAAQHSHbAKAAAB2Hxvu2oAAAMS476hGgAAA2ueBU1MAAACYAQzPZYAAAL6ot+xlgAAAoPxBqruAAACHYQbxQAAAAOgn3wI9AAAAdmvTjNQAAABhUNCr54AAANceWkNNAAAAxKM3VqUAAACnB0+6iIAAAFiioJQIAAAAi6B7NXyAAAAA3g4mAAAAAP6qqqq/gAAAgrAuJ6CAAAC6vAzSLoAAALrgXA4ugAAAuiJqsa6AAACCIz/toIAAAP7clm2/gAAA");
     }
 }

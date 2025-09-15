@@ -1,7 +1,7 @@
 use std::string::FromUtf8Error;
 
 use base64::engine::general_purpose;
-use elements::Address;
+use elements::{Address, AddressParams};
 
 // In case of blech32 addresses, the address is uppercased so that use less QR code space
 fn address_to_qr_text(address: &Address) -> String {
@@ -13,7 +13,11 @@ fn address_to_qr_text(address: &Address) -> String {
         }
         _ => address.to_string(),
     };
-    format!("liquidnetwork:{}", address_string)
+    if address.params == &AddressParams::LIQUID_TESTNET {
+        format!("liquidtestnet:{}", address_string)
+    } else {
+        format!("liquidnetwork:{}", address_string)
+    }
 }
 
 /// Convert the given address in a string representing a QR code to be consumed from a terminal
@@ -130,6 +134,6 @@ mod test {
         // Test testnet address (bech32, should be uppercased)
         let testnet_addr = Address::from_str("tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m").unwrap();
         let testnet_qr_text = address_to_qr_text(&testnet_addr);
-        assert_eq!(testnet_qr_text, "liquidnetwork:TLQ1QQ02EGJNCR8G4QN890MRW3JHGUPWQYMEKV383LWPMSFGHN36HAC5PTPMEEWTNFTLUQYARAA56UNG7WF47CRKN5FJUHK422D68M");
+        assert_eq!(testnet_qr_text, "liquidtestnet:TLQ1QQ02EGJNCR8G4QN890MRW3JHGUPWQYMEKV383LWPMSFGHN36HAC5PTPMEEWTNFTLUQYARAA56UNG7WF47CRKN5FJUHK422D68M");
     }
 }

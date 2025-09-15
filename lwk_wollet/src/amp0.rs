@@ -498,7 +498,14 @@ impl<S: Stream> Amp0LoggedIn<S> {
     /// This must be given to [`lwk_common::Amp0Signer::amp0_account_xpub()`] to obtain the xpub to pass to
     /// [`Amp0LoggedIn::create_amp0_account()`]
     pub fn next_account(&self) -> Result<u32, Error> {
-        todo!();
+        let max_account = self
+            .login_data
+            .subaccounts
+            .iter()
+            .map(|s| s.pointer)
+            .max()
+            .unwrap_or(0);
+        Ok(max_account + 1)
     }
 
     /// Create a new AMP0 account

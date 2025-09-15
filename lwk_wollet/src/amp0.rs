@@ -1072,6 +1072,7 @@ impl Blob {
             vec![4032918387],
         );
         watchonly.insert("xpubs".into(), to_value(&xpubs)?);
+        watchonly.insert("username".into(), "".into());
         let mut blob = Self {
             version: 4,
             slip77key,

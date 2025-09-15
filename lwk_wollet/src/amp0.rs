@@ -1145,6 +1145,27 @@ impl Blob {
         }
         None
     }
+
+    fn add_account_xpub(&mut self, pointer: u32, account_xpub: &Xpub) -> Result<(), Error> {
+        use rmpv::Value;
+        let path = vec![0x80000000 + 3, 0x80000000 + pointer];
+
+        // TODO: compare xpubs using only public key and chaincode
+        if !self.xpubs.contains_key(account_xpub) {
+            // Insert xpub in (de)serialized struct
+            if let Some(Value::Map(ref mut xpubs)) = self.watchonly.get_mut("xpubs") {
+                let v: Vec<Value> = path.clone().into_iter().map(Value::from).collect();
+                xpubs.push((Value::from(account_xpub.to_string()), Value::Array(v)));
+            } else {
+                return Err(Error::Generic("Unexpected value".into()));
+            }
+
+            // Insert xpub in parsed struct
+            self.xpubs.insert(account_xpub.clone(), path);
+        }
+
+        Ok(())
+    }
 }
 
 fn server_master_xpub(network: &Network) -> Xpub {

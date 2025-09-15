@@ -1,17 +1,21 @@
 # Liquid Wallet Kit
+<div align="center">
 
-![LWK logo](docs/logos/web/LWK_logo_white_on_dark_rgb.png)
+  <img src="docs/logos/web/LWK_logo_white_on_dark_rgb.png"/>
 
-**NOTE: LWK is in public beta and still undergoing significant development. Use it at your own risk.**
+  <p>
+    <strong>Liquid Wallets Made Easy</strong>
+  </p>
 
-## What is Liquid Wallet Kit (LWK)?
+  <h4>
+    [Documentation](docs/summary.md)
+  </h4>
+</div>
 
-**LWK** is a collection of Rust crates for [Liquid](https://liquid.net) Wallets.
-Its goal is to provide all the necessary building blocks for Liquid wallet development to enable a broad range of use cases on Liquid.
+## About
 
-By not following a monolithic approach but instead providing a group of function-specific libraries, LWK allows us to offer a modular, flexible and ergonomic toolset for Liquid development. This design lets application developers pick only what they need and focus on the relevant aspects of their use cases.
+Liquid Wallet Kit (LWK) is a comprehensive, Rust-based toolkit for building Liquid Network wallets and applications. LWK provides robust, modular components that abstract away the complexities of Liquid, allowing developers to focus on their unique use cases. It's the go-to library for anyone looking to integrate Liquid functionality without having to build it from scratch.
 
-We want LWK to be a reference tool driven both by Blockstream and Liquid participants that helps make Liquid integration frictionless, define ecosystem standards and leverage advanced Liquid capabilities such as covenants or swaps.
+## LICENSE
 
-While LWK is Rust native, we provide [bindings](./lwk_bindings) for Python, Kotlin and Swift using [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) and we provide preliminary support for [WASM](./lwk_wasm). We will continue polishing these bindings and expanding the available options.
-Additionally, the Bull Bitcoin team has developed [Dart/Flutter](https://github.com/SatoshiPortal/lwk-dart) bindings.
+[MIT](LICENSE.md)

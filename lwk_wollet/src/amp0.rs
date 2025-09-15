@@ -1191,6 +1191,7 @@ impl Blob {
         if let Some(s) = self.watchonly.get_mut("username") {
             *s = Value::from(username);
         } else {
+            // TODO: handle case with no username
             return Err(Error::Generic("Unexpected value".into()));
         }
         Ok(())

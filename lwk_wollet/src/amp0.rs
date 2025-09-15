@@ -195,16 +195,13 @@ impl<S: Stream> Amp0<S> {
         let amp_id = subaccount.gaid.clone();
 
         // get blob
-        let blob = amp0.get_blob().await?;
+        let blob64 = amp0.get_blob().await?;
         // decrypt blob
         let wo_blob_key_hex = login_data
             .wo_blob_key
             .ok_or_else(|| Error::Generic("Missing wo_blob_key".into()))?;
         let enc_key = decrypt_blob_key(username, password, &wo_blob_key_hex)?;
-        let plaintext = decrypt_blob(&enc_key, &blob)?;
-        // parse blob
-        let value = parse_value(&plaintext)?;
-        let blob = Blob::from_value(&value)?;
+        let blob = Blob::from_base64(&blob64, &enc_key)?;
         // compute wallet descriptor
         let gait_path = &login_data.gait_path;
         let desc = amp_descriptor(&blob, amp_subaccount, &network, gait_path)?;
@@ -444,31 +441,28 @@ impl<S: Stream> Amp0Connected<S> {
         // TODO: check that login data is consistent with what we passed
         let (enc_key, hmac_key) = derive_blob_keys(self.signer_data.client_secret_xpub());
         let zero_hmac_b64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-        let blob = if login_data.client_blob_hmac == zero_hmac_b64 {
-            // No blob, create a new one
-            // construct blob
+        let (blob, hmac) = if login_data.client_blob_hmac == zero_hmac_b64 {
+            // No blob, create and set a new one
             let blob = Blob::new(&self.signer_data)?;
-            // encrypt blob
-            let value = blob.to_value()?;
-            let plaintext = from_value(&value)?;
-            let blob64 = encrypt_blob(&enc_key, &plaintext)?;
+            let blob64 = blob.to_base64(&enc_key)?;
             let hmac = compute_hmac(&hmac_key, &blob64)?;
-            // set client blob
             self.amp0.set_blob(&blob64, &hmac, zero_hmac_b64).await?;
-            blob
+            (blob, hmac)
         } else {
             // Get the blob
             let blob64 = self.amp0.get_blob().await?;
-            let plaintext = decrypt_blob(&enc_key, &blob64)?;
-            let value = parse_value(&plaintext)?;
-            Blob::from_value(&value)?
+            let blob = Blob::from_base64(&blob64, &enc_key)?;
+            let hmac = compute_hmac(&hmac_key, &blob64)?; // can be extracted from login data
+            (blob, hmac)
         };
-        // if needed upload confidential addressess
-        // amp0.upload_ca(subaccount.required_ca).await?;
+        // TODO: upload ca if needed
         Ok(Amp0LoggedIn {
             amp0: self.amp0,
             login_data,
             blob,
+            hmac,
+            enc_key: enc_key.to_vec(),
+            hmac_key: hmac_key.to_vec(),
         })
     }
 }
@@ -477,8 +471,12 @@ impl<S: Stream> Amp0Connected<S> {
 #[allow(unused)]
 pub struct Amp0LoggedIn<S: Stream> {
     amp0: Amp0Inner<S>,
+    //  TODO: consider parsing this data further
     login_data: LoginData,
     blob: Blob,
+    hmac: String,
+    enc_key: Vec<u8>,
+    hmac_key: Vec<u8>,
 }
 
 impl<S: Stream> Amp0LoggedIn<S> {

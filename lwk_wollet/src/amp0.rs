@@ -1119,6 +1119,13 @@ impl Blob {
         Ok(rmpv::ext::to_value(self)?)
     }
 
+    fn to_base64(&self, enc_key: &[u8]) -> Result<String, Error> {
+        let value = rmpv::ext::to_value(self)?;
+        let plaintext = from_value(&value)?;
+        let blob64 = encrypt_blob(&enc_key, &plaintext)?;
+        Ok(blob64)
+    }
+
     fn find_xpub(&self, amp_subaccount: u32) -> Option<Xpub> {
         for (k, v) in &self.xpubs {
             if let [cn1, cn2] = v[..] {

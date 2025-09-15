@@ -1141,7 +1141,7 @@ impl Blob {
     fn to_base64(&self, enc_key: &[u8]) -> Result<String, Error> {
         let value = rmpv::ext::to_value(self)?;
         let plaintext = from_value(&value)?;
-        let blob64 = encrypt_blob(&enc_key, &plaintext)?;
+        let blob64 = encrypt_blob(enc_key, &plaintext)?;
         Ok(blob64)
     }
 
@@ -1180,7 +1180,7 @@ impl Blob {
             }
 
             // Insert xpub in parsed struct
-            self.xpubs.insert(account_xpub.clone(), path);
+            self.xpubs.insert(*account_xpub, path);
         }
 
         Ok(())

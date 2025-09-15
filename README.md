@@ -138,23 +138,3 @@ str(lwk.Network.mainnet())
 * [Manual coin selection](./lwk_bindings/tests/bindings/manual_coin_selection.py) shows how to manually select coins for transactions
 * [Multisig](./lwk_bindings/tests/bindings/multisig.py) demonstrates multisignature wallet setup and usage
 * [PSET details](./lwk_bindings/tests/bindings/pset_details.py) shows how to inspect and work with Partially Signed Elements Transactions
-
-### Kotlin
-
-#### Build
-
-This will build the bindings library in debug mode and generate the kotlin file
-
-```shell
-just kotlin
-```
-
-Create android bindings library libs, 4 architectures in release mode
-
-```shell
-just android
-```
-
-#### Kotlin Examples
-
-* [List transactions](./lwk_bindings/tests/bindings/list_transactions.kts) of a wpkh/slip77 wallet

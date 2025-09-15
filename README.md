@@ -276,11 +276,3 @@ When you're done, stop the rpc server.
 ```sh
 $ lwk_cli server stop
 ```
-
-## Docs
-
-To generate documentation you can use
-
-```
-RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features --no-deps --open
-```

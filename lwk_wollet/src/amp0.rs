@@ -510,10 +510,24 @@ impl<S: Stream> Amp0LoggedIn<S> {
     ///
     /// `account_xpub` must be obtained from [`lwk_common::Amp0Signer::amp0_account_xpub()`] called with the value obtained from
     /// [`Amp0LoggedIn::next_account()`]
-    pub async fn create_amp0_account(&self, _account_xpub: &Xpub) -> Result<String, Error> {
-        // com.greenaddress.txs.create_subaccount_v2
-        // com.greenaddress.login.set_client_blob
-        todo!();
+    pub async fn create_amp0_account(
+        &mut self,
+        pointer: u32,
+        account_xpub: &Xpub,
+    ) -> Result<String, Error> {
+        let amp_id = self.amp0.create_amp0_account(pointer, account_xpub).await?;
+        self.login_data.subaccounts.push(GreenSubaccount {
+            pointer,
+            type_: "2of2_no_recovery".into(),
+            gaid: amp_id.clone(),
+            required_ca: 0, // TODO
+        });
+        self.blob.add_account_xpub(pointer, account_xpub)?;
+        let blob64 = self.blob.to_base64(&self.enc_key)?;
+        let hmac = compute_hmac(&self.hmac_key, &blob64)?;
+        self.amp0.set_blob(&blob64, &hmac, &self.hmac).await?;
+        self.hmac = hmac;
+        Ok(amp_id)
     }
 
     /// Create a new Watch-Only entry for this wallet
@@ -1543,9 +1557,13 @@ pub mod blocking {
             self.inner.next_account()
         }
 
-        pub fn create_amp0_account(&self, account_xpub: &Xpub) -> Result<String, Error> {
+        pub fn create_amp0_account(
+            &mut self,
+            pointer: u32,
+            account_xpub: &Xpub,
+        ) -> Result<String, Error> {
             self.rt
-                .block_on(self.inner.create_amp0_account(account_xpub))
+                .block_on(self.inner.create_amp0_account(pointer, account_xpub))
         }
 
         pub fn create_watch_only(&self, username: &str, password: &str) -> Result<(), Error> {

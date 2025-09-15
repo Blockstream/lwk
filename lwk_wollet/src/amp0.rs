@@ -847,6 +847,31 @@ impl<S: Stream> Amp0Inner<S> {
         let amp_id: String = rmpv::ext::from_value(v)?;
         Ok(amp_id)
     }
+
+    /// Create watch only
+    pub async fn create_watch_only(
+        &self,
+        hashed_username: &str,
+        hashed_password: &str,
+        wo_blob_key_hex: &str,
+    ) -> Result<(), Error> {
+        let request = WampId::generate();
+        let args = vec![
+            hashed_username.into(),
+            hashed_password.into(),
+            wo_blob_key_hex.into(),
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.addressbook.sync_custom".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        // Returns true or raise an error
+        let _ = self.call(msg).await?;
+        Ok(())
+    }
 }
 
 fn get_entropy(username: &str, password: &str) -> [u8; 64] {

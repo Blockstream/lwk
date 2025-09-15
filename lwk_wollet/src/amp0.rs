@@ -1083,8 +1083,17 @@ impl Blob {
         Ok(blob)
     }
 
+    #[allow(unused)]
     fn from_value(value: &rmpv::Value) -> Result<Self, Error> {
         let mut blob: Self = rmpv::ext::from_value(value.clone())?;
+        blob.set_fields()?;
+        Ok(blob)
+    }
+
+    fn from_base64(blob64: &str, enc_key: &[u8]) -> Result<Self, Error> {
+        let plaintext = decrypt_blob(enc_key, blob64)?;
+        let value = parse_value(&plaintext)?;
+        let mut blob: Self = rmpv::ext::from_value(value)?;
         blob.set_fields()?;
         Ok(blob)
     }

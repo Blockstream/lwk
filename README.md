@@ -177,8 +177,3 @@ C# bindings use dotnet SDK 6.0, they are very immature at the moment:
 - The dynamic library is referenced in a non-standard way
 
 * [List transactions](./lwk_bindings/tests/bindings/list_transactions.cs) of a wpkh/slip77 wallet
-
-### WASM
-
-We currently provide preliminary support but are committed to continue working on this to have a fully featured LWK working on WASM environments.
-[See these instructions to try out LWK on WASM](./lwk_wasm)

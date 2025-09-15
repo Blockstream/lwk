@@ -821,6 +821,32 @@ impl<S: Stream> Amp0Inner<S> {
         let _ = self.call(msg).await?;
         Ok(())
     }
+
+    /// Create subaccount
+    pub async fn create_amp0_account(
+        &self,
+        pointer: u32,
+        subaccount_xpub: &Xpub,
+    ) -> Result<String, Error> {
+        let request = WampId::generate();
+        let args = vec![
+            pointer.into(),
+            "".into(),                         // name
+            "2of2_no_recovery".into(),         // type
+            to_value(&vec![subaccount_xpub])?, // xpubs
+            to_value(&vec!["".to_string()])?,  // sigs
+        ];
+        let msg = Msg::Call {
+            request,
+            options: WampDict::new(),
+            procedure: "com.greenaddress.txs.create_subaccount_v2".to_owned(),
+            arguments: Some(args),
+            arguments_kw: None,
+        };
+        let v = self.call(msg).await?;
+        let amp_id: String = rmpv::ext::from_value(v)?;
+        Ok(amp_id)
+    }
 }
 
 fn get_entropy(username: &str, password: &str) -> [u8; 64] {

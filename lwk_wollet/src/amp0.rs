@@ -2286,5 +2286,17 @@ mod tests {
             blob.watchonly.get("username").unwrap().to_string(),
             "\"testenckey2\""
         );
+
+        // Create subaccount
+        let blob64 = "hwZ89hWUsWCWMInEOkxBztqG+K9dsE0tL+H4fwzxIyUyDf3J545Ski9MYjLS6uuAYsuhXdRUsoVtJZhJOBTziVoTYXHs+M4V+KZWAfJeHZflL5ViWFvbnEGil8occK8QeEzzjg4dD8uzSb+DLhDyVE9CTXxG8eaMklKgQ5+tZ6XWR4WBKlA4O6gf4VaIIjkaRKNgOB6PaJC2X5NZNBlSPM+2gNfaL3E9J6pwXlqrBOzN3F7SCny3+LWmUdJTwPrZqKDTPGjXTZgFyrofkBeNyFtyoziSI9TsmXppBaLWpRy4EZPHHOZmFeXhPmjmIiasq4p1lIfVkMyk3HWb3tV7lcg0O57Ghp173gWbRqY0iDn3w8F8Z31jMpKbADP2DPRVQHPst4cqEjmCAmzi3AipeX913ZTtHOIXxWAuzQvpERyfV7GjQfMpjc985JMwNJijMedq0cYPuOPUKkmoSgTZVzNL2/Gh5csfZ+8K5u5wwGF09ZSAKhty0anWwv7S6ALe4HuuMa6dU2LXpYClrtel7QY1aPbZBuIZdIW6tWvU7uJR5j6NsA5V+3N/gn4YVzpZEX5FOd0AowFqi1XaCJ7UhPBqgXr8ODCi7PdXaMVRvt7pb4o2pVM+8cdDLePYQEesIB6m8P93fDen0zk9W01xNtJeDX7KJTT+DDu7zN2hg+yzXEF6g1aDQzP5oPrRssXrf4g/IPDxCVepQ+kEFC5wpNEREQNPqnCVoTdVdSKKimexjVyxl6ygKjtSnJIvhOq6MC99/MO0m6oILA4uxXwCFA==";
+        let hmac = "L+stojS55bSdNL7ke9KQkvyI7m3AAGLUwmCaPeYtf8A=";
+        assert_eq!(compute_hmac(&hmac_key, blob64).unwrap(), hmac);
+        let blob = Blob::from_base64(blob64, &enc_key).unwrap();
+
+        assert_eq!(blob.xpubs.len(), 4);
+        let account_xpub = erase_parent_fp(&signer.amp0_account_xpub(1).unwrap());
+        assert!(blob.xpubs.contains_key(&account_xpub));
+
+        assert_eq!(blob.watchonly.len(), 2);
     }
 }

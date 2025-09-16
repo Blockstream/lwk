@@ -2271,5 +2271,20 @@ mod tests {
         assert_eq!(blob.watchonly.len(), 1);
         assert!(blob.watchonly.contains_key("xpubs"));
         // No username key
+
+        // Create watch only
+        let blob64 = "xDNNtfairFXjFrV38FFCAtztjoJB0g1upBcra6Ug5Pg2q++/7iIhCXcBeZKAOoL3ao64g3vCF2uEsE8lJTPllyP5yU6wKHiskCt4ds7C889kMBG7XRY3q8feed8c54sYxxCZFLdLgi4O3YyETdpPtVn8nbPEGi2gky+PIZTlwl0ngw4obr+joOr3gfcnefDIMm6/2crTXdDQjxMccB+eWLPUpaGEoUcf4hvy8ZeZ5FIgUcn+iRaOqNpq9BMXo9o0d2WhqFILqe5QIk/wsVT7sT/OY3EQ3FB4tHSewuuwQb7I4V6Ri7Ykf1vzvg4GYvjbaUhOSBD3MIn1QigEtt2RjevI9lLox1qzALGJWViz6HDZ5xy5G8mpMpBKka2pb9H+eX5Po13vyOsqQGrvd53AVYkQIMWUSKLRj/KlI+6dKmY3LQWevxPKMoF8VUmGgjwmHOciHzKTcGKwWFcwI7P+1SkUlGzsrINYvSFD3D9HRVwebYICT0vf8rQMbYeDMe1D25Yy9QWcNIL+fa6As/zQblncoiZUqlxUNuv0CqAAvpQcxBkqIbD0Mscrcp4ZIhcFpcrrqAohLswxi3c8BAbuxpudV14zbcNp63GBzuA2JauYfxjPnxAizhMvRZ9RS5Be7zAPYP1heV73XQ==";
+        let hmac = "H3iXm81gKH579Jv16ilQxxR6HYD04IwiQ38xdK9KtmA=";
+        assert_eq!(compute_hmac(&hmac_key, blob64).unwrap(), hmac);
+        let blob = Blob::from_base64(blob64, &enc_key).unwrap();
+
+        assert_eq!(blob.xpubs.len(), 3); // master, login, client secret
+
+        assert_eq!(blob.watchonly.len(), 2);
+        assert!(blob.watchonly.contains_key("xpubs"));
+        assert_eq!(
+            blob.watchonly.get("username").unwrap().to_string(),
+            "\"testenckey2\""
+        );
     }
 }

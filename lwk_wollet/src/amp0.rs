@@ -2248,5 +2248,28 @@ mod tests {
         let signer = SwSigner::new(mnemonic, false).unwrap();
         let signer_data = signer.amp0_signer_data().unwrap();
         let (enc_key, hmac_key) = derive_blob_keys(signer_data.client_secret_xpub());
+
+        // No watch only, no AMP0 account
+        let blob64 = "VDdsBF30NkJiA77X9Ynv87U/NZsqSu+ENXCDljDc+SgIppjAjySP7+CZQiZXDBaOMjtCVuqRLUjA8zpOQ9CjWlfiftLzrSe9k+sZXVK0/9hl0oLpz5Euh7CL7T+Hqlk/TqXNAZBgwmnpx8y0XThJqNFo07IAgR9ByAoqSY/t/cC5ltVSdWUqsY5u1ZQM7y+UN3YPDudWFAhfGe3GiQA8+PYCBMo9+OPNwKCZwr3Vt2iuPj/p3KUxG6xpFb08byf7yONCYrRQA65Gyvn4hVnujDu9X8rTM3pZA138ecboEbW1mmUFz4TZs9xyKRWPoxOq/eeBh55j5twvN9Uuo8nOwYUhBg0kpt29dU9X8H3zy4rIMVbDSjmcyeFmK+Zx4qDbScZ/9hwHv2aBZVbg3wnMgTdwg0Ss+zp1yAOSqxik56sd25EZHCE4i/2zxysCWjxpsZMtswWeRCba27OQem2RoPs7rWIyyFQ5GDnyI6TxxfCsiZBvb8UlLA/DRJJGPgN+IvVOk8HIfB4HOkKvPc//8GBva7fciS+IJF93frQOVUyLlSVHX9ungz5O4+07LpfiX48cVYrRiLLQ8P5Iura6i2/cAw2IBo94FLEt8jbCSATCoV+HU8dO";
+        let hmac = "gfXz+WTkXVWWhtDLkI6lnf9Zq2hqs9Iu7+YMySaPkY0=";
+        assert_eq!(compute_hmac(&hmac_key, blob64).unwrap(), hmac);
+        let blob = Blob::from_base64(blob64, &enc_key).unwrap();
+
+        assert_eq!(blob.xpubs.len(), 3); // master, login, client secret
+        fn erase_parent_fp(xpub: &Xpub) -> Xpub {
+            let mut xpub = xpub.clone();
+            xpub.parent_fingerprint = Default::default();
+            xpub
+        }
+        let master_xpub = erase_parent_fp(signer_data.master_xpub());
+        let login_xpub = erase_parent_fp(signer_data.login_xpub());
+        let client_secret_xpub = erase_parent_fp(signer_data.client_secret_xpub());
+        assert!(blob.xpubs.contains_key(&master_xpub));
+        assert!(blob.xpubs.contains_key(&login_xpub));
+        assert!(blob.xpubs.contains_key(&client_secret_xpub));
+
+        assert_eq!(blob.watchonly.len(), 1);
+        assert!(blob.watchonly.contains_key("xpubs"));
+        // No username key
     }
 }

@@ -14,7 +14,15 @@ LWK is available for several languages.
 
 ## C#
 
-## rust
+## Rust
+You can use the crates released on [crates.io](https://crates.io)
+
+```
+[dependencies]
+lwk_wollet = "0.11.0"
+lwk_signer = "0.11.0"
+lwk_common = "0.11.0"
+```
 
 ## Flutter/Dart
 

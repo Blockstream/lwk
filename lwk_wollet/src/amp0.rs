@@ -2257,7 +2257,7 @@ mod tests {
 
         assert_eq!(blob.xpubs.len(), 3); // master, login, client secret
         fn erase_parent_fp(xpub: &Xpub) -> Xpub {
-            let mut xpub = xpub.clone();
+            let mut xpub = *xpub;
             xpub.parent_fingerprint = Default::default();
             xpub
         }

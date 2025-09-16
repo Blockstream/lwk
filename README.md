@@ -7,9 +7,7 @@
     <strong>Liquid Wallets Made Easy</strong>
   </p>
 
-  <h4>
-    [Documentation](docs/summary.md)
-  </h4>
+  <p> <strong> <a href="docs/summary.md">Documentation</a> </strong> </p>
 </div>
 
 ## About

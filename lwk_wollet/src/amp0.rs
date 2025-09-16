@@ -129,7 +129,6 @@ struct LoginData {
 /// cannot be spent!
 /// </i>
 /// </div>
-#[allow(unused)]
 pub struct Amp0<S: Stream> {
     /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
     wollet_descriptor: WolletDescriptor,
@@ -306,7 +305,6 @@ impl<S: Stream> Amp0<S> {
     }
 
     // Green backend http URL
-    #[allow(unused)]
     fn http_url(&self) -> &'static str {
         match self.network {
             Network::Liquid => "https://green-liquid-mainnet.blockstream.com",
@@ -468,7 +466,6 @@ impl<S: Stream> Amp0Connected<S> {
 }
 
 /// Session logged in to AMP0
-#[allow(unused)]
 pub struct Amp0LoggedIn<S: Stream> {
     amp0: Amp0Inner<S>,
     //  TODO: consider parsing this data further
@@ -717,7 +714,6 @@ impl<S: Stream> Amp0Inner<S> {
         };
         let v = self.call(msg).await?;
 
-        #[allow(unused)]
         #[derive(Deserialize)]
         struct AddressData {
             branch: u32,
@@ -988,7 +984,6 @@ fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     Ok(plaintext)
 }
 
-#[allow(unused)]
 fn encrypt_blob(enc_key: &[u8], plaintext: &[u8]) -> Result<String, Error> {
     let cipher = blob_cipher(enc_key)?;
 
@@ -1014,7 +1009,6 @@ fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
     Ok(value)
 }
 
-#[allow(unused)]
 fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
     // json to messagePack
     let mut v = Vec::new();
@@ -1022,7 +1016,7 @@ fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
 
     // compress
     use flate2::{read::ZlibEncoder, Compression};
-    let mut cursor = std::io::Cursor::new(v);
+    let cursor = std::io::Cursor::new(v);
     let mut z = ZlibEncoder::new(cursor, Compression::best());
     let mut compressed = Vec::new();
     compressed.extend(vec![1, 0, 0, 0]);
@@ -1686,7 +1680,6 @@ fn unblind_with_shared_secret(
     })
 }
 
-#[allow(unused)]
 fn derive_gait_path(xpub: &Xpub) -> String {
     // expected xpub is m/18241h
     // chaincode + pubkey;
@@ -1703,7 +1696,6 @@ fn derive_gait_path(xpub: &Xpub) -> String {
     hex::encode(&gait_path_bytes)
 }
 
-#[allow(unused)]
 fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
     let mut blob_keys = [0u8; 64];
 
@@ -1715,7 +1707,6 @@ fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
     (enc_key, hmac_key)
 }
 
-#[allow(unused)]
 fn compute_hmac(hmac_key: &[u8], blob64: &str) -> Result<String, Error> {
     let blob = BASE64_STANDARD
         .decode(blob64)
@@ -1727,7 +1718,6 @@ fn compute_hmac(hmac_key: &[u8], blob64: &str) -> Result<String, Error> {
     Ok(BASE64_STANDARD.encode(hmac_bytes))
 }
 
-#[allow(unused)]
 fn encrypt_blob_key(username: &str, password: &str, enc_key: &[u8]) -> Result<String, Error> {
     let entropy = get_entropy(username, password);
     let mut wo_aes_key = [0u8; 32];

@@ -2236,4 +2236,17 @@ mod tests {
         // Use watch only credentials to interact with AMP0
         let _amp0 = blocking::Amp0::new(network, &username, &password, &amp_id).unwrap();
     }
+
+    #[test]
+    fn test_amp0_blobs_from_gdk() {
+        // Check that we can correctly read blobs created by GDK
+        use lwk_common::Amp0Signer;
+        use lwk_signer::SwSigner;
+
+        // Create signer and derive the blob keys
+        let mnemonic = "deny forum retreat basic step cook boring say october owner fun trade";
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+        let signer_data = signer.amp0_signer_data().unwrap();
+        let (enc_key, hmac_key) = derive_blob_keys(signer_data.client_secret_xpub());
+    }
 }

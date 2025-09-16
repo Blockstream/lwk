@@ -19,3 +19,8 @@ LWK is available for several languages.
 ## Flutter/Dart
 
 ## Python
+You can use the official python package: [lwk](https://pypi.org/project/lwk/)
+
+```
+pip install lwk
+```

@@ -3,6 +3,7 @@
 * [Overview](overview.md) ❌
 * [Architecture](arch.md) 🚧
 * [Features](features.md) 🚧
+* [Install](install.md) ❌
 * [Basics](basics.md) ❌
   * [Signers](signer.md) ❌
   * [Watch-Only Wallets](wollet.md) ❌

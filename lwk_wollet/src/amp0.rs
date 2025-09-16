@@ -33,6 +33,7 @@ use elements::bitcoin::bip32::{ChainCode, ChildNumber, Fingerprint};
 use elements::bitcoin::network::NetworkKind;
 use elements::bitcoin::secp256k1::PublicKey;
 use elements::encode::{deserialize, serialize};
+use elements::hashes::sha256;
 use elements::hex::{FromHex, ToHex};
 use elements::pset::PartiallySignedTransaction;
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, SecretKey};
@@ -1697,13 +1698,13 @@ fn derive_gait_path(xpub: &Xpub) -> String {
 }
 
 fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
-    let mut blob_keys = [0u8; 64];
+    let mut tmp_key = [0u8; 64];
 
     let pubkey = client_secret_xpub.public_key.serialize();
-    let _ = pbkdf2::<Hmac<Sha512>>(&pubkey, &BLOB_SALT, 2048, &mut blob_keys);
+    let _ = pbkdf2::<Hmac<Sha512>>(&pubkey, &BLOB_SALT, 2048, &mut tmp_key);
 
-    let enc_key = blob_keys[..32].to_vec();
-    let hmac_key = blob_keys[32..].to_vec();
+    let enc_key = sha256::Hash::hash(&tmp_key[32..]).to_byte_array().to_vec();
+    let hmac_key = tmp_key[32..].to_vec();
     (enc_key, hmac_key)
 }
 

@@ -11,6 +11,7 @@
   * [Transaction Signing](sign.md) ❌
   * [Transaction Broadcast](broadcast.md) ❌
 * [Advanced](advanced.md) ❌
+  * [CLI](cli.md) 🚧
   * [Multisig](multisig.md) ❌
   * [Explicit](explicit.md) ❌
   * [AMP0](amp0.md) ✅

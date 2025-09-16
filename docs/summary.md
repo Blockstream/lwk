@@ -12,6 +12,7 @@
   * [Transaction Broadcast](broadcast.md) ❌
 * [Advanced](advanced.md) ❌
   * [Multisig](multisig.md) ❌
+  * [Explicit](explicit.md) ❌
   * [AMP0](amp0.md) ✅
   * [AMP2](amp2.md) ❌
   * [Jade](jade.md) ❌

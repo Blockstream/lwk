@@ -281,6 +281,7 @@ impl Registry {
         Ok(Self::new(network_default_url(network)?))
     }
 
+    /// Fetch the contract, the issuance transaction and the issuance prevout of the given asset id from the registry
     pub async fn fetch(&self, asset_id: AssetId) -> Result<RegistryData, Error> {
         // TODO should discriminate between 404 and other errors
         let url = format!("{}/{}", self.base_url.trim_end_matches("/"), asset_id);
@@ -353,6 +354,7 @@ pub mod blocking {
             })
         }
 
+        /// Fetch the contract, the issuance transaction and the issuance prevout of the given asset id from the registry
         pub fn fetch(&self, asset_id: AssetId) -> Result<super::RegistryData, Error> {
             self.rt.block_on(self.inner.fetch(asset_id))
         }

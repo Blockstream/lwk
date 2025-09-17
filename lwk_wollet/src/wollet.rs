@@ -249,6 +249,7 @@ impl Wollet {
         Ok(wollet)
     }
 
+    /// Whether the wallet is segwit (BIP141)
     pub fn is_segwit(&self) -> bool {
         self.descriptor()
             .descriptor

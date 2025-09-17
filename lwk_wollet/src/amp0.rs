@@ -1013,7 +1013,7 @@ fn parse_value(blob: &[u8]) -> Result<rmpv::Value, Error> {
 fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
     // json to messagePack
     let mut v = Vec::new();
-    rmpv::encode::write_value(&mut v, value).expect("TODO: leo");
+    rmpv::encode::write_value(&mut v, value)?;
     let bytes_len = v.len() as u32;
 
     // compress

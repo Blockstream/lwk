@@ -76,6 +76,7 @@ pub struct Update {
 }
 
 impl Update {
+    /// Whether this update only changes the tip
     pub fn only_tip(&self) -> bool {
         self.new_txs.is_empty()
             && self.txid_height_new.is_empty()

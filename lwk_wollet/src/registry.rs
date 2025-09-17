@@ -484,9 +484,12 @@ pub struct RegistryData {
     pub issuance_prevout: IssuancePrevout,
 }
 
+/// The outpoint creating the issuance (the output spent to create the issuance)
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct IssuancePrevout {
+    /// Get the transaction id of the outpoint creating the issuance
     pub txid: Txid,
+    /// Get the output index of the outpoint creating the issuance
     pub vout: u32,
 }
 

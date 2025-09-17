@@ -289,6 +289,7 @@ impl Registry {
         Ok(data)
     }
 
+    /// Fetch the contract and the issuance transaction of the given asset id from the registry
     pub async fn fetch_with_tx(
         &self,
         asset_id: AssetId,
@@ -356,6 +357,7 @@ pub mod blocking {
             self.rt.block_on(self.inner.fetch(asset_id))
         }
 
+        /// Fetch the contract and the issuance transaction of the given asset id from the registry
         pub fn fetch_with_tx(
             &self,
             asset_id: AssetId,

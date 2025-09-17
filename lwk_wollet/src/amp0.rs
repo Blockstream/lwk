@@ -1014,6 +1014,7 @@ fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
     // json to messagePack
     let mut v = Vec::new();
     rmpv::encode::write_value(&mut v, value).expect("TODO: leo");
+    let bytes_len = v.len() as u32;
 
     // compress
     use flate2::{read::ZlibEncoder, Compression};
@@ -1021,8 +1022,7 @@ fn from_value(value: &rmpv::Value) -> Result<Vec<u8>, Error> {
     let mut z = ZlibEncoder::new(cursor, Compression::best());
     let mut compressed = Vec::new();
     compressed.extend(vec![1, 0, 0, 0]);
-    // TODO: set correct value (len?)
-    compressed.extend(vec![0, 0, 0, 0]);
+    compressed.extend(bytes_len.to_le_bytes());
     z.read_to_end(&mut compressed)?;
 
     Ok(compressed)

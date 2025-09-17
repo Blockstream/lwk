@@ -95,6 +95,9 @@ impl Contract {
         Ok(())
     }
 
+    /// Compute the hash of the contract from its JSON representation
+    ///
+    /// The asset id and the reissuance token id are committed to this hash.
     pub fn contract_hash(&self) -> Result<ContractHash, Error> {
         let value = serde_json::to_value(self)?;
         contract_json_hash(&value)

@@ -960,6 +960,8 @@ impl Wollet {
         Ok(pset.extract_tx()?)
     }
 
+    /// Get all the persisted updates of this wallet.
+    /// Applying in the same order these updates to an empty wallet, recreates this wallet state.
     pub fn updates(&self) -> Result<Vec<Update>, PersistError> {
         let mut updates = vec![];
         for i in 0.. {

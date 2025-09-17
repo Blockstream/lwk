@@ -267,6 +267,7 @@ impl Wollet {
         self.max_weight_to_satisfy
     }
 
+    /// Get a concise state of the wallet, allowing to perform a scan (like [`crate::clients::blocking::BlockchainBackend::full_scan()`]) without holding the lock on the wallet.
     pub fn state(&self) -> WolletConciseState {
         let cache = &self.store.cache;
         WolletConciseState {

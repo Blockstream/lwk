@@ -17,5 +17,5 @@ session.login_user({}, sk_credentials).resolve()  # login and authenticate using
 session.create_subaccount({"name": "amp", "type": "2of2_no_recovery"}).resolve()  # create AMP account
 session.register_user({}, wo_credentials).resolve()  # register watch only
 
-sessiom_wo = gdk.Session({"name": network})  # connect to green backend
+session_wo = gdk.Session({"name": network})  # connect to green backend
 session_wo.login_user({}, wo_credentials).resolve()  # login with watch only credentials

@@ -269,6 +269,7 @@ impl RegistryPost {
 }
 
 impl Registry {
+    /// Create a new registry with the given base URL, use [`Self::default_for_network()`] to get the default registry for the given network
     pub fn new(base_url: &str) -> Self {
         Self {
             client: reqwest::Client::new(),
@@ -341,6 +342,7 @@ pub mod blocking {
     }
 
     impl Registry {
+        /// Create a new registry with the given base URL, use [`Self::default_for_network()`] to get the default registry for the given network
         pub fn new(base_url: &str) -> Result<Self, Error> {
             Ok(Self {
                 inner: super::Registry::new(base_url),

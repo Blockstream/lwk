@@ -161,6 +161,9 @@ fn init_cache() -> (HashMap<AssetId, RegistryData>, HashMap<AssetId, AssetId>) {
 }
 
 impl RegistryCache {
+    /// Create a new registry cache, using only the hardcoded assets.
+    ///
+    /// Hardcoded assets are the policy assets (LBTC, tLBTC, rLBTC) and the USDT asset on mainnet.
     pub fn new_hardcoded(registry: Registry) -> Self {
         let (cache, token_cache) = init_cache();
         Self {
@@ -169,6 +172,8 @@ impl RegistryCache {
             token_cache,
         }
     }
+
+    /// Create a new registry cache, fetching the given `asset_ids` metadata from the given registry with the given `concurrency`.
     pub async fn new(registry: Registry, asset_ids: &[AssetId], concurrency: usize) -> Self {
         let (mut cache, mut token_cache) = init_cache();
         let keys = cache.keys().cloned().collect::<Vec<_>>();

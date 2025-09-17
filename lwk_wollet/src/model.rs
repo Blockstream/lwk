@@ -227,13 +227,28 @@ impl BitcoinAddressResult {
 /// Value returned from [`crate::Wollet::issuance()`] containing details about an issuance
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IssuanceDetails {
+    /// Transaction id containing the issuance
     pub txid: Txid,
+
+    /// Input index containing the issuance
     pub vin: u32,
+
+    /// Entropy of the issuance
     pub entropy: [u8; 32],
+
+    /// Asset id of the asset emitted
     pub asset: AssetId,
+
+    /// Asset id of the reissuance token
     pub token: AssetId,
+
+    /// Amount of asset emitted
     pub asset_amount: Option<u64>,
+
+    /// Amount of reissuance token emitted
     pub token_amount: Option<u64>,
+
+    /// Whether the issuance is a reissuance
     pub is_reissuance: bool,
     // asset_blinder
     // token_blinder

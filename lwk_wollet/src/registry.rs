@@ -56,12 +56,29 @@ impl Entity {
 /// A contract defining metadata of an asset such the name and the ticker
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Contract {
+    /// The entity of the asset, such as the domain of the issuer
     pub entity: Entity,
+
     #[serde(deserialize_with = "serde_from_hex", serialize_with = "serde_to_hex")]
+    /// The public key of the issuer, 33 bytes long.
     pub issuer_pubkey: Vec<u8>,
+
+    /// The name of the asset
+    ///
+    /// The name must be 1 to 255 characters long and can only contain ASCII characters.
     pub name: String,
+
+    /// The precision of the asset, such as 8 for Liquid Bitcoin.
+    /// 100 satoshi of an assets with precision 2 is shown as "1.00"
+    /// Maximum precision is 8.
     pub precision: u8,
+
+    /// The ticker of the asset.
+    ///
+    /// The ticker must be 3 to 24 characters long and can only contain letters, numbers, dots and hyphens.
     pub ticker: String,
+
+    /// The version of the contract, currently only 0 is supported
     pub version: u8,
 }
 

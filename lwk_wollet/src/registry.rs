@@ -83,10 +83,15 @@ pub struct Contract {
 }
 
 impl Contract {
+    /// Create a new contract from a JSON value, doesn't validate the contract, use [`Self::validate()`] to validate the contract.
     pub fn from_value(value: &Value) -> Result<Self, Error> {
         Ok(serde_json::from_value(value.clone())?)
     }
 
+    /// Validate the contract against the rules of the registry
+    ///
+    /// If this method doesn't error the contract is semantically valid.
+    /// Its publication can still fail when published if the proof on the domain is not valid.
     pub fn validate(&self) -> Result<(), Error> {
         if self.version != 0 {
             return Err(Error::InvalidVersion);

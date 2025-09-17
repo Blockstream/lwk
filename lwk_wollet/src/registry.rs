@@ -437,24 +437,34 @@ pub struct IssuancePrevout {
 }
 
 impl RegistryData {
+    /// Get the precision of the asset as specified in the contract.
+    ///
+    /// The precision is the number of decimals of the asset. For example, 8 for Liquid Bitcoin.
+    ///
+    /// 100 satoshi of an assets with precision 2 is shown as "1.00"
     pub fn precision(&self) -> u8 {
         self.contract.precision
     }
 
+    /// Get the ticker of the asset as specified in the contract.
     pub fn ticker(&self) -> &str {
         &self.contract.ticker
     }
 
+    /// Get the name of the asset as specified in the contract.
     pub fn name(&self) -> &str {
         &self.contract.name
     }
 
+    /// Get the domain of the asset as specified in the contract.
+    /// The registry doesn't allow to publish an asset with a domain without a proof on the domain itself.
     pub fn domain(&self) -> &str {
         match &self.contract.entity {
             Entity::Domain(domain) => domain,
         }
     }
 
+    /// Get the issuance transaction previous output.
     pub fn issuance_prevout(&self) -> OutPoint {
         OutPoint {
             txid: self.issuance_prevout.txid,
@@ -462,6 +472,7 @@ impl RegistryData {
         }
     }
 
+    /// Get the entropy of the issuance transaction, used to compute the asset id and the reissuance token id.
     pub fn entropy(&self) -> Result<Midstate, Error> {
         Ok(AssetId::generate_asset_entropy(
             self.issuance_prevout(),
@@ -469,11 +480,13 @@ impl RegistryData {
         ))
     }
 
+    /// Get the asset id of this asset
     pub fn asset_id(&self) -> Result<AssetId, Error> {
         let entropy = self.entropy()?;
         Ok(AssetId::from_entropy(entropy))
     }
 
+    /// Get the asset id of the reissuance token of this asset
     pub fn token_id(&self) -> Result<AssetId, Error> {
         let entropy = self.entropy()?;
         Ok(AssetId::reissuance_token_from_entropy(

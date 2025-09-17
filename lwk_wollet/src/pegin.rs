@@ -24,6 +24,7 @@ pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
 }
 
 // TODO move this in the trait
+/// Fetch the last full header, the full header is the header with the fed peg script which is not always present.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fetch_last_full_header<B: crate::clients::blocking::BlockchainBackend>(
     client: &B,

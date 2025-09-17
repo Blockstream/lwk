@@ -407,6 +407,9 @@ pub fn issuance_ids(
     Ok((asset_id, token_id))
 }
 
+/// Compute the hash of the contract from its JSON representation
+///
+/// The asset id and the reissuance token id are committed to this hash.
 pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     let contract_str = serde_json::to_string(contract)?;
 

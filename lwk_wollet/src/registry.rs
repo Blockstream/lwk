@@ -423,10 +423,16 @@ pub struct TxIn {
     pub vin: u32,
 }
 
+/// The data related to an issued asset with a contract in the registry.
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct RegistryData {
+    /// The contract of the asset, with details about the asset such as the name, the ticker, the precision, etc.
     pub contract: Contract,
+
+    /// The input containing the issuance
     pub issuance_txin: TxIn,
+
+    /// The outpoint creating the issuance (the output spent to create the issuance)
     pub issuance_prevout: IssuancePrevout,
 }
 

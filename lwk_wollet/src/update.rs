@@ -57,6 +57,7 @@ impl DownloadTxResult {
 /// contains the delta of information to be applied to the wallet to reach the latest status.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {
+    /// The version of the update
     pub version: u8,
 
     /// The status of the wallet this update is generated from
@@ -64,14 +65,23 @@ pub struct Update {
     /// If 0 means it has been deserialized from a V0 version
     pub wollet_status: u64,
 
+    /// The new transactions
     pub new_txs: DownloadTxResult,
+
+    /// The new transaction with confirmation heights (or None if not confirmed)
     pub txid_height_new: Vec<(Txid, Option<Height>)>,
+
+    /// The transaction ids to delete, for example after a reorg or a replace by fee.
     pub txid_height_delete: Vec<Txid>,
+
+    /// The timestamps of the transactions, more precisely the timestamp of the block containing the transaction
     pub timestamps: Vec<(Height, Timestamp)>,
 
     /// The script pub key with the chain, the child number and the blinding pubkey
     /// The blinding pubkey is optional for backward compatibility reasons
     pub scripts_with_blinding_pubkey: Vec<(Chain, ChildNumber, Script, Option<BlindingPublicKey>)>,
+
+    /// The tip of the blockchain at the time the update was generated
     pub tip: BlockHeader,
 }
 

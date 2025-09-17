@@ -299,6 +299,7 @@ impl Registry {
         Ok((data.contract, tx))
     }
 
+    /// Post a contract to the registry
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         let response = self.client.post(&self.base_url).json(&data).send().await?;
         let status = response.status();
@@ -363,6 +364,7 @@ pub mod blocking {
             self.rt.block_on(self.inner.fetch_with_tx(asset_id, client))
         }
 
+        /// Post a contract to the registry
         pub fn post(&self, data: &RegistryPost) -> Result<(), Error> {
             self.rt.block_on(self.inner.post(data))
         }

@@ -606,6 +606,8 @@ fn usdt() -> (AssetId, RegistryData) {
     (asset_id, data)
 }
 
+/// Add the contracts information of the given assets to the partially signed transaction. Following the ELIP0100 specification.
+/// Without the contract information, the partially signed transaction is valid but will not show asset information when signed with an hardware wallet.
 pub fn add_contracts<'a>(
     pset: &mut PartiallySignedTransaction,
     assets: impl Iterator<Item = &'a RegistryAssetData>,

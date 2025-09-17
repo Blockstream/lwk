@@ -14,6 +14,7 @@ fn height_with_fed_peg_script(network: crate::ElementsNetwork, current_tip: u32)
     (current_tip / network.dynamic_epoch_length()) * network.dynamic_epoch_length()
 }
 
+/// Fetch the fed peg script from the header
 pub fn fed_peg_script(header: &BlockHeader) -> Option<bitcoin::ScriptBuf> {
     match &header.ext {
         elements::BlockExtData::Proof { .. } => None,

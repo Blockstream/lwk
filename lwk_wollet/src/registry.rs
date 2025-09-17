@@ -112,6 +112,7 @@ impl FromStr for Contract {
     }
 }
 
+/// An asyncronous registry client, allowing to fetch and post assets metadata from the registry.
 #[derive(Clone)]
 pub struct Registry {
     client: reqwest::Client,
@@ -336,6 +337,7 @@ pub mod blocking {
 
     use super::RegistryPost;
 
+    /// A blocking registry client, allowing to fetch and post assets metadata from the registry.
     pub struct Registry {
         inner: super::Registry,
         rt: Runtime,

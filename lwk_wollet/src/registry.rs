@@ -197,6 +197,7 @@ impl RegistryCache {
         }
     }
 
+    /// Return the asset metadata related to the given asset id if it exists in the cache
     pub fn get(&self, asset_id: AssetId) -> Option<RegistryData> {
         self.cache.get(&asset_id).cloned()
     }
@@ -209,6 +210,7 @@ impl RegistryCache {
             .and_then(|asset_id| self.cache.get(asset_id).cloned())
     }
 
+    /// Fetch the contract and the issuance transaction of the given asset id from the registry
     pub async fn fetch_with_tx(
         &self,
         asset_id: AssetId,
@@ -217,6 +219,7 @@ impl RegistryCache {
         self.inner.fetch_with_tx(asset_id, client).await
     }
 
+    /// Post a contract to the registry
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         self.inner.post(data).await
     }

@@ -111,6 +111,7 @@ impl Update {
         Ok(result)
     }
 
+    /// Serialize an update to a base64 encoded string, encrypted with a key derived from the descriptor. Decrypt using [`Self::deserialize_decrypted_base64()`]
     pub fn serialize_encrypted_base64(&self, desc: &WolletDescriptor) -> Result<String, Error> {
         let vec = self.serialize_encrypted(desc)?;
         Ok(BASE64_STANDARD.encode(vec))
@@ -131,6 +132,7 @@ impl Update {
         Ok(Update::deserialize(&plaintext)?)
     }
 
+    /// Deserialize an update from a base64 encoded string, decrypted with a key derived from the descriptor. Create the base64 using [`Self::serialize_encrypted_base64()`]
     pub fn deserialize_decrypted_base64(
         base64: &str,
         desc: &WolletDescriptor,

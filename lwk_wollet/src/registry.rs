@@ -350,6 +350,9 @@ fn network_default_url(network: ElementsNetwork) -> Result<&'static str, Error> 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod blocking {
+    //! The module contains a blocking registry client, allowing to fetch and post assets metadata from the registry.
+    //! The blocking client is based on the async client, it uses a tokio runtime to run the async client in a blocking context.
+
     use elements::{AssetId, Transaction};
     use tokio::runtime::Runtime;
 

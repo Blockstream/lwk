@@ -14,12 +14,15 @@ use crate::{ElementsNetwork, Error, Update, WolletDescriptor};
 /// Error type for the [`Persister`] trait.
 #[derive(thiserror::Error, Debug)]
 pub enum PersistError {
+    /// Encoding error
     #[error(transparent)]
     Encoding(#[from] elements::encode::Error),
 
+    /// IO error
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    /// Other error
     #[error("{0}")]
     Other(String),
 }

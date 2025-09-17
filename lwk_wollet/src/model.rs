@@ -279,6 +279,7 @@ impl std::fmt::Display for DisplayWalletTxInputOutputs<'_> {
 }
 
 impl WalletTx {
+    /// Generate the URL to the transaction on the given explorer including the information needed to unblind the transaction in the explorer UI.
     pub fn unblinded_url(&self, explorer_url: &str) -> String {
         format!(
             "{}tx/{}#blinded={}",

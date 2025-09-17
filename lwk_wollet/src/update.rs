@@ -85,11 +85,15 @@ impl Update {
     pub fn prune(&mut self, wallet: &Wollet) {
         self.new_txs.prune(&wallet.store.cache.paths);
     }
+
+    /// Serialize an [`Update`] to a byte array
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
         let mut vec = vec![];
         self.consensus_encode(&mut vec)?;
         Ok(vec)
     }
+
+    /// Deserialize an [`Update`] from a byte array
     pub fn deserialize(bytes: &[u8]) -> Result<Update, elements::encode::Error> {
         Update::consensus_decode(bytes)
     }

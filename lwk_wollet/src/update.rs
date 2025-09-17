@@ -94,6 +94,7 @@ impl Update {
         Update::consensus_decode(bytes)
     }
 
+    /// Serialize an update to a byte array, encrypted with a key derived from the descriptor. Decrypt using [`Self::deserialize_decrypted()`]
     pub fn serialize_encrypted(&self, desc: &WolletDescriptor) -> Result<Vec<u8>, Error> {
         let mut plaintext = self.serialize()?;
 
@@ -117,6 +118,7 @@ impl Update {
         Ok(BASE64_STANDARD.encode(vec))
     }
 
+    /// Deserialize an update from a byte array, decrypted with a key derived from the descriptor. Create the byte array using [`Self::serialize_encrypted()`]
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
         let nonce_bytes = &bytes
             .get(..12)

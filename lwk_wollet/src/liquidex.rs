@@ -95,9 +95,11 @@ impl LiquidexTxOutSecrets {
     }
 }
 
+/// A marker type to indicate a validated [`LiquidexProposal`] proposal
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validated;
 
+/// A marker type to indicate an unvalidated [`LiquidexProposal`] proposal
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unvalidated;
 

@@ -9,6 +9,10 @@ LWK's primary goal is to abstract away complexity by handling the most challengi
 
 By providing these building blocks, LWK liberates developers from building Liquid functionality from scratch. This allows them to significantly accelerate development time and focus on creating unique, value-added features for their specific use cases, whether it's building a mobile wallet, integrating Liquid in an exchange, or developing a DeFi application. Ultimately, LWK is the definitive, go-to library for anyone committed to innovating on the Liquid Network.
 
+## Example: single-sig mobile wallet
+
+This example application showcases how the Liquid Wallet Kit (LWK) simplifies the development of a single-signature mobile wallet. The two diagrams below illustrate the key user flows: Wallet Creation and Transaction Management. LWK handles the complex, low-level interactions with the Liquid blockchain and cryptographic operations, allowing the application to focus on the user interface and experience.
+
 ### Wallet Creation
 
 ```mermaid

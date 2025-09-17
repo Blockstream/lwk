@@ -1104,7 +1104,7 @@ fn tx_outputs(
         .collect()
 }
 
-/// Blockchain tip
+/// Blockchain tip, the highest valid block in the blockchain
 pub struct Tip {
     height: Height,
     hash: BlockHash,
@@ -1112,12 +1112,17 @@ pub struct Tip {
 }
 
 impl Tip {
+    /// The height of the tip
     pub fn height(&self) -> Height {
         self.height
     }
+
+    /// The hash of the block at the tip
     pub fn hash(&self) -> BlockHash {
         self.hash
     }
+
+    /// The timestamp of the tip as unix timestamp (seconds since epoch)
     pub fn timestamp(&self) -> Option<Timestamp> {
         self.timestamp
     }

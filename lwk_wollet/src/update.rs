@@ -82,6 +82,8 @@ impl Update {
             && self.txid_height_delete.is_empty()
             && self.scripts_with_blinding_pubkey.is_empty()
     }
+
+    /// Prune the update, removing unneeded data from transactions.
     pub fn prune(&mut self, wallet: &Wollet) {
         self.new_txs.prune(&wallet.store.cache.paths);
     }

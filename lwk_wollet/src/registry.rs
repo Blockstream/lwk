@@ -267,6 +267,7 @@ impl RegistryCache {
     }
 }
 
+/// The data to post to the registry to publish a contract for an asset id
 #[derive(Serialize, Clone)]
 pub struct RegistryPost {
     contract: Contract,
@@ -284,6 +285,7 @@ impl fmt::Display for RegistryPost {
 }
 
 impl RegistryPost {
+    /// Create a new registry post to publish a contract for an asset id
     pub fn new(contract: Contract, asset_id: AssetId) -> Self {
         Self { contract, asset_id }
     }

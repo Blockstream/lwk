@@ -139,6 +139,8 @@ pub struct Registry {
     base_url: String,
 }
 
+/// A registry cache contains a reference to the registry, and some cached asset metadata, hardcoded and fetched from the registry.
+/// It also contains a token cache, to quickly find the asset id of a reissuance token.
 pub struct RegistryCache {
     inner: Registry,
 

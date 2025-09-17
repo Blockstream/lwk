@@ -277,6 +277,7 @@ impl Registry {
     }
 
     #[allow(dead_code)]
+    /// Return the default registry for the given network, use [`Self::new()`] to specify a custom URL
     pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self::new(network_default_url(network)?))
     }
@@ -347,6 +348,7 @@ pub mod blocking {
             })
         }
 
+        /// Return the default registry for the given network, use [`Self::new()`] to specify a custom URL
         pub fn default_for_network(network: ElementsNetwork) -> Result<Self, Error> {
             Ok(Self {
                 inner: super::Registry::new(super::network_default_url(network)?),

@@ -1184,13 +1184,7 @@ impl Blob {
     }
 
     fn add_username(&mut self, username: &str) -> Result<(), Error> {
-        use rmpv::Value;
-        if let Some(s) = self.watchonly.get_mut("username") {
-            *s = Value::from(username);
-        } else {
-            // TODO: handle case with no username
-            return Err(Error::Generic("Unexpected value".into()));
-        }
+        self.watchonly.insert("username".into(), username.into());
         Ok(())
     }
 }

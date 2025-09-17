@@ -27,6 +27,6 @@ in their systems.
 
 Internal crate dependencies are shown in this diagram: an arrow indicates "depends on" (when dotted the dependency is feature-activated, when blue is a dev-dependency):
 
-![Dep tree](docs/dep-tree.svg)
+![Dep tree](./dep-tree.svg)
 
 (generated with `cargo depgraph --workspace-only --dev-deps`)

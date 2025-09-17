@@ -33,11 +33,13 @@ static RE_TICKER: Lazy<Regex> =
 /// The entity of an asset, contains the domain of the issuer.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Entity {
+    /// Contain the domain of the entity, such as `example.com`
     #[serde(rename = "domain")]
     Domain(String),
 }
 
 impl Entity {
+    /// Get the domain of the entity, such as `example.com`
     pub fn domain(&self) -> &str {
         match self {
             Entity::Domain(d) => d.as_str(),

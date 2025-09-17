@@ -52,6 +52,7 @@ sha256t_hash_newtype! {
 pub struct NoPersist {}
 
 impl NoPersist {
+    /// Create a new fake persister (implements [`Persister`] trait with empty methods thus doesn't persist anything)
     pub fn new() -> Arc<Self> {
         Arc::new(Self {})
     }

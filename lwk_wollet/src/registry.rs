@@ -625,6 +625,7 @@ pub fn add_contracts<'a>(
     }
 }
 
+/// `RegistryAssetData` contains all the data related to an asset with a contract in the registry.
 #[derive(Debug, Clone)]
 pub struct RegistryAssetData {
     asset_id: AssetId,
@@ -635,6 +636,9 @@ pub struct RegistryAssetData {
 }
 
 impl RegistryAssetData {
+    /// Create a new registry asset data from the asset id, the issuance transaction and the contract
+    ///
+    /// Returns an error if the issuance transaction is not valid for the given asset id and contract
     pub fn new(
         asset_id: AssetId,
         issuance_tx: Transaction,
@@ -659,38 +663,47 @@ impl RegistryAssetData {
         Err(Error::InvalidIssuanceTxtForAsset(asset_id.to_string()))
     }
 
+    /// Get the contract as a string
     pub fn contract_str(&self) -> String {
         serde_json::to_string(&self.contract).expect("contract")
     }
 
+    /// Get the contract
     pub fn contract(&self) -> &Contract {
         &self.contract
     }
 
+    /// Get the issuance transaction prevout
     pub fn issuance_prevout(&self) -> OutPoint {
         self.issuance_tx.input[self.issuance_vin as usize].previous_output
     }
 
+    /// Get the asset id of the reissuance token of this asset id
     pub fn reissuance_token(&self) -> AssetId {
         self.token_id
     }
 
+    /// Get the token id
     pub fn token_id(&self) -> AssetId {
         self.token_id
     }
 
+    /// Get the asset id
     pub fn asset_id(&self) -> AssetId {
         self.asset_id
     }
 
+    /// Get the issuance transaction
     pub fn issuance_tx(&self) -> &Transaction {
         &self.issuance_tx
     }
 
+    /// Get the issuance transaction input
     pub fn txin(&self) -> &elements::TxIn {
         &self.issuance_tx.input[self.issuance_vin as usize]
     }
 
+    /// Get the entropy of the issuance transaction
     pub fn entropy(&self) -> Result<[u8; 32], Error> {
         let entropy = AssetId::generate_asset_entropy(
             self.txin().previous_output,
@@ -700,6 +713,7 @@ impl RegistryAssetData {
         Ok(entropy)
     }
 
+    /// Get the asset metadata from this registry asset data
     pub fn asset_metadata(&self) -> AssetMetadata {
         AssetMetadata::new(self.contract_str(), self.issuance_prevout())
     }

@@ -1,3 +1,7 @@
+//! Registry related functions
+//!
+//! The Registry is repository to store and retrieve asset metadata, like the name or the ticker of an asset.
+
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;

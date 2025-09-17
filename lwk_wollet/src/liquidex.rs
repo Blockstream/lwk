@@ -124,9 +124,13 @@ pub struct LiquidexProposal<S> {
     data: PhantomData<S>,
 }
 
+/// An asset identifier and an amount
 #[derive(Debug, Clone)]
 pub struct AssetAmount {
+    /// The amount of the asset in units (satoshi)
     pub amount: u64,
+
+    /// The asset identifier
     pub asset: AssetId,
 }
 

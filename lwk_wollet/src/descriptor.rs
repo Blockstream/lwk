@@ -329,7 +329,7 @@ impl WolletDescriptor {
     /// Get a cipher from the descriptor, used to encrypt and decrypt updates.
     ///
     /// The rationale to derive a key from the descriptor is to avoid storing a separate key that you need to backup for the wallet data.
-    /// In the end the descriptor allow you to recover the same data directly from the blockchain, thuse we don't need additional security.
+    /// In the end the descriptor allows you to recover the same data directly from the blockchain, thus we don't need additional security.
     pub fn cipher(&self) -> Aes256GcmSiv {
         let key_bytes = EncryptionKeyHash::hash(self.to_string().as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);

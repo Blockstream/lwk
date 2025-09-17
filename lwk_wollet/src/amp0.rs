@@ -1164,8 +1164,10 @@ impl Blob {
         use rmpv::Value;
         let path = vec![0x80000000 + 3, 0x80000000 + pointer];
 
-        // TODO: compare xpubs using only public key and chaincode
-        if !self.xpubs.contains_key(account_xpub) {
+        if self.xpubs.keys().all(|xpub| {
+            xpub.public_key != account_xpub.public_key && xpub.chain_code != account_xpub.chain_code
+        }) {
+            // Account xpub is not in the blob
             // Insert xpub in (de)serialized struct
             if let Some(Value::Map(ref mut xpubs)) = self.watchonly.get_mut("xpubs") {
                 let v: Vec<Value> = path.clone().into_iter().map(Value::from).collect();

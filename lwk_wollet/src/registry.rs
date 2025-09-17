@@ -417,9 +417,12 @@ pub fn contract_json_hash(contract: &Value) -> Result<ContractHash, Error> {
     Ok(ContractHash::from_raw_hash(hash))
 }
 
+/// The input containing the issuance
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct TxIn {
+    /// The transaction id of the transaction containing the issuance
     pub txid: Txid,
+    /// The input index of the input containing the issuance
     pub vin: u32,
 }
 

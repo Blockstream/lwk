@@ -251,6 +251,9 @@ pub enum Error {
     RmpvDecodeError(#[from] rmpv::decode::Error),
 
     #[error(transparent)]
+    RmpvEncodeError(#[from] rmpv::encode::Error),
+
+    #[error(transparent)]
     RmpvExtError(#[from] rmpv::ext::Error),
 
     #[error(transparent)]

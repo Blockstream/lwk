@@ -9,6 +9,7 @@ use thiserror::Error;
 use crate::Signer;
 
 // TODO impl error handling
+/// Generate a singlesig descriptor with the given parameters
 pub fn singlesig_desc<S: Signer + ?Sized>(
     signer: &S,
     script_variant: Singlesig,
@@ -53,6 +54,7 @@ fn fmt_path(path: &DerivationPath) -> String {
 }
 
 // TODO impl error handling
+/// Generate a multisig descriptor with the given parameters
 pub fn multisig_desc(
     threshold: u32,
     xpubs: Vec<(Option<KeySource>, Xpub)>,

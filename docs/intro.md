@@ -55,3 +55,17 @@ This simple example highlights the core responsibilities of each LWK component:
 * **Signer** 🔑: Manages private keys and handles all signing operations.
 * **Wollet** 👀: Provides a watch-only view of the wallet, deriving addresses and tracking transactions and balances without holding any private keys.
 * **Client** 🌐: Fetch blockchain data from the Liquid Network to update the `wollet`.
+
+## Key Features
+LWK allows to build more complex applications and prodcuts by leveraging its wide range of features:
+* [x] Send and receive LBTC
+* [x] Send and receive Liquid Issued Assets (e.g. LUSDt)
+* [x] Send and receive AMP assets (e.g. BMN)
+* [x] Software signers
+* [x] Hardware wallets support (Jade)
+* [x] Watch-Only view with CT descriptors
+* [x] Single-sig
+* [x] Generic Multisig
+* [x] Multi-language support (Swift, Kotlin, Javascript, Typescript, Wasm, React Native, Go, C#, Rust, Flutter/Dart, Python)
+
+For a more complete and detailed list of LWK features see [here](features.md).

@@ -1478,18 +1478,30 @@ pub mod blocking {
     }
 
     impl Amp0 {
+        /// Index of the last returned address
         pub fn last_index(&self) -> u32 {
             self.inner.last_index
         }
 
+        /// AMP identifier
         pub fn amp_id(&self) -> &str {
             &self.inner.amp_id
         }
 
+        /// The LWK watch-only wallet descriptor corresponding to the AMP0 (sub)account.
+        ///
+        /// <div class="warning">
+        /// <b>WARNING:</b>
+        ///
+        /// Do not derive addresses using [`WolletDescriptor::address()`] or [`crate::Wollet::address()`].
+        ///
+        /// See [`Amp0`] for more details.
+        /// </div>
         pub fn wollet_descriptor(&self) -> WolletDescriptor {
             self.inner.wollet_descriptor()
         }
 
+        /// Create a new AMP0 context
         pub fn new(
             network: Network,
             username: &str,
@@ -1503,10 +1515,14 @@ pub mod blocking {
             Ok(Amp0 { rt, inner })
         }
 
+        /// Get an address
+        ///
+        /// If `index` is None, a new address is returned.
         pub fn address(&mut self, index: Option<u32>) -> Result<AddressResult, Error> {
             self.rt.block_on(self.inner.address(index))
         }
 
+        /// Ask AMP0 server to cosign
         pub fn sign(&self, pset: &Amp0Pset) -> Result<Transaction, Error> {
             self.rt.block_on(self.inner.sign(pset))
         }

@@ -70,8 +70,10 @@ struct CosignResponseInner {
     pset: String,
 }
 
+/// Response from the AMP2 server when cosigning a PSET
 #[derive(Serialize, Deserialize)]
 pub struct CosignResponse {
+    /// The cosigned PSET
     pub pset: PartiallySignedTransaction,
 }
 

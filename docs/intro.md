@@ -50,6 +50,7 @@ flowchart TD
     Wollet -->|Broadcast TX| Client
 ```
 
+### Remarks
 This simple example highlights the core responsibilities of each LWK component:
 * **Signer** 🔑: Manages private keys and handles all signing operations.
 * **Wollet** 👀: Provides a watch-only view of the wallet, deriving addresses and tracking transactions and balances without holding any private keys.

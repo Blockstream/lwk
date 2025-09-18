@@ -69,3 +69,7 @@ LWK allows to build more complex applications and prodcuts by leveraging its wid
 * [x] Multi-language support (Swift, Kotlin, Javascript, Typescript, Wasm, React Native, Go, C#, Rust, Flutter/Dart, Python)
 
 For a more complete and detailed list of LWK features see [here](features.md).
+
+## Get started
+
+[Install LWK](install.md) and go through our [tutorial](basics.md).

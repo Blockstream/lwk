@@ -88,6 +88,7 @@ impl ElementsNetwork {
     }
 
     #[cfg(feature = "bindings")]
+    /// Return the transaction builder for this network.
     pub fn tx_builder(&self) -> crate::TxBuilder {
         crate::TxBuilder::new(*self)
     }

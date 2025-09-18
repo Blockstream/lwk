@@ -37,9 +37,13 @@ pub struct Recipient {
     pub vout: u32,
 }
 
+/// The details of the signatures in a PSET
 #[derive(Debug, Clone)]
 pub struct PsetSignatures {
+    /// The signatures that are available
     pub has_signature: Vec<(PublicKey, KeySource)>,
+
+    /// The signatures that are missing
     pub missing_signature: Vec<(PublicKey, KeySource)>,
 }
 

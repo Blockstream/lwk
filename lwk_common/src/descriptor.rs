@@ -206,10 +206,13 @@ impl FromStr for Bip {
     }
 }
 
+/// The variant of the multisig descriptor
 pub enum Multisig {
+    /// Witness script hash
     Wsh,
 }
 
+/// The variant of the multisig descriptor
 #[derive(Error, Debug)]
 #[error("Invalid multisig variant '{0}' supported variant are: 'wsh'")]
 pub struct InvalidMultisigVariant(String);

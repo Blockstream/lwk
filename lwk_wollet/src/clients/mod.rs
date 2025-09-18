@@ -162,6 +162,7 @@ pub struct History {
     pub v: i32,
 }
 
+/// Try to unblind a transaction output using the given descriptor
 pub fn try_unblind(output: &TxOut, descriptor: &WolletDescriptor) -> Result<TxOutSecrets, Error> {
     match (output.asset, output.value, output.nonce) {
         (Asset::Confidential(_), Value::Confidential(_), Nonce::Confidential(_)) => {

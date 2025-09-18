@@ -64,7 +64,7 @@ pub struct Issuance {
 impl Issuance {
     /// Create a new issuance or reissuance information from a input of a PSET
     pub fn new(input: &Input) -> Self {
-        // TODO: return Result<Self, Error> and error if input.asset_issuance() is null
+        // TODO: return Result<Self, Error> and error if input.asset_issuance() is null, adjust documentation/function also in pset_issuances()
 
         // These are meaningless if inner is null
         let (asset, token) = input.issuance_ids();

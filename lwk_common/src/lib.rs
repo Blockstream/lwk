@@ -335,6 +335,7 @@ pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures>
         .collect()
 }
 
+/// Return the issuances of a PSET, for each input return an Issuance but the struct must be checked with [`Issuance::is_issuance`] if it's a real issuance or reissuance.
 pub fn pset_issuances(pset: &PartiallySignedTransaction) -> Vec<Issuance> {
     pset.inputs().iter().map(Issuance::new).collect()
 }

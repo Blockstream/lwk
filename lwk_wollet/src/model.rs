@@ -186,14 +186,17 @@ pub struct AddressResult {
 }
 
 impl AddressResult {
+    /// Create a new address result.
     pub fn new(address: Address, index: u32) -> Self {
         Self { address, index }
     }
 
+    /// Get the address.
     pub fn address(&self) -> &Address {
         &self.address
     }
 
+    /// Get the derivation index of this address, the last element in the derivation path. In standard with-wildcard descriptors is the value replacing the wildcard.
     pub fn index(&self) -> u32 {
         self.index
     }

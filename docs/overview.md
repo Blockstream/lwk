@@ -45,3 +45,8 @@ flowchart TD
     Signer -->|Signed PSET| Wollet 
     Wollet -->|Broadcast TX| Client
 ```
+
+This simple example highlights the core responsibilities of each LWK component:
+* **Signer** 🔑: Manages private keys and handles all signing operations.
+* **Wollet** 👀: Provides a watch-only view of the wallet, deriving addresses and tracking transactions and balances without holding any private keys.
+* **Client** 🌐: Fetch blockchain data from the Liquid Network to update the `wollet`.

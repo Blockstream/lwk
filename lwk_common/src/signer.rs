@@ -113,28 +113,34 @@ pub mod amp0 {
     }
 
     impl Amp0SignerData {
+        /// Return the master xpub used for register and login_address
         pub fn master_xpub(&self) -> &Xpub {
             &self.master_xpub
         }
 
+        /// Return the register xpub used for gait path (not in the client blob)
         pub fn register_xpub(&self) -> &Xpub {
             &self.register_xpub
         }
 
+        /// Return the login xpub used for signing the login challenge
         pub fn login_xpub(&self) -> &Xpub {
             &self.login_xpub
         }
 
+        /// Return the client secret xpub used for encrypting the client blob
         pub fn client_secret_xpub(&self) -> &Xpub {
             &self.client_secret_xpub
         }
 
+        /// Return the login address (used for the login challenge)
         pub fn login_address(&self, network: &Network) -> Address {
             let pk = bitcoin::PublicKey::new(self.master_xpub.public_key);
             let params = network.address_params();
             Address::p2pkh(&pk, None, params)
         }
 
+        /// Return the slip77 master blinding key
         pub fn slip77_key(&self) -> &MasterBlindingKey {
             &self.slip77_key
         }

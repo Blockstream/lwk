@@ -28,6 +28,7 @@ pub fn address_to_text_qr(address: &Address) -> Result<String, QrError> {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum QrError {
     #[error(transparent)]
     Qr(#[from] qr_code::types::QrError),

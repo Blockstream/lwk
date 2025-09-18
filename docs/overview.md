@@ -15,6 +15,12 @@ This example application showcases how the Liquid Wallet Kit (LWK) simplifies th
 
 ### Wallet Creation
 
+The mobile app starts by creating a new software `signer` and helps the user back up the corresponding BIP39 mnemonic. From this signer, the app extracts the `xpub` to derive a single-signature [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki) (e.g., `ct(slip77(...),elwpkh([...]xpub/<0;1>/*))`).
+
+This CT descriptor is then used to initialize a `wollet`, which is LWK's watch-only wallet. The `wollet` allows the app to fetch addresses, transactions, and the current balance to display in the user interface.
+
+When the app is opened, it uses a `client` to sync the wollet with the latest blockchain information. This ensures the wallet data is up-to-date.
+
 ```mermaid
 flowchart TD
     Signer(Signer 🔑)

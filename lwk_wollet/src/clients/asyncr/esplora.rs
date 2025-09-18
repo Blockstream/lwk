@@ -610,6 +610,7 @@ impl EsploraClient {
         Ok(data)
     }
 
+    /// Avoid encrypting the descriptor when calling the waterfalls endpoint.
     pub fn avoid_encryption(&mut self) {
         self.waterfalls_avoid_encryption = true;
     }

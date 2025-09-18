@@ -29,7 +29,7 @@ flowchart TD
     App((📱))
     Signer -->|Xpub| Wollet 
     Client -->|Blockchain Update| Wollet
-    Wollet -->|Txs, Balance| App
+    Wollet -->|Addresses, Txs, Balance| App
 ```
 
 ### Transaction Management

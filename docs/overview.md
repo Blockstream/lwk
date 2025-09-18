@@ -34,6 +34,10 @@ flowchart TD
 
 ### Transaction Management
 
+The mobile app enables users to send funds by allowing them to specify the amount, asset, and destination address. The `wollet` then takes this information to create an unsigned transaction, which is encoded in the [PSET](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki) format.
+
+The PSET is passed to the `signer`, which uses its private keys to sign the transaction. Once the PSET is signed, it's finalized into a complete transaction, which the `client` then broadcasts to the Liquid Network.
+
 ```mermaid
 flowchart TD
     Signer(Signer 🔑)

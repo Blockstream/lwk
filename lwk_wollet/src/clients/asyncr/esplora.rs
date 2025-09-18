@@ -127,7 +127,7 @@ impl EsploraClient {
         Ok(tx)
     }
 
-    /// Fetcth concurrently a list of transactions.
+    /// Fetch concurrently a list of transactions.
     pub async fn get_transactions(
         &self,
         txids: &[Txid],

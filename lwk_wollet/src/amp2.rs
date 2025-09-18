@@ -39,6 +39,7 @@ impl Amp2Descriptor {
         Self { inner }
     }
 
+    /// Return a copy of this Amp2 descriptor.
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.clone()
     }

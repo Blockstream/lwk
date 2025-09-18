@@ -14,12 +14,20 @@ pub const LIQUID_DEFAULT_REGTEST_ASSET_STR: &str =
 /// The network of the elements blockchain.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum ElementsNetwork {
+    /// Liquid mainnet.
     Liquid,
+    /// Liquid testnet.
     LiquidTestnet,
-    ElementsRegtest { policy_asset: AssetId },
+    /// Liquid regtest with a custom policy asset.
+    ElementsRegtest {
+        /// The policy asset to use for this regtest network.
+        /// You can use the default one using [`ElementsNetwork::default_regtest()`].
+        policy_asset: AssetId,
+    },
 }
 
 impl ElementsNetwork {
+    /// Return the policy asset for this network.
     pub fn policy_asset(&self) -> AssetId {
         match self {
             ElementsNetwork::Liquid => {
@@ -32,6 +40,7 @@ impl ElementsNetwork {
         }
     }
 
+    /// Return the string representation of this network.
     pub fn as_str(&self) -> &'static str {
         match self {
             ElementsNetwork::Liquid => "liquid",
@@ -40,6 +49,7 @@ impl ElementsNetwork {
         }
     }
 
+    /// Return the address parameters for this network to generate addresses compatible for this network.
     pub fn address_params(&self) -> &'static AddressParams {
         match self {
             ElementsNetwork::Liquid => &AddressParams::LIQUID,
@@ -48,6 +58,7 @@ impl ElementsNetwork {
         }
     }
 
+    /// Return the default regtest network using the default regtest policy asset.
     pub fn default_regtest() -> ElementsNetwork {
         let policy_asset = AssetId::from_str(LIQUID_DEFAULT_REGTEST_ASSET_STR).expect("static");
 

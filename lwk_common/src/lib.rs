@@ -314,6 +314,8 @@ pub fn pset_balance(
     })
 }
 
+/// Return the signatures of a PSET, for each input return a [`PsetSignatures`] which includes a
+/// list of signatures that are available and a list of signatures that are missing.
 pub fn pset_signatures(pset: &PartiallySignedTransaction) -> Vec<PsetSignatures> {
     pset.inputs()
         .iter()

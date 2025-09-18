@@ -214,6 +214,7 @@ impl TryFrom<&ConfidentialDescriptor<DescriptorPublicKey>> for Chain {
 }
 
 impl WolletDescriptor {
+    /// Return a reference to the underlying descriptor.
     pub fn descriptor(&self) -> &Descriptor<DescriptorPublicKey> {
         &self.inner.descriptor
     }
@@ -310,6 +311,8 @@ impl WolletDescriptor {
         }
     }
 
+    /// Derive the single path descriptors of this descriptor if it's multipath.
+    /// If it's not multipath, return the descriptor itself as a single element.
     pub fn single_bitcoin_descriptors(&self) -> Vec<String> {
         let d = self.inner_descriptor_if_available(Chain::External);
         let d = to_bitcoin_descriptor(&d.descriptor().to_string());

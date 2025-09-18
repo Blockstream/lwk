@@ -41,18 +41,38 @@ Using AMP0 with LWK you can keep the signer separated and operate it accoriding 
 > We put some mechanism in order to make it harder to do the wrong thing, anyway callers should be careful when getting new addresses and syncing the wallet.
 
 ## Setup
+To use AMP0 with LWK you need to:
+1. Create a Liquid wallet (backup its mnemonic/seed)
+2. Create an AMP account (AMP ID)
+3. Create a Liquid Watch-Only (username and password)
 
-To complete the setup procedure you can use:
+### 1. Create Liquid wallet
+Create a `Signer` and backup it's mnemonic/seed.
+From the signer get its `signer_data` using `Signer::amp0_signer_data()`.
+
+Create a `Amp0Connected::new()` passing the `signer_data`.
+You now need to authenticate with AMP0 server.
+First get the server challenge with `Amp0Connected::get_challenge()`.
+Sign the challenge with `Signer::amp0_sign_challenge()`.
+You can now call `Amp0Connected::login()` passing the signature.
+This function returns a `Amp0LoggedIn` instance, which can be used to create new AMP0 accounts and watch-only entries.
+
+### 2. Create an AMP account
+Obtain the number of the next account using `Amp0LoggedIn::next_account()`.
+Use the signer to get the corresponding xpub `Signer::amp0_accont_xpub()`.
+Now you can create a new AMP0 account with `Amp0LoggedIn::create_amp0_account()`, which returns the AMP ID.
+
+### 3. Create a Liquid Watch-Only
+Choose your your AMP0 Watch-Only credentials `username` and `password` and call `Amp0LoggedIn::create_watch_only()`.
+
+
+Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
+
+### Alternative setup
+It's possible to setup an AMP0 account using GDK based apps:
 * [Blockstream App](https://blockstream.com/app/) (easiest, GUI, mobile, desktop, Jade support), or
 * [`green_cli`](https://github.com/Blockstream/green_cli/) (CLI, Jade support), or
 * [GDK](https://github.com/blockstream/gdk) directly (fastest, [example](gdk-amp0.py))
-
-You need to:
-1. Create a Liquid wallet (backup its mnemonic/seed)
-2. Create a AMP account (AMP ID)
-3. Create a Liquid Watch-Only (username and password)
-
-Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
 
 ## AMP0 daily operations
 

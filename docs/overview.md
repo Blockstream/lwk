@@ -26,7 +26,7 @@ flowchart TD
     Wollet -->|Txs, Balance| App
 ```
 
-### Wallet Transaction Flow
+### Transaction Management
 
 ```mermaid
 flowchart TD

@@ -2248,14 +2248,30 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    #[ignore] // not implemented yet
-    fn test_full_login() {
+    #[ignore] // Requires network connectivity
+    fn test_amp0_full_login_testnet() {
+        amp0_full_login(false)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    #[ignore] // Requires local Green backend
+    fn test_amp0_full_login_regtest() {
+        amp0_full_login(true)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn amp0_full_login(regtest: bool) {
         use super::*;
         use lwk_common::Amp0Signer;
         use lwk_common::Network;
         use lwk_signer::SwSigner;
 
-        let network = Network::LocaltestLiquid;
+        let network = if regtest {
+            Network::LocaltestLiquid
+        } else {
+            Network::TestnetLiquid
+        };
 
         // Create signer and watch only credentials
         let (signer, mnemonic) = SwSigner::random(false).unwrap();

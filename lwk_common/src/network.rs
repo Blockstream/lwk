@@ -3,18 +3,24 @@ use std::str::FromStr;
 use elements::AddressParams;
 use serde::{Deserialize, Deserializer, Serialize};
 
+/// The network of the elements blockchain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
+    /// Liquid mainnet
     Liquid,
+    /// Liquid testnet
     TestnetLiquid,
+    /// Liquid regtest
     LocaltestLiquid,
 }
 
 impl Network {
+    /// Return true if the network is mainnet.
     pub fn is_mainnet(&self) -> bool {
         self == &Self::Liquid
     }
 
+    /// Return the address parameters for this network to generate addresses compatible for this network.
     pub fn address_params(&self) -> &'static AddressParams {
         match self {
             Network::Liquid => &AddressParams::LIQUID,

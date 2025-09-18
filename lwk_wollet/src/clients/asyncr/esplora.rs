@@ -269,7 +269,7 @@ impl EsploraClient {
     /// Returns `Some(Update)` if any changes were found during scanning, or `None` if no changes
     /// were detected.
     ///
-    /// To scan beyond the gap limit use [`BlockchainBackend::full_scan_to_index()`] instead.
+    /// To scan beyond the gap limit use [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`] instead.
     pub async fn full_scan(&mut self, wollet: &Wollet) -> Result<Option<Update>, Error> {
         self.full_scan_to_index(wollet, 0).await
     }

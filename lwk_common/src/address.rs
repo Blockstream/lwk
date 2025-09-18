@@ -22,7 +22,9 @@ impl From<Address> for elements::Address {
     }
 }
 
+/// The error type returned by [`Address::parse`]
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum AddressParseError {
     #[error("Expected a mainnet address but got a testnet one")]
     ExpectedMainnetGotTestnet,

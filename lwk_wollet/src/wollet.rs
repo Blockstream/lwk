@@ -1152,6 +1152,7 @@ pub fn derive_script_and_blinding_key(
 
 #[cfg(feature = "test_wallet")]
 impl Wollet {
+    /// Create a new random test wallet with its signer.
     pub fn test_wallet() -> Result<(lwk_signer::SwSigner, Self), Error> {
         use lwk_common::Signer;
         use std::str::FromStr;

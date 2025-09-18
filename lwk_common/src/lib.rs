@@ -149,6 +149,8 @@ fn is_mine(
     Ok(false)
 }
 
+/// Return the net balance of a PSET from the perspective of the given `descriptor`.
+/// It returns also the fee and the recipients (external receivers) of the PSET.
 pub fn pset_balance(
     pset: &PartiallySignedTransaction,
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,

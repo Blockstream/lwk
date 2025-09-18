@@ -75,6 +75,7 @@ pub mod electrum_ssl {
     pub const LIQUID_TESTNET_SOCKET: &str = "elements-testnet.blockstream.info:50002";
 }
 
+/// Derive the script pubkey from a confidential descriptor and an index.
 pub fn derive_script_pubkey(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     index: u32,
@@ -85,6 +86,7 @@ pub fn derive_script_pubkey(
         .script_pubkey())
 }
 
+/// Derive the blinding secret key from a confidential descriptor and a script pubkey.
 pub fn derive_blinding_key(
     descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     script_pubkey: &Script,

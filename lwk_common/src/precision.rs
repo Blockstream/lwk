@@ -1,3 +1,5 @@
+//! Module to handle the formattings of amount of assets given its precision.
+
 use std::num::{ParseIntError, TryFromIntError};
 
 #[derive(thiserror::Error, Debug)]

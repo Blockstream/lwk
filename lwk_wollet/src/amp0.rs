@@ -1395,6 +1395,7 @@ impl WebSocketClient {
 /// Custom error type for WebSocket operations
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
 pub enum WebSocketError {
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),

@@ -451,6 +451,7 @@ impl WolletDescriptor {
         Ok(result)
     }
 
+    /// Whether this descriptor has a wildcard. A descriptor without a wildcard is a single address descriptor.
     pub fn has_wildcard(&self) -> bool {
         self.inner.descriptor.has_wildcard()
     }

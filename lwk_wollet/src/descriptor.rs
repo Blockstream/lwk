@@ -322,6 +322,7 @@ impl WolletDescriptor {
         v
     }
 
+    /// Derive a change address from this descriptor at the given `index`.
     pub fn change(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
         self.inner_address(index, params, Chain::Internal)
     }
@@ -336,6 +337,7 @@ impl WolletDescriptor {
         Aes256GcmSiv::new(key)
     }
 
+    /// Derive an address from this descriptor at the given `index`.
     pub fn address(&self, index: u32, params: &'static AddressParams) -> Result<Address, Error> {
         self.inner_address(index, params, Chain::External)
     }

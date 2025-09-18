@@ -63,6 +63,9 @@ const WO_SEED_U: [u8; 8] = [0x01, 0x77, 0x6f, 0x5f, 0x75, 0x73, 0x65, 0x72]; // 
 const WO_SEED_P: [u8; 8] = [0x02, 0x77, 0x6f, 0x5f, 0x70, 0x61, 0x73, 0x73]; // [2]'wo_pass'
 const WO_SEED_K: [u8; 8] = [0x03, 0x77, 0x6f, 0x5f, 0x62, 0x6C, 0x6f, 0x62]; // [3]'wo_blob'
 
+// TODO: add version or commit
+const USER_AGENT: &str = "[v2,sw,csv,csv_opt] lwk";
+
 fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
     let value = rmp_serde::encode::to_vec_named(value)?;
     Ok(rmp_serde::decode::from_slice(&value)?)
@@ -664,7 +667,7 @@ impl<S: Stream> Amp0Inner<S> {
         let args = vec![
             "custom".into(),
             to_value(&credentials)?,
-            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+            USER_AGENT.into(),
             true.into(),
         ];
         let msg = Msg::Call {
@@ -758,7 +761,7 @@ impl<S: Stream> Amp0Inner<S> {
         let args = vec![
             master_xpub.public_key.to_hex().into(),
             master_xpub.chain_code.to_hex().into(),
-            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+            USER_AGENT.into(),
             gait_path.into(),
         ];
         let msg = Msg::Call {
@@ -801,7 +804,7 @@ impl<S: Stream> Amp0Inner<S> {
             true.into(), // minimal
             "GA".into(), // path hex
             "".into(),   // device id
-            "[v2,sw,csv,csv_opt]48c4e352e3add7ef3ae904b0acd15cf5fe2c5cc3".into(),
+            USER_AGENT.into(),
         ];
         let msg = Msg::Call {
             request,

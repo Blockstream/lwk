@@ -46,9 +46,12 @@ use elements::{
 use elements::{script, Script, ScriptHash, WScriptHash};
 use elements_miniscript::psbt::PsbtExt;
 
-pub(crate) const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
-pub(crate) const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
-pub(crate) const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
+/// The fingerprint of the AMP0 server key for the mainnet network.
+pub const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
+/// The fingerprint of the AMP0 server key for the testnet network.
+pub const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
+/// The fingerprint of the AMP0 server key for the regtest network.
+pub const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
 
 struct Amp0Inner<S: Stream> {
     stream: S,

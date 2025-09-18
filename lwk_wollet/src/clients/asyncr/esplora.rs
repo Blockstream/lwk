@@ -614,6 +614,7 @@ impl EsploraClient {
         self.waterfalls_avoid_encryption = true;
     }
 
+    /// Set the waterfalls server recipient key. This is used to encrypt the descriptor when calling the waterfalls endpoint.
     pub fn set_waterfalls_server_recipient(&mut self, recipient: Recipient) {
         self.waterfalls_server_recipient = Some(recipient);
     }

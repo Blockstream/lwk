@@ -2,6 +2,7 @@ use elements::OutPoint;
 
 /// Error type for the whole crate.
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum Error {
     #[error("{0}")]
     Generic(String),

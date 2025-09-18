@@ -14,13 +14,28 @@ use std::str::FromStr;
 /// Details of a wallet transaction output used in [`WalletTx`]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WalletTxOut {
+    /// The outpoint of the output.
     pub outpoint: OutPoint,
+
+    /// The script pubkey of the output.
     pub script_pubkey: Script,
+
+    /// The height of the block containing this output if it's confirmed.
     pub height: Option<u32>,
+
+    /// The unblinded values (amount and asset) of the output with their blinding factors.
     pub unblinded: TxOutSecrets,
+
+    /// The wildcard index of the address of this output.
     pub wildcard_index: u32,
+
+    /// The chain of the output. Can be "external" or "internal" (change).
     pub ext_int: Chain,
+
+    /// Whether the output is spent.
     pub is_spent: bool,
+
+    /// The address receiving this output.
     pub address: Address,
 }
 

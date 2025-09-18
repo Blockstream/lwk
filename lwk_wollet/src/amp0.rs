@@ -46,9 +46,9 @@ use elements::{
 use elements::{script, Script, ScriptHash, WScriptHash};
 use elements_miniscript::psbt::PsbtExt;
 
-pub const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
-pub const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
-pub const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
+pub(crate) const AMP0_FINGERPRINT_MAINNET: &str = "0557d83a";
+pub(crate) const AMP0_FINGERPRINT_TESTNET: &str = "98c379b9";
+pub(crate) const AMP0_FINGERPRINT_REGTEST: &str = "b5281696";
 
 struct Amp0Inner<S: Stream> {
     stream: S,

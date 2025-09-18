@@ -156,6 +156,7 @@ pub use elements_miniscript;
 pub use elements_miniscript::elements;
 pub use elements_miniscript::elements::bitcoin::{self, hashes, secp256k1};
 
+/// The blinding public key used for confidential addresses.
 pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey;
 
 pub(crate) mod hex {

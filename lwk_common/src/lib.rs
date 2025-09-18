@@ -344,6 +344,7 @@ pub fn burn_script() -> Script {
     Builder::new().push_opcode(OP_RETURN).into_script()
 }
 
+/// Create a debug string of a PSET, but remove new lines on number arrays.
 pub fn pset_debug(pset: &PartiallySignedTransaction) -> String {
     let debug_str = format!("{:#?}", pset);
     let mut result = String::new();

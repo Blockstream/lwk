@@ -166,6 +166,8 @@ pub trait BlockchainBackend {
     /// If transactions are found beyond the gap limit during this scan, subsequent calls to
     /// [`BlockchainBackend::full_scan()`] will automatically scan up to the highest used index, preventing any
     /// previously-found transactions from being missed.
+    ///
+    /// See [`crate::asyncr::EsploraClient::full_scan_to_index()`] for an async version of this method.
     fn full_scan_to_index<S: WolletState>(
         &mut self,
         state: &S,

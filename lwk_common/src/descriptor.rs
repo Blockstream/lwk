@@ -109,6 +109,7 @@ pub enum Singlesig {
     ShWpkh,
 }
 
+/// The error type returned by Singlesig::from_str
 #[derive(Error, Debug)]
 #[error("Invalid singlesig variant '{0}' supported variant are: 'wpkh', 'shwpkh'")]
 pub struct InvalidSinglesigVariant(String);
@@ -152,6 +153,7 @@ pub enum DescriptorBlindingKey {
     Elip151,
 }
 
+/// The error type returned by `DescriptorBlindingKey::from_str`
 #[derive(Error, Debug)]
 #[error("Invalid blinding key variant '{0}' supported variant are: 'slip77', 'elip151'")]
 pub struct InvalidBlindingKeyVariant(String);

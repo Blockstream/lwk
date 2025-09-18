@@ -1,5 +1,6 @@
 use elements_miniscript::elements::OutPoint;
 
+#[allow(missing_docs)]
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("There is no unblinding information and Input #{idx} is missing witness_utxo of outpoint {previous_outpoint}")]

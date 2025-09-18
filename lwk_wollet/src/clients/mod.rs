@@ -96,7 +96,9 @@ impl EsploraClientBuilder {
 /// In other words the next index to be used when creating a new internal or external address.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LastUnused {
+    /// The last unused internal index (for changes).
     pub internal: u32,
+    /// The last unused external index.
     pub external: u32,
 }
 

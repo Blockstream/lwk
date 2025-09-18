@@ -3,13 +3,18 @@
 [AMP0](https://blockstream.com/amp/) (Asset Management Platform version 0) is a service for issuers that allows to enforce specific rules on certain Liquid assets (AMP0 assets).
 
 AMP0 is based on a legacy system and it does not fit the LWK model perfectly.
-Despite that _LWK has partial support for AMP0_.
+That is reflected in the LWK AMP0 interface which could be a bit cumbersome to use.
+
+## Limitations
+_LWK has partial support for AMP0._
+For instance it does not allow to issue AMP0 asset, or use accounts with 2FA.
 
 |                                 | LWK | GDK | AMP0 API |
 |---------------------------------| :-: | :-: | :------: |
-|Create AMP0 accounts             | ❌ | ✅ | ❌ |
+|Create AMP0 accounts             | ✅ | ✅ | ❌ |
 |Receive on AMP0 accounts         | ✅ | ✅ | ❌ |
 |Monitor AMP0 accounts            | ✅ | ✅ | ❌ |
+|Account with 2FA                 | ❌ | ✅ | ❌ |
 |issue, reissue, burn AMP0 assets | ❌ | ❌ | ✅ |
 |set restriction for AMP0 assets  | ❌ | ❌ | ✅ |
 

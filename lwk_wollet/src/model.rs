@@ -159,6 +159,11 @@ impl UnvalidatedRecipient {
         Ok(self.satoshi)
     }
 
+    /// Validate fields of this UnvalidatedRecipient and return a validated one:
+    ///
+    /// * non zero amount
+    /// * valid asset id (64 hex characters)
+    /// * valid address for the given `network` (or translate "burn" to a burn script)
     pub fn validate(&self, network: ElementsNetwork) -> Result<Recipient, Error> {
         let satoshi = self.validate_satoshi()?;
         let asset = self.validate_asset(network)?;

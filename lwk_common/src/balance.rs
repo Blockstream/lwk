@@ -45,6 +45,8 @@ impl std::ops::Sub<Balance> for Balance {
     }
 }
 
+/// A signed balance of assets, to represent a balance with negative values such
+/// as the results of a transactions from the perspective of a wallet.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(transparent)]
 pub struct SignedBalance(BTreeMap<AssetId, i64>);

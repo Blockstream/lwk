@@ -101,11 +101,12 @@ pub fn multisig_desc(
 }
 
 #[derive(Debug, Clone, Copy)]
+/// The variant of the singlesig descriptor
 pub enum Singlesig {
-    /// as defined by bip84
+    /// Witness public key hash as defined by bip84
     Wpkh,
 
-    /// as defined by bip49
+    /// Witness public key hash wrapped in script hash as defined by bip49
     ShWpkh,
 }
 

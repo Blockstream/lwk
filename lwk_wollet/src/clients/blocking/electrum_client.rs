@@ -259,6 +259,7 @@ impl From<GetHistoryRes> for History {
 
 /// Error type when parsing a string to the [`ElectrumUrl`] type.
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum UrlError {
     #[error(transparent)]
     Url(#[from] url::ParseError),

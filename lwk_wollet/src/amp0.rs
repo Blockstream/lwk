@@ -66,6 +66,15 @@ const WO_SEED_K: [u8; 8] = [0x03, 0x77, 0x6f, 0x5f, 0x62, 0x6C, 0x6f, 0x62]; // 
 // TODO: add version or commit
 const USER_AGENT: &str = "[v2,sw,csv,csv_opt] lwk";
 
+// TODO: upload addesses at login and when creating an AMP0 account
+// * internal: get _confidential_ address for Amp0Connected and Amp0LoggedIn
+//   * tell green backend to monitor a new address: Amp0Inner.get_new_address
+//   * get confidential address: derive the wollet descriptor
+// * login: upload required CA addresses
+// * create_amp0_account: upload INITIAL_UPLOAD_CA addresses
+// Addresses uploaded after creation of 2of2_no_recovery subaccounts.
+// const INITIAL_UPLOAD_CA: u32 = 20;
+
 fn to_value<T: serde::Serialize>(value: &T) -> Result<rmpv::Value, Error> {
     let value = rmp_serde::encode::to_vec_named(value)?;
     Ok(rmp_serde::decode::from_slice(&value)?)
@@ -531,6 +540,7 @@ impl<S: Stream> Amp0LoggedIn<S> {
         let hmac = compute_hmac(&self.hmac_key, &blob64)?;
         self.amp0.set_blob(&blob64, &hmac, &self.hmac).await?;
         self.hmac = hmac;
+        // TODO: upload INITIAL_UPLOAD_CA
         Ok(amp_id)
     }
 

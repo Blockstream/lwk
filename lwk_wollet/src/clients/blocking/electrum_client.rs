@@ -92,6 +92,8 @@ impl ElectrumUrl {
             Ok(ElectrumUrl::Plaintext(host_port.into()))
         }
     }
+
+    /// Build an Electrum client from the url and options
     pub fn build_client(&self, options: &ElectrumOptions) -> Result<Client, Error> {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
@@ -116,6 +118,7 @@ impl Debug for ElectrumClient {
 /// Options for the [`ElectrumClient::with_options()`] method.
 #[derive(Default)]
 pub struct ElectrumOptions {
+    /// The timeout for the Electrum client.
     pub timeout: Option<u8>,
 }
 

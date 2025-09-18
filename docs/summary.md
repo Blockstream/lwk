@@ -11,6 +11,9 @@
   * [Transaction Signing](sign.md) ❌
   * [Transaction Broadcast](broadcast.md) ❌
 * [Advanced](advanced.md) ❌
+  * [Issuance](issuance.md) ❌
+  * [Reissuance](reissuance.md) ❌
+  * [Burn](burn.md) ❌
   * [CLI](cli.md) 🚧
   * [Multisig](multisig.md) ❌
   * [Explicit](explicit.md) ❌

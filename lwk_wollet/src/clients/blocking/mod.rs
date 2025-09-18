@@ -56,10 +56,12 @@ pub trait BlockchainBackend {
         HashSet::new()
     }
 
+    /// Whether the client is configured to only fetch transactions with unspent outputs (false by default)
     fn utxo_only(&self) -> bool {
         false
     }
 
+    /// Get the wallet history
     fn get_history<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -131,6 +133,7 @@ pub trait BlockchainBackend {
         Ok(data)
     }
 
+    /// Get the history using the waterfalls endpoint
     fn get_history_waterfalls<S: WolletState>(
         &mut self,
         _descriptor: &WolletDescriptor,

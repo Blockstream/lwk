@@ -169,6 +169,7 @@ impl FromStr for DescriptorBlindingKey {
     }
 }
 
+/// The variant of the descriptor like specified in the bips
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Bip {
     /// For P2WPKH wallets
@@ -189,6 +190,7 @@ impl std::fmt::Display for Bip {
     }
 }
 
+/// The error type returned by Bip::from_str
 #[derive(Error, Debug)]
 #[error("Invalid bip  variant '{0}' supported variant are: 'bip84'")]
 pub struct InvalidBipVariant(String);

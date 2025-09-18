@@ -127,6 +127,7 @@ impl EsploraClient {
         Ok(tx)
     }
 
+    /// Fetcth concurrently a list of transactions.
     pub async fn get_transactions(
         &self,
         txids: &[Txid],
@@ -139,6 +140,9 @@ impl EsploraClient {
         results.into_iter().collect()
     }
 
+    /// Fetch concurrently a list of block headers
+    ///
+    /// Optionally pass known blockhash to avoid some network roundtrips if already known.
     pub async fn get_headers(
         &self,
         heights: &[Height],
@@ -172,6 +176,7 @@ impl EsploraClient {
     // examples:
     // https://blockstream.info/liquidtestnet/api/address/tex1qntw9m0j2e93n84x975t47ddhgkzx3x8lhfv2nj/txs
     // https://blockstream.info/liquidtestnet/api/scripthash/b50a2a798d876db54acfa0d8dfdc49154ea8defed37b225ec4c9ec7415358ba3/txs
+    /// Get the transactions involved in a list of scripts
     pub async fn get_scripts_history(
         &self,
         scripts: &[&Script],

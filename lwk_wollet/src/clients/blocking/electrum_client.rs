@@ -29,7 +29,9 @@ pub struct ElectrumClient {
 /// If you need to use tls without validating the domain, use the constructor [`ElectrumUrl`]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ElectrumUrl {
-    Tls(String, bool), // the bool value indicates if the domain name should be validated
+    /// The TLS scheme with the domain name and the flag indicating if the domain name should be validated
+    Tls(String, bool),
+    /// The plaintext scheme with the domain name
     Plaintext(String),
 }
 

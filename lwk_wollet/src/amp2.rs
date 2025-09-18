@@ -16,10 +16,15 @@ use elements::pset::PartiallySignedTransaction;
 use lwk_common::keyorigin_xpub_from_str;
 use serde::{Deserialize, Serialize};
 
+/// The fingerprint of the AMP2 server key for the testnet network.
 pub const FINGERPRINT_TESTNET: &str = "3d970d04";
+/// The xpub of the AMP2 server key for the testnet network.
 pub const XPUB_TESTNET: &str = "tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+/// The derivation path of the AMP2 server key for the testnet network.
 pub const DERIVATION_PATH_TESTNET: &str = "m/87h/1h/0h";
+/// The keyorigin xpub of the AMP2 server key for the testnet network.
 pub const KEYORIGIN_XPUB_TESTNET: &str = "[3d970d04/87h/1h/0h]tpubDC347GyKEGtyd4swZDaEmBTcNuqseyX7E3Yw58FoeV1njuBcUmBMr5vBeBh6eRsxKYHeCAEkKj8J2p2dBQQJwB8n33uyAPrdgwFxLFTCXRd";
+/// The URL of the AMP2 server for the testnet network.
 pub const URL_TESTNET: &str = "https://amp2.testnet.blockstream.com/";
 
 /// Context for actions interacting with AMP2

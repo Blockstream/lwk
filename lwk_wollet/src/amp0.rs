@@ -1525,6 +1525,7 @@ pub mod blocking {
     }
 
     impl Amp0Connected {
+        /// Connect and register to AMP0
         pub fn new(network: Network, signer_data: super::Amp0SignerData) -> Result<Self, Error> {
             let rt = Runtime::new()?;
             let inner = rt.block_on(super::Amp0Connected::<WebSocketClient>::new_(
@@ -1534,10 +1535,17 @@ pub mod blocking {
             Ok(Amp0Connected { rt, inner })
         }
 
+        /// Obtain a login challenge
+        ///
+        /// This must be signed with [`lwk_common::Amp0Signer::amp0_sign_challenge()`].
         pub fn get_challenge(&self) -> Result<String, Error> {
             self.rt.block_on(self.inner.get_challenge())
         }
 
+        /// Log in
+        ///
+        /// `sig` must be obtained from [`lwk_common::Amp0Signer::amp0_sign_challenge()`] called with the value returned
+        /// by [`Amp0Connected::get_challenge()`]
         pub fn login(self, sig: &str) -> Result<Amp0LoggedIn, Error> {
             let amp0loggedin = self.rt.block_on(self.inner.login(sig))?;
             Ok(Amp0LoggedIn {

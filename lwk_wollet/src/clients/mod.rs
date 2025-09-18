@@ -123,12 +123,25 @@ impl IndexMut<Chain> for LastUnused {
 /// Data processed after a "get history" call
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Data {
+    /// The new transaction ids that are involved in the update, with the confirmation height if confirmed.
     pub txid_height: HashMap<Txid, Option<Height>>,
+
+    /// The new scripts that are involved in the update.
     pub scripts: HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
+
+    /// The last unused index for each chain.
     pub last_unused: LastUnused,
+
+    /// The block hash of the block at the given height.
     pub height_blockhash: HashMap<Height, BlockHash>,
+
+    /// The timestamp of the block at the given height, to be used to get the timestamp of the transaction.
     pub height_timestamp: HashMap<Height, Timestamp>,
+
+    /// The tip of the blockchain at the time the get_history was called.
     pub tip: Option<BlockHash>,
+
+    /// The unspent outputs of this get_history call, this is non-empty only in waterfalls UTXO mode, where it's needed to know which outputs are unspent to create a dummy tx spending all the other outputs.
     pub unspent: Vec<OutPoint>,
 }
 

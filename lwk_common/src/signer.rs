@@ -74,6 +74,9 @@ pub trait Signer {
         Ok(xpub.network == bitcoin::NetworkKind::Main)
     }
 
+    /// Return the Witness Public Key Hash, slip77, descriptor for this signer
+    ///
+    /// Example: "ct(slip77(...),elwpkh([73c5da0a/84'/1'/0']xpub.../<0;1>/*))#2e4n992d"
     fn wpkh_slip77_descriptor(&self) -> Result<String, String> {
         crate::singlesig_desc(
             self,

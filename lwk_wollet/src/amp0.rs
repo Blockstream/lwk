@@ -2258,9 +2258,12 @@ mod tests {
         let network = Network::LocaltestLiquid;
 
         // Create signer and watch only credentials
-        let (signer, _mnemonic) = SwSigner::random(false).unwrap();
+        let (signer, mnemonic) = SwSigner::random(false).unwrap();
         let username = format!("user{}", signer.fingerprint());
         let password = format!("pass{}", signer.fingerprint());
+        println!("mnemonic: {}", mnemonic);
+        println!("username: {}", username);
+        println!("password: {}", password);
 
         // Collect signer data
         let signer_data = signer.amp0_signer_data().unwrap();

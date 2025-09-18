@@ -58,6 +58,7 @@ pub trait Signer {
         Ok(keyorigin_xpub)
     }
 
+    /// Return true if the signer is for mainnet.
     fn is_mainnet(&self) -> Result<bool, Self::Error> {
         let xpub = match self.xpub() {
             Ok(xpub) => xpub,

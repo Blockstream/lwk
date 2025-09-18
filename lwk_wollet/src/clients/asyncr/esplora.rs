@@ -807,6 +807,7 @@ pub async fn async_sleep(millis: i32) {
     wasm_bindgen_futures::JsFuture::from(p).await.unwrap();
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sleep asynchronously for the given number of milliseconds on non-WASM targets.
 pub async fn async_sleep(millis: i32) {
     tokio::time::sleep(tokio::time::Duration::from_millis(millis as u64)).await;
 }

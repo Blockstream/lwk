@@ -55,8 +55,10 @@ struct RegisterRequest {
     descriptor: String,
 }
 
+/// Response from the AMP2 server when registering a wallet
 #[derive(Serialize, Deserialize)]
 pub struct RegisterResponse {
+    /// The AMP2 wallet id, should match [`WolletDescriptor::dwid()`]
     pub wid: String,
 }
 

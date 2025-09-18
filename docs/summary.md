@@ -1,9 +1,8 @@
 # LWK documentation
 
 * [Introduction](intro.md) 🚧
-* [Architecture](arch.md) 🚧
-* [Features](features.md) 🚧
-* [Install](install.md) ❌
+  * [Features](features.md) 🚧
+  * [Install](install.md) ❌
 * [Basics](basics.md) ❌
   * [Signers](signer.md) ❌
   * [Watch-Only Wallets](wollet.md) ❌
@@ -34,6 +33,7 @@
   * [Nix](nix.md) 🚧
   * [Docs](docs.md) 🚧
 * [Miscellaneous](misc.md) ❌
+  * [Architecture](arch.md) 🚧
   * [Use Cases](usecases.md) ❌
   * [LWK Users](users.md) ❌
   * [History](history.md) 🚧

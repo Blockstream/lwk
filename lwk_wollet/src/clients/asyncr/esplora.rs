@@ -713,6 +713,7 @@ impl EsploraClient {
         }
     }
 
+    /// Return the number of network requests made by this client.
     pub fn requests(&self) -> usize {
         self.requests.load(std::sync::atomic::Ordering::Relaxed)
     }

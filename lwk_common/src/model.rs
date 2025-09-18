@@ -105,8 +105,14 @@ impl Issuance {
     }
 }
 
+/// The details of a Partially Signed Elements Transaction:
+///
+/// - the net balance from the point of view of the wallet
+/// - the available and missing signatures for each input
+/// - for issuances and reissuances transactions contains the issuance or reissuance details
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
+    /// The net balance of the PSET from the point of view of the wallet
     pub balance: PsetBalance,
 
     /// For each input, existing or missing signatures

@@ -104,6 +104,7 @@ pub struct UnvalidatedRecipient {
 }
 
 impl UnvalidatedRecipient {
+    /// Create a new unvalidated recipient for receiving `satoshi` units of the policy asset (Liquid Bitcoin for mainnet).
     pub fn lbtc(address: String, satoshi: u64) -> Self {
         UnvalidatedRecipient {
             address,
@@ -111,6 +112,8 @@ impl UnvalidatedRecipient {
             asset: "".to_string(),
         }
     }
+
+    /// Create a new unvalidated recipient for burning `satoshi` units of the given `asset`.
     pub fn burn(asset: String, satoshi: u64) -> Self {
         UnvalidatedRecipient {
             address: "burn".to_string(),

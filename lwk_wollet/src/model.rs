@@ -67,13 +67,21 @@ pub struct WalletTx {
 /// network independent.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Recipient {
+    /// The amount to send in satoshi.
     pub satoshi: u64,
+
+    /// The script pubkey of the recipient.
     pub script_pubkey: Script,
+
+    /// The blinding pubkey of the recipient.
     pub blinding_pubkey: Option<PublicKey>,
+
+    /// The asset to send.
     pub asset: AssetId,
 }
 
 impl Recipient {
+    /// Create a new recipient from the given `satoshi`, `address` and `asset`.
     pub fn from_address(satoshi: u64, address: &Address, asset: AssetId) -> Self {
         Self {
             satoshi,

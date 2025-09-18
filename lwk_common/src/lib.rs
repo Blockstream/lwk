@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![warn(missing_docs)]
 
 //! A crate containing common code used in multiple other crate in the workspace, such as:
 //!

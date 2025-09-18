@@ -2,11 +2,15 @@ use elements_miniscript::elements::bitcoin::bip32::{DerivationPath, Fingerprint,
 use std::str::FromStr;
 use thiserror::Error;
 
+/// The error type returned by keyorigin_xpub_from_str
 #[derive(Error, Debug)]
 #[error("Invalid key origin xpub \"{0}\", expected [fingerprint/path]xpub")]
 pub struct InvalidKeyOriginXpub(String);
 
 // TODO: cleanup this fn
+/// Parse a keyorigin xpub from a string
+///
+/// Example: "[73c5da0a/84h/1h/0h]tpub..."
 pub fn keyorigin_xpub_from_str(
     s: &str,
 ) -> Result<(Option<(Fingerprint, DerivationPath)>, Xpub), InvalidKeyOriginXpub> {

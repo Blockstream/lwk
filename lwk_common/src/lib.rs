@@ -67,8 +67,11 @@ use elements_miniscript::elements::{
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
 use std::collections::btree_map::BTreeMap;
 
+/// The sockets of the Blockstream Liquid Electrum servers.
 pub mod electrum_ssl {
+    /// The socket of the Blockstream Liquid mainnet Electrum server.
     pub const LIQUID_SOCKET: &str = "elements-mainnet.blockstream.info:50002";
+    /// The socket of the Blockstream Liquid testnet Electrum server.
     pub const LIQUID_TESTNET_SOCKET: &str = "elements-testnet.blockstream.info:50002";
 }
 

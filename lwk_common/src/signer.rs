@@ -15,6 +15,7 @@ use crate::descriptor::Bip;
 
 /// A trait defining methods of signers, providing blanket implementations for some methods.
 pub trait Signer {
+    /// The user defined error type returned by the signer.
     type Error: std::fmt::Debug;
 
     /// Try to sign the given pset, mutating it in place.

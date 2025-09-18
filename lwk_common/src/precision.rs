@@ -1,6 +1,7 @@
 use std::num::{ParseIntError, TryFromIntError};
 
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum Error {
     #[error("The maximum precision is 8, given {0}")]
     TooPrecise(u8),

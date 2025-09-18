@@ -50,14 +50,31 @@ pub struct ExternalUtxo {
 /// wallet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WalletTx {
+    /// The transaction.
     pub tx: Transaction,
+
+    /// The transaction id.
     pub txid: Txid,
+
+    /// The height of the block containing the transaction if it's confirmed.
     pub height: Option<u32>,
+
+    /// The net balance from the perspective of the wallet of the transaction.
     pub balance: SignedBalance,
+
+    /// The fee of the transaction.
     pub fee: u64,
+
+    /// The type of the transaction. Can be "issuance", "reissuance", "burn", "redeposit", "incoming", "outgoing" or "unknown".
     pub type_: String,
+
+    /// The timestamp of the transaction if it's confirmed.
     pub timestamp: Option<Timestamp>,
+
+    /// The inputs of the transaction that belong to this wallet, or None for inputs owned by others (thus respecting the indexes of the inputs).
     pub inputs: Vec<Option<WalletTxOut>>,
+
+    /// The outputs of the transaction that belong to this wallet, or None for outputs owned by others (thus respecting the indexes of the outputs).
     pub outputs: Vec<Option<WalletTxOut>>,
 }
 

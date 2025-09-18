@@ -13,6 +13,7 @@ use crate::{
 use super::BlockchainBackend;
 
 impl EsploraClientBuilder {
+    /// Build a blocking Esplora client
     pub fn build_blocking(self) -> Result<EsploraClient, Error> {
         Ok(EsploraClient {
             rt: Runtime::new()?,
@@ -30,6 +31,7 @@ pub struct EsploraClient {
 }
 
 impl EsploraClient {
+    /// Create a new Esplora client
     pub fn new(url: &str, network: ElementsNetwork) -> Result<Self, Error> {
         Ok(Self {
             rt: Runtime::new()?,

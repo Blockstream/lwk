@@ -70,9 +70,9 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 
 ### Alternative setup
 It's possible to setup an AMP0 account using GDK based apps:
-* [Blockstream App](https://blockstream.com/app/) (easiest, GUI, mobile, desktop, Jade support), or
-* [`green_cli`](https://github.com/Blockstream/green_cli/) (CLI, Jade support), or
-* [GDK](https://github.com/blockstream/gdk) directly (fastest, [example](gdk-amp0.py))
+1. [Blockstream App](https://blockstream.com/app/) (easiest, GUI, mobile, desktop, Jade support), or
+2. [`green_cli`](https://github.com/Blockstream/green_cli/) (CLI, Jade support), or
+3. [GDK](https://github.com/blockstream/gdk) directly (fastest, [example](gdk-amp0.py))
 
 ## AMP0 daily operations
 

@@ -2,7 +2,7 @@ use crate::Error;
 use lwk_wollet::hashes::hex::FromHex;
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::Contract`]
+/// A contract defining metadata of an asset such the name and the ticker
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct Contract {

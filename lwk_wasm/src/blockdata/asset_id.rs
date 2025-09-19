@@ -98,6 +98,8 @@ impl AssetId {
         Ok(elements::AssetId::from_str(asset_id)?.into())
     }
 
+    /// Return the string representation of the asset identifier (64 hex characters).
+    /// This representation can be used to recreate the asset identifier via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

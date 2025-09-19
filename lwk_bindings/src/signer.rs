@@ -69,7 +69,7 @@ impl Bip {
 /// A Software signer, wrapper over [`lwk_signer::SwSigner`]
 #[derive(uniffi::Object)]
 pub struct Signer {
-    inner: lwk_signer::SwSigner,
+    pub(crate) inner: lwk_signer::SwSigner,
 }
 
 #[uniffi::export]

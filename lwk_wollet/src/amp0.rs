@@ -2248,14 +2248,14 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    #[ignore] // Requires network connectivity
+    #[ignore = "Requires network connectivity"]
     fn test_amp0_full_login_testnet() {
         amp0_full_login(false)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    #[ignore] // Requires local Green backend
+    #[ignore = "Requires local Green backend"]
     fn test_amp0_full_login_regtest() {
         amp0_full_login(true)
     }

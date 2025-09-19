@@ -36,10 +36,12 @@ impl OutPoint {
         Ok(out_point.into())
     }
 
+    /// Return the transaction identifier.
     pub fn txid(&self) -> Txid {
         self.inner.txid.into()
     }
 
+    /// Return the output index.
     pub fn vout(&self) -> u32 {
         self.inner.vout
     }

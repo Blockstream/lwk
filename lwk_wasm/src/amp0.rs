@@ -1,4 +1,5 @@
-use crate::{AddressResult, Error, Network, Transaction, WebSocketSerial};
+use crate::{AddressResult, Error, Network, Signer, Transaction, WebSocketSerial};
+use lwk_common::Amp0Signer;
 
 use wasm_bindgen::prelude::*;
 
@@ -172,6 +173,27 @@ impl From<lwk_common::Amp0SignerData> for Amp0SignerData {
 impl AsRef<lwk_common::Amp0SignerData> for Amp0SignerData {
     fn as_ref(&self) -> &lwk_common::Amp0SignerData {
         &self.inner
+    }
+}
+
+#[wasm_bindgen]
+impl Signer {
+    /// AMP0 signer data for login
+    #[wasm_bindgen(js_name = amp0SignerData)]
+    pub fn amp0_signer_data(&self) -> Result<Amp0SignerData, Error> {
+        Ok(self.inner.amp0_signer_data()?.into())
+    }
+
+    /// AMP0 sign login challenge
+    #[wasm_bindgen(js_name = amp0SignChallenge)]
+    pub fn amp0_sign_challenge(&self, challenge: &str) -> Result<String, Error> {
+        Ok(self.inner.amp0_sign_challenge(challenge)?)
+    }
+
+    /// AMP0 account xpub
+    #[wasm_bindgen(js_name = amp0AccountXpub)]
+    pub fn amp0_account_xpub(&self, account: u32) -> Result<String, Error> {
+        Ok(self.inner.amp0_account_xpub(account)?.to_string())
     }
 }
 

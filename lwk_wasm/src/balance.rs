@@ -60,6 +60,7 @@ impl Balance {
         Ok(self.inner.serialize(&serializer)?)
     }
 
+    /// Return the string representation of the balance.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         serde_json::to_string(&self.inner).expect("contain simple types")

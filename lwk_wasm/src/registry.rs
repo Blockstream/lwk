@@ -6,6 +6,7 @@ use crate::{
     Transaction,
 };
 
+/// A Registry, a repository to store and retrieve asset metadata, like the name or the ticker of an asset.
 #[wasm_bindgen]
 pub struct Registry {
     inner: lwk_wollet::registry::RegistryCache,

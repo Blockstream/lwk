@@ -379,4 +379,38 @@ mod tests {
         // Broadcast
         let _txid = client.broadcast_tx(&tx).await.unwrap();
     }
+
+    #[wasm_bindgen_test]
+    #[ignore = "Requires network connectivity and it takes too long"]
+    async fn test_amp0_create_account() {
+        use crate::{Bip, Mnemonic, Signer};
+
+        let network = Network::testnet();
+
+        let mnemonic = Mnemonic::from_random(12).unwrap();
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+        let fp = &signer.keyorigin_xpub(&Bip::bip49()).unwrap()[1..9];
+        let username = format!("user{}", fp);
+        let password = format!("pass{}", fp);
+
+        // Login to AMP0
+        let sd = signer.amp0_signer_data().unwrap();
+        let amp0 = Amp0Connected::new(&network, &sd).await.unwrap();
+        let challenge = amp0.get_challenge().await.unwrap();
+        let sig = signer.amp0_sign_challenge(&challenge).unwrap();
+        let mut amp0 = amp0.login(&sig).await.unwrap();
+
+        // Create AMP0 account
+        let pointer = amp0.next_account().unwrap();
+        let xpub = signer.amp0_account_xpub(pointer).unwrap();
+        let amp_id = amp0.create_amp0_account(pointer, &xpub).await.unwrap();
+
+        // Create Watch-Only
+        amp0.create_watch_only(&username, &password).await.unwrap();
+
+        // Login Watch-Only
+        let _amp0 = Amp0::new_testnet(&username, &password, &amp_id)
+            .await
+            .unwrap();
+    }
 }

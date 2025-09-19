@@ -146,6 +146,10 @@ impl Registry {
             .map(Into::into)
     }
 
+    /// Add the contracts information of the assets used in the Pset
+    /// if available in this registry.
+    /// Without the contract information, the partially signed transaction
+    /// is valid but will not show asset information when signed with an hardware wallet.
     #[wasm_bindgen(js_name = addContracts)]
     pub fn add_contracts(&self, pset: Pset) -> Result<Pset, Error> {
         let mut pset: elements::pset::PartiallySignedTransaction = pset.into();

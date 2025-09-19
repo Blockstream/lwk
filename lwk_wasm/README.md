@@ -141,3 +141,8 @@ for (const [currency, amount] of balance.entries()) {
 // 3. Convert to a plain object
 const balanceObject = Object.fromEntries(balance.entries());
 ```
+
+## Documentation
+
+Documentation of this crate should not use link to rust types such as [`Transaction`] because they are not usable in end-user javascript packages.
+Many types are wrappers of types in lwk crates, in this cases we mostly duplicate the original documentation with context adjustment. 

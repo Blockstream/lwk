@@ -101,12 +101,14 @@ impl From<Txid> for elements::Txid {
 
 #[wasm_bindgen]
 impl Txid {
-    /// Creates a `Txid`
+    /// Creates a `Txid` from its hex string representation (64 characters).
     #[wasm_bindgen(constructor)]
     pub fn new(tx_id: &str) -> Result<Txid, Error> {
         Ok(elements::Txid::from_str(tx_id)?.into())
     }
 
+    /// Return the string representation of the transaction identifier as shown in the explorer.
+    /// This representation can be used to recreate the transaction identifier via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

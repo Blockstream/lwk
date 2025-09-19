@@ -2365,4 +2365,17 @@ mod tests {
 
         assert_eq!(blob.watchonly.len(), 2);
     }
+
+    #[test]
+    fn test_amp0_signer_data_serde() {
+        use lwk_common::Amp0Signer;
+        use lwk_signer::SwSigner;
+
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+
+        let sd = signer.amp0_signer_data().unwrap();
+        let sd_str = sd.to_string();
+        assert_eq!(Amp0SignerData::from_str(&sd_str).unwrap(), sd);
+    }
 }

@@ -106,16 +106,20 @@ impl AssetId {
 
 #[wasm_bindgen]
 impl AssetIds {
+    /// Return an empty list of asset identifiers.
     pub fn empty() -> Result<AssetIds, Error> {
         Ok(AssetIds {
             inner: BTreeSet::new(),
         })
     }
 
+    /// Return the string representation of this list of asset identifiers.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
+
+    // TODO: implement entries()
 }
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {

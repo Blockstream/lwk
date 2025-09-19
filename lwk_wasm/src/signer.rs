@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 /// A Software signer.
 #[wasm_bindgen]
 pub struct Signer {
-    inner: lwk_signer::SwSigner,
+    pub(crate) inner: lwk_signer::SwSigner,
 }
 
 #[wasm_bindgen]

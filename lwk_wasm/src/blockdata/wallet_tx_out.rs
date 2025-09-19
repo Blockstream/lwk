@@ -86,6 +86,7 @@ impl From<Option<lwk_wollet::WalletTxOut>> for OptionWalletTxOut {
 
 #[wasm_bindgen]
 impl OptionWalletTxOut {
+    /// Return a copy of the WalletTxOut if it exists, otherwise None
     pub fn get(&self) -> Option<WalletTxOut> {
         self.inner.clone()
     }

@@ -2,7 +2,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::{Error, Wollet, WolletDescriptor};
 
-/// Wrapper of [`lwk_wollet::Update`]
+/// An Update contains the delta of information to be applied to the wallet to reach the latest status.
+/// It's created passing a reference to the wallet to the blockchain client
 #[wasm_bindgen]
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Update {

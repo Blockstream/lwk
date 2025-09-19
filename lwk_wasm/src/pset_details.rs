@@ -3,28 +3,36 @@ use wasm_bindgen::prelude::*;
 
 use crate::{Address, AssetId, Balance, Txid};
 
-/// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetDetails`]
+/// The details of a Partially Signed Elements Transaction:
+///
+/// - the net balance from the point of view of the wallet
+/// - the available and missing signatures for each input
+/// - for issuances and reissuances transactions contains the issuance or reissuance details
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct PsetDetails {
     inner: lwk_common::PsetDetails,
 }
 
-/// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetBalance`]
+/// The details regarding balance and amounts in a PSET:
+///
+/// - The fee of the transaction in the PSET
+/// - The net balance of the assets in the PSET from the point of view of the wallet
+/// - The outputs going out of the wallet
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct PsetBalance {
     inner: lwk_common::PsetBalance,
 }
 
-/// PSET details from a perspective of a wallet, wrapper of [`lwk_common::PsetSignatures`]
+/// The details of the signatures in a PSET, divided in available and missing signatures.
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct PsetSignatures {
     inner: lwk_common::PsetSignatures,
 }
 
-/// PSET details from a perspective of a wallet, wrapper of [`lwk_common::Issuance`]
+/// The details of an issuance or reissuance.
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct Issuance {

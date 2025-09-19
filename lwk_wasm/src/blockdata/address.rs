@@ -2,7 +2,7 @@ use crate::{Error, Network, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`elements::Address`]
+/// An Elements address
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Address {
@@ -106,7 +106,9 @@ impl Address {
     }
 }
 
-/// Wrapper of [`lwk_wollet::AddressResult`]
+/// Value returned from asking an address to the wallet.
+/// Containing the confidential address and its
+/// derivation index (the last element in the derivation path)
 #[wasm_bindgen]
 pub struct AddressResult {
     inner: lwk_wollet::AddressResult,

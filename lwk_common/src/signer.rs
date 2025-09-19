@@ -101,9 +101,11 @@ pub mod amp0 {
     use crate::Network;
     use elements::hex::ToHex;
     use elements::Address;
+    use serde::{Deserialize, Serialize};
+    use serde_json;
 
     /// Signer information necessary for full login to AMP0
-    #[derive(Clone)]
+    #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Debug)]
     pub struct Amp0SignerData {
         // used for register and login_address
         master_xpub: Xpub,
@@ -114,7 +116,24 @@ pub mod amp0 {
         // used for encrypting the client blob
         client_secret_xpub: Xpub,
         // master blinding key (always slip77)
-        slip77_key: MasterBlindingKey,
+        slip77_key: String,
+    }
+
+    impl std::fmt::Display for Amp0SignerData {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match serde_json::to_string(self) {
+                Ok(s) => write!(f, "{}", s),
+                Err(e) => write!(f, "Error serializing: {}", e),
+            }
+        }
+    }
+
+    impl FromStr for Amp0SignerData {
+        type Err = serde_json::Error;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            serde_json::from_str(s)
+        }
     }
 
     impl Amp0SignerData {
@@ -146,7 +165,7 @@ pub mod amp0 {
         }
 
         /// Return the slip77 master blinding key
-        pub fn slip77_key(&self) -> &MasterBlindingKey {
+        pub fn slip77_key(&self) -> &str {
             &self.slip77_key
         }
     }
@@ -164,7 +183,7 @@ pub mod amp0 {
             let client_secret_path = DerivationPath::from_str("m/1885434739h").expect("static");
             let client_secret_xpub = self.derive_xpub(&client_secret_path)?;
 
-            let slip77_key = self.slip77_master_blinding_key()?;
+            let slip77_key = self.slip77_master_blinding_key()?.to_string();
 
             Ok(Amp0SignerData {
                 master_xpub,

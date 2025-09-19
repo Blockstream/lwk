@@ -200,3 +200,42 @@ impl Amp0Connected {
         }))
     }
 }
+
+#[uniffi::export]
+impl Amp0LoggedIn {
+    /// List of AMP IDs.
+    pub fn get_amp_ids(&self) -> Result<Vec<String>, LwkError> {
+        Ok(self.inner.lock()?.get_amp_ids()?)
+    }
+
+    /// Get the next account for AMP0 account creation
+    ///
+    /// This must be given to [`Signer::amp0_account_xpub()`] to obtain the xpub to pass to
+    /// [`Amp0LoggedIn::create_amp0_account()`]
+    pub fn next_account(&self) -> Result<u32, LwkError> {
+        Ok(self.inner.lock()?.next_account()?)
+    }
+
+    /// Create a new AMP0 account
+    ///
+    /// `account_xpub` must be obtained from [`Signer::amp0_account_xpub()`] called with the value obtained from
+    /// [`Amp0LoggedIn::next_account()`]
+    pub fn create_amp0_account(
+        &self,
+        pointer: u32,
+        account_xpub: &str,
+    ) -> Result<String, LwkError> {
+        use elements::bitcoin::bip32::Xpub;
+        use std::str::FromStr;
+        let account_xpub = Xpub::from_str(account_xpub)?;
+        Ok(self
+            .inner
+            .lock()?
+            .create_amp0_account(pointer, &account_xpub)?)
+    }
+
+    /// Create a new Watch-Only entry for this wallet
+    pub fn create_watch_only(&self, username: &str, password: &str) -> Result<(), LwkError> {
+        Ok(self.inner.lock()?.create_watch_only(username, password)?)
+    }
+}

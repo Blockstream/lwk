@@ -140,3 +140,63 @@ impl Signer {
         Ok(self.inner.amp0_account_xpub(account)?.to_string())
     }
 }
+
+/// Session connecting to AMP0
+#[derive(uniffi::Object)]
+pub struct Amp0Connected {
+    /// Uniffi doesn't allow to accept self and consume the parameter (everything is behind Arc)
+    /// So, inside the Mutex we have an option that allow to consume the inner builder and also
+    /// to emulate the consumption of this object after login.
+    /// (same approach used for TxBuilder)
+    inner: Mutex<Option<lwk_wollet::amp0::blocking::Amp0Connected>>,
+}
+
+/// Session logged in AMP0
+#[derive(uniffi::Object)]
+pub struct Amp0LoggedIn {
+    inner: Mutex<lwk_wollet::amp0::blocking::Amp0LoggedIn>,
+}
+
+fn amp0_err() -> LwkError {
+    "AMP0 session already logged in or it errored".into()
+}
+
+#[uniffi::export]
+impl Amp0Connected {
+    /// Connect and register to AMP0
+    #[uniffi::constructor]
+    pub fn new(network: &Network, signer_data: &Amp0SignerData) -> Result<Self, LwkError> {
+        let inner = lwk_wollet::amp0::blocking::Amp0Connected::new(
+            network.into(),
+            signer_data.inner.clone(),
+        )?;
+        Ok(Amp0Connected {
+            inner: Mutex::new(Some(inner)),
+        })
+    }
+
+    /// Obtain a login challenge
+    ///
+    /// This must be signed with [`Signer::amp0_sign_challenge()`].
+    pub fn get_challenge(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(amp0_err)?
+            .get_challenge()?)
+    }
+
+    /// Log in
+    ///
+    /// `sig` must be obtained from [`Signer::amp0_sign_challenge()`] called with the value returned
+    /// by [`Amp0Connected::get_challenge()`]
+    pub fn login(self: Arc<Self>, sig: &str) -> Result<Arc<Amp0LoggedIn>, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let amp0 = lock.take().ok_or_else(amp0_err)?;
+        let amp0 = amp0.login(sig)?;
+        Ok(Arc::new(Amp0LoggedIn {
+            inner: Mutex::new(amp0),
+        }))
+    }
+}

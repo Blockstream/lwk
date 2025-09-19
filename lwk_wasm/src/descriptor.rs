@@ -42,11 +42,16 @@ impl WolletDescriptor {
         Ok(desc.into())
     }
 
+    /// Return the string representation of the descriptor, including the checksum.
+    /// This representation can be used to recreate the descriptor via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
 
+    /// Create a new multisig descriptor, where each participant is a keyorigin_xpub and it requires at least threshold signatures to spend.
+    /// Errors if the threshold is 0 or greater than the number of participants.
+    /// Uses slip77 for the blinding key.
     #[wasm_bindgen(js_name = newMultiWshSlip77)]
     pub fn new_multi_wsh_slip77(
         threshold: u32,
@@ -68,6 +73,7 @@ impl WolletDescriptor {
         Ok(desc.into())
     }
 
+    /// Whether the descriptor is for mainnet
     #[wasm_bindgen(js_name = isMainnet)]
     pub fn is_mainnet(&self) -> bool {
         self.inner.is_mainnet()

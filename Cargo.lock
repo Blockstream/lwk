@@ -2269,6 +2269,7 @@ dependencies = [
  "qr_code",
  "rand",
  "serde",
+ "serde_json",
  "thiserror 1.0.69",
 ]
 

@@ -122,3 +122,21 @@ impl AsRef<lwk_common::Amp0SignerData> for Amp0SignerData {
         &self.inner
     }
 }
+
+#[uniffi::export]
+impl Signer {
+    /// AMP0 signer data for login
+    pub fn amp0_signer_data(&self) -> Result<Amp0SignerData, LwkError> {
+        Ok(self.inner.amp0_signer_data()?.into())
+    }
+
+    /// AMP0 sign login challenge
+    fn amp0_sign_challenge(&self, challenge: &str) -> Result<String, LwkError> {
+        Ok(self.inner.amp0_sign_challenge(challenge)?)
+    }
+
+    /// AMP0 account xpub
+    fn amp0_account_xpub(&self, account: u32) -> Result<String, LwkError> {
+        Ok(self.inner.amp0_account_xpub(account)?.to_string())
+    }
+}

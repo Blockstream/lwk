@@ -2,13 +2,13 @@ use crate::{Error, Pset, WolletDescriptor};
 
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::amp2::Amp2`]
+/// Context for actions interacting with Asset Management Platform version 2
 #[wasm_bindgen]
 pub struct Amp2 {
     inner: lwk_wollet::amp2::Amp2,
 }
 
-/// Wrapper of [`lwk_wollet::amp2::Amp2Descriptor`]
+/// An Asset Management Platform version 2 descriptor
 #[wasm_bindgen]
 pub struct Amp2Descriptor {
     inner: lwk_wollet::amp2::Amp2Descriptor,

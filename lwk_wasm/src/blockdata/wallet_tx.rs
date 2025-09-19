@@ -75,7 +75,7 @@ impl WalletTx {
 mod tests {
     use crate::WalletTx;
     use lwk_wollet::elements::{self, hex::FromHex, pset::serialize::Deserialize};
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, HashMap};
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
@@ -110,7 +110,7 @@ mod tests {
             txid: tx.txid(),
             tx: tx.clone(),
             height: Some(4),
-            balance: vec![(a, 10)].into_iter().collect(),
+            balance: vec![(a, 10)].into_iter().collect::<BTreeMap<_, _>>().into(),
             fee: 23,
             type_: "type".to_string(),
             timestamp: Some(124),
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(wallet_tx.height(), Some(4));
 
         let balance: HashMap<elements::AssetId, i64> =
-            serde_wasm_bindgen::from_value(wallet_tx.balance().unwrap()).unwrap();
+            serde_wasm_bindgen::from_value(wallet_tx.balance().into()).unwrap();
         assert_eq!(balance.get(&a), Some(&10));
 
         assert_eq!(wallet_tx.fee(), 23);

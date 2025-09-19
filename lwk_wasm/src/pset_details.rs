@@ -275,7 +275,7 @@ mod tests {
         let details = wollet.pset_details(&pset).unwrap();
         assert_eq!(details.balance().fee(), 254);
         let balance: HashMap<lwk_wollet::elements::AssetId, i64> =
-            serde_wasm_bindgen::from_value(details.balance().balances().unwrap()).unwrap();
+            serde_wasm_bindgen::from_value(details.balance().balances().into()).unwrap();
         assert_eq!(
             format!("{:?}", balance),
             "{5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1254}"

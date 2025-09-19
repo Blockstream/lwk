@@ -2,7 +2,9 @@ use wasm_bindgen::prelude::*;
 
 use crate::Error;
 
-/// Wrapper of [`lwk_common::precision::Precision`]
+/// Helper to convert satoshi values of an asset to the value with the given precision and viceversa.
+///
+/// For example 100 satoshi with precision 2 is "1.00"
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Precision {

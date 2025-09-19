@@ -3,7 +3,7 @@ use lwk_common::{multisig_desc, DescriptorBlindingKey, Multisig};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::WolletDescriptor`]
+/// A wrapper that contains only the subset of CT descriptors handled by wollet
 #[wasm_bindgen]
 pub struct WolletDescriptor {
     inner: lwk_wollet::WolletDescriptor,

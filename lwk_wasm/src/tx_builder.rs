@@ -205,11 +205,14 @@ impl TxBuilder {
         self.inner.set_wallet_utxos(outpoints).into()
     }
 
+    /// Return a string representation of the transaction builder (mostly for debugging)
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         self.to_string()
     }
 
+    /// Set data to create a PSET from which you
+    /// can create a LiquiDEX proposal
     #[wasm_bindgen(js_name = liquidexMake)]
     pub fn liquidex_make(
         self,
@@ -224,6 +227,7 @@ impl TxBuilder {
             .into())
     }
 
+    /// Set data to take LiquiDEX proposals
     #[wasm_bindgen(js_name = liquidexTake)]
     pub fn liquidex_take(self, proposals: Vec<ValidatedLiquidexProposal>) -> Result<Self, Error> {
         let proposals: Vec<lwk_wollet::LiquidexProposal<Validated>> =

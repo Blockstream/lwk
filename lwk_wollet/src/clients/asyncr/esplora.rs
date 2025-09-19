@@ -827,6 +827,7 @@ impl EsploraClientBuilder {
 
 // based on https://users.rust-lang.org/t/rust-wasm-async-sleeping-for-100-milli-seconds-goes-up-to-1-minute/81177
 // TODO remove/handle/justify unwraps
+/// Async sleep
 #[cfg(target_arch = "wasm32")]
 pub async fn async_sleep(millis: i32) {
     let mut cb = |resolve: js_sys::Function, _reject: js_sys::Function| {

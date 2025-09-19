@@ -90,12 +90,18 @@ impl From<RegistryData> for lwk_wollet::registry::RegistryData {
 
 #[wasm_bindgen]
 impl Registry {
+    /// Create a new registry cache specifying the URL of the registry,
+    /// fetch the assets metadata identified by the given asset ids and cache them for later local retrieval.
+    /// Use `default_for_network()` to get the default registry for the given network.
     pub async fn new(url: &str, asset_ids: &AssetIds) -> Result<Self, Error> {
         let registry = lwk_wollet::registry::Registry::new(url);
         let asset_ids: Vec<elements::AssetId> = asset_ids.into();
         Ok(RegistryCache::new(registry, &asset_ids, 4).await.into())
     }
 
+    /// Return the default registry for the given network,
+    /// fetch the assets metadata identified by the given asset ids and cache them for later local retrieval.
+    /// Use `new()` to specify a custom URL
     #[wasm_bindgen(js_name = defaultForNetwork)]
     pub async fn default_for_network(
         network: &Network,
@@ -107,6 +113,9 @@ impl Registry {
         Ok(cache.into())
     }
 
+    /// Create a new registry cache, using only the hardcoded assets.
+    ///
+    /// Hardcoded assets are the policy assets (LBTC, tLBTC, rLBTC) and the USDT asset on mainnet.
     #[wasm_bindgen(js_name = defaultHardcodedForNetwork)]
     pub fn default_hardcoded_for_network(network: &Network) -> Result<Self, Error> {
         let registry = lwk_wollet::registry::Registry::default_for_network(network.into())?;
@@ -114,6 +123,7 @@ impl Registry {
         Ok(cache.into())
     }
 
+    /// Fetch the contract and the issuance transaction of the given asset id from the registry
     #[wasm_bindgen(js_name = fetchWithTx)]
     pub async fn fetch_with_tx(
         &self,
@@ -130,15 +140,19 @@ impl Registry {
         })
     }
 
+    /// Post a contract to the registry for registration.
     pub async fn post(&self, data: &RegistryPost) -> Result<(), Error> {
         let data: lwk_wollet::registry::RegistryPost = data.clone().into();
         Ok(self.inner.post(&data).await?)
     }
 
+    /// Return the asset metadata related to the given asset id if it exists in this registry.
     pub fn get(&self, asset_id: &AssetId) -> Option<RegistryData> {
         self.inner.get((*asset_id).into()).map(|data| data.into())
     }
 
+    /// Return the asset metadata related to the given token id,
+    /// in other words `token_id` is the reissuance token of the returned asset
     #[wasm_bindgen(js_name = getAssetOfToken)]
     pub fn get_asset_of_token(&self, token_id: &AssetId) -> Option<RegistryData> {
         self.inner

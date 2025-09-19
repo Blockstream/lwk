@@ -24,27 +24,34 @@ impl Display for Xpub {
 
 #[wasm_bindgen]
 impl Xpub {
-    /// Creates a Mnemonic
+    /// Creates a Xpub
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Xpub, Error> {
         let inner = bip32::Xpub::from_str(s)?;
         Ok(inner.into())
     }
 
+    /// Return the string representation of the Xpub.
+    /// This representation can be used to recreate the Xpub via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)
     }
 
+    /// Return the identifier of the Xpub.
+    /// This is a 40 hex characters string (20 bytes).
     pub fn identifier(&self) -> String {
         self.inner.identifier().to_string()
     }
 
+    /// Return the first four bytes of the identifier as hex string
+    /// This is a 8 hex characters string (4 bytes).
     pub fn fingerprint(&self) -> String {
         self.inner.fingerprint().to_string()
     }
 
-    /// Returns true if the passed string is a valid xpub with a valid keyorigin if present
+    /// Returns true if the passed string is a valid xpub with a valid keyorigin if present.
+    /// For example: "[73c5da0a/84h/1h/0h]tpub..."
     #[wasm_bindgen(js_name = isValidWithKeyOrigin)]
     pub fn is_valid_with_keyorigin(s: &str) -> bool {
         lwk_common::keyorigin_xpub_from_str(s).is_ok()

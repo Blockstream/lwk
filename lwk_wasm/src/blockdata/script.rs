@@ -3,7 +3,7 @@ use lwk_wollet::elements::{self, hex::ToHex, pset::serialize::Deserialize};
 use lwk_wollet::hashes::hex::FromHex;
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`elements::Script`]
+/// An Elements (Liquid) script
 #[wasm_bindgen]
 pub struct Script {
     inner: elements::Script,

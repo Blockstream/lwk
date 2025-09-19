@@ -54,18 +54,23 @@ impl Transaction {
         Ok(tx.into())
     }
 
+    /// Return the transaction identifier.
     pub fn txid(&self) -> Txid {
         self.inner.txid().into()
     }
 
+    /// Return the consensus encoded bytes of the transaction.
     pub fn bytes(&self) -> Vec<u8> {
         elements::Transaction::serialize(&self.inner)
     }
 
+    /// Return the fee of the transaction in the given asset.
+    /// At the moment the only asset that can be used as fee is the policy asset (LBTC for mainnet).
     pub fn fee(&self, policy_asset: &AssetId) -> u64 {
         self.inner.fee_in((*policy_asset).into())
     }
 
+    /// Return the hex representation of the transaction. More precisely, they are the consensus encoded bytes of the transaction converted in hex.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

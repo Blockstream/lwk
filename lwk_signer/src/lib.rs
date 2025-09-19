@@ -1,12 +1,12 @@
-#![cfg_attr(not(test), deny(clippy::unwrap_used))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-
 //! Contains a software signer [`SwSigner`] and an [`AnySigner`] that can be a Jade or a Software signer.
 //!
 //! Signers should implement [`lwk_common::Signer`]
 
-mod software;
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![warn(missing_docs)]
 
+mod software;
 pub use crate::software::{sign_with_seckey, NewError, SignError, SwSigner};
 pub use bip39;
 

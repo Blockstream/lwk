@@ -105,9 +105,8 @@ pub struct Amp0SignerData {
 }
 
 impl Display for Amp0SignerData {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!();
-        //write!(f, "{}", self.inner)
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
     }
 }
 

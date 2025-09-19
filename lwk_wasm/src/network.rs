@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{AssetId, EsploraClient, TxBuilder};
 
-/// Wrapper of [`lwk_wollet::ElementsNetwork`]
+/// The network of the elements blockchain such as mainnet, testnet or regtest.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Network {

@@ -2,7 +2,26 @@ use crate::{AddressResult, Error, Network, Transaction, WebSocketSerial};
 
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::amp0::Amp0`]
+/// Context for actions related to an AMP0 (sub)account
+///
+/// <div class="warning">
+/// <b>WARNING:</b>
+///
+/// AMP0 is based on a legacy system, and some things do not fit precisely the way LWK allows to do
+/// things.
+///
+/// Callers must be careful with the following:
+/// * <b>Addresses: </b>
+///   to get addresses use [`Amp0::address()`]. This ensures
+///   that all addresses used are correctly monitored by the AMP0 server.
+/// * <b>Syncing: </b>
+///   to sync the AMP0 [`crate::Wollet`], use [`Amp0::last_index()`] and [`crate::clients::blocking::BlockchainBackend::full_scan_to_index()`]. This ensures that all utxos are synced, even if there are gaps between higher than the GAP LIMIT.
+///
+/// <i>
+/// Failing to do the above might lead to inconsistent states, where funds are not shown or they
+/// cannot be spent!
+/// </i>
+/// </div>
 #[wasm_bindgen]
 pub struct Amp0 {
     inner: lwk_wollet::amp0::Amp0<WebSocketSerial>,
@@ -84,7 +103,12 @@ impl Amp0 {
     }
 }
 
-/// Wrapper of [`lwk_wollet::amp0::Amp0Pset`]
+/// A PSET to use with AMP0
+///
+/// When asking AMP0 to cosign, the caller must pass some extra data that does not belong to the
+/// PSET. This struct holds and manage the necessary data.
+///
+/// If you're not dealing with AMP0, do not use this struct.
 #[wasm_bindgen]
 pub struct Amp0Pset {
     inner: lwk_wollet::amp0::Amp0Pset,

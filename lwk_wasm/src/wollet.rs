@@ -44,6 +44,9 @@ impl Wollet {
         Ok(address_result.into())
     }
 
+    /// Get the full derivation path for an address
+    ///
+    /// Note: will be removed once we add the full path to lwk_wollet::AddressResult
     #[wasm_bindgen(js_name = addressFullPath)]
     pub fn address_full_path(&self, index: u32) -> Result<Vec<u32>, Error> {
         // TODO we should add the full path to lwk_wollet::AddressResult
@@ -64,26 +67,59 @@ impl Wollet {
         Ok(full_path)
     }
 
+    /// Apply an update containing blockchain data
+    ///
+    /// To update the wallet you need to first obtain the blockchain data relevant for the wallet.
+    /// This can be done using a `full_scan()`, which
+    /// returns an `Update` that contains new transaction and other data relevant for the
+    /// wallet.
+    /// The update must then be applied to the `Wollet` so that wollet methods such as
+    /// `balance()` or `transactions()` include the new data.
+    ///
+    /// However getting blockchain data involves network calls, so between the full scan start and
+    /// when the update is applied it might elapse a significant amount of time.
+    /// In that interval, applying any update, or any transaction using `apply_transaction()`,
+    /// will cause this function to return a `Error::UpdateOnDifferentStatus`.
+    /// Callers should either avoid applying updates and transactions, or they can catch the error
+    /// and wait for a new full scan to be completed and applied.
     #[wasm_bindgen(js_name = applyUpdate)]
     pub fn apply_update(&mut self, update: &Update) -> Result<(), Error> {
         Ok(self.inner.apply_update(update.into())?)
     }
 
+    /// Apply a transaction to the wallet state
+    ///
+    /// Wallet transactions are normally obtained using a `full_scan()`
+    /// and applying the result with `apply_update()`. However a
+    /// full scan involves network calls and it can take a significant amount of time.
+    ///
+    /// If the caller does not want to wait for a full scan containing the transaction, it can
+    /// apply the transaction to the wallet state using this function.
+    ///
+    /// Note: if this transaction is *not* returned by a next full scan, after `apply_update()` it will disappear from the
+    /// transactions list, will not be included in balance computations, and by the remaining
+    /// wollet methods.
+    ///
+    /// Calling this method, might cause `apply_update()` to fail with a
+    /// `Error::UpdateOnDifferentStatus`, make sure to either avoid it or handle the error properly.
     #[wasm_bindgen(js_name = applyTransaction)]
     pub fn apply_transaction(&mut self, tx: &Transaction) -> Result<Balance, Error> {
         Ok(self.inner.apply_transaction(tx.clone().into())?.into())
     }
 
+    /// Get the wallet balance for each assets
     pub fn balance(&self) -> Result<Balance, Error> {
         let balance = self.inner.balance()?;
         Ok(balance.into())
     }
 
+    /// Get the asset identifiers owned by the wallet
     #[wasm_bindgen(js_name = assetsOwned)]
     pub fn assets_owned(&self) -> Result<AssetIds, Error> {
         Ok(self.inner.assets_owned()?.into())
     }
 
+    /// Get the wallet transactions
     pub fn transactions(&self) -> Result<Vec<WalletTx>, Error> {
         Ok(self
             .inner
@@ -110,6 +146,7 @@ impl Wollet {
         Ok(pset.into())
     }
 
+    /// Get the PSET details with respect to the wallet
     #[wasm_bindgen(js_name = psetDetails)]
     pub fn pset_details(&self, pset: &Pset) -> Result<PsetDetails, Error> {
         let pset: PartiallySignedTransaction = pset.clone().into();
@@ -117,19 +154,27 @@ impl Wollet {
         Ok(details.into())
     }
 
+    /// Get a copy of the wallet descriptor of this wallet.
     pub fn descriptor(&self) -> Result<WolletDescriptor, Error> {
         Ok(self.inner.wollet_descriptor().into())
     }
 
+    /// A deterministic value derived from the descriptor, the config and the content of this wollet,
+    /// including what's in the wallet store (transactions etc)
+    ///
+    /// In this case, we don't need cryptographic assurance guaranteed by the std default hasher (siphash)
+    /// And we can use a much faster hasher, which is used also in the rust compiler.
+    /// ([source](https://nnethercote.github.io/2021/12/08/a-brutally-effective-hash-function-in-rust.html))
     pub fn status(&self) -> u64 {
         self.inner.status()
     }
 
+    /// Get the blockchain tip at the time of the last update of this wollet.
     pub fn tip(&self) -> Tip {
         self.inner.tip().into()
     }
 
-    /// wraps [lwk_wollet::Wollet::never_scanned()]
+    /// Returns true if this wollet has never received an updated applyed to it
     #[wasm_bindgen(js_name = neverScanned)]
     pub fn never_scanned(&self) -> bool {
         self.inner.never_scanned()

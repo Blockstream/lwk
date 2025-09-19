@@ -2,7 +2,10 @@ use crate::{Error, Network, Pset, Transaction, Txid, Update, Wollet};
 use lwk_wollet::{age, clients::asyncr};
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`asyncr::EsploraClient`]
+/// A blockchain backend implementation based on the
+/// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md).
+/// But can also use the [waterfalls](https://github.com/RCasatta/waterfalls)
+/// endpoint to speed up the scan if supported by the server.
 #[wasm_bindgen]
 pub struct EsploraClient {
     inner: asyncr::EsploraClient,
@@ -16,7 +19,7 @@ impl AsRef<asyncr::EsploraClient> for EsploraClient {
 
 #[wasm_bindgen]
 impl EsploraClient {
-    /// Creates a client, wrapper of [`asyncr::EsploraClient`]
+    /// Creates an Esplora client with the given options
     #[wasm_bindgen(constructor)]
     pub fn new(
         network: &Network,

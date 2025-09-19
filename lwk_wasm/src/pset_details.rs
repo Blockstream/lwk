@@ -48,6 +48,8 @@ pub struct Recipient {
 
 #[wasm_bindgen]
 impl PsetDetails {
+    /// Return the balance of the PSET from the point of view of the wallet
+    /// that generated this via `psetDetails()`
     pub fn balance(&self) -> PsetBalance {
         self.inner.balance.clone().into()
     }
@@ -62,6 +64,7 @@ impl PsetDetails {
             .collect()
     }
 
+    /// Set of fingerprints for which the PSET is missing a signature
     #[wasm_bindgen(js_name = fingerprintsMissing)]
     pub fn fingerprints_missing(&self) -> Vec<String> {
         self.inner
@@ -71,6 +74,7 @@ impl PsetDetails {
             .collect()
     }
 
+    /// List of fingerprints for which the PSET has a signature
     #[wasm_bindgen(js_name = fingerprintsHas)]
     pub fn fingerprints_has(&self) -> Vec<String> {
         self.inner

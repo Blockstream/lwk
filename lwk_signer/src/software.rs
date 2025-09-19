@@ -49,9 +49,11 @@ pub enum SignError {
 /// Possible errors when creating a new software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
 pub enum NewError {
+    /// Error parsing the mnemonic
     #[error(transparent)]
     Bip39(#[from] bip39::Error),
 
+    /// Error deriving the extended private key
     #[error(transparent)]
     Bip32(#[from] bip32::Error),
 }

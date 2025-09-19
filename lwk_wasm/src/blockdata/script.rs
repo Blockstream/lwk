@@ -37,7 +37,7 @@ impl std::fmt::Display for Script {
 
 #[wasm_bindgen]
 impl Script {
-    /// Creates a `Script`
+    /// Creates a `Script` from its hex string representation.
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Script, Error> {
         let bytes = Vec::<u8>::from_hex(s)?;
@@ -45,14 +45,20 @@ impl Script {
         Ok(inner.into())
     }
 
+    /// Return the consensus encoded bytes of the script.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
     }
 
+    /// Return the string of the script showing op codes and their arguments.
+    ///
+    /// For example: "OP_DUP OP_HASH160 OP_PUSHBYTES_20 088ac47276d105b91cf9aa27a00112421dd5f23c OP_EQUALVERIFY OP_CHECKSIG"
     pub fn asm(&self) -> String {
         self.inner.asm()
     }
 
+    /// Return the string representation of the script (hex encoding of its consensus encoded bytes).
+    /// This representation can be used to recreate the script via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

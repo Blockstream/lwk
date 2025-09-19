@@ -37,11 +37,14 @@ pub enum SignerError {
 /// A signer that can be a software signer [`SwSigner`] or a [`lwk_jade::Jade`]
 #[derive(Debug)]
 pub enum AnySigner {
+    /// A software signer [`SwSigner`]
     Software(SwSigner),
 
+    /// A Jade signer [`lwk_jade::Jade`]
     #[cfg(feature = "jade")]
     Jade(lwk_jade::Jade, elements_miniscript::bitcoin::XKeyIdentifier),
 
+    /// A Ledger signer [`lwk_ledger::Ledger`]
     #[cfg(feature = "ledger")]
     Ledger(
         lwk_ledger::Ledger<lwk_ledger::TransportTcp>,

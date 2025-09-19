@@ -1,4 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]

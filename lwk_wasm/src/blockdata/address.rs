@@ -2,7 +2,7 @@ use crate::{Error, Network, Script};
 use lwk_wollet::elements::{self, AddressParams};
 use wasm_bindgen::prelude::*;
 
-/// An Elements address
+/// An Elements (Liquid) address
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Address {

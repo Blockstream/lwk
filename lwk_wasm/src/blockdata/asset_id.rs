@@ -7,7 +7,7 @@ use crate::Error;
 use lwk_wollet::elements;
 use wasm_bindgen::prelude::*;
 
-/// A valid asset identifier. wrapper of [`elements::AssetId`]
+/// A valid asset identifier.
 ///
 /// 32 bytes encoded as hex string.
 #[wasm_bindgen]
@@ -17,7 +17,7 @@ pub struct AssetId {
 }
 
 // wasm_bindgen does not support Vec<T> as a wrapper of Vec<T>
-/// A collection of asset identifiers. wrapper of [`Vec<elements::AssetId>`]
+/// An ordered collection of asset identifiers.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
 pub struct AssetIds {

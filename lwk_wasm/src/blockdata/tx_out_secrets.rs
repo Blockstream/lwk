@@ -20,10 +20,12 @@ impl From<elements::TxOutSecrets> for TxOutSecrets {
 
 #[wasm_bindgen]
 impl TxOutSecrets {
+    /// Return the asset of the output.
     pub fn asset(&self) -> AssetId {
         self.inner.asset.into()
     }
 
+    /// Return the asset blinding factor as a hex string.
     #[wasm_bindgen(js_name = assetBlindingFactor)]
     pub fn asset_blinding_factor(&self) -> String {
         self.inner
@@ -33,10 +35,12 @@ impl TxOutSecrets {
             .expect("asset_bf to_string creates valid hex")
     }
 
+    /// Return the value of the output.
     pub fn value(&self) -> u64 {
         self.inner.value
     }
 
+    /// Return the value blinding factor as a hex string.
     #[wasm_bindgen(js_name = valueBlindingFactor)]
     pub fn value_blinding_factor(&self) -> String {
         self.inner
@@ -46,6 +50,7 @@ impl TxOutSecrets {
             .expect("value_bf to_string creates valid hex")
     }
 
+    /// Return true if the output is explicit (no blinding factors).
     #[wasm_bindgen(js_name = isExplicit)]
     pub fn is_explicit(&self) -> bool {
         self.inner.asset_bf == AssetBlindingFactor::zero()

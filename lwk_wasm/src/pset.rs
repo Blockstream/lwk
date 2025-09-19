@@ -3,7 +3,7 @@ use lwk_wollet::elements::pset::{Input, Output, PartiallySignedTransaction};
 use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
-/// Partially Signed Elements Transaction, wrapper of [`PartiallySignedTransaction`]
+/// Partially Signed Elements Transaction
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, Clone)]
 pub struct Pset {

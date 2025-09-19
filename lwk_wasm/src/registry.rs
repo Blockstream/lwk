@@ -22,6 +22,7 @@ pub struct AssetMeta {
     tx: Transaction,
 }
 
+/// The data to post to the registry to publish a contract for an asset id
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct RegistryPost {
@@ -41,11 +42,13 @@ impl AssetMeta {
 
 #[wasm_bindgen]
 impl RegistryPost {
+    /// Create a new registry post object to be used to publish a contract for an asset id in the registry.
     #[wasm_bindgen(constructor)]
     pub fn new(contract: Contract, asset_id: AssetId) -> Self {
         lwk_wollet::registry::RegistryPost::new(contract.into(), asset_id.into()).into()
     }
 
+    /// Return a string representation of the registry post (mostly for debugging).
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self.inner)

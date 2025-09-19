@@ -5,7 +5,7 @@ use lwk_wollet::elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`elements::TxOutSecrets`]
+/// Contains unblinded information such as the asset and the value of a transaction output
 #[derive(PartialEq, Eq, Debug)]
 #[wasm_bindgen]
 pub struct TxOutSecrets {

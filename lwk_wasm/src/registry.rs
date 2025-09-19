@@ -16,6 +16,9 @@ pub struct RegistryData {
     inner: lwk_wollet::registry::RegistryData,
 }
 
+/// Data related to an asset in the registry:
+/// - contract: the contract of the asset
+/// - tx: the issuance transaction of the asset
 #[wasm_bindgen]
 pub struct AssetMeta {
     contract: Contract,
@@ -31,10 +34,12 @@ pub struct RegistryPost {
 
 #[wasm_bindgen]
 impl AssetMeta {
+    /// Return the contract of the asset.
     pub fn contract(&self) -> Contract {
         self.contract.clone()
     }
 
+    /// Return the issuance transaction of the asset.
     pub fn tx(&self) -> Transaction {
         self.tx.clone()
     }

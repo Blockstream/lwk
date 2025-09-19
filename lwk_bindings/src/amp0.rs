@@ -1,7 +1,10 @@
+use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 
+use lwk_common::Amp0Signer;
+
 // use crate::{LwkError, Pset, WolletDescriptor};
-use crate::{AddressResult, LwkError, Network, Pset, Transaction, WolletDescriptor};
+use crate::{AddressResult, LwkError, Network, Pset, Signer, Transaction, WolletDescriptor};
 
 /// Context for actions related to an AMP0 (sub)account
 #[derive(uniffi::Object)]
@@ -91,5 +94,31 @@ impl Amp0Pset {
     /// Get blinding nonces
     pub fn blinding_nonces(&self) -> Result<Vec<String>, LwkError> {
         Ok(self.inner.blinding_nonces().to_vec())
+    }
+}
+
+/// Signer information necessary for full login to AMP0
+#[derive(uniffi::Object, Clone)]
+#[uniffi::export(Display)]
+pub struct Amp0SignerData {
+    inner: lwk_common::Amp0SignerData,
+}
+
+impl Display for Amp0SignerData {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!();
+        //write!(f, "{}", self.inner)
+    }
+}
+
+impl From<lwk_common::Amp0SignerData> for Amp0SignerData {
+    fn from(inner: lwk_common::Amp0SignerData) -> Self {
+        Self { inner }
+    }
+}
+
+impl AsRef<lwk_common::Amp0SignerData> for Amp0SignerData {
+    fn as_ref(&self) -> &lwk_common::Amp0SignerData {
+        &self.inner
     }
 }

@@ -15,7 +15,7 @@ use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySigned
 use wasm_bindgen::prelude::*;
 use web_sys::WebSocket;
 
-/// WebSocket-based Wrapper of [`asyncr::Jade`]
+/// WebSocket-based `Jade` useful for testing in the browser with the Jade emulator.
 #[wasm_bindgen]
 pub struct JadeWebSocket {
     inner: asyncr::Jade<WebSocketSerial>,

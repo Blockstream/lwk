@@ -16,7 +16,7 @@ use lwk_wollet::elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKe
 use lwk_wollet::{bitcoin::bip32::DerivationPath, elements::pset::PartiallySignedTransaction};
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`asyncr::Jade`]
+/// A Jade hardware wallet usable via Web Serial
 #[wasm_bindgen]
 pub struct Jade {
     inner: asyncr::Jade<WebSerial>,

@@ -131,7 +131,18 @@ impl TxBuilder {
         Ok(())
     }
 
-    /// Issue an asset, wrapper of [`lwk_wollet::TxBuilder::issue_asset()`]
+    /// Issue an asset
+    ///
+    /// There will be `asset_sats` units of this asset that will be received by
+    /// `asset_receiver` if it's set, otherwise to an address of the wallet generating the issuance.
+    ///
+    /// There will be `token_sats` reissuance tokens that allow token holder to reissue the created
+    /// asset. Reissuance token will be received by `token_receiver` if it's some, or to an
+    /// address of the wallet generating the issuance if none.
+    ///
+    /// If a `contract` is provided, it's metadata will be committed in the generated asset id.
+    ///
+    /// Can't be used if `reissue_asset` has been called
     pub fn issue_asset(
         &self,
         asset_sats: u64,
@@ -153,7 +164,17 @@ impl TxBuilder {
         Ok(())
     }
 
-    /// Reissue an asset, wrapper of [`lwk_wollet::TxBuilder::reissue_asset()`]
+    /// Reissue an asset
+    ///
+    /// reissue the asset defined by `asset_to_reissue`, provided the reissuance token is owned
+    /// by the wallet generating te reissuance.
+    ///
+    /// Generated transaction will create `satoshi_to_reissue` new asset units, and they will be
+    /// sent to the provided `asset_receiver` address if some, or to an address from the wallet
+    /// generating the reissuance transaction if none.
+    ///
+    /// If the issuance transaction does not involve this wallet,
+    /// pass the issuance transaction in `issuance_tx`.
     pub fn reissue_asset(
         &self,
         asset_to_reissue: AssetId,
@@ -173,7 +194,17 @@ impl TxBuilder {
         Ok(())
     }
 
-    /// Manual coin selection, wrapper of [`lwk_wollet::TxBuilder::set_wallet_utxos()`]
+    /// Switch to manual coin selection by giving a list of internal UTXOs to use.
+    ///
+    /// All passed UTXOs are added to the transaction.
+    /// No other wallet UTXO is added to the transaction, caller is supposed to add enough UTXOs to
+    /// cover for all recipients and fees.
+    ///
+    /// This method never fails, any error will be raised in [`TxBuilder::finish`].
+    ///
+    /// Possible errors:
+    /// * OutPoint doesn't belong to the wallet
+    /// * Insufficient funds (remember to include L-BTC utxos for fees)
     pub fn set_wallet_utxos(&self, utxos: Vec<Arc<OutPoint>>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;
@@ -185,7 +216,9 @@ impl TxBuilder {
         Ok(())
     }
 
-    /// Add external utxos, wrapper of [`lwk_wollet::TxBuilder::add_external_utxos()`]
+    /// Adds external UTXOs
+    ///
+    /// Note: unblinded UTXOs with the same scriptpubkeys as the wallet, are considered external.
     pub fn add_external_utxos(&self, utxos: Vec<Arc<ExternalUtxo>>) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let inner = lock.take().ok_or_else(builder_finished)?;

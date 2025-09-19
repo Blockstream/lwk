@@ -54,7 +54,7 @@ impl Amp0 {
     }
 }
 
-/// Wrapper over [`lwk_wollet::amp0::Amp0Pset`]
+/// A PSET to use with AMP0
 #[derive(uniffi::Object)]
 pub struct Amp0Pset {
     inner: lwk_wollet::amp0::Amp0Pset,

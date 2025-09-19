@@ -8,7 +8,7 @@ use lwk_wollet::{
 };
 use wasm_bindgen::prelude::*;
 
-/// A Software signer, wrapper of [`lwk_signer::SwSigner`]
+/// A Software signer.
 #[wasm_bindgen]
 pub struct Signer {
     inner: lwk_signer::SwSigner,

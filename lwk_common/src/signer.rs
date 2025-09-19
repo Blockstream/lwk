@@ -103,7 +103,7 @@ pub mod amp0 {
     use elements::Address;
 
     /// Signer information necessary for full login to AMP0
-    #[allow(unused)]
+    #[derive(Clone)]
     pub struct Amp0SignerData {
         // used for register and login_address
         master_xpub: Xpub,

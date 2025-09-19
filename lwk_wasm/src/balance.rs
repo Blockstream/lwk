@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 use crate::Error;
 
 /// A signed balance of assets, to represent a balance with negative values such
-/// as the results of a transactions from the perspective of a wallet.
+/// as the results of a transaction from the perspective of a wallet.
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Balance {

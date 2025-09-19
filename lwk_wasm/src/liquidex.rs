@@ -5,21 +5,30 @@ use wasm_bindgen::prelude::*;
 
 use crate::{AssetId, Pset, Transaction};
 
-/// Wrapper of [`lwk_wollet::LiquidexProposal<Unvalidated>`]
+/// LiquiDEX swap proposal
+///
+/// A LiquiDEX swap proposal is a transaction with one input and one output created by the "maker".
+/// The transaction "swaps" the input for the output, meaning that the "maker" sends the input and
+/// receives the output.
+/// However the transaction is incomplete (unbalanced and without a fee output), thus it cannot be
+/// broadcast.
+/// The "taker" can "complete" the transaction (using [`crate::TxBuilder::liquidex_take()`]) by
+/// adding more inputs and more outputs to balance the amounts, meaning that the "taker" sends the
+/// output and receives the input.
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct UnvalidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Unvalidated>,
 }
 
-/// Wrapper of [`lwk_wollet::LiquidexProposal<Validated>`]
+/// Created by validating `UnvalidatedLiquidexProposal` via `validate()` or `insecure_validate()`
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct ValidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Validated>,
 }
 
-/// Wrapper of [`lwk_wollet::AssetAmount`]
+/// An asset identifier and an amount in satoshi units
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct AssetAmount {

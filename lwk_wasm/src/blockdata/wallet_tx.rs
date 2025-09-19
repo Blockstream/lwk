@@ -1,7 +1,9 @@
 use crate::{Balance, OptionWalletTxOut, Transaction, Txid};
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::WalletTx`]
+/// Value returned by asking transactions to the wallet. Contains details about a transaction
+/// from the perspective of the wallet, for example the net-balance of the transaction for the
+/// wallet.
 #[derive(Debug)]
 #[wasm_bindgen]
 pub struct WalletTx {

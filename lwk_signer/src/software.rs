@@ -108,15 +108,18 @@ impl SwSigner {
         })
     }
 
+    /// Return true if the signer is for mainnet. There is no need to discriminate between regtest and testnet.
     pub fn is_mainnet(&self) -> bool {
         self.xprv.network == bitcoin::NetworkKind::Main
     }
 
+    /// Create a new software signer from a random mnemonic
     pub fn random(is_mainnet: bool) -> Result<(Self, Mnemonic), NewError> {
         let mnemonic = Mnemonic::generate(12)?;
         Ok((SwSigner::new(&mnemonic.to_string(), is_mainnet)?, mnemonic))
     }
 
+    /// Create a new software signer from a given extended private key
     pub fn from_xprv(xprv: Xpriv) -> Self {
         Self {
             xprv,
@@ -136,22 +139,27 @@ impl SwSigner {
         self.ecdsa_sign_opt = EcdsaSignOpt::NoGrind;
     }
 
+    /// Return the extended public key of the signer
     pub fn xpub(&self) -> Xpub {
         Xpub::from_priv(&self.secp, &self.xprv)
     }
 
+    /// Return the seed of the signer if it has been initialized with the mnemonic (can't provide the seed if initialized with xprv)
     pub fn seed(&self) -> Option<[u8; 64]> {
         self.mnemonic.as_ref().map(|m| m.to_seed(""))
     }
 
+    /// Return the mnemonic of the signer if it has been initialized with the mnemonic (can't provide the mnemonic if initialized with xprv)
     pub fn mnemonic(&self) -> Option<Mnemonic> {
         self.mnemonic.clone()
     }
 
+    /// Return the fingerprint of the signer (4 bytes)
     pub fn fingerprint(&self) -> Fingerprint {
         self.xprv.fingerprint(&self.secp)
     }
 
+    /// Derive an xprv from the master, path can contains hardened derivations.
     pub fn derive_xprv(&self, path: &DerivationPath) -> Result<Xpriv, SignError> {
         Ok(self.xprv.derive_priv(&self.secp, path)?)
     }

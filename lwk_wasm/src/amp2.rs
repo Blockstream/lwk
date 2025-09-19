@@ -22,10 +22,12 @@ impl std::fmt::Display for Amp2Descriptor {
 
 #[wasm_bindgen]
 impl Amp2Descriptor {
+    /// Return the descriptor as a `WolletDescriptor`
     pub fn descriptor(&self) -> WolletDescriptor {
         self.inner.descriptor().into()
     }
 
+    /// Return the string representation of the descriptor.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

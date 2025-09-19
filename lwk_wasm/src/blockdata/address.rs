@@ -45,7 +45,7 @@ impl std::fmt::Display for Address {
 impl Address {
     /// Creates an `Address`
     ///
-    /// If you know the network, you can use [`Address::parse()`] to validate that the network is consistent.
+    /// If you know the network, you can use `parse()` to validate that the network is consistent.
     #[wasm_bindgen(constructor)]
     pub fn new(s: &str) -> Result<Address, Error> {
         let inner: elements::Address = s.parse()?;
@@ -59,26 +59,32 @@ impl Address {
         Ok(inner.into())
     }
 
+    /// Return the script pubkey of the address.
     #[wasm_bindgen(js_name = scriptPubkey)]
     pub fn script_pubkey(&self) -> Script {
         self.inner.script_pubkey().into()
     }
 
+    /// Return true if the address is blinded, in other words, if it has a blinding key.
     #[wasm_bindgen(js_name = isBlinded)]
     pub fn is_blinded(&self) -> bool {
         self.inner.is_blinded()
     }
 
+    /// Return true if the address is for mainnet.
     #[wasm_bindgen(js_name = isMainnet)]
     pub fn is_mainnet(&self) -> bool {
         self.inner.params == &AddressParams::LIQUID
     }
 
+    /// Return the unconfidential address, in other words, the address without the blinding key.
     #[wasm_bindgen(js_name = toUnconfidential)]
     pub fn to_unconfidential(&self) -> Address {
         self.inner.to_unconfidential().into()
     }
 
+    /// Return the string representation of the address.
+    /// This representation can be used to recreate the address via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

@@ -3,7 +3,7 @@ use lwk_wollet::bitcoin::bip32;
 use std::{fmt::Display, str::FromStr};
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`bip32::Xpub`]
+/// An extended public key
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug)]
 pub struct Xpub {

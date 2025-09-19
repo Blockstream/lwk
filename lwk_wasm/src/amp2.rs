@@ -33,7 +33,7 @@ impl Amp2Descriptor {
 }
 
 impl Amp2Descriptor {
-    pub fn inner(&self) -> lwk_wollet::amp2::Amp2Descriptor {
+    pub(crate) fn inner(&self) -> lwk_wollet::amp2::Amp2Descriptor {
         self.inner.clone()
     }
 }

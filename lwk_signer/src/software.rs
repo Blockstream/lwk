@@ -26,6 +26,7 @@ use lwk_common::Signer;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum SignError {
     #[error(transparent)]
     Pset(#[from] elements_miniscript::elements::pset::Error),

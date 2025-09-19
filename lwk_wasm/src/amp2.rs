@@ -46,21 +46,25 @@ impl From<lwk_wollet::amp2::Amp2Descriptor> for Amp2Descriptor {
 
 #[wasm_bindgen]
 impl Amp2 {
+    /// Create a new AMP2 client with the default url and server key for the testnet network.
     #[wasm_bindgen(js_name = newTestnet)]
     pub fn new_testnet() -> Self {
         let inner = lwk_wollet::amp2::Amp2::new_testnet();
         Self { inner }
     }
 
+    /// Get an AMP2 wallet descriptor from the keyorigin xpub string obtained from a signer
     #[wasm_bindgen(js_name = descriptorFromStr)]
     pub fn descriptor_from_str(&self, keyorigin_xpub: &str) -> Result<Amp2Descriptor, Error> {
         Ok(self.inner.descriptor_from_str(keyorigin_xpub)?.into())
     }
 
+    /// Register an AMP2 wallet with the AMP2 server
     pub async fn register(&self, desc: &Amp2Descriptor) -> Result<String, Error> {
         Ok(self.inner.register(desc.inner()).await?.wid)
     }
 
+    /// Ask the AMP2 server to cosign a PSET
     pub async fn cosign(&self, pset: &Pset) -> Result<Pset, Error> {
         let pset = self.inner.cosign(&pset.clone().into()).await?.pset;
         Ok(pset.into())

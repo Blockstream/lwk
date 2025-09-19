@@ -261,6 +261,7 @@ impl Signer for SwSigner {
 #[cfg(feature = "amp0")]
 impl lwk_common::Amp0Signer for SwSigner {}
 
+/// Sign a PSET with a given secret key
 pub fn sign_with_seckey(
     seckey: bitcoin::secp256k1::SecretKey,
     pset: &mut PartiallySignedTransaction,

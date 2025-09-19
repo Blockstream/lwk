@@ -236,6 +236,51 @@ impl Amp0Connected {
     }
 }
 
+/// Session logged in AMP0
+#[wasm_bindgen]
+pub struct Amp0LoggedIn {
+    inner: lwk_wollet::amp0::Amp0LoggedIn<WebSocketSerial>,
+}
+
+#[wasm_bindgen]
+impl Amp0LoggedIn {
+    /// List of AMP IDs.
+    pub fn get_amp_ids(&self) -> Result<Vec<String>, Error> {
+        Ok(self.inner.get_amp_ids()?)
+    }
+
+    /// Get the next account for AMP0 account creation
+    ///
+    /// This must be given to [`Signer::amp0_account_xpub()`] to obtain the xpub to pass to
+    /// [`Amp0LoggedIn::create_amp0_account()`]
+    pub fn next_account(&self) -> Result<u32, Error> {
+        Ok(self.inner.next_account()?)
+    }
+
+    /// Create a new AMP0 account
+    ///
+    /// `account_xpub` must be obtained from [`Signer::amp0_account_xpub()`] called with the value obtained from
+    /// [`Amp0LoggedIn::next_account()`]
+    pub async fn create_amp0_account(
+        &mut self,
+        pointer: u32,
+        account_xpub: &str,
+    ) -> Result<String, Error> {
+        use lwk_wollet::elements::bitcoin::bip32::Xpub;
+        use std::str::FromStr;
+        let account_xpub = Xpub::from_str(account_xpub)?;
+        Ok(self
+            .inner
+            .create_amp0_account(pointer, &account_xpub)
+            .await?)
+    }
+
+    /// Create a new Watch-Only entry for this wallet
+    pub async fn create_watch_only(&mut self, username: &str, password: &str) -> Result<(), Error> {
+        Ok(self.inner.create_watch_only(username, password).await?)
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

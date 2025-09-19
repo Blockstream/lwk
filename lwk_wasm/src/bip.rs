@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-/// wrapper over [`lwk_common::Bip`]
+/// The bip variant for a descriptor like specified in the bips (49, 84, 87)
 #[wasm_bindgen]
 pub struct Bip {
     inner: lwk_common::Bip,

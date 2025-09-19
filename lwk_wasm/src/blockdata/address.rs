@@ -122,10 +122,12 @@ impl From<lwk_wollet::AddressResult> for AddressResult {
 
 #[wasm_bindgen]
 impl AddressResult {
+    /// Return the address.
     pub fn address(&self) -> Address {
         self.inner.address().into()
     }
 
+    /// Return the derivation index of the address.
     pub fn index(&self) -> u32 {
         self.inner.index()
     }

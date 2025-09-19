@@ -18,6 +18,7 @@ use lwk_common::Signer;
 
 /// Possible errors when signing with [`AnySigner`]
 #[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum SignerError {
     #[error(transparent)]
     Software(#[from] SignError),

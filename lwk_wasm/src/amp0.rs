@@ -197,6 +197,45 @@ impl Signer {
     }
 }
 
+/// Session connecting to AMP0
+#[wasm_bindgen]
+pub struct Amp0Connected {
+    inner: lwk_wollet::amp0::Amp0Connected<WebSocketSerial>,
+}
+
+#[wasm_bindgen]
+impl Amp0Connected {
+    /// Connect and register to AMP0
+    #[wasm_bindgen(constructor)]
+    pub async fn new(network: &Network, signer_data: &Amp0SignerData) -> Result<Self, Error> {
+        let url = lwk_wollet::amp0::default_url((*network).into())?;
+        let websocket_serial = WebSocketSerial::new_wamp(url).await?;
+        let inner = lwk_wollet::amp0::Amp0Connected::new(
+            websocket_serial,
+            (*network).into(),
+            signer_data.inner.clone(),
+        )
+        .await?;
+        Ok(Self { inner })
+    }
+
+    /// Obtain a login challenge
+    ///
+    /// This must be signed with [`Signer::amp0_sign_challenge()`].
+    pub async fn get_challenge(&self) -> Result<String, Error> {
+        Ok(self.inner.get_challenge().await?)
+    }
+
+    /// Log in
+    ///
+    /// `sig` must be obtained from [`Signer::amp0_sign_challenge()`] called with the value returned
+    /// by [`Amp0Connected::get_challenge()`]
+    pub async fn login(self, sig: &str) -> Result<Amp0LoggedIn, Error> {
+        let inner = self.inner.login(sig).await?;
+        Ok(Amp0LoggedIn { inner })
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

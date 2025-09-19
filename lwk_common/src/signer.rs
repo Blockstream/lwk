@@ -105,6 +105,13 @@ pub mod amp0 {
     use serde_json;
 
     /// Signer information necessary for full login to AMP0
+    ///
+    /// Consists in a series of xpubs and the SLIP77 master
+    /// blinding key. These data must be obtained from a signer
+    /// for logging in AMP0.
+    ///
+    /// In general the signer is isolated, so we need to be able
+    /// (de)serialize this struct.
     #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Debug)]
     pub struct Amp0SignerData {
         // used for register and login_address

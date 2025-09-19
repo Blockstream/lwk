@@ -8,7 +8,7 @@ use lwk_wollet::elements::pset::PartiallySignedTransaction;
 use lwk_wollet::elements_miniscript::ForEachKey;
 use wasm_bindgen::prelude::*;
 
-/// Wrapper of [`lwk_wollet::Wollet`]
+/// A watch-only wallet defined by a CT descriptor.
 #[wasm_bindgen]
 pub struct Wollet {
     inner: lwk_wollet::Wollet,
@@ -142,7 +142,7 @@ impl Wollet {
     }
 }
 
-/// Wrapper of [`lwk_wollet::Tip`]
+/// Blockchain tip, the highest valid block in the blockchain
 #[wasm_bindgen]
 pub struct Tip {
     inner: lwk_wollet::Tip,

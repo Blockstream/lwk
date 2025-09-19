@@ -153,6 +153,28 @@ impl Amp0Pset {
     }
 }
 
+#[wasm_bindgen]
+pub struct Amp0SignerData {
+    inner: lwk_common::Amp0SignerData,
+}
+
+impl std::fmt::Display for Amp0SignerData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+impl From<lwk_common::Amp0SignerData> for Amp0SignerData {
+    fn from(inner: lwk_common::Amp0SignerData) -> Self {
+        Self { inner }
+    }
+}
+
+impl AsRef<lwk_common::Amp0SignerData> for Amp0SignerData {
+    fn as_ref(&self) -> &lwk_common::Amp0SignerData {
+        &self.inner
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use super::*;

@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 // use crate::{LwkError, Pset, WolletDescriptor};
 use crate::{AddressResult, LwkError, Network, Pset, Transaction, WolletDescriptor};
 
-/// Wrapper over [`lwk_wollet::amp0::blocking::Amp0`]
+/// Context for actions related to an AMP0 (sub)account
 #[derive(uniffi::Object)]
 pub struct Amp0 {
     inner: Mutex<lwk_wollet::amp0::blocking::Amp0>,

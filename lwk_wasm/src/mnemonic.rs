@@ -33,6 +33,10 @@ impl Mnemonic {
         Ok(inner.into())
     }
 
+    /// Return the string representation of the Mnemonic.
+    /// This representation can be used to recreate the Mnemonic via `new()`
+    ///
+    /// Note this is secret information, do not log it.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{}", self)

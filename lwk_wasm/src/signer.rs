@@ -43,6 +43,7 @@ impl Signer {
         Ok(signature.to_string())
     }
 
+    /// Return the witness public key hash, slip77 descriptor of this signer
     #[wasm_bindgen(js_name = wpkhSlip77Descriptor)]
     pub fn wpkh_slip77_descriptor(&self) -> Result<WolletDescriptor, Error> {
         // TODO: make script_variant and blinding_variant parameters
@@ -55,11 +56,13 @@ impl Signer {
         WolletDescriptor::new(&desc_str)
     }
 
+    /// Return the extended public key of the signer
     #[wasm_bindgen(js_name = getMasterXpub)]
     pub fn get_master_xpub(&self) -> Result<Xpub, Error> {
         Ok(self.inner.xpub().into())
     }
 
+    /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
     #[wasm_bindgen(js_name = keyoriginXpub)]
     pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, Error> {
         Ok(lwk_common::Signer::keyorigin_xpub(
@@ -69,6 +72,7 @@ impl Signer {
         )?)
     }
 
+    /// Return the mnemonic of the signer
     pub fn mnemonic(&self) -> Mnemonic {
         self.inner
             .mnemonic()

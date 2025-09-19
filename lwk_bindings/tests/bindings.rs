@@ -8,6 +8,7 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/send_transaction.py",
     "tests/bindings/test_env.py",
     "tests/bindings/multisig.py",
+    "tests/bindings/setup-amp0.py",
     "tests/bindings/amp0.py",
     "tests/bindings/amp2.py",
     "tests/bindings/list_transactions.kts",

@@ -221,14 +221,14 @@ impl Amp0Connected {
 
     /// Obtain a login challenge
     ///
-    /// This must be signed with [`Signer::amp0_sign_challenge()`].
+    /// This must be signed with [`amp0_sign_challenge()`].
     pub async fn get_challenge(&self) -> Result<String, Error> {
         Ok(self.inner.get_challenge().await?)
     }
 
     /// Log in
     ///
-    /// `sig` must be obtained from [`Signer::amp0_sign_challenge()`] called with the value returned
+    /// `sig` must be obtained from [`amp0_sign_challenge()`] called with the value returned
     /// by [`Amp0Connected::get_challenge()`]
     pub async fn login(self, sig: &str) -> Result<Amp0LoggedIn, Error> {
         let inner = self.inner.login(sig).await?;
@@ -251,7 +251,7 @@ impl Amp0LoggedIn {
 
     /// Get the next account for AMP0 account creation
     ///
-    /// This must be given to [`Signer::amp0_account_xpub()`] to obtain the xpub to pass to
+    /// This must be given to [`amp0_account_xpub()`] to obtain the xpub to pass to
     /// [`Amp0LoggedIn::create_amp0_account()`]
     pub fn next_account(&self) -> Result<u32, Error> {
         Ok(self.inner.next_account()?)
@@ -259,7 +259,7 @@ impl Amp0LoggedIn {
 
     /// Create a new AMP0 account
     ///
-    /// `account_xpub` must be obtained from [`Signer::amp0_account_xpub()`] called with the value obtained from
+    /// `account_xpub` must be obtained from [`amp0_account_xpub()`] called with the value obtained from
     /// [`Amp0LoggedIn::next_account()`]
     pub async fn create_amp0_account(
         &mut self,

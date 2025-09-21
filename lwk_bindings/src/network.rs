@@ -4,7 +4,7 @@ use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 
 use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
-/// Wrapper over [`lwk_wollet::ElementsNetwork`]
+/// The network of the elements blockchain.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 #[uniffi::export(Display)]
 pub struct Network {
@@ -48,16 +48,19 @@ impl From<&Network> for lwk_common::Network {
 
 #[uniffi::export]
 impl Network {
+    /// Return the mainnet network
     #[uniffi::constructor]
     pub fn mainnet() -> Arc<Network> {
         Arc::new(lwk_wollet::ElementsNetwork::Liquid.into())
     }
 
+    /// Return the testnet network
     #[uniffi::constructor]
     pub fn testnet() -> Arc<Network> {
         Arc::new(lwk_wollet::ElementsNetwork::LiquidTestnet.into())
     }
 
+    /// Return the regtest network with the given policy asset
     #[uniffi::constructor]
     pub fn regtest(policy_asset: AssetId) -> Arc<Network> {
         Arc::new(
@@ -68,6 +71,7 @@ impl Network {
         )
     }
 
+    /// Return the default regtest network with the default policy asset
     #[uniffi::constructor]
     pub fn regtest_default() -> Arc<Network> {
         let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -75,6 +79,7 @@ impl Network {
         Arc::new(lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
     }
 
+    /// Return the default electrum client for this network
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => (LIQUID_SOCKET, true, true),
@@ -87,6 +92,7 @@ impl Network {
         ElectrumClient::new(url, tls, validate_domain)
     }
 
+    /// Return the default esplora client for this network
     pub fn default_esplora_client(&self) -> Result<Arc<EsploraClient>, LwkError> {
         let url = match &self.inner {
             lwk_wollet::ElementsNetwork::Liquid => "https://blockstream.info/liquid/api",
@@ -99,14 +105,17 @@ impl Network {
         EsploraClient::new(url, &self.inner.into())
     }
 
+    /// Return true if the network is the mainnet network
     pub fn is_mainnet(&self) -> bool {
         matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
     }
 
+    /// Return the policy asset (eg LBTC for mainnet) for this network
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
     }
 
+    /// Return a new `TxBuilder` for this network
     pub fn tx_builder(&self) -> Arc<TxBuilder> {
         Arc::new(TxBuilder::new(self))
     }

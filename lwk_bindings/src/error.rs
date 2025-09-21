@@ -4,6 +4,7 @@ use elements::pset::ParseError;
 
 /// Possible errors emitted
 #[derive(uniffi::Error, thiserror::Error, Debug)]
+#[allow(missing_docs)]
 pub enum LwkError {
     #[error("{msg}")]
     Generic { msg: String },

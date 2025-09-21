@@ -4,6 +4,7 @@ use lwk_wollet::EC;
 
 use crate::types::{AssetId, Hex};
 
+/// Contains unblinded information such as the asset and the value of a transaction output
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
 pub struct TxOutSecrets {
     inner: elements::TxOutSecrets,
@@ -23,10 +24,12 @@ impl From<&TxOutSecrets> for elements::TxOutSecrets {
 
 #[uniffi::export]
 impl TxOutSecrets {
+    /// Return the asset identifier of the output.
     pub fn asset(&self) -> AssetId {
         self.inner.asset.into()
     }
 
+    /// Return the asset blinding factor as a hex string.
     pub fn asset_bf(&self) -> Hex {
         self.inner
             .asset_bf
@@ -35,10 +38,12 @@ impl TxOutSecrets {
             .expect("asset_bf to_string creates valid hex")
     }
 
+    /// Return the value of the output.
     pub fn value(&self) -> u64 {
         self.inner.value
     }
 
+    /// Return the value blinding factor as a hex string.
     pub fn value_bf(&self) -> Hex {
         self.inner
             .value_bf
@@ -47,6 +52,7 @@ impl TxOutSecrets {
             .expect("value_bf to_string creates valid hex")
     }
 
+    /// Return true if the output is explicit (no blinding factors).
     pub fn is_explicit(&self) -> bool {
         self.inner.asset_bf == AssetBlindingFactor::zero()
             && self.inner.value_bf == ValueBlindingFactor::zero()

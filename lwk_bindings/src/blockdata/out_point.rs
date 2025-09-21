@@ -1,6 +1,7 @@
 use crate::{LwkError, Txid};
 use std::{fmt::Display, sync::Arc};
 
+/// A reference to a transaction output
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct OutPoint {
@@ -33,17 +34,21 @@ impl Display for OutPoint {
 
 #[uniffi::export]
 impl OutPoint {
-    /// Construct an OutPoint object
+    /// Construct an OutPoint object from its string representation.
+    /// For example: "[elements]0000000000000000000000000000000000000000000000000000000000000001:1"
+    /// To create the string representation of an outpoint use `to_string()`.
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner: elements::OutPoint = s.parse()?;
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Return the transaction identifier.
     pub fn txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.txid.into())
     }
 
+    /// Return the output index.
     pub fn vout(&self) -> u32 {
         self.inner.vout
     }

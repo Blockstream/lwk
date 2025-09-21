@@ -4,6 +4,7 @@ use elements::hashes::Hash;
 
 use crate::{types::Hex, LwkError};
 
+/// A transaction identifier.
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
 #[uniffi::export(Display)]
 pub struct Txid {
@@ -53,6 +54,7 @@ impl Txid {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Return the bytes of the transaction identifier.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_byte_array().to_vec()
     }

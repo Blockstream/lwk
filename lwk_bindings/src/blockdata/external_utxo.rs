@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{LwkError, Transaction, TxOutSecrets};
 
+/// An external UTXO, owned by another wallet
 #[derive(uniffi::Object)]
 pub struct ExternalUtxo {
     inner: lwk_wollet::ExternalUtxo,

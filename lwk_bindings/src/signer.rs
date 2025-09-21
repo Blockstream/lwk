@@ -98,10 +98,12 @@ impl Signer {
         Ok(Arc::new(pset.into()))
     }
 
+    /// Return the witness public key hash, slip77 descriptor of this signer
     pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         self.singlesig_desc(Singlesig::Wpkh, DescriptorBlindingKey::Slip77)
     }
 
+    /// Generate a singlesig descriptor with the given parameters
     pub fn singlesig_desc(
         &self,
         script_variant: Singlesig,
@@ -115,6 +117,7 @@ impl Signer {
         WolletDescriptor::new(&desc_str)
     }
 
+    /// Return keyorigin and xpub, like "[73c5da0a/84h/1h/0h]tpub..."
     pub fn keyorigin_xpub(&self, bip: &Bip) -> Result<String, LwkError> {
         let is_mainnet = lwk_common::Signer::is_mainnet(&self.inner)?;
         Ok(lwk_common::Signer::keyorigin_xpub(
@@ -124,6 +127,7 @@ impl Signer {
         )?)
     }
 
+    /// Get the mnemonic of the signer
     pub fn mnemonic(&self) -> Result<Arc<Mnemonic>, LwkError> {
         Ok(Arc::new(self.inner.mnemonic().map(Into::into).ok_or_else(
             || LwkError::Generic {

@@ -19,7 +19,7 @@ pub struct Wollet {
     inner: Mutex<lwk_wollet::Wollet>, // every exposed method must take `&self` (no &mut) so that we need to encapsulate into Mutex
 }
 impl Wollet {
-    pub fn inner_wollet(
+    pub(crate) fn inner_wollet(
         &self,
     ) -> Result<MutexGuard<'_, lwk_wollet::Wollet>, PoisonError<MutexGuard<'_, lwk_wollet::Wollet>>>
     {
@@ -62,10 +62,15 @@ impl Wollet {
         }))
     }
 
+    /// Get a copy of the wallet descriptor
     pub fn descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         Ok(Arc::new(self.inner.lock()?.wollet_descriptor().into()))
     }
 
+    /// Get a wallet address
+    ///
+    /// If Some return the address at the given index,
+    /// otherwise the last unused address.
     pub fn address(&self, index: Option<u32>) -> Result<Arc<AddressResult>, LwkError> {
         // TODO test this method assert the first address with many different supported descriptor in different networks
         let wollet = self.inner.lock()?;
@@ -73,18 +78,48 @@ impl Wollet {
         Ok(Arc::new(address.into()))
     }
 
+    /// Apply an update containing blockchain data
+    ///
+    /// To update the wallet you need to first obtain the blockchain data relevant for the wallet.
+    /// This can be done using `full_scan()`, which
+    /// returns an `Update` that contains new transaction and other data relevant for the
+    /// wallet.
+    /// The update must then be applied to the `Wollet` so that wollet methods such as
+    /// `balance()` or `transactions()` include the new data.
+    ///
+    /// However getting blockchain data involves network calls, so between the full scan start and
+    /// when the update is applied it might elapse a significant amount of time.
+    /// In that interval, applying any update, or any transaction using `apply_transaction()`,
+    /// will cause this function to return a `Error::UpdateOnDifferentStatus`.
+    /// Callers should either avoid applying updates and transactions, or they can catch the error and wait for a new full scan to be completed and applied.
     pub fn apply_update(&self, update: &Update) -> Result<(), LwkError> {
         let mut wollet = self.inner.lock()?;
         wollet.apply_update(update.clone().into())?;
         Ok(())
     }
 
+    /// Apply a transaction to the wallet state
+    ///
+    /// Wallet transactions are normally obtained using `full_scan()`
+    /// and applying the resulting `Update` with `apply_update()`. However a
+    /// full scan involves network calls and it can take a significant amount of time.
+    ///
+    /// If the caller does not want to wait for a full scan containing the transaction, it can
+    /// apply the transaction to the wallet state using this function.
+    ///
+    /// Note: if this transaction is *not* returned by a next full scan, after `apply_update()` it will disappear from the
+    /// transactions list, will not be included in balance computations, and by the remaining
+    /// wollet methods.
+    ///
+    /// Calling this method, might cause `apply_update()` to fail with a
+    /// `Error::UpdateOnDifferentStatus`, make sure to either avoid it or handle the error properly.
     pub fn apply_transaction(&self, tx: &Transaction) -> Result<(), LwkError> {
         let mut wollet = self.inner.lock()?;
         wollet.apply_transaction(tx.clone().into())?;
         Ok(())
     }
 
+    /// Get the wallet balance
     pub fn balance(&self) -> Result<HashMap<AssetId, u64>, LwkError> {
         let m: HashMap<_, _> = self
             .inner
@@ -98,10 +133,12 @@ impl Wollet {
         Ok(m)
     }
 
+    /// Get all the wallet transactions
     pub fn transactions(&self) -> Result<Vec<Arc<WalletTx>>, LwkError> {
         self.transactions_paginated(0, u32::MAX)
     }
 
+    /// Get the wallet transactions with pagination
     pub fn transactions_paginated(
         &self,
         offset: u32,
@@ -141,6 +178,7 @@ impl Wollet {
             .collect())
     }
 
+    /// Finalize a PSET, returning a new PSET with the finalized inputs
     pub fn finalize(&self, pset: &Pset) -> Result<Arc<Pset>, LwkError> {
         let mut pset = pset.inner();
         let wollet = self.inner.lock()?;
@@ -148,6 +186,7 @@ impl Wollet {
         Ok(Arc::new(pset.into()))
     }
 
+    /// Get the PSET details with respect to the wallet
     pub fn pset_details(&self, pset: &Pset) -> Result<Arc<PsetDetails>, LwkError> {
         let wollet = self.inner.lock()?;
         let details = wollet.get_details(&pset.inner())?;

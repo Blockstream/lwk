@@ -18,7 +18,7 @@ pub struct UnvalidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Unvalidated>,
 }
 
-/// Wrapper over [`lwk_wollet::AssetAmount`]
+/// An asset identifier and an amount
 #[derive(uniffi::Object, Debug, Clone)]
 pub struct AssetAmount {
     inner: lwk_wollet::AssetAmount,
@@ -106,10 +106,12 @@ impl ValidatedLiquidexProposal {
 
 #[uniffi::export]
 impl AssetAmount {
+    /// Return the amount of the asset
     pub fn amount(&self) -> u64 {
         self.inner.amount
     }
 
+    /// Return the asset of the amount
     pub fn asset(&self) -> AssetId {
         self.inner.asset.into()
     }

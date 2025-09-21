@@ -5,7 +5,7 @@ use lwk_wollet::elements_miniscript::psbt::finalize;
 use lwk_wollet::EC;
 use std::{fmt::Display, sync::Arc};
 
-/// Partially Signed Elements Transaction, wrapper over [`elements::pset::PartiallySignedTransaction`]
+/// A Partially Signed Elements Transaction
 #[derive(uniffi::Object, PartialEq, Debug, Clone)]
 #[uniffi::export(Display)]
 pub struct Pset {
@@ -47,11 +47,14 @@ impl Pset {
         Ok(Arc::new(tx))
     }
 
+    /// Extract the Transaction from a Pset by filling in
+    /// the available signature information in place.
     pub fn extract_tx(&self) -> Result<Arc<Transaction>, LwkError> {
         let tx: Transaction = self.inner.extract_tx()?.into();
         Ok(Arc::new(tx))
     }
 
+    /// Attempt to combine with another `Pset`.
     pub fn combine(&self, other: &Pset) -> Result<Pset, LwkError> {
         let mut pset = self.inner.clone();
         pset.merge(other.inner.clone())?;
@@ -66,6 +69,7 @@ impl Pset {
         Ok(txid.into())
     }
 
+    /// Return a copy of the inputs of this PSET
     pub fn inputs(&self) -> Vec<Arc<PsetInput>> {
         self.inner
             .inputs()

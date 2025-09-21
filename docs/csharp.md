@@ -8,4 +8,4 @@ C# bindings use dotnet SDK 6.0, they are very immature at the moment:
 - It's currently tested only in linux
 - The dynamic library is referenced in a non-standard way
 
-* [List transactions](./lwk_bindings/tests/bindings/list_transactions.cs) of a wpkh/slip77 wallet
+* [List transactions](../lwk_bindings/tests/bindings/list_transactions.cs) of a wpkh/slip77 wallet

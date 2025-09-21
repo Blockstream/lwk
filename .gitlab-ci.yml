@@ -173,6 +173,7 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     # - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial && cd - # TODO: restore browser tests, at the moment fail with "Cannot assign requested address"
     - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
+    - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial && cd -
   artifacts:
     paths:
       - lwk_wasm/pkg

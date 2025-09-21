@@ -37,3 +37,7 @@ RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod
 RUN apt update -qq && apt install -y dotnet-sdk-6.0
 
 RUN cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
+
+# Install Node.js LTS using official binaries
+RUN curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
+    

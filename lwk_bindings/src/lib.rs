@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 
 mod amp0;
 mod amp2;

@@ -25,6 +25,7 @@ impl EsploraClientBuilder {
 #[derive(Debug)]
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
+/// But can also use the [waterfalls](https://github.com/RCasatta/waterfalls) endpoint to speed up the scan if supported by the server.
 pub struct EsploraClient {
     rt: Runtime,
     client: asyncr::EsploraClient,

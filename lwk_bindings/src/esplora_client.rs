@@ -4,11 +4,16 @@ use lwk_wollet::clients::blocking::{self, BlockchainBackend};
 
 use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet};
 
-/// Wrapper over [`blocking::EsploraClient`]
+/// A blockchain backend implementation based on the
+/// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md)
+/// But can also use the [waterfalls](https://github.com/RCasatta/waterfalls) endpoint to
+/// speed up the scan if supported by the server.
 #[derive(uniffi::Object, Debug)]
 pub struct EsploraClient {
     pub(crate) inner: Mutex<blocking::EsploraClient>,
 }
+
+/// A builder for the `EsploraClient`
 #[derive(uniffi::Record)]
 pub struct EsploraClientBuilder {
     base_url: String,

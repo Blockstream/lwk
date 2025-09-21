@@ -1,6 +1,7 @@
 use crate::{LwkError, Script};
 use std::{fmt::Display, sync::Arc};
 
+/// A Liquid address
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Address {
@@ -46,14 +47,17 @@ impl Address {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Return the script pubkey of the address.
     pub fn script_pubkey(&self) -> Arc<Script> {
         Arc::new(self.inner.script_pubkey().into())
     }
 
+    /// Return true if the address is blinded.
     pub fn is_blinded(&self) -> bool {
         self.inner.is_blinded()
     }
 
+    /// Return the unconfidential address.
     pub fn to_unconfidential(&self) -> Arc<Self> {
         Arc::new(self.inner.to_unconfidential().into())
     }

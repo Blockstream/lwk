@@ -4,6 +4,7 @@ use crate::{
 };
 use std::sync::Arc;
 
+/// A transaction output.
 #[derive(uniffi::Object, Debug)]
 pub struct TxOut {
     inner: elements::TxOut,

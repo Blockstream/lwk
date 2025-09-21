@@ -10,6 +10,7 @@ use crate::{
 };
 use std::{fmt::Display, sync::Arc};
 
+/// A Liquid transaction
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
 #[uniffi::export(Display)]
 pub struct Transaction {
@@ -54,25 +55,31 @@ impl AsRef<elements::Transaction> for Transaction {
 
 #[uniffi::export]
 impl Transaction {
-    /// Construct a Transaction object
+    /// Construct a Transaction object from its hex representation.
+    /// To create the hex representation of a transaction use `to_string()`.
     #[uniffi::constructor]
     pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner: elements::Transaction = elements::Transaction::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Return the transaction identifier.
     pub fn txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.txid().into())
     }
 
+    /// Return the consensus encoded bytes of the transaction.
     pub fn bytes(&self) -> Vec<u8> {
         elements::Transaction::serialize(&self.inner)
     }
 
+    /// Return the fee of the transaction in the given asset.
+    /// At the moment the only asset that can be used as fee is the policy asset (LBTC for mainnet).
     pub fn fee(&self, policy_asset: &AssetId) -> u64 {
         self.inner.fee_in((*policy_asset).into())
     }
 
+    /// Return a copy of the outputs of the transaction.
     pub fn outputs(&self) -> Vec<Arc<TxOut>> {
         self.inner
             .output
@@ -81,6 +88,7 @@ impl Transaction {
             .collect()
     }
 
+    /// Return a copy of the inputs of the transaction.
     pub fn inputs(&self) -> Vec<Arc<TxIn>> {
         self.inner
             .input

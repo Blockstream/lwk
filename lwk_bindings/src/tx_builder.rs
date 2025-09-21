@@ -230,6 +230,8 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Set data to create a PSET from which you
+    /// can create a LiquiDEX proposal
     pub fn liquidex_make(
         &self,
         utxo: &OutPoint,
@@ -243,6 +245,7 @@ impl TxBuilder {
         Ok(())
     }
 
+    /// Set data to take LiquiDEX proposals
     pub fn liquidex_take(
         &self,
         proposals: Vec<Arc<ValidatedLiquidexProposal>>,

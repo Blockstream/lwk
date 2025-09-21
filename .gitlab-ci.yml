@@ -5,7 +5,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 .base:
-  image: xenoky/lwk-builder@sha256:6ed5fa190e26fe2b1e3bd329d8cf3400c4e9a1fd94f0ac61671df2a1a2787624
+  image: xenoky/lwk-builder@sha256:b3ed5a58a179e228cc25c632ce28aaab641df247fef9c649064a3eff44773b87
   tags:
     - cloud
   retry:
@@ -173,7 +173,12 @@ wasm:
     - cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
     # - cd lwk_wasm && WASM_BINDGEN_TEST_TIMEOUT=60 wasm-pack test --chrome --headless --features serial && cd - # TODO: restore browser tests, at the moment fail with "Cannot assign requested address"
     - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
-    - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial && cd -
+    # testing nodejs package
+    - cd lwk_wasm
+    - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
+    - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
+    - npm install ./pkg_node
+    - node ./tests/node/network.js
   artifacts:
     paths:
       - lwk_wasm/pkg

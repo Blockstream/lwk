@@ -1,3 +1,5 @@
+//! Liquid out point
+
 use crate::{LwkError, Txid};
 use std::{fmt::Display, sync::Arc};
 

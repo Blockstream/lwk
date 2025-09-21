@@ -1,3 +1,5 @@
+//! Liquid transaction input
+
 use crate::OutPoint;
 use std::sync::Arc;
 

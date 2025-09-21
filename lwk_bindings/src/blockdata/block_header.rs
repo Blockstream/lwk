@@ -1,3 +1,5 @@
+//! Liquid block header
+
 use elements::BlockHeader as ElementsBlockHeader;
 
 /// Wrapper over [`elements::BlockHeader`]

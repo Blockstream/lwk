@@ -1,3 +1,5 @@
+//! Liquid transaction output
+
 use crate::{
     types::{AssetId, SecretKey},
     Address, LwkError, Network, Script, TxOutSecrets,

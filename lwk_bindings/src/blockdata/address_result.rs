@@ -1,3 +1,5 @@
+//! Liquid address result
+
 use crate::Address;
 use std::sync::Arc;
 

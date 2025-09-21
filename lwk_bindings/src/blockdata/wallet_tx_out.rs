@@ -1,3 +1,5 @@
+//! Liquid wallet transaction output
+
 use std::sync::Arc;
 
 use crate::{Address, Chain, OutPoint, Script, TxOutSecrets};

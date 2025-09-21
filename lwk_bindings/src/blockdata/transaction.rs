@@ -1,3 +1,5 @@
+//! Liquid transaction
+
 use elements::{
     hex::ToHex,
     pset::serialize::{Deserialize, Serialize},

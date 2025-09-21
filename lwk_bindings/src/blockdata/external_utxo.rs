@@ -1,3 +1,5 @@
+//! External UTXO
+
 use std::sync::Arc;
 
 use crate::{LwkError, Transaction, TxOutSecrets};

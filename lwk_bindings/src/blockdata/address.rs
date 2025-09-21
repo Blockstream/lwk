@@ -1,3 +1,5 @@
+//! Liquid address
+
 use crate::{LwkError, Script};
 use std::{fmt::Display, sync::Arc};
 

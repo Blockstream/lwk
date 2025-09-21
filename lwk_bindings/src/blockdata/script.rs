@@ -1,3 +1,5 @@
+//! Liquid script
+
 use elements::{hex::ToHex, pset::serialize::Deserialize};
 
 use crate::{types::Hex, LwkError};

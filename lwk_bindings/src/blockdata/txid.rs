@@ -1,3 +1,5 @@
+//! Liquid transaction identifier
+
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
 use elements::hashes::Hash;

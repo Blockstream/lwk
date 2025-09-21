@@ -1,3 +1,5 @@
+//! Liquid transaction output secrets
+
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;

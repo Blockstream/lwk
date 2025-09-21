@@ -1,3 +1,5 @@
+//! Liquid wallet transaction
+
 use crate::{types::AssetId, Transaction, Txid, WalletTxOut};
 use std::{collections::HashMap, sync::Arc};
 

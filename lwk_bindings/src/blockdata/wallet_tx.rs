@@ -1,6 +1,9 @@
 use crate::{types::AssetId, Transaction, Txid, WalletTxOut};
 use std::{collections::HashMap, sync::Arc};
 
+/// Value returned by asking transactions to the wallet. Contains details about a transaction
+/// from the perspective of the wallet, for example the net-balance of the transaction for the
+/// wallet.
 #[derive(uniffi::Object, Debug)]
 pub struct WalletTx {
     inner: lwk_wollet::WalletTx,
@@ -14,15 +17,18 @@ impl From<lwk_wollet::WalletTx> for WalletTx {
 
 #[uniffi::export]
 impl WalletTx {
+    /// Return a copy of the transaction.
     pub fn tx(&self) -> Arc<Transaction> {
         let tx: Transaction = self.inner.tx.clone().into();
         Arc::new(tx)
     }
 
+    /// Return the height of the block containing the transaction if it's confirmed.
     pub fn height(&self) -> Option<u32> {
         self.inner.height
     }
 
+    /// Return the net balance of the transaction for the wallet.
     pub fn balance(&self) -> HashMap<AssetId, i64> {
         self.inner
             .balance
@@ -31,22 +37,30 @@ impl WalletTx {
             .collect()
     }
 
+    /// Return the transaction identifier.
     pub fn txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.txid.into())
     }
 
+    /// Return the fee of the transaction.
     pub fn fee(&self) -> u64 {
         self.inner.fee
     }
 
+    /// Return the type of the transaction. Can be "issuance", "reissuance", "burn", "redeposit",
+    /// "incoming", "outgoing" or "unknown".
     pub fn type_(&self) -> String {
         self.inner.type_.clone()
     }
 
+    /// Return the timestamp of the block containing the transaction if it's confirmed.
     pub fn timestamp(&self) -> Option<u32> {
         self.inner.timestamp
     }
 
+    /// Return a list with the same number of elements as the inputs of the transaction.
+    /// The element in the list is a `WalletTxOut` (the output spent to create the input)
+    /// if it belongs to the wallet, while it is None for inputs owned by others
     pub fn inputs(&self) -> Vec<Option<Arc<WalletTxOut>>> {
         self.inner
             .inputs
@@ -55,6 +69,9 @@ impl WalletTx {
             .collect()
     }
 
+    /// Return a list with the same number of elements as the outputs of the transaction.
+    /// The element in the list is a `WalletTxOut` if it belongs to the wallet,
+    /// while it is None for inputs owned by others
     pub fn outputs(&self) -> Vec<Option<Arc<WalletTxOut>>> {
         self.inner
             .outputs
@@ -63,6 +80,8 @@ impl WalletTx {
             .collect()
     }
 
+    /// Return the URL to view the transaction on the explorer. Including the information needed to
+    /// unblind the transaction in the explorer UI.
     pub fn unblinded_url(&self, explorer_url: &str) -> String {
         self.inner.unblinded_url(explorer_url)
     }

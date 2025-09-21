@@ -3,6 +3,7 @@ use elements::{hex::ToHex, pset::serialize::Deserialize};
 use crate::{types::Hex, LwkError};
 use std::{fmt::Display, sync::Arc};
 
+/// A Liquid script
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
 pub struct Script {
@@ -35,26 +36,32 @@ impl Display for Script {
 
 #[uniffi::export]
 impl Script {
-    /// Construct a Script object
+    /// Construct a Script object from its hex representation.
+    /// To create the hex representation of a script use `to_string()`.
     #[uniffi::constructor]
     pub fn new(hex: &Hex) -> Result<Arc<Self>, LwkError> {
         let inner = elements::Script::deserialize(hex.as_ref())?;
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Return the consensus encoded bytes of the script.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
     }
 
+    /// Return the string representation of the script showing op codes and their arguments.
+    /// For example: "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
     pub fn asm(&self) -> String {
         self.inner.asm()
     }
 
+    /// Whether a script pubkey is provably unspendable (like a burn script)
     pub fn is_provably_unspendable(&self) -> bool {
         self.inner.is_provably_unspendable()
     }
 }
 
+/// Whether a script pubkey is provably segwit
 #[uniffi::export]
 pub fn is_provably_segwit(script_pubkey: &Script, redeem_script: &Option<Arc<Script>>) -> bool {
     lwk_common::is_provably_segwit(

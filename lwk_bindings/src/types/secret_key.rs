@@ -29,16 +29,21 @@ impl From<&SecretKey> for secp256k1::SecretKey {
 
 #[uniffi::export]
 impl SecretKey {
+    /// Creates a `SecretKey` from a byte array
+    ///
+    /// The bytes can be used to create a `SecretKey` with `from_bytes()`
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = secp256k1::SecretKey::from_slice(bytes)?;
         Ok(Arc::new(SecretKey { inner }))
     }
 
+    /// Returns the bytes of the secret key, the bytes can be used to create a `SecretKey` with `from_bytes()`
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.secret_bytes().to_vec()
     }
 
+    /// Creates a `SecretKey` from a WIF (Wallet Import Format) string
     #[uniffi::constructor]
     pub fn from_wif(wif: &str) -> Result<Arc<Self>, LwkError> {
         let inner = elements::bitcoin::PrivateKey::from_wif(wif)?.inner;

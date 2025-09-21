@@ -7,7 +7,10 @@ use crate::{LwkError, Update};
 /// An exported trait, useful for caller-defined persistence.
 #[uniffi::export(with_foreign)]
 pub trait ForeignPersister: Send + Sync {
+    /// Return the update at the given index
     fn get(&self, index: u64) -> Result<Option<Arc<Update>>, LwkError>;
+
+    /// Push an update
     fn push(&self, update: Arc<Update>) -> Result<(), LwkError>;
 }
 
@@ -17,7 +20,7 @@ impl From<LwkError> for lwk_wollet::PersistError {
     }
 }
 
-/// Implements [`ForeignPersister`]
+/// An object to define persistency at the caller level
 #[derive(uniffi::Object)]
 pub struct ForeignPersisterLink {
     pub(crate) inner: Arc<dyn ForeignPersister>,
@@ -25,6 +28,7 @@ pub struct ForeignPersisterLink {
 
 #[uniffi::export]
 impl ForeignPersisterLink {
+    /// Create a new `ForeignPersisterLink`
     #[uniffi::constructor]
     pub fn new(persister: Arc<dyn ForeignPersister>) -> Self {
         Self { inner: persister }

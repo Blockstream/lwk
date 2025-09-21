@@ -4,14 +4,23 @@ use lwk_wollet::{Unvalidated, Validated};
 
 use crate::{types::AssetId, LwkError, Pset, Transaction, Txid};
 
-/// Wrapper over [`lwk_wollet::LiquidexProposal<Validated>`]
+/// Created by validating `UnvalidatedLiquidexProposal` via `validate()` or `insecure_validate()`
 #[derive(uniffi::Object, Debug, Clone)]
 #[uniffi::export(Display)]
 pub struct ValidatedLiquidexProposal {
     inner: lwk_wollet::LiquidexProposal<Validated>,
 }
 
-/// Wrapper over [`lwk_wollet::LiquidexProposal<Unvalidated>`]
+/// LiquiDEX swap proposal
+///
+/// A LiquiDEX swap proposal is a transaction with one input and one output created by the "maker".
+/// The transaction "swaps" the input for the output, meaning that the "maker" sends the input and
+/// receives the output.
+/// However the transaction is incomplete (unbalanced and without a fee output), thus it cannot be
+/// broadcast.
+/// The "taker" can "complete" the transaction (using `liquidex_take()`) by
+/// adding more inputs and more outputs to balance the amounts, meaning that the "taker" sends the
+/// output and receives the input.
 #[derive(uniffi::Object, Debug, Clone)]
 #[uniffi::export(Display)]
 pub struct UnvalidatedLiquidexProposal {
@@ -53,24 +62,28 @@ impl std::str::FromStr for UnvalidatedLiquidexProposal {
 
 #[uniffi::export]
 impl UnvalidatedLiquidexProposal {
+    /// Create a LiquiDEX proposal from a PSET
     #[uniffi::constructor]
     pub fn from_pset(pset: &Pset) -> Result<Arc<UnvalidatedLiquidexProposal>, LwkError> {
         let proposal = lwk_wollet::LiquidexProposal::from_pset(pset.as_ref())?;
         Ok(Arc::new(Self { inner: proposal }))
     }
 
+    /// Create a LiquiDEX proposal from its json string representation
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<UnvalidatedLiquidexProposal>, LwkError> {
         let proposal = lwk_wollet::LiquidexProposal::from_str(s)?;
         Ok(Arc::new(Self { inner: proposal }))
     }
 
+    /// Validate the proposal output but not the input wich require fetching the previous transaction
     pub fn insecure_validate(&self) -> Result<Arc<ValidatedLiquidexProposal>, LwkError> {
         Ok(Arc::new(ValidatedLiquidexProposal {
             inner: self.inner.clone().insecure_validate()?,
         }))
     }
 
+    /// Validate the proposal input and output, returning a validated proposal.
     pub fn validate(
         &self,
         previous_tx: &Transaction,
@@ -80,6 +93,7 @@ impl UnvalidatedLiquidexProposal {
         }))
     }
 
+    /// Return the transaction id of the previous transaction needed for validation
     pub fn needed_tx(&self) -> Result<Arc<Txid>, LwkError> {
         Ok(Arc::new(self.inner.needed_tx()?.into()))
     }
@@ -93,11 +107,13 @@ impl From<ValidatedLiquidexProposal> for lwk_wollet::LiquidexProposal<Validated>
 
 #[uniffi::export]
 impl ValidatedLiquidexProposal {
+    /// The asset value and amount in the input of this validated proposal.
     pub fn input(&self) -> Arc<AssetAmount> {
         let inner = self.inner.input();
         Arc::new(AssetAmount { inner })
     }
 
+    /// The asset value and amount in the output of this validated proposal.
     pub fn output(&self) -> Arc<AssetAmount> {
         let inner = self.inner.output();
         Arc::new(AssetAmount { inner })

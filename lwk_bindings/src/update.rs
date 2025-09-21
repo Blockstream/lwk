@@ -32,11 +32,13 @@ impl AsRef<lwk_wollet::Update> for Update {
 
 #[uniffi::export]
 impl Update {
+    /// Creates an `Update` from a byte array created with `serialize()`
     #[uniffi::constructor]
     pub fn new(bytes: &[u8]) -> Result<Update, LwkError> {
         Ok(lwk_wollet::Update::deserialize(bytes)?.into())
     }
 
+    /// Serialize an `Update` to a byte array, can be deserialized back with `new()`
     pub fn serialize(&self) -> Result<Vec<u8>, LwkError> {
         Ok(self.inner.serialize()?)
     }

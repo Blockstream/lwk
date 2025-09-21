@@ -1,6 +1,9 @@
 use crate::Address;
 use std::sync::Arc;
 
+/// Value returned from asking an address to the wallet.
+/// Containing the confidential address and its
+/// derivation index (the last element in the derivation path)
 #[derive(uniffi::Object)]
 pub struct AddressResult {
     inner: lwk_wollet::AddressResult,
@@ -14,10 +17,12 @@ impl From<lwk_wollet::AddressResult> for AddressResult {
 
 #[uniffi::export]
 impl AddressResult {
+    /// Return the address.
     pub fn address(&self) -> Arc<Address> {
         Arc::new(self.inner.address().clone().into())
     }
 
+    /// Return the derivation index of the address.
     pub fn index(&self) -> u32 {
         self.inner.index()
     }

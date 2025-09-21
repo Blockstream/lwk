@@ -2,6 +2,11 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{types::AssetId, Address, Txid};
 
+/// The details of a Partially Signed Elements Transaction:
+///
+/// - the net balance from the point of view of the wallet
+/// - the available and missing signatures for each input
+/// - for issuances and reissuances transactions contains the issuance or reissuance details
 #[derive(uniffi::Object, Debug)]
 pub struct PsetDetails {
     inner: lwk_common::PsetDetails,
@@ -15,10 +20,13 @@ impl From<lwk_common::PsetDetails> for PsetDetails {
 
 #[uniffi::export]
 impl PsetDetails {
+    /// Return the balance of the PSET from the point of view of the wallet
+    /// that generated this via `psetDetails()`
     pub fn balance(&self) -> Arc<PsetBalance> {
         Arc::new(self.inner.balance.clone().into())
     }
 
+    /// For each input its existing or missing signatures
     pub fn signatures(&self) -> Vec<Arc<PsetSignatures>> {
         self.inner
             .sig_details
@@ -28,6 +36,7 @@ impl PsetDetails {
             .collect()
     }
 
+    /// Return an element for every input that could possibly be a issuance or a reissuance
     pub fn inputs_issuances(&self) -> Vec<Arc<Issuance>> {
         // this is not aligned with what we are doing in app, where we offer a vec of only issuance and another with only reissuance
         // with a reference to the relative input. We should problaby move that logic upper so we can reuse?
@@ -118,6 +127,7 @@ fn key_source_to_string(
     format!("[{}]{}", key_source.0, key_source.1)
 }
 
+/// The details of an issuance or reissuance
 #[derive(uniffi::Object, Debug)]
 
 pub struct Issuance {
@@ -126,42 +136,52 @@ pub struct Issuance {
 
 #[uniffi::export]
 impl Issuance {
+    /// Return the asset id or None if it's a null issuance
     pub fn asset(&self) -> Option<AssetId> {
         self.inner.asset().map(Into::into)
     }
 
+    /// Return the token id or None if it's a null issuance
     pub fn token(&self) -> Option<AssetId> {
         self.inner.token().map(Into::into)
     }
 
+    /// Return the previous output index or None if it's a null issuance
     pub fn prev_vout(&self) -> Option<u32> {
         self.inner.prev_vout()
     }
 
+    /// Return the previous transaction id or None if it's a null issuance
     pub fn prev_txid(&self) -> Option<Arc<Txid>> {
         self.inner.prev_txid().map(|e| Arc::new(e.into()))
     }
 
+    /// Return true if the issuance or reissuance is null
     pub fn is_null(&self) -> bool {
         self.inner.is_null()
     }
 
+    /// Return true if this is effectively an issuance
     pub fn is_issuance(&self) -> bool {
         self.inner.is_issuance()
     }
 
+    /// Return true if this is effectively a reissuance
     pub fn is_reissuance(&self) -> bool {
         self.inner.is_reissuance()
     }
 
+    /// Return true if the issuance or reissuance is confidential
     pub fn is_confidential(&self) -> bool {
         self.inner.is_confidential()
     }
 
+    /// Return the amount of the asset in satoshis
     pub fn asset_satoshi(&self) -> Option<u64> {
         self.inner.asset_satoshi()
     }
 
+    /// Return the amount of the reissuance token in satoshis
     pub fn token_satoshi(&self) -> Option<u64> {
         self.inner.token_satoshi()
     }

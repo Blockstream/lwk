@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{Address, Chain, OutPoint, Script, TxOutSecrets};
 
+/// Details of a wallet transaction output used in `WalletTx`
 #[derive(uniffi::Object)]
 pub struct WalletTxOut {
     inner: lwk_wollet::WalletTxOut,
@@ -15,30 +16,37 @@ impl From<lwk_wollet::WalletTxOut> for WalletTxOut {
 
 #[uniffi::export]
 impl WalletTxOut {
+    /// Return the outpoint (txid and vout) of this `WalletTxOut`.
     pub fn outpoint(&self) -> Arc<OutPoint> {
         Arc::new(self.inner.outpoint.into())
     }
 
+    /// Return the script pubkey of the address of this `WalletTxOut`.
     pub fn script_pubkey(&self) -> Arc<Script> {
         Arc::new(self.inner.script_pubkey.clone().into())
     }
 
+    /// Return the height of the block containing this output if it's confirmed.
     pub fn height(&self) -> Option<u32> {
         self.inner.height
     }
 
+    /// Return the address of this `WalletTxOut`.
     pub fn address(&self) -> Arc<Address> {
         Arc::new(self.inner.address.clone().into())
     }
 
+    /// Return the unblinded values of this `WalletTxOut`.
     pub fn unblinded(&self) -> Arc<TxOutSecrets> {
         Arc::new(self.inner.unblinded.into())
     }
 
+    /// Return the wildcard index used to derive the address of this `WalletTxOut`.
     pub fn wildcard_index(&self) -> u32 {
         self.inner.wildcard_index
     }
 
+    /// Return the chain of this `WalletTxOut`. Can be "Chain::External" or "Chain::Internal" (change).
     pub fn ext_int(&self) -> Chain {
         self.inner.ext_int.into()
     }

@@ -13,3 +13,4 @@ context/jade-emulator/Dockerfile
 result
 *__pycache__
 venv/
+node_modules/

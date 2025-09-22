@@ -37,4 +37,15 @@ You can generate a wallet confidential address with `Wollet::address()`.
 
 This address can receive any Liquid asset or amount.
 
+## Get Transactions and Balance
+It's possibile to get the list of wallet transactions with `Wollet::transactions()` and the balance `Wollet::balance()`.
 
+Note: Liquid transactions are confidential, meaining that only sender and receiver can see their asset and amount. `Wollet` unblinds the transactions and returns unblinded data that can be shown to the user.
+
+`Wollet` however does not have internet access.
+To fetch (new) wallet data, you need to use a "client" that fetches wallet transactions from some server.
+In the next section we explain how (new) blockchain data can be obtained and added to the wallet.
+
+----
+
+Next: [Update the Wallet](scan.md)

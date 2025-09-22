@@ -1,0 +1,7 @@
+[book]
+title = "LWK Documentation"
+author = "LWK Contributors"
+
+[output.html]
+git-repository-url = "https://github.com/blockstream/lwk"
+edit-url-template = "https://github.com/blockstream/lwk/edit/master/docs/src/{path}"

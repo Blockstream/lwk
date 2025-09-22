@@ -311,7 +311,7 @@ mod tests {
         let balance = wollet.balance().unwrap();
         use std::collections::HashMap;
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
-            serde_wasm_bindgen::from_value(balance.into()).unwrap();
+            serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
         let lbtc = lwk_wollet::ElementsNetwork::Liquid.policy_asset();
         let mut expected = HashMap::new();
         expected.insert(lbtc, 1000);
@@ -348,7 +348,7 @@ mod tests {
         // Get balance
         let balance = wollet.balance().unwrap();
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
-            serde_wasm_bindgen::from_value(balance.into()).unwrap();
+            serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
         let lbtc = lwk_wollet::ElementsNetwork::LiquidTestnet.policy_asset();
         let lbtc_balance = balance.get(&lbtc).unwrap_or(&0);
         if *lbtc_balance < 500 {

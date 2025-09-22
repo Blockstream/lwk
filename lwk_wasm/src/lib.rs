@@ -110,7 +110,7 @@ mod tests {
         let mut wollet = Wollet::new(&network, &descriptor).unwrap();
         let update = client.full_scan(&wollet).await.unwrap().unwrap();
         wollet.apply_update(&update).unwrap();
-        let balance = wollet.balance().unwrap().into();
+        let balance = wollet.balance().unwrap().entries().unwrap();
         let balance: HashMap<AssetId, u64> = serde_wasm_bindgen::from_value(balance).unwrap();
         assert!(
             *balance.get(&(network.policy_asset().into())).unwrap() >= expected_at_least,

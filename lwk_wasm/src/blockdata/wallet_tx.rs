@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(wallet_tx.height(), Some(4));
 
         let balance: HashMap<elements::AssetId, i64> =
-            serde_wasm_bindgen::from_value(wallet_tx.balance().into()).unwrap();
+            serde_wasm_bindgen::from_value(wallet_tx.balance().entries().unwrap()).unwrap();
         assert_eq!(balance.get(&a), Some(&10));
 
         assert_eq!(wallet_tx.fee(), 23);

@@ -109,7 +109,7 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = [ bin ];
 
-            buildInputs = [ registry.bin rustToolchain pkgs.websocat pkgs.heaptrack ];
+            buildInputs = [ registry.bin rustToolchain pkgs.websocat pkgs.heaptrack pkgs.mdbook ];
 
             ELEMENTSD_EXEC = "${pkgs.elementsd}/bin/elementsd";
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";

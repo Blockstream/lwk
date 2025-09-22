@@ -140,11 +140,23 @@ impl Stream for WebSocketSerial {
                 }
             }
 
-            // Wait a bit for more data
-            let promise = web_sys::js_sys::Promise::new(&mut |resolve, _reject| {
-                web_sys::window()
-                    .unwrap()
-                    .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 10)
+            // Cross-platform timeout
+            let global_obj = js_sys::global();
+            let set_timeout = js_sys::Reflect::get(&global_obj, &"setTimeout".into())
+                .map_err(|e| {
+                    lwk_jade::Error::Generic(format!("Failed to get setTimeout: {:?}", e))
+                })?
+                .dyn_into::<js_sys::Function>()
+                .map_err(|e| {
+                    lwk_jade::Error::Generic(format!("setTimeout not a function: {:?}", e))
+                })?;
+
+            let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+                set_timeout
+                    .call2(&JsValue::NULL, &resolve, &JsValue::from_f64(10.0))
+                    .map_err(|e| {
+                        lwk_jade::Error::Generic(format!("setTimeout call failed: {:?}", e))
+                    })
                     .unwrap();
             });
 

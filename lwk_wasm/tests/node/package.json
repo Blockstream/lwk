@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "lwk_node": "^0.11.1"
+    "lwk_node": "file:../../pkg_node"
   }
 }

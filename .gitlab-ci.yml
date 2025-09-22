@@ -177,10 +177,11 @@ wasm:
     - cd lwk_wasm
     - RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
     - sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
-    - npm install ./pkg_node
-    - node ./tests/node/network.js
-    - node ./tests/node/list_transactions.js
-    - node ./tests/node/amp0.js
+    - cd tests/node
+    - npm install
+    - node network.js
+    - node list_transactions.js
+    - node amp0.js
   artifacts:
     paths:
       - lwk_wasm/pkg

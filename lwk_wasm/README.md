@@ -104,6 +104,18 @@ Rename the package to `lwk_node` so that we can publish it to npm.
 sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
 ```
 
+### Test node js examples
+
+Requirement:
+
+* having built node pkg like shown in previous paragraph
+* having node and npm installed
+
+```shell
+cd lwk_wasm/tests/node
+npm install
+node network.js
+```
 
 ## Javascript code conventions
 

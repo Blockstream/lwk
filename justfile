@@ -98,3 +98,11 @@ csharp-windows: build-bindings-lib
 # Run benchmarks. Optionally specify which benchmark to run
 bench filter="":
     cd lwk_wollet/benches && cargo bench -- {{filter}} && cd -
+
+# Build the mdbook documentation
+mdbook:
+    cd docs && mdbook build
+
+# Serve the mdbook documentation locally for development
+mdbook-serve: mdbook
+    cd docs && mdbook serve

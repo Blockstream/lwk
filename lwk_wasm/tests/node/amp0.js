@@ -1,3 +1,5 @@
+const WebSocket = require('ws');
+global.WebSocket = WebSocket;
 
 const lwk = require('lwk_node');
 

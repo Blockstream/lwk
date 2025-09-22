@@ -14,3 +14,9 @@ While hardware signers are inherently more secure, LWK's design allows you to en
 
 This guide will focus on software signers. For more details on hardware signers, please see the [Jade documentation](jade.md).
 
+## Create Signer
+To create a signer you need a mnemonic.
+You can generate a new one with `bip39::Mnemonic::generate()`.
+Then you can create a software signer with `SwSigner::new()`.
+
+

@@ -32,4 +32,9 @@ Once you have a `WolletDescriptor` you can create a `Wollet` using either `Wolle
 
 LWK also allows `Wollet`s to have a [custom persister](persister.md).
 
+## Generate Addresses
+You can generate a wallet confidential address with `Wollet::address()`.
+
+This address can receive any Liquid asset or amount.
+
 

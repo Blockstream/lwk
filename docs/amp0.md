@@ -14,6 +14,7 @@ For instance it does not allow to issue AMP0 asset, or use accounts with 2FA.
 |Create AMP0 accounts             | ✅ | ✅ | ❌ |
 |Receive on AMP0 accounts         | ✅ | ✅ | ❌ |
 |Monitor AMP0 accounts            | ✅ | ✅ | ❌ |
+|Send from AMP0 accounts          | ✅ | ✅ | ❌ |
 |Account with 2FA                 | ❌ | ✅ | ❌ |
 |issue, reissue, burn AMP0 assets | ❌ | ❌ | ✅ |
 |set restriction for AMP0 assets  | ❌ | ❌ | ✅ |

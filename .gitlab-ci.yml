@@ -20,8 +20,14 @@ variables:
 wasm:
   extends: .base
   variables:
+    WASM_BINDGEN_TEST_RUNNER_ARGS: "--no-sandbox --disable-dev-shm-usage --remote-debugging-address=127.0.0.1"
     WASM_BINDGEN_TEST_TIMEOUT: 60
-    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
+    MOZ_DISABLE_CONTENT_SANDBOX: "1"
   script:
-    - (cd lwk_wasm &&  wasm-pack test --node --features serial)
+    - apt update -qq
+    - mkdir -p /etc/apt/keyrings
+    - wget -q https://packages.mozilla.org/apt mozilla.gpg -O- | tee /etc/apt/keyrings/mozilla.gpg > /dev/null
+    - echo "deb [signed-by=/etc/apt/keyrings/mozilla.gpg arch=amd64] https://packages.mozilla.org/apt mozilla main" | tee -a /etc/apt/sources.list.d/mozilla.list > /dev/null
+    - apt-get update && apt-get install -y firefox libdbus-glib-1-2 libgtk-3-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgbm1 libpango-1.0-0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2
+    - (cd lwk_wasm && wasm-pack test --firefox --headless --features serial)
 

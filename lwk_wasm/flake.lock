@@ -77,15 +77,14 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 0,
-        "narHash": "sha256-VBXVhC82bo7xOS4uIcHSAkJpJHTCOc5AgA0CMirLpVk=",
         "path": "..",
         "type": "path"
       },
       "original": {
         "path": "..",
         "type": "path"
-      }
+      },
+      "parent": []
     },
     "nexus_relay": {
       "inputs": {

@@ -1,15 +1,15 @@
 # LWK documentation
 
-* [Introduction](intro.md) 🚧
+* [Introduction](intro.md) ✅
   * [Features](features.md) 🚧
-  * [Install](install.md) ❌
-* [Basics](basics.md) ❌
-  * [Signers](signer.md) ❌
-  * [Watch-Only Wallets](wollet.md) ❌
-  * [Blockchain Scan](scan.md) ❌
-  * [Transaction Creation](tx.md) ❌
-  * [Transaction Signing](sign.md) ❌
-  * [Transaction Broadcast](broadcast.md) ❌
+  * [Install](install.md) 🚧
+* [Basics](basics.md) ✅
+  * [Signers](signer.md) ✅
+  * [Watch-Only Wallets](wollet.md) ✅
+  * [Blockchain Scan](scan.md) ✅
+  * [Transaction Creation](tx.md) ✅
+  * [Transaction Signing](sign.md) ✅
+  * [Transaction Broadcast](broadcast.md) ✅
 * [Advanced](advanced.md) ❌
   * [Issuance](issuance.md) ❌
   * [Reissuance](reissuance.md) ❌
@@ -38,5 +38,5 @@
 * [Miscellaneous](misc.md) ❌
   * [Architecture](arch.md) 🚧
   * [Use Cases](usecases.md) ❌
-  * [LWK Users](users.md) ❌
+  * [LWK Users](users.md) 🚧
   * [History](history.md) 🚧

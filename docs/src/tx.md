@@ -7,3 +7,13 @@ Now that the `Wollet` has a balance, it is able to craft transactions sending fu
 
 The first step is construction a `TxBuilder` (or `WolletTxBuilder`), using `TxBuilder::new()` or `Wollet::tx_builder()`.
 You can now specify how to build the transaction using the methods exposed by the `TxBuilder`.
+
+## Add a Recipient
+If you want to send some funds you need this information:
+* Address: destination (confidential) address provided by the receiver
+* Amount: number of units of the asset (satoshi) to be sent.
+* Asset: identifier of the asset that should be sent
+
+Then you can call `TxBuilder::add_recipient()` to create an output which sends the amount of the asset, to the specified address.
+
+You can add multiple recipients to the same transaction.

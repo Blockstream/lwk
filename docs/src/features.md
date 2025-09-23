@@ -15,6 +15,6 @@
   Issued Assets with your hardware signer, using singlesig or multisig
   wallets (currently [**Jade**](https://blockstream.com/jade/) only, with more coming soon).
 * **Multi Language** support: Swift, Kotlin, Javascript, Typescript, WASM, React Native, Go, C#, Rust, Flutter/Dart and Python. 
-* **Liquid Atomic Swaps**: using LiquiDEX.
-* **Blockstream AMP** support: send and receive asset issued with the Blockstream Asset Management Platform.
+* **Liquid Atomic Swaps**: using [LiquiDEX](https://blog.blockstream.com/liquidex-2-step-atomic-swaps-on-the-liquid-network/).
+* **Blockstream AMP** support: send and receive asset issued with the [Blockstream Asset Management Platform](https://blockstream.com/amp/).
 * **And more!**

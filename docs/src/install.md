@@ -14,6 +14,12 @@ LWK is available for several languages.
 
 ## C#
 
+```shell
+dotnet add package LiquidWalletKit --version 0.8.2
+```
+
+Please open an issue if you need a more recent version
+
 ## Rust
 You can use the crates released on [crates.io](https://crates.io)
 

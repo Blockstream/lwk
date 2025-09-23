@@ -16,3 +16,13 @@ The balance can be shown to the user or validated against the `Signer` expectati
 
 It's worth noticing that `Wollet`s can work without internet,
 so offline `Signer`s can have `Wollet`s instance to enhance the validation performed before signing.
+
+## Sign the PSET
+Once you have performed enough validation, you can call `Signer::sign`.
+Which adds signatures from `Signer` to the PSET.
+
+Once the PSET has enough signatures, you can broadcast to the Liquid Network.
+
+----
+
+Next: [Broadcast a Transaction](broadcast.md)

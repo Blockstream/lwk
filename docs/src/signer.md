@@ -27,6 +27,18 @@ The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the ke
 
 For particularly simple cases, such as single sig, you can get the CT descriptor directly from the signer, for instance using `Signer::wpkh_slip77_descriptor()`.
 
+<!-- langtabs-start -->
+```rust
+{{#include ../lwk_wollet/src/lib.rs}}
+```
+```js
+{{#include signer.md}}
+```
+```python
+{{#include ../lwk_bindings/tests/bindings/amp0.py}}
+```
+<!-- langtabs-end -->
+
 ----
 
 Next: [Watch-Only Wallets](wollet.md)

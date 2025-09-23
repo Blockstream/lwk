@@ -20,9 +20,8 @@ variables:
 wasm:
   extends: .base
   variables:
-    WASM_BINDGEN_TEST_RUNNER_ARGS: "--no-sandbox --disable-dev-shm-usage --remote-debugging-address=127.0.0.1 --disable-ipv6"
     WASM_BINDGEN_TEST_TIMEOUT: 60
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
   script:
-    - (cd lwk_wasm &&  wasm-pack test --chrome --headless --features serial)
+    - (cd lwk_wasm &&  wasm-pack test --node --features serial)
 

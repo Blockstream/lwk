@@ -26,3 +26,13 @@ LWK allows to construct complex transactions, here there are few examples
 * [Explicit inputs and outputs](explicit.md)
 * [Send all LBTC](sendall.md)
 * [Issuance](issuance.md), [reissuance](reissuance.md), [burn](burn.md)
+
+## Construct the Transaction (PSET)
+Once you set all the desired options to the `TxBuilder`.
+You can construct the transaction calling `TxBuilder::finish()`.
+This will return a Partially Signed Elements Transaction ([PSET](https://github.com/ElementsProject/elements/blob/master/doc/pset.mediawiki)),
+a transaction encoded in a format that facilitates sharing the transaction with signers.
+
+----
+
+Next: [Sign Transaction](sign.md)

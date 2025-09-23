@@ -16,3 +16,12 @@ To delve into their differences and strength points see our [dedicated section](
 In this guide we will use an `EsploraClient`.
 
 You can create a new client with `EsploraClient::new()`, specifying the URL of the service.
+
+## Scan the Blockchain
+Given a `Wollet` you can call `EsploraClient::full_scan()`,
+which performs a series of network calls that scan the blockchain to find transactions relevant for the wallet.
+
+`EsploraClient::full_scan()` has a stopping mechanisms that relies on BIP44 GAP LIMIT.
+This might not fit every use cases.
+In case you have large sequences of consecutive unused addresses you can use
+`EsploraClient::full_scan_to_index()`.

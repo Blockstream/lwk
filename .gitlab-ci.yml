@@ -17,32 +17,17 @@ variables:
   services:
     - docker:20.10.12-dind
 
-
 wasm:
   extends: .base
   variables:
-    RUSTFLAGS: "--cfg=web_sys_unstable_apis"
     WASM_BINDGEN_TEST_RUNNER_ARGS: "--no-sandbox --disable-dev-shm-usage --remote-debugging-address=127.0.0.1"
     WASM_BINDGEN_TEST_TIMEOUT: 60
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    #- cargo check --target wasm32-unknown-unknown -p lwk_common -p lwk_rpc_model -p lwk_containers -p lwk_hwi
-    #- cargo check --target wasm32-unknown-unknown -p lwk_wollet --no-default-features --features esplora,serial,amp2,amp0
-    #- cargo check --target wasm32-unknown-unknown -p lwk_signer --no-default-features
-    #- cargo check --target wasm32-unknown-unknown -p lwk_jade --no-default-features --features asyncr --features serial
-    #- cargo check --target wasm32-unknown-unknown -p lwk_ledger --no-default-features
-    # - cd lwk_wasm && RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --features serial && cd -
-    # wasm tests in the browser
-    - (cd lwk_wasm &&  wasm-pack test --chrome --headless --features serial)
-    # testing nodejs package
-    #- cd lwk_wasm
-    #- RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_PROFILE_RELEASE_OPT_LEVEL=z wasm-pack build --target nodejs --out-dir pkg_node -- --features serial
-    #- sed -i 's/"lwk_wasm"/"lwk_node"/g' pkg_node/package.json
-    #- cd tests/node
-    #- npm install
-    #- node network.js
-    #- node list_transactions.js
-    #- node amp0.js
-  artifacts:
-    paths:
-      - lwk_wasm/pkg
+    - |
+      cd lwk_wasm
+      echo '#!/bin/sh' > chromedriver_wrapper
+      echo 'exec /usr/bin/chromedriver --allowed-ips=127.0.0.1 "$@"' >> chromedriver_wrapper
+      chmod +x chromedriver_wrapper
+      export CHROMEDRIVER=$PWD/chromedriver_wrapper
+      wasm-pack test --chrome --headless --features serial

@@ -6,3 +6,15 @@ First you need to call `Wollet::finalize()` to finalize the PSET and extract the
 
 ## Broadcast the Transaction
 The transaction returned by the previous step can be sent to the Liquid Network with `EsploraClient::broadcast()`.
+
+## Apply the Transaction
+If you send a transaction you might want to see the balance decrease immediately.
+With LWK this does not happens automatically,
+you can do a "full scan" and apply the returned update.
+However this requires network calls and it might be slow,
+if you want your balance to be updated immediately,
+you can call `Wollet::apply_tx()`.
+
+----
+
+Next: [Advanced Features](advanced.md)

@@ -20,11 +20,23 @@ pip install lwk
 ```
 
 
+## Javascript/Typescript (Wasm)
+
+### Wasm module
+
+```shell
+npm install lwk_wasm
+```
+
+### Node module
+
+```shell
+npm install lwk_node
+```
+
 ## iOS/Swift
 
 ## Android/Kotlin
-
-## Javascript/Typescript (Wasm)
 
 ## React Native
 

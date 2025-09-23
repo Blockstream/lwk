@@ -17,3 +17,12 @@ If you want to send some funds you need this information:
 Then you can call `TxBuilder::add_recipient()` to create an output which sends the amount of the asset, to the specified address.
 
 You can add multiple recipients to the same transaction.
+
+## Advanced Options
+LWK allows to construct complex transactions, here there are few examples
+* Set fee rate with `TxBuilder::fee_rate()`
+* [Manual coin selection](manual.md)
+* [External UTXOS](external.md)
+* [Explicit inputs and outputs](explicit.md)
+* [Send all LBTC](sendall.md)
+* [Issuance](issuance.md), [reissuance](reissuance.md), [burn](burn.md)

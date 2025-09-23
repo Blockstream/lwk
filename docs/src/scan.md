@@ -11,3 +11,8 @@ LWK currently support 3 types of servers:
 * Waterfalls Servers
 
 To delve into their differences and strength points see our [dedicated section](clients.md).
+
+## Create a Client
+In this guide we will use an `EsploraClient`.
+
+You can create a new client with `EsploraClient::new()`, specifying the URL of the service.

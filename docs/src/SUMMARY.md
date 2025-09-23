@@ -23,18 +23,6 @@
   * [Ledger](ledger.md) ❌
   * [LiquiDEX](liquidex.md) ❌
   * [Pegin](pegin.md) ❌
-* [Bindings](bindings.md) ❌
-  * [Rust](rust.md) 🚧
-  * [JavaScript](js.md) ❌
-  * [WASM](wasm.md) 🚧
-  * [Python](python.md) 🚧
-  * [Kotlin](kotlin.md) 🚧
-  * [Swift](swift.md) 🚧
-  * [C#](csharp.md) 🚧
-* [Development](dev.md) ❌
-  * [Tests](tests.md) 🚧
-  * [Nix](nix.md) 🚧
-  * [Docs](docs.md) 🚧
 * [Miscellaneous](misc.md) ❌
   * [Architecture](arch.md) 🚧
   * [Use Cases](usecases.md) ❌

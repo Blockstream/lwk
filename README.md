@@ -1,13 +1,13 @@
 # Liquid Wallet Kit
 <div align="center">
 
-  <img src="docs/logos/web/LWK_logo_white_on_dark_rgb.png"/>
+  <img src="docs/src/logos/web/LWK_logo_white_on_dark_rgb.png"/>
 
   <p>
     <strong>Liquid Wallets Made Easy</strong>
   </p>
 
-  <p> <strong> <a href="docs/summary.md">Documentation</a> </strong> </p>
+  <p> <strong> <a href="docs/src/SUMMARY.md">Documentation</a> </strong> </p>
 </div>
 
 ## About

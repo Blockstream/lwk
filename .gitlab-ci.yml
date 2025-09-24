@@ -203,3 +203,20 @@ mdbook-snippets:
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cd docs/snippets/rust && cargo test && cd -
+
+mdbook-snippets-py:
+  extends: .base
+  script:
+    # setup env variables
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
+    # build python wheel
+    - cd lwk_bindings/
+    - python -m venv venv
+    - source venv/bin/activate
+    # install maturin
+    - python -m pip install maturin maturin[patchelf] uniffi-bindgen==0.28.0
+    # build and install python wheel
+    - maturin develop --compatibility manylinux2014 --release -m lwk_bindings/Cargo.toml -b uniffi
+    # run tests
+    - cd ../docs/snippets/python
+    - python signer.py

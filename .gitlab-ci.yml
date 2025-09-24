@@ -24,6 +24,7 @@ fmt_clippy:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
+    - cd docs/snippets/rust && cargo fmt --check && cargo clippy -- -D warnings && cd -
 
 test_clean:
   image: rust:1.75

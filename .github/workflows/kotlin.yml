@@ -35,7 +35,7 @@ jobs:
       
       - name: "Install NDK"
         run: |
-          cargo install cargo-ndk
+          cargo install cargo-ndk --version 3.5.4
   
       - name: "Build Android bindings"
         run: |

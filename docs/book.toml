@@ -5,7 +5,17 @@ author = "LWK Contributors"
 [output.html]
 git-repository-url = "https://github.com/blockstream/lwk"
 edit-url-template = "https://github.com/blockstream/lwk/edit/master/docs/src/{path}"
-additional-js = ["mermaid.min.js", "mermaid-init.js"]
+additional-js = [
+    "mermaid.min.js",
+    "mermaid-init.js",
+    "tabs.js"
+]
+additional-css = ["styles.css"]
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
+
+[preprocessor.snippets]
+after = ["links"]
+
+# Snippets documentation is adapted from https://github.com/breez/breez-sdk-liquid-docs

@@ -1,10 +1,10 @@
 # LWK docs Rust snippets
 
+Run all snippets
 ```
-cargo check
+cargo test
 ```
 
 ## TODOs:
-* [ ] run single test
 * [ ] CI: fmt and clippy
 * [ ] CI: run tests

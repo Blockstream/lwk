@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "052868bef07cffaf9fce636c615de58aaafe780b" }
+
+[patch.crates-io]
+secp256k1-zkp = { git = "https://github.com/breez/rust-secp256k1-zkp.git", rev = "eac2e479255a6e32b5588bc25ee53c642fdd8395" }

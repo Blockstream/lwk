@@ -1,3 +1,4 @@
+#[test]
 fn generate_signer() -> anyhow::Result<()> {
     // ANCHOR: generate-signer
     use lwk_signer::{bip39::Mnemonic, SwSigner};

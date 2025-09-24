@@ -19,6 +19,24 @@ To create a signer you need a mnemonic.
 You can generate a new one with `bip39::Mnemonic::generate()`.
 Then you can create a software signer with `SwSigner::new()`.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../snippets/rust/src/signer.rs:generate-signer}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+{{#include ../snippets/python/signer.py:generate-signer}}
+```
+</section>
+</custom-tabs>
+
 ## Get Xpub
 Once you have a signer you need to get some an extended public key (`xpub`),
 which can be used to create a wallet that requires signature from the signer.

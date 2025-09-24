@@ -1,3 +1,5 @@
+/* from https://github.com/breez/breez-sdk-liquid-docs */
+
 .content li:has(> input[type="checkbox"]) {
     list-style: none;
 }

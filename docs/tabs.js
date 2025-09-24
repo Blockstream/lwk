@@ -1,3 +1,5 @@
+/* from https://github.com/breez/breez-sdk-liquid-docs */
+
 (function () {
     'use strict';
 

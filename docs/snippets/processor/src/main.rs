@@ -1,3 +1,5 @@
+// From https://github.com/breez/breez-sdk-liquid-docs
+
 use clap::{crate_version, Arg, ArgMatches, Command};
 use mdbook::book::Book;
 use mdbook::errors::{Error, Result};

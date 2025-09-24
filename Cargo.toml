@@ -16,6 +16,7 @@ members = [
     "lwk_test_util",
     "lwk_wasm",
 ]
+exclude = ["lwk_boltz"]
 resolver = "2"
 
 [patch.crates-io]

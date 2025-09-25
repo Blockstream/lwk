@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
+use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::ElementsNetwork;
 
 pub struct ElectrumClient {
@@ -36,7 +39,12 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
     }
 
     async fn get_genesis_hash(&self) -> Result<elements::BlockHash, Error> {
-        todo!()
+        // TODO this should use spawn_blocking
+        let headers = self
+            .inner
+            .get_headers(&[0], &HashMap::new())
+            .map_err(|e| Error::Protocol(e.to_string()))?;
+        Ok(headers[0].block_hash())
     }
 
     async fn broadcast_tx(&self, _signed_tx: &elements::Transaction) -> Result<String, Error> {

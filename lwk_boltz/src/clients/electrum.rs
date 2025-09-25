@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -36,9 +36,53 @@ impl ElectrumClient {
 impl boltz_client::network::LiquidClient for ElectrumClient {
     async fn get_address_utxo(
         &self,
-        _address: &elements::Address,
+        address: &elements::Address,
     ) -> Result<Option<(elements::OutPoint, elements::TxOut)>, Error> {
-        todo!()
+        let spk = address.script_pubkey();
+        let inner = Arc::clone(&self.inner);
+        let spk_clone = spk.clone();
+        let history = task::spawn_blocking(move || inner.get_scripts_history(&[&spk_clone]))
+            .await
+            .map_err(|e| Error::Protocol(e.to_string()))?
+            .map_err(|e| Error::Protocol(e.to_string()))?;
+
+        if history.is_empty() || history[0].is_empty() {
+            return Ok(None);
+        }
+
+        let txids: Vec<_> = history[0].iter().map(|h| h.txid).collect();
+        let inner = Arc::clone(&self.inner);
+        let txs = task::spawn_blocking(move || inner.get_transactions(&txids))
+            .await
+            .map_err(|e| Error::Protocol(e.to_string()))?
+            .map_err(|e| Error::Protocol(e.to_string()))?;
+
+        // Create a HashSet of all spent outpoints for fast lookup
+        let mut spent_outpoints = HashSet::new();
+        for tx in txs.iter() {
+            for input in tx.input.iter() {
+                spent_outpoints.insert(input.previous_output);
+            }
+        }
+
+        // Find the first unspent output for this address
+        for tx in txs.iter() {
+            for (vout, output) in tx.output.iter().enumerate() {
+                if output.script_pubkey == spk {
+                    let outpoint = elements::OutPoint {
+                        txid: tx.txid(),
+                        vout: vout as u32,
+                    };
+
+                    // Check if this output is spent using the HashSet
+                    if !spent_outpoints.contains(&outpoint) {
+                        return Ok(Some((outpoint, output.clone())));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 
     async fn get_genesis_hash(&self) -> Result<elements::BlockHash, Error> {

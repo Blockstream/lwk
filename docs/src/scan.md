@@ -33,6 +33,23 @@ The `Update` can be applied to the `Wollet` using `Wollet::apply_update()`.
 After applying the update the wollet data will include the new transaction downloaded,
 for instance more transactions can be returned and balance can increase (or decrease).
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:client}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ----
 
 Next: [Create a transaction](tx.md)

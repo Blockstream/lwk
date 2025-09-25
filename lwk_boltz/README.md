@@ -15,5 +15,5 @@ Then
 ```shell
 ./regtest/start.sh
 ./regtest/stop.sh
-````
+```
 

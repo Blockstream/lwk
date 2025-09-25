@@ -32,10 +32,44 @@ Once you have a `WolletDescriptor` you can create a `Wollet` using either `Wolle
 
 LWK also allows `Wollet`s to have a [custom persister](persister.md).
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:wollet}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ## Generate Addresses
 You can generate a wallet confidential address with `Wollet::address()`.
 
 This address can receive any Liquid asset or amount.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:address}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
 
 ## Get Transactions and Balance
 It's possibile to get the list of wallet transactions with `Wollet::transactions()` and the balance `Wollet::balance()`.
@@ -45,6 +79,23 @@ Note: Liquid transactions are confidential, meaining that only sender and receiv
 `Wollet` however does not have internet access.
 To fetch (new) wallet data, you need to use a "client" that fetches wallet transactions from some server.
 In the next section we explain how (new) blockchain data can be obtained and added to the wallet.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:txs}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
 
 ----
 

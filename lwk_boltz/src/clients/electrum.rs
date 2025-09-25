@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use boltz_client::elements;
@@ -6,9 +7,10 @@ use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::ElementsNetwork;
+use tokio::task;
 
 pub struct ElectrumClient {
-    inner: lwk_wollet::ElectrumClient,
+    inner: Arc<lwk_wollet::ElectrumClient>,
     network: ElementsNetwork,
 }
 
@@ -23,7 +25,7 @@ impl ElectrumClient {
             lwk_wollet::ElectrumUrl::new(url, tls, validate_domain).map_err(|e| e.to_string())?;
         let client = lwk_wollet::ElectrumClient::new(&electrum_url).map_err(|e| e.to_string())?;
         Ok(Self {
-            inner: client,
+            inner: Arc::new(client),
             network,
         })
     }
@@ -39,11 +41,14 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
     }
 
     async fn get_genesis_hash(&self) -> Result<elements::BlockHash, Error> {
-        // TODO this should use spawn_blocking
-        let headers = self
-            .inner
-            .get_headers(&[0], &HashMap::new())
-            .map_err(|e| Error::Protocol(e.to_string()))?;
+        let inner = Arc::clone(&self.inner);
+        let headers = task::spawn_blocking(move || {
+            inner
+                .get_headers(&[0], &HashMap::new())
+                .map_err(|e| Error::Protocol(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::Protocol(e.to_string()))??;
         Ok(headers[0].block_hash())
     }
 

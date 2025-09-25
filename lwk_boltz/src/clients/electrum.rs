@@ -58,14 +58,17 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
 
 #[cfg(test)]
 mod tests {
-    use boltz_client::network::{LiquidChain, LiquidClient};
+    use boltz_client::{
+        network::{LiquidChain, LiquidClient},
+        ToHex,
+    };
     use lwk_wollet::ElementsNetwork;
 
     use crate::clients::ElectrumClient;
 
-    #[test]
+    #[tokio::test]
     #[ignore = "requires internet connection"]
-    fn test_electrum_client() {
+    async fn test_electrum_client() {
         let client = ElectrumClient::new(
             "elements-mainnet.blockstream.info:50002",
             true,
@@ -74,5 +77,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(client.network(), LiquidChain::Liquid);
+
+        assert_eq!(
+            client.get_genesis_hash().await.unwrap().to_hex(),
+            "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
+        );
     }
 }

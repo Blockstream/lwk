@@ -1528,6 +1528,7 @@ dependencies = [
  "async-trait",
  "boltz-client",
  "lwk_wollet",
+ "tokio",
 ]
 
 [[package]]

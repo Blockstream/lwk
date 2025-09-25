@@ -165,6 +165,14 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/amp0-daily-ops.js:amp0-daily-ops:ignore}}
+```
+</section>
 </custom-tabs>
 
 ## Examples

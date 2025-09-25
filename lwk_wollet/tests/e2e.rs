@@ -3802,3 +3802,50 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+#[allow(unused)]
+#[cfg(feature = "amp0")]
+#[ignore = "requires network calls"]
+fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
+    // ANCHOR: amp0-setup
+    use lwk_common::{Amp0Signer, Network};
+    use lwk_signer::SwSigner;
+    use lwk_wollet::amp0::blocking::{Amp0, Amp0Connected};
+
+    // Create signer and watch only credentials
+    let network = Network::TestnetLiquid;
+    let is_mainnet = false;
+    let (signer, mnemonic) = SwSigner::random(is_mainnet)?;
+    let username = "<username>";
+    let password = "<password>";
+    let username = format!("user{}", signer.fingerprint()); // ANCHOR: ignore
+    let password = format!("pass{}", signer.fingerprint()); // ANCHOR: ignore
+
+    // Collect signer data
+    let signer_data = signer.amp0_signer_data()?;
+
+    // Connect to AMP0
+    let amp0 = Amp0Connected::new(network, signer_data)?;
+
+    // Obtain and sign the authentication challenge
+    let challenge = amp0.get_challenge()?;
+    let sig = signer.amp0_sign_challenge(&challenge)?;
+
+    // Login
+    let mut amp0 = amp0.login(&sig)?;
+
+    // Create a new AMP0 account
+    let pointer = amp0.next_account()?;
+    let account_xpub = signer.amp0_account_xpub(pointer)?;
+    let amp_id = amp0.create_amp0_account(pointer, &account_xpub)?;
+
+    // Create watch only entries
+    amp0.create_watch_only(&username, &password)?;
+
+    // Use watch only credentials to interact with AMP0
+    let amp0 = Amp0::new(network, &username, &password, &amp_id)?;
+    // ANCHOR_END: amp0-setup
+
+    Ok(())
+}

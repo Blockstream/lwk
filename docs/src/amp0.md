@@ -142,6 +142,23 @@ Call `Amp0::sign()` passing the signed `Amp0Pset`.
 
 If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can be broadcast, e.g. with `EsploraClient::broadcast()`.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:amp0-daily-ops:ignore}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ## Examples
 We provide a few examples on how to integrate use AMP0 with LWK:
 * [amp0.py](../lwk_bindings/tests/bindings/amp0.py) shows how to receive, monitor and send with an AMP0 account

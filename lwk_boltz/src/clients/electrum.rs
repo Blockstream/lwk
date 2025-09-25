@@ -160,4 +160,15 @@ mod tests {
             "00149b2adc26532ca4e7141a2959390dc13f8a2b27e5"
         );
     }
+
+    #[tokio::test]
+    #[ignore = "requires regtest env"]
+    async fn test_electrum_client_regtest() {
+        let client =
+            ElectrumClient::new("localhost:19002", false, false, ElementsNetwork::Liquid).unwrap();
+        assert_eq!(
+            client.get_genesis_hash().await.unwrap().to_hex(),
+            "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
+        );
+    }
 }

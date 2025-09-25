@@ -15,6 +15,23 @@ However this requires network calls and it might be slow,
 if you want your balance to be updated immediately,
 you can call `Wollet::apply_tx()`.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:broadcast}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ----
 
 Next: [Advanced Features](advanced.md)

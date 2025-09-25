@@ -121,7 +121,10 @@ mod tests {
         network::{LiquidChain, LiquidClient},
         ToHex,
     };
-    use lwk_wollet::ElementsNetwork;
+    use lwk_wollet::{
+        elements::{self, confidential::Value},
+        ElementsNetwork,
+    };
 
     use crate::clients::ElectrumClient;
 
@@ -140,6 +143,21 @@ mod tests {
         assert_eq!(
             client.get_genesis_hash().await.unwrap().to_hex(),
             "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
+        );
+
+        let address: elements::Address = "ex1qnv4dcfjn9jjww9q699vnjrwp879zkfl98zzyy5"
+            .parse()
+            .unwrap();
+        // this test can start failing if the address utxo become spent, find another address to test with
+        let r = client.get_address_utxo(&address).await.unwrap().unwrap();
+        assert_eq!(
+            r.0.txid.to_hex(),
+            "22b1240eb51714a95e3819bb2d05b1c170aa72a974c529443bf697ae3700ff1f"
+        );
+        assert_eq!(r.0.vout, 0);
+        assert_eq!(
+            r.1.script_pubkey.to_hex(),
+            "00149b2adc26532ca4e7141a2959390dc13f8a2b27e5"
         );
     }
 }

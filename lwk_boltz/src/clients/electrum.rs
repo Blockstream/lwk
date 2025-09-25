@@ -10,11 +10,15 @@ pub struct ElectrumClient {
 }
 
 impl ElectrumClient {
-    pub fn new(url: &str, tls: bool, validate_domain: bool, network: ElementsNetwork) -> Result<Self, String> {
-        let electrum_url = lwk_wollet::ElectrumUrl::new(url, tls, validate_domain)
-            .map_err(|e| e.to_string())?;
-        let client = lwk_wollet::ElectrumClient::new(&electrum_url)
-            .map_err(|e| e.to_string())?;
+    pub fn new(
+        url: &str,
+        tls: bool,
+        validate_domain: bool,
+        network: ElementsNetwork,
+    ) -> Result<Self, String> {
+        let electrum_url =
+            lwk_wollet::ElectrumUrl::new(url, tls, validate_domain).map_err(|e| e.to_string())?;
+        let client = lwk_wollet::ElectrumClient::new(&electrum_url).map_err(|e| e.to_string())?;
         Ok(Self {
             inner: client,
             network,
@@ -41,5 +45,26 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
 
     fn network(&self) -> LiquidChain {
         crate::elements_network_to_liquid_chain(self.network)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use boltz_client::network::{LiquidChain, LiquidClient};
+    use lwk_wollet::ElementsNetwork;
+
+    use crate::clients::ElectrumClient;
+
+    #[test]
+    #[ignore = "requires internet connection"]
+    fn test_electrum_client() {
+        let client = ElectrumClient::new(
+            "elements-mainnet.blockstream.info:50002",
+            true,
+            true,
+            ElementsNetwork::Liquid,
+        )
+        .unwrap();
+        assert_eq!(client.network(), LiquidChain::Liquid);
     }
 }

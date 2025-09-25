@@ -4,11 +4,17 @@ use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use lwk_wollet::ElementsNetwork;
 
-pub struct EsploraClient(lwk_wollet::asyncr::EsploraClient);
+pub struct EsploraClient {
+    inner: lwk_wollet::asyncr::EsploraClient,
+    network: ElementsNetwork,
+}
 
 impl EsploraClient {
     pub fn new(url: &str, network: ElementsNetwork) -> Self {
-        Self(lwk_wollet::asyncr::EsploraClient::new(network, url))
+        Self {
+            inner: lwk_wollet::asyncr::EsploraClient::new(network, url),
+            network,
+        }
     }
 }
 
@@ -30,6 +36,6 @@ impl boltz_client::network::LiquidClient for EsploraClient {
     }
 
     fn network(&self) -> LiquidChain {
-        todo!()
+        crate::elements_network_to_liquid_chain(self.network)
     }
 }

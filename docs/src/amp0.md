@@ -84,6 +84,14 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/amp0-setup.js:amp0-setup:ignore}}
+```
+</section>
 </custom-tabs>
 
 ### Alternative setup

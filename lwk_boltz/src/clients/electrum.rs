@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
+use boltz_client::ToHex;
 use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::ElementsNetwork;
 use tokio::task;
@@ -52,8 +53,17 @@ impl boltz_client::network::LiquidClient for ElectrumClient {
         Ok(headers[0].block_hash())
     }
 
-    async fn broadcast_tx(&self, _signed_tx: &elements::Transaction) -> Result<String, Error> {
-        todo!()
+    async fn broadcast_tx(&self, signed_tx: &elements::Transaction) -> Result<String, Error> {
+        let inner = Arc::clone(&self.inner);
+        let tx = signed_tx.clone();
+        let txid = task::spawn_blocking(move || {
+            inner
+                .broadcast(&tx)
+                .map_err(|e| Error::Protocol(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::Protocol(e.to_string()))??;
+        Ok(txid.to_hex())
     }
 
     fn network(&self) -> LiquidChain {

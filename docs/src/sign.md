@@ -17,11 +17,45 @@ The balance can be shown to the user or validated against the `Signer` expectati
 It's worth noticing that `Wollet`s can work without internet,
 so offline `Signer`s can have `Wollet`s instance to enhance the validation performed before signing.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:pset-details}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ## Sign the PSET
 Once you have performed enough validation, you can call `Signer::sign`.
 Which adds signatures from `Signer` to the PSET.
 
 Once the PSET has enough signatures, you can broadcast to the Liquid Network.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:sign}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
 
 ----
 

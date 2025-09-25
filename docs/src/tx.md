@@ -33,6 +33,23 @@ You can construct the transaction calling `TxBuilder::finish()`.
 This will return a Partially Signed Elements Transaction ([PSET](https://github.com/ElementsProject/elements/blob/master/doc/pset.mediawiki)),
 a transaction encoded in a format that facilitates sharing the transaction with signers.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:tx}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ----
 
 Next: [Sign Transaction](sign.md)

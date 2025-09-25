@@ -69,6 +69,23 @@ Choose your your AMP0 Watch-Only credentials `username` and `password` and call 
 
 Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
 
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:amp0-setup:ignore}}
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+</custom-tabs>
+
 ### Alternative setup
 It's possible to setup an AMP0 account using GDK based apps:
 1. [Blockstream App](https://blockstream.com/app/) (easiest, GUI, mobile, desktop, Jade support), or

@@ -3710,3 +3710,95 @@ fn test_blinding_nonces() {
     let res = crate::amp0::Amp0Pset::new(pset, fake_blinding_nonces);
     assert!(res.is_err());
 }
+
+#[test]
+#[allow(unused)]
+fn basics() -> Result<(), Box<dyn std::error::Error>> {
+    let server = setup_with_esplora();
+
+    // ANCHOR: generate-signer
+    use lwk_signer::{bip39::Mnemonic, SwSigner};
+
+    let mnemonic = Mnemonic::generate(12)?;
+    let is_mainnet = false;
+
+    let signer = SwSigner::new(&mnemonic.to_string(), is_mainnet)?;
+    // ANCHOR_END: generate-signer
+
+    // ANCHOR: get-xpub
+    let bip = lwk_common::Bip::Bip84;
+    let xpub = signer.keyorigin_xpub(bip, is_mainnet);
+    // ANCHOR_END: get-xpub
+
+    // ANCHOR: wollet
+    use lwk_wollet::{ElementsNetwork, Wollet, WolletDescriptor};
+
+    let desc = signer.wpkh_slip77_descriptor()?;
+    let wd = WolletDescriptor::from_str(&desc)?;
+    let network = ElementsNetwork::LiquidTestnet;
+    let mut wollet = Wollet::without_persist(network, wd)?;
+    // ANCHOR_END: wollet
+
+    // Override wollet to use regtest
+    let wd = WolletDescriptor::from_str(&desc)?;
+    let network = ElementsNetwork::default_regtest();
+    let mut wollet = Wollet::without_persist(network, wd)?;
+
+    // ANCHOR: address
+    let addr = wollet.address(None)?;
+    // ANCHOR_END: address
+
+    // ANCHOR: txs
+    let txs = wollet.transactions()?;
+    let balance = wollet.balance()?;
+    // ANCHOR_END: txs
+
+    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+
+    // ANCHOR: client
+    use lwk_wollet::clients::blocking::EsploraClient;
+
+    // let url = "https://blockstream.info/liquidtestnet/api";
+    // let url = "https://blockstream.info/liquid/api";
+
+    let mut client = EsploraClient::new(&url, network)?;
+
+    if let Some(update) = client.full_scan(&wollet)? {
+        wollet.apply_update(update)?;
+    }
+    // ANCHOR_END: client
+
+    // Receive some funds
+    let txid = server.elementsd_sendtoaddress(addr.address(), 10_000, None);
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    let address = server.elementsd_getnewaddress();
+    let sats = 1000;
+    let lbtc = network.policy_asset();
+
+    // ANCHOR: tx
+    let mut pset = wollet
+        .tx_builder()
+        .add_recipient(&address, sats, lbtc)?
+        .finish()?;
+    // ANCHOR_END: tx
+
+    // ANCHOR: pset-details
+    let details = wollet.get_details(&pset)?;
+    // ANCHOR_END: pset-details
+
+    // ANCHOR: sign
+    let sigs_added = signer.sign(&mut pset)?;
+    assert_eq!(sigs_added, 1);
+    // ANCHOR_END: sign
+
+    // ANCHOR: broadcast
+    let tx = wollet.finalize(&mut pset)?;
+    let txid = client.broadcast(&tx)?;
+
+    // (optional)
+    wollet.apply_transaction(tx)?;
+    // ANCHOR_END: broadcast
+
+    Ok(())
+}

@@ -3849,3 +3849,84 @@ fn test_amp0_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+#[allow(unused)]
+#[cfg(feature = "amp0")]
+#[ignore = "requires network calls"]
+#[rustfmt::skip] // our priority here is that generated docs renders nicely
+fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
+    // ANCHOR: amp0-daily-ops
+    use lwk_common::{Network, Signer};
+    use lwk_signer::SwSigner;
+    use lwk_wollet::amp0::{blocking::Amp0, Amp0Pset};
+    use lwk_wollet::{clients::blocking::EsploraClient, ElementsNetwork, Wollet};
+
+    // Signer
+    let mnemonic = "<mnemonic>";
+    // AMP0 Watch-Only credentials
+    let username = "<username>";
+    let password = "<password>";
+    let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth"; // ANCHOR: ingore
+    let username = "userleo345678"; // ANCHOR: ingore
+    let password = "userleo345678"; // ANCHOR: ingore
+    // AMP ID (optional)
+    let amp_id = "";
+
+    // Create AMP0 context
+    let network = Network::TestnetLiquid;
+
+    let mut amp0 = Amp0::new(network, username, password, amp_id)?;
+
+    // Create AMP0 Wollet
+    let wd = amp0.wollet_descriptor();
+    let mut wollet = Wollet::without_persist(ElementsNetwork::LiquidTestnet, wd)?;
+
+    // Get a new address
+    let addr = amp0.address(None);
+
+    // Update the wallet with (new) blockchain data
+    let url = "https://blockstream.info/liquidtestnet/api";
+    let mut client = EsploraClient::new(url, ElementsNetwork::LiquidTestnet)?;
+    // esplora is too slow // ANCHOR: ignore
+    let url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"; // ANCHOR: ignore
+    let mut client = EsploraClient::new_waterfalls(url, ElementsNetwork::LiquidTestnet)?; // ANCHOR: ignore
+    if let Some(update) = client.full_scan_to_index(&wollet, amp0.last_index())? {
+        wollet.apply_update(update)?;
+    }
+
+    // Get balance
+    let balance = wollet.balance()?;
+    let lbtc = wollet.policy_asset(); // ANCHOR: ingore
+    let balance = *balance.get(&lbtc).unwrap_or(&0); // ANCHOR: ingore
+    if balance < 500 { // ANCHOR: ingore
+        let addr = amp0.address(Some(1)).unwrap(); // ANCHOR: ingore
+        panic!("Send some tLBTC to {}", addr.address()); // ANCHOR: ingore
+    } // ANCHOR: ingore
+
+    // Construct a PSET sending LBTC back to the wallet
+    let amp0pset = wollet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .finish_for_amp0()?;
+    let mut pset = amp0pset.pset().clone();
+    let blinding_nonces = amp0pset.blinding_nonces();
+
+    // User signs the PSET
+    let is_mainnet = false;
+    let signer = SwSigner::new(mnemonic, is_mainnet)?;
+    let sigs = signer.sign(&mut pset)?;
+    assert!(sigs > 0);
+
+    // Reconstruct the Amp0 PSET with the PSET signed by the user
+    let amp0pset = Amp0Pset::new(pset, blinding_nonces.to_vec())?;
+
+    // AMP0 signs
+    let tx = amp0.sign(&amp0pset)?;
+
+    // Broadcast the transaction
+    let txid = client.broadcast(&tx)?;
+    // ANCHOR_END: amp0-daily-ops
+
+    Ok(())
+}

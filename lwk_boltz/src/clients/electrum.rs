@@ -3,7 +3,17 @@ use boltz_client::elements;
 use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 
-struct ElectrumClient(lwk_wollet::ElectrumClient);
+pub struct ElectrumClient(lwk_wollet::ElectrumClient);
+
+impl ElectrumClient {
+    pub fn new(url: &str, tls: bool, validate_domain: bool) -> Result<Self, String> {
+        let electrum_url = lwk_wollet::ElectrumUrl::new(url, tls, validate_domain)
+            .map_err(|e| e.to_string())?;
+        let client = lwk_wollet::ElectrumClient::new(&electrum_url)
+            .map_err(|e| e.to_string())?;
+        Ok(Self(client))
+    }
+}
 
 #[async_trait]
 impl boltz_client::network::LiquidClient for ElectrumClient {

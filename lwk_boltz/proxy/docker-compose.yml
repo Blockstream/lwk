@@ -1,0 +1,4 @@
+services:
+  ssl-proxy:
+    network_mode: "host"
+    build: .

@@ -24,14 +24,26 @@ pip install lwk
 
 ### Wasm module
 
+Install LWK
 ```shell
 npm install lwk_wasm
 ```
 
+Import LWK
+```typescript
+const lwk = require('lwk_wasm');
+```
+
 ### Node module
 
+Install LWK
 ```shell
 npm install lwk_node
+```
+
+Import LWK
+```typescript
+const lwk = require('lwk_node');
 ```
 
 ## iOS/Swift

@@ -182,5 +182,14 @@ mod test {
             )
             .unwrap()
         );
+
+        let network = crate::ElementsNetwork::default_regtest();
+        assert_eq!(
+            network.genesis_block_hash(),
+            elements::BlockHash::from_str(
+                "00902a6b70c2ca83b5d9c815d96a0e2f4202179316970d14ea1847dae5b1ca21"
+            )
+            .unwrap()
+        );
     }
 }

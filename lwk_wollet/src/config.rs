@@ -150,6 +150,7 @@ mod test {
     use std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},
+        str::FromStr,
     };
 
     use super::Config;
@@ -160,5 +161,17 @@ mod test {
         let mut hasher = DefaultHasher::new();
         config.hash(&mut hasher);
         assert_eq!(13646096770106105413, hasher.finish());
+    }
+
+    #[test]
+    fn test_genesis_block_hash() {
+        let network = crate::ElementsNetwork::Liquid;
+        assert_eq!(
+            network.genesis_block_hash(),
+            elements::BlockHash::from_str(
+                "1466275836220db2944ca059a3a10ef6fd2ea684b0688d2c379296888a206003"
+            )
+            .unwrap()
+        );
     }
 }

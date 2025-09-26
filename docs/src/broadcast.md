@@ -30,6 +30,14 @@ you can call `Wollet::apply_tx()`.
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

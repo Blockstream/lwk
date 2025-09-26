@@ -48,6 +48,14 @@ for instance more transactions can be returned and balance can increase (or decr
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:client:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

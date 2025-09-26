@@ -9,8 +9,7 @@ async function runAmp0Setup() {
 	if (true) { // ANCHOR: ignore
         const mnemonic = "<mnemonic>";
         } // ANCHOR: ignore
-        // TODO: random mnemonic/singer // ANCHOR: ignore
-        const mnemonic = "boring use silly know power luxury media normal elite fault vast lucky"; // ANCHOR: ignore
+        const mnemonic = lwk.Mnemonic.fromRandom(12).toString(); // ANCHOR: ignore
         const m = new lwk.Mnemonic(mnemonic);
         const network = lwk.Network.testnet();
         const signer = new lwk.Signer(m, network);

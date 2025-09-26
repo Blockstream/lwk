@@ -1,11 +1,11 @@
 async function runAmp0DailyOps() {
     try {
-        // ANCHOR: amp0-daily-ops
         const WebSocket = require('ws');
         global.WebSocket = WebSocket;
 
         const lwk = require('lwk_node');
 
+        // ANCHOR: amp0-daily-ops
 	if (true) { // ANCHOR: ignore
         const mnemonic = "<mnemonic>";
         } // ANCHOR: ignore

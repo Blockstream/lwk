@@ -6,13 +6,13 @@ const lwk = require('lwk_node');
 console.log("Starting AMP0 test");
 
 // AMP0 credentials
-const username = "userleo345678";
-const password = "userleo345678";
+const username = "userlwk001";
+const password = "userlwk001";
 // AMP ID
 const amp_id = "";
 
 // BIP39 mnemonic corresponding to the AMP0 account
-const mnemonic = new lwk.Mnemonic("student lady today genius gentle zero satoshi book just link gauge tooth");
+const mnemonic = new lwk.Mnemonic("thrive metal cactus come oval candy medal bounce captain shock permit joke");
 
 const network = lwk.Network.testnet();
 const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
@@ -27,7 +27,7 @@ async function runAmp0Test() {
         // Get an address
         const addrResult = await amp0.address(1);
         const addr1 = addrResult.address().toString();
-        console.assert(addr1 === "vjU8ft8T5MX2X6DorpqwELknV2H27dhsLUwDAWHbhTpQT4FHtedrEUauYgjFa4w8nbK9eybQWB4EqRZh", "Address mismatch");
+        console.assert(addr1 === "vjTxG9xqzTD2axryND7TjTj7YqitakaDfvUaqrnSuyp3XScTezBiieU9ZrBfoHATxe3xUTt1uzwNAJo5", "Address mismatch");
 
         // Create wollet
         const wollet = amp0.wollet();

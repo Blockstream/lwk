@@ -325,7 +325,7 @@ mod tests {
         use std::collections::HashMap;
 
         let network = Network::testnet();
-        let mut amp0 = Amp0::new_testnet("userleo345678", "userleo345678", "")
+        let mut amp0 = Amp0::new_testnet("userlwk001", "userlwk001", "")
             .await
             .unwrap();
 
@@ -367,7 +367,7 @@ mod tests {
 
         // User signs
         let mnemonic = Mnemonic::new(
-            "student lady today genius gentle zero satoshi book just link gauge tooth",
+            "thrive metal cactus come oval candy medal bounce captain shock permit joke",
         )
         .unwrap();
         let signer = Signer::new(&mnemonic, &network).unwrap();

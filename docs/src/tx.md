@@ -48,6 +48,14 @@ a transaction encoded in a format that facilitates sharing the transaction with 
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:tx:ignore}}
+```
+</section>
 </custom-tabs>
 
 ----

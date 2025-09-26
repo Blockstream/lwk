@@ -1,0 +1,34 @@
+# Regtest environment management
+
+# Start the regtest environment
+regtest-env-start:
+    #!/usr/bin/env bash
+    set -e
+    cd regtest
+    ./start.sh
+    cd ../proxy
+    docker compose up -d
+
+regtest-env-stop:
+    #!/usr/bin/env bash
+    set -e
+    cd regtest
+    ./stop.sh
+    cd ../proxy
+    docker compose down
+
+# Run reverse swap test
+test-reverse: regtest-env-start
+    #!/usr/bin/env bash
+    set -e
+    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
+    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
+    cargo test --test reverse -- --nocapture
+
+# Run submarine swap test
+test-submarine: regtest-env-start
+    #!/usr/bin/env bash
+    set -e
+    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
+    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
+    cargo test --test submarine -- --nocapture

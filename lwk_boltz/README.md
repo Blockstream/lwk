@@ -13,7 +13,15 @@ git submodule update --init --recursive
 Then
 
 ```shell
-./regtest/start.sh
-./regtest/stop.sh
+just regtest-env-start
 ```
 
+Launch integration testing
+
+```shell
+just test-submarine
+```
+
+```shell
+just test-reverse
+```

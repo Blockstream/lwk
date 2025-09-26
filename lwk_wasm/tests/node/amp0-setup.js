@@ -1,11 +1,11 @@
 async function runAmp0Setup() {
     try {
-        // ANCHOR: amp0-setup
         const WebSocket = require('ws');
         global.WebSocket = WebSocket;
 
         const lwk = require('lwk_node');
 
+        // ANCHOR: amp0-setup
 	if (true) { // ANCHOR: ignore
         const mnemonic = "<mnemonic>";
         } // ANCHOR: ignore

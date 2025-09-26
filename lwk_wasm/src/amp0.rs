@@ -222,6 +222,7 @@ impl Amp0Connected {
     /// Obtain a login challenge
     ///
     /// This must be signed with [`amp0_sign_challenge()`].
+    #[wasm_bindgen(js_name = getChallenge)]
     pub async fn get_challenge(&self) -> Result<String, Error> {
         Ok(self.inner.get_challenge().await?)
     }

@@ -7,7 +7,7 @@
     <strong>Liquid Wallets Made Easy</strong>
   </p>
 
-  <p> <strong> <a href="docs/src/SUMMARY.md">Documentation</a> </strong> </p>
+  <p> <strong> <a href="https://blockstream.github.io/lwk/book">Documentation</a> </strong> </p>
 </div>
 
 ## About

@@ -72,6 +72,11 @@ impl Signer {
         )?)
     }
 
+    /// Return the signer fingerprint
+    pub fn fingerprint(&self) -> Result<String, Error> {
+        Ok(self.inner.fingerprint().to_string())
+    }
+
     /// Return the mnemonic of the signer
     pub fn mnemonic(&self) -> Mnemonic {
         self.inner

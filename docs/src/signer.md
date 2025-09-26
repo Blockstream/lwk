@@ -35,6 +35,14 @@ Then you can create a software signer with `SwSigner::new()`.
 {{#include ../snippets/python/signer.py:generate-signer}}
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:generate-signer:ignore}}
+```
+</section>
 </custom-tabs>
 
 ## Get Xpub
@@ -56,6 +64,14 @@ The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the ke
 <section>
 
 ```python
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:get-xpub:ignore}}
 ```
 </section>
 </custom-tabs>

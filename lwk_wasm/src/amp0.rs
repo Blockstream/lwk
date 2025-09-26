@@ -264,6 +264,7 @@ impl Amp0LoggedIn {
     ///
     /// `account_xpub` must be obtained from [`amp0_account_xpub()`] called with the value obtained from
     /// [`Amp0LoggedIn::next_account()`]
+    #[wasm_bindgen(js_name = createAmp0Account)]
     pub async fn create_amp0_account(
         &mut self,
         pointer: u32,

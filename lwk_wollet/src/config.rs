@@ -1,6 +1,7 @@
+use elements::hashes::Hash;
 use serde::{Deserialize, Serialize};
 
-use crate::elements::{AddressParams, AssetId};
+use crate::elements::{AddressParams, AssetId, BlockHash};
 use crate::error::Error;
 use std::str::FromStr;
 
@@ -53,6 +54,17 @@ impl ElementsNetwork {
                 AssetId::from_str(LIQUID_TESTNET_POLICY_ASSET_STR).expect("can't fail on const")
             }
             ElementsNetwork::ElementsRegtest { policy_asset } => *policy_asset,
+        }
+    }
+
+    /// Return the genesis block hash for this network.
+    pub fn genesis_block_hash(&self) -> BlockHash {
+        match self {
+            ElementsNetwork::Liquid => BlockHash::from_byte_array(GENESIS_LIQUID),
+            ElementsNetwork::LiquidTestnet => BlockHash::from_byte_array(GENESIS_LIQUID_TESTNET),
+            ElementsNetwork::ElementsRegtest { .. } => {
+                BlockHash::from_byte_array(GENESIS_LIQUID_REGTEST)
+            }
         }
     }
 

@@ -3867,9 +3867,9 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     // AMP0 Watch-Only credentials
     let username = "<username>";
     let password = "<password>";
-    let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth"; // ANCHOR: ingore
-    let username = "userleo345678"; // ANCHOR: ingore
-    let password = "userleo345678"; // ANCHOR: ingore
+    let mnemonic = "thrive metal cactus come oval candy medal bounce captain shock permit joke"; // ANCHOR: ingore
+    let username = "userlwk001"; // ANCHOR: ingore
+    let password = "userlwk001"; // ANCHOR: ingore
     // AMP ID (optional)
     let amp_id = "";
 

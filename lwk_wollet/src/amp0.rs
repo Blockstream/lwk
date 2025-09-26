@@ -2051,9 +2051,9 @@ mod tests {
         use lwk_common::Signer;
         use lwk_signer::SwSigner;
 
-        let mnemonic = "student lady today genius gentle zero satoshi book just link gauge tooth";
-        let username = "userleo345678";
-        let password = "userleo345678";
+        let mnemonic = "thrive metal cactus come oval candy medal bounce captain shock permit joke";
+        let username = "userlwk001";
+        let password = "userlwk001";
         let amp_id = "";
 
         let (network, elements_network, url) = if regtest {
@@ -2076,7 +2076,7 @@ mod tests {
         let mut amp0 = blocking::Amp0::new(network, username, password, amp_id).unwrap();
 
         if !regtest {
-            assert_eq!(amp0.amp_id(), "GATu95iW5LAgaQu8XpSREDMMDFE2e");
+            assert_eq!(amp0.amp_id(), "GA4VUas7QorFN1tamV6vGbhMz8iwkf");
         }
 
         let wd = amp0.wollet_descriptor();

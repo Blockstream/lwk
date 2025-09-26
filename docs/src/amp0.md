@@ -69,6 +69,13 @@ Choose your your AMP0 Watch-Only credentials `username` and `password` and call 
 
 Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (username and password), you're ready to use AMP0 with LWK.
 
+> If you're using `lwk_node`, polyfill the websocket
+> ```typescript
+> const WebSocket = require('ws');
+> global.WebSocket = WebSocket;
+> const lwk = require('lwk_node');
+> ```
+
 <custom-tabs category="lang">
 <div slot="title">Rust</div>
 <section>

@@ -47,6 +47,14 @@ LWK also allows `Wollet`s to have a [custom persister](persister.md).
 ```python
 ```
 </section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:wollet:ignore}}
+```
+</section>
 </custom-tabs>
 
 ## Generate Addresses
@@ -67,6 +75,14 @@ This address can receive any Liquid asset or amount.
 <section>
 
 ```python
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:address:ignore}}
 ```
 </section>
 </custom-tabs>
@@ -93,6 +109,14 @@ In the next section we explain how (new) blockchain data can be obtained and add
 <section>
 
 ```python
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+{{#include ../../lwk_wasm/tests/node/basics.js:txs:ignore}}
 ```
 </section>
 </custom-tabs>

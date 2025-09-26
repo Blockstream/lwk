@@ -25,17 +25,16 @@ async function runAmp0Setup() {
         // Connect to AMP0
         const amp0connected = await new lwk.Amp0Connected(network, signer_data);
         // Obtain and sign the authentication challenge
-        // TODO: getChallenge, nextAccount, createAmp0Account, createWatchOnly // ANCHOR: ignore
-        const challenge = await amp0connected.get_challenge();
+        const challenge = await amp0connected.getChallenge();
         const sig = signer.amp0SignChallenge(challenge);
         // Login
         const amp0loggedin = await amp0connected.login(sig);
         // Create a new AMP0 account
-        const pointer = amp0loggedin.next_account();
+        const pointer = amp0loggedin.nextAccount();
         const account_xpub = signer.amp0AccountXpub(pointer);
-        const amp_id = await amp0loggedin.create_amp0_account(pointer, account_xpub);
+        const amp_id = await amp0loggedin.createAmp0Account(pointer, account_xpub);
         // Create watch only entries
-        await amp0loggedin.create_watch_only(username, password);
+        await amp0loggedin.createWatchOnly(username, password);
         // Use watch only credentials to interact with AMP0
         const amp0 = await new lwk.Amp0(network, username, password, amp_id);
         // ANCHOR_END: amp0-setup

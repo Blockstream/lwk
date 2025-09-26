@@ -280,6 +280,7 @@ impl Amp0LoggedIn {
     }
 
     /// Create a new Watch-Only entry for this wallet
+    #[wasm_bindgen(js_name = createWatchOnly)]
     pub async fn create_watch_only(&mut self, username: &str, password: &str) -> Result<(), Error> {
         Ok(self.inner.create_watch_only(username, password).await?)
     }

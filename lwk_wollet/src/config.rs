@@ -173,5 +173,14 @@ mod test {
             )
             .unwrap()
         );
+
+        let network = crate::ElementsNetwork::LiquidTestnet;
+        assert_eq!(
+            network.genesis_block_hash(),
+            elements::BlockHash::from_str(
+                "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
+            )
+            .unwrap()
+        );
     }
 }

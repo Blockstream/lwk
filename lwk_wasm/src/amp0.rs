@@ -255,6 +255,7 @@ impl Amp0LoggedIn {
     ///
     /// This must be given to [`amp0_account_xpub()`] to obtain the xpub to pass to
     /// [`Amp0LoggedIn::create_amp0_account()`]
+    #[wasm_bindgen(js_name = nextAccount)]
     pub fn next_account(&self) -> Result<u32, Error> {
         Ok(self.inner.next_account()?)
     }

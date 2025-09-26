@@ -246,6 +246,7 @@ pub struct Amp0LoggedIn {
 #[wasm_bindgen]
 impl Amp0LoggedIn {
     /// List of AMP IDs.
+    #[wasm_bindgen(js_name = getAmpIds)]
     pub fn get_amp_ids(&self) -> Result<Vec<String>, Error> {
         Ok(self.inner.get_amp_ids()?)
     }

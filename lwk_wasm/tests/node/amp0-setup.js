@@ -17,8 +17,8 @@ async function runAmp0Setup() {
         const username = "<username>";
         const password = "<password>";
         } // ANCHOR: ignore
-        const username = "user" + signer.getMasterXpub(); // ANCHOR: ignore
-        const password = "pass" + signer.getMasterXpub(); // ANCHOR: ignore
+        const username = "user" + signer.fingerprint(); // ANCHOR: ignore
+        const password = "pass" + signer.fingerprint(); // ANCHOR: ignore
 
         // Collect signer data
         const signer_data = signer.amp0SignerData();

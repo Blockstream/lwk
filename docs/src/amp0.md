@@ -90,6 +90,7 @@ Now that you have mnemonic/seed (or Jade), AMP ID and Watch-Only credentials (us
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/amp0-setup.py:amp0-setup:ignore}}
 ```
 </section>
 

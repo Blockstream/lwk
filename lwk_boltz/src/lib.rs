@@ -21,6 +21,10 @@ pub struct LighthingSession {
     chain_client: ChainClient,
 }
 
+enum Error {
+    InvalidInvoice,
+}
+
 impl LighthingSession {
     /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
     // TODO: add mnemonic as param to generate deterministic keypairs
@@ -42,6 +46,23 @@ impl LighthingSession {
             chain_client,
         }
     }
+
+    pub async fn prepare_pay(
+        &self,
+        bolt11_invoice: &str,
+        refund_address: String, // TODO use elements::Address
+    ) -> Result<PreparePayResponse, Error> {
+        todo!()
+    }
+}
+
+struct PreparePayResponse {
+    /// A liquidnetwork uri with the address to pay and the amount.
+    /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
+    uri: String,
+
+    /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
+    fee: u64,
 }
 
 pub struct Event;

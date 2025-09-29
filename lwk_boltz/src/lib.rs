@@ -1,7 +1,10 @@
 pub mod clients;
 
+use std::sync::Arc;
+
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
+use boltz_client::boltz::BoltzWsConfig;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
@@ -13,7 +16,7 @@ use lwk_wollet::ElementsNetwork;
 use crate::clients::ElectrumClient;
 
 struct LighthingSession {
-    ws: BoltzWsApi,
+    ws: Arc<BoltzWsApi>,
     api: BoltzApiClientV2,
     chain_client: ChainClient,
 }
@@ -24,11 +27,20 @@ impl LighthingSession {
     pub fn new(
         network: ElementsNetwork,
         client: ElectrumClient, // TODO: should be generic to support other clients
-        handler: Box<dyn EventHandler>,
+        _handler: Box<dyn EventHandler>,
     ) -> Self {
         let chain_client = ChainClient::new().with_liquid(client);
-        let api = BoltzApiClientV2::new(boltz_default_url(network).to_string(), None); // TODO: implement timeout
-        todo!()
+        let url = boltz_default_url(network);
+        let api = BoltzApiClientV2::new(url.to_string(), None); // TODO: implement timeout
+        let config = BoltzWsConfig::default();
+        let ws = Arc::new(BoltzWsApi::new(url.to_string(), config));
+        let future = BoltzWsApi::run_ws_loop(ws.clone());
+        tokio::spawn(future); // TODO handle wasm
+        Self {
+            ws,
+            api,
+            chain_client,
+        }
     }
 }
 

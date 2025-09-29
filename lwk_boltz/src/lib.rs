@@ -124,6 +124,15 @@ impl LighthingSession {
             }
         }
     }
+
+    fn invoice(
+        &self,
+        amount: u64,
+        description: Option<&str>,
+        destination_address: String, // TODO: use elements::Address
+    ) -> Result<InvoiceResponse, Error> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
@@ -150,6 +159,19 @@ pub struct PreparePayResponse {
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
+}
+
+#[derive(Debug)]
+pub struct InvoiceResponse {
+    /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
+    /// However, the receiver will receive `amount - swap_fee - network_fee`
+    bolt11_invoice: String,
+
+    /// The fee of the swap provider
+    swap_fee: u64,
+
+    /// The network fee (fee of the onchain transaction)
+    network_fee: u64,
 }
 
 impl PreparePayResponse {

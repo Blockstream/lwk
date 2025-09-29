@@ -1406,4 +1406,27 @@ mod tests {
         assert_eq!(issuance.asset_amount, Some(1000000000));
         assert_eq!(issuance.token_amount, Some(1));
     }
+
+    #[test]
+    fn test_serialize_proprietary_key() {
+        use elements::encode::Encodable;
+        use elements::hex::ToHex;
+        let key = elements::pset::raw::ProprietaryKey::from_pset_pair(0x02, vec![]);
+        let mut buf = vec![];
+        key.consensus_encode(&mut buf).unwrap();
+        assert_eq!(buf, vec![4, 112, 115, 101, 116, 2]);
+        let pair = elements::pset::raw::Pair {
+            key: key.to_key(),
+            value: ElementsNetwork::Liquid
+                .genesis_block_hash()
+                .to_byte_array()
+                .to_vec(),
+        };
+        let mut buf = vec![];
+        pair.consensus_encode(&mut buf).unwrap();
+        assert_eq!(
+            buf.to_hex(),
+            "07fc047073657402200360208a889692372c8d68b084a62efdf60ea1a359a04c94b20d223658276614",
+        );
+    }
 }

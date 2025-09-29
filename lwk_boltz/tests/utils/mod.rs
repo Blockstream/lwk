@@ -1,5 +1,4 @@
-use bitcoin::base64;
-use bitcoin::base64::Engine;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use boltz_client::{
     boltz::BoltzWsApi,
     network::{BitcoinChain, Chain, LiquidChain},
@@ -49,10 +48,7 @@ async fn json_rpc_request(
         .post(PROXY_URL)
         .header(
             "Authorization",
-            format!(
-                "Basic {}",
-                base64::engine::general_purpose::STANDARD.encode(cookie)
-            ),
+            format!("Basic {}", STANDARD.encode(cookie)),
         )
         .header("X-Proxy-URL", url)
         .json(&req_body)

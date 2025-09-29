@@ -20,6 +20,10 @@ mod tests {
     #[tokio::test]
     async fn test_session_submarine() {
         let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
         let session = LighthingSession::new(
             ElementsNetwork::default_regtest(),
             ElectrumClient::new(
@@ -34,6 +38,17 @@ mod tests {
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();
         log::info!("Prepare Pay Response: {prepare_pay_response:?}");
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.address,
+            prepare_pay_response.amount,
+        )
+        .await
+        .unwrap();
+        prepare_pay_response.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
     }
 
     #[tokio::test]

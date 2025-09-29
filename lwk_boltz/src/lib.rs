@@ -22,7 +22,7 @@ use crate::clients::ElectrumClient;
 
 pub struct LighthingSession {
     ws: Arc<BoltzWsApi>,
-    api: BoltzApiClientV2,
+    api: Arc<BoltzApiClientV2>,
     chain_client: ChainClient,
     liquid_chain: LiquidChain,
 }
@@ -42,7 +42,7 @@ impl LighthingSession {
     ) -> Self {
         let chain_client = ChainClient::new().with_liquid(client);
         let url = boltz_default_url(network);
-        let api = BoltzApiClientV2::new(url.to_string(), None); // TODO: implement timeout
+        let api = Arc::new(BoltzApiClientV2::new(url.to_string(), None)); // TODO: implement timeout
         let config = BoltzWsConfig::default();
         let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
@@ -112,6 +112,11 @@ impl LighthingSession {
                     address: create_swap_response.address,
                     amount: create_swap_response.expected_amount,
                     fee: 0, // TODO: populate fee correctly
+                    rx,
+                    swap_script,
+                    api: self.api.clone(),
+                    our_keys,
+                    bolt11_invoice: bolt11_invoice.to_string(),
                 })
             }
             _ => {
@@ -127,18 +132,97 @@ pub struct PreparePayResponse {
 
     /// A liquidnetwork uri with the address to pay and the amount.
     /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
-    uri: String,
+    pub uri: String,
 
     /// The address to pay to.
     /// It is the same contained in the uri but provided for convenience.
-    address: String,
+    pub address: String,
 
     /// The amount to pay.
     /// It is the same contained in the uri but provided for convenience.
-    amount: u64,
+    pub amount: u64,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
-    fee: u64,
+    pub fee: u64,
+
+    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
+    bolt11_invoice: String,
+    swap_script: SwapScript,
+    api: Arc<BoltzApiClientV2>,
+    our_keys: Keypair,
+}
+
+impl PreparePayResponse {
+    pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        loop {
+            let update = self.rx.recv().await.unwrap();
+            log::info!("Got Update from server: {}", update.status);
+            log::debug!("Update: {update:?}");
+            match update.status.as_str() {
+                "transaction.mempool" => {}
+                "transaction.confirmed" => {}
+                "invoice.pending" => {}
+                "invoice.paid" => {}
+                "transaction.claim.pending" => {
+                    let response = self
+                        .swap_script
+                        .submarine_cooperative_claim(
+                            &self.swap_id,
+                            &self.our_keys,
+                            &self.bolt11_invoice,
+                            &self.api,
+                        )
+                        .await
+                        .unwrap();
+                    log::debug!("Received claim tx details : {response:?}");
+                }
+
+                "transaction.claimed" => {
+                    break Ok(true);
+                }
+
+                // This means the funding transaction was rejected by Boltz for whatever reason, and we need to get
+                // the funds back via refund.
+                "transaction.lockupFailed" | "invoice.failedToPay" => {
+                    todo!();
+                    // sleep(WAIT_TIME).await;
+                    // let tx = swap_script
+                    //     .construct_refund(SwapTransactionParams {
+                    //         keys: our_keys,
+                    //         output_address: refund_address,
+                    //         fee: Fee::Absolute(1000),
+                    //         swap_id: swap_id.clone(),
+                    //         chain_client,
+                    //         boltz_client: &boltz_api_v2,
+                    //         options: None,
+                    //     })
+                    //     .await
+                    //     .unwrap();
+
+                    // let txid = chain_client.broadcast_tx(&tx).await.unwrap();
+                    // log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+
+                    // Non cooperative refund requires expired swap
+                    /*log::info!("Cooperative refund failed. {:?}", e);
+                    log::info!("Attempting Non-cooperative refund.");
+
+                    let tx = swap_tx
+                        .sign_refund(&our_keys, Fee::Absolute(1000), None)
+                        .await
+                        .unwrap();
+                    let txid = swap_tx
+                        .broadcast(&tx, bitcoin_client)
+                        .await
+                        .unwrap();
+                    log::info!("Non-cooperative Refund Successfully broadcasted: {}", txid);*/
+                    break Ok(false);
+                }
+                _ => {
+                    panic!("Unexpected update: {}", update.status);
+                }
+            };
+        }
+    }
 }
 
 pub struct Event;

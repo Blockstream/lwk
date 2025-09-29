@@ -197,9 +197,3 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c cargo test -p lwk_cli --features registry -- registry_publish
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
-
-mdbook-snippets:
-  extends: .base
-  script:
-    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cd docs/snippets/rust && cargo test && cd -

@@ -15,7 +15,7 @@ use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
 
-struct LighthingSession {
+pub struct LighthingSession {
     ws: Arc<BoltzWsApi>,
     api: BoltzApiClientV2,
     chain_client: ChainClient,
@@ -44,9 +44,15 @@ impl LighthingSession {
     }
 }
 
-struct Event;
+pub struct Event;
 pub trait EventHandler {
     fn on_event(&self, e: Event);
+}
+pub struct EventHandlerImpl;
+impl EventHandler for EventHandlerImpl {
+    fn on_event(&self, e: Event) {
+        todo!()
+    }
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

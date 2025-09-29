@@ -17,7 +17,7 @@ mod tests {
         util::{secrets::Preimage, sleep},
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::clients::ElectrumClient;
+    use lwk_boltz::{clients::ElectrumClient, EventHandler, EventHandlerImpl, LighthingSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -35,6 +35,22 @@ mod tests {
         let chain = Chain::Liquid(LiquidChain::LiquidRegtest);
         let cooperative = true;
         v2_reverse(&chain_client, chain, cooperative).await;
+    }
+
+    #[tokio::test]
+    async fn test_session_reverse() {
+        let _ = env_logger::try_init();
+        let _session = LighthingSession::new(
+            ElementsNetwork::default_regtest(),
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+            Box::new(EventHandlerImpl {}),
+        );
     }
 
     /// Test the reverse swap, copied from the boltz_client tests

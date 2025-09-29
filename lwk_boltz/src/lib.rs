@@ -44,7 +44,8 @@ impl LighthingSession {
         let url = boltz_default_url(network);
         let api = BoltzApiClientV2::new(url.to_string(), None); // TODO: implement timeout
         let config = BoltzWsConfig::default();
-        let ws = Arc::new(BoltzWsApi::new(url.to_string(), config));
+        let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
+        let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
         tokio::spawn(future); // TODO handle wasm
         Self {
@@ -94,13 +95,34 @@ impl LighthingSession {
         let swap_id = create_swap_response.id.clone();
         log::info!("Created Swap Script id:{swap_id} swap_script:{swap_script:?}");
 
-        // let mut rx = ws_api.updates();
-        // ws_api.subscribe_swap(&swap_id).await.unwrap();
-        todo!()
+        let mut rx = self.ws.updates();
+        self.ws.subscribe_swap(&swap_id).await.unwrap();
+        let update = rx.recv().await.unwrap();
+        match update.status.as_str() {
+            "invoice.set" => {
+                log::info!(
+                    "Send {} sats to {} address {}",
+                    create_swap_response.expected_amount,
+                    chain,
+                    create_swap_response.address
+                );
+                Ok(PreparePayResponse {
+                    swap_id,
+                    uri: create_swap_response.bip21,
+                    fee: 0, // TODO: populate fee correctly
+                })
+            }
+            _ => {
+                panic!("Unexpected update: {}", update.status);
+            }
+        }
     }
 }
 
+#[derive(Debug)]
 pub struct PreparePayResponse {
+    pub swap_id: String,
+
     /// A liquidnetwork uri with the address to pay and the amount.
     /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
     uri: String,

@@ -32,7 +32,8 @@ mod tests {
             Box::new(EventHandlerImpl {}),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        session.prepare_pay(&bolt11_invoice).await.unwrap();
+        let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();
+        log::info!("Prepare Pay Response: {prepare_pay_response:?}");
     }
 
     #[tokio::test]

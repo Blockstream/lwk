@@ -189,6 +189,5 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 
 ## Examples
 We provide a few examples on how to integrate use AMP0 with LWK:
-* [amp0.py](../lwk_bindings/tests/bindings/amp0.py) shows how to receive, monitor and send with an AMP0 account
 * [liquidwebwallet.org](https://liquidwebwallet.org) integrates AMP0 using WASM
 * Rust tests in [amp0.rs](../lwk_wollet/src/amp0.rs)

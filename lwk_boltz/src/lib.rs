@@ -3,6 +3,27 @@ pub mod clients;
 use boltz_client::network::LiquidChain;
 use lwk_wollet::ElementsNetwork;
 
+struct LighthingSession {
+    ws: BoltzWsApi,
+    api: BoltzApiClientV2,
+}
+
+impl LighthingSession {
+    /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
+    // TODO: add mnemonic as param to generate deterministic keypairs
+    pub fn new(
+        network: ElementsNetwork,
+        client: Box<dyn LiquidClient>,
+        handler: Arc<dyn EventHandler>,
+    ) -> Self {
+        todo!()
+    }
+}
+
+pub trait EventHandler {
+    fn on_event(&self, e: Event);
+}
+
 /// Convert an ElementsNetwork to a LiquidChain
 pub fn elements_network_to_liquid_chain(network: ElementsNetwork) -> LiquidChain {
     match network {

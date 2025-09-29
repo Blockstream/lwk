@@ -1,5 +1,10 @@
 pub mod clients;
 
+use boltz_client::boltz::BoltzApiClientV2;
+use boltz_client::boltz::BoltzWsApi;
+use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
+use boltz_client::boltz::BOLTZ_REGTEST;
+use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::LiquidChain;
 use lwk_wollet::ElementsNetwork;
 
@@ -39,6 +44,14 @@ pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> ElementsNetwork {
         LiquidChain::Liquid => ElementsNetwork::Liquid,
         LiquidChain::LiquidTestnet => ElementsNetwork::LiquidTestnet,
         LiquidChain::LiquidRegtest => ElementsNetwork::default_regtest(),
+    }
+}
+
+pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
+    match network {
+        ElementsNetwork::Liquid => BOLTZ_MAINNET_URL_V2,
+        ElementsNetwork::LiquidTestnet => BOLTZ_TESTNET_URL_V2,
+        ElementsNetwork::ElementsRegtest { .. } => BOLTZ_REGTEST,
     }
 }
 

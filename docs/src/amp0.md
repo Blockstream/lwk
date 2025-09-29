@@ -174,6 +174,7 @@ If all the AMP0 rules are respected, the transaction is cosigned by AMP0 and can
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/amp0-daily-ops.py:amp0-daily-ops:ignore}}
 ```
 </section>
 

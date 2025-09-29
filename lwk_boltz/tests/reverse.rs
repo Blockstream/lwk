@@ -40,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_session_reverse() {
         let _ = env_logger::try_init();
-        let _session = LighthingSession::new(
+        let session = LighthingSession::new(
             ElementsNetwork::default_regtest(),
             ElectrumClient::new(
                 DEFAULT_REGTEST_NODE,
@@ -51,6 +51,14 @@ mod tests {
             .unwrap(),
             Box::new(EventHandlerImpl {}),
         );
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let invoice = session
+            .invoice(100000, None, claim_address.to_string())
+            .await
+            .unwrap();
+        log::info!("Invoice: {invoice:?}");
     }
 
     /// Test the reverse swap, copied from the boltz_client tests

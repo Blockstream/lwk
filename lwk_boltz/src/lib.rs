@@ -5,14 +5,17 @@ use std::sync::Arc;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::CreateReverseRequest;
 use boltz_client::boltz::CreateSubmarineRequest;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
+use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
 use boltz_client::swaps::SwapScript;
+use boltz_client::util::secrets::Preimage;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
 use lwk_wollet::secp256k1::rand::thread_rng;
@@ -56,12 +59,16 @@ impl LighthingSession {
         }
     }
 
+    fn chain(&self) -> Chain {
+        Chain::Liquid(self.liquid_chain)
+    }
+
     pub async fn prepare_pay(
         &self,
         bolt11_invoice: &str,
         // refund_address: elements::Address,
     ) -> Result<PreparePayResponse, Error> {
-        let chain = Chain::Liquid(self.liquid_chain);
+        let chain = self.chain();
 
         let secp = Secp256k1::new();
         let our_keys = Keypair::new(&secp, &mut thread_rng());
@@ -125,12 +132,53 @@ impl LighthingSession {
         }
     }
 
-    fn invoice(
+    pub async fn invoice(
         &self,
         amount: u64,
         description: Option<&str>,
-        destination_address: String, // TODO: use elements::Address
+        claim_address: String, // TODO: use elements::Address
     ) -> Result<InvoiceResponse, Error> {
+        let chain = self.chain();
+        let secp = Secp256k1::new();
+        let preimage = Preimage::new();
+        let our_keys = Keypair::new(&secp, &mut thread_rng());
+        let claim_public_key = PublicKey {
+            compressed: true,
+            inner: our_keys.public_key(),
+        };
+
+        let addrs_sig = sign_address(&claim_address, &our_keys).unwrap();
+        let create_reverse_req = CreateReverseRequest {
+            from: "BTC".to_string(),
+            to: chain.to_string(),
+            invoice: None,
+            invoice_amount: Some(amount),
+            preimage_hash: Some(preimage.sha256),
+            description: None,
+            description_hash: None,
+            address_signature: Some(addrs_sig.to_string()),
+            address: Some(claim_address.clone()),
+            claim_public_key,
+            referral_id: None, // Add address signature here.
+            webhook: None,
+        };
+
+        let reverse_resp = self.api.post_reverse_req(create_reverse_req).await.unwrap();
+        let invoice = reverse_resp.invoice.clone().unwrap();
+
+        // let _ = check_for_mrh(&boltz_api_v2, &invoice, chain)
+        //     .await
+        //     .unwrap()
+        //     .unwrap();
+
+        // log::debug!("Got Reverse swap response: {reverse_resp:?}");
+
+        // let swap_script =
+        //     SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
+        // let swap_id = reverse_resp.id.clone();
+
+        // ws_api.subscribe_swap(&swap_id).await.unwrap();
+        // let mut rx = ws_api.updates();
         todo!()
     }
 }

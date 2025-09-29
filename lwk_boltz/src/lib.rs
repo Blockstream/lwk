@@ -12,6 +12,7 @@ use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
+use boltz_client::swaps::SwapScript;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
 use lwk_wollet::secp256k1::rand::thread_rng;
@@ -82,18 +83,16 @@ impl LighthingSession {
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        // create_swap_response
-        //     .validate(&invoice, &refund_public_key, chain)
-        //     .unwrap();
-        // log::info!("VALIDATED RESPONSE!");
+        create_swap_response
+            .validate(&bolt11_invoice, &refund_public_key, chain)
+            .unwrap();
+        log::info!("VALIDATED RESPONSE!");
 
-        // log::debug!("Swap Response: {create_swap_response:?}");
-
-        // let swap_script =
-        //     SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)
-        //         .unwrap();
-        // let swap_id = create_swap_response.id.clone();
-        // log::debug!("Created Swap Script. : {swap_script:?}");
+        let swap_script =
+            SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)
+                .unwrap();
+        let swap_id = create_swap_response.id.clone();
+        log::info!("Created Swap Script id:{swap_id} swap_script:{swap_script:?}");
 
         // let mut rx = ws_api.updates();
         // ws_api.subscribe_swap(&swap_id).await.unwrap();

@@ -17,7 +17,7 @@ mod tests {
         util::{secrets::Preimage, sleep},
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, EventHandler, EventHandlerImpl, LighthingSession};
+    use lwk_boltz::{clients::ElectrumClient, LighthingSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -49,7 +49,6 @@ mod tests {
                 ElementsNetwork::default_regtest(),
             )
             .unwrap(),
-            Box::new(EventHandlerImpl {}),
         );
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await

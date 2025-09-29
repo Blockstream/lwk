@@ -14,7 +14,7 @@ mod tests {
         util::sleep,
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, EventHandlerImpl, LighthingSession};
+    use lwk_boltz::{clients::ElectrumClient, LighthingSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -33,7 +33,6 @@ mod tests {
                 ElementsNetwork::default_regtest(),
             )
             .unwrap(),
-            Box::new(EventHandlerImpl {}),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();

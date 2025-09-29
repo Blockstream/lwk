@@ -42,7 +42,6 @@ impl LighthingSession {
     pub fn new(
         network: ElementsNetwork,
         client: ElectrumClient, // TODO: should be generic to support other clients
-        _handler: Box<dyn EventHandler>,
     ) -> Self {
         let chain_client = ChainClient::new().with_liquid(client);
         let url = boltz_default_url(network);
@@ -309,17 +308,6 @@ impl PreparePayResponse {
                 }
             };
         }
-    }
-}
-
-pub struct Event;
-pub trait EventHandler {
-    fn on_event(&self, e: Event);
-}
-pub struct EventHandlerImpl;
-impl EventHandler for EventHandlerImpl {
-    fn on_event(&self, e: Event) {
-        todo!()
     }
 }
 

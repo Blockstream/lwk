@@ -1,6 +1,9 @@
 use std::{collections::HashMap, env, io::Write};
 
-use bitcoin::{secp256k1::Secp256k1, PrivateKey, PublicKey};
+use elements::{
+    bitcoin::{NetworkKind, PrivateKey, PublicKey},
+    secp256k1_zkp::Secp256k1,
+};
 use rand::{thread_rng, RngCore};
 use tempfile::TempDir;
 use testcontainers::{core::WaitFor, Image};
@@ -37,8 +40,7 @@ impl PinServer {
         rng.fill_bytes(&mut random_buff);
         file.write_all(&random_buff)?;
 
-        let prv_key =
-            PrivateKey::from_slice(&random_buff, bitcoin::Network::Regtest).expect("32 bytes");
+        let prv_key = PrivateKey::from_slice(&random_buff, NetworkKind::Test).expect("32 bytes");
         let pin_server_pub_key = PublicKey::from_private_key(&Secp256k1::new(), &prv_key);
 
         assert!(file_path.is_absolute() && file_path.exists());

@@ -2277,7 +2277,7 @@ dependencies = [
 name = "lwk_containers"
 version = "0.10.0"
 dependencies = [
- "bitcoin",
+ "elements 0.25.2",
  "rand",
  "tempfile",
  "testcontainers",

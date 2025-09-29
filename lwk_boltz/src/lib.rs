@@ -27,6 +27,7 @@ impl LighthingSession {
         handler: Box<dyn EventHandler>,
     ) -> Self {
         let chain_client = ChainClient::new().with_liquid(client);
+        let api = BoltzApiClientV2::new(boltz_default_url(network).to_string(), None); // TODO: implement timeout
         todo!()
     }
 }

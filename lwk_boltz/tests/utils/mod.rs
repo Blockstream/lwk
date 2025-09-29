@@ -9,6 +9,7 @@ use futures::FutureExt;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::{error::Error, sync::Arc};
+use tokio::task::JoinHandle;
 
 const BITCOIND_URL: &str = "http://localhost:18443/wallet/client";
 const ELEMENTSD_URL: &str = "http://localhost:18884/wallet/client";
@@ -167,4 +168,18 @@ pub async fn mine_blocks(n_blocks: u64) -> Result<(), Box<dyn Error>> {
         json_rpc_request(chain, "generatetoaddress", json!([n_blocks, address])).await?;
     }
     Ok(())
+}
+
+pub fn start_block_mining() -> JoinHandle<()> {
+    tokio::spawn(async {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));
+        loop {
+            interval.tick().await;
+            if let Err(e) = mine_blocks(1).await {
+                log::error!("Failed to mine block: {:?}", e);
+            } else {
+                log::info!("Mined a block");
+            }
+        }
+    })
 }

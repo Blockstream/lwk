@@ -10,13 +10,17 @@ use boltz_client::boltz::CreateSubmarineRequest;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
+use boltz_client::fees::Fee;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
 use boltz_client::swaps::SwapScript;
+use boltz_client::swaps::SwapTransactionParams;
+use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
+use boltz_client::util::sleep;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
 use lwk_wollet::secp256k1::rand::thread_rng;
@@ -27,7 +31,7 @@ use crate::clients::ElectrumClient;
 pub struct LighthingSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,
-    chain_client: ChainClient,
+    chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
 }
 
@@ -43,7 +47,7 @@ impl LighthingSession {
         network: ElementsNetwork,
         client: ElectrumClient, // TODO: should be generic to support other clients
     ) -> Self {
-        let chain_client = ChainClient::new().with_liquid(client);
+        let chain_client = Arc::new(ChainClient::new().with_liquid(client));
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), None)); // TODO: implement timeout
         let config = BoltzWsConfig::default();
@@ -200,6 +204,9 @@ impl LighthingSession {
             swap_script,
             api: self.api.clone(),
             our_keys,
+            preimage,
+            claim_address,
+            chain_client: self.chain_client.clone(),
         })
     }
 }
@@ -230,9 +237,8 @@ pub struct PreparePayResponse {
     our_keys: Keypair,
 }
 
-#[derive(Debug)]
 pub struct InvoiceResponse {
-    swap_id: String,
+    pub swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - swap_fee - network_fee`
     pub bolt11_invoice: String,
@@ -247,6 +253,9 @@ pub struct InvoiceResponse {
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
+    preimage: Preimage,
+    claim_address: String,
+    chain_client: Arc<ChainClient>,
 }
 
 impl PreparePayResponse {
@@ -326,6 +335,44 @@ impl InvoiceResponse {
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
             let update = self.rx.recv().await.unwrap();
+            match update.status.as_str() {
+                "transaction.mempool" => {
+                    log::info!("Boltz broadcasted funding tx");
+
+                    const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+                    sleep(WAIT_TIME).await; // TODO better way to wait
+
+                    let tx = self
+                        .swap_script
+                        .construct_claim(
+                            &self.preimage,
+                            SwapTransactionParams {
+                                keys: self.our_keys,
+                                output_address: self.claim_address.clone(),
+                                fee: Fee::Absolute(1000),
+                                swap_id: self.swap_id.clone(),
+                                options: Some(TransactionOptions::default().with_cooperative(true)),
+                                chain_client: &self.chain_client,
+                                boltz_client: &self.api,
+                            },
+                        )
+                        .await
+                        .unwrap();
+
+                    self.chain_client.broadcast_tx(&tx).await.unwrap();
+
+                    log::info!("Successfully broadcasted claim tx!");
+                    log::debug!("Claim Tx {tx:?}");
+                }
+                "transaction.confirmed" => {}
+                "invoice.settled" => {
+                    log::info!("Reverse Swap Successful!");
+                    break Ok(true);
+                }
+                _ => {
+                    panic!("Unexpected update: {}", update.status);
+                }
+            }
             log::info!("Got Update from server: {}", update.status);
         }
     }

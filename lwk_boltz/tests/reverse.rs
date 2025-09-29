@@ -61,7 +61,7 @@ mod tests {
             .invoice(100000, None, claim_address.to_string())
             .await
             .unwrap();
-        log::info!("Invoice: {invoice:?}");
+        log::info!("Invoice: {}", invoice.bolt11_invoice);
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice.clone());
         invoice.complete_pay().await.unwrap();
     }

@@ -3867,9 +3867,9 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
     // AMP0 Watch-Only credentials
     let username = "<username>";
     let password = "<password>";
-    let mnemonic = "thrive metal cactus come oval candy medal bounce captain shock permit joke"; // ANCHOR: ingore
-    let username = "userlwk001"; // ANCHOR: ingore
-    let password = "userlwk001"; // ANCHOR: ingore
+    let mnemonic = "thrive metal cactus come oval candy medal bounce captain shock permit joke"; // ANCHOR: ignore
+    let username = "userlwk001"; // ANCHOR: ignore
+    let password = "userlwk001"; // ANCHOR: ignore
     // AMP ID (optional)
     let amp_id = "";
 
@@ -3897,12 +3897,12 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get balance
     let balance = wollet.balance()?;
-    let lbtc = wollet.policy_asset(); // ANCHOR: ingore
-    let balance = *balance.get(&lbtc).unwrap_or(&0); // ANCHOR: ingore
-    if balance < 500 { // ANCHOR: ingore
-        let addr = amp0.address(Some(1)).unwrap(); // ANCHOR: ingore
-        panic!("Send some tLBTC to {}", addr.address()); // ANCHOR: ingore
-    } // ANCHOR: ingore
+    let lbtc = wollet.policy_asset(); // ANCHOR: ignore
+    let balance = *balance.get(&lbtc).unwrap_or(&0); // ANCHOR: ignore
+    if balance < 500 { // ANCHOR: ignore
+        let addr = amp0.address(Some(1)).unwrap(); // ANCHOR: ignore
+        panic!("Send some tLBTC to {}", addr.address()); // ANCHOR: ignore
+    } // ANCHOR: ignore
 
     // Construct a PSET sending LBTC back to the wallet
     let amp0pset = wollet

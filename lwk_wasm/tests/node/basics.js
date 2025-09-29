@@ -1,7 +1,7 @@
 const lwk = require('lwk_node');
 
 // TODO: use regtest instead of testnet:
-// however keep displaying testnet in the generated docs using // ANCHOR: ingore
+// however keep displaying testnet in the generated docs using // ANCHOR: ignore
 
 async function runBasicsTest() {
     try {

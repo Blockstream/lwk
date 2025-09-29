@@ -4,6 +4,7 @@ use boltz_client::error::Error;
 use boltz_client::network::LiquidChain;
 use lwk_wollet::ElementsNetwork;
 
+#[allow(dead_code)]
 pub struct EsploraClient {
     inner: lwk_wollet::asyncr::EsploraClient,
     network: ElementsNetwork,

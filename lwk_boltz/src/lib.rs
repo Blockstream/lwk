@@ -139,7 +139,7 @@ impl LighthingSession {
     pub async fn invoice(
         &self,
         amount: u64,
-        description: Option<&str>,
+        description: Option<String>,
         claim_address: String, // TODO: use elements::Address
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
@@ -158,7 +158,7 @@ impl LighthingSession {
             invoice: None,
             invoice_amount: Some(amount),
             preimage_hash: Some(preimage.sha256),
-            description: None,
+            description,
             description_hash: None,
             address_signature: Some(addrs_sig.to_string()),
             address: Some(claim_address.clone()),
@@ -321,7 +321,6 @@ impl PreparePayResponse {
                         .await
                         .unwrap();
                     log::info!("Non-cooperative Refund Successfully broadcasted: {}", txid);*/
-                    break Ok(false);
                 }
                 _ => {
                     panic!("Unexpected update: {}", update.status);

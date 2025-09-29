@@ -109,6 +109,8 @@ impl LighthingSession {
                 Ok(PreparePayResponse {
                     swap_id,
                     uri: create_swap_response.bip21,
+                    address: create_swap_response.address,
+                    amount: create_swap_response.expected_amount,
                     fee: 0, // TODO: populate fee correctly
                 })
             }
@@ -126,6 +128,14 @@ pub struct PreparePayResponse {
     /// A liquidnetwork uri with the address to pay and the amount.
     /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
     uri: String,
+
+    /// The address to pay to.
+    /// It is the same contained in the uri but provided for convenience.
+    address: String,
+
+    /// The amount to pay.
+    /// It is the same contained in the uri but provided for convenience.
+    amount: u64,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     fee: u64,

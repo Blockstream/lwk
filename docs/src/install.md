@@ -5,7 +5,7 @@ LWK is available for several languages.
 ## Rust
 You can use the crates released on [crates.io](https://crates.io)
 
-```
+```rust,ignore
 [dependencies]
 lwk_wollet = "0.11.0"
 lwk_signer = "0.11.0"
@@ -15,7 +15,7 @@ lwk_common = "0.11.0"
 ## Python
 You can use the official python package: [lwk](https://pypi.org/project/lwk/)
 
-```
+```shell,ignore
 pip install lwk
 ```
 
@@ -25,24 +25,24 @@ pip install lwk
 ### Wasm module
 
 Install LWK
-```shell
+```shell,ignore
 npm install lwk_wasm
 ```
 
 Import LWK
-```typescript
+```typescript,ignore
 const lwk = require('lwk_wasm');
 ```
 
 ### Node module
 
 Install LWK
-```shell
+```shell,ignore
 npm install lwk_node
 ```
 
 Import LWK
-```typescript
+```typescript,ignore
 const lwk = require('lwk_node');
 ```
 
@@ -56,7 +56,7 @@ const lwk = require('lwk_node');
 
 ## C#
 
-```shell
+```shell,ignore
 dotnet add package LiquidWalletKit --version 0.8.2
 ```
 

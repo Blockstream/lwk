@@ -13,7 +13,7 @@ A LWK wollet can perform the following operations:
 A Wollet is defined by a [CT descriptor](https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki), which consists in a Bitcoin descriptor plus the descriptor blinding key.
 
 In the previous section, we saw how to generate a single sig CT descriptor from a signer with `Signer::wpkh_slip77_descriptor()`, which returns something like:
-```
+```ignore
 ct(slip77(...),elwpkh([ffffffff/84h/1h/0h]xpub...))
 ```
 * `ct(...,...)`

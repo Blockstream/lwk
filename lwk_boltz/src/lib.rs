@@ -5,12 +5,16 @@ use std::sync::Arc;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::CreateSubmarineRequest;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
+use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
-use boltz_client::network::LiquidClient;
 use boltz_client::swaps::ChainClient;
+use boltz_client::Secp256k1;
+use boltz_client::{Keypair, PublicKey};
+use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
@@ -19,9 +23,11 @@ pub struct LighthingSession {
     ws: Arc<BoltzWsApi>,
     api: BoltzApiClientV2,
     chain_client: ChainClient,
+    liquid_chain: LiquidChain,
 }
 
-enum Error {
+#[derive(Debug)]
+pub enum Error {
     InvalidInvoice,
 }
 
@@ -44,19 +50,58 @@ impl LighthingSession {
             ws,
             api,
             chain_client,
+            liquid_chain: elements_network_to_liquid_chain(network),
         }
     }
 
     pub async fn prepare_pay(
         &self,
         bolt11_invoice: &str,
-        refund_address: String, // TODO use elements::Address
+        // refund_address: elements::Address,
     ) -> Result<PreparePayResponse, Error> {
+        let chain = Chain::Liquid(self.liquid_chain);
+
+        let secp = Secp256k1::new();
+        let our_keys = Keypair::new(&secp, &mut thread_rng());
+        let refund_public_key = PublicKey {
+            inner: our_keys.public_key(),
+            compressed: true,
+        };
+
+        let create_swap_req = CreateSubmarineRequest {
+            from: chain.to_string(),
+            to: "BTC".to_string(),
+            invoice: bolt11_invoice.to_string(),
+            refund_public_key,
+            pair_hash: None,
+            referral_id: None,
+            webhook: None,
+        };
+
+        let create_swap_response = self.api.post_swap_req(&create_swap_req).await.unwrap();
+
+        log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
+
+        // create_swap_response
+        //     .validate(&invoice, &refund_public_key, chain)
+        //     .unwrap();
+        // log::info!("VALIDATED RESPONSE!");
+
+        // log::debug!("Swap Response: {create_swap_response:?}");
+
+        // let swap_script =
+        //     SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)
+        //         .unwrap();
+        // let swap_id = create_swap_response.id.clone();
+        // log::debug!("Created Swap Script. : {swap_script:?}");
+
+        // let mut rx = ws_api.updates();
+        // ws_api.subscribe_swap(&swap_id).await.unwrap();
         todo!()
     }
 }
 
-struct PreparePayResponse {
+pub struct PreparePayResponse {
     /// A liquidnetwork uri with the address to pay and the amount.
     /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
     uri: String,

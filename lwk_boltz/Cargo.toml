@@ -9,6 +9,7 @@ boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "052868be
     "ws",
 ] }
 lwk_wollet = { version = "0.12.0" }
+elements = "0.26"
 tokio = { version = "1.0", features = ["rt"] }
 log = "0.4"
 env_logger = "0.11.8"

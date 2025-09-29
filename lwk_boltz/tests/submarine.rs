@@ -14,8 +14,26 @@ mod tests {
         util::sleep,
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::clients::ElectrumClient;
+    use lwk_boltz::{clients::ElectrumClient, EventHandlerImpl, LighthingSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
+
+    #[tokio::test]
+    async fn test_session_submarine() {
+        let _ = env_logger::try_init();
+        let session = LighthingSession::new(
+            ElementsNetwork::default_regtest(),
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+            Box::new(EventHandlerImpl {}),
+        );
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        session.prepare_pay(&bolt11_invoice).await.unwrap();
+    }
 
     #[tokio::test]
     async fn test_submarine() {

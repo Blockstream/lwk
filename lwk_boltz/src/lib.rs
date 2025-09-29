@@ -178,11 +178,21 @@ impl LighthingSession {
         let swap_id = reverse_resp.id.clone();
 
         self.ws.subscribe_swap(&swap_id).await.unwrap();
-        let rx = self.ws.updates();
+        let mut rx = self.ws.updates();
 
         // TODO "swap.created"
+        let update = rx.recv().await.unwrap();
+        match update.status.as_str() {
+            "swap.created" => {
+                log::info!("Waiting for Invoice to be paid: {}", &invoice);
+            }
+            _ => {
+                panic!("Unexpected update: {}", update.status);
+            }
+        }
 
         Ok(InvoiceResponse {
+            swap_id,
             bolt11_invoice: invoice,
             swap_fee: 0,    // TODO: populate fee correctly
             network_fee: 0, // TODO: populate fee correctly
@@ -222,6 +232,7 @@ pub struct PreparePayResponse {
 
 #[derive(Debug)]
 pub struct InvoiceResponse {
+    swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - swap_fee - network_fee`
     bolt11_invoice: String,

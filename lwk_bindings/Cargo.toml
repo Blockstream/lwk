@@ -30,6 +30,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "lwk"
 
 [features]
+default = ["lightning"]   # remove me, just for now for intellisense
 foreign_bindings = []
 lightning = ["lwk_boltz", "tokio", "log"]
 

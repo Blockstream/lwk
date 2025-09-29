@@ -40,6 +40,10 @@ mod tests {
     #[tokio::test]
     async fn test_session_reverse() {
         let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
         let session = LighthingSession::new(
             ElementsNetwork::default_regtest(),
             ElectrumClient::new(
@@ -58,6 +62,8 @@ mod tests {
             .await
             .unwrap();
         log::info!("Invoice: {invoice:?}");
+        utils::start_pay_invoice_lnd(invoice.bolt11_invoice.clone());
+        invoice.complete_pay().await.unwrap();
     }
 
     /// Test the reverse swap, copied from the boltz_client tests

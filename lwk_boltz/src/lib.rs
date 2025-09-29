@@ -235,13 +235,13 @@ pub struct InvoiceResponse {
     swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - swap_fee - network_fee`
-    bolt11_invoice: String,
+    pub bolt11_invoice: String,
 
     /// The fee of the swap provider
-    swap_fee: u64,
+    pub swap_fee: u64,
 
     /// The network fee (fee of the onchain transaction)
-    network_fee: u64,
+    pub network_fee: u64,
 
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
     swap_script: SwapScript,
@@ -318,6 +318,15 @@ impl PreparePayResponse {
                     panic!("Unexpected update: {}", update.status);
                 }
             };
+        }
+    }
+}
+
+impl InvoiceResponse {
+    pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        loop {
+            let update = self.rx.recv().await.unwrap();
+            log::info!("Got Update from server: {}", update.status);
         }
     }
 }

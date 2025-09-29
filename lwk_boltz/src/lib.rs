@@ -12,6 +12,7 @@ use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
+use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
 use boltz_client::swaps::SwapScript;
@@ -166,20 +167,31 @@ impl LighthingSession {
         let reverse_resp = self.api.post_reverse_req(create_reverse_req).await.unwrap();
         let invoice = reverse_resp.invoice.clone().unwrap();
 
-        // let _ = check_for_mrh(&boltz_api_v2, &invoice, chain)
-        //     .await
-        //     .unwrap()
-        //     .unwrap();
+        let _ = check_for_mrh(&self.api, &invoice, chain)
+            .await
+            .unwrap()
+            .unwrap();
 
-        // log::debug!("Got Reverse swap response: {reverse_resp:?}");
+        log::debug!("Got Reverse swap response: {reverse_resp:?}");
 
-        // let swap_script =
-        //     SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
-        // let swap_id = reverse_resp.id.clone();
+        let swap_script =
+            SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
+        let swap_id = reverse_resp.id.clone();
 
-        // ws_api.subscribe_swap(&swap_id).await.unwrap();
-        // let mut rx = ws_api.updates();
-        todo!()
+        self.ws.subscribe_swap(&swap_id).await.unwrap();
+        let rx = self.ws.updates();
+
+        // TODO "swap.created"
+
+        Ok(InvoiceResponse {
+            bolt11_invoice: invoice,
+            swap_fee: 0,    // TODO: populate fee correctly
+            network_fee: 0, // TODO: populate fee correctly
+            rx,
+            swap_script,
+            api: self.api.clone(),
+            our_keys,
+        })
     }
 }
 
@@ -220,6 +232,11 @@ pub struct InvoiceResponse {
 
     /// The network fee (fee of the onchain transaction)
     network_fee: u64,
+
+    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
+    swap_script: SwapScript,
+    api: Arc<BoltzApiClientV2>,
+    our_keys: Keypair,
 }
 
 impl PreparePayResponse {

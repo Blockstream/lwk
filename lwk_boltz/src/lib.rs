@@ -6,11 +6,16 @@ use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::LiquidChain;
+use boltz_client::network::LiquidClient;
+use boltz_client::swaps::ChainClient;
 use lwk_wollet::ElementsNetwork;
+
+use crate::clients::ElectrumClient;
 
 struct LighthingSession {
     ws: BoltzWsApi,
     api: BoltzApiClientV2,
+    chain_client: ChainClient,
 }
 
 impl LighthingSession {
@@ -18,13 +23,15 @@ impl LighthingSession {
     // TODO: add mnemonic as param to generate deterministic keypairs
     pub fn new(
         network: ElementsNetwork,
-        client: Box<dyn LiquidClient>,
-        handler: Arc<dyn EventHandler>,
+        client: ElectrumClient, // TODO: should be generic to support other clients
+        handler: Box<dyn EventHandler>,
     ) -> Self {
+        let chain_client = ChainClient::new().with_liquid(client);
         todo!()
     }
 }
 
+struct Event;
 pub trait EventHandler {
     fn on_event(&self, e: Event);
 }

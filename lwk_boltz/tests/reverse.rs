@@ -22,7 +22,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "mainnet"]
-    async fn test_session_submarine_mainnet() {
+    async fn test_session_reverse_mainnet() {
         let _ = env_logger::try_init();
 
         use lwk_common::Signer;

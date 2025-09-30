@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::sync::Arc;
+    use std::{env, sync::Arc};
 
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest},
@@ -16,6 +16,46 @@ mod tests {
     };
     use lwk_boltz::{clients::ElectrumClient, LightningSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
+
+    #[tokio::test]
+    #[ignore = "mainnet"]
+    async fn test_session_submarine_mainnet() {
+        let _ = env_logger::try_init();
+
+        let network = ElementsNetwork::Liquid;
+
+        let session = LightningSession::new(
+            network,
+            ElectrumClient::new(
+                "elements-mainnet.blockstream.info:50002",
+                true,
+                true,
+                network,
+            )
+            .unwrap(),
+        );
+
+        // In a real mainnet test, you would need to provide an actual Lightning invoice
+        // This is a placeholder - in practice you'd need to generate this externally
+        let bolt11_invoice = env::var("MAINNET_INVOICE")
+            .expect("MAINNET_INVOICE environment variable must be set for mainnet submarine test");
+
+        log::info!("Preparing payment for invoice: {}", bolt11_invoice);
+
+        let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();
+        log::info!("Prepare Pay Response: {prepare_pay_response:?}");
+        log::info!(
+            "Send {} sats to address: {}",
+            prepare_pay_response.amount,
+            prepare_pay_response.address
+        );
+        log::info!("Waiting for payment to be sent to the address...");
+
+        // Note: In a real test, you would need to send funds to prepare_pay_response.address
+        // with amount prepare_pay_response.amount before calling complete_pay()
+        let result = prepare_pay_response.complete_pay().await;
+        log::info!("Complete Pay Result: {:?}", result);
+    }
 
     #[tokio::test]
     async fn test_session_submarine() {

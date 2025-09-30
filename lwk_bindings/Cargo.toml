@@ -12,7 +12,9 @@ lwk_signer = { version = "0.12.0" }
 lwk_wollet = { version = "0.12.0" }
 lwk_test_util = { version = "0.12.0" }
 lwk_boltz = { version = "0.1.0", optional = true }
-tokio = { version = "1.0", features = ["rt"] }
+tokio = { version = "1.0", features = [
+    "rt",
+], optional = true } # move into lwk_boltz
 
 elements = "0.25.0"
 thiserror = "1.0.50"
@@ -28,7 +30,7 @@ name = "lwk"
 
 [features]
 foreign_bindings = []
-lightning = ["lwk_boltz"]
+lightning = ["lwk_boltz", "tokio"]
 
 [package.metadata.docs.rs]
 all-features = true

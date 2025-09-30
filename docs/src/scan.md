@@ -46,6 +46,7 @@ for instance more transactions can be returned and balance can increase (or decr
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:client:ignore}}
 ```
 </section>
 

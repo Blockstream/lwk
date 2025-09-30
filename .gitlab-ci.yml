@@ -125,8 +125,22 @@ doc:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
-    - cargo +nightly doc --all-features --no-deps
-
+    # - cargo +nightly doc --all-features --no-deps # we can't use --all-features right now because of lightning feature
+    - cargo +nightly doc --no-deps -p lwk_app --all-features
+    - cargo +nightly doc --no-deps -p lwk_cli --all-features
+    - cargo +nightly doc --no-deps -p lwk_common --all-features
+    - cargo +nightly doc --no-deps -p lwk_containers --all-features
+    - cargo +nightly doc --no-deps -p lwk_hwi --all-features
+    - cargo +nightly doc --no-deps -p lwk_jade --all-features
+    - cargo +nightly doc --no-deps -p lwk_ledger --all-features
+    - cargo +nightly doc --no-deps -p lwk_rpc_model --all-features
+    - cargo +nightly doc --no-deps -p lwk_signer --all-features
+    - cargo +nightly doc --no-deps -p lwk_test_util --all-features
+    - cargo +nightly doc --no-deps -p lwk_tiny_jrpc --all-features
+    - cargo +nightly doc --no-deps -p lwk_wasm --all-features
+    - cargo +nightly doc --no-deps -p lwk_wollet --all-features
+    - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings
+    
 examples:
   extends: .base
   script:

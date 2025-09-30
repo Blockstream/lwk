@@ -46,6 +46,7 @@ a transaction encoded in a format that facilitates sharing the transaction with 
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:tx:ignore}}
 ```
 </section>
 

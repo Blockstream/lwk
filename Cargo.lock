@@ -2228,6 +2228,7 @@ name = "lwk_bindings"
 version = "0.12.0"
 dependencies = [
  "elements 0.25.2",
+ "lwk_boltz",
  "lwk_common",
  "lwk_signer",
  "lwk_test_util",
@@ -2236,6 +2237,12 @@ dependencies = [
  "thiserror 1.0.69",
  "uniffi",
 ]
+
+[[package]]
+name = "lwk_boltz"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "329b8defa1d7b0c48c9cc98db7bbb7da6fde3b582424f6d81bf4ac3bb1f99069"
 
 [[package]]
 name = "lwk_cli"

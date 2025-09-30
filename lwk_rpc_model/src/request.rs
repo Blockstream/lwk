@@ -100,6 +100,19 @@ pub struct SignerUnload {
     pub name: String,
 }
 
+/// Derive a BIP85 mnemonic from a loaded software signer
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerDeriveBip85 {
+    /// The name of the signer
+    pub name: String,
+
+    /// Index for the derived mnemonic (0-based)
+    pub index: u32,
+
+    /// Number of words in the derived mnemonic (12 or 24)
+    pub word_count: u32,
+}
+
 /// Request a receiving address
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WalletAddress {

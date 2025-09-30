@@ -28,6 +28,13 @@ pub struct SignerGenerate {
     pub mnemonic: String,
 }
 
+/// Response for BIP85 mnemonic derivation
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SignerDeriveBip85 {
+    /// The derived BIP85 mnemonic
+    pub mnemonic: String,
+}
+
 /// Response for list signers call
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignerList {

@@ -194,6 +194,7 @@ pub enum SignerSubCommandsEnum {
     Sign,
     SinglesigDesc,
     Xpub,
+    DeriveBip85,
 }
 
 #[derive(Debug, Args)]
@@ -355,6 +356,20 @@ pub enum SignerCommand {
 
         #[arg(long)]
         kind: XpubKind,
+    },
+
+    /// Derive a BIP85 mnemonic from a loaded software signer
+    DeriveBip85 {
+        #[arg(short, long, env)]
+        signer: String,
+
+        /// Index for the derived mnemonic (0-based)
+        #[arg(long, default_value = "0")]
+        index: u32,
+
+        /// Number of words in the derived mnemonic (12 or 24)
+        #[arg(long, default_value = "12")]
+        word_count: u32,
     },
 
     /// Register a multisig wallet

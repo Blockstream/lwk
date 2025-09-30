@@ -245,6 +245,20 @@ impl Client {
         self.make_request(Method::SignerDetails, Some(req))
     }
 
+    pub fn signer_derive_bip85(
+        &self,
+        name: String,
+        index: u32,
+        word_count: u32,
+    ) -> Result<response::SignerDeriveBip85, Error> {
+        let req = request::SignerDeriveBip85 {
+            name,
+            index,
+            word_count,
+        };
+        self.make_request(Method::SignerDeriveBip85, Some(req))
+    }
+
     pub fn wallet_combine(
         &self,
         name: String,

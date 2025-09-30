@@ -694,6 +694,33 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 })?,
             )
         }
+        Method::SignerDeriveBip85 => {
+            let r: request::SignerDeriveBip85 = serde_json::from_value(params)?;
+            let mut s = state.lock()?;
+
+            let signer = s.get_available_signer(&r.name)?;
+
+            // Only software signers support BIP85 derivation
+            let sw_signer = match signer {
+                AnySigner::Software(sw) => sw,
+                _ => {
+                    return Err(Error::Generic(
+                        "BIP85 derivation is only supported for software signers".to_string(),
+                    ))
+                }
+            };
+
+            let derived_mnemonic = sw_signer
+                .derive_bip85_mnemonic(r.index, r.word_count)
+                .map_err(|e| Error::Generic(format!("BIP85 derivation failed: {}", e)))?;
+
+            Response::result(
+                request.id,
+                serde_json::to_value(response::SignerDeriveBip85 {
+                    mnemonic: derived_mnemonic.to_string(),
+                })?,
+            )
+        }
         Method::WalletBroadcast => {
             let r: request::WalletBroadcast = serde_json::from_value(params)?;
             let mut s = state.lock()?;

@@ -54,6 +54,7 @@ pub enum Method {
     SignerXpub,
     SignerSign,
     SignerSinglesigDescriptor,
+    SignerDeriveBip85,
     SignerRegisterMultisig,
     AssetContract,
     AssetInsert,
@@ -110,6 +111,7 @@ impl Method {
                 Method::SignerSinglesigDescriptor => {
                     schema_for!(request::SignerSinglesigDescriptor)
                 }
+                Method::SignerDeriveBip85 => schema_for!(request::SignerDeriveBip85),
                 Method::SignerRegisterMultisig => schema_for!(request::SignerRegisterMultisig),
                 Method::AssetContract => schema_for!(request::AssetContract),
                 Method::AssetInsert => schema_for!(request::AssetInsert),
@@ -163,6 +165,7 @@ impl Method {
                 Method::SignerSinglesigDescriptor => {
                     schema_for!(response::SignerSinglesigDescriptor)
                 }
+                Method::SignerDeriveBip85 => schema_for!(response::SignerDeriveBip85),
                 Method::SignerRegisterMultisig => schema_for!(response::Empty),
                 Method::AssetContract => schema_for!(response::AssetContract),
                 Method::AssetInsert => schema_for!(response::Empty),
@@ -222,6 +225,7 @@ impl FromStr for Method {
             "signer_xpub" => Method::SignerXpub,
             "signer_sign" => Method::SignerSign,
             "signer_singlesig_descriptor" => Method::SignerSinglesigDescriptor,
+            "signer_derive_bip85" => Method::SignerDeriveBip85,
             "signer_register_multisig" => Method::SignerRegisterMultisig,
             "asset_contract" => Method::AssetContract,
             "asset_insert" => Method::AssetInsert,
@@ -283,6 +287,7 @@ impl std::fmt::Display for Method {
             Method::SignerXpub => "signer_xpub",
             Method::SignerSign => "signer_sign",
             Method::SignerSinglesigDescriptor => "signer_singlesig_descriptor",
+            Method::SignerDeriveBip85 => "signer_derive_bip85",
             Method::SignerRegisterMultisig => "signer_register_multisig",
             Method::AssetContract => "asset_contract",
             Method::AssetInsert => "asset_insert",

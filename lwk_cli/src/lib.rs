@@ -217,6 +217,14 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.signer_xpub(signer, kind.to_string())?;
                 serde_json::to_value(r)?
             }
+            SignerCommand::DeriveBip85 {
+                signer,
+                index,
+                word_count,
+            } => {
+                let r = client.signer_derive_bip85(signer, index, word_count)?;
+                serde_json::to_value(r)?
+            }
             SignerCommand::RegisterMultisig { signer, wallet } => {
                 let r = client.signer_register_multisig(signer, wallet)?;
                 serde_json::to_value(r)?

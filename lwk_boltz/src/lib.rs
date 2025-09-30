@@ -348,7 +348,7 @@ impl InvoiceResponse {
                             SwapTransactionParams {
                                 keys: self.our_keys,
                                 output_address: self.claim_address.clone(),
-                                fee: Fee::Absolute(1000),
+                                fee: Fee::Relative(1.0),
                                 swap_id: self.swap_id.clone(),
                                 options: Some(TransactionOptions::default().with_cooperative(true)),
                                 chain_client: &self.chain_client,

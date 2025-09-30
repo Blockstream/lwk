@@ -42,21 +42,18 @@ impl From<lwk_boltz::InvoiceResponse> for InvoiceResponse {
 impl LightningSession {
     /// Create the lightning session
     ///
-    /// Note the passed `ElectrumClient` should not be referenced elsewhere and it will be consumed
-    /// by this method (not available after this call).
+    /// TODO: is there a way to pass the electrum client directly? cannot use Arc::try_unwrap because uniffi keeps references around
     #[uniffi::constructor]
-    pub fn new(network: &Network, client: Arc<ElectrumClient>) -> Result<Self, LwkError> {
-        // Try to unwrap the Arc to get owned ElectrumClient
-        let inner_client = Arc::try_unwrap(client)
-            .map_err(|_| LwkError::Generic {
-                msg: "ElectrumClient is still referenced elsewhere".to_string(),
-            })?
-            .into_inner()
-            .map_err(|_| LwkError::Generic {
-                msg: "ElectrumClient mutex is poisoned".to_string(),
-            })?;
-
-        let client = lwk_boltz::clients::ElectrumClient::from_client(inner_client, network.into());
+    pub fn new(
+        network: &Network,
+        electrum_url: &str,
+        tls: bool,
+        validate_domain: bool,
+    ) -> Result<Self, LwkError> {
+        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
+            .map_err(lwk_wollet::Error::Url)?;
+        let client = lwk_wollet::ElectrumClient::new(&url)?;
+        let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
         let inner = lwk_boltz::LightningSession::new(network.into(), client);
         Ok(Self { inner })
     }

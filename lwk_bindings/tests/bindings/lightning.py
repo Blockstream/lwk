@@ -2,7 +2,7 @@ from lwk import *
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.testnet()
-client = network.default_electrum_client()
 
-lightning_session = LightningSession(network, client)
+lightning_session = LightningSession(network, "elements-testnet.blockstream.info:50002", True, True)
 
+lightning_session.invoice(1000,"ciao","bao")

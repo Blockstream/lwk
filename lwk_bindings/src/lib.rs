@@ -27,7 +27,9 @@ mod update;
 mod wollet;
 
 #[cfg(feature = "lightning")]
-pub mod lightning;
+mod lightning;
+#[cfg(feature = "lightning")]
+pub use lightning::LighthingSession;
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;

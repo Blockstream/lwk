@@ -19,5 +19,6 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/p2sh-multi.py",
     "tests/bindings/chained_reissuances.py",
     "tests/bindings/external_utxos.py",
-    "tests/bindings/send_explicit.py"
+    "tests/bindings/send_explicit.py",
+    "tests/bindings/basics.py"
 );

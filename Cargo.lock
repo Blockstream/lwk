@@ -2351,10 +2351,12 @@ dependencies = [
  "base64 0.21.7",
  "bip39",
  "elements-miniscript",
+ "hmac",
  "lwk_common",
  "lwk_jade",
  "lwk_ledger",
  "lwk_test_util",
+ "sha2",
  "thiserror 1.0.69",
 ]
 

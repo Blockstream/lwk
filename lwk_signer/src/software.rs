@@ -22,7 +22,9 @@ use elements_miniscript::{
     psbt::PsbtExt,
     slip77::MasterBlindingKey,
 };
+use hmac::{Hmac, Mac};
 use lwk_common::Signer;
+use sha2::Sha512;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -45,6 +47,12 @@ pub enum SignError {
 
     #[error("Cannot derive slip77 key (mnemonic/seed not available)")]
     DeterministicSlip77NotAvailable,
+
+    #[error("Cannot derive BIP85 mnemonic (mnemonic/seed not available)")]
+    Bip85MnemonicNotAvailable,
+
+    #[error("BIP85 derivation failed: {0}")]
+    Bip85Derivation(String),
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -165,6 +173,120 @@ impl SwSigner {
     /// Derive an xprv from the master, path can contains hardened derivations.
     pub fn derive_xprv(&self, path: &DerivationPath) -> Result<Xpriv, SignError> {
         Ok(self.xprv.derive_priv(&self.secp, path)?)
+    }
+
+    /// Derive a BIP85 mnemonic from the signer's mnemonic.
+    ///
+    /// This method uses BIP85 to deterministically derive a new mnemonic from the signer's
+    /// master mnemonic. The derived mnemonic can be used for creating separate wallets
+    /// while maintaining deterministic derivation from the original seed.
+    ///
+    /// # Arguments
+    /// * `index` - The index for the derived mnemonic (0-based)
+    /// * `word_count` - The number of words in the derived mnemonic (12 or 24)
+    ///
+    /// # Returns
+    /// * `Ok(Mnemonic)` - The derived BIP85 mnemonic
+    /// * `Err(SignError::Bip85MnemonicNotAvailable)` - If the signer was not initialized with a mnemonic
+    /// * `Err(SignError::Bip85Derivation)` - If BIP85 derivation fails
+    ///
+    /// # Example
+    /// ```rust
+    /// use lwk_signer::SwSigner;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let signer = SwSigner::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", false)?;
+    /// let derived_mnemonic = signer.derive_bip85_mnemonic(0, 12)?;
+    /// println!("Derived mnemonic: {}", derived_mnemonic);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn derive_bip85_mnemonic(
+        &self,
+        index: u32,
+        word_count: u32,
+    ) -> Result<Mnemonic, SignError> {
+        // Check if we have a mnemonic available
+        let _mnemonic = self
+            .mnemonic
+            .as_ref()
+            .ok_or_else(|| SignError::Bip85MnemonicNotAvailable)?;
+
+        // Convert the elements Xpriv to a standard bitcoin Xpriv for BIP85
+        let seed = self
+            .seed()
+            .ok_or_else(|| SignError::Bip85MnemonicNotAvailable)?;
+
+        // Create a standard bitcoin Xpriv from the seed
+        let bitcoin_xprv = bitcoin::bip32::Xpriv::new_master(bitcoin::Network::Bitcoin, &seed)
+            .map_err(|e| SignError::Bip85Derivation(format!("Failed to create Xpriv: {}", e)))?;
+
+        // Implement BIP85 derivation directly
+        let derived_mnemonic = Self::bip85_derive_mnemonic(&bitcoin_xprv, index, word_count)?;
+
+        Ok(derived_mnemonic)
+    }
+
+    /// Internal BIP85 mnemonic derivation implementation
+    fn bip85_derive_mnemonic(
+        xprv: &bitcoin::bip32::Xpriv,
+        index: u32,
+        word_count: u32,
+    ) -> Result<Mnemonic, SignError> {
+        // BIP85 constants
+        const BIP85_PURPOSE: u32 = 83696968; // "m/83696968'"
+        const BIP85_APPLICATION_39: u32 = 39; // BIP39 application
+        const BIP85_ENTROPY_HMAC_KEY: &[u8] = b"bip-entropy-from-k";
+
+        // Validate word count
+        if word_count != 12 && word_count != 24 {
+            return Err(SignError::Bip85Derivation(
+                "Word count must be 12 or 24".to_string(),
+            ));
+        }
+
+        // Derive the BIP85 path: m/83696968'/39'/language'/word_count'/index'
+        let language = 0; // English
+        let path = [
+            BIP85_PURPOSE,        // hardened
+            BIP85_APPLICATION_39, // hardened
+            language,             // hardened
+            word_count,           // hardened
+            index,                // hardened
+        ];
+
+        // Convert path to DerivationPath
+        let child_numbers: Result<Vec<_>, _> = path
+            .iter()
+            .map(|&i| bitcoin::bip32::ChildNumber::from_hardened_idx(i))
+            .collect();
+        let child_numbers = child_numbers
+            .map_err(|e| SignError::Bip85Derivation(format!("Path creation failed: {}", e)))?;
+        let derivation_path = bitcoin::bip32::DerivationPath::from(child_numbers);
+
+        // Derive the key using the path
+        let derived_key = xprv
+            .derive_priv(&bitcoin::secp256k1::Secp256k1::new(), &derivation_path)
+            .map_err(|e| SignError::Bip85Derivation(format!("Key derivation failed: {}", e)))?;
+
+        // HMAC-SHA512 the derived private key with the fixed BIP85 key
+        let mut mac = Hmac::<Sha512>::new_from_slice(BIP85_ENTROPY_HMAC_KEY)
+            .map_err(|e| SignError::Bip85Derivation(format!("HMAC key creation failed: {}", e)))?;
+
+        // Use the private key bytes (excluding the first byte which is the network prefix)
+        let priv_key_bytes = &derived_key.private_key.secret_bytes();
+        mac.update(priv_key_bytes);
+        let hmac_result = mac.finalize();
+
+        // Extract the appropriate amount of entropy based on word count
+        let entropy_len = if word_count == 12 { 16 } else { 32 }; // 128 or 256 bits
+        let entropy = &hmac_result.into_bytes()[..entropy_len];
+
+        // Create mnemonic from entropy
+        let mnemonic = Mnemonic::from_entropy(entropy)
+            .map_err(|e| SignError::Bip85Derivation(format!("Mnemonic creation failed: {}", e)))?;
+
+        Ok(mnemonic)
     }
 }
 
@@ -401,5 +523,62 @@ mod tests {
 
         // result checked also with bitcoin-cli
         // bitcoin-cli verifymessage "1BZ9j3F7m4H1RPyeDp5iFwpR31SB6zrs19" "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=" 'Hello, world!'
+    }
+
+    #[test]
+    fn test_bip85_mnemonic_derivation() {
+        // Test with a known mnemonic
+        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+
+        // Derive a 12-word mnemonic at index 0
+        let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
+        assert_eq!(derived_0_12.word_count(), 12);
+
+        // Derive a 24-word mnemonic at index 0
+        let derived_0_24 = signer.derive_bip85_mnemonic(0, 24).unwrap();
+        assert_eq!(derived_0_24.word_count(), 24);
+
+        // Derive different mnemonics at different indices
+        let derived_1_12 = signer.derive_bip85_mnemonic(1, 12).unwrap();
+        let derived_2_12 = signer.derive_bip85_mnemonic(2, 12).unwrap();
+        let derived_3_12 = signer.derive_bip85_mnemonic(3, 12).unwrap();
+
+        // check derived mnemonics
+        assert_eq!(signer.mnemonic().unwrap().to_string(), "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
+        assert_eq!(
+            derived_0_12.to_string(),
+            "prosper short ramp prepare exchange stove life snack client enough purpose fold"
+        );
+        assert_eq!(derived_0_24.to_string(), "stick exact spice sock filter ginger museum horse kit multiply manual wear grief demand derive alert quiz fault december lava picture immune decade jaguar");
+        assert_eq!(
+            derived_1_12.to_string(),
+            "sing slogan bar group gauge sphere rescue fossil loyal vital model desert"
+        );
+        assert_eq!(
+            derived_2_12.to_string(),
+            "comfort onion auto dizzy upgrade mutual banner announce section poet point pudding"
+        );
+        assert_eq!(
+            derived_3_12.to_string(),
+            "tuna mention protect shrimp mushroom access cat cattle license bind equip trial"
+        );
+
+        // derived mnemonics can be checked using bip85-cli (pip install bip85-cli)
+    }
+
+    #[test]
+    fn test_bip85_mnemonic_derivation_without_mnemonic() {
+        // Test that BIP85 derivation fails when signer was created from xprv
+        use std::str::FromStr;
+        let xprv = Xpriv::from_str("tprv8bxtvyWEZW9M4n8ByZVSG2NNP4aeiRdhDZXNEv1eVNtrhLLnc6vJ1nf9DN5cHAoxMwqRR1CD6YXBvw2GncSojF8DknPnQVMgbpkjnKHkrGY").unwrap();
+        let signer = SwSigner::from_xprv(xprv);
+
+        // Should fail because no mnemonic is available
+        let result = signer.derive_bip85_mnemonic(0, 12);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            SignError::Bip85MnemonicNotAvailable
+        ));
     }
 }

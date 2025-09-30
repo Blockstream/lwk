@@ -45,6 +45,7 @@ LWK also allows `Wollet`s to have a [custom persister](persister.md).
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:wollet:ignore}}
 ```
 </section>
 
@@ -75,6 +76,7 @@ This address can receive any Liquid asset or amount.
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:address:ignore}}
 ```
 </section>
 
@@ -109,6 +111,7 @@ In the next section we explain how (new) blockchain data can be obtained and add
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:txs:ignore}}
 ```
 </section>
 

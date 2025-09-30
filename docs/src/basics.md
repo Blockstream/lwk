@@ -10,4 +10,6 @@ This guide will walk you through the core components of LWK and show how they in
 * **Sign a Transaction**: Here, we'll demonstrate how to use the private keys from your signer to sign a transaction.
 * **Broadcast a Transaction**: Finally, you'll learn how to send your signed transaction to the Liquid network.
 
-Next: [LWK signers](signer.md)
+----
+
+Next: [Create a LWK signer](signer.md)

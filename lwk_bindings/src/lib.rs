@@ -26,6 +26,9 @@ pub mod types;
 mod update;
 mod wollet;
 
+#[cfg(feature = "lightning")]
+pub mod lightning;
+
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;
 pub use blockdata::block_header::BlockHeader;

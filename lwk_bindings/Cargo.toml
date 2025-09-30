@@ -11,6 +11,7 @@ lwk_common = { version = "0.12.0" }
 lwk_signer = { version = "0.12.0" }
 lwk_wollet = { version = "0.12.0" }
 lwk_test_util = { version = "0.12.0" }
+lwk_boltz = { version = "0.1.0", optional = true }
 
 elements = "0.25.0"
 thiserror = "1.0.50"
@@ -26,6 +27,7 @@ name = "lwk"
 
 [features]
 foreign_bindings = []
+lightning = ["lwk_boltz"]
 
 [package.metadata.docs.rs]
 all-features = true

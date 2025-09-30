@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::sync::Arc;
+    use std::{env, sync::Arc};
 
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateReverseRequest, BOLTZ_REGTEST},
@@ -19,6 +19,39 @@ mod tests {
     };
     use lwk_boltz::{clients::ElectrumClient, LightningSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
+
+    #[tokio::test]
+    #[ignore = "mainnet"]
+    async fn test_session_submarine_mainnet() {
+        let _ = env_logger::try_init();
+
+        use lwk_common::Signer;
+        let mnemonic = env::var("MAINNET_MNEMONIC").unwrap();
+        let network = ElementsNetwork::Liquid;
+        let signer = lwk_signer::SwSigner::new(&mnemonic, true).unwrap();
+        let desc = signer.wpkh_slip77_descriptor().unwrap();
+        let desc: lwk_wollet::WolletDescriptor = desc.parse().unwrap();
+        let claim_address = desc.address(2, network.address_params()).unwrap();
+        log::info!("Claim Address: {}", claim_address);
+        let session = LightningSession::new(
+            network,
+            ElectrumClient::new(
+                "elements-mainnet.blockstream.info:50002",
+                true,
+                true,
+                network,
+            )
+            .unwrap(),
+        );
+        let response = session
+            .invoice(1000, Some("test".to_string()), claim_address.to_string())
+            .await
+            .unwrap();
+        log::info!("Invoice Response: {}", response.bolt11_invoice);
+        log::info!("Waiting for invoice to be paid");
+        let result = response.complete_pay().await;
+        log::info!("Complete Pay Result: {:?}", result);
+    }
 
     #[tokio::test]
     async fn test_reverse() {

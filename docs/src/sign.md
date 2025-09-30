@@ -30,6 +30,7 @@ so offline `Signer`s can have `Wollet`s instance to enhance the validation perfo
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:pset-details:ignore}}
 ```
 </section>
 
@@ -61,6 +62,7 @@ Once the PSET has enough signatures, you can broadcast to the Liquid Network.
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:sign:ignore}}
 ```
 </section>
 

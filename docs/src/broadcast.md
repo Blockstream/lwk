@@ -28,6 +28,7 @@ you can call `Wollet::apply_tx()`.
 <section>
 
 ```python
+{{#include ../../lwk_wasm/tests/node/basics.js:broadcast:ignore}}
 ```
 </section>
 

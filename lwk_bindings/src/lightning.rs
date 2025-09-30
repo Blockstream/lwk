@@ -64,20 +64,32 @@ impl LighthingSession {
     /// Prepare to pay a bolt11 invoice
     pub async fn prepare_pay(
         &self,
-        _invoice: &str,
-        _refund_address: &str,
+        invoice: &str,
+        // _refund_address: &str, // TODO
     ) -> Result<PreparePayResponse, LwkError> {
-        todo!()
+        self.inner
+            .prepare_pay(invoice)
+            .await
+            .map(Into::into)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Prepare pay failed: {:?}", e),
+            })
     }
 
     /// Create a new invoice for a given amount and a claim address to receive the payment
     pub async fn invoice(
         &self,
-        _amount: u64,
-        _description: Option<String>,
-        _claim_address: &str,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &str,
     ) -> Result<InvoiceResponse, LwkError> {
-        todo!()
+        self.inner
+            .invoice(amount, description, claim_address.to_string())
+            .await
+            .map(Into::into)
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Invoice failed: {:?}", e),
+            })
     }
 }
 

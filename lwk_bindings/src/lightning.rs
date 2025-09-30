@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::{ElectrumClient, LwkError, Network};
 
@@ -12,7 +12,30 @@ pub struct LighthingSession {
 
 #[derive(uniffi::Object)]
 pub struct PreparePayResponse {
-    inner: lwk_boltz::PreparePayResponse,
+    /// Using Option to allow consuming the inner value when complete_pay is called
+    inner: Mutex<Option<lwk_boltz::PreparePayResponse>>,
+}
+
+#[derive(uniffi::Object)]
+pub struct InvoiceResponse {
+    /// Using Option to allow consuming the inner value when complete_pay is called
+    inner: Mutex<Option<lwk_boltz::InvoiceResponse>>,
+}
+
+impl From<lwk_boltz::PreparePayResponse> for PreparePayResponse {
+    fn from(inner: lwk_boltz::PreparePayResponse) -> Self {
+        Self {
+            inner: Mutex::new(Some(inner)),
+        }
+    }
+}
+
+impl From<lwk_boltz::InvoiceResponse> for InvoiceResponse {
+    fn from(inner: lwk_boltz::InvoiceResponse) -> Self {
+        Self {
+            inner: Mutex::new(Some(inner)),
+        }
+    }
 }
 
 #[uniffi::export]
@@ -45,5 +68,49 @@ impl LighthingSession {
         _refund_address: &str,
     ) -> Result<PreparePayResponse, LwkError> {
         todo!()
+    }
+
+    /// Create a new invoice for a given amount and a claim address to receive the payment
+    pub async fn invoice(
+        &self,
+        _amount: u64,
+        _description: Option<String>,
+        _claim_address: &str,
+    ) -> Result<InvoiceResponse, LwkError> {
+        todo!()
+    }
+}
+
+#[uniffi::export]
+impl PreparePayResponse {
+    pub async fn complete_pay(&self) -> Result<bool, LwkError> {
+        // Extract the inner value and drop the lock before awaiting
+        let inner = {
+            let mut lock = self.inner.lock()?;
+            lock.take().ok_or_else(|| LwkError::Generic {
+                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+            })?
+        };
+        // Now we can await without holding the lock
+        inner.complete_pay().await.map_err(|e| LwkError::Generic {
+            msg: format!("Complete pay failed: {:?}", e),
+        })
+    }
+}
+
+#[uniffi::export]
+impl InvoiceResponse {
+    pub async fn complete_pay(&self) -> Result<bool, LwkError> {
+        // Extract the inner value and drop the lock before awaiting
+        let inner = {
+            let mut lock = self.inner.lock()?;
+            lock.take().ok_or_else(|| LwkError::Generic {
+                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+            })?
+        };
+        // Now we can await without holding the lock
+        inner.complete_pay().await.map_err(|e| LwkError::Generic {
+            msg: format!("Complete pay failed: {:?}", e),
+        })
     }
 }

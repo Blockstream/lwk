@@ -6,7 +6,7 @@ use crate::{ElectrumClient, LwkError, Network};
 ///
 /// Lightning payments are done via LBTC swaps using Boltz.
 #[derive(uniffi::Object)]
-pub struct LighthingSession {
+pub struct LightningSession {
     inner: lwk_boltz::LighthingSession,
 }
 
@@ -39,7 +39,7 @@ impl From<lwk_boltz::InvoiceResponse> for InvoiceResponse {
 }
 
 #[uniffi::export]
-impl LighthingSession {
+impl LightningSession {
     /// Create the lightning session
     ///
     /// Note the passed `ElectrumClient` should not be referenced elsewhere and it will be consumed

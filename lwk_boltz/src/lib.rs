@@ -28,7 +28,7 @@ use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
 
-pub struct LighthingSession {
+pub struct LightningSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
@@ -40,7 +40,7 @@ pub enum Error {
     InvalidInvoice,
 }
 
-impl LighthingSession {
+impl LightningSession {
     /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
     // TODO: add mnemonic as param to generate deterministic keypairs
     pub fn new(

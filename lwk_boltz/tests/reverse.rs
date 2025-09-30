@@ -17,7 +17,7 @@ mod tests {
         util::{secrets::Preimage, sleep},
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, LighthingSession};
+    use lwk_boltz::{clients::ElectrumClient, LightningSession};
     use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -44,7 +44,7 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = utils::start_block_mining();
 
-        let session = LighthingSession::new(
+        let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
             ElectrumClient::new(
                 DEFAULT_REGTEST_NODE,

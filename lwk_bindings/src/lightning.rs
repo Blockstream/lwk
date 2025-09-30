@@ -7,7 +7,7 @@ use crate::{ElectrumClient, LwkError, Network};
 /// Lightning payments are done via LBTC swaps using Boltz.
 #[derive(uniffi::Object)]
 pub struct LightningSession {
-    inner: lwk_boltz::LighthingSession,
+    inner: lwk_boltz::LightningSession,
 }
 
 #[derive(uniffi::Object)]
@@ -57,7 +57,7 @@ impl LightningSession {
             })?;
 
         let client = lwk_boltz::clients::ElectrumClient::from_client(inner_client, network.into());
-        let inner = lwk_boltz::LighthingSession::new(network.into(), client);
+        let inner = lwk_boltz::LightningSession::new(network.into(), client);
         Ok(Self { inner })
     }
 

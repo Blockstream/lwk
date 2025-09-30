@@ -91,12 +91,3 @@ impl ElectrumClient {
         Ok(Arc::new(tip.into()))
     }
 }
-
-impl ElectrumClient {
-    pub(crate) fn into_inner(
-        self,
-    ) -> Result<lwk_wollet::ElectrumClient, std::sync::PoisonError<lwk_wollet::ElectrumClient>>
-    {
-        self.inner.into_inner()
-    }
-}

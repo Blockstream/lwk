@@ -2235,6 +2235,7 @@ dependencies = [
  "lwk_wollet",
  "serde_json",
  "thiserror 1.0.69",
+ "tokio",
  "uniffi",
 ]
 

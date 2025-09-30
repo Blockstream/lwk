@@ -1,6 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
-use crate::{ElectrumClient, LwkError, Network};
+use crate::{LwkError, Network};
+use tokio::runtime::Runtime;
 
 /// A session to pay and receive lightning payments.
 ///
@@ -8,34 +9,21 @@ use crate::{ElectrumClient, LwkError, Network};
 #[derive(uniffi::Object)]
 pub struct LightningSession {
     inner: lwk_boltz::LightningSession,
+    runtime: Runtime,
 }
 
 #[derive(uniffi::Object)]
 pub struct PreparePayResponse {
     /// Using Option to allow consuming the inner value when complete_pay is called
     inner: Mutex<Option<lwk_boltz::PreparePayResponse>>,
+    runtime: Runtime,
 }
 
 #[derive(uniffi::Object)]
 pub struct InvoiceResponse {
     /// Using Option to allow consuming the inner value when complete_pay is called
     inner: Mutex<Option<lwk_boltz::InvoiceResponse>>,
-}
-
-impl From<lwk_boltz::PreparePayResponse> for PreparePayResponse {
-    fn from(inner: lwk_boltz::PreparePayResponse) -> Self {
-        Self {
-            inner: Mutex::new(Some(inner)),
-        }
-    }
-}
-
-impl From<lwk_boltz::InvoiceResponse> for InvoiceResponse {
-    fn from(inner: lwk_boltz::InvoiceResponse) -> Self {
-        Self {
-            inner: Mutex::new(Some(inner)),
-        }
-    }
+    runtime: Runtime,
 }
 
 #[uniffi::export]
@@ -54,45 +42,75 @@ impl LightningSession {
             .map_err(lwk_wollet::Error::Url)?;
         let client = lwk_wollet::ElectrumClient::new(&url)?;
         let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
-        let inner = lwk_boltz::LightningSession::new(network.into(), client);
-        Ok(Self { inner })
+
+        let runtime = Runtime::new().map_err(|e| LwkError::Generic {
+            msg: format!("Failed to create tokio runtime: {}", e),
+        })?;
+
+        // Enter the runtime context before creating the inner session
+        // because lwk_boltz::LightningSession::new calls tokio::spawn
+        let inner = {
+            let _guard = runtime.enter();
+            lwk_boltz::LightningSession::new(network.into(), client)
+        };
+
+        Ok(Self { inner, runtime })
     }
 
     /// Prepare to pay a bolt11 invoice
-    pub async fn prepare_pay(
+    pub fn prepare_pay(
         &self,
         invoice: &str,
         // _refund_address: &str, // TODO
     ) -> Result<PreparePayResponse, LwkError> {
-        self.inner
-            .prepare_pay(invoice)
-            .await
-            .map(Into::into)
+        let response = self
+            .runtime
+            .block_on(self.inner.prepare_pay(invoice))
             .map_err(|e| LwkError::Generic {
                 msg: format!("Prepare pay failed: {:?}", e),
-            })
+            })?;
+
+        let runtime = Runtime::new().map_err(|e| LwkError::Generic {
+            msg: format!("Failed to create tokio runtime: {}", e),
+        })?;
+
+        Ok(PreparePayResponse {
+            inner: Mutex::new(Some(response)),
+            runtime,
+        })
     }
 
     /// Create a new invoice for a given amount and a claim address to receive the payment
-    pub async fn invoice(
+    pub fn invoice(
         &self,
         amount: u64,
         description: Option<String>,
         claim_address: &str,
     ) -> Result<InvoiceResponse, LwkError> {
-        self.inner
-            .invoice(amount, description, claim_address.to_string())
-            .await
-            .map(Into::into)
+        let response = self
+            .runtime
+            .block_on(
+                self.inner
+                    .invoice(amount, description, claim_address.to_string()),
+            )
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {:?}", e),
-            })
+            })?;
+
+        let runtime = Runtime::new().map_err(|e| LwkError::Generic {
+            msg: format!("Failed to create tokio runtime: {}", e),
+        })?;
+
+        Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+            runtime,
+        })
     }
 }
 
 #[uniffi::export]
 impl PreparePayResponse {
-    pub async fn complete_pay(&self) -> Result<bool, LwkError> {
+    pub fn complete_pay(&self) -> Result<bool, LwkError> {
         // Extract the inner value and drop the lock before awaiting
         let inner = {
             let mut lock = self.inner.lock()?;
@@ -101,15 +119,29 @@ impl PreparePayResponse {
             })?
         };
         // Now we can await without holding the lock
-        inner.complete_pay().await.map_err(|e| LwkError::Generic {
-            msg: format!("Complete pay failed: {:?}", e),
-        })
+        self.runtime
+            .block_on(inner.complete_pay())
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Complete pay failed: {:?}", e),
+            })
     }
 }
 
 #[uniffi::export]
 impl InvoiceResponse {
-    pub async fn complete_pay(&self) -> Result<bool, LwkError> {
+    pub fn bolt11_invoice(&self) -> Result<String, LwkError> {
+        Ok({
+            let lock = self.inner.lock()?;
+            lock.as_ref()
+                .ok_or_else(|| LwkError::Generic {
+                    msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+                })?
+                .bolt11_invoice
+                .clone()
+        })
+    }
+
+    pub fn complete_pay(&self) -> Result<bool, LwkError> {
         // Extract the inner value and drop the lock before awaiting
         let inner = {
             let mut lock = self.inner.lock()?;
@@ -118,8 +150,10 @@ impl InvoiceResponse {
             })?
         };
         // Now we can await without holding the lock
-        inner.complete_pay().await.map_err(|e| LwkError::Generic {
-            msg: format!("Complete pay failed: {:?}", e),
-        })
+        self.runtime
+            .block_on(inner.complete_pay())
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Complete pay failed: {:?}", e),
+            })
     }
 }

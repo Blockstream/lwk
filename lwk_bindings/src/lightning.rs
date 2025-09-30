@@ -37,4 +37,13 @@ impl LighthingSession {
         let inner = lwk_boltz::LighthingSession::new(network.into(), client);
         Ok(Self { inner })
     }
+
+    /// Prepare to pay a bolt11 invoice
+    pub async fn prepare_pay(
+        &self,
+        _invoice: &str,
+        _refund_address: &str,
+    ) -> Result<PreparePayResponse, LwkError> {
+        todo!()
+    }
 }

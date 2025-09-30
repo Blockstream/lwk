@@ -32,7 +32,7 @@ Then you can create a software signer with `SwSigner::new()`.
 <section>
 
 ```python
-{{#include ../snippets/python/signer.py:generate-signer}}
+{{#include ../../lwk_bindings/tests/bindings/basics.py:generate-signer:ignore}}
 ```
 </section>
 
@@ -64,6 +64,7 @@ The xpub is obtained with `Signer::keyorigin_xpub()`, which also includes the ke
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/basics.py:get-xpub:ignore}}
 ```
 </section>
 

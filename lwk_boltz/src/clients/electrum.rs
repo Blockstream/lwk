@@ -16,6 +16,13 @@ pub struct ElectrumClient {
 }
 
 impl ElectrumClient {
+    pub fn from_client(client: lwk_wollet::ElectrumClient, network: ElementsNetwork) -> Self {
+        Self {
+            inner: Arc::new(client),
+            network,
+        }
+    }
+
     pub fn new(
         url: &str,
         tls: bool,

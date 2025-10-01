@@ -129,9 +129,10 @@ impl LightningSession {
                     bolt11_invoice: bolt11_invoice.to_string(),
                 })
             }
-            _ => {
-                panic!("Unexpected update: {}", update.status);
-            }
+            _ => Err(Error::UnexpectedUpdate {
+                swap_id: update.id,
+                status: update.status,
+            }),
         }
     }
 

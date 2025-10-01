@@ -1,3 +1,4 @@
+use boltz_client::boltz::SwapStatus;
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
 
@@ -11,6 +12,9 @@ pub enum Error {
 
     #[error("Receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),
+
+    #[error("Unexpected status {status} for swap {swap_id}")]
+    UnexpectedUpdate { swap_id: String, status: String },
 }
 
 impl From<BoltzError> for Error {

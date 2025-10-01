@@ -79,7 +79,7 @@ impl LightningSession {
             inner: our_keys.public_key(),
         };
 
-        let addrs_sig = sign_address(&claim_address, &our_keys).unwrap();
+        let addrs_sig = sign_address(&claim_address, &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
             from: "BTC".to_string(),
             to: chain.to_string(),
@@ -109,20 +109,22 @@ impl LightningSession {
         log::debug!("Got Reverse swap response: {reverse_resp:?}");
 
         let swap_script =
-            SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key).unwrap();
+            SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
         let swap_id = reverse_resp.id.clone();
 
-        self.ws.subscribe_swap(&swap_id).await.unwrap();
+        self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        // TODO "swap.created"
-        let update = rx.recv().await.unwrap();
+        let update = rx.recv().await?;
         match update.status.as_str() {
             "swap.created" => {
                 log::info!("Waiting for Invoice to be paid: {}", &invoice);
             }
             _ => {
-                panic!("Unexpected update: {}", update.status);
+                Err(Error::UnexpectedUpdate {
+                    swap_id: swap_id.clone(),
+                    status: update.status,
+                })?;
             }
         }
 

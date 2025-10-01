@@ -94,7 +94,11 @@ impl LightningSession {
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;
 
         let fee = create_swap_response.expected_amount
-            - bolt11_parsed.amount_milli_satoshis().unwrap() / 1000;
+            - bolt11_parsed
+                .amount_milli_satoshis()
+                .ok_or(Error::InvoiceWithoutAmount(bolt11_invoice.to_string()))?
+                / 1000;
+
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
         create_swap_response.validate(&bolt11_invoice, &refund_public_key, chain)?;

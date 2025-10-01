@@ -15,6 +15,9 @@ pub enum Error {
 
     #[error("Unexpected status {status} for swap {swap_id}")]
     UnexpectedUpdate { swap_id: String, status: String },
+
+    #[error("Invoice without amount {0}")]
+    InvoiceWithoutAmount(String),
 }
 
 impl From<BoltzError> for Error {

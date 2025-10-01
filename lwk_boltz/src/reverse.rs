@@ -21,14 +21,11 @@ use crate::LightningSession;
 pub struct InvoiceResponse {
     pub swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
-    /// However, the receiver will receive `amount - swap_fee - network_fee`
+    /// However, the receiver will receive `amount - fee`
     pub bolt11_invoice: String,
 
     /// The fee of the swap provider
-    pub swap_fee: u64,
-
-    /// The network fee (fee of the onchain transaction)
-    pub network_fee: u64,
+    pub fee: u64,
 
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
     swap_script: SwapScript,
@@ -76,6 +73,9 @@ impl LightningSession {
             .as_ref()
             .ok_or(Error::MissingInvoiceInResponse(reverse_resp.id.clone()))?
             .clone();
+        let fee = amount.checked_sub(reverse_resp.onchain_amount).ok_or(
+            Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
+        )?;
 
         let _ = check_for_mrh(&self.api, &invoice, chain).await?.ok_or(
             Error::MagicRoutingHintNotSupportedForNow(reverse_resp.id.clone()),
@@ -106,8 +106,7 @@ impl LightningSession {
         Ok(InvoiceResponse {
             swap_id,
             bolt11_invoice: invoice,
-            swap_fee: 0,    // TODO: populate fee correctly
-            network_fee: 0, // TODO: populate fee correctly
+            fee,
             rx,
             swap_script,
             api: self.api.clone(),

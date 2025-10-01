@@ -122,7 +122,7 @@ impl LightningSession {
 impl InvoiceResponse {
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
-            let update = self.rx.recv().await.unwrap();
+            let update = self.rx.recv().await?;
             match update.status.as_str() {
                 "transaction.mempool" => {
                     log::info!("Boltz broadcasted funding tx");
@@ -144,10 +144,9 @@ impl InvoiceResponse {
                                 boltz_client: &self.api,
                             },
                         )
-                        .await
-                        .unwrap();
+                        .await?;
 
-                    self.chain_client.broadcast_tx(&tx).await.unwrap();
+                    self.chain_client.broadcast_tx(&tx).await?;
 
                     log::info!("Successfully broadcasted claim tx!");
                     log::debug!("Claim Tx {tx:?}");
@@ -158,7 +157,10 @@ impl InvoiceResponse {
                     break Ok(true);
                 }
                 _ => {
-                    panic!("Unexpected update: {}", update.status);
+                    Err(Error::UnexpectedUpdate {
+                        swap_id: self.swap_id.clone(),
+                        status: update.status,
+                    })?;
                 }
             }
             log::info!("Got Update from server: {}", update.status);

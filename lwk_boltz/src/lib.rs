@@ -91,7 +91,7 @@ impl LightningSession {
             webhook: None,
         };
 
-        let create_swap_response = self.api.post_swap_req(&create_swap_req).await.unwrap();
+        let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;
 
         let fee = create_swap_response.expected_amount
             - bolt11_parsed.amount_milli_satoshis().unwrap() / 1000;

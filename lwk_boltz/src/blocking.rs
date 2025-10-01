@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::Error;
+use lwk_wollet::ElementsNetwork;
+
+use crate::{clients::ElectrumClient, Error};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -18,11 +20,11 @@ pub struct InvoiceResponse {
 }
 
 impl LightningSession {
-    pub fn new(inner: super::LightningSession) -> Result<Self, Error> {
-        Ok(Self {
-            inner,
-            runtime: Arc::new(tokio::runtime::Runtime::new()?),
-        })
+    pub fn new(network: ElementsNetwork, client: ElectrumClient) -> Result<Self, Error> {
+        let runtime = Arc::new(tokio::runtime::Runtime::new()?);
+        let _guard = runtime.enter();
+        let inner = super::LightningSession::new(network, client);
+        Ok(Self { inner, runtime })
     }
 
     pub fn prepare_pay(&self, bolt11_invoice: &str) -> Result<PreparePayResponse, Error> {

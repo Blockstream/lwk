@@ -120,7 +120,7 @@ impl LightningSession {
 impl PreparePayResponse {
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
-            let update = self.rx.recv().await.unwrap();
+            let update = self.rx.recv().await?;
             log::info!("Got Update from server: {}", update.status);
             log::debug!("Update: {update:?}");
             match update.status.as_str() {
@@ -137,8 +137,7 @@ impl PreparePayResponse {
                             &self.bolt11_invoice,
                             &self.api,
                         )
-                        .await
-                        .unwrap();
+                        .await?;
                     log::debug!("Received claim tx details : {response:?}");
                 }
 
@@ -182,7 +181,10 @@ impl PreparePayResponse {
                     log::info!("Non-cooperative Refund Successfully broadcasted: {}", txid);*/
                 }
                 _ => {
-                    panic!("Unexpected update: {}", update.status);
+                    Err(Error::UnexpectedUpdate {
+                        swap_id: self.swap_id.clone(),
+                        status: update.status,
+                    })?;
                 }
             };
         }

@@ -107,7 +107,7 @@ impl LightningSession {
 
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
-        let update = rx.recv().await.unwrap();
+        let update = rx.recv().await?;
         match update.status.as_str() {
             "invoice.set" => {
                 log::info!(

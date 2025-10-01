@@ -8,6 +8,9 @@ pub enum Error {
 
     #[error("Boltz API error: {0}")]
     BoltzApi(BoltzError),
+
+    #[error("Receiver error: {0}")]
+    Receiver(#[from] tokio::sync::broadcast::error::RecvError),
 }
 
 impl From<BoltzError> for Error {

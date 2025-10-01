@@ -18,6 +18,9 @@ pub enum Error {
 
     #[error("Invoice without amount {0}")]
     InvoiceWithoutAmount(String),
+
+    #[error("Expected amount {0} is lower than amount in invoice {1}")]
+    ExpectedAmountLowerThanInvoice(u64, String),
 }
 
 impl From<BoltzError> for Error {

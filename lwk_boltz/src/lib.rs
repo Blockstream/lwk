@@ -102,10 +102,9 @@ impl LightningSession {
             .ok_or(Error::MissingInvoiceInResponse(reverse_resp.id.clone()))?
             .clone();
 
-        let _ = check_for_mrh(&self.api, &invoice, chain)
-            .await
-            .unwrap()
-            .unwrap();
+        let _ = check_for_mrh(&self.api, &invoice, chain).await?.ok_or(
+            Error::MagicRoutingHintNotSupportedForNow(reverse_resp.id.clone()),
+        )?;
 
         log::debug!("Got Reverse swap response: {reverse_resp:?}");
 

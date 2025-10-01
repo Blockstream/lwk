@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("Missing invoice in response for swap id {0}")]
     MissingInvoiceInResponse(String),
+
+    #[error("Magic routing hint not supported for now. Swap id {0}")]
+    MagicRoutingHintNotSupportedForNow(String),
 }
 
 impl From<BoltzError> for Error {

@@ -157,7 +157,7 @@ impl InvoiceResponse {
                     break Ok(true);
                 }
                 _ => {
-                    Err(Error::UnexpectedUpdate {
+                    return Err(Error::UnexpectedUpdate {
                         swap_id: self.swap_id.clone(),
                         status: update.status,
                     })?;

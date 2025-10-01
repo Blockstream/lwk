@@ -97,19 +97,16 @@ impl LightningSession {
             - bolt11_parsed.amount_milli_satoshis().unwrap() / 1000;
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        create_swap_response
-            .validate(&bolt11_invoice, &refund_public_key, chain)
-            .unwrap();
+        create_swap_response.validate(&bolt11_invoice, &refund_public_key, chain)?;
         log::info!("VALIDATED RESPONSE!");
 
         let swap_script =
-            SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)
-                .unwrap();
+            SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)?;
         let swap_id = create_swap_response.id.clone();
         log::info!("Created Swap Script id:{swap_id} swap_script:{swap_script:?}");
 
         let mut rx = self.ws.updates();
-        self.ws.subscribe_swap(&swap_id).await.unwrap();
+        self.ws.subscribe_swap(&swap_id).await?;
         let update = rx.recv().await.unwrap();
         match update.status.as_str() {
             "invoice.set" => {

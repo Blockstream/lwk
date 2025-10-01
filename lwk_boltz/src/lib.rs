@@ -18,6 +18,8 @@ use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
 pub use crate::error::Error;
+pub use crate::reverse::InvoiceResponse;
+pub use crate::submarine::PreparePayResponse;
 
 pub struct LightningSession {
     ws: Arc<BoltzWsApi>,

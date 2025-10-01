@@ -23,7 +23,7 @@ test-reverse: regtest-env-start
     set -e
     export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
     export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
-    cargo test --test reverse -- --nocapture
+    RUST_LOG=info cargo test --test reverse -- test_session_reverse --nocapture
 
 # Run submarine swap test
 test-submarine: regtest-env-start
@@ -31,4 +31,4 @@ test-submarine: regtest-env-start
     set -e
     export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
     export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
-    cargo test --test submarine -- --nocapture
+    RUST_LOG=info cargo test --test submarine -- test_session_submarine --nocapture

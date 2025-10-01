@@ -1,5 +1,6 @@
 pub mod clients;
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use boltz_client::boltz::BoltzApiClientV2;
@@ -21,6 +22,7 @@ use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
+use boltz_client::Bolt11Invoice;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
 use lwk_wollet::secp256k1::rand::thread_rng;
@@ -73,6 +75,7 @@ impl LightningSession {
         // refund_address: elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
+        let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice).unwrap();
 
         let secp = Secp256k1::new();
         let our_keys = Keypair::new(&secp, &mut thread_rng());
@@ -93,6 +96,8 @@ impl LightningSession {
 
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await.unwrap();
 
+        let fee = create_swap_response.expected_amount
+            - bolt11_parsed.amount_milli_satoshis().unwrap() / 1000;
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
         create_swap_response
@@ -122,7 +127,7 @@ impl LightningSession {
                     uri: create_swap_response.bip21,
                     address: create_swap_response.address,
                     amount: create_swap_response.expected_amount,
-                    fee: 0, // TODO: populate fee correctly
+                    fee,
                     rx,
                     swap_script,
                     api: self.api.clone(),

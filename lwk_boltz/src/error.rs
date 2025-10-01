@@ -26,6 +26,9 @@ pub enum Error {
 
     #[error("Magic routing hint not supported for now. Swap id {0}")]
     MagicRoutingHintNotSupportedForNow(String),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl From<BoltzError> for Error {

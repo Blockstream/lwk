@@ -95,8 +95,12 @@ impl LightningSession {
             webhook: None,
         };
 
-        let reverse_resp = self.api.post_reverse_req(create_reverse_req).await.unwrap();
-        let invoice = reverse_resp.invoice.clone().unwrap();
+        let reverse_resp = self.api.post_reverse_req(create_reverse_req).await?;
+        let invoice = reverse_resp
+            .invoice
+            .as_ref()
+            .ok_or(Error::MissingInvoiceInResponse(reverse_resp.id.clone()))?
+            .clone();
 
         let _ = check_for_mrh(&self.api, &invoice, chain)
             .await

@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("Expected amount {0} is lower than amount in invoice {1}")]
     ExpectedAmountLowerThanInvoice(u64, String),
+
+    #[error("Missing invoice in response for swap id {0}")]
+    MissingInvoiceInResponse(String),
 }
 
 impl From<BoltzError> for Error {

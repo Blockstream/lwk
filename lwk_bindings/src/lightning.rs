@@ -38,12 +38,12 @@ impl LightningSession {
             .map_err(lwk_wollet::Error::Url)?;
         let client = lwk_wollet::ElectrumClient::new(&url)?;
         let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
-        let async_session = lwk_boltz::LightningSession::new(network.into(), client);
-        let inner = lwk_boltz::blocking::LightningSession::new(async_session).map_err(|e| {
-            LwkError::Generic {
-                msg: format!("Failed to create blocking lightning session: {:?}", e),
-            }
-        })?;
+        let inner =
+            lwk_boltz::blocking::LightningSession::new(network.into(), client).map_err(|e| {
+                LwkError::Generic {
+                    msg: format!("Failed to create blocking lightning session: {:?}", e),
+                }
+            })?;
         Ok(Self { inner })
     }
 

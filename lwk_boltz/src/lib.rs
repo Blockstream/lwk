@@ -72,7 +72,7 @@ impl LightningSession {
         // refund_address: elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
-        let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice).unwrap();
+        let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice)?;
 
         let secp = Secp256k1::new();
         let our_keys = Keypair::new(&secp, &mut thread_rng());

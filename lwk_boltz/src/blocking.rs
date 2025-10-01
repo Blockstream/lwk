@@ -56,11 +56,19 @@ impl PreparePayResponse {
         let inner = self.runtime.block_on(self.inner.complete_pay())?;
         Ok(inner)
     }
+
+    pub fn uri(&self) -> String {
+        self.inner.uri.clone()
+    }
 }
 
 impl InvoiceResponse {
     pub fn complete_pay(self) -> Result<bool, Error> {
         let inner = self.runtime.block_on(self.inner.complete_pay())?;
         Ok(inner)
+    }
+
+    pub fn bolt11_invoice(&self) -> String {
+        self.inner.bolt11_invoice.clone()
     }
 }

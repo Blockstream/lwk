@@ -125,6 +125,20 @@ impl PreparePayResponse {
                 msg: format!("Complete pay failed: {:?}", e),
             })
     }
+
+    pub fn uri(&self) -> Result<String, LwkError> {
+        Ok({
+            self.inner
+                .lock()?
+                .as_ref()
+                .ok_or_else(|| LwkError::Generic {
+                    msg: "This PreparePayResponse already called complete_pay or errored"
+                        .to_string(),
+                })?
+                .uri
+                .clone()
+        })
+    }
 }
 
 #[uniffi::export]

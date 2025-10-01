@@ -1,3 +1,4 @@
+pub mod blocking;
 pub mod clients;
 mod error;
 mod reverse;

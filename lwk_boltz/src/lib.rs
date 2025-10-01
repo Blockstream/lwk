@@ -1,4 +1,5 @@
 pub mod clients;
+mod error;
 
 use std::str::FromStr;
 use std::sync::Arc;
@@ -29,17 +30,13 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
+pub use crate::error::Error;
 
 pub struct LightningSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
-}
-
-#[derive(Debug)]
-pub enum Error {
-    InvalidInvoice,
 }
 
 impl LightningSession {

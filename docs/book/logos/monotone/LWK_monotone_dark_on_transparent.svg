@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 2007.5 1008.5">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-3 {
+        fill: #0d1437;
+      }
+
+      .cls-4 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <clipPath id="clippath">
+      <path class="cls-1" d="M910.5,586.2v-163.9c0-17-9.1-32.7-23.8-41.3l-142-82c-14.7-8.5-32.9-8.5-47.6,0l-142,82c-14.7,8.5-23.8,24.2-23.8,41.3v163.9c0,17,9.1,32.7,23.8,41.3l142,82c14.7,8.5,32.9,8.5,47.6,0l142-82c14.7-8.5,23.8-24.2,23.8-41.3Z"/>
+    </clipPath>
+  </defs>
+  <!-- Generator: Adobe Illustrator 28.6.0, SVG Export Plug-In . SVG Version: 1.2.0 Build 709)  -->
+  <g>
+    <g id="Layer_1">
+      <g id="Layer_1-2" data-name="Layer_1">
+        <g>
+          <g class="cls-4">
+            <g>
+              <polygon class="cls-3" points="531.3 513.4 618.8 563.6 618.1 663.9 531.3 613.7 531.3 513.4"/>
+              <polygon class="cls-3" points="723 500.2 789.4 461.6 672.9 394.8 791.7 326.2 720.9 285.3 534.8 392.8 723 500.2"/>
+              <polygon class="cls-3" points="717.5 721.2 719.5 506.2 531.3 398.8 531.3 476.7 650.9 545.2 650 682.2 717.5 721.2"/>
+              <path class="cls-2" d="M910.5,394.8"/>
+              <polygon class="cls-3" points="792.6 467.7 726.5 506.2 724.5 721.1 910.5 613.7 910.5 532.9 791.7 601.5 792.6 467.7"/>
+              <polygon class="cls-3" points="824.3 449.2 823.6 546 910.5 495.8 910.5 398.9 824.3 449.2"/>
+              <polygon class="cls-3" points="907.3 393 823.6 344.6 736.7 394.8 821.1 443.1 907.3 393"/>
+            </g>
+          </g>
+          <g>
+            <path class="cls-3" d="M1018.8,584.1v-189h30.3v163.6h86.1v25.5h-116.5.1Z"/>
+            <path class="cls-3" d="M1171.8,584.1l-13.5-189h26.5l6.8,110,3,48.5h2.2l21.4-112.7h30.1l21.4,112.7h2.2l3-48.5,7.1-110h25.5l-13.5,189h-40.6l-19.2-109.4h-2.2l-19.2,109.4h-41Z"/>
+            <path class="cls-3" d="M1390.9,497.2l-22.8,28.4v58.5h-30.3v-189h30.3v90.5h1.4l23-31.4,46.3-59h34.9l-62.3,79.6,64.7,109.4h-34.7l-50.6-86.9h0Z"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

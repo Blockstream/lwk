@@ -1,4 +1,3 @@
-use boltz_client::boltz::SwapStatus;
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
 

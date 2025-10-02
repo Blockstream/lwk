@@ -17,6 +17,7 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
 use crate::LightningSession;
+use crate::WAIT_TIME;
 
 pub struct InvoiceResponse {
     pub swap_id: String,
@@ -126,7 +127,6 @@ impl InvoiceResponse {
                 "transaction.mempool" => {
                     log::info!("Boltz broadcasted funding tx");
 
-                    const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
                     sleep(WAIT_TIME).await; // TODO better way to wait
 
                     let tx = self

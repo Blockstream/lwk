@@ -22,6 +22,8 @@ pub use crate::error::Error;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 
+pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+
 pub struct LightningSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,

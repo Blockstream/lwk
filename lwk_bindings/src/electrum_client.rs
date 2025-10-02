@@ -8,6 +8,8 @@ use crate::{BlockHeader, LwkError, Transaction, Txid, Update, Wollet};
 #[derive(uniffi::Object, Debug)]
 pub struct ElectrumClient {
     inner: Arc<Mutex<lwk_wollet::ElectrumClient>>,
+
+    #[allow(unused)] // TODO remove once lwk_boltz is integrated
     url: lwk_wollet::ElectrumUrl,
 }
 
@@ -96,6 +98,7 @@ impl ElectrumClient {
 
 impl ElectrumClient {
     /// Create a new electrum client with the same connection parameters
+    #[allow(unused)] // TODO remove once lwk_boltz is integrated
     pub(crate) fn clone_client(&self) -> Result<lwk_wollet::ElectrumClient, LwkError> {
         Ok(lwk_wollet::ElectrumClient::new(&self.url)?)
     }

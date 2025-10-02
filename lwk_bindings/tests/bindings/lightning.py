@@ -10,7 +10,7 @@ print(claim_address)
 
 lightning_session = LightningSession(network, "elements-mainnet.blockstream.info:50002", True, True, 10)
 
-invoice_response = lightning_session.invoice(1000, "ciao", str(claim_address))
+invoice_response = lightning_session.invoice(1000, "ciao", claim_address)
 bolt11_invoice = invoice_response.bolt11_invoice()
 print(bolt11_invoice)
 assert bolt11_invoice.startswith("lnbc1")

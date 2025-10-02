@@ -51,11 +51,11 @@ impl LightningSession {
     pub fn prepare_pay(
         &self,
         invoice: &str,
-        // _refund_address: &str, // TODO
+        refund_address: &str,
     ) -> Result<PreparePayResponse, LwkError> {
         let response = self
             .inner
-            .prepare_pay(invoice)
+            .prepare_pay(invoice, refund_address)
             .map_err(|e| LwkError::Generic {
                 msg: format!("Prepare pay failed: {:?}", e),
             })?;

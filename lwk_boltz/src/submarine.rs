@@ -91,7 +91,12 @@ impl LightningSession {
 
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
-        let update = rx.recv().await?;
+        let update = tokio::select! {
+            update = rx.recv() => update?,
+            _ = tokio::time::sleep(self.timeout) => {
+                return Err(Error::Timeout(swap_id.clone()));
+            }
+        };
         match update.status.as_str() {
             "invoice.set" => {
                 log::info!(

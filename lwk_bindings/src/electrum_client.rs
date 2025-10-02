@@ -7,7 +7,8 @@ use crate::{BlockHeader, LwkError, Transaction, Txid, Update, Wollet};
 /// A client to issue TCP requests to an electrum server.
 #[derive(uniffi::Object, Debug)]
 pub struct ElectrumClient {
-    inner: Mutex<lwk_wollet::ElectrumClient>,
+    inner: Arc<Mutex<lwk_wollet::ElectrumClient>>,
+    url: lwk_wollet::ElectrumUrl,
 }
 
 #[uniffi::export]
@@ -23,7 +24,8 @@ impl ElectrumClient {
             .map_err(lwk_wollet::Error::Url)?;
         let client = lwk_wollet::ElectrumClient::new(&url)?;
         Ok(Arc::new(Self {
-            inner: Mutex::new(client),
+            inner: Arc::new(Mutex::new(client)),
+            url,
         }))
     }
 
@@ -89,5 +91,12 @@ impl ElectrumClient {
     pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
+    }
+}
+
+impl ElectrumClient {
+    /// Create a new electrum client with the same connection parameters
+    pub(crate) fn clone_client(&self) -> Result<lwk_wollet::ElectrumClient, LwkError> {
+        Ok(lwk_wollet::ElectrumClient::new(&self.url)?)
     }
 }

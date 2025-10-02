@@ -39,7 +39,7 @@ mod tests {
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
         log::info!("creating invoice for mainnet address: {}", mainnet_addr);
         let invoice_response = session
-            .invoice(1000, Some("test".to_string()), mainnet_addr.to_string())
+            .invoice(1000, Some("test".to_string()), &mainnet_addr)
             .await
             .unwrap();
         assert!(invoice_response.bolt11_invoice.starts_with("lnbc1"));
@@ -70,7 +70,7 @@ mod tests {
             Some(TIMEOUT),
         );
         let response = session
-            .invoice(1000, Some("test".to_string()), claim_address.to_string())
+            .invoice(1000, Some("test".to_string()), &claim_address)
             .await
             .unwrap();
         log::info!("Invoice Response: {}", response.bolt11_invoice);
@@ -117,10 +117,8 @@ mod tests {
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
-        let invoice = session
-            .invoice(100000, None, claim_address.to_string())
-            .await
-            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let invoice = session.invoice(100000, None, &claim_address).await.unwrap();
         log::info!("Invoice: {}", invoice.bolt11_invoice);
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice.clone());
         invoice.complete_pay().await.unwrap();

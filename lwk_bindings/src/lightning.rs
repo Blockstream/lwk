@@ -73,11 +73,11 @@ impl LightningSession {
         &self,
         amount: u64,
         description: Option<String>,
-        claim_address: &str,
+        claim_address: &Address,
     ) -> Result<InvoiceResponse, LwkError> {
         let response = self
             .inner
-            .invoice(amount, description, claim_address.to_string())
+            .invoice(amount, description, claim_address.as_ref())
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {:?}", e),
             })?;

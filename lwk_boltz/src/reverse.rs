@@ -14,6 +14,7 @@ use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
+use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
@@ -34,7 +35,7 @@ pub struct InvoiceResponse {
     api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
     preimage: Preimage,
-    claim_address: String,
+    claim_address: elements::Address,
     chain_client: Arc<ChainClient>,
 }
 impl LightningSession {
@@ -42,7 +43,7 @@ impl LightningSession {
         &self,
         amount: u64,
         description: Option<String>,
-        claim_address: String, // TODO: use elements::Address
+        claim_address: &elements::Address,
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
         let secp = Secp256k1::new();
@@ -53,7 +54,7 @@ impl LightningSession {
             inner: our_keys.public_key(),
         };
 
-        let addrs_sig = sign_address(&claim_address, &our_keys)?;
+        let addrs_sig = sign_address(&claim_address.to_string(), &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
             from: "BTC".to_string(),
             to: chain.to_string(),
@@ -63,7 +64,7 @@ impl LightningSession {
             description,
             description_hash: None,
             address_signature: Some(addrs_sig.to_string()),
-            address: Some(claim_address.clone()),
+            address: Some(claim_address.to_string()),
             claim_public_key,
             referral_id: None, // Add address signature here.
             webhook: None,
@@ -119,7 +120,7 @@ impl LightningSession {
             api: self.api.clone(),
             our_keys,
             preimage,
-            claim_address,
+            claim_address: claim_address.clone(),
             chain_client: self.chain_client.clone(),
         })
     }
@@ -148,7 +149,7 @@ impl InvoiceResponse {
                             &self.preimage,
                             SwapTransactionParams {
                                 keys: self.our_keys,
-                                output_address: self.claim_address.clone(),
+                                output_address: self.claim_address.to_string(),
                                 fee: Fee::Relative(1.0),
                                 swap_id: self.swap_id.clone(),
                                 options: Some(TransactionOptions::default().with_cooperative(true)),

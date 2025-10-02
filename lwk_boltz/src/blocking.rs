@@ -49,7 +49,7 @@ impl LightningSession {
         &self,
         amount: u64,
         description: Option<String>,
-        claim_address: String,
+        claim_address: &elements::Address,
     ) -> Result<InvoiceResponse, Error> {
         let inner =
             self.runtime

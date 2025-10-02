@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
@@ -127,7 +128,14 @@ impl LightningSession {
 impl InvoiceResponse {
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
-            let update = self.rx.recv().await?;
+            let update = tokio::select! {
+                update = self.rx.recv() => update?,
+                _ = tokio::time::sleep(Duration::from_secs(180)) => {
+                    // We use a conservartively long 3 minute timeout because the swap can take a
+                    // while to complete and also block confirmation may
+                    return Err(Error::Timeout(self.swap_id.clone()));
+                }
+            };
             match update.status.as_str() {
                 "transaction.mempool" => {
                     log::info!("Boltz broadcasted funding tx");

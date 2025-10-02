@@ -27,6 +27,9 @@ pub enum Error {
     #[error("Magic routing hint not supported for now. Swap id {0}")]
     MagicRoutingHintNotSupportedForNow(String),
 
+    #[error("Timeout waiting for swap update for swap {0}")]
+    Timeout(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }

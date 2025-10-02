@@ -87,17 +87,22 @@ impl LightningSession {
         let swap_script =
             SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
         let swap_id = reverse_resp.id.clone();
-
+        log::info!("subscribing to swap: {swap_id}");
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        let update = rx.recv().await?;
+        let update = tokio::select! {
+            update = rx.recv() => update?,
+            _ = tokio::time::sleep(self.timeout) => {
+                return Err(Error::Timeout(swap_id.clone()));
+            }
+        };
         match update.status.as_str() {
             "swap.created" => {
                 log::info!("Waiting for Invoice to be paid: {}", &invoice);
             }
             _ => {
-                Err(Error::UnexpectedUpdate {
+                return Err(Error::UnexpectedUpdate {
                     swap_id: swap_id.clone(),
                     status: update.status,
                 })?;

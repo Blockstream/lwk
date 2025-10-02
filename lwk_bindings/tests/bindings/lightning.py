@@ -8,7 +8,7 @@ wollet = Wollet(network, desc, datadir=None)
 claim_address = wollet.address(2).address()
 print(claim_address)
 
-lightning_session = LightningSession(network, "elements-mainnet.blockstream.info:50002", True, True)
+lightning_session = LightningSession(network, "elements-mainnet.blockstream.info:50002", True, True, 10)
 
 invoice_response = lightning_session.invoice(1000, "ciao", str(claim_address))
 bolt11_invoice = invoice_response.bolt11_invoice()

@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, sync::Arc};
+    use std::{env, str::FromStr, sync::Arc};
 
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateReverseRequest, BOLTZ_REGTEST},
@@ -18,7 +18,32 @@ mod tests {
         Keypair, PublicKey, Secp256k1,
     };
     use lwk_boltz::{clients::ElectrumClient, LightningSession};
-    use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
+    use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
+
+    #[tokio::test]
+    #[ignore = "mainnet"]
+    async fn test_session_create_invoice_mainnet() {
+        let _ = env_logger::try_init();
+        let network = ElementsNetwork::Liquid;
+        let session = LightningSession::new(
+            network,
+            ElectrumClient::new(
+                "elements-mainnet.blockstream.info:50002",
+                true,
+                true,
+                network,
+            )
+            .unwrap(),
+            Some(TIMEOUT),
+        );
+        let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
+        log::info!("creating invoice for mainnet address: {}", mainnet_addr);
+        let invoice_response = session
+            .invoice(1000, Some("test".to_string()), mainnet_addr.to_string())
+            .await
+            .unwrap();
+        assert!(invoice_response.bolt11_invoice.starts_with("lnbc1"));
+    }
 
     #[tokio::test]
     #[ignore = "mainnet"]
@@ -42,6 +67,7 @@ mod tests {
                 network,
             )
             .unwrap(),
+            Some(TIMEOUT),
         );
         let response = session
             .invoice(1000, Some("test".to_string()), claim_address.to_string())
@@ -75,7 +101,7 @@ mod tests {
         let _ = env_logger::try_init();
 
         // Start concurrent block mining task
-        let mining_handle = utils::start_block_mining();
+        let _mining_handle = utils::start_block_mining();
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
@@ -86,6 +112,7 @@ mod tests {
                 ElementsNetwork::default_regtest(),
             )
             .unwrap(),
+            Some(TIMEOUT),
         );
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await

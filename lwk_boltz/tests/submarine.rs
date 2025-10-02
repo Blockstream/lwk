@@ -33,6 +33,7 @@ mod tests {
                 network,
             )
             .unwrap(),
+            Some(TIMEOUT),
         );
 
         // In a real mainnet test, you would need to provide an actual Lightning invoice
@@ -85,6 +86,7 @@ mod tests {
                 ElementsNetwork::default_regtest(),
             )
             .unwrap(),
+            Some(TIMEOUT),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let prepare_pay_response = session

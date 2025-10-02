@@ -5,6 +5,7 @@ mod reverse;
 mod submarine;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
@@ -29,18 +30,24 @@ pub struct LightningSession {
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
+    timeout: Duration,
 }
 
 impl LightningSession {
     /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
+    ///
+    /// Accept a `timeout` parameter to set the timeout for the Boltz API and WebSocket connection.
+    /// If `timeout` is `None`, the default timeout of 10 seconds is used.
+    ///
     // TODO: add mnemonic as param to generate deterministic keypairs
     pub fn new(
         network: ElementsNetwork,
         client: ElectrumClient, // TODO: should be generic to support other clients
+        timeout: Option<Duration>,
     ) -> Self {
         let chain_client = Arc::new(ChainClient::new().with_liquid(client));
         let url = boltz_default_url(network);
-        let api = Arc::new(BoltzApiClientV2::new(url.to_string(), None)); // TODO: implement timeout
+        let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();
         let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
@@ -51,6 +58,7 @@ impl LightningSession {
             api,
             chain_client,
             liquid_chain: elements_network_to_liquid_chain(network),
+            timeout: timeout.unwrap_or(Duration::from_secs(10)),
         }
     }
 

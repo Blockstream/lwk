@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{sync::Mutex, time::Duration};
 
 use crate::{Address, LwkError, Network};
 
@@ -33,17 +33,20 @@ impl LightningSession {
         electrum_url: &str,
         tls: bool,
         validate_domain: bool,
+        timeout: Option<u64>,
     ) -> Result<Self, LwkError> {
         let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
             .map_err(lwk_wollet::Error::Url)?;
         let client = lwk_wollet::ElectrumClient::new(&url)?;
         let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
-        let inner =
-            lwk_boltz::blocking::LightningSession::new(network.into(), client).map_err(|e| {
-                LwkError::Generic {
-                    msg: format!("Failed to create blocking lightning session: {:?}", e),
-                }
-            })?;
+        let inner = lwk_boltz::blocking::LightningSession::new(
+            network.into(),
+            client,
+            timeout.map(Duration::from_secs),
+        )
+        .map_err(|e| LwkError::Generic {
+            msg: format!("Failed to create blocking lightning session: {:?}", e),
+        })?;
         Ok(Self { inner })
     }
 

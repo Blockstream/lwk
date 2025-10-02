@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use lwk_wollet::{elements, ElementsNetwork};
 
@@ -20,10 +20,14 @@ pub struct InvoiceResponse {
 }
 
 impl LightningSession {
-    pub fn new(network: ElementsNetwork, client: ElectrumClient) -> Result<Self, Error> {
+    pub fn new(
+        network: ElementsNetwork,
+        client: ElectrumClient,
+        timeout: Option<Duration>,
+    ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let inner = super::LightningSession::new(network, client);
+        let inner = super::LightningSession::new(network, client, timeout);
         Ok(Self { inner, runtime })
     }
 

@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Address, LwkError, Network};
+use crate::{Address, ElectrumClient, LwkError, Network};
 
 /// A session to pay and receive lightning payments.
 ///
@@ -33,18 +33,17 @@ impl LightningSession {
     #[uniffi::constructor]
     pub fn new(
         network: &Network,
-        electrum_url: &str,
-        tls: bool,
-        validate_domain: bool,
+        client: &ElectrumClient,
         timeout: Option<u64>,
     ) -> Result<Self, LwkError> {
-        let url = lwk_wollet::ElectrumUrl::new(electrum_url, tls, validate_domain)
-            .map_err(lwk_wollet::Error::Url)?;
-        let client = lwk_wollet::ElectrumClient::new(&url)?;
-        let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
+        let network_value = network.into();
+        // Transform lwk_bindings::ElectrumClient into lwk_boltz::clients::ElectrumClient
+        let inner_client = client.clone_client()?;
+        let boltz_client =
+            lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
         let inner = lwk_boltz::blocking::LightningSession::new(
-            network.into(),
-            Arc::new(client),
+            network_value,
+            Arc::new(boltz_client),
             timeout.map(Duration::from_secs),
         )
         .map_err(|e| LwkError::Generic {

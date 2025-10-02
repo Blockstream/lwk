@@ -27,13 +27,15 @@ mod tests {
         let network = ElementsNetwork::Liquid;
         let session = LightningSession::new(
             network,
-            ElectrumClient::new(
-                "elements-mainnet.blockstream.info:50002",
-                true,
-                true,
-                network,
-            )
-            .unwrap(),
+            Arc::new(
+                ElectrumClient::new(
+                    "elements-mainnet.blockstream.info:50002",
+                    true,
+                    true,
+                    network,
+                )
+                .unwrap(),
+            ),
             Some(TIMEOUT),
         );
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
@@ -72,17 +74,14 @@ mod tests {
         let desc: lwk_wollet::WolletDescriptor = desc.parse().unwrap();
         let claim_address = desc.address(2, network.address_params()).unwrap();
         log::info!("Claim Address: {}", claim_address);
-        let session = LightningSession::new(
+        let client = ElectrumClient::new(
+            "elements-mainnet.blockstream.info:50002",
+            true,
+            true,
             network,
-            ElectrumClient::new(
-                "elements-mainnet.blockstream.info:50002",
-                true,
-                true,
-                network,
-            )
-            .unwrap(),
-            Some(TIMEOUT),
-        );
+        )
+        .unwrap();
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT));
         let response = session
             .invoice(1000, Some("test".to_string()), &claim_address)
             .await
@@ -116,18 +115,10 @@ mod tests {
 
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
+        let network = ElementsNetwork::default_regtest();
+        let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(
-            ElementsNetwork::default_regtest(),
-            ElectrumClient::new(
-                DEFAULT_REGTEST_NODE,
-                false,
-                false,
-                ElementsNetwork::default_regtest(),
-            )
-            .unwrap(),
-            Some(TIMEOUT),
-        );
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT));
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();

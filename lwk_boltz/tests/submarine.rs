@@ -26,13 +26,15 @@ mod tests {
 
         let session = LightningSession::new(
             network,
-            ElectrumClient::new(
-                "elements-mainnet.blockstream.info:50002",
-                true,
-                true,
-                network,
-            )
-            .unwrap(),
+            Arc::new(
+                ElectrumClient::new(
+                    "elements-mainnet.blockstream.info:50002",
+                    true,
+                    true,
+                    network,
+                )
+                .unwrap(),
+            ),
             Some(TIMEOUT),
         );
 
@@ -79,13 +81,15 @@ mod tests {
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            ElectrumClient::new(
-                DEFAULT_REGTEST_NODE,
-                false,
-                false,
-                ElementsNetwork::default_regtest(),
-            )
-            .unwrap(),
+            Arc::new(
+                ElectrumClient::new(
+                    DEFAULT_REGTEST_NODE,
+                    false,
+                    false,
+                    ElementsNetwork::default_regtest(),
+                )
+                .unwrap(),
+            ),
             Some(TIMEOUT),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();

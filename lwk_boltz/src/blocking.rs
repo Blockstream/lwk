@@ -27,10 +27,14 @@ impl LightningSession {
         Ok(Self { inner, runtime })
     }
 
-    pub fn prepare_pay(&self, bolt11_invoice: &str) -> Result<PreparePayResponse, Error> {
+    pub fn prepare_pay(
+        &self,
+        bolt11_invoice: &str,
+        refund_address: &str,
+    ) -> Result<PreparePayResponse, Error> {
         let inner = self
             .runtime
-            .block_on(self.inner.prepare_pay(bolt11_invoice))?;
+            .block_on(self.inner.prepare_pay(bolt11_invoice, refund_address))?;
         Ok(PreparePayResponse {
             inner,
             runtime: self.runtime.clone(),

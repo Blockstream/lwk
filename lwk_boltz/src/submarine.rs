@@ -2,14 +2,15 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest};
-use boltz_client::swaps::SwapScript;
+use boltz_client::fees::Fee;
+use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
+use boltz_client::util::sleep;
 use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
 use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
-use crate::LightningSession;
+use crate::{LightningSession, WAIT_TIME};
 
-#[derive(Debug)]
 pub struct PreparePayResponse {
     pub swap_id: String,
 
@@ -33,13 +34,15 @@ pub struct PreparePayResponse {
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
+    chain_client: Arc<ChainClient>,
+    refund_address: String,
 }
 
 impl LightningSession {
     pub async fn prepare_pay(
         &self,
         bolt11_invoice: &str,
-        // refund_address: elements::Address,
+        refund_address: &str,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
         let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice)?;
@@ -106,6 +109,8 @@ impl LightningSession {
                     swap_script,
                     api: self.api.clone(),
                     our_keys,
+                    chain_client: self.chain_client.clone(),
+                    refund_address: refund_address.to_string(),
                     bolt11_invoice: bolt11_invoice.to_string(),
                 })
             }
@@ -148,23 +153,23 @@ impl PreparePayResponse {
                 // This means the funding transaction was rejected by Boltz for whatever reason, and we need to get
                 // the funds back via refund.
                 "transaction.lockupFailed" | "invoice.failedToPay" => {
-                    todo!();
-                    // sleep(WAIT_TIME).await;
-                    // let tx = swap_script
-                    //     .construct_refund(SwapTransactionParams {
-                    //         keys: our_keys,
-                    //         output_address: refund_address,
-                    //         fee: Fee::Absolute(1000),
-                    //         swap_id: swap_id.clone(),
-                    //         chain_client,
-                    //         boltz_client: &boltz_api_v2,
-                    //         options: None,
-                    //     })
-                    //     .await
-                    //     .unwrap();
+                    sleep(WAIT_TIME).await;
+                    let tx = self
+                        .swap_script
+                        .construct_refund(SwapTransactionParams {
+                            keys: self.our_keys,
+                            output_address: self.refund_address.to_string(),
+                            fee: Fee::Relative(1.0), // TODO: improve
+                            swap_id: self.swap_id.clone(),
+                            chain_client: &self.chain_client,
+                            boltz_client: &self.api,
+                            options: None,
+                        })
+                        .await
+                        .unwrap();
 
-                    // let txid = chain_client.broadcast_tx(&tx).await.unwrap();
-                    // log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                    let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
+                    log::info!("Cooperative Refund Successfully broadcasted: {txid}");
 
                     // Non cooperative refund requires expired swap
                     /*log::info!("Cooperative refund failed. {:?}", e);

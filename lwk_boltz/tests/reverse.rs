@@ -38,11 +38,25 @@ mod tests {
         );
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
         log::info!("creating invoice for mainnet address: {}", mainnet_addr);
-        let invoice_response = session
-            .invoice(1000, Some("test".to_string()), &mainnet_addr)
-            .await
-            .unwrap();
-        assert!(invoice_response.bolt11_invoice.starts_with("lnbc1"));
+
+        for _ in 0..10 {
+            let invoice_response = session
+                .invoice(1000, Some("test".to_string()), &mainnet_addr)
+                .await;
+            match invoice_response {
+                Ok(invoice_response) => {
+                    assert!(invoice_response.bolt11_invoice.starts_with("lnbc1"));
+                    return;
+                }
+                Err(e) => {
+                    // it happens sometimes that the invoice is not created with:
+                    // [2025-10-02T11:03:52Z WARN  boltz_client::swaps::status_stream] Failed to broadcast update: channel closed
+                    // in this case we retry, testing the capability of the session to retry
+                    log::error!("Error creating invoice: {:?}", e);
+                }
+            }
+        }
+        assert!(false, "Invoice not created after 10 attempts");
     }
 
     #[tokio::test]

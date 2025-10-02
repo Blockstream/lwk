@@ -1,4 +1,7 @@
-use std::{sync::Mutex, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use crate::{Address, LwkError, Network};
 
@@ -41,7 +44,7 @@ impl LightningSession {
         let client = lwk_boltz::clients::ElectrumClient::from_client(client, network.into());
         let inner = lwk_boltz::blocking::LightningSession::new(
             network.into(),
-            client,
+            Arc::new(client),
             timeout.map(Duration::from_secs),
         )
         .map_err(|e| LwkError::Generic {

@@ -10,6 +10,7 @@ use lwk_wollet::blocking::BlockchainBackend;
 use lwk_wollet::ElementsNetwork;
 use tokio::task;
 
+#[derive(Clone)]
 pub struct ElectrumClient {
     inner: Arc<lwk_wollet::ElectrumClient>,
     network: ElementsNetwork,

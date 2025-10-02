@@ -42,10 +42,10 @@ impl LightningSession {
     // TODO: add mnemonic as param to generate deterministic keypairs
     pub fn new(
         network: ElementsNetwork,
-        client: ElectrumClient, // TODO: should be generic to support other clients
+        client: Arc<ElectrumClient>, // TODO: should be generic to support other clients
         timeout: Option<Duration>,
     ) -> Self {
-        let chain_client = Arc::new(ChainClient::new().with_liquid(client));
+        let chain_client = Arc::new(ChainClient::new().with_liquid((*client).clone()));
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();

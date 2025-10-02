@@ -22,7 +22,7 @@ pub struct InvoiceResponse {
 impl LightningSession {
     pub fn new(
         network: ElementsNetwork,
-        client: ElectrumClient,
+        client: Arc<ElectrumClient>,
         timeout: Option<Duration>,
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);

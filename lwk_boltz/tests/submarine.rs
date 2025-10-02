@@ -42,8 +42,10 @@ mod tests {
 
         log::info!("Preparing payment for invoice: {}", bolt11_invoice);
 
-        let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();
-        log::info!("Prepare Pay Response: {prepare_pay_response:?}");
+        let prepare_pay_response = session
+            .prepare_pay(&bolt11_invoice, "refund address")
+            .await
+            .unwrap();
         log::info!(
             "Send {} sats to address: {}",
             prepare_pay_response.amount,
@@ -75,12 +77,32 @@ mod tests {
             .unwrap(),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        let prepare_pay_response = session.prepare_pay(&bolt11_invoice).await.unwrap();
-        log::info!("Prepare Pay Response: {prepare_pay_response:?}");
+        let prepare_pay_response = session
+            .prepare_pay(&bolt11_invoice, "refund address")
+            .await
+            .unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
             &prepare_pay_response.address,
             prepare_pay_response.amount,
+        )
+        .await
+        .unwrap();
+        prepare_pay_response.complete_pay().await.unwrap();
+
+        // Test underpay which triggers a refund to the refund address
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let prepare_pay_response = session
+            .prepare_pay(&bolt11_invoice, &refund_address)
+            .await
+            .unwrap();
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.address,
+            prepare_pay_response.amount - 1, // underpay to trigger refund
         )
         .await
         .unwrap();
@@ -103,8 +125,8 @@ mod tests {
             .unwrap(),
         );
         let chain = Chain::Liquid(LiquidChain::LiquidRegtest);
-        let underpay = false;
-        v2_submarine(&chain_client, underpay, chain).await;
+        v2_submarine(&chain_client, false, chain).await;
+        v2_submarine(&chain_client, true, chain).await;
     }
 
     async fn v2_submarine(chain_client: &ChainClient, underpay: bool, chain: Chain) {

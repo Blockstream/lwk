@@ -170,6 +170,7 @@ impl PreparePayResponse {
 
                     let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
                     log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                    break Ok(false);
 
                     // Non cooperative refund requires expired swap
                     /*log::info!("Cooperative refund failed. {:?}", e);

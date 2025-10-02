@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use lwk_wollet::ElementsNetwork;
+use lwk_wollet::{elements, ElementsNetwork};
 
 use crate::{clients::ElectrumClient, Error};
 
@@ -30,7 +30,7 @@ impl LightningSession {
     pub fn prepare_pay(
         &self,
         bolt11_invoice: &str,
-        refund_address: &str,
+        refund_address: &elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let inner = self
             .runtime

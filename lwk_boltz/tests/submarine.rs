@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, sync::Arc};
+    use std::{env, str::FromStr, sync::Arc};
 
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest},
@@ -15,7 +15,7 @@ mod tests {
         Keypair, PublicKey, Secp256k1,
     };
     use lwk_boltz::{clients::ElectrumClient, LightningSession};
-    use lwk_wollet::{secp256k1::rand::thread_rng, ElementsNetwork};
+    use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
     #[ignore = "mainnet"]
@@ -39,11 +39,16 @@ mod tests {
         // This is a placeholder - in practice you'd need to generate this externally
         let bolt11_invoice = env::var("MAINNET_INVOICE")
             .expect("MAINNET_INVOICE environment variable must be set for mainnet submarine test");
+        let refund_address = env::var("MAINNET_REFUND_ADDRESS").expect(
+            "MAINNET_REFUND_ADDRESS environment variable must be set for mainnet submarine test",
+        );
 
         log::info!("Preparing payment for invoice: {}", bolt11_invoice);
 
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_invoice, "refund address")
+            .prepare_pay(&bolt11_invoice, &refund_address)
             .await
             .unwrap();
         log::info!(
@@ -66,6 +71,11 @@ mod tests {
         // Start concurrent block mining task
         let mining_handle = utils::start_block_mining();
 
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
             ElectrumClient::new(
@@ -78,7 +88,7 @@ mod tests {
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_invoice, "refund address")
+            .prepare_pay(&bolt11_invoice, &refund_address)
             .await
             .unwrap();
         utils::send_to_address(
@@ -92,9 +102,6 @@ mod tests {
 
         // Test underpay which triggers a refund to the refund address
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
-            .await
-            .unwrap();
         let prepare_pay_response = session
             .prepare_pay(&bolt11_invoice, &refund_address)
             .await

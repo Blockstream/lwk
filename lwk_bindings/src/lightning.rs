@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use crate::{LwkError, Network};
+use crate::{Address, LwkError, Network};
 
 /// A session to pay and receive lightning payments.
 ///
@@ -51,11 +51,11 @@ impl LightningSession {
     pub fn prepare_pay(
         &self,
         invoice: &str,
-        refund_address: &str,
+        refund_address: &Address,
     ) -> Result<PreparePayResponse, LwkError> {
         let response = self
             .inner
-            .prepare_pay(invoice, refund_address)
+            .prepare_pay(invoice, refund_address.as_ref())
             .map_err(|e| LwkError::Generic {
                 msg: format!("Prepare pay failed: {:?}", e),
             })?;

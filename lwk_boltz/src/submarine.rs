@@ -6,6 +6,7 @@ use boltz_client::fees::Fee;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
 use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
+use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
@@ -42,7 +43,7 @@ impl LightningSession {
     pub async fn prepare_pay(
         &self,
         bolt11_invoice: &str,
-        refund_address: &str,
+        refund_address: &elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
         let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice)?;

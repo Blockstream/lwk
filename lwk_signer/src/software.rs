@@ -3,6 +3,7 @@ use elements_miniscript::{
     bitcoin::{
         self,
         bip32::DerivationPath,
+        hashes::{sha512, HashEngine, Hmac, HmacEngine},
         secp256k1::Message,
         sign_message::{MessageSignature, MessageSignatureError},
         PrivateKey,
@@ -22,9 +23,7 @@ use elements_miniscript::{
     psbt::PsbtExt,
     slip77::MasterBlindingKey,
 };
-use hmac::{Hmac, Mac};
 use lwk_common::Signer;
-use sha2::Sha512;
 
 /// Possible errors when signing with the software signer [`SwSigner`]
 #[derive(thiserror::Error, Debug)]
@@ -270,17 +269,16 @@ impl SwSigner {
             .map_err(|e| SignError::Bip85Derivation(format!("Key derivation failed: {}", e)))?;
 
         // HMAC-SHA512 the derived private key with the fixed BIP85 key
-        let mut mac = Hmac::<Sha512>::new_from_slice(BIP85_ENTROPY_HMAC_KEY)
-            .map_err(|e| SignError::Bip85Derivation(format!("HMAC key creation failed: {}", e)))?;
+        let mut hmac_engine = HmacEngine::<sha512::Hash>::new(BIP85_ENTROPY_HMAC_KEY);
 
         // Use the private key bytes (excluding the first byte which is the network prefix)
         let priv_key_bytes = &derived_key.private_key.secret_bytes();
-        mac.update(priv_key_bytes);
-        let hmac_result = mac.finalize();
+        hmac_engine.input(priv_key_bytes);
+        let hmac_result = Hmac::<sha512::Hash>::from_engine(hmac_engine);
 
         // Extract the appropriate amount of entropy based on word count
         let entropy_len = if word_count == 12 { 16 } else { 32 }; // 128 or 256 bits
-        let entropy = &hmac_result.into_bytes()[..entropy_len];
+        let entropy = &hmac_result.to_byte_array()[..entropy_len];
 
         // Create mnemonic from entropy
         let mnemonic = Mnemonic::from_entropy(entropy)
@@ -564,6 +562,59 @@ mod tests {
         );
 
         // derived mnemonics can be checked using bip85-cli (pip install bip85-cli)
+    }
+
+    #[test]
+    fn test_bip85_mnemonic_derivation_testvectors() {
+        // Test with a known mnemonic from jade testvectors
+        let mnemonic = "fish inner face ginger orchard permit useful method fence kidney chuckle party favorite sunset draw limb science crane oval letter slot invite sadness banana";
+        let signer = SwSigner::new(mnemonic, false).unwrap();
+
+        // Derive menmonics from testvectors
+        let derived_0_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
+        let derived_12_12 = signer.derive_bip85_mnemonic(12, 12).unwrap();
+        let derived_100_12 = signer.derive_bip85_mnemonic(100, 12).unwrap();
+        let derived_65535_12 = signer.derive_bip85_mnemonic(65535, 12).unwrap();
+        let derived_0_24 = signer.derive_bip85_mnemonic(0, 24).unwrap();
+        let derived_24_24 = signer.derive_bip85_mnemonic(24, 24).unwrap();
+        let derived_1024_24 = signer.derive_bip85_mnemonic(1024, 24).unwrap();
+        let derived_65535_24 = signer.derive_bip85_mnemonic(65535, 24).unwrap();
+
+        // check derived mnemonics
+        assert_eq!(
+            derived_0_12.to_string(),
+            "elephant this puppy lucky fatigue skate aerobic emotion peanut outer clinic casino"
+        );
+        assert_eq!(
+            derived_12_12.to_string(),
+            "prevent marriage menu outside total tone prison few sword coffee print salad"
+        );
+        assert_eq!(
+            derived_100_12.to_string(),
+            "lottery divert goat drink tackle picture youth text stem marriage call tip"
+        );
+        assert_eq!(
+            derived_65535_12.to_string(),
+            "curtain angle fatigue siren involve bleak detail frame name spare size cycle"
+        );
+        assert_eq!(
+            derived_0_24.to_string(),
+            "certain act palace ball plug they divide fold climb hand tuition inside choose sponsor grass scheme choose split top twenty always vendor fit thank"
+        );
+        assert_eq!(
+            derived_24_24.to_string(),
+            "flip meat face wood hammer crack fat topple admit canvas bid capital leopard angry fan gate domain exile patient recipe nut honey resist inner"
+        );
+        assert_eq!(
+            derived_1024_24.to_string(),
+            "phone goat wheel unique local maximum sand reflect scissors one have spin weasel dignity antenna acid pulp increase fitness typical bacon strike spy festival"
+        );
+        assert_eq!(
+            derived_65535_24.to_string(),
+            "humble museum grab fitness wrap window front job quarter update rich grape gap daring blame cricket traffic sad trade easily genius boost lumber rhythm"
+        );
+
+        // derived mnemonics from jade testvectors https://github.com/Blockstream/Jade/blob/master/test_jade.py
     }
 
     #[test]

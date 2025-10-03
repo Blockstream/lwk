@@ -15,8 +15,6 @@ bip39 = { version = "2.0.0", features = ["rand"] }
 elements-miniscript = { version = "0.4.0", features = ["base64"] }
 thiserror = "1.0.48"
 base64 = "0.21.7"
-sha2 = "0.10.8"
-hmac = "0.12.1"
 
 [dev-dependencies]
 lwk_test_util = { version = "0.12.0" }

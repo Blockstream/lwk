@@ -1,5 +1,17 @@
 from lwk import *
 
+# Example implementation of the Logging trait
+class MyLogger(Logging):
+    def log(self, level: LogLevel, message: str):
+        # Only print Info level and greater (Info, Warn, Error)
+        if level in (LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR):
+            level_str = {
+                LogLevel.INFO: "INFO",
+                LogLevel.WARN: "WARN",
+                LogLevel.ERROR: "ERROR",
+            }.get(level, "UNKNOWN")
+            print(f"[{level_str}] {message}")
+
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.mainnet()
 client = network.default_electrum_client()
@@ -9,7 +21,9 @@ wollet = Wollet(network, desc, datadir=None)
 claim_address = wollet.address(2).address()
 print(claim_address)
 
-lightning_session = LightningSession(network, client, 10)
+# Create a lightning session with custom logging
+logger = MyLogger()
+lightning_session = LightningSession(network, client, 10, logger)
 
 invoice_response = lightning_session.invoice(1000, "ciao", claim_address)
 bolt11_invoice = invoice_response.bolt11_invoice()

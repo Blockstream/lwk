@@ -142,12 +142,7 @@ impl LightningSession {
         invoice: &str,
         refund_address: &Address,
     ) -> Result<PreparePayResponse, LwkError> {
-        let response = self
-            .inner
-            .prepare_pay(invoice, refund_address.as_ref())
-            .map_err(|e| LwkError::Generic {
-                msg: format!("Prepare pay failed: {:?}", e),
-            })?;
+        let response = self.inner.prepare_pay(invoice, refund_address.as_ref())?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),
@@ -178,14 +173,10 @@ impl LightningSession {
 impl PreparePayResponse {
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
-        lock.take()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
-            .complete_pay()
-            .map_err(|e| LwkError::Generic {
-                msg: format!("Complete pay failed: {:?}", e),
-            })
+        let response = lock.take().ok_or_else(|| LwkError::Generic {
+            msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+        })?;
+        Ok(response.complete_pay()?)
     }
 
     pub fn uri(&self) -> Result<String, LwkError> {
@@ -215,13 +206,9 @@ impl InvoiceResponse {
 
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
-        lock.take()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-            })?
-            .complete_pay()
-            .map_err(|e| LwkError::Generic {
-                msg: format!("Complete pay failed: {:?}", e),
-            })
+        let response = lock.take().ok_or_else(|| LwkError::Generic {
+            msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+        })?;
+        Ok(response.complete_pay()?)
     }
 }

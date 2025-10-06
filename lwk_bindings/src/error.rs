@@ -11,6 +11,13 @@ pub enum LwkError {
 
     #[error("Poison error: {msg}")]
     PoisonError { msg: String },
+
+    #[error("Invoice contain a magic routing hint, there is no need to pay via Boltz, pay directly to: {uri}")]
+    MagicRoutingHint {
+        address: String,
+        amount: u64,
+        uri: String,
+    },
 }
 
 impl From<lwk_wollet::Error> for LwkError {
@@ -181,6 +188,26 @@ impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
         LwkError::Generic {
             msg: format!("{:?}", value),
+        }
+    }
+}
+
+#[cfg(feature = "lightning")]
+impl From<lwk_boltz::Error> for LwkError {
+    fn from(value: lwk_boltz::Error) -> Self {
+        match value {
+            lwk_boltz::Error::MagicRoutingHint {
+                address,
+                amount,
+                uri,
+            } => LwkError::MagicRoutingHint {
+                address,
+                amount,
+                uri,
+            },
+            _ => LwkError::Generic {
+                msg: format!("{:?}", value),
+            },
         }
     }
 }

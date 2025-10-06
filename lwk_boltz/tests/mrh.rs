@@ -6,11 +6,13 @@ mod tests {
     use std::{str::FromStr, sync::Arc};
 
     use boltz_client::{
-        boltz::BoltzApiClientV2, network::Chain, network::LiquidChain,
+        boltz::{BoltzApiClientV2, MagicRoutingHint},
+        network::{Chain, LiquidChain},
         swaps::magic_routing::check_for_mrh,
     };
-    use lwk_boltz::{clients::ElectrumClient, LightningSession};
+    use lwk_boltz::{clients::ElectrumClient, Error, LightningSession};
     use lwk_wollet::{elements, ElementsNetwork};
+    use tokio::time::sleep;
 
     /// Test Magic Routing Hints: A Boltz wallet pays another Boltz wallet's invoice
     /// directly on-chain without performing a swap
@@ -21,11 +23,11 @@ mod tests {
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
         let network = ElementsNetwork::default_regtest();
-        let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
         // Receiver: Create a LightningSession and generate an invoice with MRH
-        let receiver_session =
-            LightningSession::new(network, Arc::new(client.clone()), Some(TIMEOUT));
+        let receiver_session = LightningSession::new(network, client.clone(), Some(TIMEOUT));
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -36,14 +38,9 @@ mod tests {
             .invoice(invoice_amount, Some("MRH test".to_string()), &claim_address)
             .await
             .unwrap();
+        log::info!("claim_address: {}", claim_address);
         log::info!("Receiver created invoice: {}", invoice.bolt11_invoice);
         log::info!("Invoice fee: {}", invoice.fee);
-
-        // Sender: Detect MRH in the invoice
-        let sender_client =
-            ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
-        let _sender_session =
-            LightningSession::new(network, Arc::new(sender_client), Some(TIMEOUT));
 
         // Check for magic routing hint
         let boltz_api = BoltzApiClientV2::new(utils::BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
@@ -88,5 +85,24 @@ mod tests {
         );
 
         // TODO complete the payment from a sender that detects the MRH and pays directly to the MRH address
+
+        // Sender: Detect MRH in the invoice
+        let sender_session = LightningSession::new(network, client.clone(), Some(TIMEOUT));
+        let prepare_pay_response = sender_session
+            .prepare_pay(&invoice.bolt11_invoice, &claim_address)
+            .await;
+        if let Err(Error::MagicRoutingHint {
+            address,
+            amount,
+            uri,
+        }) = prepare_pay_response
+        {
+            utils::send_to_address(Chain::Liquid(LiquidChain::LiquidRegtest), &address, amount)
+                .await
+                .unwrap();
+            log::info!("Sent {} sats to {} or use uri {}", amount, address, uri);
+        }
+
+        invoice.complete_pay().await.unwrap();
     }
 }

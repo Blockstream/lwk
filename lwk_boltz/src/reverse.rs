@@ -136,6 +136,10 @@ impl InvoiceResponse {
                 }
             };
             match update.status.as_str() {
+                "transaction.direct" => {
+                    log::info!("Payer used magic routing hint");
+                    break Ok(true);
+                }
                 "transaction.mempool" => {
                     log::info!("Boltz broadcasted funding tx");
 

@@ -4,9 +4,11 @@ use std::time::Duration;
 
 use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest};
 use boltz_client::fees::Fee;
+use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
 use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
+use lwk_wollet::bitcoin::Denomination;
 use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
@@ -55,6 +57,18 @@ impl LightningSession {
             inner: our_keys.public_key(),
             compressed: true,
         };
+
+        if let Some((address, amount)) = check_for_mrh(&self.api, &bolt11_invoice, chain).await? {
+            let mrh_uri = format!(
+                "liquidnetwork:{address}?amount={:.8}",
+                amount.to_string_in(Denomination::Bitcoin)
+            );
+            return Err(Error::MagicRoutingHint {
+                address: address.to_string(),
+                amount: amount.to_sat(),
+                uri: mrh_uri,
+            });
+        }
 
         let create_swap_req = CreateSubmarineRequest {
             from: chain.to_string(),

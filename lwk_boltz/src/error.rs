@@ -32,6 +32,13 @@ pub enum Error {
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("Invoice contain a magic routing hint, there is no need to pay via Boltz, pay directly to: {uri}")]
+    MagicRoutingHint {
+        address: String,
+        amount: u64,
+        uri: String,
+    },
 }
 
 impl From<BoltzError> for Error {

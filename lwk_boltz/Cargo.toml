@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "19abf46f8f379c8c6e7a884809089cf81272ae83", features = [
+boltz-client = { git = "https://github.com/SatoshiPortal/boltz-rust/", rev = "4e90ab133f75cb297c3d0bf274428c0419b680fc", features = [
     "ws",
 ] }
 lwk_wollet = { version = "0.12.0" }

@@ -79,7 +79,7 @@ impl LightningSession {
         )?;
 
         let _ = check_for_mrh(&self.api, &invoice, chain).await?.ok_or(
-            Error::MagicRoutingHintNotSupportedForNow(reverse_resp.id.clone()),
+            Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),
         )?;
 
         log::debug!("Got Reverse swap response: {reverse_resp:?}");

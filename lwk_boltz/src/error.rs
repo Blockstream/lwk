@@ -25,7 +25,7 @@ pub enum Error {
     MissingInvoiceInResponse(String),
 
     #[error("Magic routing hint not supported for now. Swap id {0}")]
-    MagicRoutingHintNotSupportedForNow(String),
+    InvoiceWithoutMagicRoutingHint(String),
 
     #[error("Timeout waiting for swap update for swap {0}")]
     Timeout(String),

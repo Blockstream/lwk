@@ -15,6 +15,7 @@ lwk_boltz = { version = "0.1.0", optional = true }
 tokio = { version = "1.0", features = [
     "rt",
 ], optional = true } # move into lwk_boltz
+log = { version = "0.4", optional = true }
 
 elements = "0.25.0"
 thiserror = "1.0.50"
@@ -30,7 +31,7 @@ name = "lwk"
 
 [features]
 foreign_bindings = []
-lightning = ["lwk_boltz", "tokio"]
+lightning = ["lwk_boltz", "tokio", "log"]
 
 [package.metadata.docs.rs]
 all-features = true

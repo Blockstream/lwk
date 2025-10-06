@@ -4,6 +4,71 @@ use std::{
 };
 
 use crate::{Address, ElectrumClient, LwkError, Network};
+use log::{Level, Metadata, Record};
+
+/// Log level for logging messages
+#[derive(uniffi::Enum)]
+pub enum LogLevel {
+    /// Debug level
+    Debug,
+    /// Info level
+    Info,
+    /// Warning level
+    Warn,
+    /// Error level
+    Error,
+}
+
+/// An exported trait for handling logging messages.
+///
+/// Implement this trait to receive and handle logging messages from the lightning session.
+#[uniffi::export(with_foreign)]
+pub trait Logging: Send + Sync {
+    /// Log a message with the given level
+    fn log(&self, level: LogLevel, message: String);
+}
+
+/// An object to define logging at the caller level
+#[derive(uniffi::Object)]
+pub struct LoggingLink {
+    #[allow(dead_code)]
+    pub(crate) inner: Arc<dyn Logging>,
+}
+
+#[uniffi::export]
+impl LoggingLink {
+    /// Create a new `LoggingLink`
+    #[uniffi::constructor]
+    pub fn new(logging: Arc<dyn Logging>) -> Self {
+        Self { inner: logging }
+    }
+}
+
+/// Bridge logger that forwards log messages to our custom Logging trait
+struct LoggingBridge {
+    inner: Arc<dyn Logging>,
+}
+
+impl log::Log for LoggingBridge {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        let level = match record.level() {
+            Level::Error => LogLevel::Error,
+            Level::Warn => LogLevel::Warn,
+            Level::Info => LogLevel::Info,
+            Level::Debug => LogLevel::Debug,
+            Level::Trace => LogLevel::Debug, // Map Trace to Debug
+        };
+
+        let message = format!("{}", record.args());
+        self.inner.log(level, message);
+    }
+
+    fn flush(&self) {}
+}
 
 /// A session to pay and receive lightning payments.
 ///
@@ -11,6 +76,8 @@ use crate::{Address, ElectrumClient, LwkError, Network};
 #[derive(uniffi::Object)]
 pub struct LightningSession {
     inner: lwk_boltz::blocking::LightningSession,
+    #[allow(dead_code)]
+    logging: Option<Arc<dyn Logging>>,
 }
 
 #[derive(uniffi::Object)]
@@ -29,13 +96,30 @@ pub struct InvoiceResponse {
 impl LightningSession {
     /// Create the lightning session
     ///
+    /// If a `logging` implementation is provided, it will be set as the global logger
+    /// to receive log messages from the lightning operations. Note that the global
+    /// logger can only be set once - if a logger is already set, the new one will be ignored.
+    ///
     /// TODO: is there a way to pass the electrum client directly? cannot use Arc::try_unwrap because uniffi keeps references around
     #[uniffi::constructor]
     pub fn new(
         network: &Network,
         client: &ElectrumClient,
         timeout: Option<u64>,
+        logging: Option<Arc<dyn Logging>>,
     ) -> Result<Self, LwkError> {
+        // Set up the custom logger if provided
+        if let Some(ref logger_impl) = logging {
+            let bridge = LoggingBridge {
+                inner: logger_impl.clone(),
+            };
+            // Try to set the logger. This can only be done once globally.
+            // If it fails (logger already set), we silently continue.
+            let _ = log::set_boxed_logger(Box::new(bridge))
+                .and_then(|()| Ok(log::set_max_level(log::LevelFilter::Trace)));
+        }
+        log::info!("Creating lightning session");
+
         let network_value = network.into();
         // Transform lwk_bindings::ElectrumClient into lwk_boltz::clients::ElectrumClient
         let inner_client = client.clone_client()?;
@@ -49,7 +133,7 @@ impl LightningSession {
         .map_err(|e| LwkError::Generic {
             msg: format!("Failed to create blocking lightning session: {:?}", e),
         })?;
-        Ok(Self { inner })
+        Ok(Self { inner, logging })
     }
 
     /// Prepare to pay a bolt11 invoice

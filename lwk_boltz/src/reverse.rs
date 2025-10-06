@@ -141,8 +141,6 @@ impl InvoiceResponse {
                 "transaction.mempool" => {
                     log::info!("Boltz broadcasted funding tx");
 
-                    sleep(WAIT_TIME).await; // TODO better way to wait
-
                     let tx = self
                         .swap_script
                         .construct_claim(

@@ -29,7 +29,7 @@ mod wollet;
 #[cfg(feature = "lightning")]
 mod lightning;
 #[cfg(feature = "lightning")]
-pub use lightning::LightningSession;
+pub use lightning::{LightningSession, LogLevel, Logging, LoggingLink};
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;

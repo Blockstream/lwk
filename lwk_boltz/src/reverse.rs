@@ -11,7 +11,6 @@ use boltz_client::swaps::SwapScript;
 use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
-use boltz_client::util::sleep;
 use boltz_client::Secp256k1;
 use boltz_client::{Keypair, PublicKey};
 use lwk_wollet::elements;
@@ -19,7 +18,6 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
 use crate::LightningSession;
-use crate::WAIT_TIME;
 
 pub struct InvoiceResponse {
     pub swap_id: String,

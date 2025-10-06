@@ -545,7 +545,7 @@ dependencies = [
 [[package]]
 name = "boltz-client"
 version = "0.3.0"
-source = "git+https://github.com/RCasatta/boltz-rust?rev=a7ef1115abf0c6d3312fb3e99adc39da4e2bb1f5#a7ef1115abf0c6d3312fb3e99adc39da4e2bb1f5"
+source = "git+https://github.com/RCasatta/boltz-rust?rev=19abf46f8f379c8c6e7a884809089cf81272ae83#19abf46f8f379c8c6e7a884809089cf81272ae83"
 dependencies = [
  "async-trait",
  "bip39",
@@ -560,7 +560,7 @@ dependencies = [
  "lightning-invoice",
  "log",
  "macros",
- "reqwest 0.12.12",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",
@@ -1792,7 +1792,7 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
- "windows-registry 0.5.3",
+ "windows-registry",
 ]
 
 [[package]]
@@ -2310,7 +2310,7 @@ dependencies = [
  "lwk_tiny_jrpc",
  "lwk_wollet",
  "rand 0.8.5",
- "reqwest 0.12.23",
+ "reqwest",
  "schemars",
  "secp256k1",
  "serde",
@@ -2348,7 +2348,7 @@ dependencies = [
  "lwk_common",
  "lwk_signer",
  "lwk_wollet",
- "reqwest 0.12.23",
+ "reqwest",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
@@ -2417,7 +2417,7 @@ dependencies = [
  "lwk_containers",
  "lwk_test_util",
  "rand 0.8.5",
- "reqwest 0.12.23",
+ "reqwest",
  "serde",
  "serde_bytes",
  "serde_cbor",
@@ -2510,7 +2510,7 @@ dependencies = [
  "lwk_ledger",
  "lwk_signer",
  "lwk_wollet",
- "reqwest 0.12.23",
+ "reqwest",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -2556,7 +2556,7 @@ dependencies = [
  "pbkdf2",
  "rand 0.8.5",
  "regex-lite",
- "reqwest 0.12.23",
+ "reqwest",
  "rmp-serde",
  "rmpv",
  "scrypt",
@@ -2585,7 +2585,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.0.0"
-source = "git+https://github.com/RCasatta/boltz-rust?rev=a7ef1115abf0c6d3312fb3e99adc39da4e2bb1f5#a7ef1115abf0c6d3312fb3e99adc39da4e2bb1f5"
+source = "git+https://github.com/RCasatta/boltz-rust?rev=19abf46f8f379c8c6e7a884809089cf81272ae83#19abf46f8f379c8c6e7a884809089cf81272ae83"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3346,48 +3346,6 @@ checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
 
 [[package]]
 name = "reqwest"
-version = "0.12.12"
-source = "git+https://github.com/seanmonstar/reqwest?rev=00b15b9a893d350388af513179e1a973dfa26f85#00b15b9a893d350388af513179e1a973dfa26f85"
-dependencies = [
- "base64 0.22.1",
- "bytes",
- "futures-core",
- "futures-util",
- "http",
- "http-body",
- "http-body-util",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "ipnet",
- "js-sys",
- "log",
- "mime",
- "once_cell",
- "percent-encoding",
- "pin-project-lite",
- "quinn",
- "rustls",
- "rustls-pemfile",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-rustls",
- "tower",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "webpki-roots 0.26.11",
- "windows-registry 0.4.0",
-]
-
-[[package]]
-name = "reqwest"
 version = "0.12.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d429f34c8092b2d42c7c93cec323bb4adeb7c67698f70839adec842ec10c7ceb"
@@ -3580,15 +3538,6 @@ dependencies = [
  "rustls-webpki",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
-dependencies = [
- "rustls-pki-types",
 ]
 
 [[package]]
@@ -4945,7 +4894,7 @@ dependencies = [
  "miniscript",
  "prefix_uvarint",
  "prometheus",
- "reqwest 0.12.23",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",
@@ -5096,17 +5045,6 @@ checksum = "45e46c0661abb7180e7b9c281db115305d49ca1709ab8242adf09666d2173c65"
 
 [[package]]
 name = "windows-registry"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286ad90ddb45071efd1a66dfa43eb02dd0dfbae1545ad6cc3c51cf34d7e8ba3"
-dependencies = [
- "windows-result 0.3.4",
- "windows-strings 0.3.1",
- "windows-targets 0.53.4",
-]
-
-[[package]]
-name = "windows-registry"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b8a9ed28765efc97bbc954883f4e6796c33a06546ebafacbabee9696967499e"
@@ -5132,15 +5070,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7084dcc306f89883455a206237404d3eaf961e5bd7e0f312f7c91f57eb44167f"
 dependencies = [
  "windows-link 0.2.0",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87fa48cc5d406560701792be122a10132491cff9d0aeb23583cc2dcafc847319"
-dependencies = [
- "windows-link 0.1.3",
 ]
 
 [[package]]

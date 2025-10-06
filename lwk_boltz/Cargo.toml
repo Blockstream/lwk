@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "a7ef1115abf0c6d3312fb3e99adc39da4e2bb1f5", features = [
+boltz-client = { git = "https://github.com/RCasatta/boltz-rust", rev = "19abf46f8f379c8c6e7a884809089cf81272ae83", features = [
     "ws",
 ] }
 lwk_wollet = { version = "0.12.0" }
@@ -20,4 +20,3 @@ reqwest = { version = "0.12", default-features = false, features = ["json"] }
 base64 = "0.22"
 lwk_signer = { version = "0.12.0" }
 lwk_common = { version = "0.12.0" }
-

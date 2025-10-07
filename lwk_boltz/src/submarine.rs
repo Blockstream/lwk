@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest};
+use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest, SwapStatus};
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
@@ -138,24 +138,29 @@ impl LightningSession {
 }
 
 impl PreparePayResponse {
-    pub async fn complete_pay(mut self) -> Result<bool, Error> {
-        let timeout = Duration::from_secs(180);
-        let update = next_status(
+    async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+        next_status(
             &mut self.rx,
-            timeout,
-            &[
-                SwapState::TransactionMempool,
-                SwapState::TransactionLockupFailed,
-            ],
+            Duration::from_secs(180),
+            expected_states,
             &self.swap_id,
         )
-        .await?;
+        .await
+    }
+
+    pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        let update = self
+            .next_status(&[
+                SwapState::TransactionMempool,
+                SwapState::TransactionLockupFailed,
+            ])
+            .await?;
         let update_status = update.status.parse::<SwapState>().expect("TODO");
 
         if update_status == SwapState::TransactionMempool {
             log::info!("transaction.mempool Boltz broadcasted funding tx");
         } else if update_status == SwapState::TransactionLockupFailed {
-            log::info!("transaction.lockupFailed Boltz failed to lockup funding tx");
+            log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
             sleep(WAIT_TIME).await;
             let tx = self
                 .swap_script
@@ -175,34 +180,12 @@ impl PreparePayResponse {
             log::info!("Cooperative Refund Successfully broadcasted: {txid}");
             return Ok(false);
         }
-        let _update = next_status(
-            &mut self.rx,
-            timeout,
-            &[SwapState::TransactionConfirmed],
-            &self.swap_id,
-        )
-        .await?;
-        let _update = next_status(
-            &mut self.rx,
-            timeout,
-            &[SwapState::InvoicePending],
-            &self.swap_id,
-        )
-        .await?;
-        let _update = next_status(
-            &mut self.rx,
-            timeout,
-            &[SwapState::InvoicePaid],
-            &self.swap_id,
-        )
-        .await?;
-        let _update = next_status(
-            &mut self.rx,
-            timeout,
-            &[SwapState::TransactionClaimPending],
-            &self.swap_id,
-        )
-        .await?;
+        let _update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
+        let _update = self.next_status(&[SwapState::InvoicePending]).await?;
+        let _update = self.next_status(&[SwapState::InvoicePaid]).await?;
+        let _update = self
+            .next_status(&[SwapState::TransactionClaimPending])
+            .await?;
 
         let response = self
             .swap_script
@@ -215,14 +198,8 @@ impl PreparePayResponse {
             .await?;
         log::debug!("Received claim tx details : {response:?}");
 
-        let _update = next_status(
-            &mut self.rx,
-            timeout,
-            &[SwapState::TransactionClaimed],
-            &self.swap_id,
-        )
-        .await?;
-        log::error!("transaction.claimed Boltz claimed funding tx");
+        let _update = self.next_status(&[SwapState::TransactionClaimed]).await?;
+        log::info!("transaction.claimed Boltz claimed funding tx");
         Ok(true)
     }
 }

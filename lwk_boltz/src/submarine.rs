@@ -48,6 +48,7 @@ impl LightningSession {
         refund_address: &elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
+        let bolt11_invoice_str = bolt11_invoice.to_string();
 
         let secp = Secp256k1::new();
         let our_keys = Keypair::new(&secp, &mut thread_rng());
@@ -57,7 +58,7 @@ impl LightningSession {
         };
 
         if let Some((address, amount)) =
-            check_for_mrh(&self.api, &bolt11_invoice.to_string(), chain).await?
+            check_for_mrh(&self.api, &bolt11_invoice_str, chain).await?
         {
             let mrh_uri = format!(
                 "liquidnetwork:{address}?amount={:.8}",
@@ -73,7 +74,7 @@ impl LightningSession {
         let create_swap_req = CreateSubmarineRequest {
             from: chain.to_string(),
             to: "BTC".to_string(),
-            invoice: bolt11_invoice.to_string(),
+            invoice: bolt11_invoice_str.clone(),
             refund_public_key,
             pair_hash: None,
             referral_id: None,
@@ -84,19 +85,19 @@ impl LightningSession {
 
         let bolt11_amount = bolt11_invoice
             .amount_milli_satoshis()
-            .ok_or(Error::InvoiceWithoutAmount(bolt11_invoice.to_string()))?
+            .ok_or(Error::InvoiceWithoutAmount(bolt11_invoice_str.clone()))?
             / 1000;
         let fee = create_swap_response
             .expected_amount
             .checked_sub(bolt11_amount)
             .ok_or(Error::ExpectedAmountLowerThanInvoice(
                 create_swap_response.expected_amount,
-                bolt11_invoice.to_string(),
+                bolt11_invoice_str.clone(),
             ))?;
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        create_swap_response.validate(&bolt11_invoice.to_string(), &refund_public_key, chain)?;
+        create_swap_response.validate(&bolt11_invoice_str, &refund_public_key, chain)?;
         log::info!("VALIDATED RESPONSE!");
 
         let swap_script =

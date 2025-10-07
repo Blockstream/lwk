@@ -18,7 +18,7 @@ use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
-use crate::LightningSession;
+use crate::{next_status, LightningSession, SwapState};
 
 pub struct InvoiceResponse {
     pub swap_id: String,
@@ -93,23 +93,8 @@ impl LightningSession {
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        let update = tokio::select! {
-            update = rx.recv() => update?,
-            _ = tokio::time::sleep(self.timeout) => {
-                return Err(Error::Timeout(swap_id.clone()));
-            }
-        };
-        match update.status.as_str() {
-            "swap.created" => {
-                log::info!("Waiting for Invoice to be paid: {}", &invoice);
-            }
-            _ => {
-                return Err(Error::UnexpectedUpdate {
-                    swap_id: swap_id.clone(),
-                    status: update.status,
-                })?;
-            }
-        }
+        let _update = next_status(&mut rx, self.timeout, SwapState::SwapCreated, &swap_id).await?;
+        log::info!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
             swap_id,

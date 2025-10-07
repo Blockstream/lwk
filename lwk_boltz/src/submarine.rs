@@ -139,82 +139,90 @@ impl LightningSession {
 
 impl PreparePayResponse {
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
-        loop {
-            let update = tokio::select! {
-                update = self.rx.recv() => update?,
-                _ = tokio::time::sleep(Duration::from_secs(180)) => {
-                    // We use a conservartively long 3 minute timeout because the swap can take a
-                    // while to complete and also block confirmation may
-                    return Err(Error::Timeout(self.swap_id.clone()));
-                }
-            };
-            log::info!("Got Update from server: {}", update.status);
-            log::debug!("Update: {update:?}");
-            match update.status.as_str() {
-                "transaction.mempool" => {}
-                "transaction.confirmed" => {}
-                "invoice.pending" => {}
-                "invoice.paid" => {}
-                "transaction.claim.pending" => {
-                    let response = self
-                        .swap_script
-                        .submarine_cooperative_claim(
-                            &self.swap_id,
-                            &self.our_keys,
-                            &self.bolt11_invoice.to_string(),
-                            &self.api,
-                        )
-                        .await?;
-                    log::debug!("Received claim tx details : {response:?}");
-                }
+        let timeout = Duration::from_secs(180);
+        let update = next_status(
+            &mut self.rx,
+            timeout,
+            &[
+                SwapState::TransactionMempool,
+                SwapState::TransactionLockupFailed,
+            ],
+            &self.swap_id,
+        )
+        .await?;
+        let update_status = update.status.parse::<SwapState>().expect("TODO");
 
-                "transaction.claimed" => {
-                    break Ok(true);
-                }
+        if update_status == SwapState::TransactionMempool {
+            log::info!("transaction.mempool Boltz broadcasted funding tx");
+        } else if update_status == SwapState::TransactionLockupFailed {
+            log::info!("transaction.lockupFailed Boltz failed to lockup funding tx");
+            sleep(WAIT_TIME).await;
+            let tx = self
+                .swap_script
+                .construct_refund(SwapTransactionParams {
+                    keys: self.our_keys,
+                    output_address: self.refund_address.to_string(),
+                    fee: Fee::Relative(1.0), // TODO: improve
+                    swap_id: self.swap_id.clone(),
+                    chain_client: &self.chain_client,
+                    boltz_client: &self.api,
+                    options: None,
+                })
+                .await
+                .unwrap();
 
-                // This means the funding transaction was rejected by Boltz for whatever reason, and we need to get
-                // the funds back via refund.
-                "transaction.lockupFailed" | "invoice.failedToPay" => {
-                    sleep(WAIT_TIME).await;
-                    let tx = self
-                        .swap_script
-                        .construct_refund(SwapTransactionParams {
-                            keys: self.our_keys,
-                            output_address: self.refund_address.to_string(),
-                            fee: Fee::Relative(1.0), // TODO: improve
-                            swap_id: self.swap_id.clone(),
-                            chain_client: &self.chain_client,
-                            boltz_client: &self.api,
-                            options: None,
-                        })
-                        .await
-                        .unwrap();
-
-                    let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
-                    log::info!("Cooperative Refund Successfully broadcasted: {txid}");
-                    break Ok(false);
-
-                    // Non cooperative refund requires expired swap
-                    /*log::info!("Cooperative refund failed. {:?}", e);
-                    log::info!("Attempting Non-cooperative refund.");
-
-                    let tx = swap_tx
-                        .sign_refund(&our_keys, Fee::Absolute(1000), None)
-                        .await
-                        .unwrap();
-                    let txid = swap_tx
-                        .broadcast(&tx, bitcoin_client)
-                        .await
-                        .unwrap();
-                    log::info!("Non-cooperative Refund Successfully broadcasted: {}", txid);*/
-                }
-                _ => {
-                    Err(Error::UnexpectedUpdate {
-                        swap_id: self.swap_id.clone(),
-                        status: update.status,
-                    })?;
-                }
-            };
+            let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
+            log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+            return Ok(false);
         }
+        let _update = next_status(
+            &mut self.rx,
+            timeout,
+            &[SwapState::TransactionConfirmed],
+            &self.swap_id,
+        )
+        .await?;
+        let _update = next_status(
+            &mut self.rx,
+            timeout,
+            &[SwapState::InvoicePending],
+            &self.swap_id,
+        )
+        .await?;
+        let _update = next_status(
+            &mut self.rx,
+            timeout,
+            &[SwapState::InvoicePaid],
+            &self.swap_id,
+        )
+        .await?;
+        let _update = next_status(
+            &mut self.rx,
+            timeout,
+            &[SwapState::TransactionClaimPending],
+            &self.swap_id,
+        )
+        .await?;
+
+        let response = self
+            .swap_script
+            .submarine_cooperative_claim(
+                &self.swap_id,
+                &self.our_keys,
+                &self.bolt11_invoice.to_string(),
+                &self.api,
+            )
+            .await?;
+        log::debug!("Received claim tx details : {response:?}");
+
+        let _update = next_status(
+            &mut self.rx,
+            timeout,
+            &[SwapState::TransactionClaimed],
+            &self.swap_id,
+        )
+        .await?;
+        log::error!("transaction.claimed Boltz claimed funding tx");
+        Ok(true)
     }
 }

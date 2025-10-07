@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
+use boltz_client::boltz::SwapStatus;
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::magic_routing::sign_address;
@@ -113,6 +114,15 @@ impl LightningSession {
 }
 
 impl InvoiceResponse {
+    async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+        next_status(
+            &mut self.rx,
+            Duration::from_secs(180),
+            expected_states,
+            &self.swap_id,
+        )
+        .await
+    }
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
             let update = tokio::select! {

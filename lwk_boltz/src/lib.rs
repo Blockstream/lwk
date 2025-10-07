@@ -111,9 +111,11 @@ pub async fn next_status(
     let update = tokio::select! {
         update = rx.recv() => update?,
         _ = tokio::time::sleep(timeout) => {
+            log::warn!("Timeout while waiting state {:?} for swap id {}", expected_states, swap_id );
             return Err(Error::Timeout(swap_id.to_string()));
         }
     };
+    log::info!("Received update. status:{}", update.status);
     let status = update
         .status
         .parse::<SwapState>()

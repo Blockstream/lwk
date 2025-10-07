@@ -27,7 +27,11 @@ mod update;
 mod wollet;
 
 #[cfg(feature = "lightning")]
+mod invoice;
+#[cfg(feature = "lightning")]
 mod lightning;
+#[cfg(feature = "lightning")]
+pub use invoice::Bolt11Invoice;
 #[cfg(feature = "lightning")]
 pub use lightning::{LightningSession, LogLevel, Logging, LoggingLink};
 

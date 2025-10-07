@@ -22,6 +22,7 @@ use crate::clients::ElectrumClient;
 pub use crate::error::Error;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
+pub use boltz_client::Bolt11Invoice;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 

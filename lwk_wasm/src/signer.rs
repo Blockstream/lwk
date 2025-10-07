@@ -84,6 +84,11 @@ impl Signer {
             .expect("wasm bindings always create signer via mnemonic and not via xpriv")
             .into()
     }
+
+    /// Return the derived BIP85 mnemonic
+    pub fn derive_bip85_mnemonic(&self, index: u32, word_count: u32) -> Result<Mnemonic, Error> {
+        Ok(self.inner.derive_bip85_mnemonic(index, word_count)?.into())
+    }
 }
 
 #[allow(dead_code)]
@@ -163,5 +168,23 @@ mod tests {
         assert_eq!(signer.mnemonic(), mnemonic);
 
         assert_eq!(signer.sign_message("Hello, world!").unwrap(), "Hwlg40qLYZXEj9AoA3oZpfJMJPxaXzBL0+siHAJRhTIvSFiwSdtCsqxqB7TxgWfhqIr/YnGE4nagWzPchFJElTo=");
+
+        // Test BIP85 derivation
+        assert_eq!(
+            signer.derive_bip85_mnemonic(0, 12).unwrap().to_string(),
+            "prosper short ramp prepare exchange stove life snack client enough purpose fold"
+        );
+
+        assert_eq!(signer.derive_bip85_mnemonic(0, 24).unwrap().to_string(), "stick exact spice sock filter ginger museum horse kit multiply manual wear grief demand derive alert quiz fault december lava picture immune decade jaguar");
+
+        assert_ne!(
+            signer.derive_bip85_mnemonic(0, 12).unwrap().to_string(),
+            signer.derive_bip85_mnemonic(1, 12).unwrap().to_string()
+        );
+
+        assert_eq!(
+            signer.derive_bip85_mnemonic(0, 12).unwrap().to_string(),
+            signer.derive_bip85_mnemonic(0, 12).unwrap().to_string()
+        );
     }
 }

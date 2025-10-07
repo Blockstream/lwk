@@ -124,57 +124,42 @@ impl InvoiceResponse {
         .await
     }
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
-        loop {
-            let update = tokio::select! {
-                update = self.rx.recv() => update?,
-                _ = tokio::time::sleep(Duration::from_secs(180)) => {
-                    // We use a conservartively long 3 minute timeout because the swap can take a
-                    // while to complete and also block confirmation may
-                    return Err(Error::Timeout(self.swap_id.clone()));
-                }
-            };
-            match update.status.as_str() {
-                "transaction.direct" => {
-                    log::info!("Payer used magic routing hint");
-                    break Ok(true);
-                }
-                "transaction.mempool" => {
-                    log::info!("Boltz broadcasted funding tx");
-
-                    let tx = self
-                        .swap_script
-                        .construct_claim(
-                            &self.preimage,
-                            SwapTransactionParams {
-                                keys: self.our_keys,
-                                output_address: self.claim_address.to_string(),
-                                fee: Fee::Relative(1.0),
-                                swap_id: self.swap_id.clone(),
-                                options: Some(TransactionOptions::default().with_cooperative(true)),
-                                chain_client: &self.chain_client,
-                                boltz_client: &self.api,
-                            },
-                        )
-                        .await?;
-
-                    self.chain_client.broadcast_tx(&tx).await?;
-
-                    log::info!("Successfully broadcasted claim tx!");
-                    log::debug!("Claim Tx {tx:?}");
-                }
-                "transaction.confirmed" => {}
-                "invoice.settled" => {
-                    log::info!("Reverse Swap Successful!");
-                    break Ok(true);
-                }
-                _ => {
-                    return Err(Error::UnexpectedUpdate {
+        let update = self
+            .next_status(&[
+                SwapState::TransactionDirect,
+                SwapState::TransactionMempool,
+                SwapState::TransactionConfirmed,
+            ])
+            .await?;
+        let update_status = update.status.parse::<SwapState>().expect("TODO");
+        if update_status == SwapState::TransactionDirect {
+            log::info!("transaction.direct Payer used magic routing hint");
+            return Ok(true);
+        } else {
+            log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
+            let tx = self
+                .swap_script
+                .construct_claim(
+                    &self.preimage,
+                    SwapTransactionParams {
+                        keys: self.our_keys,
+                        output_address: self.claim_address.to_string(),
+                        fee: Fee::Relative(1.0),
                         swap_id: self.swap_id.clone(),
-                        status: update.status,
-                    })?;
-                }
-            }
-            log::info!("Got Update from server: {}", update.status);
+                        options: Some(TransactionOptions::default().with_cooperative(true)),
+                        chain_client: &self.chain_client,
+                        boltz_client: &self.api,
+                    },
+                )
+                .await?;
+
+            self.chain_client.broadcast_tx(&tx).await?;
+
+            log::info!("Successfully broadcasted claim tx!");
+            log::debug!("Claim Tx {tx:?}");
         }
+        let _update = self.next_status(&[SwapState::InvoiceSettled]).await?; // Can we receive TransactionConfirmed before InvoiceSettled?
+        log::info!("invoice.settled Reverse Swap Successful!");
+        Ok(true)
     }
 }

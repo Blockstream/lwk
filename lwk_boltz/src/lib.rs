@@ -3,6 +3,7 @@ pub mod clients;
 mod error;
 mod reverse;
 mod submarine;
+mod swap_state;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,6 +23,7 @@ use crate::clients::ElectrumClient;
 pub use crate::error::Error;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
+pub use crate::swap_state::SwapState;
 pub use boltz_client::Bolt11Invoice;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);

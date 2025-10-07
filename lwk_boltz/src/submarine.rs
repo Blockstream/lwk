@@ -118,10 +118,11 @@ impl LightningSession {
         match update.status.as_str() {
             "invoice.set" => {
                 log::info!(
-                    "Send {} sats to {} address {}",
+                    "Send {} sats to {} address {} or use uri {}",
                     create_swap_response.expected_amount,
                     chain,
-                    create_swap_response.address
+                    create_swap_response.address,
+                    create_swap_response.bip21
                 );
                 Ok(PreparePayResponse {
                     swap_id,

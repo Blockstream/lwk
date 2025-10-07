@@ -110,7 +110,8 @@ impl LightningSession {
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        let _update = next_status(&mut rx, self.timeout, SwapState::InvoiceSet, &swap_id).await?;
+        let _update =
+            next_status(&mut rx, self.timeout, &[SwapState::InvoiceSet], &swap_id).await?;
 
         log::info!(
             "Send {} sats to {} address {} or use uri {}",

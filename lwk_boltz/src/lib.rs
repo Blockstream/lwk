@@ -101,11 +101,11 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
     }
 }
 
-/// Wait for a specific swap status update from a broadcast receiver with timeout
+/// Wait for one of the expected swap status updates from a broadcast receiver with timeout
 pub async fn next_status(
     rx: &mut tokio::sync::broadcast::Receiver<SwapStatus>,
     timeout: Duration,
-    expected_state: SwapState,
+    expected_states: &[SwapState],
     swap_id: &str,
 ) -> Result<SwapStatus, Error> {
     let update = tokio::select! {
@@ -121,7 +121,7 @@ pub async fn next_status(
             swap_id: swap_id.to_string(),
             status: update.status.clone(),
         })?;
-    if status != expected_state {
+    if !expected_states.contains(&status) {
         return Err(Error::UnexpectedUpdate {
             swap_id: swap_id.to_string(),
             status: update.status.clone(),

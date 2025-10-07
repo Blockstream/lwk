@@ -11,6 +11,7 @@ use std::time::Duration;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
@@ -98,6 +99,36 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
         ElementsNetwork::LiquidTestnet => BOLTZ_TESTNET_URL_V2,
         ElementsNetwork::ElementsRegtest { .. } => BOLTZ_REGTEST,
     }
+}
+
+/// Wait for a specific swap status update from a broadcast receiver with timeout
+pub async fn next_status(
+    rx: &mut tokio::sync::broadcast::Receiver<SwapStatus>,
+    timeout: Duration,
+    expected_state: SwapState,
+    swap_id: &str,
+) -> Result<SwapStatus, Error> {
+    let update = tokio::select! {
+        update = rx.recv() => update?,
+        _ = tokio::time::sleep(timeout) => {
+            return Err(Error::Timeout(swap_id.to_string()));
+        }
+    };
+    let status = update
+        .status
+        .parse::<SwapState>()
+        .map_err(|_| Error::UnexpectedUpdate {
+            swap_id: swap_id.to_string(),
+            status: update.status.clone(),
+        })?;
+    if status != expected_state {
+        return Err(Error::UnexpectedUpdate {
+            swap_id: swap_id.to_string(),
+            status: update.status.clone(),
+        });
+    }
+
+    Ok(update)
 }
 
 #[cfg(test)]

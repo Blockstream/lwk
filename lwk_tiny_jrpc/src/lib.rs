@@ -598,7 +598,8 @@ mod test {
 
         // create the http serve dir
         let dir = tempfile::tempdir().unwrap();
-        let dir_path = dir.into_path();
+
+        let dir_path = dir.keep();
 
         let config = Config {
             serve_dir: Some(dir_path.clone()),

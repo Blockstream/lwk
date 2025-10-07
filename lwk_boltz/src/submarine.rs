@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -34,7 +33,7 @@ pub struct PreparePayResponse {
     pub fee: u64,
 
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
-    bolt11_invoice: String,
+    bolt11_invoice: Bolt11Invoice,
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
@@ -45,11 +44,10 @@ pub struct PreparePayResponse {
 impl LightningSession {
     pub async fn prepare_pay(
         &self,
-        bolt11_invoice: &str,
+        bolt11_invoice: &Bolt11Invoice,
         refund_address: &elements::Address,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
-        let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice)?;
 
         let secp = Secp256k1::new();
         let our_keys = Keypair::new(&secp, &mut thread_rng());
@@ -58,7 +56,9 @@ impl LightningSession {
             compressed: true,
         };
 
-        if let Some((address, amount)) = check_for_mrh(&self.api, &bolt11_invoice, chain).await? {
+        if let Some((address, amount)) =
+            check_for_mrh(&self.api, &bolt11_invoice.to_string(), chain).await?
+        {
             let mrh_uri = format!(
                 "liquidnetwork:{address}?amount={:.8}",
                 amount.to_string_in(Denomination::Bitcoin)
@@ -82,7 +82,7 @@ impl LightningSession {
 
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;
 
-        let bolt11_amount = bolt11_parsed
+        let bolt11_amount = bolt11_invoice
             .amount_milli_satoshis()
             .ok_or(Error::InvoiceWithoutAmount(bolt11_invoice.to_string()))?
             / 1000;
@@ -96,7 +96,7 @@ impl LightningSession {
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
-        create_swap_response.validate(&bolt11_invoice, &refund_public_key, chain)?;
+        create_swap_response.validate(&bolt11_invoice.to_string(), &refund_public_key, chain)?;
         log::info!("VALIDATED RESPONSE!");
 
         let swap_script =
@@ -132,7 +132,7 @@ impl LightningSession {
                     our_keys,
                     chain_client: self.chain_client.clone(),
                     refund_address: refund_address.to_string(),
-                    bolt11_invoice: bolt11_invoice.to_string(),
+                    bolt11_invoice: bolt11_invoice.clone(),
                 })
             }
             _ => Err(Error::UnexpectedUpdate {
@@ -167,7 +167,7 @@ impl PreparePayResponse {
                         .submarine_cooperative_claim(
                             &self.swap_id,
                             &self.our_keys,
-                            &self.bolt11_invoice,
+                            &self.bolt11_invoice.to_string(),
                             &self.api,
                         )
                         .await?;

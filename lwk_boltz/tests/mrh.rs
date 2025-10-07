@@ -6,13 +6,13 @@ mod tests {
     use std::{str::FromStr, sync::Arc};
 
     use boltz_client::{
-        boltz::{BoltzApiClientV2, MagicRoutingHint},
+        boltz::BoltzApiClientV2,
         network::{Chain, LiquidChain},
         swaps::magic_routing::check_for_mrh,
+        Bolt11Invoice,
     };
     use lwk_boltz::{clients::ElectrumClient, Error, LightningSession};
     use lwk_wollet::{elements, ElementsNetwork};
-    use tokio::time::sleep;
 
     /// Test Magic Routing Hints: A Boltz wallet pays another Boltz wallet's invoice
     /// directly on-chain without performing a swap
@@ -88,8 +88,9 @@ mod tests {
 
         // Sender: Detect MRH in the invoice
         let sender_session = LightningSession::new(network, client.clone(), Some(TIMEOUT));
+        let bolt11_parsed = Bolt11Invoice::from_str(&invoice.bolt11_invoice).unwrap();
         let prepare_pay_response = sender_session
-            .prepare_pay(&invoice.bolt11_invoice, &claim_address)
+            .prepare_pay(&bolt11_parsed, &claim_address)
             .await;
         if let Err(Error::MagicRoutingHint {
             address,

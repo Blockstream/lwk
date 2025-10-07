@@ -45,6 +45,11 @@ impl Mnemonic {
         let inner = bip39::Mnemonic::generate(word_count as usize)?;
         Ok(Arc::new(Self { inner }))
     }
+
+    /// Get the number of words in this mnemonic
+    pub fn word_count(&self) -> u8 {
+        self.inner.word_count() as u8
+    }
 }
 
 #[cfg(test)]

@@ -135,6 +135,30 @@ impl Signer {
             },
         )?))
     }
+
+    /// Derive a BIP85 mnemonic from this signer
+    ///
+    /// # Arguments
+    /// * `index` - The index for the derived mnemonic (0-based)
+    /// * `word_count` - The number of words in the derived mnemonic (12 or 24)
+    ///
+    /// # Returns
+    /// * `Ok(Mnemonic)` - The derived BIP85 mnemonic
+    /// * `Err(LwkError)` - If BIP85 derivation fails
+    ///
+    /// # Example
+    /// ```python
+    /// signer = Signer.new(mnemonic, network)
+    /// derived_mnemonic = signer.derive_bip85_mnemonic(0, 12)
+    /// ```
+    pub fn derive_bip85_mnemonic(
+        &self,
+        index: u32,
+        word_count: u32,
+    ) -> Result<Arc<Mnemonic>, LwkError> {
+        let derived_mnemonic = self.inner.derive_bip85_mnemonic(index, word_count)?;
+        Ok(Arc::new(derived_mnemonic.into()))
+    }
 }
 
 #[cfg(test)]
@@ -172,5 +196,41 @@ mod tests {
         assert_eq!(xpub, expected);
 
         assert_eq!(signer.mnemonic().unwrap(), mnemonic);
+    }
+
+    #[test]
+    fn test_bip85_derivation() {
+        let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
+        let network: crate::Network = ElementsNetwork::default_regtest().into();
+
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+
+        // Test BIP85 derivation with 12 words
+        let derived_mnemonic_12 = signer.derive_bip85_mnemonic(0, 12).unwrap();
+        assert_eq!(derived_mnemonic_12.word_count(), 12);
+        let expected_mnemonic_12 =
+            "prosper short ramp prepare exchange stove life snack client enough purpose fold";
+        assert_eq!(derived_mnemonic_12.to_string(), expected_mnemonic_12);
+
+        // Test BIP85 derivation with 24 words
+        let derived_mnemonic_24 = signer.derive_bip85_mnemonic(0, 24).unwrap();
+        assert_eq!(derived_mnemonic_24.word_count(), 24);
+        let expected_mnemonic_24 = "stick exact spice sock filter ginger museum horse kit multiply manual wear grief demand derive alert quiz fault december lava picture immune decade jaguar";
+        assert_eq!(derived_mnemonic_24.to_string(), expected_mnemonic_24);
+
+        // Test that different indices produce different mnemonics
+        let derived_mnemonic_1 = signer.derive_bip85_mnemonic(1, 12).unwrap();
+        assert_ne!(
+            derived_mnemonic_12.to_string(),
+            derived_mnemonic_1.to_string()
+        );
+
+        // Test that the same index produces the same mnemonic
+        let derived_mnemonic_0_again = signer.derive_bip85_mnemonic(0, 12).unwrap();
+        assert_eq!(
+            derived_mnemonic_12.to_string(),
+            derived_mnemonic_0_again.to_string()
+        );
     }
 }

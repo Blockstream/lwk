@@ -20,5 +20,6 @@ uniffi::build_foreign_language_testcases!(
     "tests/bindings/chained_reissuances.py",
     "tests/bindings/external_utxos.py",
     "tests/bindings/send_explicit.py",
-    "tests/bindings/basics.py"
+    "tests/bindings/basics.py",
+    "tests/bindings/bip85.py"
 );

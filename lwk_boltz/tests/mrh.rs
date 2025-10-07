@@ -46,7 +46,7 @@ mod tests {
         let boltz_api = BoltzApiClientV2::new(utils::BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
         let mrh_result = check_for_mrh(
             &boltz_api,
-            &invoice.bolt11_invoice,
+            &invoice.bolt11_invoice.to_string(),
             Chain::Liquid(LiquidChain::LiquidRegtest),
         )
         .await
@@ -88,7 +88,7 @@ mod tests {
 
         // Sender: Detect MRH in the invoice
         let sender_session = LightningSession::new(network, client.clone(), Some(TIMEOUT));
-        let bolt11_parsed = Bolt11Invoice::from_str(&invoice.bolt11_invoice).unwrap();
+        let bolt11_parsed = invoice.bolt11_invoice.clone();
         let prepare_pay_response = sender_session
             .prepare_pay(&bolt11_parsed, &claim_address)
             .await;

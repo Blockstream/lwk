@@ -47,7 +47,7 @@ mod tests {
                 .await;
             match invoice_response {
                 Ok(invoice_response) => {
-                    assert!(invoice_response.bolt11_invoice.starts_with("lnbc1"));
+                    assert!(invoice_response.bolt11_invoice.to_string().starts_with("lnbc1"));
                     return;
                 }
                 Err(e) => {
@@ -125,7 +125,7 @@ mod tests {
         let claim_address = elements::Address::from_str(&claim_address).unwrap();
         let invoice = session.invoice(100000, None, &claim_address).await.unwrap();
         log::info!("Invoice: {}", invoice.bolt11_invoice);
-        utils::start_pay_invoice_lnd(invoice.bolt11_invoice.clone());
+        utils::start_pay_invoice_lnd(invoice.bolt11_invoice.to_string());
         invoice.complete_pay().await.unwrap();
     }
 

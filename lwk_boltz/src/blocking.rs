@@ -79,7 +79,7 @@ impl InvoiceResponse {
         Ok(inner)
     }
 
-    pub fn bolt11_invoice(&self) -> String {
+    pub fn bolt11_invoice(&self) -> Bolt11Invoice {
         self.inner.bolt11_invoice.clone()
     }
 }

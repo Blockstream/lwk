@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::Secp256k1;
-use boltz_client::{Keypair, PublicKey};
+use boltz_client::{Bolt11Invoice, Keypair, PublicKey};
 use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
@@ -23,7 +24,7 @@ pub struct InvoiceResponse {
     pub swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - fee`
-    pub bolt11_invoice: String,
+    pub bolt11_invoice: Bolt11Invoice,
 
     /// The fee of the swap provider
     pub fee: u64,
@@ -69,16 +70,17 @@ impl LightningSession {
         };
 
         let reverse_resp = self.api.post_reverse_req(create_reverse_req).await?;
-        let invoice = reverse_resp
+        let invoice_str = reverse_resp
             .invoice
             .as_ref()
             .ok_or(Error::MissingInvoiceInResponse(reverse_resp.id.clone()))?
             .clone();
+        let invoice = Bolt11Invoice::from_str(&invoice_str)?;
         let fee = amount.checked_sub(reverse_resp.onchain_amount).ok_or(
             Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
         )?;
 
-        let _ = check_for_mrh(&self.api, &invoice, chain).await?.ok_or(
+        let _ = check_for_mrh(&self.api, &invoice_str, chain).await?.ok_or(
             Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),
         )?;
 

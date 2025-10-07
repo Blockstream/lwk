@@ -195,15 +195,16 @@ impl PreparePayResponse {
 
 #[uniffi::export]
 impl InvoiceResponse {
-    pub fn bolt11_invoice(&self) -> Result<String, LwkError> {
-        Ok(self
+    pub fn bolt11_invoice(&self) -> Result<Bolt11Invoice, LwkError> {
+        let bolt11_invoice = self
             .inner
             .lock()?
             .as_ref()
             .ok_or_else(|| LwkError::Generic {
                 msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
             })?
-            .bolt11_invoice())
+            .bolt11_invoice();
+        Ok(Bolt11Invoice::from(bolt11_invoice))
     }
 
     pub fn complete_pay(&self) -> Result<bool, LwkError> {

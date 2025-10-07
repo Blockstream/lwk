@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use boltz_client::Bolt11Invoice;
 use lwk_wollet::{elements, ElementsNetwork};
@@ -34,13 +34,12 @@ impl LightningSession {
 
     pub fn prepare_pay(
         &self,
-        bolt11_invoice: &str,
+        bolt11_invoice: &Bolt11Invoice,
         refund_address: &elements::Address,
     ) -> Result<PreparePayResponse, Error> {
-        let bolt11_parsed = Bolt11Invoice::from_str(bolt11_invoice)?;
         let inner = self
             .runtime
-            .block_on(self.inner.prepare_pay(&bolt11_parsed, refund_address))?;
+            .block_on(self.inner.prepare_pay(bolt11_invoice, refund_address))?;
         Ok(PreparePayResponse {
             inner,
             runtime: self.runtime.clone(),

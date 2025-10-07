@@ -37,7 +37,8 @@ assert bolt11_invoice.startswith("lnbc1")
 ## in the real world any invoice generated from a Boltz-enabled wallet will contain a MRH
 try:
     refund_address = wollet.address(3).address()
-    prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice, refund_address)
+    bolt11_invoice_obj = Bolt11Invoice(bolt11_invoice)
+    prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice_obj, refund_address)
 except LwkError.MagicRoutingHint as e:
     # Handle the specific MagicRoutingHint error
     print(f"Magic routing hint detected!")

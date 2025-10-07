@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Address, ElectrumClient, LwkError, Network};
+use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Network};
 use log::{Level, Metadata, Record};
 
 /// Log level for logging messages
@@ -139,10 +139,12 @@ impl LightningSession {
     /// Prepare to pay a bolt11 invoice
     pub fn prepare_pay(
         &self,
-        invoice: &str,
+        invoice: &Bolt11Invoice,
         refund_address: &Address,
     ) -> Result<PreparePayResponse, LwkError> {
-        let response = self.inner.prepare_pay(invoice, refund_address.as_ref())?;
+        let response = self
+            .inner
+            .prepare_pay(invoice.as_ref(), refund_address.as_ref())?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

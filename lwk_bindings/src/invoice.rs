@@ -27,6 +27,12 @@ impl From<&Bolt11Invoice> for lwk_boltz::Bolt11Invoice {
     }
 }
 
+impl AsRef<lwk_boltz::Bolt11Invoice> for Bolt11Invoice {
+    fn as_ref(&self) -> &lwk_boltz::Bolt11Invoice {
+        &self.inner
+    }
+}
+
 impl Display for Bolt11Invoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

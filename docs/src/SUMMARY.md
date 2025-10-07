@@ -27,6 +27,7 @@
   * [Ledger]() #(ledger.md) ❌
   * [LiquiDEX]() #(liquidex.md) ❌
   * [Pegin]() #(pegin.md) ❌
+  * [Bip85]() #(bip85.md) ❌
   * [CLI]() #(cli.md) 🚧
 * [Miscellaneous]() #(misc.md) ❌
   * [Architecture](arch.md) 🚧

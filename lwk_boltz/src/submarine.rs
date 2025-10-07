@@ -12,7 +12,7 @@ use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
-use crate::{LightningSession, WAIT_TIME};
+use crate::{next_status, LightningSession, SwapState, WAIT_TIME};
 
 pub struct PreparePayResponse {
     pub swap_id: String,
@@ -109,41 +109,30 @@ impl LightningSession {
 
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
-        let update = tokio::select! {
-            update = rx.recv() => update?,
-            _ = tokio::time::sleep(self.timeout) => {
-                return Err(Error::Timeout(swap_id.clone()));
-            }
-        };
-        match update.status.as_str() {
-            "invoice.set" => {
-                log::info!(
-                    "Send {} sats to {} address {} or use uri {}",
-                    create_swap_response.expected_amount,
-                    chain,
-                    create_swap_response.address,
-                    create_swap_response.bip21
-                );
-                Ok(PreparePayResponse {
-                    swap_id,
-                    uri: create_swap_response.bip21,
-                    address: create_swap_response.address,
-                    amount: create_swap_response.expected_amount,
-                    fee,
-                    rx,
-                    swap_script,
-                    api: self.api.clone(),
-                    our_keys,
-                    chain_client: self.chain_client.clone(),
-                    refund_address: refund_address.to_string(),
-                    bolt11_invoice: bolt11_invoice.clone(),
-                })
-            }
-            _ => Err(Error::UnexpectedUpdate {
-                swap_id: update.id,
-                status: update.status,
-            }),
-        }
+
+        let _update = next_status(&mut rx, self.timeout, SwapState::InvoiceSet, &swap_id).await?;
+
+        log::info!(
+            "Send {} sats to {} address {} or use uri {}",
+            create_swap_response.expected_amount,
+            chain,
+            create_swap_response.address,
+            create_swap_response.bip21
+        );
+        Ok(PreparePayResponse {
+            swap_id,
+            uri: create_swap_response.bip21,
+            address: create_swap_response.address,
+            amount: create_swap_response.expected_amount,
+            fee,
+            rx,
+            swap_script,
+            api: self.api.clone(),
+            our_keys,
+            chain_client: self.chain_client.clone(),
+            refund_address: refund_address.to_string(),
+            bolt11_invoice: bolt11_invoice.clone(),
+        })
     }
 }
 

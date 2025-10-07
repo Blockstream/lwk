@@ -66,6 +66,10 @@ impl LightningSession {
     fn chain(&self) -> Chain {
         Chain::Liquid(self.liquid_chain)
     }
+
+    fn network(&self) -> ElementsNetwork {
+        liquid_chain_to_elements_network(self.liquid_chain)
+    }
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

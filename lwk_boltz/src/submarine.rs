@@ -60,9 +60,11 @@ impl LightningSession {
         if let Some((address, amount)) =
             check_for_mrh(&self.api, &bolt11_invoice_str, chain).await?
         {
+            let asset_id = self.network().policy_asset().to_string();
             let mrh_uri = format!(
-                "liquidnetwork:{address}?amount={:.8}",
-                amount.to_string_in(Denomination::Bitcoin)
+                "liquidnetwork:{address}?amount={:.8}&assetid={}",
+                amount.to_string_in(Denomination::Bitcoin),
+                asset_id
             );
             return Err(Error::MagicRoutingHint {
                 address: address.to_string(),

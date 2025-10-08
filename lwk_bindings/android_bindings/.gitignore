@@ -14,3 +14,13 @@
 .cxx
 local.properties
 *.so
+*.a
+.kotlin
+
+lwk.native.kt
+lwk.h
+
+lwk.kt
+lwk.common.kt
+lwk.android.kt
+lwk.jvm.kt

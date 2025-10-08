@@ -2,16 +2,10 @@
 
 ## Build
 
-This will build the bindings library in debug mode and generate the kotlin file
+Create Kotlin Multiplatform bindings
 
 ```shell
-just kotlin
-```
-
-Create android bindings library libs, 4 architectures in release mode
-
-```shell
-just android
+just kotlin-multiplatform
 ```
 
 ## Examples

@@ -1,3 +1,4 @@
+use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,6 +16,8 @@ use crate::error::Error;
 use crate::{next_status, LightningSession, SwapState, WAIT_TIME};
 
 pub struct PreparePayResponse {
+    pub last_state: SwapState,
+
     pub swap_id: String,
 
     /// A liquidnetwork uri with the address to pay and the amount.
@@ -121,6 +124,7 @@ impl LightningSession {
             create_swap_response.bip21
         );
         Ok(PreparePayResponse {
+            last_state: SwapState::InvoiceSet,
             swap_id,
             uri: create_swap_response.bip21,
             address: create_swap_response.address,
@@ -148,58 +152,104 @@ impl PreparePayResponse {
         .await
     }
 
-    pub async fn complete_pay(mut self) -> Result<bool, Error> {
-        let update = self
-            .next_status(&[
-                SwapState::TransactionMempool,
-                SwapState::TransactionLockupFailed,
-            ])
-            .await?;
-        let update_status = update.status.parse::<SwapState>().expect("TODO");
+    async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        match self.last_state {
+            SwapState::InvoiceSet => {
+                let update = self
+                    .next_status(&[
+                        SwapState::TransactionMempool,
+                        SwapState::TransactionLockupFailed,
+                    ])
+                    .await?;
+                let update_status = update.status.parse::<SwapState>().expect("TODO");
 
-        if update_status == SwapState::TransactionMempool {
-            log::info!("transaction.mempool Boltz broadcasted funding tx");
-        } else if update_status == SwapState::TransactionLockupFailed {
-            log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
-            sleep(WAIT_TIME).await;
-            let tx = self
-                .swap_script
-                .construct_refund(SwapTransactionParams {
-                    keys: self.our_keys,
-                    output_address: self.refund_address.to_string(),
-                    fee: Fee::Relative(1.0), // TODO: improve
-                    swap_id: self.swap_id.clone(),
-                    chain_client: &self.chain_client,
-                    boltz_client: &self.api,
-                    options: None,
-                })
-                .await
-                .unwrap();
+                if update_status == SwapState::TransactionMempool {
+                    log::info!("transaction.mempool Boltz broadcasted funding tx");
+                    self.last_state = update_status;
+                    Ok(ControlFlow::Continue(update))
+                } else if update_status == SwapState::TransactionLockupFailed {
+                    log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
+                    sleep(WAIT_TIME).await;
+                    let tx = self
+                        .swap_script
+                        .construct_refund(SwapTransactionParams {
+                            keys: self.our_keys,
+                            output_address: self.refund_address.to_string(),
+                            fee: Fee::Relative(1.0), // TODO: improve
+                            swap_id: self.swap_id.clone(),
+                            chain_client: &self.chain_client,
+                            boltz_client: &self.api,
+                            options: None,
+                        })
+                        .await
+                        .unwrap();
 
-            let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
-            log::info!("Cooperative Refund Successfully broadcasted: {txid}");
-            return Ok(false);
+                    let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
+                    log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                    self.last_state = update_status;
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    todo!()
+                }
+            }
+            SwapState::TransactionMempool => {
+                let update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
+                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::TransactionConfirmed => {
+                let update = self.next_status(&[SwapState::InvoicePending]).await?;
+                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::InvoicePending => {
+                let update = self.next_status(&[SwapState::InvoicePaid]).await?;
+                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::InvoicePaid => {
+                let update = self
+                    .next_status(&[SwapState::TransactionClaimPending])
+                    .await?;
+                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                let response = self
+                    .swap_script
+                    .submarine_cooperative_claim(
+                        &self.swap_id,
+                        &self.our_keys,
+                        &self.bolt11_invoice.to_string(),
+                        &self.api,
+                    )
+                    .await?;
+                log::debug!("Received claim tx details : {response:?}");
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::TransactionClaimPending => {
+                let update = self.next_status(&[SwapState::TransactionClaimed]).await?;
+                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::TransactionClaimed => {
+                log::info!("transaction.claimed Boltz claimed funding tx");
+                Ok(ControlFlow::Break(true))
+            }
+            ref e => Err(Error::UnexpectedUpdate {
+                swap_id: self.swap_id.clone(),
+                status: e.to_string(),
+            }),
         }
-        let _update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
-        let _update = self.next_status(&[SwapState::InvoicePending]).await?;
-        let _update = self.next_status(&[SwapState::InvoicePaid]).await?;
-        let _update = self
-            .next_status(&[SwapState::TransactionClaimPending])
-            .await?;
+    }
 
-        let response = self
-            .swap_script
-            .submarine_cooperative_claim(
-                &self.swap_id,
-                &self.our_keys,
-                &self.bolt11_invoice.to_string(),
-                &self.api,
-            )
-            .await?;
-        log::debug!("Received claim tx details : {response:?}");
-
-        let _update = self.next_status(&[SwapState::TransactionClaimed]).await?;
-        log::info!("transaction.claimed Boltz claimed funding tx");
-        Ok(true)
+    pub async fn complete_pay(mut self) -> Result<bool, Error> {
+        loop {
+            match self.advance().await? {
+                ControlFlow::Continue(update) => {
+                    log::info!("Received update. status:{}", update.status);
+                }
+                ControlFlow::Break(e) => {
+                    break Ok(e);
+                }
+            }
+        }
     }
 }

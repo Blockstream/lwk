@@ -213,10 +213,11 @@ impl LightningSession {
                 compressed: true,
             },
         )?;
-        let rx = self.ws.updates();
+        let mut rx = self.ws.updates();
         self.ws
             .subscribe_swap(&data.create_swap_response.id)
             .await?;
+        rx.recv().await?; // skip the initial state which is resent from boltz server
         Ok(PreparePayResponse {
             data,
             swap_script,

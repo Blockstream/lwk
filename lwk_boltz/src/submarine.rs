@@ -318,3 +318,55 @@ impl PreparePayResponse {
         self.data.create_swap_response.id.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_prepare_pay_data_serialization_roundtrip() {
+        // Load the JSON data from the test file
+        let json_data = include_str!("../tests/data/prepare_pay_response.json");
+
+        // Deserialize the JSON into PreparePayData
+        let deserialized1: PreparePayData = serde_json::from_str(json_data)
+            .expect("Failed to deserialize PreparePayData from JSON");
+
+        // Serialize it back to JSON
+        let serialized = serde_json::to_string(&deserialized1)
+            .expect("Failed to serialize PreparePayData to JSON");
+
+        // Deserialize again
+        let deserialized2: PreparePayData = serde_json::from_str(&serialized)
+            .expect("Failed to deserialize PreparePayData from serialized JSON");
+
+        // Compare the two deserialized versions for equality
+        assert_eq!(deserialized1.last_state, deserialized2.last_state);
+        assert_eq!(deserialized1.fee, deserialized2.fee);
+        assert_eq!(
+            deserialized1.bolt11_invoice.to_string(),
+            deserialized2.bolt11_invoice.to_string()
+        );
+        assert_eq!(
+            deserialized1.create_swap_response.id,
+            deserialized2.create_swap_response.id
+        );
+        assert_eq!(
+            deserialized1.create_swap_response.expected_amount,
+            deserialized2.create_swap_response.expected_amount
+        );
+        assert_eq!(
+            deserialized1.create_swap_response.address,
+            deserialized2.create_swap_response.address
+        );
+        assert_eq!(
+            deserialized1.our_keys.secret_bytes(),
+            deserialized2.our_keys.secret_bytes()
+        );
+        assert_eq!(deserialized1.refund_address, deserialized2.refund_address);
+
+        // Also test that the full structs are equal (this will test all fields)
+        // Note: We can't directly compare PreparePayData due to Keypair not implementing Eq
+        // But we can compare all the individual fields as above
+    }
+}

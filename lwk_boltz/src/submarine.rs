@@ -32,7 +32,6 @@ pub struct PreparePayResponse {
 #[derive(Clone, Debug)]
 pub struct PreparePayData {
     pub last_state: SwapState,
-    pub swap_id: String,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: u64,
@@ -51,7 +50,6 @@ impl Serialize for PreparePayData {
 
         let mut state = serializer.serialize_struct("PreparePayData", 10)?;
         state.serialize_field("last_state", &self.last_state)?;
-        state.serialize_field("swap_id", &self.swap_id)?;
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
         state.serialize_field("create_swap_response", &self.create_swap_response)?;
@@ -70,7 +68,6 @@ impl<'de> Deserialize<'de> for PreparePayData {
         #[derive(Deserialize)]
         struct PreparePayDataHelper {
             last_state: SwapState,
-            swap_id: String,
             fee: u64,
             bolt11_invoice: String,
             create_swap_response: CreateSubmarineResponse,
@@ -99,7 +96,6 @@ impl<'de> Deserialize<'de> for PreparePayData {
 
         Ok(PreparePayData {
             last_state: helper.last_state,
-            swap_id: helper.swap_id,
             fee: helper.fee,
             bolt11_invoice,
             create_swap_response: helper.create_swap_response,
@@ -191,7 +187,6 @@ impl LightningSession {
         Ok(PreparePayResponse {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
-                swap_id,
                 fee,
                 bolt11_invoice: bolt11_invoice.clone(),
                 our_keys: our_keys.clone(),
@@ -208,11 +203,12 @@ impl LightningSession {
 
 impl PreparePayResponse {
     async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+        let swap_id = self.swap_id();
         next_status(
             &mut self.rx,
             Duration::from_secs(180),
             expected_states,
-            &self.data.swap_id,
+            &swap_id,
         )
         .await
     }
@@ -241,7 +237,7 @@ impl PreparePayResponse {
                             keys: self.data.our_keys,
                             output_address: self.data.refund_address.to_string(),
                             fee: Fee::Relative(1.0), // TODO: improve
-                            swap_id: self.data.swap_id.clone(),
+                            swap_id: self.swap_id(),
                             chain_client: &self.chain_client,
                             boltz_client: &self.api,
                             options: None,
@@ -280,7 +276,7 @@ impl PreparePayResponse {
                 let response = self
                     .swap_script
                     .submarine_cooperative_claim(
-                        &self.data.swap_id,
+                        &self.swap_id(),
                         &self.data.our_keys,
                         &self.data.bolt11_invoice.to_string(),
                         &self.api,
@@ -299,7 +295,7 @@ impl PreparePayResponse {
                 Ok(ControlFlow::Break(true))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.data.swap_id.clone(),
+                swap_id: self.swap_id(),
                 status: e.to_string(),
             }),
         }
@@ -316,5 +312,9 @@ impl PreparePayResponse {
                 }
             }
         }
+    }
+
+    fn swap_id(&self) -> String {
+        self.data.create_swap_response.id.clone()
     }
 }

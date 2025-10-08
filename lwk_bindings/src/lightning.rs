@@ -1,4 +1,5 @@
 use std::{
+    ops::ControlFlow,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -90,6 +91,13 @@ pub struct PreparePayResponse {
 pub struct InvoiceResponse {
     /// Using Option to allow consuming the inner value when complete_pay is called
     inner: Mutex<Option<lwk_boltz::blocking::InvoiceResponse>>,
+}
+
+#[derive(uniffi::Enum)]
+pub enum PaymentState {
+    Continue,
+    Success,
+    Failed,
 }
 
 #[uniffi::export]
@@ -212,6 +220,26 @@ impl PreparePayResponse {
                 msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
             })?
             .uri())
+    }
+
+    pub fn advance(&self) -> Result<PaymentState, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let mut response = lock.take().ok_or_else(|| LwkError::Generic {
+            msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+        })?;
+        let control_flow = response.advance()?;
+        let result = match control_flow {
+            ControlFlow::Continue(_update) => PaymentState::Continue,
+            ControlFlow::Break(update) => {
+                if update {
+                    PaymentState::Success
+                } else {
+                    PaymentState::Failed
+                }
+            }
+        };
+        *lock = Some(response);
+        Ok(result)
     }
 }
 

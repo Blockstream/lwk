@@ -71,6 +71,10 @@ impl PreparePayResponse {
     pub fn uri(&self) -> String {
         self.inner.data.create_swap_response.bip21.clone()
     }
+
+    pub fn serialize(&self) -> Result<String, Error> {
+        self.inner.serialize()
+    }
 }
 
 impl InvoiceResponse {

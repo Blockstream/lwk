@@ -1,9 +1,9 @@
-use std::{sync::Arc, time::Duration};
+use std::{ops::ControlFlow, sync::Arc, time::Duration};
 
 use boltz_client::Bolt11Invoice;
 use lwk_wollet::{elements, ElementsNetwork};
 
-use crate::{clients::ElectrumClient, Error, PreparePayData};
+use crate::{clients::ElectrumClient, Error, PreparePayData, SwapStatus};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -85,6 +85,11 @@ impl PreparePayResponse {
 
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
+    }
+
+    pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let inner = self.runtime.block_on(self.inner.advance())?;
+        Ok(inner)
     }
 }
 

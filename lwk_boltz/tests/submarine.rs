@@ -14,7 +14,9 @@ mod tests {
         util::sleep,
         Bolt11Invoice, Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, LightningSession};
+    use lwk_boltz::{
+        clients::ElectrumClient, LightningSession, PreparePayData, PreparePayResponse,
+    };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -82,18 +84,19 @@ mod tests {
             .await
             .unwrap();
         let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            Arc::new(
-                ElectrumClient::new(
-                    DEFAULT_REGTEST_NODE,
-                    false,
-                    false,
-                    ElementsNetwork::default_regtest(),
-                )
-                .unwrap(),
-            ),
+            client.clone(),
             Some(TIMEOUT),
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
@@ -132,6 +135,56 @@ mod tests {
         )
         .await
         .unwrap();
+        prepare_pay_response.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_session_restore_submarine() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = LightningSession::new(
+            ElementsNetwork::default_regtest(),
+            client.clone(),
+            Some(TIMEOUT),
+        );
+
+        // test restore swap after drop
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
+        let prepare_pay_response = session
+            .prepare_pay(&bolt11_parsed, &refund_address)
+            .await
+            .unwrap();
+        let serialized_data = prepare_pay_response.serialize().unwrap();
+        drop(prepare_pay_response);
+        drop(session);
+        let session = LightningSession::new(
+            ElementsNetwork::default_regtest(),
+            client.clone(),
+            Some(TIMEOUT),
+        );
+        let data = PreparePayData::deserialize(&serialized_data).unwrap();
+        let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
         prepare_pay_response.complete_pay().await.unwrap();
 
         // Stop the mining task

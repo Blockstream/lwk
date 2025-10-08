@@ -10,7 +10,7 @@ use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
-use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
+use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1, ToHex};
 use lwk_wollet::bitcoin::Denomination;
 use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
@@ -53,8 +53,8 @@ impl Serialize for PreparePayData {
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
         state.serialize_field("create_swap_response", &self.create_swap_response)?;
-        // Serialize the secret key bytes for keypair recreation
-        state.serialize_field("our_keys", &self.our_keys.secret_bytes())?;
+        // Serialize the secret key hex string for keypair recreation
+        state.serialize_field("secret_key", &self.our_keys.secret_bytes().to_hex())?;
         state.serialize_field("refund_address", &self.refund_address)?;
         state.end()
     }
@@ -71,7 +71,7 @@ impl<'de> Deserialize<'de> for PreparePayData {
             fee: u64,
             bolt11_invoice: String,
             create_swap_response: CreateSubmarineResponse,
-            our_keys: Vec<u8>, // Secret key bytes
+            secret_key: String, // Secret key hex string
             refund_address: String,
         }
 
@@ -85,7 +85,7 @@ impl<'de> Deserialize<'de> for PreparePayData {
 
         // Recreate Keypair from secret key bytes using from_seckey_slice
         let secp = Secp256k1::new();
-        let our_keys = match Keypair::from_seckey_slice(&secp, &helper.our_keys) {
+        let our_keys = match Keypair::from_seckey_str(&secp, &helper.secret_key) {
             Ok(keypair) => keypair,
             Err(_) => {
                 return Err(serde::de::Error::custom(

@@ -1,5 +1,5 @@
 /// Enum representing all possible swap status values from Boltz API updates
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SwapState {
     InvoiceSet,
     TransactionMempool,

@@ -69,7 +69,7 @@ impl PreparePayResponse {
     }
 
     pub fn uri(&self) -> String {
-        self.inner.uri.clone()
+        self.inner.data.uri.clone()
     }
 }
 

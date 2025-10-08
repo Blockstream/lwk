@@ -1,4 +1,5 @@
 use std::ops::ControlFlow;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,13 +12,23 @@ use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
 use lwk_wollet::bitcoin::Denomination;
 use lwk_wollet::elements;
 use lwk_wollet::secp256k1::rand::thread_rng;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::Error;
 use crate::{next_status, LightningSession, SwapState, WAIT_TIME};
 
 pub struct PreparePayResponse {
-    pub last_state: SwapState,
+    pub data: PreparePayData,
 
+    // unserializable fields
+    chain_client: Arc<ChainClient>,
+    api: Arc<BoltzApiClientV2>,
+    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparePayData {
+    pub last_state: SwapState,
     pub swap_id: String,
 
     /// A liquidnetwork uri with the address to pay and the amount.
@@ -34,14 +45,77 @@ pub struct PreparePayResponse {
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: u64,
+    pub bolt11_invoice: Bolt11Invoice,
+    pub swap_script: SwapScript,
+    pub our_keys: Keypair,
+    pub refund_address: String,
+}
 
-    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
-    bolt11_invoice: Bolt11Invoice,
-    swap_script: SwapScript,
-    api: Arc<BoltzApiClientV2>,
-    our_keys: Keypair,
-    chain_client: Arc<ChainClient>,
-    refund_address: String,
+impl Serialize for PreparePayData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut state = serializer.serialize_struct("PreparePayData", 10)?;
+        state.serialize_field("last_state", &self.last_state)?;
+        state.serialize_field("swap_id", &self.swap_id)?;
+        state.serialize_field("uri", &self.uri)?;
+        state.serialize_field("address", &self.address)?;
+        state.serialize_field("amount", &self.amount)?;
+        state.serialize_field("fee", &self.fee)?;
+        state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
+        // TODO: Implement proper serialization for SwapScript
+        state.serialize_field(
+            "swap_script",
+            &"TODO: SwapScript serialization not implemented",
+        )?;
+        // TODO: Implement proper serialization for Keypair (this contains private keys - be careful!)
+        state.serialize_field(
+            "our_keys",
+            &"TODO: Keypair serialization not implemented - contains private keys",
+        )?;
+        state.serialize_field("refund_address", &self.refund_address)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for PreparePayData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct PreparePayDataHelper {
+            last_state: SwapState,
+            swap_id: String,
+            uri: String,
+            address: String,
+            amount: u64,
+            fee: u64,
+            bolt11_invoice: String,
+            swap_script: String,
+            our_keys: String,
+            refund_address: String,
+        }
+
+        let helper = PreparePayDataHelper::deserialize(deserializer)?;
+
+        // Parse bolt11_invoice from string
+        let _bolt11_invoice = match Bolt11Invoice::from_str(&helper.bolt11_invoice) {
+            Ok(invoice) => invoice,
+            Err(_) => return Err(serde::de::Error::custom("Failed to parse bolt11 invoice")),
+        };
+
+        // TODO: Implement deserialization for SwapScript
+        todo!("SwapScript deserialization not implemented");
+
+        // TODO: Implement deserialization for Keypair - this is particularly challenging since it contains private keys
+        todo!(
+            "Keypair deserialization not implemented - contains private keys, need secure handling"
+        );
+    }
 }
 
 impl LightningSession {
@@ -124,19 +198,21 @@ impl LightningSession {
             create_swap_response.bip21
         );
         Ok(PreparePayResponse {
-            last_state: SwapState::InvoiceSet,
-            swap_id,
-            uri: create_swap_response.bip21,
-            address: create_swap_response.address,
-            amount: create_swap_response.expected_amount,
-            fee,
+            data: PreparePayData {
+                last_state: SwapState::InvoiceSet,
+                swap_id,
+                uri: create_swap_response.bip21,
+                address: create_swap_response.address,
+                amount: create_swap_response.expected_amount,
+                fee,
+                bolt11_invoice: bolt11_invoice.clone(),
+                swap_script: swap_script.clone(),
+                our_keys: our_keys.clone(),
+                refund_address: refund_address.to_string(),
+            },
             rx,
-            swap_script,
             api: self.api.clone(),
-            our_keys,
             chain_client: self.chain_client.clone(),
-            refund_address: refund_address.to_string(),
-            bolt11_invoice: bolt11_invoice.clone(),
         })
     }
 }
@@ -147,13 +223,13 @@ impl PreparePayResponse {
             &mut self.rx,
             Duration::from_secs(180),
             expected_states,
-            &self.swap_id,
+            &self.data.swap_id,
         )
         .await
     }
 
     async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
-        match self.last_state {
+        match self.data.last_state {
             SwapState::InvoiceSet => {
                 let update = self
                     .next_status(&[
@@ -165,18 +241,19 @@ impl PreparePayResponse {
 
                 if update_status == SwapState::TransactionMempool {
                     log::info!("transaction.mempool Boltz broadcasted funding tx");
-                    self.last_state = update_status;
+                    self.data.last_state = update_status;
                     Ok(ControlFlow::Continue(update))
                 } else if update_status == SwapState::TransactionLockupFailed {
                     log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
                     sleep(WAIT_TIME).await;
                     let tx = self
+                        .data
                         .swap_script
                         .construct_refund(SwapTransactionParams {
-                            keys: self.our_keys,
-                            output_address: self.refund_address.to_string(),
+                            keys: self.data.our_keys,
+                            output_address: self.data.refund_address.to_string(),
                             fee: Fee::Relative(1.0), // TODO: improve
-                            swap_id: self.swap_id.clone(),
+                            swap_id: self.data.swap_id.clone(),
                             chain_client: &self.chain_client,
                             boltz_client: &self.api,
                             options: None,
@@ -186,7 +263,7 @@ impl PreparePayResponse {
 
                     let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
                     log::info!("Cooperative Refund Successfully broadcasted: {txid}");
-                    self.last_state = update_status;
+                    self.data.last_state = update_status;
                     Ok(ControlFlow::Break(true))
                 } else {
                     todo!()
@@ -194,30 +271,31 @@ impl PreparePayResponse {
             }
             SwapState::TransactionMempool => {
                 let update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
-                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
                 let update = self.next_status(&[SwapState::InvoicePending]).await?;
-                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePending => {
                 let update = self.next_status(&[SwapState::InvoicePaid]).await?;
-                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePaid => {
                 let update = self
                     .next_status(&[SwapState::TransactionClaimPending])
                     .await?;
-                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 let response = self
+                    .data
                     .swap_script
                     .submarine_cooperative_claim(
-                        &self.swap_id,
-                        &self.our_keys,
-                        &self.bolt11_invoice.to_string(),
+                        &self.data.swap_id,
+                        &self.data.our_keys,
+                        &self.data.bolt11_invoice.to_string(),
                         &self.api,
                     )
                     .await?;
@@ -226,7 +304,7 @@ impl PreparePayResponse {
             }
             SwapState::TransactionClaimPending => {
                 let update = self.next_status(&[SwapState::TransactionClaimed]).await?;
-                self.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionClaimed => {
@@ -234,7 +312,7 @@ impl PreparePayResponse {
                 Ok(ControlFlow::Break(true))
             }
             ref e => Err(Error::UnexpectedUpdate {
-                swap_id: self.swap_id.clone(),
+                swap_id: self.data.swap_id.clone(),
                 status: e.to_string(),
             }),
         }

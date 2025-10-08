@@ -240,7 +240,7 @@ impl PreparePayResponse {
         .await
     }
 
-    async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+    pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         match self.data.last_state {
             SwapState::InvoiceSet => {
                 let update = self
@@ -345,8 +345,15 @@ impl PreparePayResponse {
         }
     }
 
-    fn swap_id(&self) -> String {
+    pub fn swap_id(&self) -> String {
         self.data.create_swap_response.id.clone()
+    }
+
+    pub fn address(&self) -> String {
+        self.data.create_swap_response.address.clone()
+    }
+    pub fn amount(&self) -> u64 {
+        self.data.create_swap_response.expected_amount
     }
 }
 

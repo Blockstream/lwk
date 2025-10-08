@@ -171,10 +171,11 @@ mod tests {
         // test restore swap after drop
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
-        let prepare_pay_response = session
+        let mut prepare_pay_response = session
             .prepare_pay(&bolt11_parsed, &refund_address)
             .await
             .unwrap();
+
         let serialized_data = prepare_pay_response.serialize().unwrap();
         drop(prepare_pay_response);
         drop(session);
@@ -185,6 +186,13 @@ mod tests {
         );
         let data = PreparePayData::deserialize(&serialized_data).unwrap();
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.address(),
+            prepare_pay_response.amount(),
+        )
+        .await
+        .unwrap();
         prepare_pay_response.complete_pay().await.unwrap();
 
         // Stop the mining task

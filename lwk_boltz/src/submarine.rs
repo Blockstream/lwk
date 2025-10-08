@@ -3,7 +3,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest, SwapStatus};
+use boltz_client::boltz::{
+    BoltzApiClientV2, CreateSubmarineRequest, CreateSubmarineResponse, SwapStatus,
+};
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
@@ -21,6 +23,7 @@ pub struct PreparePayResponse {
     pub data: PreparePayData,
 
     // unserializable fields
+    swap_script: SwapScript,
     chain_client: Arc<ChainClient>,
     api: Arc<BoltzApiClientV2>,
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
@@ -31,22 +34,10 @@ pub struct PreparePayData {
     pub last_state: SwapState,
     pub swap_id: String,
 
-    /// A liquidnetwork uri with the address to pay and the amount.
-    /// Note the amount is greater that what is specified in the bolt11 invoice because of fees
-    pub uri: String,
-
-    /// The address to pay to.
-    /// It is the same contained in the uri but provided for convenience.
-    pub address: String,
-
-    /// The amount to pay.
-    /// It is the same contained in the uri but provided for convenience.
-    pub amount: u64,
-
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: u64,
     pub bolt11_invoice: Bolt11Invoice,
-    pub swap_script: SwapScript,
+    pub create_swap_response: CreateSubmarineResponse,
     pub our_keys: Keypair,
     pub refund_address: String,
 }
@@ -61,21 +52,11 @@ impl Serialize for PreparePayData {
         let mut state = serializer.serialize_struct("PreparePayData", 10)?;
         state.serialize_field("last_state", &self.last_state)?;
         state.serialize_field("swap_id", &self.swap_id)?;
-        state.serialize_field("uri", &self.uri)?;
-        state.serialize_field("address", &self.address)?;
-        state.serialize_field("amount", &self.amount)?;
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
-        // TODO: Implement proper serialization for SwapScript
-        state.serialize_field(
-            "swap_script",
-            &"TODO: SwapScript serialization not implemented",
-        )?;
-        // TODO: Implement proper serialization for Keypair (this contains private keys - be careful!)
-        state.serialize_field(
-            "our_keys",
-            &"TODO: Keypair serialization not implemented - contains private keys",
-        )?;
+        state.serialize_field("create_swap_response", &self.create_swap_response)?;
+        // Serialize the secret key bytes for keypair recreation
+        state.serialize_field("our_keys", &self.our_keys.secret_bytes())?;
         state.serialize_field("refund_address", &self.refund_address)?;
         state.end()
     }
@@ -90,31 +71,41 @@ impl<'de> Deserialize<'de> for PreparePayData {
         struct PreparePayDataHelper {
             last_state: SwapState,
             swap_id: String,
-            uri: String,
-            address: String,
-            amount: u64,
             fee: u64,
             bolt11_invoice: String,
-            swap_script: String,
-            our_keys: String,
+            create_swap_response: CreateSubmarineResponse,
+            our_keys: Vec<u8>, // Secret key bytes
             refund_address: String,
         }
 
         let helper = PreparePayDataHelper::deserialize(deserializer)?;
 
         // Parse bolt11_invoice from string
-        let _bolt11_invoice = match Bolt11Invoice::from_str(&helper.bolt11_invoice) {
+        let bolt11_invoice = match Bolt11Invoice::from_str(&helper.bolt11_invoice) {
             Ok(invoice) => invoice,
             Err(_) => return Err(serde::de::Error::custom("Failed to parse bolt11 invoice")),
         };
 
-        // TODO: Implement deserialization for SwapScript
-        todo!("SwapScript deserialization not implemented");
+        // Recreate Keypair from secret key bytes using from_seckey_slice
+        let secp = Secp256k1::new();
+        let our_keys = match Keypair::from_seckey_slice(&secp, &helper.our_keys) {
+            Ok(keypair) => keypair,
+            Err(_) => {
+                return Err(serde::de::Error::custom(
+                    "Failed to recreate keypair from secret key",
+                ))
+            }
+        };
 
-        // TODO: Implement deserialization for Keypair - this is particularly challenging since it contains private keys
-        todo!(
-            "Keypair deserialization not implemented - contains private keys, need secure handling"
-        );
+        Ok(PreparePayData {
+            last_state: helper.last_state,
+            swap_id: helper.swap_id,
+            fee: helper.fee,
+            bolt11_invoice,
+            create_swap_response: helper.create_swap_response,
+            our_keys,
+            refund_address: helper.refund_address,
+        })
     }
 }
 
@@ -201,15 +192,13 @@ impl LightningSession {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_id,
-                uri: create_swap_response.bip21,
-                address: create_swap_response.address,
-                amount: create_swap_response.expected_amount,
                 fee,
                 bolt11_invoice: bolt11_invoice.clone(),
-                swap_script: swap_script.clone(),
                 our_keys: our_keys.clone(),
                 refund_address: refund_address.to_string(),
+                create_swap_response: create_swap_response.clone(),
             },
+            swap_script: swap_script.clone(),
             rx,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
@@ -247,7 +236,6 @@ impl PreparePayResponse {
                     log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
                     sleep(WAIT_TIME).await;
                     let tx = self
-                        .data
                         .swap_script
                         .construct_refund(SwapTransactionParams {
                             keys: self.data.our_keys,
@@ -290,7 +278,6 @@ impl PreparePayResponse {
                     .await?;
                 self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
                 let response = self
-                    .data
                     .swap_script
                     .submarine_cooperative_claim(
                         &self.data.swap_id,

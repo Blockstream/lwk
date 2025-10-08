@@ -57,8 +57,11 @@ mod tests {
             .unwrap();
         log::info!(
             "Send {} sats to address: {}",
-            prepare_pay_response.data.amount,
-            prepare_pay_response.data.address
+            prepare_pay_response
+                .data
+                .create_swap_response
+                .expected_amount,
+            prepare_pay_response.data.create_swap_response.address
         );
         log::info!("Waiting for payment to be sent to the address...");
 
@@ -101,8 +104,11 @@ mod tests {
             .unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
-            &prepare_pay_response.data.address,
-            prepare_pay_response.data.amount,
+            &prepare_pay_response.data.create_swap_response.address,
+            prepare_pay_response
+                .data
+                .create_swap_response
+                .expected_amount,
         )
         .await
         .unwrap();
@@ -117,8 +123,12 @@ mod tests {
             .unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
-            &prepare_pay_response.data.address,
-            prepare_pay_response.data.amount - 1, // underpay to trigger refund
+            &prepare_pay_response.data.create_swap_response.address,
+            prepare_pay_response
+                .data
+                .create_swap_response
+                .expected_amount
+                - 1, // underpay to trigger refund
         )
         .await
         .unwrap();

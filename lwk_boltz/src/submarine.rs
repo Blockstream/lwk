@@ -301,6 +301,14 @@ impl PreparePayResponse {
         }
     }
 
+    pub async fn serialize(&self) -> Result<String, Error> {
+        Ok(serde_json::to_string(&self.data)?)
+    }
+
+    pub async fn deserialize(&self, data: &str) -> Result<PreparePayData, Error> {
+        Ok(serde_json::from_str(data)?)
+    }
+
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
             match self.advance().await? {

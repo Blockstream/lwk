@@ -39,6 +39,9 @@ pub enum Error {
         amount: u64,
         uri: String,
     },
+
+    #[error("Serialization error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 impl From<BoltzError> for Error {

@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use boltz_client::Bolt11Invoice;
 use lwk_wollet::{elements, ElementsNetwork};
 
-use crate::{clients::ElectrumClient, Error};
+use crate::{clients::ElectrumClient, Error, PreparePayData};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -40,6 +40,17 @@ impl LightningSession {
         let inner = self
             .runtime
             .block_on(self.inner.prepare_pay(bolt11_invoice, refund_address))?;
+        Ok(PreparePayResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
+    }
+
+    pub fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, Error> {
+        let data = PreparePayData::deserialize(data)?;
+        let inner = self
+            .runtime
+            .block_on(self.inner.restore_prepare_pay(data))?;
         Ok(PreparePayResponse {
             inner,
             runtime: self.runtime.clone(),

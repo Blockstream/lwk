@@ -331,10 +331,6 @@ impl PreparePayResponse {
         Ok(serde_json::to_string(&self.data)?)
     }
 
-    pub fn deserialize(&self, data: &str) -> Result<PreparePayData, Error> {
-        Ok(serde_json::from_str(data)?)
-    }
-
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         loop {
             match self.advance().await? {
@@ -350,6 +346,12 @@ impl PreparePayResponse {
 
     fn swap_id(&self) -> String {
         self.data.create_swap_response.id.clone()
+    }
+}
+
+impl PreparePayData {
+    pub fn deserialize(data: &str) -> Result<Self, Error> {
+        Ok(serde_json::from_str(data)?)
     }
 }
 

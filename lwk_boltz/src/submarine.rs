@@ -327,11 +327,11 @@ impl PreparePayResponse {
         }
     }
 
-    pub async fn serialize(&self) -> Result<String, Error> {
+    pub fn serialize(&self) -> Result<String, Error> {
         Ok(serde_json::to_string(&self.data)?)
     }
 
-    pub async fn deserialize(&self, data: &str) -> Result<PreparePayData, Error> {
+    pub fn deserialize(&self, data: &str) -> Result<PreparePayData, Error> {
         Ok(serde_json::from_str(data)?)
     }
 

@@ -199,6 +199,32 @@ impl LightningSession {
             chain_client: self.chain_client.clone(),
         })
     }
+
+    pub async fn restore_prepare_pay(
+        &self,
+        data: PreparePayData,
+    ) -> Result<PreparePayResponse, Error> {
+        let p = data.our_keys.public_key();
+        let swap_script = SwapScript::submarine_from_swap_resp(
+            self.chain(),
+            &data.create_swap_response,
+            PublicKey {
+                inner: p,
+                compressed: true,
+            },
+        )?;
+        let rx = self.ws.updates();
+        self.ws
+            .subscribe_swap(&data.create_swap_response.id)
+            .await?;
+        Ok(PreparePayResponse {
+            data,
+            swap_script,
+            rx,
+            api: self.api.clone(),
+            chain_client: self.chain_client.clone(),
+        })
+    }
 }
 
 impl PreparePayResponse {

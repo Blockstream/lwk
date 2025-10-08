@@ -151,6 +151,14 @@ impl LightningSession {
         })
     }
 
+    /// Restore a payment from its serialized data see `PreparePayResponse::serialize`
+    pub fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, LwkError> {
+        let response = self.inner.restore_prepare_pay(data)?;
+        Ok(PreparePayResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
     /// Create a new invoice for a given amount and a claim address to receive the payment
     pub fn invoice(
         &self,
@@ -181,7 +189,7 @@ impl PreparePayResponse {
         Ok(response.complete_pay()?)
     }
 
-    /// Serialize the prepare pay response to a string
+    /// Serialize the prepare pay response data to a json string
     ///
     /// This can be used to restore the prepare pay response after a crash
     pub fn serialize(&self) -> Result<String, LwkError> {

@@ -21,7 +21,8 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use crate::error::Error;
 use crate::{next_status, LightningSession, SwapState};
 
-pub struct InvoiceResponse {
+#[derive(Clone, Debug)]
+pub struct InvoiceData {
     pub last_state: SwapState,
 
     pub swap_id: String,
@@ -32,12 +33,18 @@ pub struct InvoiceResponse {
     /// The fee of the swap provider
     pub fee: u64,
 
-    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
-    swap_script: SwapScript,
-    api: Arc<BoltzApiClientV2>,
     our_keys: Keypair,
     preimage: Preimage,
     claim_address: elements::Address,
+}
+
+pub struct InvoiceResponse {
+    pub data: InvoiceData,
+
+    // unserializable fields
+    rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
+    swap_script: SwapScript,
+    api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
 }
 impl LightningSession {
@@ -107,16 +114,18 @@ impl LightningSession {
         log::info!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
-            last_state: SwapState::SwapCreated,
-            swap_id,
-            bolt11_invoice: invoice,
-            fee,
+            data: InvoiceData {
+                last_state: SwapState::SwapCreated,
+                swap_id,
+                bolt11_invoice: invoice,
+                fee,
+                our_keys,
+                preimage,
+                claim_address: claim_address.clone(),
+            },
             rx,
             swap_script,
             api: self.api.clone(),
-            our_keys,
-            preimage,
-            claim_address: claim_address.clone(),
             chain_client: self.chain_client.clone(),
         })
     }
@@ -128,11 +137,12 @@ impl InvoiceResponse {
             &mut self.rx,
             Duration::from_secs(180),
             expected_states,
-            &self.swap_id,
-            SwapState::TemporaryDeleteMe, // TODO: use self.last_state once available
+            &self.data.swap_id,
+            self.data.last_state,
         )
         .await
     }
+
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
         let update = self
             .next_status(&[
@@ -150,12 +160,12 @@ impl InvoiceResponse {
             let tx = self
                 .swap_script
                 .construct_claim(
-                    &self.preimage,
+                    &self.data.preimage,
                     SwapTransactionParams {
-                        keys: self.our_keys,
-                        output_address: self.claim_address.to_string(),
+                        keys: self.data.our_keys,
+                        output_address: self.data.claim_address.to_string(),
                         fee: Fee::Relative(1.0),
-                        swap_id: self.swap_id.clone(),
+                        swap_id: self.data.swap_id.clone(),
                         options: Some(TransactionOptions::default().with_cooperative(true)),
                         chain_client: &self.chain_client,
                         boltz_client: &self.api,

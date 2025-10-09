@@ -387,3 +387,9 @@ mod tests {
         );
     }
 }
+
+impl InvoiceData {
+    pub fn deserialize(data: &str) -> Result<Self, Error> {
+        Ok(serde_json::from_str(data)?)
+    }
+}

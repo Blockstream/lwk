@@ -22,6 +22,8 @@ use crate::error::Error;
 use crate::{next_status, LightningSession, SwapState};
 
 pub struct InvoiceResponse {
+    pub last_state: SwapState,
+
     pub swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - fee`
@@ -105,6 +107,7 @@ impl LightningSession {
         log::info!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
+            last_state: SwapState::SwapCreated,
             swap_id,
             bolt11_invoice: invoice,
             fee,

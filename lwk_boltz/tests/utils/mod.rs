@@ -73,10 +73,18 @@ async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn Error
         .json(&params)
         .send()
         .await?
-        .json::<Value>()
+        .text()
         .await?;
 
-    Ok(res)
+    // Parse the last JSON in the response (multiple JSONs separated by newlines)
+    let last_json_line = res
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .ok_or("Empty response")?;
+
+    let parsed: Value = serde_json::from_str(last_json_line)?;
+    Ok(parsed)
 }
 
 pub async fn generate_address(chain: Chain) -> Result<String, Box<dyn Error>> {

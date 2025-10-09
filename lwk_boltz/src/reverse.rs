@@ -14,6 +14,7 @@ use boltz_client::swaps::SwapScript;
 use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
+use boltz_client::util::sleep;
 use boltz_client::Secp256k1;
 use boltz_client::{Bolt11Invoice, Keypair, PublicKey};
 use lwk_wollet::elements;
@@ -205,7 +206,15 @@ impl InvoiceResponse {
                         )
                         .await?;
 
-                    self.chain_client.broadcast_tx(&tx).await?;
+                    for _ in 0..30 {
+                        match self.chain_client.broadcast_tx(&tx).await {
+                            Ok(_) => break,
+                            Err(_) => {
+                                log::info!("Failed broadcast, retrying in 1 second");
+                                sleep(Duration::from_secs(1)).await;
+                            }
+                        }
+                    }
 
                     log::info!("Successfully broadcasted claim tx!");
                     log::debug!("Claim Tx {tx:?}");

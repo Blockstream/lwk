@@ -116,4 +116,8 @@ impl InvoiceResponse {
         let inner = self.runtime.block_on(self.inner.advance())?;
         Ok(inner)
     }
+
+    pub fn serialize(&self) -> Result<String, Error> {
+        self.inner.serialize()
+    }
 }

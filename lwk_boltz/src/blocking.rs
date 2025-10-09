@@ -88,6 +88,10 @@ impl PreparePayResponse {
         Ok(inner)
     }
 
+    pub fn swap_id(&self) -> String {
+        self.inner.swap_id()
+    }
+
     pub fn uri(&self) -> String {
         self.inner.data.create_swap_response.bip21.clone()
     }
@@ -106,6 +110,10 @@ impl InvoiceResponse {
     pub fn complete_pay(self) -> Result<bool, Error> {
         let inner = self.runtime.block_on(self.inner.complete_pay())?;
         Ok(inner)
+    }
+
+    pub fn swap_id(&self) -> String {
+        self.inner.swap_id().to_string()
     }
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {

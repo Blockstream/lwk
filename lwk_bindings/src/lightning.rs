@@ -264,4 +264,24 @@ impl InvoiceResponse {
         })?;
         Ok(response.complete_pay()?)
     }
+
+    pub fn advance(&self) -> Result<PaymentState, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let mut response = lock.take().ok_or_else(|| LwkError::Generic {
+            msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+        })?;
+        let control_flow = response.advance()?;
+        let result = match control_flow {
+            ControlFlow::Continue(_update) => PaymentState::Continue,
+            ControlFlow::Break(update) => {
+                if update {
+                    PaymentState::Success
+                } else {
+                    PaymentState::Failed
+                }
+            }
+        };
+        *lock = Some(response);
+        Ok(result)
+    }
 }

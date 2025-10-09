@@ -277,3 +277,49 @@ impl InvoiceResponse {
         Ok(true)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invoice_data_serialization_roundtrip() {
+        // Load the JSON data from the test file
+        let json_data = include_str!("../tests/data/invoice_response.json");
+
+        // Deserialize the JSON into InvoiceData
+        let deserialized1: InvoiceData =
+            serde_json::from_str(json_data).expect("Failed to deserialize InvoiceData from JSON");
+
+        // Serialize it back to JSON
+        let serialized =
+            serde_json::to_string(&deserialized1).expect("Failed to serialize InvoiceData to JSON");
+
+        // Deserialize again
+        let deserialized2: InvoiceData = serde_json::from_str(&serialized)
+            .expect("Failed to deserialize InvoiceData from serialized JSON");
+
+        // Compare the two deserialized versions for equality
+        assert_eq!(deserialized1.last_state, deserialized2.last_state);
+        assert_eq!(deserialized1.fee, deserialized2.fee);
+        assert_eq!(
+            deserialized1.create_reverse_response.id,
+            deserialized2.create_reverse_response.id
+        );
+        assert_eq!(
+            deserialized1.create_reverse_response.onchain_amount,
+            deserialized2.create_reverse_response.onchain_amount
+        );
+        assert_eq!(
+            deserialized1.our_keys.secret_bytes(),
+            deserialized2.our_keys.secret_bytes()
+        );
+        assert_eq!(deserialized1.claim_address, deserialized2.claim_address);
+
+        // Note: We can't directly compare Preimage due to its structure, but we can compare the hex strings
+        assert_eq!(
+            deserialized1.preimage.to_string(),
+            deserialized2.preimage.to_string()
+        );
+    }
+}

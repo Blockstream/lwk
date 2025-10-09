@@ -26,7 +26,6 @@ use crate::{next_status, LightningSession, SwapState};
 pub struct InvoiceData {
     pub last_state: SwapState,
 
-    pub swap_id: String,
     /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
     /// However, the receiver will receive `amount - fee`
     pub bolt11_invoice: Bolt11Invoice,
@@ -119,7 +118,6 @@ impl LightningSession {
         Ok(InvoiceResponse {
             data: InvoiceData {
                 last_state: SwapState::SwapCreated,
-                swap_id,
                 bolt11_invoice: invoice,
                 fee,
                 create_reverse_response: reverse_resp.clone(),
@@ -137,14 +135,19 @@ impl LightningSession {
 
 impl InvoiceResponse {
     async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+        let swap_id = self.swap_id().to_string();
         next_status(
             &mut self.rx,
             Duration::from_secs(180),
             expected_states,
-            &self.data.swap_id,
+            &swap_id,
             self.data.last_state,
         )
         .await
+    }
+
+    pub fn swap_id(&self) -> &str {
+        &self.data.create_reverse_response.id
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {
@@ -169,7 +172,7 @@ impl InvoiceResponse {
                         keys: self.data.our_keys,
                         output_address: self.data.claim_address.to_string(),
                         fee: Fee::Relative(1.0),
-                        swap_id: self.data.swap_id.clone(),
+                        swap_id: self.swap_id().to_string(),
                         options: Some(TransactionOptions::default().with_cooperative(true)),
                         chain_client: &self.chain_client,
                         boltz_client: &self.api,

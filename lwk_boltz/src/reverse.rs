@@ -206,6 +206,30 @@ impl LightningSession {
             chain_client: self.chain_client.clone(),
         })
     }
+
+    pub async fn restore_invoice(&self, data: InvoiceData) -> Result<InvoiceResponse, Error> {
+        let p = data.our_keys.public_key();
+        let swap_script = SwapScript::reverse_from_swap_resp(
+            self.chain(),
+            &data.create_reverse_response,
+            PublicKey {
+                inner: p,
+                compressed: true,
+            },
+        )?;
+        let mut rx = self.ws.updates();
+        self.ws
+            .subscribe_swap(&data.create_reverse_response.id)
+            .await?;
+        rx.recv().await?; // skip the initial state which is resent from boltz server
+        Ok(InvoiceResponse {
+            data,
+            rx,
+            swap_script,
+            api: self.api.clone(),
+            chain_client: self.chain_client.clone(),
+        })
+    }
 }
 
 impl InvoiceResponse {

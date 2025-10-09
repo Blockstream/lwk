@@ -22,7 +22,7 @@ use lwk_wollet::ElementsNetwork;
 
 use crate::clients::ElectrumClient;
 pub use crate::error::Error;
-pub use crate::reverse::InvoiceResponse;
+pub use crate::reverse::{InvoiceData, InvoiceResponse};
 pub use crate::submarine::{PreparePayData, PreparePayResponse};
 pub use crate::swap_state::SwapState;
 pub use boltz_client::Bolt11Invoice;

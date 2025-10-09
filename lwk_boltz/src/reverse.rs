@@ -272,7 +272,14 @@ impl InvoiceResponse {
             log::info!("Successfully broadcasted claim tx!");
             log::debug!("Claim Tx {tx:?}");
         }
-        let _update = self.next_status(&[SwapState::InvoiceSettled]).await?; // Can we receive TransactionConfirmed before InvoiceSettled?
+        let update = self
+            .next_status(&[SwapState::InvoiceSettled, SwapState::TransactionConfirmed])
+            .await?;
+        let update_status = update.status.parse::<SwapState>().expect("TODO");
+        if update_status == SwapState::TransactionConfirmed {
+            let _update = self.next_status(&[SwapState::InvoiceSettled]).await?;
+        }
+
         log::info!("invoice.settled Reverse Swap Successful!");
         Ok(true)
     }

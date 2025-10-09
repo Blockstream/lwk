@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
+use boltz_client::boltz::CreateReverseResponse;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
@@ -32,6 +33,8 @@ pub struct InvoiceData {
 
     /// The fee of the swap provider
     pub fee: u64,
+
+    create_reverse_response: CreateReverseResponse,
 
     our_keys: Keypair,
     preimage: Preimage,
@@ -119,6 +122,7 @@ impl LightningSession {
                 swap_id,
                 bolt11_invoice: invoice,
                 fee,
+                create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
                 claim_address: claim_address.clone(),

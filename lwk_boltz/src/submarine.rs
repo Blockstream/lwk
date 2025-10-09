@@ -210,7 +210,9 @@ impl PreparePayResponse {
                 }
             }
             SwapState::TransactionMempool => {
-                let update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
+                let update = self
+                    .next_status(&[SwapState::TransactionConfirmed, SwapState::InvoicePending])
+                    .await?;
                 self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }

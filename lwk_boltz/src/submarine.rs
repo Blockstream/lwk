@@ -174,8 +174,14 @@ impl LightningSession {
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        let _update =
-            next_status(&mut rx, self.timeout, &[SwapState::InvoiceSet], &swap_id).await?;
+        let _update = next_status(
+            &mut rx,
+            self.timeout,
+            &[SwapState::InvoiceSet],
+            &swap_id,
+            SwapState::Initialized,
+        )
+        .await?;
 
         log::info!(
             "Send {} sats to {} address {} or use uri {}",
@@ -236,6 +242,7 @@ impl PreparePayResponse {
             Duration::from_secs(180),
             expected_states,
             &swap_id,
+            self.data.last_state,
         )
         .await
     }
@@ -324,6 +331,8 @@ impl PreparePayResponse {
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id: self.swap_id(),
                 status: e.to_string(),
+                last_state: self.data.last_state,
+                expected_states: vec![],
             }),
         }
     }

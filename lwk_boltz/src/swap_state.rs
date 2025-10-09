@@ -1,6 +1,8 @@
 /// Enum representing all possible swap status values from Boltz API updates
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Copy)]
 pub enum SwapState {
+    Initialized,       // This is the initial state when the swap is created
+    TemporaryDeleteMe, // remove once invoice last_state is implemented
     InvoiceSet,
     TransactionMempool,
     TransactionConfirmed,
@@ -18,6 +20,8 @@ pub enum SwapState {
 impl std::fmt::Display for SwapState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
+            SwapState::Initialized => "initialized",
+            SwapState::TemporaryDeleteMe => "temporaryDeleteMe",
             SwapState::InvoiceSet => "invoice.set",
             SwapState::TransactionMempool => "transaction.mempool",
             SwapState::TransactionConfirmed => "transaction.confirmed",
@@ -40,6 +44,8 @@ impl std::str::FromStr for SwapState {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "initialized" => Ok(SwapState::Initialized),
+            "temporaryDeleteMe" => Ok(SwapState::TemporaryDeleteMe),
             "invoice.set" => Ok(SwapState::InvoiceSet),
             "transaction.mempool" => Ok(SwapState::TransactionMempool),
             "transaction.confirmed" => Ok(SwapState::TransactionConfirmed),
@@ -64,6 +70,7 @@ mod tests {
     #[test]
     fn test_swap_status_roundtrip() {
         let statuses = vec![
+            SwapState::Initialized,
             SwapState::InvoiceSet,
             SwapState::TransactionMempool,
             SwapState::TransactionConfirmed,

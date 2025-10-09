@@ -94,8 +94,14 @@ impl LightningSession {
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        let _update =
-            next_status(&mut rx, self.timeout, &[SwapState::SwapCreated], &swap_id).await?;
+        let _update = next_status(
+            &mut rx,
+            self.timeout,
+            &[SwapState::SwapCreated],
+            &swap_id,
+            SwapState::Initialized,
+        )
+        .await?;
         log::info!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
@@ -120,6 +126,7 @@ impl InvoiceResponse {
             Duration::from_secs(180),
             expected_states,
             &self.swap_id,
+            SwapState::TemporaryDeleteMe, // TODO: use self.last_state once available
         )
         .await
     }

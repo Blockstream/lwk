@@ -107,6 +107,7 @@ pub async fn next_status(
     timeout: Duration,
     expected_states: &[SwapState],
     swap_id: &str,
+    last_state: SwapState,
 ) -> Result<SwapStatus, Error> {
     let update = tokio::select! {
         update = rx.recv() => update?,
@@ -122,11 +123,15 @@ pub async fn next_status(
         .map_err(|_| Error::UnexpectedUpdate {
             swap_id: swap_id.to_string(),
             status: update.status.clone(),
+            last_state,
+            expected_states: expected_states.to_vec(),
         })?;
     if !expected_states.contains(&status) {
         return Err(Error::UnexpectedUpdate {
             swap_id: swap_id.to_string(),
             status: update.status.clone(),
+            last_state,
+            expected_states: expected_states.to_vec(),
         });
     }
 

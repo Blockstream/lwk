@@ -1,6 +1,8 @@
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
 
+use crate::SwapState;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Invalid bolt11 invoice: {0}")]
@@ -12,8 +14,13 @@ pub enum Error {
     #[error("Receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),
 
-    #[error("Unexpected status {status} for swap {swap_id}")]
-    UnexpectedUpdate { swap_id: String, status: String },
+    #[error("Unexpected status {status} for swap {swap_id}. Expected states: {expected_states:?}. Last state: {last_state}")]
+    UnexpectedUpdate {
+        swap_id: String,
+        status: String,
+        last_state: SwapState,
+        expected_states: Vec<SwapState>,
+    },
 
     #[error("Invoice without amount {0}")]
     InvoiceWithoutAmount(String),

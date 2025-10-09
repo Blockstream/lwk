@@ -100,6 +100,6 @@ impl InvoiceResponse {
     }
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {
-        self.inner.data.bolt11_invoice.clone()
+        self.inner.bolt11_invoice()
     }
 }

@@ -28,10 +28,6 @@ use crate::{next_status, LightningSession, SwapState};
 pub struct InvoiceData {
     pub last_state: SwapState,
 
-    /// The invoice to show to the payer, the invoice amount will be exactly like the amount parameter,
-    /// However, the receiver will receive `amount - fee`
-    pub bolt11_invoice: Bolt11Invoice,
-
     /// The fee of the swap provider
     pub fee: u64,
 
@@ -51,7 +47,6 @@ impl Serialize for InvoiceData {
 
         let mut state = serializer.serialize_struct("InvoiceData", 8)?;
         state.serialize_field("last_state", &self.last_state)?;
-        state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("create_reverse_response", &self.create_reverse_response)?;
         // Serialize the secret key hex string for keypair recreation
@@ -77,7 +72,6 @@ impl<'de> Deserialize<'de> for InvoiceData {
         #[derive(Deserialize)]
         struct InvoiceDataHelper {
             last_state: SwapState,
-            bolt11_invoice: String,
             fee: u64,
             create_reverse_response: CreateReverseResponse,
             secret_key: String, // Secret key hex string
@@ -86,12 +80,6 @@ impl<'de> Deserialize<'de> for InvoiceData {
         }
 
         let helper = InvoiceDataHelper::deserialize(deserializer)?;
-
-        // Parse bolt11_invoice from string
-        let bolt11_invoice = match Bolt11Invoice::from_str(&helper.bolt11_invoice) {
-            Ok(invoice) => invoice,
-            Err(_) => return Err(serde::de::Error::custom("Failed to parse bolt11 invoice")),
-        };
 
         // Recreate Keypair from secret key bytes using from_seckey_slice
         let secp = Secp256k1::new();
@@ -118,7 +106,6 @@ impl<'de> Deserialize<'de> for InvoiceData {
 
         Ok(InvoiceData {
             last_state: helper.last_state,
-            bolt11_invoice,
             fee: helper.fee,
             create_reverse_response: helper.create_reverse_response,
             our_keys,
@@ -206,7 +193,6 @@ impl LightningSession {
         Ok(InvoiceResponse {
             data: InvoiceData {
                 last_state: SwapState::SwapCreated,
-                bolt11_invoice: invoice,
                 fee,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
@@ -236,6 +222,19 @@ impl InvoiceResponse {
 
     pub fn swap_id(&self) -> &str {
         &self.data.create_reverse_response.id
+    }
+
+    pub fn serialize(&self) -> Result<String, Error> {
+        Ok(serde_json::to_string(&self.data)?)
+    }
+
+    pub fn bolt11_invoice(&self) -> Bolt11Invoice {
+        Bolt11Invoice::from_str(&self.data.create_reverse_response.invoice.as_ref().expect(
+            "Invoice must be present or we would have errored on the LightningSession::invoice",
+        ))
+        .expect(
+            "Invoice must be parsable or we would have errored on the LightningSession::invoice",
+        )
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {

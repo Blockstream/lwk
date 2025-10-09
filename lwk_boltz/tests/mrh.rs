@@ -39,14 +39,14 @@ mod tests {
             .await
             .unwrap();
         log::info!("claim_address: {}", claim_address);
-        log::info!("Receiver created invoice: {}", invoice.data.bolt11_invoice);
+        log::info!("Receiver created invoice: {}", invoice.bolt11_invoice());
         log::info!("Invoice fee: {}", invoice.data.fee);
 
         // Check for magic routing hint
         let boltz_api = BoltzApiClientV2::new(utils::BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
         let mrh_result = check_for_mrh(
             &boltz_api,
-            &invoice.data.bolt11_invoice.to_string(),
+            &invoice.bolt11_invoice().to_string(),
             Chain::Liquid(LiquidChain::LiquidRegtest),
         )
         .await
@@ -88,7 +88,7 @@ mod tests {
 
         // Sender: Detect MRH in the invoice
         let sender_session = LightningSession::new(network, client.clone(), Some(TIMEOUT));
-        let bolt11_parsed = invoice.data.bolt11_invoice.clone();
+        let bolt11_parsed = invoice.bolt11_invoice();
         let prepare_pay_response = sender_session
             .prepare_pay(&bolt11_parsed, &claim_address)
             .await;

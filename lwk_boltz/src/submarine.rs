@@ -17,6 +17,7 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::Error;
+use crate::swap_state::SwapStateTrait;
 use crate::{next_status, LightningSession, SwapState, WAIT_TIME};
 
 pub struct PreparePayResponse {
@@ -256,7 +257,7 @@ impl PreparePayResponse {
                         SwapState::TransactionLockupFailed,
                     ])
                     .await?;
-                let update_status = update.status.parse::<SwapState>().expect("TODO");
+                let update_status = update.swap_state()?;
 
                 if update_status == SwapState::TransactionMempool {
                     log::info!("transaction.mempool Boltz broadcasted funding tx");
@@ -289,24 +290,24 @@ impl PreparePayResponse {
             }
             SwapState::TransactionMempool => {
                 let update = self.next_status(&[SwapState::TransactionConfirmed]).await?;
-                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
                 let update = self.next_status(&[SwapState::InvoicePending]).await?;
-                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePending => {
                 let update = self.next_status(&[SwapState::InvoicePaid]).await?;
-                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePaid => {
                 let update = self
                     .next_status(&[SwapState::TransactionClaimPending])
                     .await?;
-                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.swap_state()?;
                 let response = self
                     .swap_script
                     .submarine_cooperative_claim(
@@ -321,7 +322,7 @@ impl PreparePayResponse {
             }
             SwapState::TransactionClaimPending => {
                 let update = self.next_status(&[SwapState::TransactionClaimed]).await?;
-                self.data.last_state = update.status.parse::<SwapState>().expect("TODO");
+                self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionClaimed => {

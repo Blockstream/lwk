@@ -23,6 +23,7 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::Error;
+use crate::swap_state::SwapStateTrait;
 use crate::{next_status, LightningSession, SwapState};
 
 #[derive(Clone, Debug)]
@@ -272,7 +273,7 @@ impl InvoiceResponse {
                         SwapState::TransactionConfirmed,
                     ])
                     .await?;
-                let update_status = update.status.parse::<SwapState>().expect("TODO");
+                let update_status = update.swap_state()?;
 
                 if update_status == SwapState::TransactionDirect {
                     log::info!("transaction.direct Payer used magic routing hint");
@@ -308,7 +309,7 @@ impl InvoiceResponse {
                 let update = self
                     .next_status(&[SwapState::InvoiceSettled, SwapState::TransactionConfirmed])
                     .await?;
-                let update_status = update.status.parse::<SwapState>().expect("TODO");
+                let update_status = update.swap_state()?;
                 if update_status == SwapState::TransactionConfirmed {
                     self.data.last_state = update_status;
                     Ok(ControlFlow::Continue(update))

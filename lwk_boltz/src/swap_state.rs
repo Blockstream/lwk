@@ -1,3 +1,7 @@
+use boltz_client::boltz::SwapStatus;
+
+use crate::Error;
+
 /// Enum representing all possible swap status values from Boltz API updates
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Copy)]
 pub enum SwapState {
@@ -15,6 +19,17 @@ pub enum SwapState {
     SwapCreated,
     TransactionDirect,
     InvoiceSettled,
+}
+
+pub(crate) trait SwapStateTrait {
+    fn swap_state(&self) -> Result<SwapState, Error>;
+}
+impl SwapStateTrait for SwapStatus {
+    fn swap_state(&self) -> Result<SwapState, Error> {
+        self.status
+            .parse::<SwapState>()
+            .map_err(|e| Error::InvalidSwapState(self.status.clone()))
+    }
 }
 
 impl std::fmt::Display for SwapState {

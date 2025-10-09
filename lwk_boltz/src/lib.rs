@@ -2,6 +2,7 @@ pub mod blocking;
 pub mod clients;
 mod error;
 mod invoice_data;
+mod prepare_pay_data;
 mod reverse;
 mod submarine;
 mod swap_state;
@@ -24,8 +25,9 @@ use lwk_wollet::ElementsNetwork;
 use crate::clients::ElectrumClient;
 pub use crate::error::Error;
 pub use crate::invoice_data::InvoiceData;
+pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::reverse::InvoiceResponse;
-pub use crate::submarine::{PreparePayData, PreparePayResponse};
+pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;
 pub use boltz_client::Bolt11Invoice;
 

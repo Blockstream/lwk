@@ -28,7 +28,7 @@ impl SwapStateTrait for SwapStatus {
     fn swap_state(&self) -> Result<SwapState, Error> {
         self.status
             .parse::<SwapState>()
-            .map_err(|e| Error::InvalidSwapState(self.status.clone()))
+            .map_err(|_| Error::InvalidSwapState(self.status.clone()))
     }
 }
 

@@ -201,9 +201,6 @@ def pay_invoice(lightning_session, wollet, client, signer):
         # Save swap data to file
         save_swap_data(swap_id, data)
 
-        # Simulate break
-        sys.exit(0)
-
         # Start thread to wait for completion
         thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
         thread.daemon = True
@@ -261,6 +258,7 @@ def main():
     client = network.default_electrum_client()
     signer = Signer(mnemonic, network)
     desc = signer.wpkh_slip77_descriptor()
+    print("Wollet descriptor: ", desc)
     wollet = Wollet(network, desc, datadir=None)
 
     # Create lightning session with logging

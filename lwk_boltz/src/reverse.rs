@@ -99,7 +99,7 @@ impl LightningSession {
             SwapState::Initialized,
         )
         .await?;
-        log::info!("Waiting for Invoice to be paid: {}", &invoice);
+        log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
             data: InvoiceData {

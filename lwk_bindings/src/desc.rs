@@ -61,6 +61,11 @@ impl WolletDescriptor {
     pub fn is_amp0(&self) -> bool {
         self.inner.is_amp0()
     }
+
+    /// Return the descriptor encoded so that can be part of an URL
+    pub fn url_encoded_descriptor(&self) -> String {
+        self.inner.url_encoded_descriptor()
+    }
 }
 
 impl fmt::Display for WolletDescriptor {

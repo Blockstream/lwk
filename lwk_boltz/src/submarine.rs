@@ -231,6 +231,7 @@ impl PreparePayResponse {
                     .next_status(&[SwapState::TransactionClaimPending])
                     .await?;
                 self.data.last_state = update.swap_state()?;
+                log::info!("submarine_cooperative_claim");
                 let response = self
                     .swap_script
                     .submarine_cooperative_claim(
@@ -239,9 +240,25 @@ impl PreparePayResponse {
                         &self.data.bolt11_invoice.to_string(),
                         &self.api,
                     )
-                    .await?;
-                log::debug!("Received claim tx details : {response:?}");
-                Ok(ControlFlow::Continue(update))
+                    .await;
+                match response {
+                    Ok(val) => {
+                        log::info!(
+                            "succesfully sent submarine cooperative claim, response: {val:?}"
+                        );
+                        Ok(ControlFlow::Continue(update))
+                    }
+                    Err(e) => {
+                        if e.to_string()
+                            .contains("swap not eligible for a cooperative claim")
+                        {
+                            log::info!("swap not eligible for a cooperative claim, boltz decision, we did our best");
+                            Ok(ControlFlow::Break(true))
+                        } else {
+                            return Err(e.into());
+                        }
+                    }
+                }
             }
             SwapState::TransactionClaimPending => {
                 let update = self.next_status(&[SwapState::TransactionClaimed]).await?;

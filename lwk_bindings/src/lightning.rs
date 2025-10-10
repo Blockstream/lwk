@@ -107,8 +107,6 @@ impl LightningSession {
     /// If a `logging` implementation is provided, it will be set as the global logger
     /// to receive log messages from the lightning operations. Note that the global
     /// logger can only be set once - if a logger is already set, the new one will be ignored.
-    ///
-    /// TODO: is there a way to pass the electrum client directly? cannot use Arc::try_unwrap because uniffi keeps references around
     #[uniffi::constructor]
     pub fn new(
         network: &Network,

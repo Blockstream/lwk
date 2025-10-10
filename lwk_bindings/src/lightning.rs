@@ -107,8 +107,6 @@ impl LightningSession {
     /// If a `logging` implementation is provided, it will be set as the global logger
     /// to receive log messages from the lightning operations. Note that the global
     /// logger can only be set once - if a logger is already set, the new one will be ignored.
-    ///
-    /// TODO: is there a way to pass the electrum client directly? cannot use Arc::try_unwrap because uniffi keeps references around
     #[uniffi::constructor]
     pub fn new(
         network: &Network,
@@ -185,6 +183,14 @@ impl LightningSession {
             inner: Mutex::new(Some(response)),
         })
     }
+
+    /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`
+    pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, LwkError> {
+        let response = self.inner.restore_invoice(data)?;
+        Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
 }
 
 #[uniffi::export]
@@ -195,6 +201,17 @@ impl PreparePayResponse {
             msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
         })?;
         Ok(response.complete_pay()?)
+    }
+
+    pub fn swap_id(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(|| LwkError::Generic {
+                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+            })?
+            .swap_id())
     }
 
     /// Serialize the prepare pay response data to a json string
@@ -220,6 +237,28 @@ impl PreparePayResponse {
                 msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
             })?
             .uri())
+    }
+
+    pub fn uri_address(&self) -> Result<Arc<Address>, LwkError> {
+        let uri_address = self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(|| LwkError::Generic {
+                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+            })?
+            .uri_address();
+        Ok(Address::new(&uri_address)?)
+    }
+    pub fn uri_amount(&self) -> Result<u64, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(|| LwkError::Generic {
+                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
+            })?
+            .uri_amount())
     }
 
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
@@ -257,11 +296,56 @@ impl InvoiceResponse {
         Ok(Bolt11Invoice::from(bolt11_invoice))
     }
 
+    pub fn swap_id(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(|| LwkError::Generic {
+                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+            })?
+            .swap_id())
+    }
+
+    /// Serialize the prepare pay response data to a json string
+    ///
+    /// This can be used to restore the prepare pay response after a crash
+    pub fn serialize(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or_else(|| LwkError::Generic {
+                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+            })?
+            .serialize()?)
+    }
+
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
         let response = lock.take().ok_or_else(|| LwkError::Generic {
             msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
         })?;
         Ok(response.complete_pay()?)
+    }
+
+    pub fn advance(&self) -> Result<PaymentState, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let mut response = lock.take().ok_or_else(|| LwkError::Generic {
+            msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
+        })?;
+        let control_flow = response.advance()?;
+        let result = match control_flow {
+            ControlFlow::Continue(_update) => PaymentState::Continue,
+            ControlFlow::Break(update) => {
+                if update {
+                    PaymentState::Success
+                } else {
+                    PaymentState::Failed
+                }
+            }
+        };
+        *lock = Some(response);
+        Ok(result)
     }
 }

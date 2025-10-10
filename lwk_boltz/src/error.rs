@@ -5,6 +5,9 @@ use crate::SwapState;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Invalid swap state: {0}")]
+    InvalidSwapState(String),
+
     #[error("Invalid bolt11 invoice: {0}")]
     InvalidBolt11Invoice(ParseOrSemanticError),
 

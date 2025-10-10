@@ -1,1 +1,27 @@
-{"last_state":"SwapCreated","fee":277,"create_reverse_response":{"id":"DGN7Sq1ZPfIk","invoice":"lnbcrt1m1p5wwln3sp5rnaclztkdxu89xe2auqw70c537jpr4vqlchnl0rg0lzzz9kah6sqpp5tvnwm52h8clvw9epaegznl4zc9vqyxheaplhrfkdgt35nmmzfyusdpz2djkuepqw3hjqnpdgf2yxgrpv3j8yetnwvxqyp2xqcqz95rzjqfcu44g7y5ds55exucrvjyj9hmsdutwst38u8mgm9rz5s3epelszszzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqmqlgynu2un0ccn3c5vklf2gezcezdtf7390a8zrthtej078vup44dxgzstcyz27mjj5jy9h6cf9rk8hcxrxnaa8lnakkhntl74zdcacq6kx7yw","swapTree":{"claimLeaf":{"output":"82012088a91474151f8781453457ccc0c1881553523aa75648cb882071cad51e251b0a5326e606c91245bee0de2dd05c4fc3ed1b28c5484721cfe028ac","version":196},"refundLeaf":{"output":"20b8467ca9c7f7a6c743d41601636db933e63242fe8ad77207ac7efd9d27aa6c0ead02ba06b1","version":196}},"lockupAddress":"el1pqtxz4rw8h3hn763l8k0qa5njz7qceu2hccc0ruf4a6hc84kev59usmdg4qft06nndfqxqcu53e44t48jgl4fgmytxj0lfrhgha0w02ugv3w2uxdc9gpy","refundPublicKey":"02b8467ca9c7f7a6c743d41601636db933e63242fe8ad77207ac7efd9d27aa6c0e","timeoutBlockHeight":1722,"onchainAmount":99723,"blindingKey":"c0c48a5b566e5646a5b97158ac7e9d7bab0fb0c98fe3861d0886616c19e5de13"},"secret_key":"0de6ea7ede6eaca734996e158e2153cdbc2694f4e81b143378e72a3c40dc2917","preimage":"2400379bf911093bc99d369c3bac629ffd0d403bcbb26e91100767f10e667590","claim_address":"el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e"}
+{
+    "last_state": "SwapCreated",
+    "swap_type": "Reverse",
+    "fee": 277,
+    "create_reverse_response": {
+        "id": "DGN7Sq1ZPfIk",
+        "invoice": "lnbcrt1m1p5wwln3sp5rnaclztkdxu89xe2auqw70c537jpr4vqlchnl0rg0lzzz9kah6sqpp5tvnwm52h8clvw9epaegznl4zc9vqyxheaplhrfkdgt35nmmzfyusdpz2djkuepqw3hjqnpdgf2yxgrpv3j8yetnwvxqyp2xqcqz95rzjqfcu44g7y5ds55exucrvjyj9hmsdutwst38u8mgm9rz5s3epelszszzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqmqlgynu2un0ccn3c5vklf2gezcezdtf7390a8zrthtej078vup44dxgzstcyz27mjj5jy9h6cf9rk8hcxrxnaa8lnakkhntl74zdcacq6kx7yw",
+        "swapTree": {
+            "claimLeaf": {
+                "output": "82012088a91474151f8781453457ccc0c1881553523aa75648cb882071cad51e251b0a5326e606c91245bee0de2dd05c4fc3ed1b28c5484721cfe028ac",
+                "version": 196
+            },
+            "refundLeaf": {
+                "output": "20b8467ca9c7f7a6c743d41601636db933e63242fe8ad77207ac7efd9d27aa6c0ead02ba06b1",
+                "version": 196
+            }
+        },
+        "lockupAddress": "el1pqtxz4rw8h3hn763l8k0qa5njz7qceu2hccc0ruf4a6hc84kev59usmdg4qft06nndfqxqcu53e44t48jgl4fgmytxj0lfrhgha0w02ugv3w2uxdc9gpy",
+        "refundPublicKey": "02b8467ca9c7f7a6c743d41601636db933e63242fe8ad77207ac7efd9d27aa6c0e",
+        "timeoutBlockHeight": 1722,
+        "onchainAmount": 99723,
+        "blindingKey": "c0c48a5b566e5646a5b97158ac7e9d7bab0fb0c98fe3861d0886616c19e5de13"
+    },
+    "secret_key": "0de6ea7ede6eaca734996e158e2153cdbc2694f4e81b143378e72a3c40dc2917",
+    "preimage": "2400379bf911093bc99d369c3bac629ffd0d403bcbb26e91100767f10e667590",
+    "claim_address": "el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e"
+}

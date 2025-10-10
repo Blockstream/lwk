@@ -17,7 +17,7 @@ mod tests {
         util::{secrets::Preimage, sleep},
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, LightningSession};
+    use lwk_boltz::{clients::ElectrumClient, InvoiceData, LightningSession};
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -130,6 +130,53 @@ mod tests {
         log::info!("Invoice: {}", invoice.bolt11_invoice());
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
         invoice.complete_pay().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_session_restore_reverse() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = LightningSession::new(
+            ElementsNetwork::default_regtest(),
+            client.clone(),
+            Some(TIMEOUT),
+        );
+
+        // test restore swap after drop
+        let invoice_response = session.invoice(100000, None, &claim_address).await.unwrap();
+
+        let serialized_data = invoice_response.serialize().unwrap();
+        drop(invoice_response);
+        drop(session);
+        let session = LightningSession::new(
+            ElementsNetwork::default_regtest(),
+            client.clone(),
+            Some(TIMEOUT),
+        );
+        let data = InvoiceData::deserialize(&serialized_data).unwrap();
+        let invoice_response = session.restore_invoice(data).await.unwrap();
+        utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
+        invoice_response.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
     }
 
     /// Test the reverse swap, copied from the boltz_client tests

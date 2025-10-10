@@ -129,10 +129,7 @@ mod tests {
         network::{LiquidChain, LiquidClient},
         ToHex,
     };
-    use lwk_wollet::{
-        elements::{self, confidential::Value},
-        ElementsNetwork,
-    };
+    use lwk_wollet::{elements, ElementsNetwork};
 
     use crate::clients::ElectrumClient;
 

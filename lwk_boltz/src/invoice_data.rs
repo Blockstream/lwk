@@ -10,10 +10,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::Error;
 use crate::SwapState;
+use crate::SwapType;
 
 #[derive(Clone, Debug)]
 pub struct InvoiceData {
     pub last_state: SwapState,
+    pub swap_type: SwapType,
 
     /// The fee of the swap provider
     pub fee: u64,
@@ -34,6 +36,7 @@ impl Serialize for InvoiceData {
 
         let mut state = serializer.serialize_struct("InvoiceData", 8)?;
         state.serialize_field("last_state", &self.last_state)?;
+        state.serialize_field("swap_type", &self.swap_type)?;
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("create_reverse_response", &self.create_reverse_response)?;
         // Serialize the secret key hex string for keypair recreation
@@ -59,6 +62,7 @@ impl<'de> Deserialize<'de> for InvoiceData {
         #[derive(Deserialize)]
         struct InvoiceDataHelper {
             last_state: SwapState,
+            swap_type: SwapType,
             fee: u64,
             create_reverse_response: CreateReverseResponse,
             secret_key: String, // Secret key hex string
@@ -93,6 +97,7 @@ impl<'de> Deserialize<'de> for InvoiceData {
 
         Ok(InvoiceData {
             last_state: helper.last_state,
+            swap_type: helper.swap_type,
             fee: helper.fee,
             create_reverse_response: helper.create_reverse_response,
             our_keys,

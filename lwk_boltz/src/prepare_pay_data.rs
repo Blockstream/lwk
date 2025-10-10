@@ -8,10 +8,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::Error;
 use crate::SwapState;
+use crate::SwapType;
 
 #[derive(Clone, Debug)]
 pub struct PreparePayData {
     pub last_state: SwapState,
+    pub swap_type: SwapType,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: u64,
@@ -30,6 +32,7 @@ impl Serialize for PreparePayData {
 
         let mut state = serializer.serialize_struct("PreparePayData", 10)?;
         state.serialize_field("last_state", &self.last_state)?;
+        state.serialize_field("swap_type", &self.swap_type)?;
         state.serialize_field("fee", &self.fee)?;
         state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
         state.serialize_field("create_swap_response", &self.create_swap_response)?;
@@ -48,6 +51,7 @@ impl<'de> Deserialize<'de> for PreparePayData {
         #[derive(Deserialize)]
         struct PreparePayDataHelper {
             last_state: SwapState,
+            swap_type: SwapType,
             fee: u64,
             bolt11_invoice: String,
             create_swap_response: CreateSubmarineResponse,
@@ -75,6 +79,7 @@ impl<'de> Deserialize<'de> for PreparePayData {
         };
 
         Ok(PreparePayData {
+            swap_type: helper.swap_type,
             last_state: helper.last_state,
             fee: helper.fee,
             bolt11_invoice,

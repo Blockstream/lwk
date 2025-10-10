@@ -15,7 +15,7 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
-use crate::{next_status, LightningSession, SwapState, WAIT_TIME};
+use crate::{next_status, LightningSession, SwapState, SwapType, WAIT_TIME};
 
 pub struct PreparePayResponse {
     pub data: PreparePayData,
@@ -115,6 +115,7 @@ impl LightningSession {
         Ok(PreparePayResponse {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
+                swap_type: SwapType::Submarine,
                 fee,
                 bolt11_invoice: bolt11_invoice.clone(),
                 our_keys: our_keys.clone(),

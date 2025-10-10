@@ -48,7 +48,7 @@ impl LightningSession {
         {
             let asset_id = self.network().policy_asset().to_string();
             let mrh_uri = format!(
-                "liquidnetwork:{address}?amount={:.8}&assetid={}",
+                "liquidnetwork:{address}?amount={}&assetid={}",
                 amount.to_string_in(Denomination::Bitcoin),
                 asset_id
             );

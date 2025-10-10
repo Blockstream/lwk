@@ -23,6 +23,7 @@ use lwk_wollet::secp256k1::rand::thread_rng;
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
 use crate::swap_state::SwapStateTrait;
+use crate::SwapType;
 use crate::{next_status, LightningSession, SwapState};
 
 pub struct InvoiceResponse {
@@ -104,6 +105,7 @@ impl LightningSession {
         Ok(InvoiceResponse {
             data: InvoiceData {
                 last_state: SwapState::SwapCreated,
+                swap_type: SwapType::Reverse,
                 fee,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,

@@ -21,6 +21,7 @@ use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
 use lwk_wollet::ElementsNetwork;
+use serde::{Deserialize, Serialize};
 
 use crate::clients::ElectrumClient;
 pub use crate::error::Error;
@@ -32,6 +33,15 @@ pub use crate::swap_state::SwapState;
 pub use boltz_client::Bolt11Invoice;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum SwapType {
+    /// Pay a bolt11 invoice
+    Submarine,
+
+    /// Show an invoice to be paid
+    Reverse,
+}
 
 pub struct LightningSession {
     ws: Arc<BoltzWsApi>,

@@ -259,6 +259,8 @@ def main():
     signer = Signer(mnemonic, network)
     desc = signer.wpkh_slip77_descriptor()
     print("Wollet descriptor: ", desc)
+    webwallet = f"https://liquidwebwallet.org/#{desc.url_encoded_descriptor()}"
+    print("online watch-only:", webwallet)
     wollet = Wollet(network, desc, datadir=None)
 
     # Create lightning session with logging

@@ -183,6 +183,14 @@ impl LightningSession {
             inner: Mutex::new(Some(response)),
         })
     }
+
+    /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`
+    pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, LwkError> {
+        let response = self.inner.restore_invoice(data)?;
+        Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
 }
 
 #[uniffi::export]

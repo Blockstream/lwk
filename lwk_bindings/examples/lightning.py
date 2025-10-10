@@ -62,10 +62,10 @@ def get_balance(wollet):
             print(f"Asset {asset}: {amount}")
     return balance
 
-def update_balance(wollet, client):
+def update_balance(wollet, esplora_client, desc):
     """Update balance by performing full scan"""
     print("Updating balance...")
-    update = client.full_scan(wollet)
+    update = esplora_client.full_scan(wollet)
     wollet.apply_update(update)
     print("Balance updated.")
     return get_balance(wollet)
@@ -152,7 +152,7 @@ def show_invoice(lightning_session, wollet):
     thread.start()
     print("Started thread to monitor invoice payment.")
 
-def pay_invoice(lightning_session, wollet, client, signer):
+def pay_invoice(lightning_session, wollet, esplora_client, signer):
     """Pay a bolt11 invoice"""
     # Read bolt11 invoice from user
     bolt11_str = input("Enter bolt11 invoice: ").strip()
@@ -195,7 +195,7 @@ def pay_invoice(lightning_session, wollet, client, signer):
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = client.broadcast(tx)
+        txid = esplora_client.broadcast(tx)
         print(f"Transaction broadcasted! TXID: {txid}")
 
         # Save swap data to file
@@ -228,7 +228,7 @@ def pay_invoice(lightning_session, wollet, client, signer):
         tx = finalized_pset.extract_tx()
 
         # Broadcast the transaction
-        txid = client.broadcast(tx)
+        txid = esplora_client.broadcast(tx)
         print(f"Direct payment transaction broadcasted! TXID: {txid}")
         return
 
@@ -255,7 +255,17 @@ def main():
     os.makedirs(f"{swaps_dir}/failed", exist_ok=True)
 
     # Create wallet components
-    client = network.default_electrum_client()
+    # Use ElectrumClient only for LightningSession
+    electrum_client = network.default_electrum_client()
+    # Use EsploraClient with waterfalls for all other operations
+    b = EsploraClientBuilder(
+        base_url="https://waterfalls.liquidwebwallet.org/liquid/api",
+        network=network,
+        waterfalls=True,
+        utxo_only=True,
+    )
+    esplora_client = EsploraClient.from_builder(b)
+
     signer = Signer(mnemonic, network)
     desc = signer.wpkh_slip77_descriptor()
 
@@ -265,18 +275,12 @@ def main():
 
     wollet = Wollet(network, desc, datadir=None)
 
-    # Create lightning session with logging
+    # Create lightning session with ElectrumClient
     logger = MyLogger()
-    lightning_session = LightningSession(network, client, 30, logger)  # 30 second timeout
+    lightning_session = LightningSession(network, electrum_client, 30, logger)  # 30 second timeout
 
-    # Initial balance scan
-    print("Performing initial balance scan...")
-    update = client.full_scan(wollet)
-    wollet.apply_update(update)
-
-    # Display initial balance
-    print("\n=== Initial Balance ===")
-    get_balance(wollet)
+    # Initial balance update
+    update_balance(wollet, esplora_client, desc)
 
     # Find and restore unfinished swaps
     print("Checking for unfinished swaps...")
@@ -329,13 +333,13 @@ def main():
 
         if choice == '1':
             print("\n=== Updating Balance ===")
-            update_balance(wollet, client)
+            update_balance(wollet, esplora_client, desc)
         elif choice == '2':
             print("\n=== Creating Invoice ===")
             show_invoice(lightning_session, wollet)
         elif choice == '3':
             print("\n=== Paying Invoice ===")
-            pay_invoice(lightning_session, wollet, client, signer)
+            pay_invoice(lightning_session, wollet, esplora_client, signer)
         elif choice == 'q':
             print("Goodbye!")
             break

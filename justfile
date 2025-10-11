@@ -30,33 +30,39 @@ docker-build:
 docker-push: docker-build
     docker push xenoky/lwk-builder # require credentials
 
-# Build the kotlin interface `lwk.kt`
 kotlin: build-bindings-lib
     cargo run --release --features bindings -- generate --library target/release/liblwk.so --language kotlin --out-dir target/release/kotlin
-    cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/main/kotlin
+    cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/androidMain/kotlin
 
 # Cross build the lib for aarch64-linux-android
 aarch64-linux-android:
-	cargo ndk -t aarch64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
+	cargo ndk -t aarch64-linux-android -o target/release/android/jniLibs build -p lwk_bindings
 
 # Cross build the lib for armv7-linux-androideabi
 armv7-linux-androideabi:
-	cargo ndk -t armv7-linux-androideabi -o target/release/kotlin/jniLibs build -p lwk_bindings
+	cargo ndk -t armv7-linux-androideabi -o target/release/android/jniLibs build -p lwk_bindings
 
 # Cross build the lib for i686-linux-android
 i686-linux-android:
-	cargo ndk -t i686-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
+	cargo ndk -t i686-linux-android -o target/release/android/jniLibs build -p lwk_bindings
 
 # Cross build the lib for x86_64-linux-android
 x86_64-linux-android:
-	cargo ndk -t x86_64-linux-android -o target/release/kotlin/jniLibs build -p lwk_bindings
+	cargo ndk -t x86_64-linux-android -o target/release/android/jniLibs build -p lwk_bindings
 
 # After cross building all the lib for android put them in final dir
 android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
-    cp -a target/release/kotlin/jniLibs lwk_bindings/android_bindings/lib/src/main
+    cp -a target/release/android/jniLibs lwk_bindings/android_bindings/lib/src/androidMain
 
-# Build the kotlin interface and android libs
-kotlin-android: kotlin android
+# Build the kotlin multiplatform interface and android, ios and jvm
+kotlin-multiplatform: ios ios-sim android
+    cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0
+    gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
+    cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
+    mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
+    mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
+    cp target/aarch64-apple-ios/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
+    cp target/lipo-ios-sim/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
 
 # Build ios (works only on mac)
 ios: aarch64-apple-ios

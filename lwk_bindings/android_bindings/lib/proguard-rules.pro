@@ -23,6 +23,7 @@
 # for JNA
 -dontwarn java.awt.*
 -keep class com.sun.jna.* { *; }
--keep class lwk_bindings.** { *; }
--keepclassmembers class * extends lwk_bindings.** { public *; }
+-keep class lwk.** { *; }
 -keepclassmembers class * extends com.sun.jna.* { public *; }
+-keepclassmembers class * extends lwk.** { public *; }
+-dontwarn java.lang.invoke.StringConcatFactory

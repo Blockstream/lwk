@@ -15,10 +15,11 @@ use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
-use boltz_client::Secp256k1;
-use boltz_client::{Bolt11Invoice, Keypair, PublicKey};
+use boltz_client::Keypair;
+use boltz_client::{Bolt11Invoice, PublicKey};
 use lwk_wollet::elements;
-use lwk_wollet::secp256k1::rand::thread_rng;
+use lwk_wollet::hashes::sha256;
+use lwk_wollet::hashes::Hash;
 
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
@@ -44,9 +45,9 @@ impl LightningSession {
         claim_address: &elements::Address,
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
-        let secp = Secp256k1::new();
-        let preimage = Preimage::new();
-        let our_keys = Keypair::new(&secp, &mut thread_rng());
+        let our_keys = self.derive_next_keypair()?;
+        let preimage = preimage_from_keypair(&our_keys)?;
+
         let claim_public_key = PublicKey {
             compressed: true,
             inner: our_keys.public_key(),

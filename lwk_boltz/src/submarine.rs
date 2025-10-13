@@ -7,10 +7,9 @@ use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
-use boltz_client::{Bolt11Invoice, Keypair, PublicKey, Secp256k1};
+use boltz_client::{Bolt11Invoice, PublicKey};
 use lwk_wollet::bitcoin::Denomination;
 use lwk_wollet::elements;
-use lwk_wollet::secp256k1::rand::thread_rng;
 
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
@@ -36,8 +35,7 @@ impl LightningSession {
         let chain = self.chain();
         let bolt11_invoice_str = bolt11_invoice.to_string();
 
-        let secp = Secp256k1::new();
-        let our_keys = Keypair::new(&secp, &mut thread_rng());
+        let our_keys = self.derive_next_keypair()?;
         let refund_public_key = PublicKey {
             inner: our_keys.public_key(),
             compressed: true,

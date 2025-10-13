@@ -7,6 +7,9 @@ mod reverse;
 mod submarine;
 mod swap_state;
 
+use std::str::FromStr;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -21,6 +24,13 @@ use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
+use boltz_client::Keypair;
+use boltz_client::Secp256k1;
+use lwk_wollet::bitcoin::bip32::DerivationPath;
+use lwk_wollet::bitcoin::bip32::Xpriv;
+use lwk_wollet::bitcoin::bip32::Xpub;
+use lwk_wollet::bitcoin::NetworkKind;
+use lwk_wollet::secp256k1::All;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 
@@ -50,11 +60,12 @@ pub struct LightningSession {
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
     timeout: Duration,
+    secp: Secp256k1<All>,
 
     #[allow(dead_code)]
     mnemonic: Mnemonic,
     #[allow(dead_code)]
-    last_used_index: u32,
+    next_index_to_use: AtomicU32,
 }
 
 impl LightningSession {
@@ -69,6 +80,7 @@ impl LightningSession {
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
     ) -> Self {
+        let liquid_chain = elements_network_to_liquid_chain(network);
         let chain_client = Arc::new(ChainClient::new().with_liquid((*client).clone()));
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
@@ -77,19 +89,24 @@ impl LightningSession {
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
         tokio::spawn(future); // TODO handle wasm
+        let secp = Secp256k1::new();
 
-        let (last_used_index, mnemonic) = match mnemonic {
-            Some(mnemonic) => (fetch_last_used_index(&mnemonic).await, mnemonic),
+        let (next_index_to_use, mnemonic) = match mnemonic {
+            Some(mnemonic) => (
+                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api).await,
+                mnemonic,
+            ),
             None => (0, Mnemonic::generate(12).unwrap()),
         };
         Self {
-            last_used_index,
+            next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
             ws,
             api,
             chain_client,
-            liquid_chain: elements_network_to_liquid_chain(network),
+            liquid_chain,
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
+            secp,
         }
     }
 

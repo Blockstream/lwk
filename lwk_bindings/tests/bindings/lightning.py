@@ -23,7 +23,8 @@ print(claim_address)
 
 # Create a lightning session with custom logging
 logger = MyLogger()
-lightning_session = LightningSession(network, client, 10, logger)
+mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for privacy reasons using a different mnemonic for the lightning session
+lightning_session = LightningSession(network, client, 10, logger, mnemonic_lightning)
 
 invoice_response = lightning_session.invoice(1000, "ciao", claim_address)
 bolt11_invoice_obj = invoice_response.bolt11_invoice()

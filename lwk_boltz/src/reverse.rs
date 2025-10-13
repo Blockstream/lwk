@@ -144,6 +144,11 @@ impl LightningSession {
     }
 }
 
+fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
+    let hashed_bytes = sha256::Hash::hash(&our_keys.secret_bytes());
+    Ok(Preimage::from_vec(hashed_bytes.as_byte_array().to_vec())?)
+}
+
 impl InvoiceResponse {
     async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id().to_string();

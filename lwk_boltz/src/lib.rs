@@ -124,6 +124,19 @@ pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> ElementsNetwork {
     }
 }
 
+/// Derive the master xpub from a mnemonic
+fn derive_xpub_from_mnemonic(
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+    network_kind: NetworkKind,
+) -> Xpub {
+    let seed = mnemonic.to_seed("");
+    let xpriv = Xpriv::new_master(network_kind, &seed[..]).unwrap();
+    let derivation_path = DerivationPath::master();
+    let derived = xpriv.derive_priv(&secp, &derivation_path).unwrap();
+    Xpub::from_priv(&secp, &derived)
+}
+
 pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
     match network {
         ElementsNetwork::Liquid => BOLTZ_MAINNET_URL_V2,

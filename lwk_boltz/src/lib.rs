@@ -100,10 +100,46 @@ impl LightningSession {
     fn network(&self) -> ElementsNetwork {
         liquid_chain_to_elements_network(self.liquid_chain)
     }
+
+    fn derive_next_keypair(&self) -> Result<Keypair, Error> {
+        // export const derivationPath = "m/44/0/0/0";
+        // TODO fix unwraps
+        let index = self.next_index_to_use.fetch_add(1, Ordering::Relaxed);
+        let derivation_path = DerivationPath::from_str(&format!("m/44/0/0/0/{index}")).unwrap();
+        let seed = self.mnemonic.to_seed("");
+        let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version
+        let derived = xpriv.derive_priv(&self.secp, &derivation_path).unwrap();
+        log::info!("derive_next_keypair with index: {index}");
+        let keypair =
+            Keypair::from_seckey_slice(&self.secp, &derived.private_key.secret_bytes()).unwrap();
+        Ok(keypair)
+    }
 }
 
-async fn fetch_last_used_index(_mnemonic: &Mnemonic) -> u32 {
-    todo!()
+fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {
+    if liquid_chain == LiquidChain::Liquid {
+        NetworkKind::Main
+    } else {
+        NetworkKind::Test
+    }
+}
+
+async fn fetch_next_index_to_use(
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+    network_kind: NetworkKind,
+    client: &BoltzApiClientV2,
+) -> u32 {
+    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind);
+    log::info!("xpub for restore is: {}", xpub);
+
+    let result = client.post_swap_restore(&xpub.to_string()).await.unwrap();
+    log::info!("result of swap/restore: {:?}", result);
+
+    match result.iter().map(|e| e.claim_details.key_index).max() {
+        Some(index) => index + 1,
+        None => 0,
+    }
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

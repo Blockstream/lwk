@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use boltz_client::{
     boltz::BoltzWsApi,

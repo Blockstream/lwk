@@ -9,7 +9,6 @@ mod tests {
         boltz::BoltzApiClientV2,
         network::{Chain, LiquidChain},
         swaps::magic_routing::check_for_mrh,
-        Bolt11Invoice,
     };
     use lwk_boltz::{clients::ElectrumClient, Error, LightningSession};
     use lwk_wollet::{elements, ElementsNetwork};

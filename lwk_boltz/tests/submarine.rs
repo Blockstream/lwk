@@ -14,9 +14,7 @@ mod tests {
         util::sleep,
         Bolt11Invoice, Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{
-        clients::ElectrumClient, LightningSession, PreparePayData, PreparePayResponse,
-    };
+    use lwk_boltz::{clients::ElectrumClient, LightningSession, PreparePayData};
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -174,7 +172,7 @@ mod tests {
         // test restore swap after drop
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
-        let mut prepare_pay_response = session
+        let prepare_pay_response = session
             .prepare_pay(&bolt11_parsed, &refund_address)
             .await
             .unwrap();

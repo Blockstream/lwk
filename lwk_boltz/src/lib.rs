@@ -53,6 +53,8 @@ pub struct LightningSession {
 
     #[allow(dead_code)]
     mnemonic: Mnemonic,
+    #[allow(dead_code)]
+    last_used_index: u32,
 }
 
 impl LightningSession {
@@ -61,7 +63,7 @@ impl LightningSession {
     /// Accept a `timeout` parameter to set the timeout for the Boltz API and WebSocket connection.
     /// If `timeout` is `None`, the default timeout of 10 seconds is used.
     ///
-    pub fn new(
+    pub async fn new(
         network: ElementsNetwork,
         client: Arc<ElectrumClient>, // TODO: should be generic to support other clients
         timeout: Option<Duration>,
@@ -75,8 +77,13 @@ impl LightningSession {
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
         tokio::spawn(future); // TODO handle wasm
-        let mnemonic = mnemonic.unwrap_or_else(|| Mnemonic::generate(12).unwrap());
+
+        let (last_used_index, mnemonic) = match mnemonic {
+            Some(mnemonic) => (fetch_last_used_index(&mnemonic).await, mnemonic),
+            None => (0, Mnemonic::generate(12).unwrap()),
+        };
         Self {
+            last_used_index,
             mnemonic,
             ws,
             api,
@@ -93,6 +100,10 @@ impl LightningSession {
     fn network(&self) -> ElementsNetwork {
         liquid_chain_to_elements_network(self.liquid_chain)
     }
+}
+
+async fn fetch_last_used_index(_mnemonic: &Mnemonic) -> u32 {
+    todo!()
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

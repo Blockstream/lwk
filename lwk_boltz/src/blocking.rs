@@ -30,7 +30,9 @@ impl LightningSession {
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let inner = super::LightningSession::new(network, client, timeout, mnemonic);
+        let inner = runtime.block_on(super::LightningSession::new(
+            network, client, timeout, mnemonic,
+        ));
         Ok(Self { inner, runtime })
     }
 

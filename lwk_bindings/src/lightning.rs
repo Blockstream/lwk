@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Network};
+use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
 
 /// Log level for logging messages
@@ -113,6 +113,7 @@ impl LightningSession {
         client: &ElectrumClient,
         timeout: Option<u64>,
         logging: Option<Arc<dyn Logging>>,
+        mnemonic: Option<Arc<Mnemonic>>,
     ) -> Result<Self, LwkError> {
         // Set up the custom logger if provided
         if let Some(ref logger_impl) = logging {
@@ -135,6 +136,7 @@ impl LightningSession {
             network_value,
             Arc::new(boltz_client),
             timeout.map(Duration::from_secs),
+            mnemonic.map(|e| e.inner()),
         )
         .map_err(|e| LwkError::Generic {
             msg: format!("Failed to create blocking lightning session: {:?}", e),

@@ -52,6 +52,12 @@ impl Mnemonic {
     }
 }
 
+impl Mnemonic {
+    pub(crate) fn inner(&self) -> bip39::Mnemonic {
+        self.inner.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::Mnemonic;

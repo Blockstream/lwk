@@ -1,5 +1,6 @@
 use std::{ops::ControlFlow, sync::Arc, time::Duration};
 
+use bip39::Mnemonic;
 use boltz_client::Bolt11Invoice;
 use lwk_wollet::{elements, ElementsNetwork};
 
@@ -25,10 +26,11 @@ impl LightningSession {
         network: ElementsNetwork,
         client: Arc<ElectrumClient>,
         timeout: Option<Duration>,
+        mnemonic: Option<Mnemonic>,
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let inner = super::LightningSession::new(network, client, timeout);
+        let inner = super::LightningSession::new(network, client, timeout, mnemonic);
         Ok(Self { inner, runtime })
     }
 

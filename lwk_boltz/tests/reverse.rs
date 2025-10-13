@@ -37,6 +37,7 @@ mod tests {
                 .unwrap(),
             ),
             Some(TIMEOUT),
+            None,
         );
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
         log::info!("creating invoice for mainnet address: {}", mainnet_addr);
@@ -84,7 +85,7 @@ mod tests {
             network,
         )
         .unwrap();
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT));
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None);
         let response = session
             .invoice(1000, Some("test".to_string()), &claim_address)
             .await
@@ -121,7 +122,7 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT));
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None);
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -157,6 +158,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             client.clone(),
             Some(TIMEOUT),
+            None,
         );
 
         // test restore swap after drop
@@ -169,6 +171,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             client.clone(),
             Some(TIMEOUT),
+            None,
         );
         let data = InvoiceData::deserialize(&serialized_data).unwrap();
         let invoice_response = session.restore_invoice(data).await.unwrap();

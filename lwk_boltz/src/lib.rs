@@ -10,6 +10,7 @@ mod swap_state;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
@@ -49,6 +50,9 @@ pub struct LightningSession {
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
     timeout: Duration,
+
+    #[allow(dead_code)]
+    mnemonic: Mnemonic,
 }
 
 impl LightningSession {
@@ -57,11 +61,11 @@ impl LightningSession {
     /// Accept a `timeout` parameter to set the timeout for the Boltz API and WebSocket connection.
     /// If `timeout` is `None`, the default timeout of 10 seconds is used.
     ///
-    // TODO: add mnemonic as param to generate deterministic keypairs
     pub fn new(
         network: ElementsNetwork,
         client: Arc<ElectrumClient>, // TODO: should be generic to support other clients
         timeout: Option<Duration>,
+        mnemonic: Option<Mnemonic>,
     ) -> Self {
         let chain_client = Arc::new(ChainClient::new().with_liquid((*client).clone()));
         let url = boltz_default_url(network);
@@ -71,7 +75,9 @@ impl LightningSession {
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
         tokio::spawn(future); // TODO handle wasm
+        let mnemonic = mnemonic.unwrap_or_else(|| Mnemonic::generate(12).unwrap());
         Self {
+            mnemonic,
             ws,
             api,
             chain_client,

@@ -38,6 +38,7 @@ mod tests {
                 .unwrap(),
             ),
             Some(TIMEOUT),
+            None,
         );
 
         // In a real mainnet test, you would need to provide an actual Lightning invoice
@@ -98,6 +99,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             client.clone(),
             Some(TIMEOUT),
+            None,
         );
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
@@ -166,6 +168,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             client.clone(),
             Some(TIMEOUT),
+            None,
         );
 
         // test restore swap after drop
@@ -183,6 +186,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             client.clone(),
             Some(TIMEOUT),
+            None,
         );
         let data = PreparePayData::deserialize(&serialized_data).unwrap();
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();

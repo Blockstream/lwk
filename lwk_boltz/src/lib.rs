@@ -184,6 +184,11 @@ pub async fn next_status(
 
 #[cfg(test)]
 mod tests {
+    use bip39::Mnemonic;
+    use boltz_client::Secp256k1;
+    use lwk_wollet::bitcoin::NetworkKind;
+
+    use crate::derive_xpub_from_mnemonic;
 
     #[test]
     fn test_elements_network_to_liquid_chain() {
@@ -201,5 +206,18 @@ mod tests {
             let roundtrip_network = crate::liquid_chain_to_elements_network(chain);
             assert_eq!(network, roundtrip_network);
         }
+    }
+
+    #[test]
+    fn test_derive_xpub_from_mnemonic() {
+        // from the web app
+        let mnemonic = "damp cart merit asset obvious idea chef traffic absent armed road link";
+        let expected_xpub = "xpub661MyMwAqRbcGprhd8RLPkaDpHxrJxiSWUUibirDPMnsvmUTW3djk2S3wsaz21ASEdw4uXQAypXA4CZ9u5EhCnXtLgfwck5PwXNRgvcaDUm";
+
+        let mnemonic: Mnemonic = mnemonic.parse().unwrap();
+        let secp = Secp256k1::new();
+        let network_kind = NetworkKind::Main;
+        let xpub = derive_xpub_from_mnemonic(&mnemonic, &secp, network_kind);
+        assert_eq!(xpub.to_string(), expected_xpub);
     }
 }

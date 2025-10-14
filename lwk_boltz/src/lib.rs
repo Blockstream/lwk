@@ -151,12 +151,24 @@ async fn fetch_next_index_to_use(
     log::info!("xpub for restore is: {}", xpub);
 
     let result = client.post_swap_restore(&xpub.to_string()).await.unwrap();
-    log::info!("result of swap/restore: {:?}", result);
+    log::info!("swap_restore api returns {} elements", result.len());
 
-    match result.iter().map(|e| e.claim_details.key_index).max() {
+    let next_index_to_use = match result
+        .iter()
+        .filter_map(|e| {
+            e.claim_details
+                .as_ref()
+                .map(|d| d.key_index)
+                .or_else(|| e.refund_details.as_ref().map(|d| d.key_index))
+        })
+        .max()
+    {
         Some(index) => index + 1,
         None => 0,
-    }
+    };
+
+    log::info!("next index to use is: {next_index_to_use}");
+    next_index_to_use
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

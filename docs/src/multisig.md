@@ -127,6 +127,7 @@ sequenceDiagram
 <section>
 
 ```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:multisig-send:ignore}}
 ```
 </section>
 

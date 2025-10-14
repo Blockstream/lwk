@@ -57,3 +57,12 @@ sequenceDiagram
 ```
 </section>
 </custom-tabs>
+
+## Receive and monitor
+The Liquid Multisig wallet is identified by the CT descriptor created during setup.
+The descriptor encodes all the information needed to derive scriptpubkeys and blinding keys which are necessary to operate the wallet. In general, it also contains the xpubs _key origin_, information needed to by signers to sign, consisting in the signer fingerprint and derivation paths.
+
+With the wallet CT descriptor you can:
+* Generate wallet (confidential) addresses
+* Get the (unblinded) list of the wallet transactions
+* Get the wallet balance

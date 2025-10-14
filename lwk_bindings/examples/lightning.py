@@ -328,6 +328,7 @@ def main():
         print("1) Update balance")
         print("2) Show invoice (reverse)")
         print("3) Pay invoice (submarine)")
+        print("4) Generate rescue file")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -341,6 +342,20 @@ def main():
         elif choice == '3':
             print("\n=== Paying Invoice ===")
             pay_invoice(lightning_session, wollet, esplora_client, signer)
+        elif choice == '4':
+            print("\n=== Generating Rescue File ===")
+            try:
+                rescue_data = lightning_session.rescue_file()
+                # Compute hash of the rescue data
+                rescue_hash = hashlib.sha256(rescue_data.encode('utf-8')).hexdigest()[:16]
+                filename = f"rescue_file_{rescue_hash}.json"
+
+                with open(filename, "w") as f:
+                    f.write(rescue_data)
+
+                print(f"Rescue file generated: {filename}")
+            except Exception as e:
+                print(f"Error generating rescue file: {e}")
         elif choice == 'q':
             print("Goodbye!")
             break

@@ -119,10 +119,12 @@ impl LightningSession {
     }
 
     fn derive_next_keypair(&self) -> Result<Keypair, Error> {
-        // export const derivationPath = "m/44/0/0/0";
         // TODO fix unwraps
         let index = self.next_index_to_use.fetch_add(1, Ordering::Relaxed);
+
+        // This derivation path is a constant for Boltz, by using this we are compatible with the web app and can use the same rescue file
         let derivation_path = DerivationPath::from_str(&format!("m/44/0/0/0/{index}")).unwrap();
+
         let seed = self.mnemonic.to_seed("");
         let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version
         let derived = xpriv.derive_priv(&self.secp, &derivation_path).unwrap();

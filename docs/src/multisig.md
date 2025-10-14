@@ -40,6 +40,7 @@ sequenceDiagram
 <section>
 
 ```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:multisig-setup:ignore}}
 ```
 </section>
 

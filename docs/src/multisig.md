@@ -66,3 +66,28 @@ With the wallet CT descriptor you can:
 * Generate wallet (confidential) addresses
 * Get the (unblinded) list of the wallet transactions
 * Get the wallet balance
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+```
+</section>
+</custom-tabs>
+
+Note that for generating addresses, getting transactions and balance, you have the same procedure for both singlesig and multisig wallets.

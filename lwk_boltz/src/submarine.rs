@@ -140,11 +140,11 @@ impl LightningSession {
                 compressed: true,
             },
         )?;
+        let swap_id = data.create_swap_response.id.clone();
         let mut rx = self.ws.updates();
-        self.ws
-            .subscribe_swap(&data.create_swap_response.id)
-            .await?;
-        rx.recv().await?; // skip the initial state which is resent from boltz server
+        self.ws.subscribe_swap(&swap_id).await?;
+        let state = rx.recv().await?; // skip the initial state which is resent from boltz server
+        log::info!("Received initial state for swap {}: {state:?}", swap_id);
         Ok(PreparePayResponse {
             data,
             swap_script,

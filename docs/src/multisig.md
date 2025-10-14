@@ -59,6 +59,10 @@ sequenceDiagram
 </section>
 </custom-tabs>
 
+In this example Carol creates the SLIP77 key at random, however this is not mandatory and valid alternatives are:
+* "elip151", to deterministically derive the descriptor blinding key from the "bitcoin" descriptor;
+* derive a SLIP77 deterministic key from a signer, however this descriptor blinding key might be re used in other descriptors.
+
 ## Receive and monitor
 The Liquid Multisig wallet is identified by the CT descriptor created during setup.
 The descriptor encodes all the information needed to derive scriptpubkeys and blinding keys which are necessary to operate the wallet. In general, it also contains the xpubs _key origin_, information needed to by signers to sign, consisting in the signer fingerprint and derivation paths.

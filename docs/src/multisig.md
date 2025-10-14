@@ -115,3 +115,34 @@ sequenceDiagram
     Note over C: Finalize PSET and<br>extract TX
     Note over C: Broadcast TX
 ```
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+```
+</section>
+
+<div slot="title">Python</div>
+<section>
+
+```python
+```
+</section>
+
+<div slot="title">Javascript</div>
+<section>
+
+```typescript
+```
+</section>
+</custom-tabs>
+
+<div class="warning">
+⚠️ Bob needs the CT descriptor to obtain the PSET details, in particular the net balance with respect to the wallet, i.e. how much is being sent out of the wallet.
+</div>
+
+In this example we went through an example where the coordinator is one of the multisig participants and the PSET is signed serially. In general, this is not the case.
+The coordinator can be a utility service, as long as it knows the multisig CT descriptor.
+Also the PSET can be signed in parallel, and in this case the coordinator must combine the signed PSET using `Wollet::combine()`.

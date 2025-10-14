@@ -4005,5 +4005,61 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let sats = 1000;
     let lbtc = network.policy_asset();
 
+    // ANCHOR: multisig-send
+    // Carol creates a transaction send few sats to a certain address
+    let address = "<address>";
+    let address = server.elementsd_getnewaddress(); // ANCHOR: ingore
+    let sats = 1000;
+    let lbtc = network.policy_asset();
+
+    let mut pset = wollet_c
+        .tx_builder()
+        .add_recipient(&address, sats, lbtc)?
+        .finish()?;
+
+    let sigs_added = signer_c.sign(&mut pset)?;
+    assert_eq!(sigs_added, 1);
+
+    // Carol sends the PSET to Bob
+    // Bob wants to analyze the PSET before signing, thus he creates a wollet
+    let wd = WolletDescriptor::from_str(&desc)?;
+    let mut wollet_b = Wollet::without_persist(network, wd)?;
+    if let Some(update) = client.full_scan(&wollet_b)? {
+        wollet_b.apply_update(update)?;
+    }
+    // Then Bob uses the wollet to analyze the PSET
+    let details = wollet_b.get_details(&pset)?;
+    // PSET has a reasonable fee
+    assert!(details.balance.fee < 100);
+    // PSET has a signature from Carol
+    let fingerprints_has = details.fingerprints_has();
+    assert_eq!(fingerprints_has.len(), 1);
+    assert!(fingerprints_has.contains(&signer_c.fingerprint()));
+    // PSET needs a signature from either Bob or Carol
+    let fingerprints_missing = details.fingerprints_missing();
+    assert_eq!(fingerprints_missing.len(), 2);
+    assert!(fingerprints_missing.contains(&signer_a.fingerprint()));
+    assert!(fingerprints_missing.contains(&signer_b.fingerprint()));
+    // PSET has a single recipient, with data matching what was specified above
+    assert_eq!(details.balance.recipients.len(), 1);
+    let recipient = details.balance.recipients[0].clone();
+    assert_eq!(recipient.address.unwrap(), address);
+    assert_eq!(recipient.asset.unwrap(), lbtc);
+    assert_eq!(recipient.value.unwrap(), sats);
+
+    // Bob is satisified with the PSET and signs it
+    let sigs_added = signer_b.sign(&mut pset)?;
+    assert_eq!(sigs_added, 1);
+
+    // Bob sends the PSET back to Carol
+    // Carol checks that the PSET has enough signatures
+    let details = wollet_c.get_details(&pset)?;
+    assert_eq!(details.fingerprints_has().len(), 2);
+
+    // Carol finalizes the PSET and broadcast the transaction
+    let tx = wollet_c.finalize(&mut pset)?;
+    let txid = client.broadcast(&tx)?;
+    // ANCHOR_END: multisig-send
+
     Ok(())
 }

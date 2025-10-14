@@ -276,8 +276,9 @@ def main():
     wollet = Wollet(network, desc, datadir=None)
 
     # Create lightning session with ElectrumClient
+    mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
     logger = MyLogger()
-    lightning_session = LightningSession(network, electrum_client, 30, logger)  # 30 second timeout
+    lightning_session = LightningSession(network, electrum_client, 30, logger, mnemonic_lightning)  # 30 second timeout
 
     # Initial balance update
     update_balance(wollet, esplora_client, desc)

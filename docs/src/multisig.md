@@ -77,6 +77,7 @@ With the wallet CT descriptor you can:
 <section>
 
 ```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:multisig-receive:ignore}}
 ```
 </section>
 

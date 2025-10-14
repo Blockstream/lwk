@@ -133,6 +133,21 @@ impl LightningSession {
             Keypair::from_seckey_slice(&self.secp, &derived.private_key.secret_bytes()).unwrap();
         Ok(keypair)
     }
+
+    /// Generate a rescue file with the lightning session mnemonic.
+    ///
+    /// The rescue file is a JSON file that contains the swaps mnemonic.
+    /// It can be used on the Boltz web app to bring non terminated swaps to completition.
+    pub fn rescue_file(&self) -> RescueFile {
+        RescueFile {
+            mnemonic: self.mnemonic.to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct RescueFile {
+    mnemonic: String,
 }
 
 fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {

@@ -3930,3 +3930,51 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+#[allow(unused)]
+fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
+    let server = setup_with_esplora();
+
+    use lwk_signer::{bip39::Mnemonic, SwSigner};
+    use lwk_wollet::clients::blocking::EsploraClient;
+    use lwk_wollet::{ElementsNetwork, Wollet, WolletDescriptor};
+
+    // ANCHOR: multisig-setup
+    let is_mainnet = false;
+    // Derivation for multisig
+    let bip = lwk_common::Bip::Bip87;
+
+    // Alice creates their signer and gets the xpub
+    let mnemonic_a = Mnemonic::generate(12)?;
+    let signer_a = SwSigner::new(&mnemonic_a.to_string(), is_mainnet)?;
+    let xpub_a = signer_a.keyorigin_xpub(bip, is_mainnet)?;
+
+    // Bob creates their signer and gets the xpub
+    let mnemonic_b = Mnemonic::generate(12)?;
+    let signer_b = SwSigner::new(&mnemonic_b.to_string(), is_mainnet)?;
+    let xpub_b = signer_b.keyorigin_xpub(bip, is_mainnet)?;
+
+    // Carol, who acts as a coordinator, creates their signer and gets the xpub
+    let mnemonic_c = Mnemonic::generate(12)?;
+    let signer_c = SwSigner::new(&mnemonic_c.to_string(), is_mainnet)?;
+    let xpub_c = signer_c.keyorigin_xpub(bip, is_mainnet)?;
+
+    // Carol generates a random SLIP77 descriptor blinding key
+    let slip77_key_c = signer_c.slip77_master_blinding_key()?;
+    let mut slip77_rand_key = [0u8; 32];
+    use rand::{thread_rng, Rng};
+    thread_rng().fill(&mut slip77_rand_key);
+    let slip77_rand_key = slip77_rand_key.to_hex();
+    let desc_blinding_key = format!("slip77({slip77_rand_key})");
+
+    // Carol uses the collected xpubs and the descriptor blinding key to create
+    // the 2of3 descriptor
+    let threshold = 2;
+    let desc = format!("ct({desc_blinding_key},elwsh(multi({threshold},{xpub_a}/<0;1>/*,{xpub_b}/<0;1>/*,{xpub_c}/<0;1>/*)))");
+    // Validate the descriptor string
+    let wd = WolletDescriptor::from_str(&desc)?;
+    // ANCHOR_END: multisig-setup
+
+    Ok(())
+}

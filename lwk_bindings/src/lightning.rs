@@ -193,6 +193,16 @@ impl LightningSession {
             inner: Mutex::new(Some(response)),
         })
     }
+
+    /// Generate a rescue file with lightning session mnemonic.
+    ///
+    /// The rescue file is a JSON file that contains the swaps mnemonic.
+    /// It can be used on the Boltz web app to bring non terminated swaps to completition.
+    pub fn rescue_file(&self) -> Result<String, LwkError> {
+        let rescue_file = self.inner.rescue_file();
+        let rescue_file_json = serde_json::to_string(&rescue_file)?;
+        Ok(rescue_file_json)
+    }
 }
 
 #[uniffi::export]

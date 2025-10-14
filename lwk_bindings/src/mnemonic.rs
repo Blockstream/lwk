@@ -53,6 +53,7 @@ impl Mnemonic {
 }
 
 impl Mnemonic {
+    #[cfg(feature = "lightning")]
     pub(crate) fn inner(&self) -> bip39::Mnemonic {
         self.inner.clone()
     }

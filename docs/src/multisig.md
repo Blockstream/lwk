@@ -100,3 +100,18 @@ However the wallet is a 2of3, so it needs either Alice or Bob to fully sign the 
 Carol sends the transaction (in PSET format) to Bob.
 Bob examines the PSET and checks that it does what it's supposed to do (e.g. outgoing addresses, assets, amounts and fees), then it signs the PSET and sends it back to Carol.
 The PSET is now fully signed, Carol can finalize it and broadcast the transaction.
+
+```mermaid
+sequenceDiagram
+    participant A as Alice
+    participant B as Bob
+    participant C as Carol<br>(coordinator)
+    Note over C: Create PSET<br>(using CT descriptor👀)
+    Note over C: signer C 🔑 signs PSET
+    C->>B: PSET
+    Note over B: Analyze PSET<br>(using CT descriptor👀)
+    Note over B: signer B 🔑 signs PSET
+    B->>C: PSET
+    Note over C: Finalize PSET and<br>extract TX
+    Note over C: Broadcast TX
+```

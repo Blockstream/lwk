@@ -4,7 +4,7 @@ use bip39::Mnemonic;
 use boltz_client::Bolt11Invoice;
 use lwk_wollet::{elements, ElementsNetwork};
 
-use crate::{clients::ElectrumClient, Error, InvoiceData, PreparePayData, SwapStatus};
+use crate::{clients::ElectrumClient, Error, InvoiceData, PreparePayData, RescueFile, SwapStatus};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -83,6 +83,10 @@ impl LightningSession {
             inner,
             runtime: self.runtime.clone(),
         })
+    }
+
+    pub fn rescue_file(&self) -> RescueFile {
+        self.inner.rescue_file()
     }
 }
 

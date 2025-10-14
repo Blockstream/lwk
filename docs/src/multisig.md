@@ -91,3 +91,12 @@ With the wallet CT descriptor you can:
 </custom-tabs>
 
 Note that for generating addresses, getting transactions and balance, you have the same procedure for both singlesig and multisig wallets.
+
+## Send
+As for addresses, transactions and balance, to create a multisig transaction you only need the CT descriptor.
+In this example Carol creates the transaction.
+Since she created the transaction, she's comfortable in skipping validation and she also signs it.
+However the wallet is a 2of3, so it needs either Alice or Bob to fully sign the transaction.
+Carol sends the transaction (in PSET format) to Bob.
+Bob examines the PSET and checks that it does what it's supposed to do (e.g. outgoing addresses, assets, amounts and fees), then it signs the PSET and sends it back to Carol.
+The PSET is now fully signed, Carol can finalize it and broadcast the transaction.

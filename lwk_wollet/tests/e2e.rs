@@ -3976,5 +3976,34 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let wd = WolletDescriptor::from_str(&desc)?;
     // ANCHOR_END: multisig-setup
 
+    // ANCHOR: multisig-receive
+    // Carol creates the wollet
+    let network = ElementsNetwork::LiquidTestnet;
+    let network = ElementsNetwork::default_regtest(); // ANCHOR: ignore
+    let mut wollet_c = Wollet::without_persist(network, wd)?;
+
+    // With the wollet, Carol can obtain addresses, transactions and balance
+    let addr = wollet_c.address(None)?;
+    let txs = wollet_c.transactions()?;
+    let balance = wollet_c.balance()?;
+
+    // Update the wollet state
+    let url = "https://blockstream.info/liquidtestnet/api";
+    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap()); // ANCHOR: ignore
+    let mut client = EsploraClient::new(&url, network)?;
+
+    if let Some(update) = client.full_scan(&wollet_c)? {
+        wollet_c.apply_update(update)?;
+    }
+    // ANCHOR_END: multisig-receive
+
+    // Receive some funds
+    let txid = server.elementsd_sendtoaddress(addr.address(), 10_000, None);
+    wait_for_tx(&mut wollet_c, &mut client, &txid);
+
+    let address = server.elementsd_getnewaddress();
+    let sats = 1000;
+    let lbtc = network.policy_asset();
+
     Ok(())
 }

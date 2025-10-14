@@ -228,6 +228,9 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
 }
 
 /// Wait for one of the expected swap status updates from a broadcast receiver with timeout
+///
+/// Note if there are concurrent swaps the broadcast receiver will receive updates for ALL swaps and
+/// thus we filter out updates for other swaps.
 pub async fn next_status(
     rx: &mut tokio::sync::broadcast::Receiver<SwapStatus>,
     timeout: Duration,
@@ -235,33 +238,53 @@ pub async fn next_status(
     swap_id: &str,
     last_state: SwapState,
 ) -> Result<SwapStatus, Error> {
-    let update = tokio::select! {
-        update = rx.recv() => update?,
-        _ = tokio::time::sleep(timeout) => {
-            log::warn!("Timeout while waiting state {:?} for swap id {}", expected_states, swap_id );
-            return Err(Error::Timeout(swap_id.to_string()));
-        }
-    };
-    log::info!("Received update. status:{}", update.status);
-    let status = update
-        .status
-        .parse::<SwapState>()
-        .map_err(|_| Error::UnexpectedUpdate {
-            swap_id: swap_id.to_string(),
-            status: update.status.clone(),
-            last_state,
-            expected_states: expected_states.to_vec(),
-        })?;
-    if !expected_states.contains(&status) {
-        return Err(Error::UnexpectedUpdate {
-            swap_id: swap_id.to_string(),
-            status: update.status.clone(),
-            last_state,
-            expected_states: expected_states.to_vec(),
-        });
-    }
+    let deadline = tokio::time::Instant::now() + timeout;
 
-    Ok(update)
+    loop {
+        // since we can receive updates for all swaps, we need to check the deadline
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        let update = tokio::select! {
+            update = rx.recv() => update?,
+            _ = tokio::time::sleep(remaining) => {
+                log::warn!("Timeout while waiting state {:?} for swap id {}", expected_states, swap_id );
+                return Err(Error::Timeout(swap_id.to_string()));
+            }
+        };
+
+        // Filter out updates for other swaps
+        if update.id != swap_id {
+            log::debug!(
+                "Ignoring update for different swap: {} (waiting for {})",
+                update.id,
+                swap_id
+            );
+            continue;
+        }
+
+        log::info!(
+            "Received update on swap {swap_id}. status:{}",
+            update.status
+        );
+        let status = update
+            .status
+            .parse::<SwapState>()
+            .map_err(|_| Error::UnexpectedUpdate {
+                swap_id: swap_id.to_string(),
+                status: update.status.clone(),
+                last_state,
+                expected_states: expected_states.to_vec(),
+            })?;
+        if !expected_states.contains(&status) {
+            return Err(Error::UnexpectedUpdate {
+                swap_id: swap_id.to_string(),
+                status: update.status.clone(),
+                last_state,
+                expected_states: expected_states.to_vec(),
+            });
+        }
+
+        return Ok(update);
+    }
 }
 
 #[cfg(test)]

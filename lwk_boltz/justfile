@@ -58,3 +58,11 @@ test-reverse-restore: regtest-env-start
     export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test reverse -- test_session_restore_reverse --nocapture
 
+
+# Run reverse swap test
+test-reverse-concurrent: regtest-env-start
+    #!/usr/bin/env bash
+    set -e
+    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
+    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
+    RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture

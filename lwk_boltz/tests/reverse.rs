@@ -185,6 +185,45 @@ mod tests {
         mining_handle.abort();
     }
 
+    #[tokio::test]
+    async fn test_session_reverse_concurrent() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let _mining_handle = utils::start_block_mining();
+        let network = ElementsNetwork::default_regtest();
+        let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
+
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None).await;
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let invoice = session.invoice(100000, None, &claim_address).await.unwrap();
+        log::info!("Invoice1: {}", invoice.bolt11_invoice());
+
+        let claim_address2 = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address2 = elements::Address::from_str(&claim_address2).unwrap();
+        let invoice2 = session
+            .invoice(100001, None, &claim_address2)
+            .await
+            .unwrap();
+        log::info!("Invoice2: {}", invoice.bolt11_invoice());
+
+        let invoice_1_str = invoice.bolt11_invoice().to_string();
+        let invoice_2_str = invoice2.bolt11_invoice().to_string();
+        utils::start_pay_invoice_lnd(invoice_1_str);
+        utils::start_pay_invoice_lnd(invoice_2_str);
+
+        let h1 = tokio::spawn(invoice.complete_pay());
+        let h2 = tokio::spawn(invoice2.complete_pay());
+        let (result1, result2) = tokio::try_join!(h1, h2).unwrap();
+        result1.unwrap();
+        result2.unwrap();
+    }
+
     /// Test the reverse swap, copied from the boltz_client tests
     async fn v2_reverse(chain_client: &ChainClient, chain: Chain, cooperative: bool) {
         let secp = Secp256k1::new();

@@ -59,7 +59,7 @@ impl Bolt11Invoice {
     }
 
     /// Returns the invoice description as a string
-    pub fn description(&self) -> String {
+    pub fn invoice_description(&self) -> String {
         format!("{}", self.inner.description())
     }
 

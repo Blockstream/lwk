@@ -23,7 +23,7 @@ print(claim_address)
 
 # Create a lightning session with custom logging
 logger = MyLogger()
-mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for privacy reasons using a different mnemonic for the lightning session
+mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
 lightning_session = LightningSession(network, client, 10, logger, mnemonic_lightning)
 
 invoice_response = lightning_session.invoice(1000, "ciao", claim_address)

@@ -6,6 +6,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
+use lwk_boltz::SubSwapStates;
 
 /// Log level for logging messages
 #[derive(uniffi::Enum)]
@@ -88,6 +89,11 @@ pub struct PreparePayResponse {
 }
 
 #[derive(uniffi::Object)]
+pub struct WebHook {
+    url: String,
+}
+
+#[derive(uniffi::Object)]
 pub struct InvoiceResponse {
     /// Using Option to allow consuming the inner value when complete_pay is called
     inner: Mutex<Option<lwk_boltz::blocking::InvoiceResponse>>,
@@ -149,11 +155,18 @@ impl LightningSession {
         &self,
         invoice: &Bolt11Invoice,
         refund_address: &Address,
+        webhook: Option<Arc<WebHook>>,
     ) -> Result<PreparePayResponse, LwkError> {
-        // TODO: add webhook
-        let response = self
-            .inner
-            .prepare_pay(invoice.as_ref(), refund_address.as_ref(), None)?;
+        let webhook = webhook
+            .as_ref()
+            .map(|w| lwk_boltz::Webhook::<SubSwapStates> {
+                url: w.url.to_string(),
+                hash_swap_id: None,
+                status: None,
+            });
+        let response =
+            self.inner
+                .prepare_pay(invoice.as_ref(), refund_address.as_ref(), webhook)?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),
@@ -361,5 +374,13 @@ impl InvoiceResponse {
         };
         *lock = Some(response);
         Ok(result)
+    }
+}
+
+#[uniffi::export]
+impl WebHook {
+    #[uniffi::constructor]
+    pub fn new(url: String) -> Arc<Self> {
+        Arc::new(Self { url })
     }
 }

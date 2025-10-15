@@ -43,6 +43,7 @@ pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;
+pub use boltz_client::boltz::{RevSwapStates, SubSwapStates, Webhook};
 pub use boltz_client::Bolt11Invoice;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);

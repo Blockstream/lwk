@@ -86,6 +86,7 @@ With the wallet CT descriptor you can:
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/multisig.py:multisig-receive:ignore}}
 ```
 </section>
 

@@ -80,10 +80,7 @@ details = wollet_b.pset_details(pset)
 # PSET has a reasonable fee
 assert details.balance().fee() < 100
 # PSET has a signature from Carol
-# TODO: signer.fingerprint and PsetDetails.fingerprints_has/missing # ANCHOR: ignore
-fingerprint_a = xpub_a[1:9]
-fingerprint_b = xpub_b[1:9]
-fingerprint_c = xpub_c[1:9]
+# TODO: PsetDetails.fingerprints_has/missing # ANCHOR: ignore
 fingerprints_has = set()
 fingerprints_missing = set()
 for sig_details in details.signatures():
@@ -91,11 +88,11 @@ for sig_details in details.signatures():
     fingerprints_missing.update({v[1:9] for v in sig_details.missing_signature().values()})
 
 assert len(fingerprints_has) == 1
-assert fingerprint_c in fingerprints_has
+assert signer_c.fingerprint() in fingerprints_has
 # PSET needs a signature from either Bob or Carol
 assert len(fingerprints_missing) == 2
-assert fingerprint_a in fingerprints_missing
-assert fingerprint_b in fingerprints_missing
+assert signer_a.fingerprint() in fingerprints_missing
+assert signer_b.fingerprint() in fingerprints_missing
 # PSET has a single recipient, with data matching what was specified above
 assert len(details.balance().recipients()) == 1
 recipient = details.balance().recipients()[0]

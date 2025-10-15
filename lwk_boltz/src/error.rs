@@ -52,6 +52,12 @@ pub enum Error {
 
     #[error("Serialization error: {0}")]
     SerdeJson(#[from] serde_json::Error),
+
+    #[error("BIP32 derivation error: {0}")]
+    Bip32(#[from] lwk_wollet::bitcoin::bip32::Error),
+
+    #[error("Secp256k1 error: {0}")]
+    Secp256k1(#[from] lwk_wollet::secp256k1::Error),
 }
 
 impl From<BoltzError> for Error {

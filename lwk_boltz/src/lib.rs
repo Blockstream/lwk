@@ -284,21 +284,20 @@ fn derive_keypair(
     mnemonic: &Mnemonic,
     secp: &Secp256k1<All>,
 ) -> Result<Keypair, Error> {
-    // TODO fix unwraps
     // Boltz derivation path: m/44/0/0/0/{index}
     let derivation_path = DerivationPath::from(vec![
-        ChildNumber::from_normal_idx(44).unwrap(),
-        ChildNumber::from_normal_idx(0).unwrap(),
-        ChildNumber::from_normal_idx(0).unwrap(),
-        ChildNumber::from_normal_idx(0).unwrap(),
-        ChildNumber::from_normal_idx(index).unwrap(),
+        ChildNumber::from_normal_idx(44)?,
+        ChildNumber::from_normal_idx(0)?,
+        ChildNumber::from_normal_idx(0)?,
+        ChildNumber::from_normal_idx(0)?,
+        ChildNumber::from_normal_idx(index)?,
     ]);
 
     let seed = mnemonic.to_seed("");
-    let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version
-    let derived = xpriv.derive_priv(&secp, &derivation_path).unwrap();
+    let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?; // the network is ininfluent since we don't use the extended key version
+    let derived = xpriv.derive_priv(&secp, &derivation_path)?;
     log::info!("derive_next_keypair with index: {index}");
-    let keypair = Keypair::from_seckey_slice(&secp, &derived.private_key.secret_bytes()).unwrap();
+    let keypair = Keypair::from_seckey_slice(&secp, &derived.private_key.secret_bytes())?;
     Ok(keypair)
 }
 

@@ -137,6 +137,7 @@ sequenceDiagram
 <section>
 
 ```python
+{{#include ../../lwk_bindings/tests/bindings/multisig.py:multisig-send:ignore}}
 ```
 </section>
 

@@ -202,7 +202,7 @@ mod tests {
 
         assert_eq!(signer.mnemonic().unwrap(), mnemonic);
 
-	assert_eq!(signer.fingerprint().unwrap(), xpub[1..9])
+        assert_eq!(signer.fingerprint().unwrap(), xpub[1..9])
     }
 
     #[test]

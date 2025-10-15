@@ -297,5 +297,8 @@ mod tests {
             recipients[0].address().unwrap().to_string(),
             "AzpoyU5wJFcfdq6sh5ETbqCBA1oLuoLYk5UGJbYLGj3wKMurrVQiX1Djq67JHFAVt1hA5QVq41iNuVmy"
         );
+
+        assert_eq!(details.fingerprints_has(), vec!["6e055509"]);
+        assert_eq!(details.fingerprints_missing(), vec!["281e2239"]);
     }
 }

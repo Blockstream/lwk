@@ -93,7 +93,9 @@ impl LightningSession {
 
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => (
-                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api).await,
+                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api)
+                    .await
+                    .unwrap(),
                 mnemonic,
             ),
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
@@ -152,11 +154,11 @@ async fn fetch_next_index_to_use(
     secp: &Secp256k1<All>,
     network_kind: NetworkKind,
     client: &BoltzApiClientV2,
-) -> u32 {
-    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind).unwrap();
+) -> Result<u32, Error> {
+    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind)?;
     log::info!("xpub for restore is: {}", xpub);
 
-    let result = client.post_swap_restore(&xpub.to_string()).await.unwrap();
+    let result = client.post_swap_restore(&xpub.to_string()).await?;
     log::info!("swap_restore api returns {} elements", result.len());
 
     let next_index_to_use = match result
@@ -174,7 +176,7 @@ async fn fetch_next_index_to_use(
     };
 
     log::info!("next index to use is: {next_index_to_use}");
-    next_index_to_use
+    Ok(next_index_to_use)
 }
 
 /// Convert an ElementsNetwork to a LiquidChain

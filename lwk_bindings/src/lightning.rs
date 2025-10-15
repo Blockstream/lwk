@@ -6,7 +6,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
-use lwk_boltz::SubSwapStates;
+use lwk_boltz::{RevSwapStates, SubSwapStates};
 
 /// Log level for logging messages
 #[derive(uniffi::Enum)]
@@ -187,11 +187,18 @@ impl LightningSession {
         amount: u64,
         description: Option<String>,
         claim_address: &Address,
+        webhook: Option<Arc<WebHook>>,
     ) -> Result<InvoiceResponse, LwkError> {
-        // TODO: add webhook
+        let webhook = webhook
+            .as_ref()
+            .map(|w| lwk_boltz::Webhook::<RevSwapStates> {
+                url: w.url.to_string(),
+                hash_swap_id: None,
+                status: None,
+            });
         let response = self
             .inner
-            .invoice(amount, description, claim_address.as_ref(), None)
+            .invoice(amount, description, claim_address.as_ref(), webhook)
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {:?}", e),
             })?;

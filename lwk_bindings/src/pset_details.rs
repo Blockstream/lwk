@@ -48,6 +48,16 @@ impl PsetDetails {
             .map(|e| Arc::new(e.into()))
             .collect()
     }
+
+    /// Set of fingerprints for which the PSET has a signature
+    pub fn fingerprints_has(&self) -> Vec<String> {
+        // TODO: return HashSet when upgrading to uniffi-rs 0.29 or later
+        self.inner
+            .fingerprints_has()
+            .into_iter()
+            .map(|fp| fp.to_string())
+            .collect()
+    }
 }
 
 #[derive(uniffi::Object, Debug)]

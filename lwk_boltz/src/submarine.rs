@@ -116,7 +116,7 @@ impl LightningSession {
                 swap_type: SwapType::Submarine,
                 fee,
                 bolt11_invoice: bolt11_invoice.clone(),
-                our_keys: our_keys.clone(),
+                our_keys,
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),
             },
@@ -253,7 +253,7 @@ impl PreparePayResponse {
                             log::info!("swap not eligible for a cooperative claim, boltz decision, we did our best");
                             Ok(ControlFlow::Break(true))
                         } else {
-                            return Err(e.into());
+                            Err(e.into())
                         }
                     }
                 }

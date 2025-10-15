@@ -204,8 +204,8 @@ fn derive_xpub_from_mnemonic(
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(network_kind, &seed[..])?;
     let derivation_path = DerivationPath::master();
-    let derived = xpriv.derive_priv(&secp, &derivation_path)?;
-    Ok(Xpub::from_priv(&secp, &derived))
+    let derived = xpriv.derive_priv(secp, &derivation_path)?;
+    Ok(Xpub::from_priv(secp, &derived))
 }
 
 pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
@@ -295,9 +295,9 @@ fn derive_keypair(
 
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?; // the network is ininfluent since we don't use the extended key version
-    let derived = xpriv.derive_priv(&secp, &derivation_path)?;
+    let derived = xpriv.derive_priv(secp, &derivation_path)?;
     log::info!("derive_next_keypair with index: {index}");
-    let keypair = Keypair::from_seckey_slice(&secp, &derived.private_key.secret_bytes())?;
+    let keypair = Keypair::from_seckey_slice(secp, &derived.private_key.secret_bytes())?;
     Ok(keypair)
 }
 

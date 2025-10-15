@@ -173,7 +173,7 @@ impl InvoiceResponse {
     }
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {
-        Bolt11Invoice::from_str(&self.data.create_reverse_response.invoice.as_ref().expect(
+        Bolt11Invoice::from_str(self.data.create_reverse_response.invoice.as_ref().expect(
             "Invoice must be present or we would have errored on the LightningSession::invoice",
         ))
         .expect(
@@ -204,7 +204,7 @@ impl InvoiceResponse {
                         .construct_claim(
                             &self.data.preimage,
                             SwapTransactionParams {
-                                keys: self.data.our_keys.clone(),
+                                keys: self.data.our_keys,
                                 output_address: self.data.claim_address.to_string(),
                                 fee: Fee::Relative(1.0),
                                 swap_id: self.swap_id().to_string(),

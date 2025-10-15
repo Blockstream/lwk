@@ -300,21 +300,33 @@ def main():
 
             if swap_type == 'Submarine':
                 print(f"Restoring submarine swap {swap_id}...")
-                prepare_pay_response = lightning_session.restore_prepare_pay(data)
-                # Start thread to monitor payment
-                thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
-                thread.daemon = True
-                thread.start()
-                print(f"Started monitoring thread for submarine swap {swap_id}")
+                try:
+                    prepare_pay_response = lightning_session.restore_prepare_pay(data)
+                    # Start thread to monitor payment
+                    thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
+                    thread.daemon = True
+                    thread.start()
+                    print(f"Started monitoring thread for submarine swap {swap_id}")
+                except LwkError.SwapExpired as e:
+                    print(f"Submarine swap {swap_id} has expired, moving to failed directory")
+                    rename_swap_data(swap_id)
+                except Exception as e:
+                    print(f"Error restoring submarine swap {swap_id}: {e}")
 
             elif swap_type == 'Reverse':
                 print(f"Restoring reverse swap {swap_id}...")
-                invoice_response = lightning_session.restore_invoice(data)
-                # Start thread to monitor invoice
-                thread = threading.Thread(target=invoice_thread, args=(invoice_response, wollet.address(None).address()))
-                thread.daemon = True
-                thread.start()
-                print(f"Started monitoring thread for reverse swap {swap_id}")
+                try:
+                    invoice_response = lightning_session.restore_invoice(data)
+                    # Start thread to monitor invoice
+                    thread = threading.Thread(target=invoice_thread, args=(invoice_response, wollet.address(None).address()))
+                    thread.daemon = True
+                    thread.start()
+                    print(f"Started monitoring thread for reverse swap {swap_id}")
+                except LwkError.SwapExpired as e:
+                    print(f"Reverse swap {swap_id} has expired, moving to failed directory")
+                    rename_swap_data(swap_id)
+                except Exception as e:
+                    print(f"Error restoring reverse swap {swap_id}: {e}")
 
             else:
                 print(f"Unknown swap type '{swap_type}' in file {swap_file}")

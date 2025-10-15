@@ -96,7 +96,7 @@ impl LightningSession {
                 fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api).await,
                 mnemonic,
             ),
-            None => (0, Mnemonic::generate(12).unwrap()),
+            None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
         };
         Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),

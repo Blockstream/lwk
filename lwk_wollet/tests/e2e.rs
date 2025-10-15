@@ -4012,6 +4012,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
         .add_recipient(&address, sats, lbtc)?
         .finish()?;
 
+    // Carol signs the transaction
     let sigs_added = signer_c.sign(&mut pset)?;
     assert_eq!(sigs_added, 1);
 

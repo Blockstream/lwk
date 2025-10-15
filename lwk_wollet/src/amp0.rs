@@ -2,6 +2,7 @@
 
 use aes::cipher::BlockEncryptMut;
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
+#[allow(deprecated)]
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, Nonce};
 use base64::prelude::*;
 use elements::bitcoin::bip32::{DerivationPath, Xpub};
@@ -974,6 +975,7 @@ fn decrypt_blob_key(
     Ok(enc_key)
 }
 
+#[allow(deprecated)]
 fn blob_cipher(enc_key: &[u8]) -> Result<Aes256Gcm, Error> {
     if enc_key.len() != 32 {
         return Err(Error::Generic("Invalid encryption key length".into()));
@@ -984,6 +986,7 @@ fn blob_cipher(enc_key: &[u8]) -> Result<Aes256Gcm, Error> {
     Ok(Aes256Gcm::new(key))
 }
 
+#[allow(deprecated)]
 fn decrypt_blob(enc_key: &[u8], blob64: &str) -> Result<Vec<u8>, Error> {
     let wo_blob = BASE64_STANDARD
         .decode(blob64)

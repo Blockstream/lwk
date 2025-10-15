@@ -1,5 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
+#[allow(deprecated)]
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::Aes256GcmSiv;
 use aes_gcm_siv::KeyInit;
@@ -339,6 +340,7 @@ impl WolletDescriptor {
     ///
     /// The rationale to derive a key from the descriptor is to avoid storing a separate key that you need to backup for the wallet data.
     /// In the end the descriptor allows you to recover the same data directly from the blockchain, thus we don't need additional security.
+    #[allow(deprecated)]
     pub fn cipher(&self) -> Aes256GcmSiv {
         let key_bytes = EncryptionKeyHash::hash(self.to_string().as_bytes()).to_byte_array();
         let key = GenericArray::from_slice(&key_bytes);

@@ -6,6 +6,7 @@ use crate::store::{Height, Timestamp};
 use crate::wollet::WolletState;
 use crate::EC;
 use crate::{BlindingPublicKey, Wollet, WolletDescriptor};
+#[allow(deprecated)]
 use aes_gcm_siv::aead::generic_array::GenericArray;
 use aes_gcm_siv::aead::AeadMutInPlace;
 use base64::prelude::*;
@@ -112,6 +113,7 @@ impl Update {
     }
 
     /// Serialize an update to a byte array, encrypted with a key derived from the descriptor. Decrypt using [`Self::deserialize_decrypted()`]
+    #[allow(deprecated)]
     pub fn serialize_encrypted(&self, desc: &WolletDescriptor) -> Result<Vec<u8>, Error> {
         let mut plaintext = self.serialize()?;
 
@@ -136,6 +138,7 @@ impl Update {
     }
 
     /// Deserialize an update from a byte array, decrypted with a key derived from the descriptor. Create the byte array using [`Self::serialize_encrypted()`]
+    #[allow(deprecated)]
     pub fn deserialize_decrypted(bytes: &[u8], desc: &WolletDescriptor) -> Result<Update, Error> {
         let nonce_bytes = &bytes
             .get(..12)

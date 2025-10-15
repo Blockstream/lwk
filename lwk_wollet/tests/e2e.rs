@@ -3961,7 +3961,6 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let xpub_c = signer_c.keyorigin_xpub(bip, is_mainnet)?;
 
     // Carol generates a random SLIP77 descriptor blinding key
-    let slip77_key_c = signer_c.slip77_master_blinding_key()?;
     let mut slip77_rand_key = [0u8; 32];
     use rand::{thread_rng, Rng};
     thread_rng().fill(&mut slip77_rand_key);

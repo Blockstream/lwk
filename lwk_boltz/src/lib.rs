@@ -79,7 +79,7 @@ impl LightningSession {
         client: Arc<ElectrumClient>, // TODO: should be generic to support other clients
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
         let chain_client = Arc::new(ChainClient::new().with_liquid((*client).clone()));
         let url = boltz_default_url(network);
@@ -93,14 +93,12 @@ impl LightningSession {
 
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => (
-                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api)
-                    .await
-                    .unwrap(),
+                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api).await?,
                 mnemonic,
             ),
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
         };
-        Self {
+        Ok(Self {
             next_index_to_use: AtomicU32::new(next_index_to_use),
             mnemonic,
             ws,
@@ -109,7 +107,7 @@ impl LightningSession {
             liquid_chain,
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
             secp,
-        }
+        })
     }
 
     fn chain(&self) -> Chain {

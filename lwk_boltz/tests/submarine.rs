@@ -38,7 +38,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
 
         // In a real mainnet test, you would need to provide an actual Lightning invoice
         // This is a placeholder - in practice you'd need to generate this externally
@@ -100,7 +101,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
@@ -170,7 +172,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
 
         // test restore swap after drop
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
@@ -189,7 +192,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
         let data = PreparePayData::deserialize(&serialized_data).unwrap();
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
         utils::send_to_address(

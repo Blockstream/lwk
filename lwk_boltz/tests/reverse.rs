@@ -39,7 +39,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
         log::info!("creating invoice for mainnet address: {}", mainnet_addr);
 
@@ -86,7 +87,9 @@ mod tests {
             network,
         )
         .unwrap();
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None).await;
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
+            .await
+            .unwrap();
         let response = session
             .invoice(1000, Some("test".to_string()), &claim_address)
             .await
@@ -123,7 +126,9 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None).await;
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
+            .await
+            .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -161,7 +166,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
 
         // test restore swap after drop
         let invoice_response = session.invoice(100000, None, &claim_address).await.unwrap();
@@ -175,7 +181,8 @@ mod tests {
             Some(TIMEOUT),
             None,
         )
-        .await;
+        .await
+        .unwrap();
         let data = InvoiceData::deserialize(&serialized_data).unwrap();
         let invoice_response = session.restore_invoice(data).await.unwrap();
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
@@ -194,7 +201,9 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None).await;
+        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
+            .await
+            .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();

@@ -32,7 +32,7 @@ impl LightningSession {
         let _guard = runtime.enter();
         let inner = runtime.block_on(super::LightningSession::new(
             network, client, timeout, mnemonic,
-        ));
+        ))?;
         Ok(Self { inner, runtime })
     }
 

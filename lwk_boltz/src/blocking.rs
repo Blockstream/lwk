@@ -1,7 +1,10 @@
 use std::{ops::ControlFlow, sync::Arc, time::Duration};
 
 use bip39::Mnemonic;
-use boltz_client::Bolt11Invoice;
+use boltz_client::{
+    boltz::{RevSwapStates, Webhook},
+    Bolt11Invoice,
+};
 use lwk_wollet::{elements, ElementsNetwork};
 
 use crate::{clients::ElectrumClient, Error, InvoiceData, PreparePayData, RescueFile, SwapStatus};
@@ -66,10 +69,14 @@ impl LightningSession {
         amount: u64,
         description: Option<String>,
         claim_address: &elements::Address,
+        webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
-        let inner =
-            self.runtime
-                .block_on(self.inner.invoice(amount, description, claim_address))?;
+        let inner = self.runtime.block_on(self.inner.invoice(
+            amount,
+            description,
+            claim_address,
+            webhook,
+        ))?;
         Ok(InvoiceResponse {
             inner,
             runtime: self.runtime.clone(),

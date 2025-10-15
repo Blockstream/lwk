@@ -174,9 +174,10 @@ impl LightningSession {
         description: Option<String>,
         claim_address: &Address,
     ) -> Result<InvoiceResponse, LwkError> {
+        // TODO: add webhook
         let response = self
             .inner
-            .invoice(amount, description, claim_address.as_ref())
+            .invoice(amount, description, claim_address.as_ref(), None)
             .map_err(|e| LwkError::Generic {
                 msg: format!("Invoice failed: {:?}", e),
             })?;

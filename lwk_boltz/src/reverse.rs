@@ -5,7 +5,9 @@ use std::time::Duration;
 
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
+use boltz_client::boltz::RevSwapStates;
 use boltz_client::boltz::SwapStatus;
+use boltz_client::boltz::Webhook;
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::magic_routing::sign_address;
@@ -43,6 +45,7 @@ impl LightningSession {
         amount: u64,
         description: Option<String>,
         claim_address: &elements::Address,
+        webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
         let our_keys = self.derive_next_keypair()?;
@@ -66,7 +69,7 @@ impl LightningSession {
             address: Some(claim_address.to_string()),
             claim_public_key,
             referral_id: None, // Add address signature here.
-            webhook: None,
+            webhook,
         };
 
         let reverse_resp = self.api.post_reverse_req(create_reverse_req).await?;

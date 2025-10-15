@@ -18,6 +18,9 @@ pub enum LwkError {
         amount: u64,
         uri: String,
     },
+
+    #[error("Swap {swap_id} has expired with status {status}")]
+    SwapExpired { swap_id: String, status: String },
 }
 
 impl From<lwk_wollet::Error> for LwkError {
@@ -205,6 +208,9 @@ impl From<lwk_boltz::Error> for LwkError {
                 amount,
                 uri,
             },
+            lwk_boltz::Error::Expired { swap_id, status } => {
+                LwkError::SwapExpired { swap_id, status }
+            }
             _ => LwkError::Generic {
                 msg: format!("{:?}", value),
             },

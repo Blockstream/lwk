@@ -127,6 +127,11 @@ impl Signer {
         )?)
     }
 
+    /// Return the signer fingerprint
+    pub fn fingerprint(&self) -> Result<String, LwkError> {
+        Ok(self.inner.fingerprint().to_string())
+    }
+
     /// Get the mnemonic of the signer
     pub fn mnemonic(&self) -> Result<Arc<Mnemonic>, LwkError> {
         Ok(Arc::new(self.inner.mnemonic().map(Into::into).ok_or_else(

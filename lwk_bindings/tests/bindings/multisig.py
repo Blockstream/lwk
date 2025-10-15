@@ -80,16 +80,11 @@ details = wollet_b.pset_details(pset)
 # PSET has a reasonable fee
 assert details.balance().fee() < 100
 # PSET has a signature from Carol
-# TODO: PsetDetails.fingerprints_has/missing # ANCHOR: ignore
-fingerprints_has = set()
-fingerprints_missing = set()
-for sig_details in details.signatures():
-    fingerprints_has.update({v[1:9] for v in sig_details.has_signature().values()})
-    fingerprints_missing.update({v[1:9] for v in sig_details.missing_signature().values()})
-
+fingerprints_has = details.fingerprints_has()
 assert len(fingerprints_has) == 1
 assert signer_c.fingerprint() in fingerprints_has
 # PSET needs a signature from either Bob or Carol
+fingerprints_missing = details.fingerprints_missing()
 assert len(fingerprints_missing) == 2
 assert signer_a.fingerprint() in fingerprints_missing
 assert signer_b.fingerprint() in fingerprints_missing
@@ -106,10 +101,7 @@ pset = signer_b.sign(pset)
 # Bob sends the PSET back to Carol
 # Carol checks that the PSET has enough signatures
 details = wollet_c.pset_details(pset)
-fingerprints_has = set()
-for sig_details in details.signatures():
-    fingerprints_has.update({v[1:9] for v in sig_details.has_signature().values()})
-
+fingerprints_has = details.fingerprints_has()
 assert len(fingerprints_has) == 2
 
 # Carol finalizes the PSET and broadcast the transaction

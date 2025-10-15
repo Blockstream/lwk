@@ -55,3 +55,67 @@ wollet_c.apply_update(update)
 client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
 txid = node.send_to_address(wollet_c.address(0).address(), 10_000, asset=None)
 wollet_c.wait_for_tx(txid, client)
+
+# ANCHOR: multisig-send
+# Carol creates a transaction send few sats to a certain address
+address = "<address>"
+address = node.get_new_address() # ANCHOR: ignore
+sats = 1000
+lbtc = network.policy_asset()
+
+b = network.tx_builder()
+b.add_recipient(address, sats, lbtc)
+pset = b.finish(wollet_c)
+
+pset = signer_c.sign(pset)
+
+# Carol sends the PSET to Bob
+# Bob wants to analyze the PSET before signing, thus he creates a wollet
+wd = WolletDescriptor(desc)
+wollet_b = Wollet(network, wd, datadir=None)
+update = client.full_scan(wollet_b)
+wollet_b.apply_update(update)
+# Then Bob uses the wollet to analyze the PSET
+details = wollet_b.pset_details(pset)
+# PSET has a reasonable fee
+assert details.balance().fee() < 100
+# PSET has a signature from Carol
+# TODO: signer.fingerprint and PsetDetails.fingerprints_has/missing # ANCHOR: ignore
+fingerprint_a = xpub_a[1:9]
+fingerprint_b = xpub_b[1:9]
+fingerprint_c = xpub_c[1:9]
+fingerprints_has = set()
+fingerprints_missing = set()
+for sig_details in details.signatures():
+    fingerprints_has.update({v[1:9] for v in sig_details.has_signature().values()})
+    fingerprints_missing.update({v[1:9] for v in sig_details.missing_signature().values()})
+
+assert len(fingerprints_has) == 1
+assert fingerprint_c in fingerprints_has
+# PSET needs a signature from either Bob or Carol
+assert len(fingerprints_missing) == 2
+assert fingerprint_a in fingerprints_missing
+assert fingerprint_b in fingerprints_missing
+# PSET has a single recipient, with data matching what was specified above
+assert len(details.balance().recipients()) == 1
+recipient = details.balance().recipients()[0]
+assert str(recipient.address()) == str(address)
+assert recipient.asset() == lbtc
+assert recipient.value() == sats
+
+# Bob is satisified with the PSET and signs it
+pset = signer_b.sign(pset)
+
+# Bob sends the PSET back to Carol
+# Carol checks that the PSET has enough signatures
+details = wollet_c.pset_details(pset)
+fingerprints_has = set()
+for sig_details in details.signatures():
+    fingerprints_has.update({v[1:9] for v in sig_details.has_signature().values()})
+
+assert len(fingerprints_has) == 2
+
+# Carol finalizes the PSET and broadcast the transaction
+tx = pset.finalize()
+txid = client.broadcast(tx)
+# ANCHOR_END: multisig-send

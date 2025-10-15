@@ -58,6 +58,16 @@ impl PsetDetails {
             .map(|fp| fp.to_string())
             .collect()
     }
+
+    /// Set of fingerprints for which the PSET is missing a signature
+    pub fn fingerprints_missing(&self) -> Vec<String> {
+        // TODO: return HashSet when upgrading to uniffi-rs 0.29 or later
+        self.inner
+            .fingerprints_missing()
+            .into_iter()
+            .map(|fp| fp.to_string())
+            .collect()
+    }
 }
 
 #[derive(uniffi::Object, Debug)]

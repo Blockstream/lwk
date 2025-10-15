@@ -201,6 +201,8 @@ mod tests {
         assert_eq!(xpub, expected);
 
         assert_eq!(signer.mnemonic().unwrap(), mnemonic);
+
+	assert_eq!(signer.fingerprint().unwrap(), xpub[1..9])
     }
 
     #[test]

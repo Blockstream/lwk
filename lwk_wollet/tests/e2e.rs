@@ -4000,10 +4000,6 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     let txid = server.elementsd_sendtoaddress(addr.address(), 10_000, None);
     wait_for_tx(&mut wollet_c, &mut client, &txid);
 
-    let address = server.elementsd_getnewaddress();
-    let sats = 1000;
-    let lbtc = network.policy_asset();
-
     // ANCHOR: multisig-send
     // Carol creates a transaction send few sats to a certain address
     let address = "<address>";

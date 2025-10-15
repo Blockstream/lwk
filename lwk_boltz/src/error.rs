@@ -58,6 +58,9 @@ pub enum Error {
 
     #[error("Secp256k1 error: {0}")]
     Secp256k1(#[from] lwk_wollet::secp256k1::Error),
+
+    #[error("Swap {swap_id} has expired with status {status}")]
+    Expired { swap_id: String, status: String },
 }
 
 impl From<BoltzError> for Error {

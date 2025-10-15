@@ -140,6 +140,14 @@ impl LightningSession {
 
         let state = rx.recv().await?; // skip the initial state which is resent from boltz server
         log::info!("Received initial state for swap {}: {state:?}", swap_id);
+
+        if state.status.contains("expired") {
+            return Err(Error::Expired {
+                swap_id,
+                status: state.status.clone(),
+            });
+        }
+
         Ok(InvoiceResponse {
             data,
             rx,

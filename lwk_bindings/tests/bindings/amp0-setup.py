@@ -9,9 +9,8 @@ mnemonic = "<mnemonic>";
 mnemonic = Mnemonic.from_random(12); # ANCHOR: ignore
 network = Network.testnet()
 signer = Signer(mnemonic, network)
-fingerprint = signer.keyorigin_xpub(Bip.new_bip84())[1:9] # ANCHOR: ignore
-username = f"user{fingerprint}" # ANCHOR: ignore
-password = f"pass{fingerprint}" # ANCHOR: ignore
+username = f"user{signer.fingerprint()}" # ANCHOR: ignore
+password = f"pass{signer.fingerprint()}" # ANCHOR: ignore
 
 # Collect signer data
 signer_data = signer.amp0_signer_data();

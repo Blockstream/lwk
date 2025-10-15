@@ -119,19 +119,8 @@ impl LightningSession {
     }
 
     fn derive_next_keypair(&self) -> Result<Keypair, Error> {
-        // TODO fix unwraps
         let index = self.next_index_to_use.fetch_add(1, Ordering::Relaxed);
-
-        // This derivation path is a constant for Boltz, by using this we are compatible with the web app and can use the same rescue file
-        let derivation_path = DerivationPath::from_str(&format!("m/44/0/0/0/{index}")).unwrap();
-
-        let seed = self.mnemonic.to_seed("");
-        let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version
-        let derived = xpriv.derive_priv(&self.secp, &derivation_path).unwrap();
-        log::info!("derive_next_keypair with index: {index}");
-        let keypair =
-            Keypair::from_seckey_slice(&self.secp, &derived.private_key.secret_bytes()).unwrap();
-        Ok(keypair)
+        derive_keypair(index, &self.mnemonic, &self.secp)
     }
 
     /// Generate a rescue file with the lightning session mnemonic.
@@ -285,6 +274,25 @@ pub async fn next_status(
 
         return Ok(update);
     }
+}
+
+/// Derive a keypair from a mnemonic and index using the Boltz derivation path
+///
+/// This derivation path is a constant for Boltz, by using this we are compatible with the web app and can use the same rescue file
+fn derive_keypair(
+    index: u32,
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+) -> Result<Keypair, Error> {
+    // TODO fix unwraps
+    let derivation_path = DerivationPath::from_str(&format!("m/44/0/0/0/{index}")).unwrap();
+
+    let seed = mnemonic.to_seed("");
+    let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version
+    let derived = xpriv.derive_priv(&secp, &derivation_path).unwrap();
+    log::info!("derive_next_keypair with index: {index}");
+    let keypair = Keypair::from_seckey_slice(&secp, &derived.private_key.secret_bytes()).unwrap();
+    Ok(keypair)
 }
 
 #[cfg(test)]

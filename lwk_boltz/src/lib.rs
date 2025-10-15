@@ -153,7 +153,7 @@ async fn fetch_next_index_to_use(
     network_kind: NetworkKind,
     client: &BoltzApiClientV2,
 ) -> u32 {
-    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind);
+    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind).unwrap();
     log::info!("xpub for restore is: {}", xpub);
 
     let result = client.post_swap_restore(&xpub.to_string()).await.unwrap();
@@ -200,12 +200,12 @@ fn derive_xpub_from_mnemonic(
     mnemonic: &Mnemonic,
     secp: &Secp256k1<All>,
     network_kind: NetworkKind,
-) -> Xpub {
+) -> Result<Xpub, Error> {
     let seed = mnemonic.to_seed("");
-    let xpriv = Xpriv::new_master(network_kind, &seed[..]).unwrap();
+    let xpriv = Xpriv::new_master(network_kind, &seed[..])?;
     let derivation_path = DerivationPath::master();
-    let derived = xpriv.derive_priv(&secp, &derivation_path).unwrap();
-    Xpub::from_priv(&secp, &derived)
+    let derived = xpriv.derive_priv(&secp, &derivation_path)?;
+    Ok(Xpub::from_priv(&secp, &derived))
 }
 
 pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
@@ -336,7 +336,7 @@ mod tests {
         let mnemonic: Mnemonic = mnemonic.parse().unwrap();
         let secp = Secp256k1::new();
         let network_kind = NetworkKind::Main;
-        let xpub = derive_xpub_from_mnemonic(&mnemonic, &secp, network_kind);
+        let xpub = derive_xpub_from_mnemonic(&mnemonic, &secp, network_kind).unwrap();
         assert_eq!(xpub.to_string(), expected_xpub);
     }
 

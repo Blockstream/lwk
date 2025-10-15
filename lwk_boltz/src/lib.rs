@@ -7,7 +7,6 @@ mod reverse;
 mod submarine;
 mod swap_state;
 
-use std::str::FromStr;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -26,6 +25,7 @@ use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
 use boltz_client::Keypair;
 use boltz_client::Secp256k1;
+use lwk_wollet::bitcoin::bip32::ChildNumber;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
@@ -285,7 +285,14 @@ fn derive_keypair(
     secp: &Secp256k1<All>,
 ) -> Result<Keypair, Error> {
     // TODO fix unwraps
-    let derivation_path = DerivationPath::from_str(&format!("m/44/0/0/0/{index}")).unwrap();
+    // Boltz derivation path: m/44/0/0/0/{index}
+    let derivation_path = DerivationPath::from(vec![
+        ChildNumber::from_normal_idx(44).unwrap(),
+        ChildNumber::from_normal_idx(0).unwrap(),
+        ChildNumber::from_normal_idx(0).unwrap(),
+        ChildNumber::from_normal_idx(0).unwrap(),
+        ChildNumber::from_normal_idx(index).unwrap(),
+    ]);
 
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..]).unwrap(); // the network is ininfluent since we don't use the extended key version

@@ -197,10 +197,9 @@ impl PreparePayResponse {
                             boltz_client: &self.api,
                             options: None,
                         })
-                        .await
-                        .unwrap();
+                        .await?;
 
-                    let txid = self.chain_client.broadcast_tx(&tx).await.unwrap();
+                    let txid = self.chain_client.broadcast_tx(&tx).await?;
                     log::info!("Cooperative Refund Successfully broadcasted: {txid}");
                     self.data.last_state = update_status;
                     Ok(ControlFlow::Break(true))

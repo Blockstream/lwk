@@ -55,6 +55,7 @@ impl LightningSession {
             compressed: true,
             inner: our_keys.public_key(),
         };
+        let webhook_str = format!("{:?}", webhook);
 
         let addrs_sig = sign_address(&claim_address.to_string(), &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
@@ -92,7 +93,7 @@ impl LightningSession {
         let swap_script =
             SwapScript::reverse_from_swap_resp(chain, &reverse_resp, claim_public_key)?;
         let swap_id = reverse_resp.id.clone();
-        log::info!("subscribing to swap: {swap_id}");
+        log::info!("subscribing to swap: {swap_id} webhook:{webhook_str}");
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 

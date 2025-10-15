@@ -37,6 +37,7 @@ impl LightningSession {
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
         let bolt11_invoice_str = bolt11_invoice.to_string();
+        let webhook_str = format!("{:?}", webhook);
 
         let our_keys = self.derive_next_keypair()?;
         let refund_public_key = PublicKey {
@@ -92,7 +93,9 @@ impl LightningSession {
         let swap_script =
             SwapScript::submarine_from_swap_resp(chain, &create_swap_response, refund_public_key)?;
         let swap_id = create_swap_response.id.clone();
-        log::info!("Created Swap Script id:{swap_id} swap_script:{swap_script:?}");
+        log::info!(
+            "Created Swap Script id:{swap_id} swap_script:{swap_script:?} webhook:{webhook_str}"
+        );
 
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;

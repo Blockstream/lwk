@@ -133,7 +133,7 @@ def show_invoice(lightning_session, wollet):
     print(f"Claim address: {claim_address}")
 
     # Create invoice
-    invoice_response = lightning_session.invoice(amount, "Lightning payment", claim_address)
+    invoice_response = lightning_session.invoice(amount, "Lightning payment", claim_address, None) # optionally accept a WebHook("https://example.com/webhook")
 
     # Get and print the bolt11 invoice
     bolt11_invoice_obj = invoice_response.bolt11_invoice()
@@ -166,7 +166,7 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer):
         print(f"Refund address: {refund_address}")
 
         # Prepare payment
-        prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice_obj, refund_address)
+        prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice_obj, refund_address, None) # optionally accept a WebHook("https://example.com/webhook")
 
         data=prepare_pay_response.serialize()
         swap_id=prepare_pay_response.swap_id()

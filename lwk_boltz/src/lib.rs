@@ -333,4 +333,18 @@ mod tests {
         let xpub = derive_xpub_from_mnemonic(&mnemonic, &secp, network_kind);
         assert_eq!(xpub.to_string(), expected_xpub);
     }
+
+    #[test]
+    fn test_derive_keypair() {
+        // from the web app
+        let mnemonic = "damp cart merit asset obvious idea chef traffic absent armed road link";
+        let expected_keypair_pubkey =
+            "0315a98cf1610e96ca92505c6e9536a208353399685440869dca58947a909d07ed";
+
+        let mnemonic: Mnemonic = mnemonic.parse().unwrap();
+        let secp = Secp256k1::new();
+        let index = 0;
+        let keypair = crate::derive_keypair(index, &mnemonic, &secp).unwrap();
+        assert_eq!(keypair.public_key().to_string(), expected_keypair_pubkey);
+    }
 }

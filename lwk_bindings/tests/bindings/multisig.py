@@ -32,3 +32,26 @@ desc = f"ct({desc_blinding_key},elwsh(multi({threshold},{xpub_a}/<0;1>/*,{xpub_b
 # Validate the descriptor string
 wd = WolletDescriptor(desc)
 # ANCHOR_END: multisig-setup
+
+# ANCHOR: multisig-receive
+# Carol creates the wollet
+wollet_c = Wollet(network, wd, datadir=None)
+
+# With the wollet, Carol can obtain addresses, transactions and balance
+addr = wollet_c.address(None);
+txs = wollet_c.transactions();
+balance = wollet_c.balance();
+
+# Update the wollet state
+url = "https://blockstream.info/liquidtestnet/api"
+client = EsploraClient(url, network)
+client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)  # ANCHOR: ignore
+
+update = client.full_scan(wollet_c)
+wollet_c.apply_update(update)
+# ANCHOR_END: multisig-receive
+
+# Receive some funds
+client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+txid = node.send_to_address(wollet_c.address(0).address(), 10_000, asset=None)
+wollet_c.wait_for_tx(txid, client)

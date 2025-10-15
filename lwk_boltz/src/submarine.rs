@@ -2,7 +2,9 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::Duration;
 
-use boltz_client::boltz::{BoltzApiClientV2, CreateSubmarineRequest, SwapStatus};
+use boltz_client::boltz::{
+    BoltzApiClientV2, CreateSubmarineRequest, SubSwapStates, SwapStatus, Webhook,
+};
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
@@ -31,6 +33,7 @@ impl LightningSession {
         &self,
         bolt11_invoice: &Bolt11Invoice,
         refund_address: &elements::Address,
+        webhook: Option<Webhook<SubSwapStates>>,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
         let bolt11_invoice_str = bolt11_invoice.to_string();
@@ -64,7 +67,7 @@ impl LightningSession {
             refund_public_key,
             pair_hash: None,
             referral_id: None,
-            webhook: None,
+            webhook,
         };
 
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;

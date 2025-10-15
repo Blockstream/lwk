@@ -2,7 +2,7 @@ use std::{ops::ControlFlow, sync::Arc, time::Duration};
 
 use bip39::Mnemonic;
 use boltz_client::{
-    boltz::{RevSwapStates, Webhook},
+    boltz::{RevSwapStates, SubSwapStates, Webhook},
     Bolt11Invoice,
 };
 use lwk_wollet::{elements, ElementsNetwork};
@@ -43,10 +43,13 @@ impl LightningSession {
         &self,
         bolt11_invoice: &Bolt11Invoice,
         refund_address: &elements::Address,
+        webhook: Option<Webhook<SubSwapStates>>,
     ) -> Result<PreparePayResponse, Error> {
-        let inner = self
-            .runtime
-            .block_on(self.inner.prepare_pay(bolt11_invoice, refund_address))?;
+        let inner = self.runtime.block_on(self.inner.prepare_pay(
+            bolt11_invoice,
+            refund_address,
+            webhook,
+        ))?;
         Ok(PreparePayResponse {
             inner,
             runtime: self.runtime.clone(),

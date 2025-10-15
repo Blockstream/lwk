@@ -150,9 +150,10 @@ impl LightningSession {
         invoice: &Bolt11Invoice,
         refund_address: &Address,
     ) -> Result<PreparePayResponse, LwkError> {
+        // TODO: add webhook
         let response = self
             .inner
-            .prepare_pay(invoice.as_ref(), refund_address.as_ref())?;
+            .prepare_pay(invoice.as_ref(), refund_address.as_ref(), None)?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

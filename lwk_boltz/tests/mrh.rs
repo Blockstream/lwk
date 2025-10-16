@@ -36,7 +36,12 @@ mod tests {
 
         let invoice_amount = 100_000;
         let invoice = receiver_session
-            .invoice(invoice_amount, Some("MRH test".to_string()), &claim_address)
+            .invoice(
+                invoice_amount,
+                Some("MRH test".to_string()),
+                &claim_address,
+                None,
+            )
             .await
             .unwrap();
         log::info!("claim_address: {}", claim_address);
@@ -93,7 +98,7 @@ mod tests {
             .unwrap();
         let bolt11_parsed = invoice.bolt11_invoice();
         let prepare_pay_response = sender_session
-            .prepare_pay(&bolt11_parsed, &claim_address)
+            .prepare_pay(&bolt11_parsed, &claim_address, None)
             .await;
         if let Err(Error::MagicRoutingHint {
             address,

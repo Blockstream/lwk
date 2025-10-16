@@ -46,7 +46,7 @@ mod tests {
 
         for _ in 0..10 {
             let invoice_response = session
-                .invoice(1000, Some("test".to_string()), &mainnet_addr)
+                .invoice(1000, Some("test".to_string()), &mainnet_addr, None)
                 .await;
             match invoice_response {
                 Ok(invoice_response) => {
@@ -91,7 +91,7 @@ mod tests {
             .await
             .unwrap();
         let response = session
-            .invoice(1000, Some("test".to_string()), &claim_address)
+            .invoice(1000, Some("test".to_string()), &claim_address, None)
             .await
             .unwrap();
         log::info!("Invoice Response: {}", response.bolt11_invoice());
@@ -133,7 +133,10 @@ mod tests {
             .await
             .unwrap();
         let claim_address = elements::Address::from_str(&claim_address).unwrap();
-        let invoice = session.invoice(100000, None, &claim_address).await.unwrap();
+        let invoice = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
         log::info!("Invoice: {}", invoice.bolt11_invoice());
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
         invoice.complete_pay().await.unwrap();
@@ -170,7 +173,10 @@ mod tests {
         .unwrap();
 
         // test restore swap after drop
-        let invoice_response = session.invoice(100000, None, &claim_address).await.unwrap();
+        let invoice_response = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
 
         let serialized_data = invoice_response.serialize().unwrap();
         drop(invoice_response);
@@ -208,7 +214,10 @@ mod tests {
             .await
             .unwrap();
         let claim_address = elements::Address::from_str(&claim_address).unwrap();
-        let invoice = session.invoice(100000, None, &claim_address).await.unwrap();
+        let invoice = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
         log::info!("Invoice1: {}", invoice.bolt11_invoice());
 
         let claim_address2 = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
@@ -216,7 +225,7 @@ mod tests {
             .unwrap();
         let claim_address2 = elements::Address::from_str(&claim_address2).unwrap();
         let invoice2 = session
-            .invoice(100001, None, &claim_address2)
+            .invoice(100001, None, &claim_address2, None)
             .await
             .unwrap();
         log::info!("Invoice2: {}", invoice.bolt11_invoice());

@@ -55,7 +55,7 @@ mod tests {
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
 
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address)
+            .prepare_pay(&bolt11_parsed, &refund_address, None)
             .await
             .unwrap();
         log::info!(
@@ -106,7 +106,7 @@ mod tests {
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address)
+            .prepare_pay(&bolt11_parsed, &refund_address, None)
             .await
             .unwrap();
         utils::send_to_address(
@@ -125,7 +125,7 @@ mod tests {
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address)
+            .prepare_pay(&bolt11_parsed, &refund_address, None)
             .await
             .unwrap();
         utils::send_to_address(
@@ -179,7 +179,7 @@ mod tests {
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address)
+            .prepare_pay(&bolt11_parsed, &refund_address, None)
             .await
             .unwrap();
 

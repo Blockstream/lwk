@@ -97,6 +97,16 @@ impl LightningSession {
     pub fn rescue_file(&self) -> RescueFile {
         self.inner.rescue_file()
     }
+
+    pub fn fetch_reverse_swaps(
+        &self,
+        claim_address: &elements::Address,
+    ) -> Result<Vec<InvoiceData>, Error> {
+        let inner = self
+            .runtime
+            .block_on(self.inner.fetch_reverse_swaps(claim_address))?;
+        Ok(inner)
+    }
 }
 
 impl PreparePayResponse {

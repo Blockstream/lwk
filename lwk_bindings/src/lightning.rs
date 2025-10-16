@@ -226,6 +226,18 @@ impl LightningSession {
         let rescue_file_json = serde_json::to_string(&rescue_file)?;
         Ok(rescue_file_json)
     }
+
+    /// Use the boltz
+    pub fn fetch_reverse_swaps(&self, claim_address: &Address) -> Result<Vec<String>, LwkError> {
+        let response = self.inner.fetch_reverse_swaps(claim_address.as_ref())?;
+        let data = response
+            .into_iter()
+            .map(|e| self.inner.restore_invoice(e))
+            .map(|e| e.and_then(|e| e.serialize()))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(data)
+    }
 }
 
 #[uniffi::export]

@@ -61,6 +61,9 @@ pub enum Error {
 
     #[error("Swap {swap_id} has expired with status {status}")]
     Expired { swap_id: String, status: String },
+
+    #[error("Swap restoration error: {0}")]
+    SwapRestoration(String),
 }
 
 impl From<BoltzError> for Error {

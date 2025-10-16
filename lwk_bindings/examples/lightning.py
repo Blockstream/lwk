@@ -235,6 +235,32 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer):
     except Exception as e:
         print(f"Error preparing payment: {e}")
 
+def fetch_reverse_swaps(lightning_session, wollet):
+    """Fetch reverse swaps for the wallet"""
+    try:
+        # Get the claim address for this wallet
+        claim_address = wollet.address(None).address()
+        print(f"Fetching reverse swaps for claim address: {claim_address}")
+
+        # Fetch reverse swaps from Boltz
+        swap_data_list = lightning_session.fetch_reverse_swaps(claim_address)
+
+        if not swap_data_list:
+            print("No reverse swaps found")
+            return
+
+        print(f"Found {len(swap_data_list)} reverse swap(s)\n")
+
+        # Print each swap's JSON data
+        for i, data in enumerate(swap_data_list, 1):
+            print(f"=== Swap {i} ===")
+            # Pretty print the JSON
+            swap_data = json.loads(data)
+            print(json.dumps(swap_data, indent=2))
+            print()
+    except Exception as e:
+        print(f"Error fetching reverse swaps: {e}")
+
 def main():
     # Get mnemonic from environment variable
     mnemonic_str = os.getenv('MNEMONIC')
@@ -341,6 +367,7 @@ def main():
         print("2) Show invoice (reverse)")
         print("3) Pay invoice (submarine)")
         print("4) Generate rescue file")
+        print("5) Fetch reverse swaps")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -368,6 +395,9 @@ def main():
                 print(f"Rescue file generated: {filename}")
             except Exception as e:
                 print(f"Error generating rescue file: {e}")
+        elif choice == '5':
+            print("\n=== Fetching Reverse Swaps ===")
+            fetch_reverse_swaps(lightning_session, wollet)
         elif choice == 'q':
             print("Goodbye!")
             break

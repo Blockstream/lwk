@@ -3,11 +3,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
 use boltz_client::boltz::RevSwapStates;
+use boltz_client::boltz::SwapRestoreType;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::Webhook;
+use boltz_client::boltz::{ClaimDetails, CreateReverseResponse};
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::magic_routing::sign_address;
@@ -17,14 +20,20 @@ use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
+use boltz_client::Bolt11Invoice;
 use boltz_client::Keypair;
-use boltz_client::{Bolt11Invoice, PublicKey};
+use boltz_client::PublicKey;
+use boltz_client::Secp256k1;
 use lwk_wollet::elements;
 use lwk_wollet::hashes::sha256;
 use lwk_wollet::hashes::Hash;
+use lwk_wollet::secp256k1::All;
 
+use crate::derive_keypair;
+use crate::derive_xpub_from_mnemonic;
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
+use crate::network_kind;
 use crate::swap_state::SwapStateTrait;
 use crate::SwapType;
 use crate::{next_status, LightningSession, SwapState};
@@ -156,6 +165,98 @@ impl LightningSession {
             chain_client: self.chain_client.clone(),
         })
     }
+
+    /// Restore active reverse swaps from the boltz api.
+    /// The claim address doesn't need to be the same used when creating the swap.
+    pub async fn fetch_reverse_swaps(
+        &self,
+        claim_address: &elements::Address,
+    ) -> Result<Vec<InvoiceData>, Error> {
+        let xpub =
+            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
+        let results = self.api.post_swap_restore(&xpub.to_string()).await?;
+        results
+            .iter()
+            .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
+            .filter(|e| e.status == "swap.created" || e.status == "invoice.settled") // TODO: are there any other state we want to recover?
+            .map(|e| {
+                convert_swap_restore_response_to_invoice_data(
+                    e,
+                    &self.mnemonic,
+                    &self.secp,
+                    claim_address,
+                )
+            })
+            .collect()
+    }
+}
+
+pub(crate) fn convert_swap_restore_response_to_invoice_data(
+    e: &boltz_client::boltz::SwapRestoreResponse,
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+    claim_address: &elements::Address,
+) -> Result<InvoiceData, Error> {
+    // Only handle reverse swaps for now
+    match e.swap_type {
+        SwapRestoreType::Reverse => {}
+        _ => {
+            return Err(Error::SwapRestoration(format!(
+                "Only reverse swaps are supported for restoration, got: {:?}",
+                e.swap_type
+            )))
+        }
+    }
+
+    // Extract claim details (required for reverse swaps)
+    let claim_details: &ClaimDetails = e.claim_details.as_ref().ok_or_else(|| {
+        Error::SwapRestoration(format!("Reverse swap {} is missing claim_details", e.id))
+    })?;
+
+    // Derive the keypair from the mnemonic at the key_index
+    let our_keys = derive_keypair(claim_details.key_index, mnemonic, secp)?;
+
+    let preimage = preimage_from_keypair(&our_keys)?;
+
+    // Parse the server public key
+    let refund_public_key_bitcoin = lwk_wollet::bitcoin::PublicKey::from_str(
+        &claim_details.server_public_key,
+    )
+    .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {}", e)))?;
+    let refund_public_key = PublicKey {
+        inner: refund_public_key_bitcoin.inner,
+        compressed: refund_public_key_bitcoin.compressed,
+    };
+
+    // Reconstruct CreateReverseResponse from ClaimDetails
+    let create_reverse_response = CreateReverseResponse {
+        id: e.id.clone(),
+        invoice: None, // Not available in restore response
+        swap_tree: claim_details.tree.clone(),
+        lockup_address: claim_details.lockup_address.clone(),
+        refund_public_key,
+        timeout_block_height: claim_details.timeout_block_height,
+        onchain_amount: claim_details.amount,
+        blinding_key: Some(claim_details.blinding_key.clone()),
+    };
+
+    // Parse the status to SwapState
+    let last_state = e.status.parse::<SwapState>().map_err(|err| {
+        Error::SwapRestoration(format!(
+            "Failed to parse status '{}' as SwapState: {}",
+            e.status, err
+        ))
+    })?;
+
+    Ok(InvoiceData {
+        last_state,
+        swap_type: SwapType::Reverse,
+        fee: None, // Fee information not available in restore response
+        create_reverse_response,
+        our_keys,
+        preimage,
+        claim_address: claim_address.clone(),
+    })
 }
 
 fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {

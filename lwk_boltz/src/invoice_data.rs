@@ -17,8 +17,8 @@ pub struct InvoiceData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
 
-    /// The fee of the swap provider
-    pub fee: u64,
+    /// The fee of the swap provider if known
+    pub fee: Option<u64>,
 
     pub(crate) create_reverse_response: CreateReverseResponse,
 
@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for InvoiceData {
         Ok(InvoiceData {
             last_state: helper.last_state,
             swap_type: helper.swap_type,
-            fee: helper.fee,
+            fee: Some(helper.fee),
             create_reverse_response: helper.create_reverse_response,
             our_keys,
             preimage,

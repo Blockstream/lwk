@@ -111,7 +111,7 @@ impl LightningSession {
             data: InvoiceData {
                 last_state: SwapState::SwapCreated,
                 swap_type: SwapType::Reverse,
-                fee,
+                fee: Some(fee),
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,

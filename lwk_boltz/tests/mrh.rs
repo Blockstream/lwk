@@ -46,7 +46,7 @@ mod tests {
             .unwrap();
         log::info!("claim_address: {}", claim_address);
         log::info!("Receiver created invoice: {}", invoice.bolt11_invoice());
-        log::info!("Invoice fee: {}", invoice.data.fee);
+        log::info!("Invoice fee: {:?}", invoice.data.fee);
 
         // Check for magic routing hint
         let boltz_api = BoltzApiClientV2::new(utils::BOLTZ_REGTEST.to_string(), Some(TIMEOUT));
@@ -81,7 +81,7 @@ mod tests {
         // The difference should be reasonable (the fee)
         let fee_diff = invoice_amount - mrh_amount.to_sat();
         log::info!(
-            "Fee difference: {} sats (invoice.fee was {})",
+            "Fee difference: {} sats (invoice.fee was {:?})",
             fee_diff,
             invoice.data.fee
         );

@@ -86,8 +86,7 @@ impl LightningSession {
         })
     }
 
-    pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, Error> {
-        let data = InvoiceData::deserialize(data)?;
+    pub fn restore_invoice(&self, data: InvoiceData) -> Result<InvoiceResponse, Error> {
         let inner = self.runtime.block_on(self.inner.restore_invoice(data))?;
         Ok(InvoiceResponse {
             inner,

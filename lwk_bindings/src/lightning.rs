@@ -6,7 +6,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
-use lwk_boltz::{RevSwapStates, SubSwapStates};
+use lwk_boltz::{InvoiceData, RevSwapStates, SubSwapStates};
 
 /// Log level for logging messages
 #[derive(uniffi::Enum)]
@@ -210,6 +210,7 @@ impl LightningSession {
 
     /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`
     pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, LwkError> {
+        let data = InvoiceData::deserialize(data)?;
         let response = self.inner.restore_invoice(data)?;
         Ok(InvoiceResponse {
             inner: Mutex::new(Some(response)),

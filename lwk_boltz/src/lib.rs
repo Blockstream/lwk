@@ -48,7 +48,7 @@ pub use boltz_client::Bolt11Invoice;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum SwapType {
     /// Pay a bolt11 invoice
     Submarine,

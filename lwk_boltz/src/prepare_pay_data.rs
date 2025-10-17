@@ -16,8 +16,8 @@ pub struct PreparePayData {
     pub swap_type: SwapType,
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
-    pub fee: u64,
-    pub bolt11_invoice: Bolt11Invoice,
+    pub fee: Option<u64>,
+    pub bolt11_invoice: Option<Bolt11Invoice>,
     pub create_swap_response: CreateSubmarineResponse,
     pub our_keys: Keypair,
     pub refund_address: String,
@@ -34,7 +34,10 @@ impl Serialize for PreparePayData {
         state.serialize_field("last_state", &self.last_state)?;
         state.serialize_field("swap_type", &self.swap_type)?;
         state.serialize_field("fee", &self.fee)?;
-        state.serialize_field("bolt11_invoice", &self.bolt11_invoice.to_string())?;
+        state.serialize_field(
+            "bolt11_invoice",
+            &self.bolt11_invoice.as_ref().map(|i| i.to_string()),
+        )?;
         state.serialize_field("create_swap_response", &self.create_swap_response)?;
         // Serialize the secret key hex string for keypair recreation
         state.serialize_field("secret_key", &self.our_keys.secret_bytes().to_hex())?;
@@ -52,8 +55,8 @@ impl<'de> Deserialize<'de> for PreparePayData {
         struct PreparePayDataHelper {
             last_state: SwapState,
             swap_type: SwapType,
-            fee: u64,
-            bolt11_invoice: String,
+            fee: Option<u64>,
+            bolt11_invoice: Option<String>,
             create_swap_response: CreateSubmarineResponse,
             secret_key: String, // Secret key hex string
             refund_address: String,
@@ -61,10 +64,14 @@ impl<'de> Deserialize<'de> for PreparePayData {
 
         let helper = PreparePayDataHelper::deserialize(deserializer)?;
 
-        // Parse bolt11_invoice from string
-        let bolt11_invoice = match Bolt11Invoice::from_str(&helper.bolt11_invoice) {
-            Ok(invoice) => invoice,
-            Err(_) => return Err(serde::de::Error::custom("Failed to parse bolt11 invoice")),
+        // Parse bolt11_invoice from string if present
+        let bolt11_invoice = if let Some(invoice_str) = helper.bolt11_invoice {
+            match Bolt11Invoice::from_str(&invoice_str) {
+                Ok(invoice) => Some(invoice),
+                Err(_) => return Err(serde::de::Error::custom("Failed to parse bolt11 invoice")),
+            }
+        } else {
+            None
         };
 
         // Recreate Keypair from secret key bytes using from_seckey_slice
@@ -121,8 +128,8 @@ mod tests {
         assert_eq!(deserialized1.last_state, deserialized2.last_state);
         assert_eq!(deserialized1.fee, deserialized2.fee);
         assert_eq!(
-            deserialized1.bolt11_invoice.to_string(),
-            deserialized2.bolt11_invoice.to_string()
+            deserialized1.bolt11_invoice.as_ref().map(|i| i.to_string()),
+            deserialized2.bolt11_invoice.as_ref().map(|i| i.to_string())
         );
         assert_eq!(
             deserialized1.create_swap_response.id,

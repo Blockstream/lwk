@@ -1,6 +1,6 @@
 {
-    "last_state": "SwapCreated",
-    "swap_type": "Reverse",
+    "last_state": "swap.created",
+    "swap_type": "reverse",
     "fee": 277,
     "create_reverse_response": {
         "id": "DGN7Sq1ZPfIk",

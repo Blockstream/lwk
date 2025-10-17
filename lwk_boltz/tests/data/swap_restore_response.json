@@ -137,5 +137,30 @@
             "blindingKey": "4b8b7d040832f090f4bca25203022d61cedfdc49dd011639648ccb5ecee603ff",
             "preimageHash": "04d5320c45ad67752386364b275ab44d9215e9f9614895b01adef0abf2b035c1"
         }
+    },
+    {
+        "id": "7sNun9gAfFP6",
+        "type": "submarine",
+        "status": "invoice.set",
+        "createdAt": 1760686745,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914390f2c0908483006be2b5b8be6c28310d80844ed88207e9b13a01ea898b591e73463bd48794ae8095b1a77d000cbd42fd152f7d87345ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20d59e910f3f824b52fb4d98cf1248323f43f0f2dbf35058ab00b977022d252f9cad03d1d936b1"
+                }
+            },
+            "keyIndex": 6,
+            "lockupAddress": "lq1pq0h49egqtyuhystdtkcl0af04a4qtwrr6tjv055umku3g98w4pyyk8p2r26ydfug979k6yqg37q923fmhchvt432ka6js3gjnw4jzk3krjn0cquhrdlr",
+            "serverPublicKey": "037e9b13a01ea898b591e73463bd48794ae8095b1a77d000cbd42fd152f7d87345",
+            "timeoutBlockHeight": 3594705,
+            "blindingKey": "647b0dd8a7acab20f51b18f1ce2e1877e4e8c4587671a399eb3a3f451543a426"
+        }
     }
 ]

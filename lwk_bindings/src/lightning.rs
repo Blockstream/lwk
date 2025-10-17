@@ -1,5 +1,6 @@
 use std::{
     ops::ControlFlow,
+    panic,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -121,6 +122,16 @@ impl LightningSession {
         logging: Option<Arc<dyn Logging>>,
         mnemonic: Option<Arc<Mnemonic>>,
     ) -> Result<Self, LwkError> {
+        // Validate the logger by attempting a test call
+        if let Some(ref logger_impl) = logging {
+            // Test the logger with a dummy message to catch issues early
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                logger_impl.log(LogLevel::Debug, "Logger validation test".to_string());
+            })).map_err(|_| LwkError::Generic {
+                msg: "Logger validation failed. Please ensure you pass an instance of a class that implements the Logging trait, not the class itself.".to_string(),
+            })?;
+        }
+
         // Set up the custom logger if provided
         if let Some(ref logger_impl) = logging {
             let bridge = LoggingBridge {

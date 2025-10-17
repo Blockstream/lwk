@@ -144,18 +144,8 @@ impl LightningSession {
             },
         )?;
         let swap_id = data.create_reverse_response.id.clone();
-        let mut rx = self.ws.updates();
+        let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
-
-        let state = rx.recv().await?; // skip the initial state which is resent from boltz server
-        log::info!("Received initial state for swap {}: {state:?}", swap_id);
-
-        if state.status.contains("expired") {
-            return Err(Error::Expired {
-                swap_id,
-                status: state.status.clone(),
-            });
-        }
 
         Ok(InvoiceResponse {
             data,
@@ -302,9 +292,15 @@ impl InvoiceResponse {
                         SwapState::TransactionDirect,
                         SwapState::TransactionMempool,
                         SwapState::TransactionConfirmed,
+                        SwapState::SwapCreated, // we can receive the swap created again when we restore
                     ])
                     .await?;
                 let update_status = update.swap_state()?;
+                if update_status == SwapState::SwapCreated {
+                    // TODO: this can cause an infinite loop if boltz goes crazy,
+                    // should we maintain a flag and error out if hitten more than once?
+                    return Ok(ControlFlow::Continue(update));
+                }
 
                 if update_status == SwapState::TransactionDirect {
                     log::info!("transaction.direct Payer used magic routing hint");

@@ -71,6 +71,73 @@ async function runMultisigTest() {
 	    wollet_c.applyUpdate(update);
 	}
 	// ANCHOR_END: multisig-receive
+
+	const lbtc = network.policyAsset().toString();
+	const lbtc_balance = wollet_c.balance().entries().get(lbtc) || 0n;
+	if (lbtc_balance < 500n) {
+	    console.log(`Balance is insufficient to make a transaction, send some tLBTC to ${addr}`);
+	    return;
+	}
+
+	// ANCHOR: multisig-send
+	// Carol creates a transaction send few sats to a certain address
+	const sats = BigInt(1000);
+	if (false) { // ANCHOR: ignore
+	const address = new lwk.Address("<address>");
+	const asset = new lwk.AssetId("<asset>");
+	} // ANCHOR: ignore
+	const address = new lwk.Address("tlq1qq2g07nju42l0nlx0erqa3wsel2l8prnq96rlnhml262mcj7pe8w6ndvvyg237japt83z24m8gu4v3yfhaqvrqxydadc9scsmw"); // ANCHOR: ignore
+	const asset = network.policyAsset(); // ANCHOR: ignore
+
+	var builder = new lwk.TxBuilder(network)
+	builder = builder.addRecipient(address, sats, asset)
+	var pset = builder.finish(wollet_c)
+
+	pset = signer_c.sign(pset)
+
+	// Carol sends the PSET to Bob
+	// Bob wants to analyze the PSET before signing, thus he creates a wollet
+	const wd_b = new lwk.WolletDescriptor(desc);
+	const wollet_b = new lwk.Wollet(network, wd_b);
+	const update_b = await client.fullScan(wollet_b);
+	if (update_b) {
+	    wollet_b.applyUpdate(update_b);
+	}
+	// Then Bob uses the wollet to analyze the PSET
+	const details = wollet_b.psetDetails(pset);
+	// PSET has a reasonable fee
+	console.assert(details.balance().fee() < 100);
+	// PSET has a signature from Carol
+	console.assert(details.fingerprintsHas().length === 1);
+	const fingerprint_c = xpub_c.substring(1, 9);
+	console.assert(details.fingerprintsHas().includes(fingerprint_c));
+	// PSET needs a signature from either Bob or Carol
+	console.assert(details.fingerprintsMissing().length === 2);
+	const fingerprint_a = xpub_a.substring(1, 9);
+	const fingerprint_b = xpub_b.substring(1, 9);
+	console.assert(details.fingerprintsMissing().includes(fingerprint_a));
+	console.assert(details.fingerprintsMissing().includes(fingerprint_b));
+	// PSET has a single recipient, with data matching what was specified above
+	console.assert(details.balance().recipients().length === 1);
+	const recipient = details.balance().recipients()[0];
+	console.assert(recipient.address().toString() === address.toString());
+	console.assert(recipient.asset().toString() === asset.toString());
+	console.assert(recipient.value() === sats);
+
+	// Bob is satisified with the PSET and signs it
+	pset = signer_b.sign(pset)
+
+	// Bob sends the PSET back to Carol
+	// Carol checks that the PSET has enough signatures
+	const details_b = wollet_b.psetDetails(pset);
+	console.assert(details_b.fingerprintsHas().length === 2);
+
+	// Carol finalizes the PSET and broadcast the transaction
+	pset = wollet_c.finalize(pset)
+	const tx = pset.extractTx();
+	const txid = await client.broadcastTx(tx);
+	// ANCHOR_END: multisig-send
+	console.log(txid.toString());
     } catch (error) {
 	console.error("Basics test failed:", error);
 	throw error;

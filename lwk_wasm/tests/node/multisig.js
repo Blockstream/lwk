@@ -109,14 +109,11 @@ async function runMultisigTest() {
 	console.assert(details.balance().fee() < 100);
 	// PSET has a signature from Carol
 	console.assert(details.fingerprintsHas().length === 1);
-	const fingerprint_c = xpub_c.substring(1, 9);
-	console.assert(details.fingerprintsHas().includes(fingerprint_c));
+	console.assert(details.fingerprintsHas().includes(signer_c.fingerprint()));
 	// PSET needs a signature from either Bob or Carol
 	console.assert(details.fingerprintsMissing().length === 2);
-	const fingerprint_a = xpub_a.substring(1, 9);
-	const fingerprint_b = xpub_b.substring(1, 9);
-	console.assert(details.fingerprintsMissing().includes(fingerprint_a));
-	console.assert(details.fingerprintsMissing().includes(fingerprint_b));
+	console.assert(details.fingerprintsMissing().includes(signer_a.fingerprint()));
+	console.assert(details.fingerprintsMissing().includes(signer_b.fingerprint()));
 	// PSET has a single recipient, with data matching what was specified above
 	console.assert(details.balance().recipients().length === 1);
 	const recipient = details.balance().recipients()[0];

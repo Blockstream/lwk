@@ -168,7 +168,6 @@ impl LightningSession {
         results
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
-            .filter(|e| e.status == "swap.created" || e.status == "invoice.settled") // TODO: are there any other state we want to recover?
             .map(|e| {
                 convert_swap_restore_response_to_invoice_data(
                     e,

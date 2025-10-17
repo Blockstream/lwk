@@ -51,6 +51,26 @@ async function runMultisigTest() {
 	// Validate the descriptor string
 	const wd = new lwk.WolletDescriptor(desc);
 	// ANCHOR_END: multisig-setup
+
+	// ANCHOR: multisig-receive
+	// Carol creates the wollet
+	const wollet_c = new lwk.Wollet(network, wd);
+
+	// With the wollet, Carol can obtain addresses, transactions and balance
+	const addr = wollet_c.address(null).address().toString();
+	const txs = wollet_c.transactions();
+	const balance = wollet_c.balance();
+
+	// Update the wollet state
+	const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+	// TODO: name variables // ANCHOR: ignore
+	const client = new lwk.EsploraClient(network, url, true, 4, false);
+
+	const update = await client.fullScan(wollet_c);
+	if (update) {
+	    wollet_c.applyUpdate(update);
+	}
+	// ANCHOR_END: multisig-receive
     } catch (error) {
 	console.error("Basics test failed:", error);
 	throw error;

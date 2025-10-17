@@ -120,8 +120,8 @@ impl LightningSession {
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
-                fee,
-                bolt11_invoice: bolt11_invoice.clone(),
+                fee: Some(fee),
+                bolt11_invoice: Some(bolt11_invoice.clone()),
                 our_keys,
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),
@@ -178,30 +178,37 @@ impl PreparePayResponse {
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         log::info!("submarine_cooperative_claim");
-        let response = self
-            .swap_script
-            .submarine_cooperative_claim(
-                &self.swap_id(),
-                &self.data.our_keys,
-                &self.data.bolt11_invoice.to_string(),
-                &self.api,
-            )
-            .await;
-        match response {
-            Ok(val) => {
-                log::info!("succesfully sent submarine cooperative claim, response: {val:?}");
-                Ok(ControlFlow::Continue(update))
-            }
-            Err(e) => {
-                if e.to_string()
-                    .contains("swap not eligible for a cooperative claim")
-                {
-                    log::info!("swap not eligible for a cooperative claim, boltz decision, we did our best");
-                    Ok(ControlFlow::Break(true))
-                } else {
-                    Err(e.into())
+        if let Some(bolt_11_invoice) = &self.data.bolt11_invoice {
+            let response = self
+                .swap_script
+                .submarine_cooperative_claim(
+                    &self.swap_id(),
+                    &self.data.our_keys,
+                    &bolt_11_invoice.to_string(),
+                    &self.api,
+                )
+                .await;
+
+            match response {
+                Ok(val) => {
+                    log::info!("succesfully sent submarine cooperative claim, response: {val:?}");
+                    Ok(ControlFlow::Continue(update))
+                }
+                Err(e) => {
+                    if e.to_string()
+                        .contains("swap not eligible for a cooperative claim")
+                    {
+                        log::info!("swap not eligible for a cooperative claim, too small, boltz decision, we did our best");
+                        Ok(ControlFlow::Break(true))
+                    } else {
+                        Err(e.into())
+                    }
                 }
             }
+        } else {
+            // we can't cooperative claim if we don't have the invoice,
+            // but the payement has been succesfull, boltz will sweep anyway it will just be more expensive
+            Ok(ControlFlow::Break(true))
         }
     }
 

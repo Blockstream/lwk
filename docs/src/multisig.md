@@ -56,6 +56,7 @@ sequenceDiagram
 <section>
 
 ```typescript
+{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-setup:ignore}}
 ```
 </section>
 </custom-tabs>

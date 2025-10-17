@@ -147,6 +147,7 @@ sequenceDiagram
 <section>
 
 ```typescript
+{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-send:ignore}}
 ```
 </section>
 </custom-tabs>

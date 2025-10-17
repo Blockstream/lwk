@@ -1,0 +1,51 @@
+/* from https://github.com/breez/breez-sdk-liquid-docs */
+
+.content li:has(> input[type="checkbox"]) {
+    list-style: none;
+}
+
+.content ul:has(> li > input[type="checkbox"]) {
+    padding-left: 15px;
+}
+
+h1:has(.tag), h2:has(.tag), h3:has(.tag) {
+  display: flex;
+}
+
+a.tag {
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.4em;
+    padding: 0.3em 0.5em;
+    margin: 0.8em;
+    display: flex;
+    border-radius: 10px;
+    border: 1px solid #fff;
+    background-color: var(--searchresults-header-fg);
+    white-space: nowrap;
+    max-height: 1.5em;
+}
+
+h1 a.tag {
+    font-size: 0.3em;
+    align-self: flex-end;
+}
+
+a.tag:link, a.tag:visited, a.tag:active {
+    color: #fff;
+    text-decoration: none;
+}
+
+a.tag:hover {
+    opacity: 0.8;
+    text-decoration: none;
+}
+
+/* Hide mdbook-help-container even if ? was pressed */
+#mdbook-help-container {
+  height: 0;
+  width: 0;
+  top: -10000px;
+  left: -10000px;
+}
+

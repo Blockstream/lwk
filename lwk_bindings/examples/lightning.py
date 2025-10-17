@@ -111,7 +111,7 @@ def pay_invoice_thread(prepare_pay_response):
                 break
             
         except Exception as e:
-            print(f"Error in payment thread: {e} last_state: {state}")
+            print(f"Error in payment thread: {e}")
             break
 
 def show_invoice(lightning_session, wollet):

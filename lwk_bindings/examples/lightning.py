@@ -152,7 +152,7 @@ def show_invoice(lightning_session, wollet):
     thread.start()
     print("Started thread to monitor invoice payment.")
 
-def pay_invoice(lightning_session, wollet, esplora_client, signer):
+def pay_invoice(lightning_session, wollet, esplora_client, signer, skip_completion_thread=False):
     """Pay a bolt11 invoice"""
     # Read bolt11 invoice from user
     bolt11_str = input("Enter bolt11 invoice: ").strip()
@@ -170,6 +170,9 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer):
 
         data=prepare_pay_response.serialize()
         swap_id=prepare_pay_response.swap_id()
+
+        # Save swap data to file
+        save_swap_data(swap_id, data)
 
 
         # Get the URI for payment
@@ -198,8 +201,11 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer):
         txid = esplora_client.broadcast(tx)
         print(f"Transaction broadcasted! TXID: {txid}")
 
-        # Save swap data to file
-        save_swap_data(swap_id, data)
+
+        # Return early if skip_completion_thread is True
+        if skip_completion_thread:
+            print("Skipping to start the completing thread as requested.")
+            return
 
         # Start thread to wait for completion
         thread = threading.Thread(target=pay_invoice_thread, args=(prepare_pay_response,))
@@ -366,8 +372,9 @@ def main():
         print("1) Update balance")
         print("2) Show invoice (reverse)")
         print("3) Pay invoice (submarine)")
-        print("4) Generate rescue file")
-        print("5) Fetch reverse swaps")
+        print("4) Pay invoice (submarine) (but don't start completion thread)")
+        print("5) Generate rescue file")
+        print("6) Fetch reverse swaps")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -382,6 +389,9 @@ def main():
             print("\n=== Paying Invoice ===")
             pay_invoice(lightning_session, wollet, esplora_client, signer)
         elif choice == '4':
+            print("\n=== Paying Invoice (but don't start completion thread) ===")
+            pay_invoice(lightning_session, wollet, esplora_client, signer, skip_completion_thread=True)
+        elif choice == '5':
             print("\n=== Generating Rescue File ===")
             try:
                 rescue_data = lightning_session.rescue_file()
@@ -395,7 +405,7 @@ def main():
                 print(f"Rescue file generated: {filename}")
             except Exception as e:
                 print(f"Error generating rescue file: {e}")
-        elif choice == '5':
+        elif choice == '6':
             print("\n=== Fetching Reverse Swaps ===")
             fetch_reverse_swaps(lightning_session, wollet)
         elif choice == 'q':

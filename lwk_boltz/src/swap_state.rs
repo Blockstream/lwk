@@ -18,6 +18,8 @@ pub enum SwapState {
     SwapCreated,
     TransactionDirect,
     InvoiceSettled,
+    InvoiceExpired,
+    SwapExpired,
 }
 
 pub(crate) trait SwapStateTrait {
@@ -47,6 +49,8 @@ impl std::fmt::Display for SwapState {
             SwapState::SwapCreated => "swap.created",
             SwapState::TransactionDirect => "transaction.direct",
             SwapState::InvoiceSettled => "invoice.settled",
+            SwapState::InvoiceExpired => "invoice.expired",
+            SwapState::SwapExpired => "swap.expired",
         };
         write!(f, "{}", s)
     }
@@ -70,6 +74,8 @@ impl std::str::FromStr for SwapState {
             "swap.created" => Ok(SwapState::SwapCreated),
             "transaction.direct" => Ok(SwapState::TransactionDirect),
             "invoice.settled" => Ok(SwapState::InvoiceSettled),
+            "invoice.expired" => Ok(SwapState::InvoiceExpired),
+            "swap.expired" => Ok(SwapState::SwapExpired),
             _ => Err(format!("Unknown swap status: {}", s)),
         }
     }

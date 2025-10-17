@@ -330,7 +330,7 @@ def main():
             swap_type = swap_data.get('swap_type')
             swap_id = swap_data.get('create_swap_response', {}).get('id') or swap_data.get('create_reverse_response', {}).get('id')
 
-            if swap_type == 'Submarine':
+            if swap_type == 'submarine':
                 print(f"Restoring submarine swap {swap_id}...")
                 try:
                     prepare_pay_response = lightning_session.restore_prepare_pay(data)
@@ -345,7 +345,7 @@ def main():
                 except Exception as e:
                     print(f"Error restoring submarine swap {swap_id}: {e}")
 
-            elif swap_type == 'Reverse':
+            elif swap_type == 'reverse':
                 print(f"Restoring reverse swap {swap_id}...")
                 try:
                     invoice_response = lightning_session.restore_invoice(data)

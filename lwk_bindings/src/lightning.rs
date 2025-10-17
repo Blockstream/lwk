@@ -1,6 +1,5 @@
 use std::{
     ops::ControlFlow,
-    panic,
     sync::{Arc, Mutex},
     time::Duration,
 };

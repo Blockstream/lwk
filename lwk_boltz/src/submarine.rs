@@ -147,16 +147,9 @@ impl LightningSession {
             },
         )?;
         let swap_id = data.create_swap_response.id.clone();
-        let mut rx = self.ws.updates();
+        let rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
-        let state = rx.recv().await?; // skip the initial state which is resent from boltz server
-        log::info!("Received initial state for swap {}: {state:?}", swap_id);
-        if state.status.contains("expired") {
-            return Err(Error::Expired {
-                swap_id,
-                status: state.status.clone(),
-            });
-        }
+
         Ok(PreparePayResponse {
             data,
             swap_script,
@@ -180,6 +173,38 @@ impl PreparePayResponse {
         .await
     }
 
+    async fn handle_cooperative_claim(
+        &self,
+        update: SwapStatus,
+    ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        log::info!("submarine_cooperative_claim");
+        let response = self
+            .swap_script
+            .submarine_cooperative_claim(
+                &self.swap_id(),
+                &self.data.our_keys,
+                &self.data.bolt11_invoice.to_string(),
+                &self.api,
+            )
+            .await;
+        match response {
+            Ok(val) => {
+                log::info!("succesfully sent submarine cooperative claim, response: {val:?}");
+                Ok(ControlFlow::Continue(update))
+            }
+            Err(e) => {
+                if e.to_string()
+                    .contains("swap not eligible for a cooperative claim")
+                {
+                    log::info!("swap not eligible for a cooperative claim, boltz decision, we did our best");
+                    Ok(ControlFlow::Break(true))
+                } else {
+                    Err(e.into())
+                }
+            }
+        }
+    }
+
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         match self.data.last_state {
             SwapState::InvoiceSet => {
@@ -187,9 +212,16 @@ impl PreparePayResponse {
                     .next_status(&[
                         SwapState::TransactionMempool,
                         SwapState::TransactionLockupFailed,
+                        SwapState::InvoiceSet, // we can receive the invoice set again when we restore
+                        SwapState::TransactionClaimPending, // this can happen if we skip all the updates and receive the claim pending update directly
                     ])
                     .await?;
                 let update_status = update.swap_state()?;
+                if update_status == SwapState::InvoiceSet {
+                    // TODO: this can cause an infinite loop if boltz goes crazy,
+                    // should we maintain a flag and error out if hitten more than once?
+                    return Ok(ControlFlow::Continue(update));
+                }
 
                 if update_status == SwapState::TransactionMempool {
                     log::info!("transaction.mempool Boltz broadcasted funding tx");
@@ -215,6 +247,8 @@ impl PreparePayResponse {
                     log::info!("Cooperative Refund Successfully broadcasted: {txid}");
                     self.data.last_state = update_status;
                     Ok(ControlFlow::Break(true))
+                } else if update_status == SwapState::TransactionClaimPending {
+                    self.handle_cooperative_claim(update).await
                 } else {
                     todo!()
                 }
@@ -241,34 +275,8 @@ impl PreparePayResponse {
                     .next_status(&[SwapState::TransactionClaimPending])
                     .await?;
                 self.data.last_state = update.swap_state()?;
-                log::info!("submarine_cooperative_claim");
-                let response = self
-                    .swap_script
-                    .submarine_cooperative_claim(
-                        &self.swap_id(),
-                        &self.data.our_keys,
-                        &self.data.bolt11_invoice.to_string(),
-                        &self.api,
-                    )
-                    .await;
-                match response {
-                    Ok(val) => {
-                        log::info!(
-                            "succesfully sent submarine cooperative claim, response: {val:?}"
-                        );
-                        Ok(ControlFlow::Continue(update))
-                    }
-                    Err(e) => {
-                        if e.to_string()
-                            .contains("swap not eligible for a cooperative claim")
-                        {
-                            log::info!("swap not eligible for a cooperative claim, boltz decision, we did our best");
-                            Ok(ControlFlow::Break(true))
-                        } else {
-                            Err(e.into())
-                        }
-                    }
-                }
+
+                self.handle_cooperative_claim(update).await
             }
             SwapState::TransactionClaimPending => {
                 let update = self.next_status(&[SwapState::TransactionClaimed]).await?;

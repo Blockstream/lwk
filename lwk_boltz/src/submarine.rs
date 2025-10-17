@@ -20,7 +20,10 @@ use lwk_wollet::secp256k1::All;
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
-use crate::{next_status, LightningSession, SwapState, SwapType, WAIT_TIME};
+use crate::{
+    derive_xpub_from_mnemonic, network_kind, next_status, LightningSession, SwapState, SwapType,
+    WAIT_TIME,
+};
 
 pub struct PreparePayResponse {
     pub data: PreparePayData,
@@ -161,6 +164,29 @@ impl LightningSession {
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
         })
+    }
+
+    /// List submarine swaps from the boltz api.
+    /// The refund address doesn't need to be the same used when creating the swap.
+    pub async fn fetch_submarine_swaps(
+        &self,
+        refund_address: &elements::Address,
+    ) -> Result<Vec<PreparePayData>, Error> {
+        let xpub =
+            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
+        let results = self.api.post_swap_restore(&xpub.to_string()).await?;
+        results
+            .iter()
+            .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
+            .map(|e| {
+                convert_swap_restore_response_to_prepare_pay_data(
+                    e,
+                    &self.mnemonic,
+                    &self.secp,
+                    &refund_address.to_string(),
+                )
+            })
+            .collect()
     }
 }
 

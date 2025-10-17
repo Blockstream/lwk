@@ -1,5 +1,5 @@
 {
-    "last_state": "InvoiceSet",
+    "last_state": "invoice.set",
     "swap_type": "Submarine",
     "fee": 69,
     "bolt11_invoice": "lnbcrt500u1p5wvhz5pp5tqfcjzll0jg0uuv3sgjr9vc65g8y79g5895uwu4xgf6kwlrpmdeqdqqcqpjxqyz5vqsp52veun5lajnyzg836kxhcvjl0pzl6fuzw6vmpknpkl6mf6xg365nq9qxpqysgq3yqfdq44vze82my7rsvlvgny33ec35lzzmzd80ljt5t8tywmxa2s05ysx3ft6y94gwke3qjzemsva6pkx4x8939cnhwz7nmzcg7zuscplu2qrj",

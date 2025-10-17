@@ -1,9 +1,10 @@
 use boltz_client::boltz::SwapStatus;
+use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
 /// Enum representing all possible swap status values from Boltz API updates
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum SwapState {
     Initialized, // This is the initial state when the swap is created
     InvoiceSet,
@@ -81,13 +82,31 @@ impl std::str::FromStr for SwapState {
     }
 }
 
+impl Serialize for SwapState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for SwapState {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::SwapState;
 
-    #[test]
-    fn test_swap_status_roundtrip() {
-        let statuses = vec![
+    fn all_swap_states() -> Vec<SwapState> {
+        vec![
             SwapState::Initialized,
             SwapState::InvoiceSet,
             SwapState::TransactionMempool,
@@ -101,13 +120,45 @@ mod tests {
             SwapState::SwapCreated,
             SwapState::TransactionDirect,
             SwapState::InvoiceSettled,
-        ];
+            SwapState::InvoiceExpired,
+            SwapState::SwapExpired,
+        ]
+    }
 
-        for status in statuses {
+    #[test]
+    fn test_swap_status_roundtrip() {
+        for status in all_swap_states() {
             // Test Display -> FromStr roundtrip
             let status_str = status.to_string();
             let parsed: SwapState = status_str.parse().unwrap();
             assert_eq!(status, parsed, "Failed roundtrip for status: {:?}", status);
+        }
+    }
+
+    #[test]
+    fn test_serde_roundtrip() {
+        for status in all_swap_states() {
+            // Test serde JSON roundtrip
+            let json = serde_json::to_string(&status).unwrap();
+            let deserialized: SwapState = serde_json::from_str(&json).unwrap();
+            assert_eq!(
+                status, deserialized,
+                "Failed serde roundtrip for status: {:?}",
+                status
+            );
+
+            // Verify the JSON contains the dot-separated format (without quotes for simplicity)
+            assert!(
+                !json.contains("InvoiceSet"),
+                "JSON should not contain PascalCase: {}",
+                json
+            );
+            let expected = format!("\"{}\"", status.to_string());
+            assert_eq!(
+                json, expected,
+                "JSON should match Display format: expected {}, got {}",
+                expected, json
+            );
         }
     }
 }

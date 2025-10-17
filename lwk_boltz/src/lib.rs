@@ -46,16 +46,9 @@ pub use crate::swap_state::SwapState;
 pub use boltz_client::boltz::{RevSwapStates, SubSwapStates, Webhook};
 pub use boltz_client::Bolt11Invoice;
 
+pub use boltz_client::boltz::SwapRestoreType as SwapType;
+
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub enum SwapType {
-    /// Pay a bolt11 invoice
-    Submarine,
-
-    /// Show an invoice to be paid
-    Reverse,
-}
 
 pub struct LightningSession {
     ws: Arc<BoltzWsApi>,

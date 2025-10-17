@@ -1,17 +1,21 @@
 use std::ops::ControlFlow;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bip39::Mnemonic;
 use boltz_client::boltz::{
-    BoltzApiClientV2, CreateSubmarineRequest, SubSwapStates, SwapStatus, Webhook,
+    BoltzApiClientV2, CreateSubmarineRequest, CreateSubmarineResponse, RefundDetails,
+    SubSwapStates, SwapRestoreType, SwapStatus, Webhook,
 };
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
-use boltz_client::{Bolt11Invoice, PublicKey};
-use lwk_wollet::bitcoin::Denomination;
+use boltz_client::{Bolt11Invoice, PublicKey, Secp256k1};
+use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
 use lwk_wollet::elements;
+use lwk_wollet::secp256k1::All;
 
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
@@ -158,6 +162,72 @@ impl LightningSession {
             chain_client: self.chain_client.clone(),
         })
     }
+}
+
+pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
+    e: &boltz_client::boltz::SwapRestoreResponse,
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+    refund_address: &str,
+) -> Result<PreparePayData, Error> {
+    // Only handle submarine swaps for now
+    match e.swap_type {
+        SwapRestoreType::Submarine => {}
+        _ => {
+            return Err(Error::SwapRestoration(format!(
+                "Only submarine swaps are supported for restoration, got: {:?}",
+                e.swap_type
+            )))
+        }
+    }
+
+    // Extract refund details (required for submarine swaps)
+    let refund_details: &RefundDetails = e.refund_details.as_ref().ok_or_else(|| {
+        Error::SwapRestoration(format!("Submarine swap {} is missing refund_details", e.id))
+    })?;
+
+    // Derive the keypair from the mnemonic at the key_index
+    let our_keys = crate::derive_keypair(refund_details.key_index, mnemonic, secp)?;
+
+    // Parse the server public key
+    let claim_public_key_bitcoin = BitcoinPublicKey::from_str(&refund_details.server_public_key)
+        .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {}", e)))?;
+    let claim_public_key = PublicKey {
+        inner: claim_public_key_bitcoin.inner,
+        compressed: claim_public_key_bitcoin.compressed,
+    };
+
+    // Reconstruct CreateSubmarineResponse from RefundDetails
+    let create_swap_response = CreateSubmarineResponse {
+        accept_zero_conf: false, // Default for restored swaps
+        address: refund_details.lockup_address.clone(),
+        bip21: String::new(), // Not available in restore response
+        claim_public_key,
+        expected_amount: 0, // Not available in restore response
+        id: e.id.clone(),
+        referral_id: None,
+        swap_tree: refund_details.tree.clone(),
+        timeout_block_height: refund_details.timeout_block_height as u64,
+        blinding_key: Some(refund_details.blinding_key.clone()),
+    };
+
+    // Parse the status to SwapState
+    let last_state = e.status.parse::<SwapState>().map_err(|err| {
+        Error::SwapRestoration(format!(
+            "Failed to parse status '{}' as SwapState: {}",
+            e.status, err
+        ))
+    })?;
+
+    Ok(PreparePayData {
+        last_state,
+        swap_type: SwapType::Submarine,
+        fee: None,            // Fee information not available in restore response
+        bolt11_invoice: None, // Invoice information not available in restore response
+        our_keys,
+        refund_address: refund_address.to_string(),
+        create_swap_response,
+    })
 }
 
 impl PreparePayResponse {

@@ -69,6 +69,7 @@ jobs:
         with:
           distribution: jetbrains
           java-version: 21
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set RELEASE_REF
         run: echo "RELEASE_REF=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV

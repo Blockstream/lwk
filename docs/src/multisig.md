@@ -95,6 +95,7 @@ With the wallet CT descriptor you can:
 <section>
 
 ```typescript
+{{#include ../../lwk_wasm/tests/node/multisig.js:multisig-receive:ignore}}
 ```
 </section>
 </custom-tabs>

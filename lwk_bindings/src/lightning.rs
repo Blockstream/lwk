@@ -6,7 +6,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
-use lwk_boltz::{InvoiceData, RevSwapStates, SubSwapStates};
+use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
 
 /// Log level for logging messages
 #[derive(uniffi::Enum)]
@@ -185,6 +185,7 @@ impl LightningSession {
 
     /// Restore a payment from its serialized data see `PreparePayResponse::serialize`
     pub fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, LwkError> {
+        let data = PreparePayData::deserialize(data)?;
         let response = self.inner.restore_prepare_pay(data)?;
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),
@@ -237,7 +238,7 @@ impl LightningSession {
         Ok(rescue_file_json)
     }
 
-    /// Use the boltz
+    /// Use the boltz api to fetch reverse swaps for a given claim address
     pub fn fetch_reverse_swaps(&self, claim_address: &Address) -> Result<Vec<String>, LwkError> {
         let response = self.inner.fetch_reverse_swaps(claim_address.as_ref())?;
         let data = response
@@ -246,6 +247,17 @@ impl LightningSession {
             .map(|e| e.and_then(|e| e.serialize()))
             .collect::<Result<Vec<_>, _>>()?;
 
+        Ok(data)
+    }
+
+    /// Use the boltz api to fetch submarine swaps for a given refund address
+    pub fn fetch_submarine_swaps(&self, refund_address: &Address) -> Result<Vec<String>, LwkError> {
+        let response = self.inner.fetch_submarine_swaps(refund_address.as_ref())?;
+        let data = response
+            .into_iter()
+            .map(|e| self.inner.restore_prepare_pay(e))
+            .map(|e| e.and_then(|e| e.serialize()))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(data)
     }
 }

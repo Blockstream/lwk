@@ -56,8 +56,7 @@ impl LightningSession {
         })
     }
 
-    pub fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, Error> {
-        let data = PreparePayData::deserialize(data)?;
+    pub fn restore_prepare_pay(&self, data: PreparePayData) -> Result<PreparePayResponse, Error> {
         let inner = self
             .runtime
             .block_on(self.inner.restore_prepare_pay(data))?;
@@ -105,6 +104,16 @@ impl LightningSession {
         let inner = self
             .runtime
             .block_on(self.inner.fetch_reverse_swaps(claim_address))?;
+        Ok(inner)
+    }
+
+    pub fn fetch_submarine_swaps(
+        &self,
+        refund_address: &elements::Address,
+    ) -> Result<Vec<PreparePayData>, Error> {
+        let inner = self
+            .runtime
+            .block_on(self.inner.fetch_submarine_swaps(refund_address))?;
         Ok(inner)
     }
 }

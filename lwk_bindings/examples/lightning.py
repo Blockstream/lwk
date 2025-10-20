@@ -267,6 +267,32 @@ def fetch_reverse_swaps(lightning_session, wollet):
     except Exception as e:
         print(f"Error fetching reverse swaps: {e}")
 
+def fetch_submarine_swaps(lightning_session, wollet):
+    """Fetch submarine swaps for the wallet"""
+    try:
+        # Get the refund address for this wallet
+        refund_address = wollet.address(None).address()
+        print(f"Fetching submarine swaps for refund address: {refund_address}")
+
+        # Fetch submarine swaps from Boltz
+        swap_data_list = lightning_session.fetch_submarine_swaps(refund_address)
+
+        if not swap_data_list:
+            print("No submarine swaps found")
+            return
+
+        print(f"Found {len(swap_data_list)} submarine swap(s)\n")
+
+        # Print each swap's JSON data
+        for i, data in enumerate(swap_data_list, 1):
+            print(f"=== Swap {i} ===")
+            # Pretty print the JSON
+            swap_data = json.loads(data)
+            print(json.dumps(swap_data, indent=2))
+            print()
+    except Exception as e:
+        print(f"Error fetching submarine swaps: {e}")
+
 def main():
     # Get mnemonic from environment variable
     mnemonic_str = os.getenv('MNEMONIC')
@@ -375,6 +401,7 @@ def main():
         print("4) Pay invoice (submarine) (but don't start completion thread)")
         print("5) Generate rescue file")
         print("6) Fetch reverse swaps")
+        print("7) Fetch submarine swaps")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -408,6 +435,9 @@ def main():
         elif choice == '6':
             print("\n=== Fetching Reverse Swaps ===")
             fetch_reverse_swaps(lightning_session, wollet)
+        elif choice == '7':
+            print("\n=== Fetching Submarine Swaps ===")
+            fetch_submarine_swaps(lightning_session, wollet)
         elif choice == 'q':
             print("Goodbye!")
             break

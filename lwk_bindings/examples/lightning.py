@@ -99,15 +99,17 @@ def pay_invoice_thread(prepare_pay_response):
     while True:
         try:
             state = prepare_pay_response.advance()
+            swap_id = prepare_pay_response.swap_id()
             if state == PaymentState.CONTINUE:
-                swap_id = prepare_pay_response.swap_id()
                 data = prepare_pay_response.serialize()
                 save_swap_data(swap_id, data)
             elif state == PaymentState.SUCCESS:
                 print("Payment completed successfully!")
+                delete_swap_data(swap_id)
                 break
             elif state == PaymentState.FAILED:
                 print("Payment failed!")
+                rename_swap_data(swap_id)
                 break
             
         except Exception as e:

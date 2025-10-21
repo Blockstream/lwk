@@ -103,7 +103,7 @@ impl LightningSession {
     ) -> Result<Vec<InvoiceData>, Error> {
         let inner = self
             .runtime
-            .block_on(self.inner.fetch_reverse_swaps(claim_address))?;
+            .block_on(self.inner.restorable_reverse_swaps(claim_address))?;
         Ok(inner)
     }
 

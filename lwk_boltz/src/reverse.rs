@@ -7,6 +7,7 @@ use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::CreateReverseRequest;
 use boltz_client::boltz::RevSwapStates;
+use boltz_client::boltz::SwapRestoreResponse;
 use boltz_client::boltz::SwapRestoreType;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::Webhook;
@@ -156,18 +157,21 @@ impl LightningSession {
         })
     }
 
-    /// Restore active reverse swaps from the boltz api.
+    /// From the swaps returned by the boltz api via [`LightningSession::fetch_swaps`]:
+    ///
+    /// - filter the reverse swaps that can be restored
+    /// - Add the private information from the session needed to restore the swap
+    ///
     /// The claim address doesn't need to be the same used when creating the swap.
-    pub async fn fetch_reverse_swaps(
+    pub async fn restorable_reverse_swaps(
         &self,
+        swaps: &[SwapRestoreResponse],
         claim_address: &elements::Address,
     ) -> Result<Vec<InvoiceData>, Error> {
-        let xpub =
-            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
-        let results = self.api.post_swap_restore(&xpub.to_string()).await?;
-        results
+        swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
+            .filter(|e| e.status == "swap.created") // TODO: are there any other state we want to restore?
             .map(|e| {
                 convert_swap_restore_response_to_invoice_data(
                     e,

@@ -210,3 +210,15 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c cargo test -p lwk_cli --features registry -- registry_publish
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
+
+boltz:
+  extends: .base
+  script:
+    - cd lwk_boltz
+    - just test-mrh
+    - just test-reverse
+    - just test-reverse-concurrent
+    - just test-reverse-restore
+    - just test-submarine
+    - just test-submarine-restore
+    

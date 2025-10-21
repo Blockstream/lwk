@@ -314,6 +314,10 @@ impl InvoiceResponse {
                 log::info!("invoice.settled Reverse Swap Successful!");
                 Ok(ControlFlow::Break(true))
             }
+            SwapState::SwapExpired => {
+                log::warn!("swap.expired Boltz swap expired");
+                Ok(ControlFlow::Break(false))
+            }
             SwapState::InvoiceExpired => {
                 log::warn!("invoice.expired Boltz invoice expired");
                 Ok(ControlFlow::Break(false))

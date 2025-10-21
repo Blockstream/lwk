@@ -295,6 +295,32 @@ def restorable_submarine_swaps(lightning_session, wollet):
     except Exception as e:
         print(f"Error fetching submarine swaps: {e}")
 
+def list_all_swaps(lightning_session):
+    """List all swaps for the lightning session"""
+    try:
+        # Fetch all swaps from Boltz
+        swap_list = lightning_session.fetch_swaps()
+
+        # Convert to JSON string and parse
+        swaps_json = str(swap_list)
+        print(f"Swaps JSON: {swaps_json}")
+        swaps_data = json.loads(swaps_json)
+
+        if not swaps_data:
+            print("No swaps found")
+            return
+
+        print(f"Found {len(swaps_data)} swap(s)\n")
+
+        # Print each swap's basic info
+        for i, swap in enumerate(swaps_data, 1):
+            print(f"=== Swap {i} ===")
+            print(f"ID: {swap.get('id', 'N/A')}")
+            print(f"Status: {swap.get('status', 'N/A')}")
+            print(f"Type: {swap.get('type', 'N/A')}")
+    except Exception as e:
+        print(f"Error listing all swaps: {e}")
+
 def main():
     # Get mnemonic from environment variable
     mnemonic_str = os.getenv('MNEMONIC')
@@ -404,6 +430,7 @@ def main():
         print("5) Generate rescue file")
         print("6) Fetch restorable reverse swaps")
         print("7) Fetch restorable submarine swaps")
+        print("8) List all swaps")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -440,6 +467,9 @@ def main():
         elif choice == '7':
             print("\n=== Fetching Submarine Swaps ===")
             restorable_submarine_swaps(lightning_session, wollet)
+        elif choice == '8':
+            print("\n=== Listing All Swaps ===")
+            list_all_swaps(lightning_session)
         elif choice == 'q':
             print("Goodbye!")
             break

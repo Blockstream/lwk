@@ -298,72 +298,39 @@ impl PreparePayResponse {
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
-        match self.data.last_state {
-            SwapState::InvoiceSet => {
-                let update = self.next_status().await?;
-                let update_status = update.swap_state()?;
-                if update_status == SwapState::InvoiceSet {
-                    // TODO: this can cause an infinite loop if boltz goes crazy,
-                    // should we maintain a flag and error out if hitten more than once?
-                    return Ok(ControlFlow::Continue(update));
-                }
+        let update = self.next_status().await?;
+        let update_status = update.swap_state()?;
 
-                if update_status == SwapState::TransactionMempool {
-                    log::info!("transaction.mempool Boltz broadcasted funding tx");
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Continue(update))
-                } else if update_status == SwapState::TransactionLockupFailed {
-                    log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
-                    sleep(WAIT_TIME).await;
-                    let tx = self
-                        .swap_script
-                        .construct_refund(SwapTransactionParams {
-                            keys: self.data.our_keys,
-                            output_address: self.data.refund_address.to_string(),
-                            fee: Fee::Relative(1.0), // TODO: improve
-                            swap_id: self.swap_id(),
-                            chain_client: &self.chain_client,
-                            boltz_client: &self.api,
-                            options: None,
-                        })
-                        .await?;
-
-                    let txid = self.chain_client.broadcast_tx(&tx).await?;
-                    log::info!("Cooperative Refund Successfully broadcasted: {txid}");
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Break(true))
-                } else if update_status == SwapState::TransactionClaimPending {
-                    self.handle_cooperative_claim(update).await
-                } else {
-                    todo!()
-                }
-            }
+        let flow = match update_status {
+            SwapState::InvoiceSet => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionMempool => {
-                let update = self.next_status().await?;
-                self.data.last_state = update.swap_state()?;
+                log::info!("transaction.mempool Boltz broadcasted funding tx");
                 Ok(ControlFlow::Continue(update))
             }
-            SwapState::TransactionConfirmed => {
-                let update = self.next_status().await?;
-                self.data.last_state = update.swap_state()?;
-                Ok(ControlFlow::Continue(update))
-            }
-            SwapState::InvoicePending => {
-                let update = self.next_status().await?;
-                self.data.last_state = update.swap_state()?;
-                Ok(ControlFlow::Continue(update))
-            }
-            SwapState::InvoicePaid => {
-                let update = self.next_status().await?;
-                self.data.last_state = update.swap_state()?;
+            SwapState::TransactionLockupFailed => {
+                log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
+                sleep(WAIT_TIME).await;
+                let tx = self
+                    .swap_script
+                    .construct_refund(SwapTransactionParams {
+                        keys: self.data.our_keys,
+                        output_address: self.data.refund_address.to_string(),
+                        fee: Fee::Relative(1.0), // TODO: improve
+                        swap_id: self.swap_id(),
+                        chain_client: &self.chain_client,
+                        boltz_client: &self.api,
+                        options: None,
+                    })
+                    .await?;
 
-                self.handle_cooperative_claim(update).await
+                let txid = self.chain_client.broadcast_tx(&tx).await?;
+                log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+                Ok(ControlFlow::Break(true))
             }
-            SwapState::TransactionClaimPending => {
-                let update = self.next_status().await?;
-                self.data.last_state = update.swap_state()?;
-                Ok(ControlFlow::Continue(update))
-            }
+            SwapState::TransactionClaimPending => self.handle_cooperative_claim(update).await,
+            SwapState::TransactionConfirmed => Ok(ControlFlow::Continue(update)),
+            SwapState::InvoicePending => Ok(ControlFlow::Continue(update)),
+            SwapState::InvoicePaid => self.handle_cooperative_claim(update).await,
             SwapState::TransactionClaimed => {
                 log::info!("transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))
@@ -373,7 +340,11 @@ impl PreparePayResponse {
                 status: e.to_string(),
                 last_state: self.data.last_state,
             }),
-        }
+        };
+
+        self.data.last_state = update_status;
+
+        flow
     }
 
     pub fn serialize(&self) -> Result<String, Error> {

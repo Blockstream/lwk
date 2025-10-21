@@ -7,6 +7,7 @@ use std::{
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
 use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
+use std::fmt;
 
 /// Log level for logging messages
 #[derive(uniffi::Enum)]
@@ -100,8 +101,16 @@ pub struct InvoiceResponse {
 }
 
 #[derive(uniffi::Object)]
+#[uniffi::export(Display)]
 pub struct SwapList {
     inner: Vec<lwk_boltz::SwapRestoreResponse>,
+}
+
+impl fmt::Display for SwapList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let json = serde_json::to_string(&self.inner).map_err(|_| fmt::Error)?;
+        write!(f, "{}", json)
+    }
 }
 
 #[derive(uniffi::Enum)]

@@ -215,6 +215,7 @@ boltz:
   extends: .base
   script:
     - cd lwk_boltz
+    - git submodule update --init --recursive
     - just test-mrh
     - just test-reverse
     - just test-reverse-concurrent

@@ -20,7 +20,9 @@ use lwk_wollet::secp256k1::All;
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
-use crate::{next_status, LightningSession, SwapState, SwapType, WAIT_TIME};
+use crate::{
+    broadcast_tx_with_retry, next_status, LightningSession, SwapState, SwapType, WAIT_TIME,
+};
 
 pub struct PreparePayResponse {
     pub data: PreparePayData,
@@ -323,7 +325,7 @@ impl PreparePayResponse {
                     })
                     .await?;
 
-                let txid = self.chain_client.broadcast_tx(&tx).await?;
+                let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                 log::info!("Cooperative Refund Successfully broadcasted: {txid}");
                 Ok(ControlFlow::Break(true))
             }

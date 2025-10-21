@@ -327,6 +327,7 @@ impl PreparePayResponse {
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                 log::info!("Cooperative Refund Successfully broadcasted: {txid}");
+
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionClaimPending => self.handle_cooperative_claim(update).await,
@@ -339,6 +340,9 @@ impl PreparePayResponse {
             }
             SwapState::SwapExpired => {
                 log::warn!("swap.expired Boltz swap expired");
+
+                // TODO: Non cooperative refund if needed
+
                 Ok(ControlFlow::Break(false))
             }
             ref e => Err(Error::UnexpectedUpdate {

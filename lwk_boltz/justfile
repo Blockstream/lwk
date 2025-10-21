@@ -1,4 +1,14 @@
 # Regtest environment management
+set dotenv-load := true
+
+# Export environment variables for tests
+export-env-vars: regtest-env-start
+    #!/usr/bin/env bash
+    set -e
+    BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
+    LND_MACAROON_HEX=$(python3 -c 'import sys; print(open(sys.argv[1], "rb").read().hex())' regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon)
+    echo "BITCOIND_COOKIE=$BITCOIND_COOKIE" > .env
+    echo "LND_MACAROON_HEX=$LND_MACAROON_HEX" >> .env
 
 # Start the regtest environment
 regtest-env-start:
@@ -16,53 +26,43 @@ regtest-env-stop:
     ./stop.sh
     cd ../proxy
     docker compose down
+    # Clean up sensitive environment variables
+    rm -f ../.env
 
 # Run reverse swap test
-test-reverse: regtest-env-start
+test-reverse: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test reverse -- test_session_reverse --nocapture
 
 # Run submarine swap test
-test-submarine: regtest-env-start
+test-submarine: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test submarine -- test_session_submarine --nocapture
 
 # Run submarine swap test
-test-mrh: regtest-env-start
+test-mrh: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test mrh -- test_session_mrh --nocapture
 
 # Run submarine restore swap test
-test-submarine-restore: regtest-env-start
+test-submarine-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test submarine -- test_session_restore_submarine --nocapture
 
 
 # Run reverse restore swap test
-test-reverse-restore: regtest-env-start
+test-reverse-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test reverse -- test_session_restore_reverse --nocapture
 
 
 # Run reverse swap test
-test-reverse-concurrent: regtest-env-start
+test-reverse-concurrent: export-env-vars
     #!/usr/bin/env bash
     set -e
-    export BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    export LND_MACAROON_HEX=$(xxd -p -c 256 regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n')
     RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture

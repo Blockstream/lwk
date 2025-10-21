@@ -97,23 +97,25 @@ impl LightningSession {
         self.inner.rescue_file()
     }
 
-    pub fn fetch_reverse_swaps(
+    pub fn restorable_reverse_swaps(
         &self,
+        swaps: &[SwapRestoreResponse],
         claim_address: &elements::Address,
     ) -> Result<Vec<InvoiceData>, Error> {
         let inner = self
             .runtime
-            .block_on(self.inner.restorable_reverse_swaps(claim_address))?;
+            .block_on(self.inner.restorable_reverse_swaps(swaps, claim_address))?;
         Ok(inner)
     }
 
-    pub fn fetch_submarine_swaps(
+    pub fn restorable_submarine_swaps(
         &self,
+        swaps: &[SwapRestoreResponse],
         refund_address: &elements::Address,
     ) -> Result<Vec<PreparePayData>, Error> {
         let inner = self
             .runtime
-            .block_on(self.inner.restorable_submarine_swaps(refund_address))?;
+            .block_on(self.inner.restorable_submarine_swaps(swaps, refund_address))?;
         Ok(inner)
     }
 

@@ -20,10 +20,7 @@ use lwk_wollet::secp256k1::All;
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
-use crate::{
-    derive_xpub_from_mnemonic, network_kind, next_status, LightningSession, SwapState, SwapType,
-    WAIT_TIME,
-};
+use crate::{next_status, LightningSession, SwapState, SwapType, WAIT_TIME};
 
 pub struct PreparePayResponse {
     pub data: PreparePayData,
@@ -174,8 +171,8 @@ impl LightningSession {
     /// The refund address doesn't need to be the same used when creating the swap.
     pub async fn restorable_submarine_swaps(
         &self,
-        refund_address: &elements::Address,
         swaps: &[SwapRestoreResponse],
+        refund_address: &elements::Address,
     ) -> Result<Vec<PreparePayData>, Error> {
         swaps
             .iter()

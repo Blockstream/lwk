@@ -31,10 +31,8 @@ use lwk_wollet::hashes::Hash;
 use lwk_wollet::secp256k1::All;
 
 use crate::derive_keypair;
-use crate::derive_xpub_from_mnemonic;
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
-use crate::network_kind;
 use crate::swap_state::SwapStateTrait;
 use crate::SwapType;
 use crate::{next_status, LightningSession, SwapState};

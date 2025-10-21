@@ -18,7 +18,6 @@ use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
-use boltz_client::boltz::SwapRestoreResponse;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
@@ -44,7 +43,7 @@ pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;
-pub use boltz_client::boltz::{RevSwapStates, SubSwapStates, Webhook};
+pub use boltz_client::boltz::{RevSwapStates, SubSwapStates, SwapRestoreResponse, Webhook};
 pub use boltz_client::Bolt11Invoice;
 
 pub use boltz_client::boltz::SwapRestoreType as SwapType;

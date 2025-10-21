@@ -241,7 +241,7 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer, skip_completi
     except Exception as e:
         print(f"Error preparing payment: {e}")
 
-def fetch_reverse_swaps(lightning_session, wollet):
+def restorable_reverse_swaps(lightning_session, wollet):
     """Fetch reverse swaps for the wallet"""
     try:
         # Get the claim address for this wallet
@@ -249,7 +249,8 @@ def fetch_reverse_swaps(lightning_session, wollet):
         print(f"Fetching reverse swaps for claim address: {claim_address}")
 
         # Fetch reverse swaps from Boltz
-        swap_data_list = lightning_session.fetch_reverse_swaps(claim_address)
+        swap_list = lightning_session.fetch_swaps()
+        swap_data_list = lightning_session.restorable_reverse_swaps(swap_list, claim_address)
 
         if not swap_data_list:
             print("No reverse swaps found")
@@ -267,7 +268,7 @@ def fetch_reverse_swaps(lightning_session, wollet):
     except Exception as e:
         print(f"Error fetching reverse swaps: {e}")
 
-def fetch_submarine_swaps(lightning_session, wollet):
+def restorable_submarine_swaps(lightning_session, wollet):
     """Fetch submarine swaps for the wallet"""
     try:
         # Get the refund address for this wallet
@@ -275,7 +276,8 @@ def fetch_submarine_swaps(lightning_session, wollet):
         print(f"Fetching submarine swaps for refund address: {refund_address}")
 
         # Fetch submarine swaps from Boltz
-        swap_data_list = lightning_session.fetch_submarine_swaps(refund_address)
+        swap_list = lightning_session.fetch_swaps()
+        swap_data_list = lightning_session.restorable_submarine_swaps(swap_list, refund_address)
 
         if not swap_data_list:
             print("No submarine swaps found")
@@ -400,8 +402,8 @@ def main():
         print("3) Pay invoice (submarine)")
         print("4) Pay invoice (submarine) (but don't start completion thread)")
         print("5) Generate rescue file")
-        print("6) Fetch reverse swaps")
-        print("7) Fetch submarine swaps")
+        print("6) Fetch restorable reverse swaps")
+        print("7) Fetch restorable submarine swaps")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -434,10 +436,10 @@ def main():
                 print(f"Error generating rescue file: {e}")
         elif choice == '6':
             print("\n=== Fetching Reverse Swaps ===")
-            fetch_reverse_swaps(lightning_session, wollet)
+            restorable_reverse_swaps(lightning_session, wollet)
         elif choice == '7':
             print("\n=== Fetching Submarine Swaps ===")
-            fetch_submarine_swaps(lightning_session, wollet)
+            restorable_submarine_swaps(lightning_session, wollet)
         elif choice == 'q':
             print("Goodbye!")
             break

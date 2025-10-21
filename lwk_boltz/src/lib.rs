@@ -18,6 +18,7 @@ use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::SwapRestoreResponse;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
@@ -127,6 +128,17 @@ impl LightningSession {
         RescueFile {
             mnemonic: self.mnemonic.to_string(),
         }
+    }
+
+    /// Fetch all swaps ever done with the session mnemonic from the boltz api.
+    ///
+    /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
+    /// being persisted or that have been lost. TODO: use fn xxx
+    pub async fn fetch_swaps(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
+        let xpub =
+            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
+        let result = self.api.post_swap_restore(&xpub.to_string()).await?;
+        Ok(result)
     }
 }
 

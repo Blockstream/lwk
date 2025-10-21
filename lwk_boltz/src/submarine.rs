@@ -337,6 +337,10 @@ impl PreparePayResponse {
                 log::info!("transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))
             }
+            SwapState::SwapExpired => {
+                log::warn!("swap.expired Boltz swap expired");
+                Ok(ControlFlow::Break(false))
+            }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id: self.swap_id(),
                 status: e.to_string(),

@@ -6,7 +6,7 @@ use std::time::Duration;
 use bip39::Mnemonic;
 use boltz_client::boltz::{
     BoltzApiClientV2, CreateSubmarineRequest, CreateSubmarineResponse, RefundDetails,
-    SubSwapStates, SwapRestoreType, SwapStatus, Webhook,
+    SubSwapStates, SwapRestoreResponse, SwapRestoreType, SwapStatus, Webhook,
 };
 use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
@@ -166,18 +166,21 @@ impl LightningSession {
         })
     }
 
-    /// List submarine swaps from the boltz api.
+    /// From the swaps returned by the boltz api via [`LightningSession::fetch_swaps`]:
+    ///
+    /// - filter the submarine swaps that can be restored
+    /// - Add the private information from the session needed to restore the swap
+    ///
     /// The refund address doesn't need to be the same used when creating the swap.
-    pub async fn fetch_submarine_swaps(
+    pub async fn restorable_submarine_swaps(
         &self,
         refund_address: &elements::Address,
+        swaps: &[SwapRestoreResponse],
     ) -> Result<Vec<PreparePayData>, Error> {
-        let xpub =
-            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
-        let results = self.api.post_swap_restore(&xpub.to_string()).await?;
-        results
+        swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
+            .filter(|e| e.status == "invoice.set") // TODO: are there any other state we want to restore?
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,

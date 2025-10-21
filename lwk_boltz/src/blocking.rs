@@ -113,7 +113,7 @@ impl LightningSession {
     ) -> Result<Vec<PreparePayData>, Error> {
         let inner = self
             .runtime
-            .block_on(self.inner.fetch_submarine_swaps(refund_address))?;
+            .block_on(self.inner.restorable_submarine_swaps(refund_address))?;
         Ok(inner)
     }
 

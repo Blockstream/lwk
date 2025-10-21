@@ -99,6 +99,11 @@ pub struct InvoiceResponse {
     inner: Mutex<Option<lwk_boltz::blocking::InvoiceResponse>>,
 }
 
+#[derive(uniffi::Object)]
+pub struct SwapList {
+    inner: Vec<lwk_boltz::SwapRestoreResponse>,
+}
+
 #[derive(uniffi::Enum)]
 pub enum PaymentState {
     Continue,
@@ -238,9 +243,23 @@ impl LightningSession {
         Ok(rescue_file_json)
     }
 
-    /// Use the boltz api to fetch reverse swaps for a given claim address
-    pub fn fetch_reverse_swaps(&self, claim_address: &Address) -> Result<Vec<String>, LwkError> {
-        let response = self.inner.fetch_reverse_swaps(claim_address.as_ref())?;
+    /// Returns a the list of all the swaps ever done with the session mnemonic.
+    ///
+    /// The object returned can be converted to a json String with toString()
+    pub fn fetch_swaps(&self) -> Result<SwapList, LwkError> {
+        let response = self.inner.fetch_swaps()?;
+        Ok(SwapList { inner: response })
+    }
+
+    /// Filter the swap list to only include restorable reverse swaps
+    pub fn restorable_reverse_swaps(
+        &self,
+        swap_list: &SwapList,
+        claim_address: &Address,
+    ) -> Result<Vec<String>, LwkError> {
+        let response = self
+            .inner
+            .restorable_reverse_swaps(&swap_list.inner, claim_address.as_ref())?;
         let data = response
             .into_iter()
             .map(|e| self.inner.restore_invoice(e))
@@ -250,9 +269,15 @@ impl LightningSession {
         Ok(data)
     }
 
-    /// Use the boltz api to fetch submarine swaps for a given refund address
-    pub fn fetch_submarine_swaps(&self, refund_address: &Address) -> Result<Vec<String>, LwkError> {
-        let response = self.inner.fetch_submarine_swaps(refund_address.as_ref())?;
+    /// Filter the swap list to only include restorable submarine swaps
+    pub fn restorable_submarine_swaps(
+        &self,
+        swap_list: &SwapList,
+        refund_address: &Address,
+    ) -> Result<Vec<String>, LwkError> {
+        let response = self
+            .inner
+            .restorable_submarine_swaps(&swap_list.inner, refund_address.as_ref())?;
         let data = response
             .into_iter()
             .map(|e| self.inner.restore_prepare_pay(e))

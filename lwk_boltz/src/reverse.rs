@@ -20,7 +20,6 @@ use boltz_client::swaps::SwapScript;
 use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
 use boltz_client::util::secrets::Preimage;
-use boltz_client::util::sleep;
 use boltz_client::Bolt11Invoice;
 use boltz_client::Keypair;
 use boltz_client::PublicKey;
@@ -35,7 +34,7 @@ use crate::error::Error;
 use crate::invoice_data::InvoiceData;
 use crate::swap_state::SwapStateTrait;
 use crate::SwapType;
-use crate::{next_status, LightningSession, SwapState};
+use crate::{broadcast_tx_with_retry, next_status, LightningSession, SwapState};
 
 pub struct InvoiceResponse {
     pub data: InvoiceData,
@@ -300,15 +299,7 @@ impl InvoiceResponse {
                     )
                     .await?;
 
-                for _ in 0..30 {
-                    match self.chain_client.broadcast_tx(&tx).await {
-                        Ok(_) => break,
-                        Err(_) => {
-                            log::info!("Failed broadcast, retrying in 1 second");
-                            sleep(Duration::from_secs(1)).await;
-                        }
-                    }
-                }
+                broadcast_tx_with_retry(&self.chain_client, &tx).await?;
 
                 log::info!("Successfully broadcasted claim tx!");
                 log::debug!("Claim Tx {tx:?}");

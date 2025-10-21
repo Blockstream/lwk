@@ -17,12 +17,11 @@ pub enum Error {
     #[error("Receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),
 
-    #[error("Unexpected status {status} for swap {swap_id}. Expected states: {expected_states:?}. Last state: {last_state}")]
+    #[error("Unexpected status {status} for swap {swap_id}. Last state: {last_state}")]
     UnexpectedUpdate {
         swap_id: String,
         status: String,
         last_state: SwapState,
-        expected_states: Vec<SwapState>,
     },
 
     #[error("Invoice without amount {0}")]

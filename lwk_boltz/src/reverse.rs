@@ -105,19 +105,13 @@ impl LightningSession {
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        let _update = next_status(
-            &mut rx,
-            self.timeout,
-            &[SwapState::SwapCreated],
-            &swap_id,
-            SwapState::Initialized,
-        )
-        .await?;
+        let update = next_status(&mut rx, self.timeout, &swap_id).await?;
+        let last_state = update.swap_state()?;
         log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
             data: InvoiceData {
-                last_state: SwapState::SwapCreated,
+                last_state,
                 swap_type: SwapType::Reverse,
                 fee: Some(fee),
                 create_reverse_response: reverse_resp.clone(),
@@ -256,16 +250,9 @@ fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
 }
 
 impl InvoiceResponse {
-    async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+    async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id().to_string();
-        next_status(
-            &mut self.rx,
-            Duration::from_secs(180),
-            expected_states,
-            &swap_id,
-            self.data.last_state,
-        )
-        .await
+        next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
     }
 
     pub fn swap_id(&self) -> &str {
@@ -286,83 +273,66 @@ impl InvoiceResponse {
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
-        match self.data.last_state {
-            SwapState::SwapCreated => {
-                let update = self
-                    .next_status(&[
-                        SwapState::TransactionDirect,
-                        SwapState::TransactionMempool,
-                        SwapState::TransactionConfirmed,
-                        SwapState::SwapCreated, // we can receive the swap created again when we restore
-                    ])
+        let update = self.next_status().await?;
+        let update_status = update.swap_state()?;
+
+        let flow = match update_status {
+            SwapState::SwapCreated => Ok(ControlFlow::Continue(update)),
+            SwapState::TransactionDirect => {
+                log::info!("transaction.direct Payer used magic routing hint");
+                Ok(ControlFlow::Break(true))
+            }
+            SwapState::TransactionMempool => {
+                log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
+                let tx = self
+                    .swap_script
+                    .construct_claim(
+                        &self.data.preimage,
+                        SwapTransactionParams {
+                            keys: self.data.our_keys,
+                            output_address: self.data.claim_address.to_string(),
+                            fee: Fee::Relative(1.0),
+                            swap_id: self.swap_id().to_string(),
+                            options: Some(TransactionOptions::default().with_cooperative(true)),
+                            chain_client: &self.chain_client,
+                            boltz_client: &self.api,
+                        },
+                    )
                     .await?;
-                let update_status = update.swap_state()?;
-                if update_status == SwapState::SwapCreated {
-                    // TODO: this can cause an infinite loop if boltz goes crazy,
-                    // should we maintain a flag and error out if hitten more than once?
-                    return Ok(ControlFlow::Continue(update));
-                }
 
-                if update_status == SwapState::TransactionDirect {
-                    log::info!("transaction.direct Payer used magic routing hint");
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Break(true))
-                } else {
-                    log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
-                    let tx = self
-                        .swap_script
-                        .construct_claim(
-                            &self.data.preimage,
-                            SwapTransactionParams {
-                                keys: self.data.our_keys,
-                                output_address: self.data.claim_address.to_string(),
-                                fee: Fee::Relative(1.0),
-                                swap_id: self.swap_id().to_string(),
-                                options: Some(TransactionOptions::default().with_cooperative(true)),
-                                chain_client: &self.chain_client,
-                                boltz_client: &self.api,
-                            },
-                        )
-                        .await?;
-
-                    for _ in 0..30 {
-                        match self.chain_client.broadcast_tx(&tx).await {
-                            Ok(_) => break,
-                            Err(_) => {
-                                log::info!("Failed broadcast, retrying in 1 second");
-                                sleep(Duration::from_secs(1)).await;
-                            }
+                for _ in 0..30 {
+                    match self.chain_client.broadcast_tx(&tx).await {
+                        Ok(_) => break,
+                        Err(_) => {
+                            log::info!("Failed broadcast, retrying in 1 second");
+                            sleep(Duration::from_secs(1)).await;
                         }
                     }
+                }
 
-                    log::info!("Successfully broadcasted claim tx!");
-                    log::debug!("Claim Tx {tx:?}");
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Continue(update))
-                }
+                log::info!("Successfully broadcasted claim tx!");
+                log::debug!("Claim Tx {tx:?}");
+                self.data.last_state = update_status;
+                Ok(ControlFlow::Continue(update))
             }
-            SwapState::TransactionMempool | SwapState::TransactionConfirmed => {
-                let update = self
-                    .next_status(&[SwapState::InvoiceSettled, SwapState::TransactionConfirmed])
-                    .await?;
-                let update_status = update.swap_state()?;
-                if update_status == SwapState::TransactionConfirmed {
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Continue(update))
-                } else {
-                    // InvoiceSettled
-                    log::info!("invoice.settled Reverse Swap Successful!");
-                    self.data.last_state = update_status;
-                    Ok(ControlFlow::Break(true))
-                }
+            SwapState::TransactionConfirmed => {
+                // TODO what if I skipped TransactionMempool, thus I haven't already broadcasted the claim?
+                Ok(ControlFlow::Continue(update))
+            }
+            SwapState::InvoiceSettled => {
+                log::info!("invoice.settled Reverse Swap Successful!");
+                Ok(ControlFlow::Break(true))
             }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id: self.swap_id().to_string(),
                 status: e.to_string(),
                 last_state: self.data.last_state,
-                expected_states: vec![],
             }),
-        }
+        };
+
+        self.data.last_state = update_status;
+
+        flow
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {

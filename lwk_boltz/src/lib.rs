@@ -230,9 +230,7 @@ pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
 pub async fn next_status(
     rx: &mut tokio::sync::broadcast::Receiver<SwapStatus>,
     timeout: Duration,
-    expected_states: &[SwapState],
     swap_id: &str,
-    last_state: SwapState,
 ) -> Result<SwapStatus, Error> {
     let deadline = tokio::time::Instant::now() + timeout;
 
@@ -242,7 +240,7 @@ pub async fn next_status(
         let update = tokio::select! {
             update = rx.recv() => update?,
             _ = tokio::time::sleep(remaining) => {
-                log::warn!("Timeout while waiting state {:?} for swap id {}", expected_states, swap_id );
+                log::warn!("Timeout while waiting state for swap id {}", swap_id );
                 return Err(Error::Timeout(swap_id.to_string()));
             }
         };
@@ -261,24 +259,6 @@ pub async fn next_status(
             "Received update on swap {swap_id}. status:{}",
             update.status
         );
-        let status = update
-            .status
-            .parse::<SwapState>()
-            .map_err(|_| Error::UnexpectedUpdate {
-                swap_id: swap_id.to_string(),
-                status: update.status.clone(),
-                last_state,
-                expected_states: expected_states.to_vec(),
-            })?;
-        if !expected_states.contains(&status) {
-            return Err(Error::UnexpectedUpdate {
-                swap_id: swap_id.to_string(),
-                status: update.status.clone(),
-                last_state,
-                expected_states: expected_states.to_vec(),
-            });
-        }
-
         return Ok(update);
     }
 }

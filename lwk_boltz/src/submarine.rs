@@ -76,7 +76,10 @@ impl LightningSession {
         };
 
         let create_swap_response = self.api.post_swap_req(&create_swap_req).await?;
-
+        log::info!(
+            "accept zero conf: {}",
+            create_swap_response.accept_zero_conf
+        );
         let bolt11_amount = bolt11_invoice
             .amount_milli_satoshis()
             .ok_or(Error::InvoiceWithoutAmount(bolt11_invoice_str.clone()))?
@@ -104,14 +107,7 @@ impl LightningSession {
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        let _update = next_status(
-            &mut rx,
-            self.timeout,
-            &[SwapState::InvoiceSet],
-            &swap_id,
-            SwapState::Initialized,
-        )
-        .await?;
+        let _update = next_status(&mut rx, self.timeout, &swap_id).await?;
 
         log::info!(
             "Send {} sats to {} address {} or use uri {}",
@@ -257,16 +253,9 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
 }
 
 impl PreparePayResponse {
-    async fn next_status(&mut self, expected_states: &[SwapState]) -> Result<SwapStatus, Error> {
+    async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id();
-        next_status(
-            &mut self.rx,
-            Duration::from_secs(180),
-            expected_states,
-            &swap_id,
-            self.data.last_state,
-        )
-        .await
+        next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
     }
 
     async fn handle_cooperative_claim(
@@ -311,14 +300,7 @@ impl PreparePayResponse {
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         match self.data.last_state {
             SwapState::InvoiceSet => {
-                let update = self
-                    .next_status(&[
-                        SwapState::TransactionMempool,
-                        SwapState::TransactionLockupFailed,
-                        SwapState::InvoiceSet, // we can receive the invoice set again when we restore
-                        SwapState::TransactionClaimPending, // this can happen if we skip all the updates and receive the claim pending update directly
-                    ])
-                    .await?;
+                let update = self.next_status().await?;
                 let update_status = update.swap_state()?;
                 if update_status == SwapState::InvoiceSet {
                     // TODO: this can cause an infinite loop if boltz goes crazy,
@@ -357,32 +339,28 @@ impl PreparePayResponse {
                 }
             }
             SwapState::TransactionMempool => {
-                let update = self
-                    .next_status(&[SwapState::TransactionConfirmed, SwapState::InvoicePending])
-                    .await?;
+                let update = self.next_status().await?;
                 self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::TransactionConfirmed => {
-                let update = self.next_status(&[SwapState::InvoicePending]).await?;
+                let update = self.next_status().await?;
                 self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePending => {
-                let update = self.next_status(&[SwapState::InvoicePaid]).await?;
+                let update = self.next_status().await?;
                 self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
             SwapState::InvoicePaid => {
-                let update = self
-                    .next_status(&[SwapState::TransactionClaimPending])
-                    .await?;
+                let update = self.next_status().await?;
                 self.data.last_state = update.swap_state()?;
 
                 self.handle_cooperative_claim(update).await
             }
             SwapState::TransactionClaimPending => {
-                let update = self.next_status(&[SwapState::TransactionClaimed]).await?;
+                let update = self.next_status().await?;
                 self.data.last_state = update.swap_state()?;
                 Ok(ControlFlow::Continue(update))
             }
@@ -394,7 +372,6 @@ impl PreparePayResponse {
                 swap_id: self.swap_id(),
                 status: e.to_string(),
                 last_state: self.data.last_state,
-                expected_states: vec![],
             }),
         }
     }

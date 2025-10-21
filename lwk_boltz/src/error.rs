@@ -63,6 +63,9 @@ pub enum Error {
 
     #[error("Swap restoration error: {0}")]
     SwapRestoration(String),
+
+    #[error("Broadcast failed after retrying")]
+    RetryBroadcastFailed,
 }
 
 impl From<BoltzError> for Error {

@@ -25,6 +25,7 @@ use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
+use boltz_client::util::sleep;
 use boltz_client::Keypair;
 use boltz_client::Secp256k1;
 use lwk_wollet::bitcoin::bip32::ChildNumber;
@@ -286,6 +287,25 @@ fn derive_keypair(
     log::info!("derive_next_keypair with index: {index}");
     let keypair = Keypair::from_seckey_slice(secp, &derived.private_key.secret_bytes())?;
     Ok(keypair)
+}
+
+/// Broadcast a transaction with retry logic
+///
+/// Attempts to broadcast the transaction up to 30 times, sleeping 1 second between retries on failure.
+pub async fn broadcast_tx_with_retry(
+    chain_client: &ChainClient,
+    tx: &boltz_client::swaps::BtcLikeTransaction,
+) -> Result<String, Error> {
+    for _ in 0..30 {
+        match chain_client.broadcast_tx(tx).await {
+            Ok(txid) => return Ok(txid),
+            Err(_) => {
+                log::info!("Failed broadcast, retrying in 1 second");
+                sleep(Duration::from_secs(1)).await;
+            }
+        }
+    }
+    Err(Error::RetryBroadcastFailed)
 }
 
 #[cfg(test)]

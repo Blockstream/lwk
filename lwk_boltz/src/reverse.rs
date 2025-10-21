@@ -314,6 +314,10 @@ impl InvoiceResponse {
                 log::info!("invoice.settled Reverse Swap Successful!");
                 Ok(ControlFlow::Break(true))
             }
+            SwapState::InvoiceExpired => {
+                log::warn!("invoice.expired Boltz invoice expired");
+                Ok(ControlFlow::Break(false))
+            }
             ref e => Err(Error::UnexpectedUpdate {
                 swap_id: self.swap_id().to_string(),
                 status: e.to_string(),

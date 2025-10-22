@@ -31,7 +31,6 @@ lwk_test_util = { path = "lwk_test_util" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
 lwk_boltz = { path = "lwk_boltz" }
-secp256k1-zkp = { git = "https://github.com/breez/rust-secp256k1-zkp.git", rev = "eac2e479255a6e32b5588bc25ee53c642fdd8395" }
 
 [profile.release-smaller]
 inherits = "release"

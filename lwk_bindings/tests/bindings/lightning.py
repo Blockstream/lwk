@@ -24,9 +24,9 @@ print(claim_address)
 # Create a lightning session with custom logging
 logger = MyLogger()
 mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
-lightning_session = LightningSession(network, client, 10, logger, mnemonic_lightning)
+lightning_session = LightningSession(network=network, client=client, timeout=10, logging=logger, mnemonic=mnemonic_lightning)
 
-invoice_response = lightning_session.invoice(1000, "ciao", claim_address, None) # optionally accept a WebHook("https://example.com/webhook")
+invoice_response = lightning_session.invoice(amount=1000, description="ciao", claim_address=claim_address, webhook=None)
 bolt11_invoice_obj = invoice_response.bolt11_invoice()
 bolt11_invoice = str(bolt11_invoice_obj)
 print(bolt11_invoice)

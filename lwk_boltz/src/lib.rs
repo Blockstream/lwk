@@ -18,6 +18,8 @@ use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::GetReversePairsResponse;
+use boltz_client::boltz::GetSubmarinePairsResponse;
 use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
@@ -139,6 +141,15 @@ impl LightningSession {
             derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
         let result = self.api.post_swap_restore(&xpub.to_string()).await?;
         Ok(result)
+    }
+
+    /// Fetch informations, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
+    pub async fn fecth_swaps_info(
+        &self,
+    ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {
+        let a = self.api.get_reverse_pairs().await?;
+        let b = self.api.get_submarine_pairs().await?;
+        Ok((a, b))
     }
 }
 

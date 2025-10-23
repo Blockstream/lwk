@@ -143,7 +143,7 @@ impl LightningSession {
         Ok(result)
     }
 
-    /// Fetch informations, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
+    /// Fetch information, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
     pub async fn fetch_swaps_info(
         &self,
     ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {

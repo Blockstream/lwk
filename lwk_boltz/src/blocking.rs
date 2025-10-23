@@ -2,7 +2,10 @@ use std::{ops::ControlFlow, sync::Arc, time::Duration};
 
 use bip39::Mnemonic;
 use boltz_client::{
-    boltz::{RevSwapStates, SubSwapStates, SwapRestoreResponse, Webhook},
+    boltz::{
+        GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates, SubSwapStates,
+        SwapRestoreResponse, Webhook,
+    },
     Bolt11Invoice,
 };
 use lwk_wollet::{elements, ElementsNetwork};
@@ -121,6 +124,13 @@ impl LightningSession {
 
     pub fn fetch_swaps(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
         let inner = self.runtime.block_on(self.inner.fetch_swaps())?;
+        Ok(inner)
+    }
+
+    pub fn fetch_swaps_info(
+        &self,
+    ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {
+        let inner = self.runtime.block_on(self.inner.fetch_swaps_info())?;
         Ok(inner)
     }
 }

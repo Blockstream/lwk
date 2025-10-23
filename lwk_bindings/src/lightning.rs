@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ops::ControlFlow,
     sync::{Arc, Mutex},
     time::Duration,
@@ -293,6 +294,18 @@ impl LightningSession {
             .map(|e| e.and_then(|e| e.serialize()))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(data)
+    }
+
+    /// Fetch informations, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
+    pub fn fetch_swaps_info(&self) -> Result<String, LwkError> {
+        let (reverse, submarine) = self.inner.fetch_swaps_info()?;
+        let reverse_json = serde_json::to_value(&reverse)?;
+        let submarine_json = serde_json::to_value(&submarine)?;
+        let mut result = HashMap::new();
+        result.insert("reverse".to_string(), reverse_json);
+        result.insert("submarine".to_string(), submarine_json);
+        let result_json = serde_json::to_string(&result)?;
+        Ok(result_json)
     }
 }
 

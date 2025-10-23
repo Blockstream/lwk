@@ -323,6 +323,18 @@ def list_all_swaps(lightning_session):
     except Exception as e:
         print(f"Error listing all swaps: {e}")
 
+def show_swaps_info(lightning_session):
+    """Show swaps info from Boltz API"""
+    try:
+        # Fetch swaps info from Boltz
+        swaps_info_json = lightning_session.fetch_swaps_info()
+
+        # Parse and pretty print the JSON
+        swaps_info = json.loads(swaps_info_json)
+        print(json.dumps(swaps_info, indent=2))
+    except Exception as e:
+        print(f"Error fetching swaps info: {e}")
+
 def main():
     # Get mnemonic from environment variable
     mnemonic_str = os.getenv('MNEMONIC')
@@ -433,6 +445,7 @@ def main():
         print("6) Fetch restorable reverse swaps")
         print("7) Fetch restorable submarine swaps")
         print("8) List all swaps")
+        print("9) Show swaps info")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -472,6 +485,9 @@ def main():
         elif choice == '8':
             print("\n=== Listing All Swaps ===")
             list_all_swaps(lightning_session)
+        elif choice == '9':
+            print("\n=== Showing Swaps Info ===")
+            show_swaps_info(lightning_session)
         elif choice == 'q':
             print("Goodbye!")
             break

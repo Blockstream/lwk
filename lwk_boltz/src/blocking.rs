@@ -10,10 +10,7 @@ use boltz_client::{
 };
 use lwk_wollet::{elements, ElementsNetwork};
 
-use crate::{
-    clients::{AnyClient, ElectrumClient},
-    Error, InvoiceData, PreparePayData, RescueFile, SwapStatus,
-};
+use crate::{clients::AnyClient, Error, InvoiceData, PreparePayData, RescueFile, SwapStatus};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -33,13 +30,12 @@ pub struct InvoiceResponse {
 impl LightningSession {
     pub fn new(
         network: ElementsNetwork,
-        client: Arc<ElectrumClient>,
+        client: AnyClient,
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let client = AnyClient::Electrum(client);
         let inner = runtime.block_on(super::LightningSession::new(
             network, client, timeout, mnemonic,
         ))?;

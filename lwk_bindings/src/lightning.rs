@@ -7,7 +7,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
-use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
+use lwk_boltz::{clients::AnyClient, InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
 use std::fmt;
 
 /// Log level for logging messages
@@ -163,9 +163,10 @@ impl LightningSession {
         let inner_client = client.clone_client()?;
         let boltz_client =
             lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
+        let client = AnyClient::Electrum(Arc::new(boltz_client));
         let inner = lwk_boltz::blocking::LightningSession::new(
             network_value,
-            Arc::new(boltz_client),
+            client,
             timeout.map(Duration::from_secs),
             mnemonic.map(|e| e.inner()),
         )

@@ -39,7 +39,7 @@ use lwk_wollet::secp256k1::All;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 
-use crate::clients::ElectrumClient;
+use crate::clients::AnyClient;
 pub use crate::error::Error;
 pub use crate::invoice_data::InvoiceData;
 pub use crate::prepare_pay_data::PreparePayData;
@@ -75,12 +75,12 @@ impl LightningSession {
     ///
     pub async fn new(
         network: ElementsNetwork,
-        client: Arc<ElectrumClient>, // TODO: should be generic to support other clients
+        client: AnyClient,
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
-        let chain_client = Arc::new(ChainClient::new().with_liquid((*client).clone()));
+        let chain_client = Arc::new(ChainClient::new().with_liquid(client));
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();

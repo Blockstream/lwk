@@ -17,7 +17,10 @@ mod tests {
         util::{secrets::Preimage, sleep},
         Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, InvoiceData, LightningSession};
+    use lwk_boltz::{
+        clients::{AnyClient, ElectrumClient},
+        InvoiceData, LightningSession,
+    };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -27,7 +30,7 @@ mod tests {
         let network = ElementsNetwork::Liquid;
         let session = LightningSession::new(
             network,
-            Arc::new(
+            AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
                     "elements-mainnet.blockstream.info:50002",
                     true,
@@ -35,7 +38,7 @@ mod tests {
                     network,
                 )
                 .unwrap(),
-            ),
+            )),
             Some(TIMEOUT),
             None,
         )
@@ -87,9 +90,14 @@ mod tests {
             network,
         )
         .unwrap();
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
-            .await
-            .unwrap();
+        let session = LightningSession::new(
+            network,
+            AnyClient::Electrum(Arc::new(client)),
+            Some(TIMEOUT),
+            None,
+        )
+        .await
+        .unwrap();
         let response = session
             .invoice(1000, Some("test".to_string()), &claim_address, None)
             .await
@@ -126,9 +134,14 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
-            .await
-            .unwrap();
+        let session = LightningSession::new(
+            network,
+            AnyClient::Electrum(Arc::new(client)),
+            Some(TIMEOUT),
+            None,
+        )
+        .await
+        .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -165,7 +178,7 @@ mod tests {
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            client.clone(),
+            AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
             None,
         )
@@ -183,7 +196,7 @@ mod tests {
         drop(session);
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            client.clone(),
+            AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
             None,
         )
@@ -207,9 +220,14 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(network, Arc::new(client), Some(TIMEOUT), None)
-            .await
-            .unwrap();
+        let session = LightningSession::new(
+            network,
+            AnyClient::Electrum(Arc::new(client)),
+            Some(TIMEOUT),
+            None,
+        )
+        .await
+        .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();

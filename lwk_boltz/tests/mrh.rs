@@ -10,7 +10,10 @@ mod tests {
         network::{Chain, LiquidChain},
         swaps::magic_routing::check_for_mrh,
     };
-    use lwk_boltz::{clients::ElectrumClient, Error, LightningSession};
+    use lwk_boltz::{
+        clients::{AnyClient, ElectrumClient},
+        Error, LightningSession,
+    };
     use lwk_wollet::{elements, ElementsNetwork};
 
     /// Test Magic Routing Hints: A Boltz wallet pays another Boltz wallet's invoice
@@ -26,9 +29,14 @@ mod tests {
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
         // Receiver: Create a LightningSession and generate an invoice with MRH
-        let receiver_session = LightningSession::new(network, client.clone(), Some(TIMEOUT), None)
-            .await
-            .unwrap();
+        let receiver_session = LightningSession::new(
+            network,
+            AnyClient::Electrum(client.clone()),
+            Some(TIMEOUT),
+            None,
+        )
+        .await
+        .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -93,9 +101,14 @@ mod tests {
         // TODO complete the payment from a sender that detects the MRH and pays directly to the MRH address
 
         // Sender: Detect MRH in the invoice
-        let sender_session = LightningSession::new(network, client.clone(), Some(TIMEOUT), None)
-            .await
-            .unwrap();
+        let sender_session = LightningSession::new(
+            network,
+            AnyClient::Electrum(client.clone()),
+            Some(TIMEOUT),
+            None,
+        )
+        .await
+        .unwrap();
         let bolt11_parsed = invoice.bolt11_invoice();
         let prepare_pay_response = sender_session
             .prepare_pay(&bolt11_parsed, &claim_address, None)

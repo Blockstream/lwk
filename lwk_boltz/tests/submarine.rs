@@ -14,7 +14,10 @@ mod tests {
         util::sleep,
         Bolt11Invoice, Keypair, PublicKey, Secp256k1,
     };
-    use lwk_boltz::{clients::ElectrumClient, LightningSession, PreparePayData};
+    use lwk_boltz::{
+        clients::{AnyClient, ElectrumClient},
+        LightningSession, PreparePayData,
+    };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
     #[tokio::test]
@@ -26,7 +29,7 @@ mod tests {
 
         let session = LightningSession::new(
             network,
-            Arc::new(
+            AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
                     "elements-mainnet.blockstream.info:50002",
                     true,
@@ -34,7 +37,7 @@ mod tests {
                     network,
                 )
                 .unwrap(),
-            ),
+            )),
             Some(TIMEOUT),
             None,
         )
@@ -97,7 +100,7 @@ mod tests {
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            client.clone(),
+            AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
             None,
         )
@@ -168,7 +171,7 @@ mod tests {
 
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            client.clone(),
+            AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
             None,
         )
@@ -188,7 +191,7 @@ mod tests {
         drop(session);
         let session = LightningSession::new(
             ElementsNetwork::default_regtest(),
-            client.clone(),
+            AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
             None,
         )

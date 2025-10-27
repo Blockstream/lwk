@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use boltz_client::elements;
 use boltz_client::error::Error;
@@ -6,14 +8,24 @@ use lwk_wollet::ElementsNetwork;
 
 #[allow(dead_code)]
 pub struct EsploraClient {
-    inner: lwk_wollet::asyncr::EsploraClient,
+    inner: Arc<lwk_wollet::asyncr::EsploraClient>,
     network: ElementsNetwork,
 }
 
 impl EsploraClient {
+    pub fn from_client(
+        client: Arc<lwk_wollet::asyncr::EsploraClient>,
+        network: ElementsNetwork,
+    ) -> Self {
+        Self {
+            inner: client,
+            network,
+        }
+    }
+
     pub fn new(url: &str, network: ElementsNetwork) -> Self {
         Self {
-            inner: lwk_wollet::asyncr::EsploraClient::new(network, url),
+            inner: Arc::new(lwk_wollet::asyncr::EsploraClient::new(network, url)),
             network,
         }
     }

@@ -7,7 +7,7 @@ use std::{
 
 use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
-use lwk_boltz::{clients::AnyClient, InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
+use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
 use std::fmt;
 
 /// Log level for logging messages
@@ -121,6 +121,25 @@ pub enum PaymentState {
     Failed,
 }
 
+#[derive(uniffi::Object)]
+pub struct AnyClient {
+    inner: lwk_boltz::clients::AnyClient,
+}
+
+#[uniffi::export]
+impl AnyClient {
+    #[uniffi::constructor]
+    pub fn from_electrum(client: Arc<ElectrumClient>, network: &Network) -> Self {
+        let inner_client = client.clone_client().expect("Failed to clone client");
+        let network_value = network.into();
+        let boltz_client =
+            lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
+        Self {
+            inner: lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client)),
+        }
+    }
+}
+
 #[uniffi::export]
 impl LightningSession {
     /// Create the lightning session
@@ -163,7 +182,7 @@ impl LightningSession {
         let inner_client = client.clone_client()?;
         let boltz_client =
             lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
-        let client = AnyClient::Electrum(Arc::new(boltz_client));
+        let client = lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client));
         let inner = lwk_boltz::blocking::LightningSession::new(
             network_value,
             client,

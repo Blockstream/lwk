@@ -110,21 +110,45 @@ impl boltz_client::network::LiquidClient for EsploraClient {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use boltz_client::{
         network::{LiquidChain, LiquidClient},
         ToHex,
     };
-    use lwk_wollet::{elements, ElementsNetwork};
+    use lwk_wollet::{
+        asyncr::{self, EsploraClientBuilder},
+        elements, ElementsNetwork,
+    };
 
     use crate::clients::EsploraClient;
 
     #[tokio::test]
     #[ignore = "requires internet connection"]
     async fn test_esplora_client() {
-        let client = EsploraClient::new(
-            "https://blockstream.info/liquid/api",
+        let client = asyncr::EsploraClient::new(
             ElementsNetwork::Liquid,
+            "https://blockstream.info/liquid/api",
         );
+
+        test_esplora_client_liquid(client).await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires internet connection"]
+    async fn test_waterfalls_client() {
+        let client = EsploraClientBuilder::new(
+            "https://waterfalls.liquidwebwallet.org/liquid/api",
+            ElementsNetwork::Liquid,
+        )
+        .waterfalls(true)
+        .build()
+        .unwrap();
+        test_esplora_client_liquid(client).await;
+    }
+
+    async fn test_esplora_client_liquid(raw_client: asyncr::EsploraClient) {
+        let client = EsploraClient::from_client(Arc::new(raw_client), ElementsNetwork::Liquid);
         assert_eq!(client.network(), LiquidChain::Liquid);
 
         assert_eq!(

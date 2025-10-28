@@ -1,6 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use lwk_wollet::clients::blocking::{self, BlockchainBackend};
+use lwk_wollet::{
+    asyncr,
+    clients::blocking::{self, BlockchainBackend},
+};
 
 use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet};
 
@@ -137,5 +140,19 @@ impl EsploraClient {
     pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
+    }
+}
+
+impl EsploraClient {
+    /// Create a new esplora blocking client with the same connection parameters
+    #[allow(unused)] // TODO remove once lwk_boltz is integrated
+    pub(crate) fn clone_blocking_client(&self) -> Result<blocking::EsploraClient, LwkError> {
+        Ok(self.builder.clone().build_blocking()?)
+    }
+
+    /// Create a new esplora async client with the same connection parameters
+    #[allow(unused)] // TODO remove once lwk_boltz is integrated
+    pub(crate) fn clone_async_client(&self) -> Result<asyncr::EsploraClient, LwkError> {
+        Ok(self.builder.clone().build()?)
     }
 }

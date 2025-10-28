@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.atomicfu)
     alias(libs.plugins.mavenPublish)
+    signing
 }
 
 kotlin {
@@ -104,21 +105,8 @@ android {
 
 val libraryVersion: String by project
 
-publishing {
-    repositories {
-        maven {
-            name = "lwkGitHubPackages"
-            url = uri("https://maven.pkg.github.com/blockstream/lwk")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-}
-
 mavenPublishing {
-    coordinates(groupId = "com.blockstream", artifactId = "lwk_bindings", version = libraryVersion)
+    coordinates(groupId = "io.github.blockstream", artifactId = "lwk_bindings", version = libraryVersion)
 
     pom {
         name = "LWK"
@@ -130,10 +118,29 @@ mavenPublishing {
                 url = "https://github.com/blockstream/lwk/blob/main/LICENSE"
             }
         }
+        developers {
+            developer {
+                id = "domegabri"
+                name = "Domenico Gabriele"
+                email = "domenico@blockstream.com"
+            }
+            developer {
+                id = "rcasatta"
+                name = "Riccardo Casatta"
+                email = "riccardo@blockstream.com"
+            }
+        }
         scm {
             connection = "scm:git:github.com/blockstream/lwk.git"
             developerConnection = "scm:git:ssh://github.com/blockstream/lwk.git"
             url = "https://github.com/blockstream/lwk"
         }
     }
+
+    publishToMavenCentral()
+    signAllPublications()
+}
+
+extensions.configure<SigningExtension> {
+    useGpgCmd()
 }

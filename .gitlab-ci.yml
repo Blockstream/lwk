@@ -18,26 +18,26 @@ variables:
     - docker:20.10.12-dind
 
 
-fmt_clippy:
+.fmt_clippy:
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
 
-test_clean:
+.test_clean:
   image: rust:1.75
   script:
     - cargo build
 
-test_wollet:
+.test_wollet:
   extends: .base
   script:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_wollet -p lwk_signer
 
-test_jade:
+.test_jade:
   extends: .base
   variables:
       TMPDIR: ${CI_PROJECT_DIR}  # otherwise issue with the docker
@@ -46,12 +46,12 @@ test_jade:
     - docker pull xenoky/local-jade-emulator:1.0.27
     - cargo test -p lwk_jade
 
-test_ledger:
+.test_ledger:
   extends: .base
   script:
     - cargo test -p lwk_ledger --features asyncr
 
-test_serial:
+.test_serial:
   extends: .base
   variables:
   script:
@@ -59,23 +59,23 @@ test_serial:
     - cargo test --no-run --features serial
 
 # run tests for minor crates all together
-test_minor:
+.test_minor:
   extends: .base
   script:
     - cargo test -p lwk_tiny_jrpc -p lwk_app -p lwk_containers -p lwk_common -p lwk_hwi -p lwk_rpc_model -p lwk_signer
 
-test_cli:
+.test_cli:
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_cli
 
-unit_tests:
+.unit_tests:
   extends: .base
   script:
     - cargo nextest run --lib --profile unit # ensure unit tests don't take more than a sec each
 
-test_coverage:
+.test_coverage:
   extends: .base
   variables:
     RUSTFLAGS: "-C instrument-coverage"
@@ -102,7 +102,7 @@ test_coverage:
         path: target/coverage.xml
       junit: target/nextest/ci/junit.xml
 
-build_cli:
+.build_cli:
   extends: .base
   only:
     - master@liquid/lwk
@@ -114,12 +114,12 @@ build_cli:
     when: always
     expire_in: 14 days
 
-audit:
+.audit:
   extends: .base
   script:
     - cargo audit --deny yanked
 
-doc:
+.doc:
   extends: .base
   variables:
     RUSTDOCFLAGS: "-D warnings --cfg docsrs"
@@ -141,18 +141,18 @@ doc:
     - cargo +nightly doc --no-deps -p lwk_wollet --all-features
     - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings
     
-examples:
+.examples:
   extends: .base
   script:
     - cargo run --example list_transactions
 
-bindings:
+.bindings:
   extends: .base
   script:
     - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - cargo test -p lwk_bindings --features foreign_bindings
 
-csharp:
+.csharp:
   extends: .base
   script:
     - cargo build --release -p lwk_bindings
@@ -168,13 +168,13 @@ csharp:
     paths:
       - csharp
 
-just:
+.just:
   extends: .base
   script:
     - just python-test-bindings
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
 
-wasm:
+.wasm:
   extends: .base
   variables:
     RUSTFLAGS: "--cfg=web_sys_unstable_apis"
@@ -200,7 +200,7 @@ wasm:
     paths:
       - lwk_wasm/pkg
 
-nix:
+.nix:
   image: nixos/nix:latest
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
@@ -211,7 +211,7 @@ nix:
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
 
-boltz:
+.boltz:
   extends: .base
   script:
     - cd lwk_boltz
@@ -222,4 +222,30 @@ boltz:
     - just test-reverse-restore
     - just test-submarine
     - just test-submarine-restore
-    
+
+# maven credentials and gpg settings
+# in runner's ~/.gradle/gradle.properties
+publish_to_maven:
+  stage: deploy
+  tags:
+    - m4
+  #only:
+  #  - tags
+  #when: manual
+  script:
+    - just kotlin-multiplatform
+    - cd lwk_bindings/android_bindings
+    - ./gradlew publish --no-daemon --stacktrace --info
+
+  environment:
+    name: maven-central
+    url: https://central.sonatype.com
+  artifacts:
+    paths:
+      - lwk_bindings/android_bindings/lib/build/libs
+      - lwk_bindings/android_bindings/lib/build/outputs
+      - lwk_bindings/android_bindings/lib/build/publications
+    when: always
+    expire_in: 7 days
+  allow_failure: false
+

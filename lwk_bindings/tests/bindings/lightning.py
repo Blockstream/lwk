@@ -14,7 +14,7 @@ class MyLogger(Logging):
 
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.mainnet()
-client = network.default_electrum_client()
+client = AnyClient.from_electrum(network.default_electrum_client())
 signer = Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()
 wollet = Wollet(network, desc, datadir=None)

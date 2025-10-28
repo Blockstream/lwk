@@ -122,32 +122,21 @@ pub enum PaymentState {
 }
 
 #[derive(uniffi::Object)]
-pub struct AnyClient {
-    inner: lwk_boltz::clients::AnyClient,
+pub enum AnyClient {
+    Electrum(Arc<ElectrumClient>),
+    Esplora(Arc<EsploraClient>),
 }
 
 #[uniffi::export]
 impl AnyClient {
     #[uniffi::constructor]
-    pub fn from_electrum(client: Arc<ElectrumClient>, network: &Network) -> Self {
-        let inner_client = client.clone_client().expect("Failed to clone client");
-        let network_value = network.into();
-        let boltz_client =
-            lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
-        Self {
-            inner: lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client)),
-        }
+    pub fn from_electrum(client: Arc<ElectrumClient>) -> Self {
+        AnyClient::Electrum(client)
     }
 
     #[uniffi::constructor]
-    pub fn from_esplora(client: Arc<EsploraClient>, network: &Network) -> Self {
-        let inner_client = client.clone_async_client().expect("Failed to clone client");
-        let network_value = network.into();
-        let boltz_client =
-            lwk_boltz::clients::EsploraClient::from_client(Arc::new(inner_client), network_value);
-        Self {
-            inner: lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client)),
-        }
+    pub fn from_esplora(client: Arc<EsploraClient>) -> Self {
+        AnyClient::Esplora(client)
     }
 }
 
@@ -161,7 +150,7 @@ impl LightningSession {
     #[uniffi::constructor]
     pub fn new(
         network: &Network,
-        client: &ElectrumClient,
+        client: &AnyClient,
         timeout: Option<u64>,
         logging: Option<Arc<dyn Logging>>,
         mnemonic: Option<Arc<Mnemonic>>,
@@ -189,11 +178,24 @@ impl LightningSession {
         log::info!("Creating lightning session");
 
         let network_value = network.into();
-        // Transform lwk_bindings::ElectrumClient into lwk_boltz::clients::ElectrumClient
-        let inner_client = client.clone_client()?;
-        let boltz_client =
-            lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
-        let client = lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client));
+
+        let client = match client {
+            AnyClient::Electrum(client) => {
+                let boltz_client = lwk_boltz::clients::ElectrumClient::from_client(
+                    client.clone_client().unwrap(),
+                    network_value,
+                );
+                lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client))
+            }
+            AnyClient::Esplora(client) => {
+                let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
+                    Arc::new(client.clone_async_client().unwrap()),
+                    network_value,
+                );
+                lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))
+            }
+        };
+
         let inner = lwk_boltz::blocking::LightningSession::new(
             network_value,
             client,

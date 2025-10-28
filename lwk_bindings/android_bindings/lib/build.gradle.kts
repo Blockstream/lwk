@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.atomicfu)
     alias(libs.plugins.mavenPublish)
+    signing
 }
 
 kotlin {
@@ -104,30 +105,29 @@ android {
 
 val libraryVersion: String by project
 
-publishing {
-    repositories {
-        maven {
-            name = "lwkGitHubPackages"
-            url = uri("https://maven.pkg.github.com/blockstream/lwk")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-}
-
 mavenPublishing {
-    coordinates(groupId = "com.blockstream", artifactId = "lwk_bindings", version = libraryVersion)
+    coordinates(groupId = "com.blockstream", artifactId = "lwk", version = libraryVersion)
 
     pom {
         name = "LWK"
-        description = "Liquid Wallet Kit for android."
+        description = "Liquid Wallet Kit"
         url = "https://blockstream.com"
         licenses {
             license {
                 name = "BSD-MIT"
                 url = "https://github.com/blockstream/lwk/blob/main/LICENSE"
+            }
+        }
+        developers {
+            developer {
+                id = "rcasatta"
+                name = "Riccardo Casatta"
+                email = "riccardo@blockstream.com"
+            }
+            developer {
+                id = "leocomandini"
+                name = "Leonardo Comandini"
+                email = "leonardo@blockstream.com"
             }
         }
         scm {
@@ -136,4 +136,11 @@ mavenPublishing {
             url = "https://github.com/blockstream/lwk"
         }
     }
+
+    publishToMavenCentral()
+    signAllPublications()
+}
+
+extensions.configure<SigningExtension> {
+    useGpgCmd()
 }

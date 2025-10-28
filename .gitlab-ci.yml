@@ -222,4 +222,25 @@ boltz:
     - just test-reverse-restore
     - just test-submarine
     - just test-submarine-restore
-    
+
+# maven credentials and gpg settings
+# in runner's ~/.gradle/gradle.properties
+publish_to_maven:
+  stage: deploy
+  tags:
+    - m4
+  when: manual
+  needs: []
+  script:
+    - just kotlin-multiplatform
+    - cd lwk_bindings/android_bindings
+    - ./gradlew publish --no-daemon --stacktrace --info
+  artifacts:
+    paths:
+      - lwk_bindings/android_bindings/lib/build/libs
+      - lwk_bindings/android_bindings/lib/build/outputs
+      - lwk_bindings/android_bindings/lib/build/publications
+    when: always
+    expire_in: 7 days
+  allow_failure: false
+

@@ -287,7 +287,7 @@ mod tests {
             address_signature: Some(addrs_sig.to_string()),
             address: Some(claim_address.clone()),
             claim_public_key,
-            referral_id: None, // Add address signature here.
+            referral_id: None,
             webhook: None,
         };
 

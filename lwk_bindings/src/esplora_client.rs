@@ -11,6 +11,9 @@ use crate::{BlockHeader, LwkError, Network, Transaction, Txid, Update, Wollet};
 #[derive(uniffi::Object, Debug)]
 pub struct EsploraClient {
     pub(crate) inner: Mutex<blocking::EsploraClient>,
+
+    /// The builder used to create the client, used to create a new client with the same configuration.
+    pub(crate) builder: lwk_wollet::clients::EsploraClientBuilder,
 }
 
 /// A builder for the `EsploraClient`
@@ -55,28 +58,34 @@ impl EsploraClient {
     /// Construct an Esplora Client
     #[uniffi::constructor]
     pub fn new(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let client = blocking::EsploraClient::new(url, network.into())?;
+        let builder = lwk_wollet::clients::EsploraClientBuilder::new(url, network.into());
+        let client = builder.clone().build_blocking()?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
+            builder,
         }))
     }
 
     /// Construct an Esplora Client using Waterfalls endpoint
     #[uniffi::constructor]
     pub fn new_waterfalls(url: &str, network: &Network) -> Result<Arc<Self>, LwkError> {
-        let client = blocking::EsploraClient::new_waterfalls(url, network.into())?;
+        let builder =
+            lwk_wollet::clients::EsploraClientBuilder::new(url, network.into()).waterfalls(true);
+        let client = builder.clone().build_blocking()?;
         Ok(Arc::new(Self {
             inner: Mutex::new(client),
+            builder,
         }))
     }
 
     /// Construct an Esplora Client from an `EsploraClientBuilder`
     #[uniffi::constructor]
     pub fn from_builder(builder: EsploraClientBuilder) -> Result<Arc<Self>, LwkError> {
+        let builder = lwk_wollet::clients::EsploraClientBuilder::from(builder);
+        let client = builder.clone().build_blocking()?;
         Ok(Arc::new(Self {
-            inner: Mutex::new(
-                lwk_wollet::clients::EsploraClientBuilder::from(builder).build_blocking()?,
-            ),
+            inner: Mutex::new(client),
+            builder,
         }))
     }
 

@@ -358,10 +358,6 @@ def main():
     os.makedirs(swaps_dir, exist_ok=True)
     os.makedirs(f"{swaps_dir}/failed", exist_ok=True)
 
-    # Create wallet components
-    # Use ElectrumClient only for LightningSession
-    electrum_client = network.default_electrum_client()
-    # Use EsploraClient with waterfalls for all other operations
     b = EsploraClientBuilder(
         base_url="https://waterfalls.liquidwebwallet.org/liquid/api",
         network=network,
@@ -379,10 +375,10 @@ def main():
 
     wollet = Wollet(network, desc, datadir=None)
 
-    # Create lightning session with ElectrumClient
     mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
+    lightning_client = AnyClient.from_esplora(esplora_client)
     logger = MyLogger()
-    lightning_session = LightningSession(network, electrum_client, 30, logger, mnemonic_lightning)  # 30 second timeout
+    lightning_session = LightningSession(network=network, client=lightning_client, timeout=30, logging=logger, mnemonic=mnemonic_lightning)
 
     # Initial balance update
     update_balance(wollet, esplora_client, desc)

@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Address, Bolt11Invoice, ElectrumClient, LwkError, Mnemonic, Network};
+use crate::{Address, Bolt11Invoice, ElectrumClient, EsploraClient, LwkError, Mnemonic, Network};
 use log::{Level, Metadata, Record};
 use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
 use std::fmt;
@@ -136,6 +136,17 @@ impl AnyClient {
             lwk_boltz::clients::ElectrumClient::from_client(inner_client, network_value);
         Self {
             inner: lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client)),
+        }
+    }
+
+    #[uniffi::constructor]
+    pub fn from_esplora(client: Arc<EsploraClient>, network: &Network) -> Self {
+        let inner_client = client.clone_async_client().expect("Failed to clone client");
+        let network_value = network.into();
+        let boltz_client =
+            lwk_boltz::clients::EsploraClient::from_client(Arc::new(inner_client), network_value);
+        Self {
+            inner: lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client)),
         }
     }
 }

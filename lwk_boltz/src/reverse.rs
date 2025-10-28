@@ -76,7 +76,7 @@ impl LightningSession {
             address_signature: Some(addrs_sig.to_string()),
             address: Some(claim_address.to_string()),
             claim_public_key,
-            referral_id: None, // Add address signature here.
+            referral_id: None,
             webhook,
         };
 

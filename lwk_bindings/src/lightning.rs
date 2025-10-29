@@ -173,7 +173,7 @@ impl LightningSession {
             // Try to set the logger. This can only be done once globally.
             // If it fails (logger already set), we silently continue.
             let _ = log::set_boxed_logger(Box::new(bridge))
-                .and_then(|()| Ok(log::set_max_level(log::LevelFilter::Trace)));
+                .map(|()| log::set_max_level(log::LevelFilter::Trace));
         }
         log::info!("Creating lightning session");
 
@@ -182,14 +182,14 @@ impl LightningSession {
         let client = match client {
             AnyClient::Electrum(client) => {
                 let boltz_client = lwk_boltz::clients::ElectrumClient::from_client(
-                    client.clone_client().unwrap(),
+                    client.clone_client().expect("TODO"),
                     network_value,
                 );
                 lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client))
             }
             AnyClient::Esplora(client) => {
                 let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
-                    Arc::new(client.clone_async_client().unwrap()),
+                    Arc::new(client.clone_async_client().expect("TODO")),
                     network_value,
                 );
                 lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))
@@ -397,7 +397,7 @@ impl PreparePayResponse {
                 msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
             })?
             .uri_address();
-        Ok(Address::new(&uri_address)?)
+        Address::new(&uri_address)
     }
     pub fn uri_amount(&self) -> Result<u64, LwkError> {
         Ok(self

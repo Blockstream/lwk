@@ -153,7 +153,7 @@ mod tests {
                 "JSON should not contain PascalCase: {}",
                 json
             );
-            let expected = format!("\"{}\"", status.to_string());
+            let expected = format!("\"{}\"", status);
             assert_eq!(
                 json, expected,
                 "JSON should match Display format: expected {}, got {}",

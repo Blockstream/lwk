@@ -67,7 +67,7 @@ mod tests {
                 }
             }
         }
-        assert!(false, "Invoice not created after 10 attempts");
+        panic!("Invoice not created after 10 attempts");
     }
 
     #[tokio::test]

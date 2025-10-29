@@ -338,7 +338,7 @@ mod tests {
 
         for network in networks {
             // Test forward conversion
-            let chain = crate::elements_network_to_liquid_chain(network.clone());
+            let chain = crate::elements_network_to_liquid_chain(network);
             // Test roundtrip: convert back and ensure it equals original
             let roundtrip_network = crate::liquid_chain_to_elements_network(chain);
             assert_eq!(network, roundtrip_network);

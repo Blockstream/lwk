@@ -107,6 +107,12 @@ impl<'de> Deserialize<'de> for InvoiceData {
     }
 }
 
+impl InvoiceData {
+    pub fn deserialize(data: &str) -> Result<Self, Error> {
+        Ok(serde_json::from_str(data)?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,11 +156,5 @@ mod tests {
             deserialized1.preimage.to_string(),
             deserialized2.preimage.to_string()
         );
-    }
-}
-
-impl InvoiceData {
-    pub fn deserialize(data: &str) -> Result<Self, Error> {
-        Ok(serde_json::from_str(data)?)
     }
 }

@@ -44,7 +44,7 @@ impl Bolt11Invoice {
     /// Construct a Bolt11Invoice from a string
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
-        let inner = lwk_boltz::Bolt11Invoice::from_str(s).map_err(|e| lwk_boltz::Error::from(e))?;
+        let inner = lwk_boltz::Bolt11Invoice::from_str(s).map_err(lwk_boltz::Error::from)?;
         Ok(Arc::new(Self { inner }))
     }
 

@@ -136,7 +136,7 @@ impl LightningSession {
     ///
     /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
     /// being persisted or that have been lost. TODO: use fn xxx
-    pub async fn fetch_swaps(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
+    pub async fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
         let xpub =
             derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
         let result = self.api.post_swap_restore(&xpub.to_string()).await?;

@@ -255,7 +255,7 @@ def restorable_reverse_swaps(lightning_session, wollet):
         print(f"Fetching reverse swaps for claim address: {claim_address}")
 
         # Fetch reverse swaps from Boltz
-        swap_list = lightning_session.fetch_swaps()
+        swap_list = lightning_session.swap_restore()
         swap_data_list = lightning_session.restorable_reverse_swaps(swap_list, claim_address)
 
         if not swap_data_list:
@@ -282,7 +282,7 @@ def restorable_submarine_swaps(lightning_session, wollet):
         print(f"Fetching submarine swaps for refund address: {refund_address}")
 
         # Fetch submarine swaps from Boltz
-        swap_list = lightning_session.fetch_swaps()
+        swap_list = lightning_session.swap_restore()
         swap_data_list = lightning_session.restorable_submarine_swaps(swap_list, refund_address)
 
         if not swap_data_list:
@@ -305,7 +305,7 @@ def list_all_swaps(lightning_session):
     """List all swaps for the lightning session"""
     try:
         # Fetch all swaps from Boltz
-        swap_list = lightning_session.fetch_swaps()
+        swap_list = lightning_session.swap_restore()
 
         # Convert to JSON string and parse
         swaps_json = str(swap_list)

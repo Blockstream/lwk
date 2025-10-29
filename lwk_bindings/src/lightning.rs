@@ -289,8 +289,8 @@ impl LightningSession {
     /// Returns a the list of all the swaps ever done with the session mnemonic.
     ///
     /// The object returned can be converted to a json String with toString()
-    pub fn fetch_swaps(&self) -> Result<SwapList, LwkError> {
-        let response = self.inner.fetch_swaps()?;
+    pub fn swap_restore(&self) -> Result<SwapList, LwkError> {
+        let response = self.inner.swap_restore()?;
         Ok(SwapList { inner: response })
     }
 

@@ -122,8 +122,8 @@ impl LightningSession {
         Ok(inner)
     }
 
-    pub fn fetch_swaps(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
-        let inner = self.runtime.block_on(self.inner.fetch_swaps())?;
+    pub fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
+        let inner = self.runtime.block_on(self.inner.swap_restore())?;
         Ok(inner)
     }
 

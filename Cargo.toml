@@ -15,8 +15,8 @@ members = [
     "lwk_rpc_model",
     "lwk_test_util",
     "lwk_wasm",
+    "lwk_boltz",
 ]
-exclude = ["lwk_boltz"]
 resolver = "2"
 
 [patch.crates-io]
@@ -30,6 +30,7 @@ lwk_signer = { path = "lwk_signer" }
 lwk_test_util = { path = "lwk_test_util" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
+lwk_boltz = { path = "lwk_boltz" }
 
 [profile.release-smaller]
 inherits = "release"

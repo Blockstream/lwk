@@ -16,6 +16,7 @@ log = "0.4"
 env_logger = "0.11.8"
 thiserror = "1"
 bip39 = { version = "2.0.0", features = ["rand"] }
+lightning = { version = "0.1.7", default-features = false }
 
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json"] }

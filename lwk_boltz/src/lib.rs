@@ -321,8 +321,11 @@ pub async fn broadcast_tx_with_retry(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use bip39::Mnemonic;
     use boltz_client::Secp256k1;
+    use lightning::offers::offer::Offer;
     use lwk_wollet::bitcoin::NetworkKind;
 
     use crate::derive_xpub_from_mnemonic;
@@ -370,5 +373,12 @@ mod tests {
         let index = 0;
         let keypair = crate::derive_keypair(index, &mnemonic, &secp).unwrap();
         assert_eq!(keypair.public_key().to_string(), expected_keypair_pubkey);
+    }
+
+    #[test]
+    fn test_bolt12() {
+        let bolt12_str = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+        let bolt12 = Offer::from_str(bolt12_str).unwrap();
+        assert_eq!(bolt12.to_string(), bolt12_str);
     }
 }

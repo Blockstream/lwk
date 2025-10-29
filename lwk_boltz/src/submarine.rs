@@ -175,7 +175,7 @@ impl LightningSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
-            .filter(|e| e.status == "invoice.set") // TODO: are there any other state we want to restore?
+            .filter(|e| e.status != "swap.expired" && e.status != "transaction.claimed")
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,

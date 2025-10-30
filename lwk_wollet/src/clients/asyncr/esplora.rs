@@ -485,9 +485,7 @@ impl EsploraClient {
             Some(r) => Ok(r.clone()),
             None => {
                 let url = format!("{}/v1/server_recipient", self.base_url);
-                self.requests
-                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                let response = self.client.get(&url).send().await?;
+                let response = self.get_with_retry(&url).await?;
                 let status = response.status().as_u16();
                 let body = response.text().await?;
                 if status != 200 {

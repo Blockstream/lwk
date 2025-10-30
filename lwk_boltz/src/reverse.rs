@@ -254,6 +254,34 @@ impl InvoiceResponse {
         next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
     }
 
+    async fn handle_claim_transaction(
+        &self,
+        update: SwapStatus,
+    ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
+        let tx = self
+            .swap_script
+            .construct_claim(
+                &self.data.preimage,
+                SwapTransactionParams {
+                    keys: self.data.our_keys,
+                    output_address: self.data.claim_address.to_string(),
+                    fee: Fee::Relative(1.0),
+                    swap_id: self.swap_id().to_string(),
+                    options: Some(TransactionOptions::default().with_cooperative(true)),
+                    chain_client: &self.chain_client,
+                    boltz_client: &self.api,
+                },
+            )
+            .await?;
+
+        broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+
+        log::info!("Successfully broadcasted claim tx!");
+        log::debug!("Claim Tx {tx:?}");
+        Ok(ControlFlow::Continue(update))
+    }
+
     pub fn swap_id(&self) -> &str {
         &self.data.create_reverse_response.id
     }
@@ -281,31 +309,7 @@ impl InvoiceResponse {
                 log::info!("transaction.direct Payer used magic routing hint");
                 Ok(ControlFlow::Break(true))
             }
-            SwapState::TransactionMempool => {
-                log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
-                let tx = self
-                    .swap_script
-                    .construct_claim(
-                        &self.data.preimage,
-                        SwapTransactionParams {
-                            keys: self.data.our_keys,
-                            output_address: self.data.claim_address.to_string(),
-                            fee: Fee::Relative(1.0),
-                            swap_id: self.swap_id().to_string(),
-                            options: Some(TransactionOptions::default().with_cooperative(true)),
-                            chain_client: &self.chain_client,
-                            boltz_client: &self.api,
-                        },
-                    )
-                    .await?;
-
-                broadcast_tx_with_retry(&self.chain_client, &tx).await?;
-
-                log::info!("Successfully broadcasted claim tx!");
-                log::debug!("Claim Tx {tx:?}");
-                self.data.last_state = update_status;
-                Ok(ControlFlow::Continue(update))
-            }
+            SwapState::TransactionMempool => self.handle_claim_transaction(update).await,
             SwapState::TransactionConfirmed => {
                 // TODO what if I skipped TransactionMempool, thus I haven't already broadcasted the claim?
                 Ok(ControlFlow::Continue(update))

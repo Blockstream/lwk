@@ -545,15 +545,15 @@ impl EsploraClient {
                 }
             };
 
-            let response = self
-                .client
-                .get(&descriptor_url)
-                .query(&[("descriptor", desc.clone())])
-                .query(&[("page", page.to_string())])
-                .query(&[("to_index", to_index.to_string())])
-                .query(&[("utxo_only", self.utxo_only.to_string())])
-                .send()
-                .await?;
+            let full_url = format!(
+                "{}?descriptor={}&page={}&to_index={}&utxo_only={}",
+                descriptor_url,
+                url_encode_descriptor(&desc),
+                page,
+                to_index,
+                self.utxo_only
+            );
+            let response = self.get_with_retry(&full_url).await?;
 
             let status = response.status();
             let body = response.text().await?;

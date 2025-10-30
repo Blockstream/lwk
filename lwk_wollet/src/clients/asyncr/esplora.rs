@@ -112,7 +112,7 @@ impl EsploraClient {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let response = self
             .client
-            .post(&self.broadcast_url)
+            .post(&self.broadcast_url) // TODO: add authorization header
             .body(tx_hex)
             .send()
             .await?;

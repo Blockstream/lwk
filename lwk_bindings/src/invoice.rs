@@ -124,6 +124,14 @@ impl LightningPayment {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Construct a lightning payment (bolt11 invoice or bolt12 offer) from a bolt11 invoice
+    #[uniffi::constructor]
+    pub fn from_bolt11_invoice(invoice: Arc<Bolt11Invoice>) -> Arc<Self> {
+        Arc::new(Self {
+            inner: lwk_boltz::LightningPayment::Bolt11(invoice.as_ref().clone().into()),
+        })
+    }
+
     /// Returns the bolt11 invoice if the lightning payment is a bolt11 invoice
     pub fn bolt11_invoice(&self) -> Option<Arc<Bolt11Invoice>> {
         match &self.inner {

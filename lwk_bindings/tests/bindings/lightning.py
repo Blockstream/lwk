@@ -39,7 +39,8 @@ assert bolt11_invoice.startswith("lnbc1")
 ## in the real world any invoice generated from a Boltz-enabled wallet will contain a MRH
 try:
     refund_address = wollet.address(3).address()
-    prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice_obj, refund_address, None) # optionally accept a WebHook("https://example.com/webhook")
+    lightning_payment = LightningPayment.from_bolt11_invoice(bolt11_invoice_obj)
+    prepare_pay_response = lightning_session.prepare_pay(lightning_payment, refund_address, None) # optionally accept a WebHook("https://example.com/webhook")
 except LwkError.MagicRoutingHint as e:
     # Handle the specific MagicRoutingHint error
     print(f"Magic routing hint detected!")
@@ -47,6 +48,7 @@ except LwkError.MagicRoutingHint as e:
 except Exception as e:
     # Handle any other unexpected errors
     print(f"Unexpected error: {e}")
+    assert False
 
 # uri = prepare_pay_response.uri() # pay the liquid uri
 # prepare_pay_response.complete_pay()

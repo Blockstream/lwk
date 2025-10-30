@@ -130,7 +130,7 @@ impl LightningSession {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
                 fee: Some(fee),
-                bolt11_invoice: Some(bolt11_invoice.clone()),
+                bolt11_invoice: Some((**bolt11_invoice).clone()),
                 our_keys,
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),

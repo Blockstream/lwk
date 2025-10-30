@@ -128,7 +128,7 @@ impl LightningPayment {
     #[uniffi::constructor]
     pub fn from_bolt11_invoice(invoice: Arc<Bolt11Invoice>) -> Arc<Self> {
         Arc::new(Self {
-            inner: lwk_boltz::LightningPayment::Bolt11(invoice.as_ref().clone().into()),
+            inner: lwk_boltz::LightningPayment::Bolt11(Box::new(invoice.as_ref().clone().into())),
         })
     }
 
@@ -136,7 +136,7 @@ impl LightningPayment {
     pub fn bolt11_invoice(&self) -> Option<Arc<Bolt11Invoice>> {
         match &self.inner {
             lwk_boltz::LightningPayment::Bolt11(invoice) => {
-                Some(Arc::new(Bolt11Invoice::from(invoice.clone())))
+                Some(Arc::new(Bolt11Invoice::from((**invoice).clone())))
             }
             lwk_boltz::LightningPayment::Bolt12(_) => None,
         }

@@ -5,8 +5,8 @@ use lightning::offers::{offer::Offer, parse::Bolt12ParseError};
 
 #[derive(Debug)]
 pub enum LightningPayment {
-    Bolt11(Bolt11Invoice),
-    Bolt12(Offer),
+    Bolt11(Box<Bolt11Invoice>),
+    Bolt12(Box<Offer>),
 }
 
 impl FromStr for LightningPayment {
@@ -14,9 +14,9 @@ impl FromStr for LightningPayment {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match Bolt11Invoice::from_str(s) {
-            Ok(invoice) => Ok(LightningPayment::Bolt11(invoice)),
+            Ok(invoice) => Ok(LightningPayment::Bolt11(Box::new(invoice))),
             Err(e1) => match Offer::from_str(s) {
-                Ok(offer) => Ok(LightningPayment::Bolt12(offer)),
+                Ok(offer) => Ok(LightningPayment::Bolt12(Box::new(offer))),
                 Err(e2) => Err((e1, e2)),
             },
         }
@@ -34,7 +34,7 @@ impl Display for LightningPayment {
 
 impl From<Bolt11Invoice> for LightningPayment {
     fn from(invoice: Bolt11Invoice) -> Self {
-        LightningPayment::Bolt11(invoice)
+        LightningPayment::Bolt11(Box::new(invoice))
     }
 }
 

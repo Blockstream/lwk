@@ -12,7 +12,7 @@ use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
-use boltz_client::{Bolt11Invoice, PublicKey, Secp256k1};
+use boltz_client::{PublicKey, Secp256k1};
 use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
 use lwk_wollet::elements;
 use lwk_wollet::secp256k1::All;
@@ -21,7 +21,8 @@ use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
 use crate::{
-    broadcast_tx_with_retry, next_status, LightningSession, SwapState, SwapType, WAIT_TIME,
+    broadcast_tx_with_retry, next_status, LightningPayment, LightningSession, SwapState, SwapType,
+    WAIT_TIME,
 };
 
 pub struct PreparePayResponse {
@@ -37,12 +38,18 @@ pub struct PreparePayResponse {
 impl LightningSession {
     pub async fn prepare_pay(
         &self,
-        bolt11_invoice: &Bolt11Invoice,
+        lightning_payment: &LightningPayment,
         refund_address: &elements::Address,
         webhook: Option<Webhook<SubSwapStates>>,
     ) -> Result<PreparePayResponse, Error> {
         let chain = self.chain();
-        let bolt11_invoice_str = bolt11_invoice.to_string();
+
+        let (bolt11_invoice_str, bolt11_invoice) = match lightning_payment {
+            LightningPayment::Bolt11(invoice) => (invoice.to_string(), invoice),
+            LightningPayment::Bolt12(_) => {
+                return Err(Error::Bolt12Unsupported);
+            }
+        };
         let webhook_str = format!("{:?}", webhook);
 
         let our_keys = self.derive_next_keypair()?;

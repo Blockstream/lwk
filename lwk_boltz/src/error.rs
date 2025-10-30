@@ -66,6 +66,9 @@ pub enum Error {
 
     #[error("Broadcast failed after retrying")]
     RetryBroadcastFailed,
+
+    #[error("Bolt12 (offers) are not yet supported")]
+    Bolt12Unsupported,
 }
 
 impl From<BoltzError> for Error {

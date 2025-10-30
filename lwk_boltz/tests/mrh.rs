@@ -111,7 +111,7 @@ mod tests {
         .unwrap();
         let bolt11_parsed = invoice.bolt11_invoice();
         let prepare_pay_response = sender_session
-            .prepare_pay(&bolt11_parsed, &claim_address, None)
+            .prepare_pay(&bolt11_parsed.into(), &claim_address, None)
             .await;
         if let Err(Error::MagicRoutingHint {
             address,

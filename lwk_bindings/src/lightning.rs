@@ -222,9 +222,10 @@ impl LightningSession {
                 hash_swap_id: None,
                 status: None,
             });
+        let lightning_payment = invoice.as_ref().clone().into(); // TODO: remove and accept LightningPayment directly
         let response =
             self.inner
-                .prepare_pay(invoice.as_ref(), refund_address.as_ref(), webhook)?;
+                .prepare_pay(&lightning_payment, refund_address.as_ref(), webhook)?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

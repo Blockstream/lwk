@@ -10,7 +10,10 @@ use boltz_client::{
 };
 use lwk_wollet::{elements, ElementsNetwork};
 
-use crate::{clients::AnyClient, Error, InvoiceData, PreparePayData, RescueFile, SwapStatus};
+use crate::{
+    clients::AnyClient, Error, InvoiceData, LightningPayment, PreparePayData, RescueFile,
+    SwapStatus,
+};
 
 pub struct LightningSession {
     inner: super::LightningSession,
@@ -44,12 +47,12 @@ impl LightningSession {
 
     pub fn prepare_pay(
         &self,
-        bolt11_invoice: &Bolt11Invoice,
+        lightning_payment: &LightningPayment,
         refund_address: &elements::Address,
         webhook: Option<Webhook<SubSwapStates>>,
     ) -> Result<PreparePayResponse, Error> {
         let inner = self.runtime.block_on(self.inner.prepare_pay(
-            bolt11_invoice,
+            lightning_payment,
             refund_address,
             webhook,
         ))?;

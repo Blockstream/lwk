@@ -12,11 +12,11 @@ mod tests {
         network::{Chain, LiquidChain},
         swaps::{ChainClient, SwapScript, SwapTransactionParams},
         util::sleep,
-        Bolt11Invoice, Keypair, PublicKey, Secp256k1,
+        Keypair, PublicKey, Secp256k1,
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        LightningSession, PreparePayData,
+        LightningPayment, LightningSession, PreparePayData,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -55,10 +55,10 @@ mod tests {
         log::info!("Preparing payment for invoice: {}", bolt11_invoice);
 
         let refund_address = elements::Address::from_str(&refund_address).unwrap();
-        let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
 
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address, None)
+            .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
         log::info!(
@@ -107,9 +107,9 @@ mod tests {
         .await
         .unwrap();
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address, None)
+            .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
         utils::send_to_address(
@@ -126,9 +126,9 @@ mod tests {
 
         // Test underpay which triggers a refund to the refund address
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address, None)
+            .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
         utils::send_to_address(
@@ -180,9 +180,9 @@ mod tests {
 
         // test restore swap after drop
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
-        let bolt11_parsed = Bolt11Invoice::from_str(&bolt11_invoice).unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
         let prepare_pay_response = session
-            .prepare_pay(&bolt11_parsed, &refund_address, None)
+            .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
 

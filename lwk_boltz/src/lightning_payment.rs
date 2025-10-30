@@ -32,6 +32,12 @@ impl Display for LightningPayment {
     }
 }
 
+impl From<Bolt11Invoice> for LightningPayment {
+    fn from(invoice: Bolt11Invoice) -> Self {
+        LightningPayment::Bolt11(invoice)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

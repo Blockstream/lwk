@@ -32,6 +32,25 @@ pub struct EsploraClientBuilder {
     headers: HashMap<String, String>,
     timeout: Option<u8>,
     concurrency: Option<usize>,
+
+    #[allow(unused)]
+    token: TokenProvider,
+}
+
+/// Provider of a token for authenticated services backend of Esplora and Waterfalls
+#[derive(Debug, Clone)]
+pub enum TokenProvider {
+    /// No token is needed
+    None,
+    /// A static token is used
+    Static(String),
+    /// A token is obtained from the Blockstream API
+    Blockstream {
+        /// The client ID
+        client_id: String,
+        /// The client secret
+        client_secret: String,
+    },
 }
 
 impl EsploraClientBuilder {
@@ -45,6 +64,7 @@ impl EsploraClientBuilder {
             headers: HashMap::new(),
             timeout: None,
             concurrency: None,
+            token: TokenProvider::None,
         }
     }
 

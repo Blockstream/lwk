@@ -771,9 +771,35 @@ impl EsploraClient {
                     builder.header("Authorization", format!("Bearer {token}"))
                 }
                 TokenProvider::Blockstream {
+                    url,
                     client_id,
                     client_secret,
-                } => todo!(),
+                } => {
+                    let token_response: serde_json::Value = self
+                        .client
+                        .post(url)
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .form(&[
+                            ("client_id", client_id.as_str()),
+                            ("client_secret", client_secret.as_str()),
+                            ("grant_type", "client_credentials"),
+                            ("scope", "openid"),
+                        ])
+                        .send()
+                        .await?
+                        .json()
+                        .await?;
+
+                    let token = token_response["access_token"]
+                        .as_str()
+                        .ok_or_else(|| {
+                            Error::Generic("Missing access_token in response".to_string())
+                        })?
+                        .to_string();
+                    // TODO: store the token and the expiration time
+                    // and refresh it only if it's expired
+                    builder.header("Authorization", format!("Bearer {token}"))
+                }
             };
             let response = builder.send().await?;
 
@@ -1031,15 +1057,16 @@ mod tests {
     async fn esplora_authenticated() {
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+        let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
         let token_response: serde_json::Value = reqwest::Client::new()
-            .post("https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token")
+            .post(staging_login)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&[
-                ("client_id", client_id),
-                ("client_secret", client_secret),
-                ("grant_type", "client_credentials".to_string()),
-                ("scope", "openid".to_string()),
+                ("client_id", client_id.as_str()),
+                ("client_secret", client_secret.as_str()),
+                ("grant_type", "client_credentials"),
+                ("scope", "openid"),
             ])
             .send()
             .await
@@ -1055,6 +1082,21 @@ mod tests {
             ElementsNetwork::Liquid,
         )
         .token(TokenProvider::Static(token_id))
+        .build()
+        .unwrap();
+
+        let tip = client.tip().await.unwrap();
+        assert!(tip.height > 100);
+
+        let mut client = EsploraClientBuilder::new(
+            "https://enterprise.staging.blockstream.info/liquid/api",
+            ElementsNetwork::Liquid,
+        )
+        .token(TokenProvider::Blockstream {
+            url: staging_login.to_string(),
+            client_id: client_id.clone(),
+            client_secret: client_secret.clone(),
+        })
         .build()
         .unwrap();
 

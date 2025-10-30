@@ -44,6 +44,8 @@ pub enum TokenProvider {
     Static(String),
     /// A token is obtained from the Blockstream API
     Blockstream {
+        /// The url to get the token from
+        url: String,
         /// The client ID
         client_id: String,
         /// The client secret

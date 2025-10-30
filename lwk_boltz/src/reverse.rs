@@ -44,6 +44,7 @@ pub struct InvoiceResponse {
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
+    claim_broadcasted: bool,
 }
 
 impl LightningSession {
@@ -122,6 +123,7 @@ impl LightningSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
+            claim_broadcasted: false,
         })
     }
 
@@ -145,6 +147,7 @@ impl LightningSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
+            claim_broadcasted: false,
         })
     }
 
@@ -254,10 +257,14 @@ impl InvoiceResponse {
         next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
     }
 
-    async fn handle_claim_transaction(
-        &self,
+    async fn handle_claim_transaction_if_necessary(
+        &mut self,
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        if self.claim_broadcasted {
+            return Ok(ControlFlow::Continue(update));
+        }
+
         log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
         let tx = self
             .swap_script
@@ -276,6 +283,7 @@ impl InvoiceResponse {
             .await?;
 
         broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        self.claim_broadcasted = true;
 
         log::info!("Successfully broadcasted claim tx!");
         log::debug!("Claim Tx {tx:?}");
@@ -309,10 +317,11 @@ impl InvoiceResponse {
                 log::info!("transaction.direct Payer used magic routing hint");
                 Ok(ControlFlow::Break(true))
             }
-            SwapState::TransactionMempool => self.handle_claim_transaction(update).await,
+            SwapState::TransactionMempool => {
+                self.handle_claim_transaction_if_necessary(update).await
+            }
             SwapState::TransactionConfirmed => {
-                // TODO what if I skipped TransactionMempool, thus I haven't already broadcasted the claim?
-                Ok(ControlFlow::Continue(update))
+                self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {
                 log::info!("invoice.settled Reverse Swap Successful!");

@@ -19,6 +19,7 @@ mod tests {
     /// Test Magic Routing Hints: A Boltz wallet pays another Boltz wallet's invoice
     /// directly on-chain without performing a swap
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_mrh() {
         let _ = env_logger::try_init();
 

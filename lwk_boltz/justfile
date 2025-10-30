@@ -34,36 +34,36 @@ regtest-env-stop:
 test-reverse: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test reverse -- tests::test_session_reverse --nocapture --exact
+    RUST_LOG=info cargo test --test reverse -- tests::test_session_reverse --nocapture --exact --ignored
 
 # Run submarine swap test
 test-submarine: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test submarine -- tests::test_session_submarine --nocapture --exact
+    RUST_LOG=info cargo test --test submarine -- tests::test_session_submarine --nocapture --exact --ignored
 
 # Run submarine swap test with magic routing hints
 test-mrh: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test mrh -- test_session_mrh --nocapture
+    RUST_LOG=info cargo test --test mrh -- test_session_mrh --nocapture --ignored
 
 # Run submarine restore swap test
 test-submarine-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test submarine -- test_session_restore_submarine --nocapture
+    RUST_LOG=info cargo test --test submarine -- test_session_restore_submarine --nocapture --ignored
 
 
 # Run reverse restore swap test
 test-reverse-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test reverse -- test_session_restore_reverse --nocapture
+    RUST_LOG=info cargo test --test reverse -- test_session_restore_reverse --nocapture --ignored
 
 
 # Run reverse swap test
 test-reverse-concurrent: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture
+    RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture --ignored

@@ -109,6 +109,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_reverse() {
         let _ = env_logger::try_init();
         let chain_client = ChainClient::new().with_liquid(
@@ -126,6 +127,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_reverse() {
         let _ = env_logger::try_init();
 
@@ -156,6 +158,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_reverse() {
         let _ = env_logger::try_init();
 
@@ -212,6 +215,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_reverse_concurrent() {
         let _ = env_logger::try_init();
 

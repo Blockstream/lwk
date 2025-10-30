@@ -78,6 +78,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_submarine() {
         let _ = env_logger::try_init();
 
@@ -149,6 +150,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_submarine() {
         let _ = env_logger::try_init();
 
@@ -213,6 +215,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_submarine() {
         let _ = env_logger::try_init();
         let chain_client = ChainClient::new().with_liquid(

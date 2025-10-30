@@ -1,7 +1,7 @@
 //! NOTE This module is temporary, as soon we make the other clients async this will be merged in
 //! the standard esplora client of which contain a lot of duplicated code.
 
-use crate::clients::{create_dummy_tx, try_unblind, Capability, History};
+use crate::clients::{create_dummy_tx, try_unblind, Capability, History, TokenProvider};
 use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::descriptor::url_encode_descriptor;
 use crate::BlindingPublicKey;
@@ -63,6 +63,10 @@ pub struct EsploraClient {
 
     /// Number of network requests made by this client
     requests: AtomicUsize,
+
+    /// The token provider
+    #[allow(unused)]
+    token: TokenProvider,
 }
 
 impl EsploraClient {
@@ -835,6 +839,7 @@ impl EsploraClientBuilder {
             concurrency: self.concurrency.unwrap_or(1),
             requests: AtomicUsize::new(0),
             waterfalls_encrypted_descriptors: HashMap::new(),
+            token: self.token,
         })
     }
 }

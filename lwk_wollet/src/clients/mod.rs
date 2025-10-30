@@ -32,8 +32,6 @@ pub struct EsploraClientBuilder {
     headers: HashMap<String, String>,
     timeout: Option<u8>,
     concurrency: Option<usize>,
-
-    #[allow(unused)]
     token: TokenProvider,
 }
 

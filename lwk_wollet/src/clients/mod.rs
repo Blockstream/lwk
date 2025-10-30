@@ -109,6 +109,12 @@ impl EsploraClientBuilder {
         self.headers.insert(key, val);
         self
     }
+
+    /// Set the token provider for authenticated services
+    pub fn token(mut self, token: TokenProvider) -> Self {
+        self.token = token;
+        self
+    }
 }
 
 /// Last unused derivation index for each chain.

@@ -764,7 +764,18 @@ impl EsploraClient {
         loop {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            let response = self.client.get(url).send().await?;
+            let builder = self.client.get(url);
+            let builder = match &self.token {
+                TokenProvider::None => builder,
+                TokenProvider::Static(token) => {
+                    builder.header("Authorization", format!("Bearer {token}"))
+                }
+                TokenProvider::Blockstream {
+                    client_id,
+                    client_secret,
+                } => todo!(),
+            };
+            let response = builder.send().await?;
 
             let level = if response.status() == 200 {
                 log::Level::Trace
@@ -913,7 +924,11 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
 mod tests {
     use std::{collections::HashMap, str::FromStr};
 
-    use crate::{clients::asyncr::async_sleep, ElementsNetwork};
+    use crate::{
+        asyncr::EsploraClientBuilder,
+        clients::{asyncr::async_sleep, TokenProvider},
+        ElementsNetwork,
+    };
 
     use super::EsploraClient;
     use elements::{encode::Decodable, BlockHash};
@@ -1009,5 +1024,41 @@ mod tests {
             .utxo_only(true)
             .build();
         assert!(client.is_err());
+    }
+
+    #[ignore = "requires internet connection and env vars"]
+    #[tokio::test]
+    async fn esplora_authenticated() {
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+
+        let token_response: serde_json::Value = reqwest::Client::new()
+            .post("https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .form(&[
+                ("client_id", client_id),
+                ("client_secret", client_secret),
+                ("grant_type", "client_credentials".to_string()),
+                ("scope", "openid".to_string()),
+            ])
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+
+        let token_id = token_response["access_token"].as_str().unwrap().to_string();
+
+        let mut client = EsploraClientBuilder::new(
+            "https://enterprise.staging.blockstream.info/liquid/api",
+            ElementsNetwork::Liquid,
+        )
+        .token(TokenProvider::Static(token_id))
+        .build()
+        .unwrap();
+
+        let tip = client.tip().await.unwrap();
+        assert!(tip.height > 100);
     }
 }

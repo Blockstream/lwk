@@ -163,7 +163,7 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer, skip_completi
 
     try:
         # Parse the invoice
-        bolt11_invoice_obj = Bolt11Invoice(bolt11_str)
+        lightning_payment = LightningPayment(bolt11_str)
 
         # Get refund address
         refund_address = wollet.address(None).address()
@@ -172,7 +172,7 @@ def pay_invoice(lightning_session, wollet, esplora_client, signer, skip_completi
         # Prepare payment
         webhook_url = os.getenv('WEBHOOK')
         webhook = WebHook(webhook_url) if webhook_url else None
-        prepare_pay_response = lightning_session.prepare_pay(bolt11_invoice_obj, refund_address, webhook) 
+        prepare_pay_response = lightning_session.prepare_pay(lightning_payment, refund_address, webhook) 
 
         data=prepare_pay_response.serialize()
         swap_id=prepare_pay_response.swap_id()

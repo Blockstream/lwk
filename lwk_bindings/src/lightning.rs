@@ -5,7 +5,10 @@ use std::{
     time::Duration,
 };
 
-use crate::{Address, Bolt11Invoice, ElectrumClient, EsploraClient, LwkError, Mnemonic, Network};
+use crate::{
+    Address, Bolt11Invoice, ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic,
+    Network,
+};
 use log::{Level, Metadata, Record};
 use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
 use std::fmt;
@@ -211,7 +214,7 @@ impl LightningSession {
     /// Prepare to pay a bolt11 invoice
     pub fn prepare_pay(
         &self,
-        invoice: &Bolt11Invoice,
+        lightning_payment: &LightningPayment,
         refund_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<PreparePayResponse, LwkError> {
@@ -222,10 +225,9 @@ impl LightningSession {
                 hash_swap_id: None,
                 status: None,
             });
-        let lightning_payment = invoice.as_ref().clone().into(); // TODO: remove and accept LightningPayment directly
         let response =
             self.inner
-                .prepare_pay(&lightning_payment, refund_address.as_ref(), webhook)?;
+                .prepare_pay(lightning_payment.as_ref(), refund_address.as_ref(), webhook)?;
 
         Ok(PreparePayResponse {
             inner: Mutex::new(Some(response)),

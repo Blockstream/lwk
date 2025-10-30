@@ -93,3 +93,44 @@ impl Bolt11Invoice {
         format!("{:?}", self.inner.payment_secret())
     }
 }
+
+/// Represents a lightning payment (bolt11 invoice or bolt12 offer)
+#[derive(uniffi::Object)]
+pub struct LightningPayment {
+    inner: lwk_boltz::LightningPayment,
+}
+
+impl AsRef<lwk_boltz::LightningPayment> for LightningPayment {
+    fn as_ref(&self) -> &lwk_boltz::LightningPayment {
+        &self.inner
+    }
+}
+
+impl Display for LightningPayment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
+#[uniffi::export]
+impl LightningPayment {
+    /// Construct a lightning payment (bolt11 invoice or bolt12 offer) from a string
+    #[uniffi::constructor]
+    pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
+        let inner =
+            lwk_boltz::LightningPayment::from_str(s).map_err(|(e1, e2)| LwkError::Generic {
+                msg: format!("Failed to create lightning payment: {:?}, {:?}", e1, e2),
+            })?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Returns the bolt11 invoice if the lightning payment is a bolt11 invoice
+    pub fn bolt11_invoice(&self) -> Option<Arc<Bolt11Invoice>> {
+        match &self.inner {
+            lwk_boltz::LightningPayment::Bolt11(invoice) => {
+                Some(Arc::new(Bolt11Invoice::from(invoice.clone())))
+            }
+            lwk_boltz::LightningPayment::Bolt12(_) => None,
+        }
+    }
+}

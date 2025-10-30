@@ -234,22 +234,16 @@ impl EsploraClient {
     ) -> Result<Vec<Vec<History>>, Error> {
         let mut result = vec![];
         for address_batch in addresses.chunks(50) {
-            let url = format!("{}/v2/waterfalls", self.base_url);
-            self.requests
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            let response = self
-                .client
-                .get(&url)
-                .query(&[(
-                    "addresses",
-                    address_batch
-                        .iter()
-                        .map(|a| a.to_string())
-                        .collect::<Vec<_>>()
-                        .join(","),
-                )])
-                .send()
-                .await?;
+            let url = format!(
+                "{}/v2/waterfalls?addresses={}",
+                self.base_url,
+                address_batch
+                    .iter()
+                    .map(|a| a.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            let response = self.get_with_retry(&url).await?;
             let status = response.status().as_u16();
             let body = response.text().await?;
 

@@ -975,16 +975,17 @@ async fn fetch_oauth_token(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, str::FromStr};
+    use std::{collections::HashMap, str::FromStr, time::Duration};
 
     use crate::{
         asyncr::{esplora::fetch_oauth_token, EsploraClientBuilder},
         clients::{asyncr::async_sleep, TokenProvider},
-        ElementsNetwork,
+        ElementsNetwork, NoPersist, Wollet, WolletDescriptor,
     };
 
     use super::EsploraClient;
     use elements::{encode::Decodable, BlockHash};
+    use tokio::time::sleep;
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
         let url = format!("{}/block/{}/raw", base_url, hash);
@@ -1120,5 +1121,70 @@ mod tests {
 
         let tip = client.tip().await.unwrap();
         assert!(tip.height > 100);
+    }
+
+    #[ignore = "requires internet connection and env vars"]
+    #[tokio::test]
+    async fn esplora_authenticated_wallet_scan() {
+        lwk_test_util::init_logging();
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+        let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+        let mut client = EsploraClientBuilder::new(
+            "https://enterprise.staging.blockstream.info/liquid/api",
+            ElementsNetwork::Liquid,
+        )
+        .token_provider(TokenProvider::Blockstream {
+            url: staging_login.to_string(),
+            client_id: client_id.clone(),
+            client_secret: client_secret.clone(),
+        })
+        .build()
+        .unwrap();
+
+        // Get mainnet descriptor from test data
+        let descriptor_str = lwk_test_util::descriptor_pset_usdt_no_contracts();
+        let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
+
+        // Create wallet
+        let mut wollet =
+            Wollet::new(ElementsNetwork::Liquid, NoPersist::new(), descriptor).unwrap();
+
+        // Perform full scan
+        let update = client.full_scan(&mut wollet).await.unwrap();
+
+        assert!(update.is_some());
+        wollet.apply_update(update.unwrap()).unwrap();
+        assert!(wollet.transactions().unwrap().len() > 16);
+    }
+
+    #[ignore = "requires internet connection and env vars"]
+    #[tokio::test]
+    async fn esplora_authenticated_refresh() {
+        lwk_test_util::init_logging();
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+        let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+        let mut client = EsploraClientBuilder::new(
+            "https://enterprise.staging.blockstream.info/liquid/api",
+            ElementsNetwork::Liquid,
+        )
+        .token_provider(TokenProvider::Blockstream {
+            url: staging_login.to_string(),
+            client_id: client_id.clone(),
+            client_secret: client_secret.clone(),
+        })
+        .build()
+        .unwrap();
+
+        for _ in 0..10 {
+            // token expires in 300 seconds, thus this code should trigger that and the logs should show "fetching authentication token"
+            let tip = client.tip().await.unwrap();
+            log::info!("tip height: {}", tip.height);
+            assert!(tip.height > 100);
+            sleep(Duration::from_secs(60)).await;
+        }
     }
 }

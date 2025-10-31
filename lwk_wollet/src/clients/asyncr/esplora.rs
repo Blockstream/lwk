@@ -20,6 +20,8 @@ use elements::{
     Script, Txid,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+#[cfg(target_arch = "wasm32")]
+use futures::lock::Mutex;
 use futures::stream::{iter, StreamExt};
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
@@ -30,7 +32,6 @@ use std::{
     str::FromStr,
     sync::atomic,
 };
-use tokio::sync::Mutex;
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page
@@ -70,7 +71,10 @@ pub struct EsploraClient {
 
     /// The cached token for authenticated services, it will be Some only when
     /// the token provider is `TokenProvider::Blockstream`
-    token: Mutex<Option<String>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    token: tokio::sync::Mutex<Option<String>>,
+    #[cfg(target_arch = "wasm32")]
+    token: futures::lock::Mutex<Option<String>>,
 }
 
 impl EsploraClient {
@@ -866,7 +870,10 @@ impl EsploraClientBuilder {
             requests: AtomicUsize::new(0),
             waterfalls_encrypted_descriptors: HashMap::new(),
             token_provider: self.token_provider,
-            token: Mutex::new(None),
+            #[cfg(not(target_arch = "wasm32"))]
+            token: tokio::sync::Mutex::new(None),
+            #[cfg(target_arch = "wasm32")]
+            token: futures::lock::Mutex::new(None),
         })
     }
 }

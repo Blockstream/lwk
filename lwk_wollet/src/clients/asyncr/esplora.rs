@@ -783,6 +783,7 @@ impl EsploraClient {
                     match cached_token.as_mut() {
                         Some(token) => builder.header("Authorization", format!("Bearer {token}")),
                         None => {
+                            log::debug!("fetching authentication token");
                             let token =
                                 fetch_oauth_token(&self.client, &url, &client_id, &client_secret)
                                     .await?;
@@ -819,6 +820,11 @@ impl EsploraClient {
                 log::debug!("{url} waiting {secs}");
 
                 async_sleep(secs * 1000).await;
+                attempt += 1;
+            } else if response.status() == 401 {
+                // 401 Unauthorized, the token is expired, so we need to refresh it
+                let mut cached_token = self.token.lock().await;
+                *cached_token = None;
                 attempt += 1;
             } else {
                 return Ok(response);

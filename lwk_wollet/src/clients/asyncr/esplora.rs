@@ -775,29 +775,8 @@ impl EsploraClient {
                     client_id,
                     client_secret,
                 } => {
-                    let token_response: serde_json::Value = self
-                        .client
-                        .post(url)
-                        .header("Content-Type", "application/x-www-form-urlencoded")
-                        .form(&[
-                            ("client_id", client_id.as_str()),
-                            ("client_secret", client_secret.as_str()),
-                            ("grant_type", "client_credentials"),
-                            ("scope", "openid"),
-                        ])
-                        .send()
-                        .await?
-                        .json()
-                        .await?;
-
-                    let token = token_response["access_token"]
-                        .as_str()
-                        .ok_or_else(|| {
-                            Error::Generic("Missing access_token in response".to_string())
-                        })?
-                        .to_string();
-                    // TODO: store the token and the expiration time
-                    // and refresh it only if it's expired
+                    let token =
+                        fetch_oauth_token(&self.client, &url, &client_id, &client_secret).await?;
                     builder.header("Authorization", format!("Bearer {token}"))
                 }
             };
@@ -946,12 +925,41 @@ fn encrypt(plaintext: &str, recipient: Recipient) -> Result<String, Error> {
     Ok(result)
 }
 
+/// Fetches an OAuth2 access token using client credentials flow
+async fn fetch_oauth_token(
+    client: &reqwest::Client,
+    url: &str,
+    client_id: &str,
+    client_secret: &str,
+) -> Result<String, Error> {
+    let token_response: serde_json::Value = client
+        .post(url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .form(&[
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("grant_type", "client_credentials"),
+            ("scope", "openid"),
+        ])
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let token = token_response["access_token"]
+        .as_str()
+        .ok_or_else(|| Error::Generic("Missing access_token in response".to_string()))?
+        .to_string();
+
+    Ok(token)
+}
+
 #[cfg(test)]
 mod tests {
     use std::{collections::HashMap, str::FromStr};
 
     use crate::{
-        asyncr::EsploraClientBuilder,
+        asyncr::{esplora::fetch_oauth_token, EsploraClientBuilder},
         clients::{asyncr::async_sleep, TokenProvider},
         ElementsNetwork,
     };
@@ -1059,23 +1067,14 @@ mod tests {
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
         let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-        let token_response: serde_json::Value = reqwest::Client::new()
-            .post(staging_login)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .form(&[
-                ("client_id", client_id.as_str()),
-                ("client_secret", client_secret.as_str()),
-                ("grant_type", "client_credentials"),
-                ("scope", "openid"),
-            ])
-            .send()
-            .await
-            .unwrap()
-            .json()
-            .await
-            .unwrap();
-
-        let token_id = token_response["access_token"].as_str().unwrap().to_string();
+        let token_id = fetch_oauth_token(
+            &reqwest::Client::new(),
+            &staging_login,
+            &client_id,
+            &client_secret,
+        )
+        .await
+        .unwrap();
 
         let mut client = EsploraClientBuilder::new(
             "https://enterprise.staging.blockstream.info/liquid/api",

@@ -67,6 +67,10 @@ pub struct EsploraClient {
 
     /// The token provider
     token_provider: TokenProvider,
+
+    /// The cached token for authenticated services, it will be Some only when
+    /// the token provider is `TokenProvider::Blockstream`
+    token: Mutex<Option<String>>,
 }
 
 impl EsploraClient {
@@ -775,9 +779,17 @@ impl EsploraClient {
                     client_id,
                     client_secret,
                 } => {
-                    let token =
-                        fetch_oauth_token(&self.client, &url, &client_id, &client_secret).await?;
-                    builder.header("Authorization", format!("Bearer {token}"))
+                    let mut cached_token = self.token.lock().await;
+                    match cached_token.as_mut() {
+                        Some(token) => builder.header("Authorization", format!("Bearer {token}")),
+                        None => {
+                            let token =
+                                fetch_oauth_token(&self.client, &url, &client_id, &client_secret)
+                                    .await?;
+                            *cached_token = Some(token.clone());
+                            builder.header("Authorization", format!("Bearer {token}"))
+                        }
+                    }
                 }
             };
             let response = builder.send().await?;
@@ -848,6 +860,7 @@ impl EsploraClientBuilder {
             requests: AtomicUsize::new(0),
             waterfalls_encrypted_descriptors: HashMap::new(),
             token_provider: self.token_provider,
+            token: Mutex::new(None),
         })
     }
 }

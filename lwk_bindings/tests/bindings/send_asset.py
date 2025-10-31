@@ -39,6 +39,8 @@ signed_pset = signer.sign(unsigned_pset)
 
 finalized_pset = wollet.finalize(signed_pset)
 tx = finalized_pset.extract_tx()
+fee_rate = 1000 * tx.fee(policy_asset) / tx.discount_vsize()
+assert fee_rate - 100 < 10
 txid = client.broadcast(tx)
 
 wollet.wait_for_tx(txid, client)

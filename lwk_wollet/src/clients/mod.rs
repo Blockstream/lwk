@@ -32,7 +32,7 @@ pub struct EsploraClientBuilder {
     headers: HashMap<String, String>,
     timeout: Option<u8>,
     concurrency: Option<usize>,
-    token: TokenProvider,
+    token_provider: TokenProvider,
 }
 
 /// Provider of a token for authenticated services backend of Esplora and Waterfalls
@@ -64,7 +64,7 @@ impl EsploraClientBuilder {
             headers: HashMap::new(),
             timeout: None,
             concurrency: None,
-            token: TokenProvider::None,
+            token_provider: TokenProvider::None,
         }
     }
 
@@ -113,8 +113,8 @@ impl EsploraClientBuilder {
     }
 
     /// Set the token provider for authenticated services
-    pub fn token(mut self, token: TokenProvider) -> Self {
-        self.token = token;
+    pub fn token_provider(mut self, token: TokenProvider) -> Self {
+        self.token_provider = token;
         self
     }
 }

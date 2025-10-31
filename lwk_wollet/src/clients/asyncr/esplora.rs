@@ -30,6 +30,7 @@ use std::{
     str::FromStr,
     sync::atomic,
 };
+use tokio::sync::Mutex;
 
 // TODO: Perhaps the waterfalls server's MAX_ADDRESSES could be configurable and return
 // the max page size in the response, so we know when we have to request another page
@@ -65,8 +66,7 @@ pub struct EsploraClient {
     requests: AtomicUsize,
 
     /// The token provider
-    #[allow(unused)]
-    token: TokenProvider,
+    token_provider: TokenProvider,
 }
 
 impl EsploraClient {
@@ -765,7 +765,7 @@ impl EsploraClient {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.get(url);
-            let builder = match &self.token {
+            let builder = match &self.token_provider {
                 TokenProvider::None => builder,
                 TokenProvider::Static(token) => {
                     builder.header("Authorization", format!("Bearer {token}"))
@@ -847,7 +847,7 @@ impl EsploraClientBuilder {
             concurrency: self.concurrency.unwrap_or(1),
             requests: AtomicUsize::new(0),
             waterfalls_encrypted_descriptors: HashMap::new(),
-            token: self.token,
+            token_provider: self.token_provider,
         })
     }
 }
@@ -1080,7 +1080,7 @@ mod tests {
             "https://enterprise.staging.blockstream.info/liquid/api",
             ElementsNetwork::Liquid,
         )
-        .token(TokenProvider::Static(token_id))
+        .token_provider(TokenProvider::Static(token_id))
         .build()
         .unwrap();
 
@@ -1091,7 +1091,7 @@ mod tests {
             "https://enterprise.staging.blockstream.info/liquid/api",
             ElementsNetwork::Liquid,
         )
-        .token(TokenProvider::Blockstream {
+        .token_provider(TokenProvider::Blockstream {
             url: staging_login.to_string(),
             client_id: client_id.clone(),
             client_secret: client_secret.clone(),

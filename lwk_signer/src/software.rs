@@ -632,4 +632,24 @@ mod tests {
             SignError::Bip85MnemonicNotAvailable
         ));
     }
+
+    #[test]
+    #[allow(unused)]
+    fn test_snippet() -> Result<(), Box<dyn std::error::Error>> {
+        // ANCHOR: test_bip85_derivation
+        // Load mnemonic
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+        // Create signer
+        let is_mainnet = false;
+        let signer = SwSigner::new(mnemonic, is_mainnet)?;
+
+        // Derive menmonics
+        let derived_0_12 = signer.derive_bip85_mnemonic(0, 12)?;
+        let derived_0_24 = signer.derive_bip85_mnemonic(0, 24)?;
+        let derived_1_12 = signer.derive_bip85_mnemonic(1, 12)?;
+        // ANCHOR_END: test_bip85_derivation
+
+        Ok(())
+    }
 }

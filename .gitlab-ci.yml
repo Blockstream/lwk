@@ -196,6 +196,7 @@ wasm:
     - node network.js
     - node list_transactions.js
     - node amp0.js
+    - node bip85.js
   artifacts:
     paths:
       - lwk_wasm/pkg

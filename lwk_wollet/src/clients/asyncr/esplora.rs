@@ -785,7 +785,7 @@ impl EsploraClient {
                         None => {
                             log::debug!("fetching authentication token");
                             let token =
-                                fetch_oauth_token(&self.client, &url, &client_id, &client_secret)
+                                fetch_oauth_token(&self.client, url, client_id, client_secret)
                                     .await?;
                             *cached_token = Some(token.clone());
                             builder.header("Authorization", format!("Bearer {token}"))
@@ -1089,7 +1089,7 @@ mod tests {
 
         let token_id = fetch_oauth_token(
             &reqwest::Client::new(),
-            &staging_login,
+            staging_login,
             &client_id,
             &client_secret,
         )
@@ -1156,7 +1156,7 @@ mod tests {
                 Wollet::new(ElementsNetwork::Liquid, NoPersist::new(), descriptor).unwrap();
 
             // Perform full scan
-            let update = client.full_scan(&mut wollet).await.unwrap();
+            let update = client.full_scan(&wollet).await.unwrap();
 
             assert!(update.is_some());
             wollet.apply_update(update.unwrap()).unwrap();

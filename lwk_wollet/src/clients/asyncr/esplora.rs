@@ -1131,32 +1131,37 @@ mod tests {
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
         let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-        let mut client = EsploraClientBuilder::new(
-            "https://enterprise.staging.blockstream.info/liquid/api",
-            ElementsNetwork::Liquid,
-        )
-        .token_provider(TokenProvider::Blockstream {
-            url: staging_login.to_string(),
-            client_id: client_id.clone(),
-            client_secret: client_secret.clone(),
-        })
-        .build()
-        .unwrap();
+        for waterfalls in [false, true] {
+            let base_url = if waterfalls {
+                "https://enterprise.staging.blockstream.info/liquid/api/waterfalls"
+            } else {
+                "https://enterprise.staging.blockstream.info/liquid/api"
+            };
+            let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+                .token_provider(TokenProvider::Blockstream {
+                    url: staging_login.to_string(),
+                    client_id: client_id.clone(),
+                    client_secret: client_secret.clone(),
+                })
+                .waterfalls(waterfalls)
+                .build()
+                .unwrap();
 
-        // Get mainnet descriptor from test data
-        let descriptor_str = lwk_test_util::descriptor_pset_usdt_no_contracts();
-        let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
+            // Get mainnet descriptor from test data
+            let descriptor_str = lwk_test_util::descriptor_pset_usdt_no_contracts();
+            let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
 
-        // Create wallet
-        let mut wollet =
-            Wollet::new(ElementsNetwork::Liquid, NoPersist::new(), descriptor).unwrap();
+            // Create wallet
+            let mut wollet =
+                Wollet::new(ElementsNetwork::Liquid, NoPersist::new(), descriptor).unwrap();
 
-        // Perform full scan
-        let update = client.full_scan(&mut wollet).await.unwrap();
+            // Perform full scan
+            let update = client.full_scan(&mut wollet).await.unwrap();
 
-        assert!(update.is_some());
-        wollet.apply_update(update.unwrap()).unwrap();
-        assert!(wollet.transactions().unwrap().len() > 16);
+            assert!(update.is_some());
+            wollet.apply_update(update.unwrap()).unwrap();
+            assert!(wollet.transactions().unwrap().len() > 16);
+        }
     }
 
     #[ignore = "requires internet connection and env vars"]

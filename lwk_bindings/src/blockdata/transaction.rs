@@ -75,6 +75,11 @@ impl Transaction {
         elements::Transaction::serialize(&self.inner)
     }
 
+    /// Returns the "discount virtual size" of this transaction.
+    pub fn discount_vsize(&self) -> u32 {
+        self.inner.discount_vsize() as u32
+    }
+
     /// Return the fee of the transaction in the given asset.
     /// At the moment the only asset that can be used as fee is the policy asset (LBTC for mainnet).
     pub fn fee(&self, policy_asset: &AssetId) -> u64 {

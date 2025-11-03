@@ -15,6 +15,12 @@ impl From<elements::TxIn> for TxIn {
     }
 }
 
+impl AsRef<elements::TxIn> for TxIn {
+    fn as_ref(&self) -> &elements::TxIn {
+        &self.inner
+    }
+}
+
 #[uniffi::export]
 impl TxIn {
     /// Outpoint

@@ -20,8 +20,12 @@ use elements::{
     Script, Txid,
 };
 use elements_miniscript::{ConfidentialDescriptor, DescriptorPublicKey};
+
 #[cfg(target_arch = "wasm32")]
 use futures::lock::Mutex;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::Mutex;
+
 use futures::stream::{iter, StreamExt};
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
@@ -71,10 +75,7 @@ pub struct EsploraClient {
 
     /// The cached token for authenticated services, it will be Some only when
     /// the token provider is `TokenProvider::Blockstream`
-    #[cfg(not(target_arch = "wasm32"))]
-    token: tokio::sync::Mutex<Option<String>>,
-    #[cfg(target_arch = "wasm32")]
-    token: futures::lock::Mutex<Option<String>>,
+    token: Mutex<Option<String>>,
 }
 
 impl EsploraClient {

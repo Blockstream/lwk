@@ -117,14 +117,7 @@ impl EsploraClient {
         // TODO: check that the transaction contains some signatures
 
         let tx_hex = tx.serialize().to_hex();
-        self.requests
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let response = self
-            .client
-            .post(&self.broadcast_url) // TODO: add authorization header
-            .body(tx_hex)
-            .send()
-            .await?;
+        let response = self.post_with_retry(&self.broadcast_url, &tx_hex).await?;
         let text = response.text().await?;
         let txid = elements::Txid::from_str(&text).map_err(|e| {
             crate::Error::Generic(format!(
@@ -774,6 +767,75 @@ impl EsploraClient {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let builder = self.client.get(url);
+            let builder = match &self.token_provider {
+                TokenProvider::None => builder,
+                TokenProvider::Static(token) => {
+                    builder.header("Authorization", format!("Bearer {token}"))
+                }
+                TokenProvider::Blockstream {
+                    url,
+                    client_id,
+                    client_secret,
+                } => {
+                    let mut cached_token = self.token.lock().await;
+                    match cached_token.as_mut() {
+                        Some(token) => builder.header("Authorization", format!("Bearer {token}")),
+                        None => {
+                            log::debug!("fetching authentication token");
+                            let token =
+                                fetch_oauth_token(&self.client, url, client_id, client_secret)
+                                    .await?;
+                            *cached_token = Some(token.clone());
+                            builder.header("Authorization", format!("Bearer {token}"))
+                        }
+                    }
+                }
+            };
+            let response = builder.send().await?;
+
+            let level = if response.status() == 200 {
+                log::Level::Trace
+            } else {
+                log::Level::Info
+            };
+            log::log!(
+                level,
+                "{} status_code:{} - body bytes:{:?}",
+                &url,
+                response.status(),
+                response.content_length(),
+            );
+
+            // 429 Too many requests
+            // 503 Service Temporarily Unavailable
+            if response.status() == 429 || response.status() == 503 {
+                if attempt > 6 {
+                    log::warn!("{url} tried 6 times, failing");
+                    return Err(Error::Generic("Too many retry".to_string()));
+                }
+                let secs = 1 << attempt;
+
+                log::debug!("{url} waiting {secs}");
+
+                async_sleep(secs * 1000).await;
+                attempt += 1;
+            } else if response.status() == 401 {
+                // 401 Unauthorized, the token is expired, so we need to refresh it
+                let mut cached_token = self.token.lock().await;
+                *cached_token = None;
+                attempt += 1;
+            } else {
+                return Ok(response);
+            }
+        }
+    }
+
+    async fn post_with_retry(&self, url: &str, body: &str) -> Result<Response, Error> {
+        let mut attempt = 0;
+        loop {
+            self.requests
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let builder = self.client.post(url).body(body.to_owned());
             let builder = match &self.token_provider {
                 TokenProvider::None => builder,
                 TokenProvider::Static(token) => {

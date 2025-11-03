@@ -33,6 +33,24 @@ txs = wollet.transactions()
 balance = wollet.balance()
 # ANCHOR_END: txs
 
+# ANCHOR: electrum_client
+# Create electrum client with custom URL
+client = ElectrumClient("blockstream.info:995", tls=True, validate_domain=True)
+
+# Or use the default electrum client for the network
+default_client = Network.mainnet().default_electrum_client()
+# ANCHOR_END: electrum_client
+
+# ANCHOR: esplora_client
+url = "https://blockstream.info/liquid/api"
+client = EsploraClient(url, Network.mainnet())
+# ANCHOR_END: esplora_client
+
+# ANCHOR: waterfalls_client
+url = "https://waterfalls.liquidwebwallet.org/liquid/api"
+client = EsploraClient.new_waterfalls(url, Network.mainnet())
+# ANCHOR_END: waterfalls_client
+
 # ANCHOR: client
 url = "https://blockstream.info/liquidtestnet/api"
 client = EsploraClient(url, network)

@@ -8,7 +8,7 @@ async function runBasicsTest() {
 
         // ANCHOR: generate-signer
         if (false) { // ANCHOR: ignore
-        const mnemonic = lwk.Mnemonic.fromRandom(12);
+            const mnemonic = lwk.Mnemonic.fromRandom(12);
         } // ANCHOR: ignore
         // Fixed mnemonic with some funds // ANCHOR: ignore
         const mnemonic = new lwk.Mnemonic("other august catalog large suit off fan hammer ritual sword evil scrub"); // ANCHOR: ignore
@@ -34,10 +34,20 @@ async function runBasicsTest() {
         const balance = wollet.balance();
         // ANCHOR_END: txs
 
+        // ANCHOR: esplora_client
+        const url_esplora = "https://blockstream.info/liquid/api";
+        const esplora_client = new lwk.EsploraClient(lwk.Network.liquid(), url_esplora, true, 4, false);
+        // ANCHOR_END: esplora_client
+
+        // ANCHOR: waterfalls_client
+        const url_waterfalls = "https://waterfalls.liquidwebwallet.org/liquid/api";
+        const waterfalls_client = new lwk.EsploraClient(lwk.Network.liquid(), url_waterfalls, true, 4, false);
+        // ANCHOR_END: waterfalls_client
+
         // ANCHOR: client
-        const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        const url_client = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.EsploraClient(network, url, true, 4, false);
+        const client = new lwk.EsploraClient(network, url_client, true, 4, false);
 
         const update = await client.fullScan(wollet);
         if (update) {
@@ -48,8 +58,8 @@ async function runBasicsTest() {
         // ANCHOR: tx
         const sats = BigInt(1000);
         if (false) { // ANCHOR: ignore
-        const address = new lwk.Address("<address>");
-        const asset = new lwk.AssetId("<asset>");
+            const address = new lwk.Address("<address>");
+            const asset = new lwk.AssetId("<asset>");
         } // ANCHOR: ignore
         const address = wollet.address(null).address(); // ANCHOR: ignore
         const asset = network.policyAsset(); // ANCHOR: ignore

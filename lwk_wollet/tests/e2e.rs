@@ -3755,9 +3755,50 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
 
     let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
 
-    // ANCHOR: client
+    // ANCHOR: electrum_client
+    use lwk_wollet::{ElectrumClient, ElectrumUrl};
+
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true).unwrap();
+    let client = ElectrumClient::new(&electrum_url).unwrap();
+    // ANCHOR_END: electrum_client
+
+    // ANCHOR: esplora_client
     use lwk_wollet::clients::blocking::EsploraClient;
 
+    let esplora_url = "https://blockstream.info/liquid/api";
+    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid).unwrap();
+    // ANCHOR_END: esplora_client
+
+    // ANCHOR: authenticated_esplora_client
+    use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
+    use lwk_wollet::clients::TokenProvider;
+
+    let base_url = "https://enterprise.blockstream.com/liquid/api";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+    log::info!("1");
+
+    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+        .token_provider(TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
+        .build()
+        .unwrap();
+    // ANCHOR_END: authenticated_esplora_client
+
+    log::info!("2");
+    // ANCHOR: waterfalls_client
+    let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
+    let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
+    // ANCHOR_END: waterfalls_client
+    log::info!("3");
+
+    // ANCHOR: client
     // let url = "https://blockstream.info/liquidtestnet/api";
     // let url = "https://blockstream.info/liquid/api";
 

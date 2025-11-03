@@ -29,6 +29,12 @@ impl From<&Contract> for lwk_wollet::Contract {
     }
 }
 
+impl AsRef<lwk_wollet::Contract> for Contract {
+    fn as_ref(&self) -> &lwk_wollet::Contract {
+        &self.inner
+    }
+}
+
 impl std::fmt::Display for Contract {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let json = serde_json::to_string(&self.inner).expect("contain simple types");

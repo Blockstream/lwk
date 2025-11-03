@@ -41,6 +41,10 @@ txid = client.broadcast(tx)
 asset_id = signed_pset.inputs()[0].issuance_asset()
 token_id = signed_pset.inputs()[0].issuance_token()
 
+txin = tx.inputs()[0]
+assert derive_asset_id(txin, contract) == asset_id
+assert derive_token_id(txin, contract) == token_id
+
 issuance = unsigned_pset.inputs()[0].issuance()
 assert issuance.asset() == asset_id
 assert issuance.token() == token_id

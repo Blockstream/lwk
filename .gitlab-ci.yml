@@ -242,5 +242,5 @@ publish_to_maven:
       - lwk_bindings/android_bindings/lib/build/publications
     when: always
     expire_in: 7 days
-  allow_failure: false
+  allow_failure: true
 

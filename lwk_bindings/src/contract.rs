@@ -74,3 +74,10 @@ pub fn derive_asset_id(txin: &TxIn, contract: &Contract) -> Result<AssetId, LwkE
     let (asset_id, _token_id) = lwk_wollet::asset_ids(txin.as_ref(), contract.as_ref())?;
     Ok(asset_id.into())
 }
+
+/// Derive token id from contract and transaction input
+#[uniffi::export]
+pub fn derive_token_id(txin: &TxIn, contract: &Contract) -> Result<AssetId, LwkError> {
+    let (_asset_id, token_id) = lwk_wollet::asset_ids(txin.as_ref(), contract.as_ref())?;
+    Ok(token_id.into())
+}

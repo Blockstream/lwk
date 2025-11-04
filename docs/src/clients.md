@@ -33,7 +33,6 @@ The Electrum protocol is the most widely used light-client syncing mechanism for
 - **Platform support:** Desktop, mobile, and server applications
 - **Browser support:** ❌ No (TCP not available in browsers)
 - **Default servers:** Blockstream public Electrum servers
-- **Custom servers:** Can specify your own server URLs
 
 This client is recommended for desktop, mobile, and server applications where interoperability is critical. By default, Blockstream public Electrum servers are used, but you can also specify custom URLs for private or local deployments.
 

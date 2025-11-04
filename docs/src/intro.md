@@ -57,7 +57,7 @@ This simple example highlights the core responsibilities of each LWK component:
 * **Client** 🌐: Fetch blockchain data from the Liquid Network to update the `wollet`.
 
 ## Key Features
-LWK allows to build more complex applications and prodcuts by leveraging its wide range of features:
+LWK allows to build more complex applications and products by leveraging its wide range of features:
 * [x] Send and receive LBTC
 * [x] Send and receive Liquid Issued Assets (e.g. USDT)
 * [x] Send and receive AMP assets (e.g. BMN)

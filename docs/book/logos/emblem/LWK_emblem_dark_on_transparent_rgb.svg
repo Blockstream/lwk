@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 2000 2000">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #14909c;
+      }
+
+      .cls-3 {
+        fill: #22e1c9;
+      }
+
+      .cls-4 {
+        fill: #0d1437;
+      }
+
+      .cls-5 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <clipPath id="clippath">
+      <path class="cls-1" d="M1582.6,1251.9v-503.7c0-52.3-27.9-100.6-73.2-126.8l-436.2-251.9c-45.3-26.1-101.1-26.1-146.4,0l-436.2,251.9c-45.3,26.1-73.2,74.5-73.2,126.8v503.7c0,52.3,27.9,100.6,73.2,126.8l436.2,251.9c45.3,26.1,101.1,26.1,146.4,0l436.2-251.9c45.3-26.1,73.2-74.5,73.2-126.8h0Z"/>
+    </clipPath>
+  </defs>
+  <!-- Generator: Adobe Illustrator 28.6.0, SVG Export Plug-In . SVG Version: 1.2.0 Build 709)  -->
+  <g>
+    <g id="Layer_1">
+      <g id="Layer_1-2" data-name="Layer_1">
+        <g class="cls-5">
+          <g>
+            <polygon class="cls-2" points="417.4 663.6 417.4 915.3 784.9 1125.8 782 1546.9 1000 1672.7 1004.6 1000 417.4 663.6"/>
+            <polygon class="cls-2" points="417.4 1028.2 686.3 1182.3 684.2 1490.4 417.4 1336.3 417.4 1028.2"/>
+            <polygon class="cls-3" points="1220.4 874.4 1004.6 1000 1000 1672.7 1582.6 1336.4 1582.6 1087.9 1217.6 1298.7 1220.4 874.4"/>
+            <polygon class="cls-3" points="1582.6 663.6 1582.6 974.2 1315.5 1128.3 1317.6 817.8 1582.6 663.6"/>
+            <polygon class="cls-4" points="852.5 663.6 1217.6 452.9 1000 327.3 417.4 663.6 1004.6 1000 1220.4 874.4 852.5 663.6"/>
+            <polygon class="cls-4" points="1048.5 663.6 1315.5 509.4 1582.6 663.6 1317.6 817.8 1048.5 663.6"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

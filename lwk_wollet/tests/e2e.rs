@@ -3773,7 +3773,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
     use lwk_wollet::clients::TokenProvider;
 
-    let base_url = "https://enterprise.blockstream.com/liquid/api";
+    let base_url = "https://enterprise.blockstream.info/liquid/api";
     let client_id = "your_client_id";
     let client_secret = "your_client_secret";
     let login_url =

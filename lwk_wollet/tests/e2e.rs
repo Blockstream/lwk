@@ -3758,15 +3758,15 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR: electrum_client
     use lwk_wollet::{ElectrumClient, ElectrumUrl};
 
-    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true).unwrap();
-    let client = ElectrumClient::new(&electrum_url).unwrap();
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
+    let client = ElectrumClient::new(&electrum_url)?;
     // ANCHOR_END: electrum_client
 
     // ANCHOR: esplora_client
     use lwk_wollet::clients::blocking::EsploraClient;
 
     let esplora_url = "https://blockstream.info/liquid/api";
-    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid).unwrap();
+    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
     // ANCHOR_END: esplora_client
 
     // ANCHOR: authenticated_esplora_client
@@ -3785,8 +3785,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
             client_id: client_id.to_string(),
             client_secret: client_secret.to_string(),
         })
-        .build()
-        .unwrap();
+        .build()?;
     // ANCHOR_END: authenticated_esplora_client
 
     // ANCHOR: waterfalls_client

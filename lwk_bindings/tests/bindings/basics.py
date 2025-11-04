@@ -33,6 +33,7 @@ txs = wollet.transactions()
 balance = wollet.balance()
 # ANCHOR_END: txs
 
+# TODO: moves example code related to clients.md to a separate file `clients.py`.
 # ANCHOR: electrum_client
 # Create electrum client with custom URL
 client = ElectrumClient("blockstream.info:995", tls=True, validate_domain=True)

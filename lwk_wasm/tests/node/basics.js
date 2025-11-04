@@ -34,6 +34,7 @@ async function runBasicsTest() {
         const balance = wollet.balance();
         // ANCHOR_END: txs
 
+        // TODO: moves example code related to clients.md to a separate file `clients.js`.
         // ANCHOR: esplora_client
         const url_esplora = "https://blockstream.info/liquid/api";
         const esplora_client = new lwk.EsploraClient(lwk.Network.liquid(), url_esplora, true, 4, false);
@@ -45,9 +46,9 @@ async function runBasicsTest() {
         // ANCHOR_END: waterfalls_client
 
         // ANCHOR: client
-        const url_client = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
+        const url = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
         // TODO: name variables // ANCHOR: ignore
-        const client = new lwk.EsploraClient(network, url_client, true, 4, false);
+        const client = new lwk.EsploraClient(network, url, true, 4, false);
 
         const update = await client.fullScan(wollet);
         if (update) {

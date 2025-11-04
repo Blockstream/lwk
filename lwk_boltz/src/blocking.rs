@@ -15,8 +15,8 @@ use crate::{
     SwapStatus,
 };
 
-pub struct LightningSession {
-    inner: super::LightningSession,
+pub struct BoltzSession {
+    inner: super::BoltzSession,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -30,7 +30,7 @@ pub struct InvoiceResponse {
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
-impl LightningSession {
+impl BoltzSession {
     pub fn new(
         network: ElementsNetwork,
         client: AnyClient,
@@ -39,9 +39,8 @@ impl LightningSession {
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let inner = runtime.block_on(super::LightningSession::new(
-            network, client, timeout, mnemonic,
-        ))?;
+        let inner =
+            runtime.block_on(super::BoltzSession::new(network, client, timeout, mnemonic))?;
         Ok(Self { inner, runtime })
     }
 

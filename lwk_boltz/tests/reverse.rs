@@ -19,7 +19,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        InvoiceData, LightningSession,
+        BoltzSession, InvoiceData,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -28,7 +28,7 @@ mod tests {
     async fn test_session_create_invoice_mainnet() {
         let _ = env_logger::try_init();
         let network = ElementsNetwork::Liquid;
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             network,
             AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
@@ -90,7 +90,7 @@ mod tests {
             network,
         )
         .unwrap();
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             network,
             AnyClient::Electrum(Arc::new(client)),
             Some(TIMEOUT),
@@ -136,7 +136,7 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             network,
             AnyClient::Electrum(Arc::new(client)),
             Some(TIMEOUT),
@@ -179,7 +179,7 @@ mod tests {
             .unwrap(),
         );
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
@@ -197,7 +197,7 @@ mod tests {
         let serialized_data = invoice_response.serialize().unwrap();
         drop(invoice_response);
         drop(session);
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
@@ -224,7 +224,7 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             network,
             AnyClient::Electrum(Arc::new(client)),
             Some(TIMEOUT),

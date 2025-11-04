@@ -33,7 +33,7 @@ mod lightning;
 #[cfg(feature = "lightning")]
 pub use invoice::{Bolt11Invoice, LightningPayment};
 #[cfg(feature = "lightning")]
-pub use lightning::{LightningSession, LogLevel, Logging, LoggingLink};
+pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;

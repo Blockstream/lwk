@@ -16,7 +16,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        LightningPayment, LightningSession, PreparePayData,
+        BoltzSession, LightningPayment, PreparePayData,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -27,7 +27,7 @@ mod tests {
 
         let network = ElementsNetwork::Liquid;
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             network,
             AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
@@ -99,7 +99,7 @@ mod tests {
             .unwrap(),
         );
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
@@ -171,7 +171,7 @@ mod tests {
             .unwrap(),
         );
 
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
@@ -191,7 +191,7 @@ mod tests {
         let serialized_data = prepare_pay_response.serialize().unwrap();
         drop(prepare_pay_response);
         drop(session);
-        let session = LightningSession::new(
+        let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),

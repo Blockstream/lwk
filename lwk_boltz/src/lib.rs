@@ -55,7 +55,7 @@ pub use boltz_client::boltz::SwapRestoreType as SwapType;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 
-pub struct LightningSession {
+pub struct BoltzSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
@@ -69,7 +69,7 @@ pub struct LightningSession {
     next_index_to_use: AtomicU32,
 }
 
-impl LightningSession {
+impl BoltzSession {
     /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
     ///
     /// Accept a `timeout` parameter to set the timeout for the Boltz API and WebSocket connection.

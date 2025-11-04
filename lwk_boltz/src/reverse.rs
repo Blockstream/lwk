@@ -34,7 +34,7 @@ use crate::error::Error;
 use crate::invoice_data::InvoiceData;
 use crate::swap_state::SwapStateTrait;
 use crate::SwapType;
-use crate::{broadcast_tx_with_retry, next_status, LightningSession, SwapState};
+use crate::{broadcast_tx_with_retry, next_status, BoltzSession, SwapState};
 
 pub struct InvoiceResponse {
     pub data: InvoiceData,
@@ -47,7 +47,7 @@ pub struct InvoiceResponse {
     claim_broadcasted: bool,
 }
 
-impl LightningSession {
+impl BoltzSession {
     pub async fn invoice(
         &self,
         amount: u64,
@@ -151,7 +151,7 @@ impl LightningSession {
         })
     }
 
-    /// From the swaps returned by the boltz api via [`LightningSession::fetch_swaps`]:
+    /// From the swaps returned by the boltz api via [`BoltzSession::fetch_swaps`]:
     ///
     /// - filter the reverse swaps that can be restored
     /// - Add the private information from the session needed to restore the swap
@@ -300,11 +300,9 @@ impl InvoiceResponse {
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {
         Bolt11Invoice::from_str(self.data.create_reverse_response.invoice.as_ref().expect(
-            "Invoice must be present or we would have errored on the LightningSession::invoice",
+            "Invoice must be present or we would have errored on the BoltzSession::invoice",
         ))
-        .expect(
-            "Invoice must be parsable or we would have errored on the LightningSession::invoice",
-        )
+        .expect("Invoice must be parsable or we would have errored on the BoltzSession::invoice")
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

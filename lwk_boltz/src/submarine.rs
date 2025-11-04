@@ -21,7 +21,7 @@ use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
 use crate::swap_state::SwapStateTrait;
 use crate::{
-    broadcast_tx_with_retry, next_status, LightningPayment, LightningSession, SwapState, SwapType,
+    broadcast_tx_with_retry, next_status, BoltzSession, LightningPayment, SwapState, SwapType,
     WAIT_TIME,
 };
 
@@ -35,7 +35,7 @@ pub struct PreparePayResponse {
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
 }
 
-impl LightningSession {
+impl BoltzSession {
     pub async fn prepare_pay(
         &self,
         lightning_payment: &LightningPayment,
@@ -168,7 +168,7 @@ impl LightningSession {
         })
     }
 
-    /// From the swaps returned by the boltz api via [`LightningSession::fetch_swaps`]:
+    /// From the swaps returned by the boltz api via [`BoltzSession::fetch_swaps`]:
     ///
     /// - filter the submarine swaps that can be restored
     /// - Add the private information from the session needed to restore the swap

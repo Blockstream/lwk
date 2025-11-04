@@ -24,9 +24,9 @@ print(claim_address)
 # Create a lightning session with custom logging
 logger = MyLogger()
 mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
-lightning_session = LightningSession(network=network, client=client, timeout=10, logging=logger, mnemonic=mnemonic_lightning)
+boltz_session = BoltzSession(network=network, client=client, timeout=10, logging=logger, mnemonic=mnemonic_lightning)
 
-invoice_response = lightning_session.invoice(amount=1000, description="ciao", claim_address=claim_address, webhook=None)
+invoice_response = boltz_session.invoice(amount=1000, description="ciao", claim_address=claim_address, webhook=None)
 bolt11_invoice_obj = invoice_response.bolt11_invoice()
 bolt11_invoice = str(bolt11_invoice_obj)
 print(bolt11_invoice)
@@ -40,7 +40,7 @@ assert bolt11_invoice.startswith("lnbc1")
 try:
     refund_address = wollet.address(3).address()
     lightning_payment = LightningPayment.from_bolt11_invoice(bolt11_invoice_obj)
-    prepare_pay_response = lightning_session.prepare_pay(lightning_payment, refund_address, None) # optionally accept a WebHook("https://example.com/webhook")
+    prepare_pay_response = boltz_session.prepare_pay(lightning_payment, refund_address, None) # optionally accept a WebHook("https://example.com/webhook")
 except LwkError.MagicRoutingHint as e:
     # Handle the specific MagicRoutingHint error
     print(f"Magic routing hint detected!")

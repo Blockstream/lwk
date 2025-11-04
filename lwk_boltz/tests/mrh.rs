@@ -12,7 +12,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        Error, LightningSession,
+        BoltzSession, Error,
     };
     use lwk_wollet::{elements, ElementsNetwork};
 
@@ -29,8 +29,8 @@ mod tests {
         let client =
             Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
-        // Receiver: Create a LightningSession and generate an invoice with MRH
-        let receiver_session = LightningSession::new(
+        // Receiver: Create a BoltzSession and generate an invoice with MRH
+        let receiver_session = BoltzSession::new(
             network,
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
@@ -102,7 +102,7 @@ mod tests {
         // TODO complete the payment from a sender that detects the MRH and pays directly to the MRH address
 
         // Sender: Detect MRH in the invoice
-        let sender_session = LightningSession::new(
+        let sender_session = BoltzSession::new(
             network,
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),

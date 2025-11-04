@@ -81,8 +81,8 @@ impl log::Log for LoggingBridge {
 ///
 /// Lightning payments are done via LBTC swaps using Boltz.
 #[derive(uniffi::Object)]
-pub struct LightningSession {
-    inner: lwk_boltz::blocking::LightningSession,
+pub struct BoltzSession {
+    inner: lwk_boltz::blocking::BoltzSession,
     #[allow(dead_code)]
     logging: Option<Arc<dyn Logging>>,
 }
@@ -144,7 +144,7 @@ impl AnyClient {
 }
 
 #[uniffi::export]
-impl LightningSession {
+impl BoltzSession {
     /// Create the lightning session
     ///
     /// If a `logging` implementation is provided, it will be set as the global logger
@@ -199,7 +199,7 @@ impl LightningSession {
             }
         };
 
-        let inner = lwk_boltz::blocking::LightningSession::new(
+        let inner = lwk_boltz::blocking::BoltzSession::new(
             network_value,
             client,
             timeout.map(Duration::from_secs),

@@ -1,6 +1,6 @@
 # Blockchain Clients
 
-LWK supports different ways to retrieve wallet data from the blockchain:
+LWK supports different ways to retrieve wallet data from the Liquid blockchain:
 
 - **Electrum** - TCP-based protocol, widely supported
 - **Esplora** - HTTP-based REST API, browser-compatible
@@ -16,12 +16,11 @@ It's also possible to connect to authenticated backends for enterprise deploymen
 | **Protocol** | TCP | HTTP/HTTPS | HTTP/HTTPS |
 | **Browser Support** | ❌ No | ✅ Yes | ✅ Yes |
 | **Mobile Support** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Sync Speed** | ⚡ Fast | 🐢 Slower | 🚀 Fastest |
-| **Roundtrips** | Minimal | Many | Few |
+| **Sync Speed** | 🏃 Average | 🐢 Slower | 🚀 Fastest |
+| **Roundtrips** | Many but batched | Many | Few |
 | **Async Support** | ❌ No | ✅ Yes | ✅ Yes |
 | **Authentication** | ❌ No | ✅ OAuth2 | 🔜 Planned |
 | **Maturity** | ⭐⭐⭐ Mature | ⭐⭐⭐ Mature | ⭐⭐ New |
-| **Best For** | Native Apps | Web Apps | Web Apps (Performance) |
 
 ## Electrum
 
@@ -29,14 +28,14 @@ The Electrum protocol is the most widely used light-client syncing mechanism for
 
 **Key characteristics:**
 - **Protocol:** TCP-based
-- **Performance:** Fast and efficient, minimal roundtrips
+- **Performance:** Good
 - **Availability:** Only blocking variant
 - **Platform support:** Desktop, mobile, and server applications
 - **Browser support:** ❌ No (TCP not available in browsers)
 - **Default servers:** Blockstream public Electrum servers
 - **Custom servers:** Can specify your own server URLs
 
-This client is recommended for desktop, mobile, and server applications where performance is critical. By default, Blockstream public Electrum servers are used, but you can also specify custom URLs for private or local deployments.
+This client is recommended for desktop, mobile, and server applications where interoperability is critical. By default, Blockstream public Electrum servers are used, but you can also specify custom URLs for private or local deployments.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

@@ -3779,8 +3779,6 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
-    log::info!("1");
-
     let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
         .token_provider(TokenProvider::Blockstream {
             url: login_url.to_string(),
@@ -3791,12 +3789,10 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     // ANCHOR_END: authenticated_esplora_client
 
-    log::info!("2");
     // ANCHOR: waterfalls_client
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
     let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
     // ANCHOR_END: waterfalls_client
-    log::info!("3");
 
     // ANCHOR: client
     // let url = "https://blockstream.info/liquidtestnet/api";

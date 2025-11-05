@@ -158,7 +158,7 @@ impl BoltzSession {
         })
     }
 
-    /// From the swaps returned by the boltz api via [`BoltzSession::fetch_swaps`]:
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
     ///
     /// - filter the reverse swaps that can be restored
     /// - Add the private information from the session needed to restore the swap

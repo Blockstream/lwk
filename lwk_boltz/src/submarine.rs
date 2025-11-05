@@ -12,10 +12,9 @@ use boltz_client::fees::Fee;
 use boltz_client::swaps::magic_routing::check_for_mrh;
 use boltz_client::swaps::{ChainClient, SwapScript, SwapTransactionParams};
 use boltz_client::util::sleep;
-use boltz_client::{PublicKey, Secp256k1};
+use boltz_client::PublicKey;
 use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
 use lwk_wollet::elements;
-use lwk_wollet::secp256k1::All;
 
 use crate::error::Error;
 use crate::prepare_pay_data::PreparePayData;
@@ -187,7 +186,6 @@ impl BoltzSession {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,
                     &self.mnemonic,
-                    &self.secp,
                     &refund_address.to_string(),
                 )
             })
@@ -198,7 +196,6 @@ impl BoltzSession {
 pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
     refund_address: &str,
 ) -> Result<PreparePayData, Error> {
     // Only handle submarine swaps for now
@@ -218,7 +215,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     })?;
 
     // Derive the keypair from the mnemonic at the key_index
-    let our_keys = crate::derive_keypair(refund_details.key_index, mnemonic, secp)?;
+    let our_keys = crate::derive_keypair(refund_details.key_index, mnemonic)?;
 
     // Parse the server public key
     let claim_public_key_bitcoin = BitcoinPublicKey::from_str(&refund_details.server_public_key)

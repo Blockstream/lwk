@@ -23,11 +23,9 @@ use boltz_client::util::secrets::Preimage;
 use boltz_client::Bolt11Invoice;
 use boltz_client::Keypair;
 use boltz_client::PublicKey;
-use boltz_client::Secp256k1;
 use lwk_wollet::elements;
 use lwk_wollet::hashes::sha256;
 use lwk_wollet::hashes::Hash;
-use lwk_wollet::secp256k1::All;
 
 use crate::derive_keypair;
 use crate::error::Error;
@@ -122,7 +120,7 @@ impl BoltzSession {
                 preimage,
                 claim_address: claim_address.clone(),
                 key_index,
-                mnemonic_identifier: mnemonic_identifier(&self.mnemonic, &self.secp)?,
+                mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
             },
             rx,
             swap_script,
@@ -136,7 +134,7 @@ impl BoltzSession {
         &self,
         data: InvoiceDataSerializable,
     ) -> Result<InvoiceResponse, Error> {
-        let data = to_invoice_data(data, &self.mnemonic, &self.secp)?;
+        let data = to_invoice_data(data, &self.mnemonic)?;
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::reverse_from_swap_resp(
             self.chain(),
@@ -176,12 +174,7 @@ impl BoltzSession {
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
             .filter(|e| e.status != "swap.expired" && e.status != "invoice.settled")
             .map(|e| {
-                convert_swap_restore_response_to_invoice_data(
-                    e,
-                    &self.mnemonic,
-                    &self.secp,
-                    claim_address,
-                )
+                convert_swap_restore_response_to_invoice_data(e, &self.mnemonic, claim_address)
             })
             .collect()
     }
@@ -190,7 +183,6 @@ impl BoltzSession {
 pub(crate) fn convert_swap_restore_response_to_invoice_data(
     e: &boltz_client::boltz::SwapRestoreResponse,
     mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
     claim_address: &elements::Address,
 ) -> Result<InvoiceData, Error> {
     // Only handle reverse swaps for now
@@ -210,7 +202,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     })?;
 
     // Derive the keypair from the mnemonic at the key_index
-    let our_keys = derive_keypair(claim_details.key_index, mnemonic, secp)?;
+    let our_keys = derive_keypair(claim_details.key_index, mnemonic)?;
 
     let preimage = preimage_from_keypair(&our_keys)?;
 
@@ -253,7 +245,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         preimage,
         claim_address: claim_address.clone(),
         key_index: claim_details.key_index,
-        mnemonic_identifier: mnemonic_identifier(mnemonic, secp)?,
+        mnemonic_identifier: mnemonic_identifier(mnemonic)?,
     })
 }
 

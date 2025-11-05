@@ -30,14 +30,12 @@ use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
 use boltz_client::util::sleep;
 use boltz_client::Keypair;
-use boltz_client::Secp256k1;
 use lightning::bitcoin::XKeyIdentifier;
 use lwk_wollet::bitcoin::bip32::ChildNumber;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
-use lwk_wollet::secp256k1::All;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +62,6 @@ pub struct BoltzSession {
     chain_client: Arc<ChainClient>,
     liquid_chain: LiquidChain,
     timeout: Duration,
-    secp: Secp256k1<All>,
 
     #[allow(dead_code)]
     mnemonic: Mnemonic,
@@ -93,11 +90,10 @@ impl BoltzSession {
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
         tokio::spawn(future); // TODO handle wasm
-        let secp = Secp256k1::new();
 
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => (
-                fetch_next_index_to_use(&mnemonic, &secp, network_kind(liquid_chain), &api).await?,
+                fetch_next_index_to_use(&mnemonic, network_kind(liquid_chain), &api).await?,
                 mnemonic,
             ),
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
@@ -110,7 +106,6 @@ impl BoltzSession {
             chain_client,
             liquid_chain,
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
-            secp,
         })
     }
 
@@ -124,7 +119,7 @@ impl BoltzSession {
 
     fn derive_next_keypair(&self) -> Result<(u32, Keypair), Error> {
         let index = self.next_index_to_use.fetch_add(1, Ordering::Relaxed);
-        let keypair = derive_keypair(index, &self.mnemonic, &self.secp)?;
+        let keypair = derive_keypair(index, &self.mnemonic)?;
         Ok((index, keypair))
     }
 
@@ -143,8 +138,7 @@ impl BoltzSession {
     /// This is useful as a swap list but can also be used to restore non-completed swaps that have not
     /// being persisted or that have been lost. TODO: use fn xxx
     pub async fn swap_restore(&self) -> Result<Vec<SwapRestoreResponse>, Error> {
-        let xpub =
-            derive_xpub_from_mnemonic(&self.mnemonic, &self.secp, network_kind(self.liquid_chain))?;
+        let xpub = derive_xpub_from_mnemonic(&self.mnemonic, network_kind(self.liquid_chain))?;
         let result = self.api.post_swap_restore(&xpub.to_string()).await?;
         Ok(result)
     }
@@ -172,22 +166,18 @@ fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {
     }
 }
 
-pub(crate) fn mnemonic_identifier(
-    mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
-) -> Result<XKeyIdentifier, Error> {
+pub(crate) fn mnemonic_identifier(mnemonic: &Mnemonic) -> Result<XKeyIdentifier, Error> {
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?;
-    Ok(xpriv.identifier(secp))
+    Ok(xpriv.identifier(&lwk_wollet::EC))
 }
 
 async fn fetch_next_index_to_use(
     mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
     network_kind: NetworkKind,
     client: &BoltzApiClientV2,
 ) -> Result<u32, Error> {
-    let xpub = derive_xpub_from_mnemonic(mnemonic, secp, network_kind)?;
+    let xpub = derive_xpub_from_mnemonic(mnemonic, network_kind)?;
     log::info!("xpub for restore is: {}", xpub);
 
     let result = client.post_swap_restore(&xpub.to_string()).await?;
@@ -232,14 +222,13 @@ pub fn liquid_chain_to_elements_network(chain: LiquidChain) -> ElementsNetwork {
 /// Derive the master xpub from a mnemonic
 fn derive_xpub_from_mnemonic(
     mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
     network_kind: NetworkKind,
 ) -> Result<Xpub, Error> {
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(network_kind, &seed[..])?;
     let derivation_path = DerivationPath::master();
-    let derived = xpriv.derive_priv(secp, &derivation_path)?;
-    Ok(Xpub::from_priv(secp, &derived))
+    let derived = xpriv.derive_priv(&lwk_wollet::EC, &derivation_path)?;
+    Ok(Xpub::from_priv(&lwk_wollet::EC, &derived))
 }
 
 pub fn boltz_default_url(network: ElementsNetwork) -> &'static str {
@@ -293,11 +282,7 @@ pub async fn next_status(
 /// Derive a keypair from a mnemonic and index using the Boltz derivation path
 ///
 /// This derivation path is a constant for Boltz, by using this we are compatible with the web app and can use the same rescue file
-fn derive_keypair(
-    index: u32,
-    mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
-) -> Result<Keypair, Error> {
+fn derive_keypair(index: u32, mnemonic: &Mnemonic) -> Result<Keypair, Error> {
     // Boltz derivation path: m/44/0/0/0/{index}
     let derivation_path = DerivationPath::from(vec![
         ChildNumber::from_normal_idx(44)?,
@@ -309,9 +294,9 @@ fn derive_keypair(
 
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?; // the network is ininfluent since we don't use the extended key version
-    let derived = xpriv.derive_priv(secp, &derivation_path)?;
+    let derived = xpriv.derive_priv(&lwk_wollet::EC, &derivation_path)?;
     log::info!("derive_next_keypair with index: {index}");
-    let keypair = Keypair::from_seckey_slice(secp, &derived.private_key.secret_bytes())?;
+    let keypair = Keypair::from_seckey_slice(&lwk_wollet::EC, &derived.private_key.secret_bytes())?;
     Ok(keypair)
 }
 
@@ -339,7 +324,6 @@ mod tests {
     use std::str::FromStr;
 
     use bip39::Mnemonic;
-    use boltz_client::Secp256k1;
     use lightning::offers::offer::Offer;
     use lwk_wollet::bitcoin::NetworkKind;
 
@@ -370,9 +354,8 @@ mod tests {
         let expected_xpub = "xpub661MyMwAqRbcGprhd8RLPkaDpHxrJxiSWUUibirDPMnsvmUTW3djk2S3wsaz21ASEdw4uXQAypXA4CZ9u5EhCnXtLgfwck5PwXNRgvcaDUm";
 
         let mnemonic: Mnemonic = mnemonic.parse().unwrap();
-        let secp = Secp256k1::new();
         let network_kind = NetworkKind::Main;
-        let xpub = derive_xpub_from_mnemonic(&mnemonic, &secp, network_kind).unwrap();
+        let xpub = derive_xpub_from_mnemonic(&mnemonic, network_kind).unwrap();
         assert_eq!(xpub.to_string(), expected_xpub);
     }
 
@@ -384,9 +367,8 @@ mod tests {
             "0315a98cf1610e96ca92505c6e9536a208353399685440869dca58947a909d07ed";
 
         let mnemonic: Mnemonic = mnemonic.parse().unwrap();
-        let secp = Secp256k1::new();
         let index = 0;
-        let keypair = crate::derive_keypair(index, &mnemonic, &secp).unwrap();
+        let keypair = crate::derive_keypair(index, &mnemonic).unwrap();
         assert_eq!(keypair.public_key().to_string(), expected_keypair_pubkey);
     }
 

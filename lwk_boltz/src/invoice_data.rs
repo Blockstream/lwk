@@ -2,10 +2,8 @@ use bip39::Mnemonic;
 use boltz_client::boltz::CreateReverseResponse;
 use boltz_client::util::secrets::Preimage;
 use boltz_client::Keypair;
-use boltz_client::Secp256k1;
 use lightning::bitcoin::XKeyIdentifier;
 use lwk_wollet::elements;
-use lwk_wollet::secp256k1::All;
 use serde::{Deserialize, Serialize};
 
 use crate::derive_keypair;
@@ -47,11 +45,10 @@ pub struct InvoiceDataSerializable {
 pub fn to_invoice_data(
     i: InvoiceDataSerializable,
     mnemonic: &Mnemonic,
-    secp: &Secp256k1<All>,
 ) -> Result<InvoiceData, Error> {
-    let our_keys = derive_keypair(i.key_index, mnemonic, secp)?;
+    let our_keys = derive_keypair(i.key_index, mnemonic)?;
     let preimage = preimage_from_keypair(&our_keys)?;
-    let identifier = mnemonic_identifier(mnemonic, secp)?;
+    let identifier = mnemonic_identifier(mnemonic)?;
     if identifier != i.mnemonic_identifier {
         return Err(Error::MnemonicIdentifierMismatch(
             identifier,
@@ -96,7 +93,6 @@ mod tests {
 
     #[test]
     fn test_invoice_data_serializable() {
-        let secp = Secp256k1::new();
         let expected_serialized = include_str!("../tests/data/invoice_data_serializable.json");
         // Deserialize the JSON into InvoiceData
         let deserialized: InvoiceDataSerializable =
@@ -106,12 +102,12 @@ mod tests {
             "damp cart merit asset obvious idea chef traffic absent armed road link",
         )
         .unwrap();
-        let identifier = mnemonic_identifier(&mnemonic, &secp).unwrap();
+        let identifier = mnemonic_identifier(&mnemonic).unwrap();
         assert_eq!(
             identifier.to_string(),
             "e92cd0870c080a91a063345362b7e76d4ad3a4b4"
         );
-        let invoice_data = to_invoice_data(deserialized, &mnemonic, &secp).unwrap();
+        let invoice_data = to_invoice_data(deserialized, &mnemonic).unwrap();
 
         assert_eq!(
             invoice_data.our_keys.secret_bytes().to_hex(),

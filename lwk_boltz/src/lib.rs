@@ -43,7 +43,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::clients::AnyClient;
 pub use crate::error::Error;
+pub use crate::invoice_data::to_invoice_data;
 pub use crate::invoice_data::InvoiceData;
+pub use crate::invoice_data::InvoiceDataSerializable;
 pub use crate::lightning_payment::LightningPayment;
 pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::reverse::InvoiceResponse;
@@ -176,7 +178,7 @@ pub(crate) fn mnemonic_identifier(
 ) -> Result<XKeyIdentifier, Error> {
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?;
-    Ok(xpriv.identifier(&secp))
+    Ok(xpriv.identifier(secp))
 }
 
 async fn fetch_next_index_to_use(

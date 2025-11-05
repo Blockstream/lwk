@@ -10,7 +10,7 @@ use crate::{
     Network,
 };
 use log::{Level, Metadata, Record};
-use lwk_boltz::{InvoiceData, PreparePayData, RevSwapStates, SubSwapStates};
+use lwk_boltz::{InvoiceDataSerializable, PreparePayData, RevSwapStates, SubSwapStates};
 use std::fmt;
 
 /// Log level for logging messages
@@ -272,7 +272,7 @@ impl BoltzSession {
 
     /// Restore an invoice flow from its serialized data see `InvoiceResponse::serialize`
     pub fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, LwkError> {
-        let data = InvoiceData::deserialize(data)?;
+        let data: InvoiceDataSerializable = serde_json::from_str(data)?;
         let response = self.inner.restore_invoice(data)?;
         Ok(InvoiceResponse {
             inner: Mutex::new(Some(response)),
@@ -308,7 +308,7 @@ impl BoltzSession {
             .restorable_reverse_swaps(&swap_list.inner, claim_address.as_ref())?;
         let data = response
             .into_iter()
-            .map(|e| self.inner.restore_invoice(e))
+            .map(|e| self.inner.restore_invoice(e.into()))
             .map(|e| e.and_then(|e| e.serialize()))
             .collect::<Result<Vec<_>, _>>()?;
 

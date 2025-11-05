@@ -21,7 +21,7 @@
         "onchainAmount": 99723,
         "blindingKey": "c0c48a5b566e5646a5b97158ac7e9d7bab0fb0c98fe3861d0886616c19e5de13"
     },
-    "secret_key": "0de6ea7ede6eaca734996e158e2153cdbc2694f4e81b143378e72a3c40dc2917",
-    "preimage": "2400379bf911093bc99d369c3bac629ffd0d403bcbb26e91100767f10e667590",
-    "claim_address": "el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e"
+    "key_index": 0,
+    "claim_address": "el1qqd3yqxz9gu9r8stv5vrhzjaa6d9ks4elkxr92fxp3pxy5m43jjk6h672z708ucn50638ahpc0unxa92uu39h5vypvwzft9r5e",
+    "mnemonic_identifier": "e92cd0870c080a91a063345362b7e76d4ad3a4b4"
 }

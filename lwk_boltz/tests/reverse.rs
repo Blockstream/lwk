@@ -6,6 +6,7 @@ mod tests {
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
     use std::{env, str::FromStr, sync::Arc};
 
+    use bip39::Mnemonic;
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateReverseRequest, BOLTZ_REGTEST},
         fees::Fee,
@@ -19,7 +20,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession, InvoiceData,
+        BoltzSession, InvoiceDataSerializable,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -178,12 +179,16 @@ mod tests {
             )
             .unwrap(),
         );
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
 
         let session = BoltzSession::new(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
-            None,
+            Some(mnemonic.clone()),
         )
         .await
         .unwrap();
@@ -201,11 +206,11 @@ mod tests {
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
-            None,
+            Some(mnemonic),
         )
         .await
         .unwrap();
-        let data = InvoiceData::deserialize(&serialized_data).unwrap();
+        let data: InvoiceDataSerializable = serde_json::from_str(&serialized_data).unwrap();
         let invoice_response = session.restore_invoice(data).await.unwrap();
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
         invoice_response.complete_pay().await.unwrap();

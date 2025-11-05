@@ -1,7 +1,7 @@
+use crate::SwapState;
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
-
-use crate::SwapState;
+use lightning::bitcoin::XKeyIdentifier;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -69,6 +69,9 @@ pub enum Error {
 
     #[error("Bolt12 (offers) are not yet supported")]
     Bolt12Unsupported,
+
+    #[error("Mnemonic identifier mismatch: {0} != {1}")]
+    MnemonicIdentifierMismatch(XKeyIdentifier, XKeyIdentifier),
 }
 
 impl From<BoltzError> for Error {

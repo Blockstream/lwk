@@ -32,7 +32,10 @@ use lwk_wollet::secp256k1::All;
 use crate::derive_keypair;
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
+use crate::invoice_data::InvoiceDataSerializable;
+use crate::mnemonic_identifier;
 use crate::swap_state::SwapStateTrait;
+use crate::to_invoice_data;
 use crate::SwapType;
 use crate::{broadcast_tx_with_retry, next_status, BoltzSession, SwapState};
 
@@ -56,7 +59,7 @@ impl BoltzSession {
         webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
-        let (_key_index, our_keys) = self.derive_next_keypair()?;
+        let (key_index, our_keys) = self.derive_next_keypair()?;
         let preimage = preimage_from_keypair(&our_keys)?;
 
         let claim_public_key = PublicKey {
@@ -118,6 +121,8 @@ impl BoltzSession {
                 our_keys,
                 preimage,
                 claim_address: claim_address.clone(),
+                key_index,
+                mnemonic_identifier: mnemonic_identifier(&self.mnemonic, &self.secp)?,
             },
             rx,
             swap_script,
@@ -127,7 +132,11 @@ impl BoltzSession {
         })
     }
 
-    pub async fn restore_invoice(&self, data: InvoiceData) -> Result<InvoiceResponse, Error> {
+    pub async fn restore_invoice(
+        &self,
+        data: InvoiceDataSerializable,
+    ) -> Result<InvoiceResponse, Error> {
+        let data = to_invoice_data(data, &self.mnemonic, &self.secp)?;
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::reverse_from_swap_resp(
             self.chain(),
@@ -243,10 +252,12 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         our_keys,
         preimage,
         claim_address: claim_address.clone(),
+        key_index: claim_details.key_index,
+        mnemonic_identifier: mnemonic_identifier(mnemonic, secp)?,
     })
 }
 
-fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
+pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
     let hashed_bytes = sha256::Hash::hash(&our_keys.secret_bytes());
     Ok(Preimage::from_vec(hashed_bytes.as_byte_array().to_vec())?)
 }
@@ -295,7 +306,8 @@ impl InvoiceResponse {
     }
 
     pub fn serialize(&self) -> Result<String, Error> {
-        Ok(serde_json::to_string(&self.data)?)
+        let x = InvoiceDataSerializable::from(self.data.clone());
+        Ok(serde_json::to_string(&x)?)
     }
 
     pub fn bolt11_invoice(&self) -> Bolt11Invoice {

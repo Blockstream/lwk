@@ -39,6 +39,8 @@ pub struct InvoiceDataSerializable {
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
     pub claim_address: elements::Address,
+
+    /// Extended fingerprint of mnemonic used for this boltz swap
     pub mnemonic_identifier: XKeyIdentifier,
 }
 

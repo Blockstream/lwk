@@ -316,7 +316,7 @@ impl PreparePayResponse {
                 log::info!("transaction.mempool Boltz broadcasted funding tx");
                 Ok(ControlFlow::Continue(update))
             }
-            SwapState::TransactionLockupFailed => {
+            SwapState::TransactionLockupFailed | SwapState::InvoiceFailedToPay => {
                 log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
                 sleep(WAIT_TIME).await;
                 let tx = self

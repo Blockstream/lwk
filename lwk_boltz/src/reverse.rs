@@ -56,7 +56,7 @@ impl BoltzSession {
         webhook: Option<Webhook<RevSwapStates>>,
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
-        let our_keys = self.derive_next_keypair()?;
+        let (_key_index, our_keys) = self.derive_next_keypair()?;
         let preimage = preimage_from_keypair(&our_keys)?;
 
         let claim_public_key = PublicKey {

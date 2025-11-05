@@ -52,7 +52,7 @@ impl BoltzSession {
         };
         let webhook_str = format!("{:?}", webhook);
 
-        let our_keys = self.derive_next_keypair()?;
+        let (_key_index, our_keys) = self.derive_next_keypair()?;
         let refund_public_key = PublicKey {
             inner: our_keys.public_key(),
             compressed: true,

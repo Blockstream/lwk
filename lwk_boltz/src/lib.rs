@@ -119,9 +119,10 @@ impl BoltzSession {
         liquid_chain_to_elements_network(self.liquid_chain)
     }
 
-    fn derive_next_keypair(&self) -> Result<Keypair, Error> {
+    fn derive_next_keypair(&self) -> Result<(u32, Keypair), Error> {
         let index = self.next_index_to_use.fetch_add(1, Ordering::Relaxed);
-        derive_keypair(index, &self.mnemonic, &self.secp)
+        let keypair = derive_keypair(index, &self.mnemonic, &self.secp)?;
+        Ok((index, keypair))
     }
 
     /// Generate a rescue file with the lightning session mnemonic.

@@ -31,6 +31,7 @@ use boltz_client::swaps::ChainClient;
 use boltz_client::util::sleep;
 use boltz_client::Keypair;
 use boltz_client::Secp256k1;
+use lightning::bitcoin::XKeyIdentifier;
 use lwk_wollet::bitcoin::bip32::ChildNumber;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
@@ -167,6 +168,15 @@ fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {
     } else {
         NetworkKind::Test
     }
+}
+
+pub(crate) fn mnemonic_identifier(
+    mnemonic: &Mnemonic,
+    secp: &Secp256k1<All>,
+) -> Result<XKeyIdentifier, Error> {
+    let seed = mnemonic.to_seed("");
+    let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?;
+    Ok(xpriv.identifier(&secp))
 }
 
 async fn fetch_next_index_to_use(

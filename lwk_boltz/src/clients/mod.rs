@@ -9,7 +9,6 @@ pub use esplora::EsploraClient;
 use async_trait::async_trait;
 use boltz_client::{elements, error::Error, network::LiquidChain};
 
-#[allow(dead_code)]
 pub enum AnyClient {
     Electrum(Arc<ElectrumClient>),
     Esplora(Arc<EsploraClient>),

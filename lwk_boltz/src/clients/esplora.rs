@@ -8,7 +8,6 @@ use boltz_client::network::LiquidChain;
 use boltz_client::ToHex;
 use lwk_wollet::ElementsNetwork;
 
-#[allow(dead_code)]
 pub struct EsploraClient {
     inner: Arc<lwk_wollet::asyncr::EsploraClient>,
     network: ElementsNetwork,

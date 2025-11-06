@@ -88,7 +88,6 @@ pub enum Msg {
 }
 
 impl Msg {
-    #[allow(dead_code)]
     pub fn request_id(&self) -> Option<WampId> {
         Some(*match self {
             Msg::Error { ref request, .. } => request,

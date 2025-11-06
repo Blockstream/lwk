@@ -64,9 +64,7 @@ pub struct BoltzSession {
     liquid_chain: LiquidChain,
     timeout: Duration,
 
-    #[allow(dead_code)]
     mnemonic: Mnemonic,
-    #[allow(dead_code)]
     next_index_to_use: AtomicU32,
 }
 

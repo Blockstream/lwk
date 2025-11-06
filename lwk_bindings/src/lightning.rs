@@ -171,7 +171,7 @@ impl BoltzSession {
             AnyClient::Esplora(c) => Arc::new(AnyClient::Esplora(c.clone())),
         };
         let builder = BoltzSessionBuilder {
-            network: Arc::new(network.clone()),
+            network: Arc::new(*network),
             client: client_arc,
             timeout: None,
             mnemonic: None,

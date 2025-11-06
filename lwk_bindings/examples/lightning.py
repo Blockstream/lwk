@@ -88,7 +88,10 @@ def invoice_thread(invoice_response, claim_address):
                 print("Invoice payment failed!")
                 rename_swap_data(swap_id)
                 break
-               
+        except LwkError.NoUpdate as e:
+            print("No update available, continuing polling...")
+            time.sleep(1)
+            continue
         except Exception as e:
             print(f"Error in invoice thread: {e}")
             break
@@ -111,7 +114,10 @@ def pay_invoice_thread(prepare_pay_response):
                 print("Payment failed!")
                 rename_swap_data(swap_id)
                 break
-            
+        except LwkError.NoUpdate as e:
+            print("No update available, continuing polling...")
+            time.sleep(1)
+            continue
         except Exception as e:
             print(f"Error in payment thread: {e}")
             break
@@ -346,6 +352,13 @@ def main():
         print("Error: MNEMONIC environment variable not set")
         return
 
+    polling = os.getenv('POLLING')
+    if polling:
+        polling = True
+    else:
+        polling = False
+    print(f"Polling: {polling}")
+
     mnemonic = Mnemonic(mnemonic_str)
     global network
     network = Network.mainnet()
@@ -384,6 +397,7 @@ def main():
         timeout=30,
         mnemonic=mnemonic_lightning,
         logging=logger,
+        polling=polling,
     )
     boltz_session = BoltzSession.from_builder(builder)
 

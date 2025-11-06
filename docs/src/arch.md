@@ -29,4 +29,4 @@ Internal crate dependencies are shown in this diagram: an arrow indicates "depen
 
 ![Dep tree](./dep-tree.svg)
 
-(generated with `cargo depgraph --workspace-only --dev-deps`)
+(generated with `cargo depgraph --workspace-only --dev-deps | dot -Tsvg > docs/src/dep-tree.svg`)

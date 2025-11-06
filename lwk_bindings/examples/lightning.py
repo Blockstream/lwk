@@ -378,7 +378,14 @@ def main():
     mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
     lightning_client = AnyClient.from_esplora(esplora_client)
     logger = MyLogger()
-    boltz_session = BoltzSession(network=network, client=lightning_client, timeout=30, logging=logger, mnemonic=mnemonic_lightning)
+    builder = BoltzSessionBuilder(
+        network=network,
+        client=lightning_client,
+        timeout=30,
+        mnemonic=mnemonic_lightning,
+        logging=logger,
+    )
+    boltz_session = BoltzSession.from_builder(builder)
 
     # Initial balance update
     update_balance(wollet, esplora_client, desc)

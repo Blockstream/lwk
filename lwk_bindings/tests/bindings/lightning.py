@@ -24,7 +24,14 @@ print(claim_address)
 # Create a lightning session with custom logging
 logger = MyLogger()
 mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session
-boltz_session = BoltzSession(network=network, client=client, timeout=10, logging=logger, mnemonic=mnemonic_lightning)
+builder = BoltzSessionBuilder(
+    network=network,
+    client=client,
+    # timeout=10, # optional parameter can be omitted, a default will be used
+    mnemonic=mnemonic_lightning,
+    logging=logger,
+)
+boltz_session = BoltzSession.from_builder(builder)
 
 invoice_response = boltz_session.invoice(amount=1000, description="ciao", claim_address=claim_address, webhook=None)
 bolt11_invoice_obj = invoice_response.bolt11_invoice()

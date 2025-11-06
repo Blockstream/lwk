@@ -160,71 +160,24 @@ impl AnyClient {
 
 #[uniffi::export]
 impl BoltzSession {
-    /// Create the lightning session
+    /// Create the lightning session with default settings
     ///
-    /// If a `logging` implementation is provided, it will be set as the global logger
-    /// to receive log messages from the lightning operations. Note that the global
-    /// logger can only be set once - if a logger is already set, the new one will be ignored.
+    /// This uses default timeout and generates a random mnemonic.
+    /// For custom configuration, use [`BoltzSession::from_builder()`] instead.
     #[uniffi::constructor]
-    pub fn new(
-        network: &Network,
-        client: &AnyClient,
-        timeout: Option<u64>,
-        logging: Option<Arc<dyn Logging>>,
-        mnemonic: Option<Arc<Mnemonic>>,
-    ) -> Result<Self, LwkError> {
-        // Validate the logger by attempting a test call
-        if let Some(ref logger_impl) = logging {
-            // Test the logger with a dummy message to catch issues early
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                logger_impl.log(LogLevel::Debug, "Logger validation test".to_string());
-            })).map_err(|_| LwkError::Generic {
-                msg: "Logger validation failed. Please ensure you pass an instance of a class that implements the Logging trait, not the class itself.".to_string(),
-            })?;
-        }
-
-        // Set up the custom logger if provided
-        if let Some(ref logger_impl) = logging {
-            let bridge = LoggingBridge {
-                inner: logger_impl.clone(),
-            };
-            // Try to set the logger. This can only be done once globally.
-            // If it fails (logger already set), we silently continue.
-            let _ = log::set_boxed_logger(Box::new(bridge))
-                .map(|()| log::set_max_level(log::LevelFilter::Trace));
-        }
-        log::info!("Creating lightning session");
-
-        let network_value = network.into();
-
-        let client = match client {
-            AnyClient::Electrum(client) => {
-                let boltz_client = lwk_boltz::clients::ElectrumClient::from_client(
-                    client.clone_client().expect("TODO"),
-                    network_value,
-                );
-                lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client))
-            }
-            AnyClient::Esplora(client) => {
-                let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
-                    Arc::new(client.clone_async_client().expect("TODO")),
-                    network_value,
-                );
-                lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))
-            }
+    pub fn new(network: &Network, client: &AnyClient) -> Result<Self, LwkError> {
+        let client_arc = match client {
+            AnyClient::Electrum(c) => Arc::new(AnyClient::Electrum(c.clone())),
+            AnyClient::Esplora(c) => Arc::new(AnyClient::Esplora(c.clone())),
         };
-
-        let mut builder = lwk_boltz::BoltzSession::builder(network_value, client);
-        if let Some(timeout_secs) = timeout {
-            builder = builder.create_swap_timeout(Duration::from_secs(timeout_secs));
-        }
-        if let Some(mnemonic) = mnemonic {
-            builder = builder.mnemonic(mnemonic.inner());
-        }
-        let inner = builder.build_blocking().map_err(|e| LwkError::Generic {
-            msg: format!("Failed to create blocking lightning session: {:?}", e),
-        })?;
-        Ok(Self { inner, logging })
+        let builder = BoltzSessionBuilder {
+            network: Arc::new(network.clone()),
+            client: client_arc,
+            timeout: None,
+            mnemonic: None,
+            logging: None,
+        };
+        Self::from_builder(builder)
     }
 
     /// Create the lightning session from a builder

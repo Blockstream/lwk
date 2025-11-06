@@ -66,6 +66,8 @@ pub struct BoltzSession {
 
     mnemonic: Mnemonic,
     next_index_to_use: AtomicU32,
+
+    polling: bool,
 }
 
 impl BoltzSession {
@@ -107,6 +109,7 @@ impl BoltzSession {
         client: AnyClient,
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
+        polling: bool,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
         let chain_client = Arc::new(ChainClient::new().with_liquid(client));
@@ -133,6 +136,7 @@ impl BoltzSession {
             chain_client,
             liquid_chain,
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
+            polling,
         })
     }
 
@@ -186,6 +190,7 @@ pub struct BoltzSessionBuilder {
     client: AnyClient,
     create_swap_timeout: Option<Duration>,
     mnemonic: Option<Mnemonic>,
+    polling: bool,
 }
 
 impl BoltzSessionBuilder {
@@ -196,6 +201,7 @@ impl BoltzSessionBuilder {
             client,
             create_swap_timeout: None,
             mnemonic: None,
+            polling: false,
         }
     }
 
@@ -215,6 +221,15 @@ impl BoltzSessionBuilder {
         self
     }
 
+    /// Set the polling flag
+    ///
+    /// If true, the advance call will not await on the websocket connection returning immediately
+    /// even if there is no update, thus requiring the caller to poll for updates.
+    pub fn polling(mut self, polling: bool) -> Self {
+        self.polling = polling;
+        self
+    }
+
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
         BoltzSession::initialize(
@@ -222,6 +237,7 @@ impl BoltzSessionBuilder {
             self.client,
             self.create_swap_timeout,
             self.mnemonic,
+            self.polling,
         )
         .await
     }

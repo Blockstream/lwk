@@ -32,6 +32,7 @@ pub struct PreparePayResponse {
     chain_client: Arc<ChainClient>,
     api: Arc<BoltzApiClientV2>,
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
+    polling: bool,
 }
 
 impl BoltzSession {
@@ -115,7 +116,7 @@ impl BoltzSession {
         let mut rx = self.ws.updates();
         self.ws.subscribe_swap(&swap_id).await?;
 
-        let _update = next_status(&mut rx, self.timeout, &swap_id).await?;
+        let _update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
 
         log::info!(
             "Send {} sats to {} address {} or use uri {}",
@@ -125,6 +126,7 @@ impl BoltzSession {
             create_swap_response.bip21
         );
         Ok(PreparePayResponse {
+            polling: self.polling,
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
@@ -162,6 +164,7 @@ impl BoltzSession {
         self.ws.subscribe_swap(&swap_id).await?;
 
         Ok(PreparePayResponse {
+            polling: self.polling,
             data,
             swap_script,
             rx,
@@ -266,7 +269,13 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
 impl PreparePayResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id();
-        next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
+        next_status(
+            &mut self.rx,
+            Duration::from_secs(180),
+            &swap_id,
+            self.polling,
+        )
+        .await
     }
 
     async fn handle_cooperative_claim(

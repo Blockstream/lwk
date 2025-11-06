@@ -38,6 +38,7 @@ use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast::error::TryRecvError;
 
 use crate::clients::AnyClient;
 pub use crate::error::Error;
@@ -347,17 +348,28 @@ pub async fn next_status(
     rx: &mut tokio::sync::broadcast::Receiver<SwapStatus>,
     timeout: Duration,
     swap_id: &str,
+    polling: bool,
 ) -> Result<SwapStatus, Error> {
     let deadline = tokio::time::Instant::now() + timeout;
 
     loop {
-        // since we can receive updates for all swaps, we need to check the deadline
-        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-        let update = tokio::select! {
-            update = rx.recv() => update?,
-            _ = tokio::time::sleep(remaining) => {
-                log::warn!("Timeout while waiting state for swap id {}", swap_id );
-                return Err(Error::Timeout(swap_id.to_string()));
+        let update = if polling {
+            match rx.try_recv() {
+                Ok(update) => update,
+                Err(TryRecvError::Empty) => {
+                    return Err(Error::NoUpdate);
+                }
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            // since we can receive updates for all swaps, we need to check the deadline
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            tokio::select! {
+                update = rx.recv() => update?,
+                _ = tokio::time::sleep(remaining) => {
+                    log::warn!("Timeout while waiting state for swap id {}", swap_id );
+                    return Err(Error::Timeout(swap_id.to_string()));
+                }
             }
         };
 

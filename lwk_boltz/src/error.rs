@@ -17,6 +17,9 @@ pub enum Error {
     #[error("Receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),
 
+    #[error("TryReceiver error: {0}")]
+    TryReceiver(#[from] tokio::sync::broadcast::error::TryRecvError),
+
     #[error("Unexpected status {status} for swap {swap_id}. Last state: {last_state}")]
     UnexpectedUpdate {
         swap_id: String,
@@ -72,6 +75,9 @@ pub enum Error {
 
     #[error("Mnemonic identifier mismatch: {0} != {1}")]
     MnemonicIdentifierMismatch(XKeyIdentifier, XKeyIdentifier),
+
+    #[error("No update available, continuing polling")]
+    NoUpdate,
 }
 
 impl From<BoltzError> for Error {

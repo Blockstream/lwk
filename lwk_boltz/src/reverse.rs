@@ -46,6 +46,7 @@ pub struct InvoiceResponse {
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
     claim_broadcasted: bool,
+    polling: bool,
 }
 
 impl BoltzSession {
@@ -106,11 +107,12 @@ impl BoltzSession {
         self.ws.subscribe_swap(&swap_id).await?;
         let mut rx = self.ws.updates();
 
-        let update = next_status(&mut rx, self.timeout, &swap_id).await?;
+        let update = next_status(&mut rx, self.timeout, &swap_id, false).await?;
         let last_state = update.swap_state()?;
         log::debug!("Waiting for Invoice to be paid: {}", &invoice);
 
         Ok(InvoiceResponse {
+            polling: self.polling,
             data: InvoiceData {
                 last_state,
                 swap_type: SwapType::Reverse,
@@ -149,6 +151,7 @@ impl BoltzSession {
         self.ws.subscribe_swap(&swap_id).await?;
 
         Ok(InvoiceResponse {
+            polling: self.polling,
             data,
             rx,
             swap_script,
@@ -257,7 +260,13 @@ pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Erro
 impl InvoiceResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id().to_string();
-        next_status(&mut self.rx, Duration::from_secs(180), &swap_id).await
+        next_status(
+            &mut self.rx,
+            Duration::from_secs(180),
+            &swap_id,
+            self.polling,
+        )
+        .await
     }
 
     async fn handle_claim_transaction_if_necessary(

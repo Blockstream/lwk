@@ -239,6 +239,8 @@ impl BoltzSessionBuilder {
     ///
     /// If true, the advance call will not await on the websocket connection returning immediately
     /// even if there is no update, thus requiring the caller to poll for updates.
+    ///
+    /// If true, the timeout_advance will be ignored even if set.
     pub fn polling(mut self, polling: bool) -> Self {
         self.polling = polling;
         self

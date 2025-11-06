@@ -6,6 +6,7 @@ mod tests {
     use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
     use std::{env, str::FromStr, sync::Arc};
 
+    use bip39::Mnemonic;
     use boltz_client::{
         boltz::{BoltzApiClientV2, BoltzWsConfig, CreateSubmarineRequest},
         fees::Fee,
@@ -156,6 +157,10 @@ mod tests {
 
         // Start concurrent block mining task
         let mining_handle = utils::start_block_mining();
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
 
         let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
@@ -175,7 +180,7 @@ mod tests {
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
-            None,
+            Some(mnemonic.clone()),
         )
         .await
         .unwrap();
@@ -195,11 +200,15 @@ mod tests {
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
             Some(TIMEOUT),
-            None,
+            Some(mnemonic),
         )
         .await
         .unwrap();
         let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
+        assert_eq!(
+            data.mnemonic_identifier.to_string(),
+            "e92cd0870c080a91a063345362b7e76d4ad3a4b4"
+        );
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),

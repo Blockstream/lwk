@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, BOLTZ_REGTEST, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, str::FromStr, sync::Arc};
+    use std::{env, str::FromStr, sync::Arc, time::Duration};
 
     use bip39::Mnemonic;
     use boltz_client::{
@@ -145,6 +145,54 @@ mod tests {
         .await
         .unwrap();
         prepare_pay_response.complete_pay().await.unwrap();
+
+        // test polling
+        let session_polling = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .polling(true)
+        .build()
+        .await
+        .unwrap();
+
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let mut prepare_pay_response = session_polling
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.data.create_swap_response.address,
+            prepare_pay_response
+                .data
+                .create_swap_response
+                .expected_amount,
+        )
+        .await
+        .unwrap();
+
+        // Poll for updates until payment is complete
+        loop {
+            match prepare_pay_response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(update)) => {
+                    log::info!("Polling: Received update. status:{}", update.status);
+                }
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Polling: Payment completed with result: {}", result);
+                    assert!(result, "Payment should succeed");
+                    break;
+                }
+                Err(lwk_boltz::Error::NoUpdate) => {
+                    log::info!("Polling: No update available, sleeping and retrying...");
+                    sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    panic!("Polling: Unexpected error: {}", e);
+                }
+            }
+        }
 
         // Stop the mining task
         mining_handle.abort();

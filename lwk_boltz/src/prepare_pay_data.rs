@@ -70,7 +70,7 @@ pub fn to_prepare_pay_data(
     let bolt11_invoice = data
         .bolt11_invoice
         .as_ref()
-        .map(|i| Bolt11Invoice::from_str(&i))
+        .map(|i| Bolt11Invoice::from_str(i))
         .transpose()?;
     Ok(PreparePayData {
         last_state: data.last_state,

@@ -535,7 +535,14 @@ impl InvoiceResponse {
         let mut response = lock.take().ok_or_else(|| LwkError::Generic {
             msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
         })?;
-        let control_flow = response.advance()?;
+        let control_flow = match response.advance() {
+            Ok(control_flow) => control_flow,
+            Err(lwk_boltz::Error::NoUpdate) => {
+                *lock = Some(response);
+                return Err(LwkError::NoUpdate);
+            }
+            Err(e) => return Err(e.into()),
+        };
         let result = match control_flow {
             ControlFlow::Continue(_update) => PaymentState::Continue,
             ControlFlow::Break(update) => {

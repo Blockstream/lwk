@@ -92,6 +92,8 @@ pub struct BoltzSessionBuilder {
     logging: Option<Arc<dyn Logging>>,
     #[uniffi(default = false)]
     polling: bool,
+    #[uniffi(default = None)]
+    timeout_advance: Option<u64>,
 }
 
 /// A session to pay and receive lightning payments.
@@ -179,6 +181,7 @@ impl BoltzSession {
             mnemonic: None,
             logging: None,
             polling: false,
+            timeout_advance: None,
         };
         Self::from_builder(builder)
     }
@@ -235,6 +238,9 @@ impl BoltzSession {
             lwk_builder = lwk_builder.mnemonic(mnemonic.inner());
         }
         lwk_builder = lwk_builder.polling(builder.polling);
+        if let Some(timeout_advance_secs) = builder.timeout_advance {
+            lwk_builder = lwk_builder.timeout_advance(Duration::from_secs(timeout_advance_secs));
+        }
 
         let inner = lwk_builder
             .build_blocking()

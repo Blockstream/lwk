@@ -154,6 +154,53 @@ impl BoltzSession {
     }
 }
 
+/// Builder for creating a [`BoltzSession`]
+pub struct BoltzSessionBuilder {
+    network: ElementsNetwork,
+    client: AnyClient,
+    create_swap_timeout: Option<Duration>,
+    mnemonic: Option<Mnemonic>,
+}
+
+impl BoltzSessionBuilder {
+    /// Create a new `BoltzSessionBuilder` with required network and client parameters
+    pub fn new(network: ElementsNetwork, client: AnyClient) -> Self {
+        Self {
+            network,
+            client,
+            create_swap_timeout: None,
+            mnemonic: None,
+        }
+    }
+
+    /// Set the timeout for the Boltz API and WebSocket connection
+    ///
+    /// If not set, the default timeout of 10 seconds is used.
+    pub fn create_swap_timeout(mut self, timeout: Duration) -> Self {
+        self.create_swap_timeout = Some(timeout);
+        self
+    }
+
+    /// Set the mnemonic for deriving swap keys
+    ///
+    /// If not set, a new random mnemonic will be generated.
+    pub fn mnemonic(mut self, mnemonic: Mnemonic) -> Self {
+        self.mnemonic = Some(mnemonic);
+        self
+    }
+
+    /// Build the `BoltzSession`
+    pub async fn build(self) -> Result<BoltzSession, Error> {
+        BoltzSession::new(
+            self.network,
+            self.client,
+            self.create_swap_timeout,
+            self.mnemonic,
+        )
+        .await
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct RescueFile {
     mnemonic: String,

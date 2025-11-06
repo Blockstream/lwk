@@ -4,7 +4,7 @@ mod utils;
 mod tests {
 
     use crate::utils::{self, DEFAULT_REGTEST_NODE, TIMEOUT, WAIT_TIME};
-    use std::{env, str::FromStr, sync::Arc};
+    use std::{env, str::FromStr, sync::Arc, time::Duration};
 
     use bip39::Mnemonic;
     use boltz_client::{
@@ -132,9 +132,10 @@ mod tests {
         // Start concurrent block mining task
         let _mining_handle = utils::start_block_mining();
         let network = ElementsNetwork::default_regtest();
-        let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
 
-        let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
             .create_swap_timeout(TIMEOUT)
             .build()
             .await
@@ -150,6 +151,46 @@ mod tests {
         log::info!("Invoice: {}", invoice.bolt11_invoice());
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
         invoice.complete_pay().await.unwrap();
+
+        // test polling
+        let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .polling(true)
+            .build()
+            .await
+            .unwrap();
+
+        let claim_address_polling =
+            utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+                .await
+                .unwrap();
+        let claim_address_polling = elements::Address::from_str(&claim_address_polling).unwrap();
+        let mut invoice_polling = session_polling
+            .invoice(100000, None, &claim_address_polling, None)
+            .await
+            .unwrap();
+        log::info!("Polling Invoice: {}", invoice_polling.bolt11_invoice());
+        utils::start_pay_invoice_lnd(invoice_polling.bolt11_invoice().to_string());
+
+        // Poll for updates until payment is complete
+        loop {
+            match invoice_polling.advance().await {
+                Ok(std::ops::ControlFlow::Continue(update)) => {
+                    log::info!("Polling: Received update. status:{}", update.status);
+                }
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Polling: Payment completed with result: {}", result);
+                    assert!(result, "Payment should succeed");
+                    break;
+                }
+                Err(lwk_boltz::Error::NoUpdate) => {
+                    log::info!("Polling: No update available, sleeping and retrying...");
+                    sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    panic!("Polling: Unexpected error: {}", e);
+                }
+            }
+        }
     }
 
     #[tokio::test]

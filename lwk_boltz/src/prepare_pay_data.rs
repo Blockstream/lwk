@@ -21,6 +21,7 @@ pub struct PreparePayData {
     pub create_swap_response: CreateSubmarineResponse,
     pub our_keys: Keypair,
     pub refund_address: String,
+    pub key_index: u32,
 }
 
 impl Serialize for PreparePayData {
@@ -93,6 +94,7 @@ impl<'de> Deserialize<'de> for PreparePayData {
             create_swap_response: helper.create_swap_response,
             our_keys,
             refund_address: helper.refund_address,
+            key_index: 0, //TODO
         })
     }
 }

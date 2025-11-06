@@ -51,7 +51,7 @@ impl BoltzSession {
         };
         let webhook_str = format!("{:?}", webhook);
 
-        let (_key_index, our_keys) = self.derive_next_keypair()?;
+        let (key_index, our_keys) = self.derive_next_keypair()?;
         let refund_public_key = PublicKey {
             inner: our_keys.public_key(),
             compressed: true,
@@ -133,6 +133,7 @@ impl BoltzSession {
                 our_keys,
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),
+                key_index,
             },
             swap_script: swap_script.clone(),
             rx,
@@ -255,6 +256,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         our_keys,
         refund_address: refund_address.to_string(),
         create_swap_response,
+        key_index: refund_details.key_index,
     })
 }
 

@@ -11,8 +11,8 @@ use boltz_client::{
 use lwk_wollet::{elements, ElementsNetwork};
 
 use crate::{
-    clients::AnyClient, Error, InvoiceData, InvoiceDataSerializable, LightningPayment,
-    PreparePayData, RescueFile, SwapStatus,
+    clients::AnyClient, prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData,
+    InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -61,7 +61,10 @@ impl BoltzSession {
         })
     }
 
-    pub fn restore_prepare_pay(&self, data: PreparePayData) -> Result<PreparePayResponse, Error> {
+    pub fn restore_prepare_pay(
+        &self,
+        data: PreparePayDataSerializable,
+    ) -> Result<PreparePayResponse, Error> {
         let inner = self
             .runtime
             .block_on(self.inner.restore_prepare_pay(data))?;

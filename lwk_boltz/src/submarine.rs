@@ -17,7 +17,7 @@ use lwk_wollet::bitcoin::{Denomination, PublicKey as BitcoinPublicKey};
 use lwk_wollet::elements;
 
 use crate::error::Error;
-use crate::prepare_pay_data::PreparePayData;
+use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDataSerializable};
 use crate::swap_state::SwapStateTrait;
 use crate::{
     broadcast_tx_with_retry, next_status, BoltzSession, LightningPayment, SwapState, SwapType,
@@ -144,8 +144,9 @@ impl BoltzSession {
 
     pub async fn restore_prepare_pay(
         &self,
-        data: PreparePayData,
+        data: PreparePayDataSerializable,
     ) -> Result<PreparePayResponse, Error> {
+        let data = to_prepare_pay_data(data, &self.mnemonic)?;
         let p = data.our_keys.public_key();
         let swap_script = SwapScript::submarine_from_swap_resp(
             self.chain(),
@@ -364,7 +365,8 @@ impl PreparePayResponse {
     }
 
     pub fn serialize(&self) -> Result<String, Error> {
-        Ok(serde_json::to_string(&self.data)?)
+        let s: PreparePayDataSerializable = self.data.clone().into();
+        Ok(serde_json::to_string(&s)?)
     }
 
     pub async fn complete_pay(mut self) -> Result<bool, Error> {

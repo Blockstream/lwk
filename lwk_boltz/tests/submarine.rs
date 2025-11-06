@@ -16,7 +16,7 @@ mod tests {
     };
     use lwk_boltz::{
         clients::{AnyClient, ElectrumClient},
-        BoltzSession, LightningPayment, PreparePayData,
+        BoltzSession, LightningPayment, PreparePayDataSerializable,
     };
     use lwk_wollet::{elements, secp256k1::rand::thread_rng, ElementsNetwork};
 
@@ -199,7 +199,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let data = PreparePayData::deserialize(&serialized_data).unwrap();
+        let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),

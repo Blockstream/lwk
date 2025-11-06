@@ -79,6 +79,19 @@ impl log::Log for LoggingBridge {
     fn flush(&self) {}
 }
 
+/// A builder for the `BoltzSession`
+#[derive(uniffi::Record)]
+pub struct BoltzSessionBuilder {
+    network: Arc<Network>,
+    client: Arc<AnyClient>,
+    #[uniffi(default = None)]
+    timeout: Option<u64>,
+    #[uniffi(default = None)]
+    mnemonic: Option<Arc<Mnemonic>>,
+    #[uniffi(default = None)]
+    logging: Option<Arc<dyn Logging>>,
+}
+
 /// A session to pay and receive lightning payments.
 ///
 /// Lightning payments are done via LBTC swaps using Boltz.
@@ -212,6 +225,68 @@ impl BoltzSession {
             msg: format!("Failed to create blocking lightning session: {:?}", e),
         })?;
         Ok(Self { inner, logging })
+    }
+
+    /// Create the lightning session from a builder
+    #[uniffi::constructor]
+    pub fn from_builder(builder: BoltzSessionBuilder) -> Result<Self, LwkError> {
+        // Validate the logger by attempting a test call
+        if let Some(ref logger_impl) = builder.logging {
+            // Test the logger with a dummy message to catch issues early
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                logger_impl.log(LogLevel::Debug, "Logger validation test".to_string());
+            })).map_err(|_| LwkError::Generic {
+                msg: "Logger validation failed. Please ensure you pass an instance of a class that implements the Logging trait, not the class itself.".to_string(),
+            })?;
+        }
+
+        // Set up the custom logger if provided
+        if let Some(ref logger_impl) = builder.logging {
+            let bridge = LoggingBridge {
+                inner: logger_impl.clone(),
+            };
+            // Try to set the logger. This can only be done once globally.
+            // If it fails (logger already set), we silently continue.
+            let _ = log::set_boxed_logger(Box::new(bridge))
+                .map(|()| log::set_max_level(log::LevelFilter::Trace));
+        }
+        log::info!("Creating lightning session from builder");
+
+        let network_value = builder.network.as_ref().into();
+
+        let client = match builder.client.as_ref() {
+            AnyClient::Electrum(client) => {
+                let boltz_client = lwk_boltz::clients::ElectrumClient::from_client(
+                    client.clone_client().expect("TODO"),
+                    network_value,
+                );
+                lwk_boltz::clients::AnyClient::Electrum(Arc::new(boltz_client))
+            }
+            AnyClient::Esplora(client) => {
+                let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
+                    Arc::new(client.clone_async_client().expect("TODO")),
+                    network_value,
+                );
+                lwk_boltz::clients::AnyClient::Esplora(Arc::new(boltz_client))
+            }
+        };
+
+        let mut lwk_builder = lwk_boltz::BoltzSession::builder(network_value, client);
+        if let Some(timeout_secs) = builder.timeout {
+            lwk_builder = lwk_builder.create_swap_timeout(Duration::from_secs(timeout_secs));
+        }
+        if let Some(mnemonic) = builder.mnemonic {
+            lwk_builder = lwk_builder.mnemonic(mnemonic.inner());
+        }
+        let inner = lwk_builder
+            .build_blocking()
+            .map_err(|e| LwkError::Generic {
+                msg: format!("Failed to create blocking lightning session: {:?}", e),
+            })?;
+        Ok(Self {
+            inner,
+            logging: builder.logging,
+        })
     }
 
     /// Prepare to pay a bolt11 invoice

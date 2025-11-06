@@ -23,7 +23,6 @@
         "timeoutBlockHeight": 10281,
         "blindingKey": "25445379f2c29610efd0d6bca47840ff56040faa22da168e204b12b281fba6fc"
     },
-    "secret_key": "eb639420a8f2c666c29d42c58b398d3ec70e8dff82f0d5ff7ba1f48ee22032f7",
-    "refund_address": "el1qq29zpg2p3za40gyy4mm28dgg2rmnv5efjxzm8xpyavt8fvef4am5pkq6j4jg6sw3ynevmu395r374zhwf8d9qpd2y0p7c26ta",
-    "key_index": 0
+    "key_index": 0,
+    "refund_address": "el1qq29zpg2p3za40gyy4mm28dgg2rmnv5efjxzm8xpyavt8fvef4am5pkq6j4jg6sw3ynevmu395r374zhwf8d9qpd2y0p7c26ta"
 }

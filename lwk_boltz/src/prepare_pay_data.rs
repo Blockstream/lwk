@@ -1,11 +1,13 @@
 use std::str::FromStr;
 
+use bip39::Mnemonic;
 use boltz_client::boltz::CreateSubmarineResponse;
 use boltz_client::Secp256k1;
 use boltz_client::ToHex;
 use boltz_client::{Bolt11Invoice, Keypair};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::derive_keypair;
 use crate::error::Error;
 use crate::SwapState;
 use crate::SwapType;
@@ -22,6 +24,53 @@ pub struct PreparePayData {
     pub our_keys: Keypair,
     pub refund_address: String,
     pub key_index: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PreparePayDataSerializable {
+    pub last_state: SwapState,
+    pub swap_type: SwapType,
+    pub fee: Option<u64>,
+    pub bolt11_invoice: Option<String>,
+    pub create_swap_response: CreateSubmarineResponse,
+    pub key_index: u32,
+    pub refund_address: String,
+}
+
+impl From<PreparePayData> for PreparePayDataSerializable {
+    fn from(data: PreparePayData) -> Self {
+        PreparePayDataSerializable {
+            last_state: data.last_state,
+            swap_type: data.swap_type,
+            fee: data.fee,
+            bolt11_invoice: data.bolt11_invoice.map(|i| i.to_string()),
+            create_swap_response: data.create_swap_response,
+            key_index: data.key_index,
+            refund_address: data.refund_address,
+        }
+    }
+}
+
+pub fn to_prepare_pay_data(
+    data: PreparePayDataSerializable,
+    mnemonic: &Mnemonic,
+) -> Result<PreparePayData, Error> {
+    let our_keys = derive_keypair(data.key_index, mnemonic)?;
+    let bolt11_invoice = data
+        .bolt11_invoice
+        .as_ref()
+        .map(|i| Bolt11Invoice::from_str(&i))
+        .transpose()?;
+    Ok(PreparePayData {
+        last_state: data.last_state,
+        swap_type: data.swap_type,
+        fee: data.fee,
+        bolt11_invoice,
+        create_swap_response: data.create_swap_response,
+        our_keys,
+        refund_address: data.refund_address,
+        key_index: data.key_index,
+    })
 }
 
 impl Serialize for PreparePayData {
@@ -110,6 +159,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_prepare_pay_data_serializable() {
+        let json_data = include_str!("../tests/data/preapre_pay_data_serializable.json");
+        let deserialized: PreparePayDataSerializable = serde_json::from_str(json_data)
+            .expect("Failed to deserialize PreparePayDataSerializable from JSON");
+        println!("deserialized: {:?}", deserialized);
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+        let prepare_pay_data = to_prepare_pay_data(deserialized, &mnemonic).unwrap();
+        println!("prepare_pay_data: {:?}", prepare_pay_data);
+        assert_eq!(
+            prepare_pay_data.our_keys.secret_bytes().to_hex(),
+            "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"
+        );
+    }
+
+    #[test]
     fn test_prepare_pay_data_serialization_roundtrip() {
         // Load the JSON data from the test file
         let json_data = include_str!("../tests/data/prepare_pay_response.json");
@@ -117,6 +184,11 @@ mod tests {
         // Deserialize the JSON into PreparePayData
         let deserialized1: PreparePayData = serde_json::from_str(json_data)
             .expect("Failed to deserialize PreparePayData from JSON");
+
+        let ss: PreparePayDataSerializable = deserialized1.clone().into();
+        let ss_str = serde_json::to_string(&ss)
+            .expect("Failed to serialize PreparePayDataSerializable to JSON");
+        println!("ss_str: {}", ss_str);
 
         // Serialize it back to JSON
         let serialized = serde_json::to_string(&deserialized1)

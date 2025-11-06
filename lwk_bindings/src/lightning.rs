@@ -468,8 +468,11 @@ impl PreparePayResponse {
             }
             Err(e) => return Err(e.into()),
         };
-        let result = match control_flow {
-            ControlFlow::Continue(_update) => PaymentState::Continue,
+        Ok(match control_flow {
+            ControlFlow::Continue(_update) => {
+                *lock = Some(response);
+                PaymentState::Continue
+            }
             ControlFlow::Break(update) => {
                 if update {
                     PaymentState::Success
@@ -477,9 +480,7 @@ impl PreparePayResponse {
                     PaymentState::Failed
                 }
             }
-        };
-        *lock = Some(response);
-        Ok(result)
+        })
     }
 }
 
@@ -543,8 +544,11 @@ impl InvoiceResponse {
             }
             Err(e) => return Err(e.into()),
         };
-        let result = match control_flow {
-            ControlFlow::Continue(_update) => PaymentState::Continue,
+        Ok(match control_flow {
+            ControlFlow::Continue(_update) => {
+                *lock = Some(response);
+                PaymentState::Continue
+            }
             ControlFlow::Break(update) => {
                 if update {
                     PaymentState::Success
@@ -552,9 +556,7 @@ impl InvoiceResponse {
                     PaymentState::Failed
                 }
             }
-        };
-        *lock = Some(response);
-        Ok(result)
+        })
     }
 }
 

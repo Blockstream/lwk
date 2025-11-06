@@ -20,8 +20,8 @@ use crate::error::Error;
 use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDataSerializable};
 use crate::swap_state::SwapStateTrait;
 use crate::{
-    broadcast_tx_with_retry, next_status, BoltzSession, LightningPayment, SwapState, SwapType,
-    WAIT_TIME,
+    broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, LightningPayment,
+    SwapState, SwapType, WAIT_TIME,
 };
 
 pub struct PreparePayResponse {
@@ -134,6 +134,7 @@ impl BoltzSession {
                 refund_address: refund_address.to_string(),
                 create_swap_response: create_swap_response.clone(),
                 key_index,
+                mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
             },
             swap_script: swap_script.clone(),
             rx,
@@ -258,6 +259,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         refund_address: refund_address.to_string(),
         create_swap_response,
         key_index: refund_details.key_index,
+        mnemonic_identifier: mnemonic_identifier(mnemonic)?,
     })
 }
 

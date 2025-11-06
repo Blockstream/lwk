@@ -3,12 +3,13 @@ use std::str::FromStr;
 use bip39::Mnemonic;
 use boltz_client::boltz::CreateSubmarineResponse;
 use boltz_client::{Bolt11Invoice, Keypair};
+use lightning::bitcoin::XKeyIdentifier;
 use serde::{Deserialize, Serialize};
 
-use crate::derive_keypair;
 use crate::error::Error;
 use crate::SwapState;
 use crate::SwapType;
+use crate::{derive_keypair, mnemonic_identifier};
 
 #[derive(Clone, Debug)]
 pub struct PreparePayData {
@@ -22,6 +23,7 @@ pub struct PreparePayData {
     pub our_keys: Keypair,
     pub refund_address: String,
     pub key_index: u32,
+    pub mnemonic_identifier: XKeyIdentifier,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -33,6 +35,9 @@ pub struct PreparePayDataSerializable {
     pub create_swap_response: CreateSubmarineResponse,
     pub key_index: u32,
     pub refund_address: String,
+
+    /// Extended fingerprint of mnemonic used for this boltz swap
+    pub mnemonic_identifier: XKeyIdentifier,
 }
 
 impl From<PreparePayData> for PreparePayDataSerializable {
@@ -45,6 +50,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
             create_swap_response: data.create_swap_response,
             key_index: data.key_index,
             refund_address: data.refund_address,
+            mnemonic_identifier: data.mnemonic_identifier,
         }
     }
 }
@@ -54,6 +60,13 @@ pub fn to_prepare_pay_data(
     mnemonic: &Mnemonic,
 ) -> Result<PreparePayData, Error> {
     let our_keys = derive_keypair(data.key_index, mnemonic)?;
+    let mnemonic_identifier = mnemonic_identifier(mnemonic)?;
+    if mnemonic_identifier != data.mnemonic_identifier {
+        return Err(Error::MnemonicIdentifierMismatch(
+            mnemonic_identifier,
+            data.mnemonic_identifier,
+        ));
+    }
     let bolt11_invoice = data
         .bolt11_invoice
         .as_ref()
@@ -68,6 +81,7 @@ pub fn to_prepare_pay_data(
         our_keys,
         refund_address: data.refund_address,
         key_index: data.key_index,
+        mnemonic_identifier,
     })
 }
 

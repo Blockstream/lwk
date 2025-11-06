@@ -39,8 +39,14 @@ impl BoltzSession {
     ) -> Result<Self, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();
-        let inner =
-            runtime.block_on(super::BoltzSession::new(network, client, timeout, mnemonic))?;
+        let mut builder = super::BoltzSession::builder(network, client);
+        if let Some(timeout) = timeout {
+            builder = builder.create_swap_timeout(timeout);
+        }
+        if let Some(mnemonic) = mnemonic {
+            builder = builder.mnemonic(mnemonic);
+        }
+        let inner = runtime.block_on(builder.build())?;
         Ok(Self { inner, runtime })
     }
 

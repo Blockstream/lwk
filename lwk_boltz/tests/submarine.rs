@@ -28,7 +28,7 @@ mod tests {
 
         let network = ElementsNetwork::Liquid;
 
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             network,
             AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
@@ -39,9 +39,9 @@ mod tests {
                 )
                 .unwrap(),
             )),
-            Some(TIMEOUT),
-            None,
         )
+        .create_swap_timeout(TIMEOUT)
+        .build()
         .await
         .unwrap();
 
@@ -100,12 +100,12 @@ mod tests {
             .unwrap(),
         );
 
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
-            Some(TIMEOUT),
-            None,
         )
+        .create_swap_timeout(TIMEOUT)
+        .build()
         .await
         .unwrap();
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
@@ -176,12 +176,13 @@ mod tests {
             .unwrap(),
         );
 
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
-            Some(TIMEOUT),
-            Some(mnemonic.clone()),
         )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .build()
         .await
         .unwrap();
 
@@ -196,12 +197,13 @@ mod tests {
         let serialized_data = prepare_pay_response.serialize().unwrap();
         drop(prepare_pay_response);
         drop(session);
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
-            Some(TIMEOUT),
-            Some(mnemonic),
         )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .build()
         .await
         .unwrap();
         let data = PreparePayDataSerializable::deserialize(&serialized_data).unwrap();

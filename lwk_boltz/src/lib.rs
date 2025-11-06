@@ -71,12 +71,40 @@ pub struct BoltzSession {
 }
 
 impl BoltzSession {
-    /// Create a new LighthingSession that connects to the Boltz API and starts a WebSocket connection
+    /// Create a new BoltzSession with default settings
     ///
-    /// Accept a `timeout` parameter to set the timeout for the Boltz API and WebSocket connection.
-    /// If `timeout` is `None`, the default timeout of 10 seconds is used.
+    /// This is a convenience method that uses default timeout (10 seconds)
+    /// and generates a random mnemonic.
     ///
-    pub async fn new(
+    /// For custom configuration, use [`BoltzSession::builder()`] instead.
+    pub async fn new(network: ElementsNetwork, client: AnyClient) -> Result<Self, Error> {
+        Self::builder(network, client).build().await
+    }
+
+    /// Get a builder for custom BoltzSession configuration
+    ///
+    /// Use this when you need to customize the timeout or provide a specific mnemonic.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use lwk_boltz::BoltzSession;
+    /// # use lwk_wollet::ElementsNetwork;
+    /// # use lwk_boltz::clients::AnyClient;
+    /// # use std::time::Duration;
+    /// # async fn example(network: ElementsNetwork, client: AnyClient) -> Result<(), Box<dyn std::error::Error>> {
+    /// let session = BoltzSession::builder(network, client)
+    ///     .create_swap_timeout(Duration::from_secs(30))
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn builder(network: ElementsNetwork, client: AnyClient) -> BoltzSessionBuilder {
+        BoltzSessionBuilder::new(network, client)
+    }
+
+    /// Internal initialization method that connects to the Boltz API and starts a WebSocket connection
+    async fn initialize(
         network: ElementsNetwork,
         client: AnyClient,
         timeout: Option<Duration>,
@@ -191,7 +219,7 @@ impl BoltzSessionBuilder {
 
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
-        BoltzSession::new(
+        BoltzSession::initialize(
             self.network,
             self.client,
             self.create_swap_timeout,

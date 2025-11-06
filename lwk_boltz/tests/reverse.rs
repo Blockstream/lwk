@@ -29,7 +29,7 @@ mod tests {
     async fn test_session_create_invoice_mainnet() {
         let _ = env_logger::try_init();
         let network = ElementsNetwork::Liquid;
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             network,
             AnyClient::Electrum(Arc::new(
                 ElectrumClient::new(
@@ -40,9 +40,9 @@ mod tests {
                 )
                 .unwrap(),
             )),
-            Some(TIMEOUT),
-            None,
         )
+        .create_swap_timeout(TIMEOUT)
+        .build()
         .await
         .unwrap();
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
@@ -91,14 +91,11 @@ mod tests {
             network,
         )
         .unwrap();
-        let session = BoltzSession::new(
-            network,
-            AnyClient::Electrum(Arc::new(client)),
-            Some(TIMEOUT),
-            None,
-        )
-        .await
-        .unwrap();
+        let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
         let response = session
             .invoice(1000, Some("test".to_string()), &claim_address, None)
             .await
@@ -137,14 +134,11 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = BoltzSession::new(
-            network,
-            AnyClient::Electrum(Arc::new(client)),
-            Some(TIMEOUT),
-            None,
-        )
-        .await
-        .unwrap();
+        let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();
@@ -184,12 +178,13 @@ mod tests {
         )
         .unwrap();
 
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
-            Some(TIMEOUT),
-            Some(mnemonic.clone()),
         )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .build()
         .await
         .unwrap();
 
@@ -202,12 +197,13 @@ mod tests {
         let serialized_data = invoice_response.serialize().unwrap();
         drop(invoice_response);
         drop(session);
-        let session = BoltzSession::new(
+        let session = BoltzSession::builder(
             ElementsNetwork::default_regtest(),
             AnyClient::Electrum(client.clone()),
-            Some(TIMEOUT),
-            Some(mnemonic),
         )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .build()
         .await
         .unwrap();
         let data: InvoiceDataSerializable = serde_json::from_str(&serialized_data).unwrap();
@@ -229,14 +225,11 @@ mod tests {
         let network = ElementsNetwork::default_regtest();
         let client = ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap();
 
-        let session = BoltzSession::new(
-            network,
-            AnyClient::Electrum(Arc::new(client)),
-            Some(TIMEOUT),
-            None,
-        )
-        .await
-        .unwrap();
+        let session = BoltzSession::builder(network, AnyClient::Electrum(Arc::new(client)))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
         let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
             .await
             .unwrap();

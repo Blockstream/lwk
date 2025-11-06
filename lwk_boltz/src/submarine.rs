@@ -33,6 +33,7 @@ pub struct PreparePayResponse {
     api: Arc<BoltzApiClientV2>,
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
     polling: bool,
+    timeout_advance: Duration,
 }
 
 impl BoltzSession {
@@ -127,6 +128,7 @@ impl BoltzSession {
         );
         Ok(PreparePayResponse {
             polling: self.polling,
+            timeout_advance: self.timeout_advance,
             data: PreparePayData {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
@@ -165,6 +167,7 @@ impl BoltzSession {
 
         Ok(PreparePayResponse {
             polling: self.polling,
+            timeout_advance: self.timeout_advance,
             data,
             swap_script,
             rx,
@@ -269,13 +272,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
 impl PreparePayResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id();
-        next_status(
-            &mut self.rx,
-            Duration::from_secs(180),
-            &swap_id,
-            self.polling,
-        )
-        .await
+        next_status(&mut self.rx, self.timeout_advance, &swap_id, self.polling).await
     }
 
     async fn handle_cooperative_claim(

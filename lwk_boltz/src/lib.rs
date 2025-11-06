@@ -69,6 +69,7 @@ pub struct BoltzSession {
     next_index_to_use: AtomicU32,
 
     polling: bool,
+    timeout_advance: Duration,
 }
 
 impl BoltzSession {
@@ -111,6 +112,7 @@ impl BoltzSession {
         timeout: Option<Duration>,
         mnemonic: Option<Mnemonic>,
         polling: bool,
+        timeout_advance: Option<Duration>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
         let chain_client = Arc::new(ChainClient::new().with_liquid(client));
@@ -138,6 +140,7 @@ impl BoltzSession {
             liquid_chain,
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
             polling,
+            timeout_advance: timeout_advance.unwrap_or(Duration::from_secs(180)),
         })
     }
 
@@ -192,6 +195,7 @@ pub struct BoltzSessionBuilder {
     create_swap_timeout: Option<Duration>,
     mnemonic: Option<Mnemonic>,
     polling: bool,
+    timeout_advance: Option<Duration>,
 }
 
 impl BoltzSessionBuilder {
@@ -203,6 +207,7 @@ impl BoltzSessionBuilder {
             create_swap_timeout: None,
             mnemonic: None,
             polling: false,
+            timeout_advance: None,
         }
     }
 
@@ -211,6 +216,14 @@ impl BoltzSessionBuilder {
     /// If not set, the default timeout of 10 seconds is used.
     pub fn create_swap_timeout(mut self, timeout: Duration) -> Self {
         self.create_swap_timeout = Some(timeout);
+        self
+    }
+
+    /// Set the timeout for the advance call
+    ///
+    /// If not set, the default timeout of 3 minutes is used.
+    pub fn timeout_advance(mut self, timeout: Duration) -> Self {
+        self.timeout_advance = Some(timeout);
         self
     }
 
@@ -239,6 +252,7 @@ impl BoltzSessionBuilder {
             self.create_swap_timeout,
             self.mnemonic,
             self.polling,
+            self.timeout_advance,
         )
         .await
     }

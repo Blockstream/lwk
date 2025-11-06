@@ -47,6 +47,7 @@ pub struct InvoiceResponse {
     chain_client: Arc<ChainClient>,
     claim_broadcasted: bool,
     polling: bool,
+    timeout_advance: Duration,
 }
 
 impl BoltzSession {
@@ -113,6 +114,7 @@ impl BoltzSession {
 
         Ok(InvoiceResponse {
             polling: self.polling,
+            timeout_advance: self.timeout_advance,
             data: InvoiceData {
                 last_state,
                 swap_type: SwapType::Reverse,
@@ -152,6 +154,7 @@ impl BoltzSession {
 
         Ok(InvoiceResponse {
             polling: self.polling,
+            timeout_advance: self.timeout_advance,
             data,
             rx,
             swap_script,
@@ -260,13 +263,7 @@ pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Erro
 impl InvoiceResponse {
     async fn next_status(&mut self) -> Result<SwapStatus, Error> {
         let swap_id = self.swap_id().to_string();
-        next_status(
-            &mut self.rx,
-            Duration::from_secs(180),
-            &swap_id,
-            self.polling,
-        )
-        .await
+        next_status(&mut self.rx, self.timeout_advance, &swap_id, self.polling).await
     }
 
     async fn handle_claim_transaction_if_necessary(

@@ -201,13 +201,14 @@ impl BoltzSession {
             }
         };
 
-        let inner = lwk_boltz::blocking::BoltzSession::new(
-            network_value,
-            client,
-            timeout.map(Duration::from_secs),
-            mnemonic.map(|e| e.inner()),
-        )
-        .map_err(|e| LwkError::Generic {
+        let mut builder = lwk_boltz::BoltzSession::builder(network_value, client);
+        if let Some(timeout_secs) = timeout {
+            builder = builder.create_swap_timeout(Duration::from_secs(timeout_secs));
+        }
+        if let Some(mnemonic) = mnemonic {
+            builder = builder.mnemonic(mnemonic.inner());
+        }
+        let inner = builder.build_blocking().map_err(|e| LwkError::Generic {
             msg: format!("Failed to create blocking lightning session: {:?}", e),
         })?;
         Ok(Self { inner, logging })

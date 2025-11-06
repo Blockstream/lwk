@@ -227,6 +227,16 @@ impl BoltzSessionBuilder {
         )
         .await
     }
+
+    /// Build a blocking `BoltzSession`
+    ///
+    /// This creates a new tokio runtime and wraps the async session for synchronous use.
+    pub fn build_blocking(self) -> Result<blocking::BoltzSession, Error> {
+        let runtime = Arc::new(tokio::runtime::Runtime::new()?);
+        let _guard = runtime.enter();
+        let inner = runtime.block_on(self.build())?;
+        Ok(blocking::BoltzSession::new_from_async(inner, runtime))
+    }
 }
 
 #[derive(Deserialize, Serialize)]

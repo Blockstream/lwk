@@ -1,6 +1,5 @@
-use std::{ops::ControlFlow, sync::Arc, time::Duration};
+use std::{ops::ControlFlow, sync::Arc};
 
-use bip39::Mnemonic;
 use boltz_client::{
     boltz::{
         GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates, SubSwapStates,
@@ -8,11 +7,11 @@ use boltz_client::{
     },
     Bolt11Invoice,
 };
-use lwk_wollet::{elements, ElementsNetwork};
+use lwk_wollet::elements;
 
 use crate::{
-    clients::AnyClient, prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData,
-    InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
+    prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData, InvoiceDataSerializable,
+    LightningPayment, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -31,23 +30,12 @@ pub struct InvoiceResponse {
 }
 
 impl BoltzSession {
-    pub fn new(
-        network: ElementsNetwork,
-        client: AnyClient,
-        timeout: Option<Duration>,
-        mnemonic: Option<Mnemonic>,
-    ) -> Result<Self, Error> {
-        let runtime = Arc::new(tokio::runtime::Runtime::new()?);
-        let _guard = runtime.enter();
-        let mut builder = super::BoltzSession::builder(network, client);
-        if let Some(timeout) = timeout {
-            builder = builder.create_swap_timeout(timeout);
-        }
-        if let Some(mnemonic) = mnemonic {
-            builder = builder.mnemonic(mnemonic);
-        }
-        let inner = runtime.block_on(builder.build())?;
-        Ok(Self { inner, runtime })
+    /// Internal method to construct a blocking session from an async session and runtime
+    pub(crate) fn new_from_async(
+        inner: super::BoltzSession,
+        runtime: Arc<tokio::runtime::Runtime>,
+    ) -> Self {
+        Self { inner, runtime }
     }
 
     pub fn prepare_pay(

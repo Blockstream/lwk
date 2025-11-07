@@ -373,7 +373,7 @@ pub async fn next_status(
             match rx.try_recv() {
                 Ok(update) => update,
                 Err(TryRecvError::Empty) => {
-                    return Err(Error::NoUpdate);
+                    return Err(Error::NoBoltzUpdate);
                 }
                 Err(e) => return Err(e.into()),
             }

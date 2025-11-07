@@ -88,7 +88,7 @@ def invoice_thread(invoice_response, claim_address):
                 print("Invoice payment failed!")
                 rename_swap_data(swap_id)
                 break
-        except LwkError.NoUpdate as e:
+        except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
             continue
@@ -114,7 +114,7 @@ def pay_invoice_thread(prepare_pay_response):
                 print("Payment failed!")
                 rename_swap_data(swap_id)
                 break
-        except LwkError.NoUpdate as e:
+        except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
             time.sleep(1)
             continue

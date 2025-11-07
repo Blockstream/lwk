@@ -22,8 +22,8 @@ pub enum LwkError {
     #[error("Swap {swap_id} has expired with status {status}")]
     SwapExpired { swap_id: String, status: String },
 
-    #[error("No update available, continuing polling")]
-    NoUpdate,
+    #[error("There are no message to receive on the boltz web socket, continuing polling")]
+    NoBoltzUpdate,
 }
 
 impl From<lwk_wollet::Error> for LwkError {
@@ -214,7 +214,7 @@ impl From<lwk_boltz::Error> for LwkError {
             lwk_boltz::Error::Expired { swap_id, status } => {
                 LwkError::SwapExpired { swap_id, status }
             }
-            lwk_boltz::Error::NoUpdate => LwkError::NoUpdate,
+            lwk_boltz::Error::NoBoltzUpdate => LwkError::NoBoltzUpdate,
             _ => LwkError::Generic {
                 msg: format!("{:?}", value),
             },

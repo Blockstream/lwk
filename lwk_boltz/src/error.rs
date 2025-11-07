@@ -77,7 +77,7 @@ pub enum Error {
     MnemonicIdentifierMismatch(XKeyIdentifier, XKeyIdentifier),
 
     #[error("No update available, continuing polling")]
-    NoUpdate,
+    NoBoltzUpdate,
 }
 
 impl From<BoltzError> for Error {

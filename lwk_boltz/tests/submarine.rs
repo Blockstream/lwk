@@ -184,7 +184,7 @@ mod tests {
                     assert!(result, "Payment should succeed");
                     break;
                 }
-                Err(lwk_boltz::Error::NoUpdate) => {
+                Err(lwk_boltz::Error::NoBoltzUpdate) => {
                     log::info!("Polling: No update available, sleeping and retrying...");
                     sleep(Duration::from_secs(1)).await;
                 }

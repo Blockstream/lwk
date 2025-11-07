@@ -462,9 +462,9 @@ impl PreparePayResponse {
         })?;
         let control_flow = match response.advance() {
             Ok(control_flow) => control_flow,
-            Err(lwk_boltz::Error::NoUpdate) => {
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {
                 *lock = Some(response);
-                return Err(LwkError::NoUpdate);
+                return Err(LwkError::NoBoltzUpdate);
             }
             Err(e) => return Err(e.into()),
         };
@@ -538,9 +538,9 @@ impl InvoiceResponse {
         })?;
         let control_flow = match response.advance() {
             Ok(control_flow) => control_flow,
-            Err(lwk_boltz::Error::NoUpdate) => {
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {
                 *lock = Some(response);
-                return Err(LwkError::NoUpdate);
+                return Err(LwkError::NoBoltzUpdate);
             }
             Err(e) => return Err(e.into()),
         };

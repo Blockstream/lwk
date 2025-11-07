@@ -438,8 +438,8 @@ pub async fn broadcast_tx_with_retry(
     for _ in 0..30 {
         match chain_client.broadcast_tx(tx).await {
             Ok(txid) => return Ok(txid),
-            Err(_) => {
-                log::info!("Failed broadcast, retrying in 1 second");
+            Err(e) => {
+                log::info!("Failed broadcast {e}, retrying in 1 second");
                 sleep(Duration::from_secs(1)).await;
             }
         }

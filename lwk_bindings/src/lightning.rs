@@ -460,26 +460,23 @@ impl PreparePayResponse {
         let mut response = lock.take().ok_or_else(|| LwkError::Generic {
             msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
         })?;
-        let control_flow = match response.advance() {
-            Ok(control_flow) => control_flow,
-            Err(lwk_boltz::Error::NoBoltzUpdate) => {
-                *lock = Some(response);
-                return Err(LwkError::NoBoltzUpdate);
-            }
-            Err(e) => return Err(e.into()),
-        };
-        Ok(match control_flow {
-            ControlFlow::Continue(_update) => {
+        Ok(match response.advance() {
+            Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
                 PaymentState::Continue
             }
-            ControlFlow::Break(update) => {
+            Ok(ControlFlow::Break(update)) => {
                 if update {
                     PaymentState::Success
                 } else {
                     PaymentState::Failed
                 }
             }
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {
+                *lock = Some(response);
+                return Err(LwkError::NoBoltzUpdate);
+            }
+            Err(e) => return Err(e.into()),
         })
     }
 }
@@ -536,26 +533,23 @@ impl InvoiceResponse {
         let mut response = lock.take().ok_or_else(|| LwkError::Generic {
             msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
         })?;
-        let control_flow = match response.advance() {
-            Ok(control_flow) => control_flow,
-            Err(lwk_boltz::Error::NoBoltzUpdate) => {
-                *lock = Some(response);
-                return Err(LwkError::NoBoltzUpdate);
-            }
-            Err(e) => return Err(e.into()),
-        };
-        Ok(match control_flow {
-            ControlFlow::Continue(_update) => {
+        Ok(match response.advance() {
+            Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
                 PaymentState::Continue
             }
-            ControlFlow::Break(update) => {
+            Ok(ControlFlow::Break(update)) => {
                 if update {
                     PaymentState::Success
                 } else {
                     PaymentState::Failed
                 }
             }
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {
+                *lock = Some(response);
+                return Err(LwkError::NoBoltzUpdate);
+            }
+            Err(e) => return Err(e.into()),
         })
     }
 }

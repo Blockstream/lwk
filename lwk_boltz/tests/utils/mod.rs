@@ -1,14 +1,16 @@
 #![allow(dead_code)]
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use boltz_client::{
-    boltz::BoltzWsApi,
+    boltz::{BoltzWsApi, SwapStatus},
     network::{BitcoinChain, Chain, LiquidChain},
+    util::sleep,
 };
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 use futures::FutureExt;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::{error::Error, sync::Arc};
+use tokio::sync::broadcast::Receiver;
 use tokio::task::JoinHandle;
 
 const BITCOIND_URL: &str = "http://localhost:18443/wallet/client";
@@ -187,4 +189,24 @@ pub fn start_block_mining() -> JoinHandle<()> {
             }
         }
     })
+}
+
+pub async fn next_status(
+    updates: &mut Receiver<SwapStatus>,
+    expected_status: &str,
+) -> Result<boltz_client::boltz::SwapStatus, Box<dyn Error>> {
+    tokio::select! {
+        result = async {
+            loop {
+                let update = updates.recv().await?;
+                log::info!("Waiting for status: {}", update.status);
+                if update.status == expected_status {
+                    return Ok(update);
+                }
+            }
+        } => result,
+        _ = sleep(WAIT_TIME) => {
+            Err("Timeout waiting for status: {expected_status}".into())
+        }
+    }
 }

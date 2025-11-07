@@ -526,6 +526,7 @@ dependencies = [
  "async-trait",
  "bip39",
  "bitcoin",
+ "electrum-client",
  "elements 0.25.2",
  "env_logger 0.7.1",
  "futures-util",

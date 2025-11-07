@@ -42,6 +42,19 @@ test-submarine: export-env-vars
     set -e
     RUST_LOG=info cargo test --test submarine -- tests::test_session_submarine --nocapture --exact --ignored
 
+
+# Run chain swaps test
+test-chain-swaps-btc-lbtc: export-env-vars
+    #!/usr/bin/env bash
+    set -e
+    RUST_LOG=info cargo test --test chain_swaps -- test_chain_swaps_btc_lbtc --nocapture
+
+# Run chain swaps test
+test-chain-swaps-lbtc-btc: export-env-vars
+    #!/usr/bin/env bash
+    set -e
+    RUST_LOG=info cargo test --test chain_swaps -- test_chain_swaps_lbtc_btc --nocapture
+
 # Run submarine swap test with magic routing hints
 test-mrh: export-env-vars
     #!/usr/bin/env bash

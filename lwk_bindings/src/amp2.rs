@@ -61,7 +61,7 @@ impl Amp2 {
     }
 
     /// Register an AMP2 wallet with the AMP2 server
-    pub fn register(&self, desc: &Amp2Descriptor) -> Result<String, LwkError> {
+    pub fn register_amp2(&self, desc: &Amp2Descriptor) -> Result<String, LwkError> {
         Ok(self.inner.blocking_register(desc.into())?.wid)
     }
 

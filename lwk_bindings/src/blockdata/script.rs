@@ -53,7 +53,7 @@ impl Script {
 
     /// Return the string representation of the script showing op codes and their arguments.
     /// For example: "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
-    pub fn asm(&self) -> String {
+    pub fn asm_script(&self) -> String {
         self.inner.asm()
     }
 
@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(script.bytes(), script_bytes);
 
         assert_eq!(
-            script.asm(),
+            script.asm_script(),
             "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
         );
 

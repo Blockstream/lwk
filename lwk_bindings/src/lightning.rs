@@ -86,9 +86,7 @@ pub struct BoltzSessionBuilder {
     client: Arc<AnyClient>,
     #[uniffi(default = None)]
     timeout: Option<u64>,
-    #[uniffi(default = None)]
     mnemonic: Option<Arc<Mnemonic>>,
-    #[uniffi(default = None)]
     logging: Option<Arc<dyn Logging>>,
     #[uniffi(default = false)]
     polling: bool,

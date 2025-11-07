@@ -391,9 +391,7 @@ impl BoltzSession {
 impl PreparePayResponse {
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
-        let response = lock.take().ok_or_else(|| LwkError::Generic {
-            msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-        })?;
+        let response = lock.take().ok_or_else(|| LwkError::ObjectConsumed)?;
         Ok(response.complete_pay()?)
     }
 
@@ -402,9 +400,7 @@ impl PreparePayResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .swap_id())
     }
 
@@ -416,9 +412,7 @@ impl PreparePayResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .serialize()?)
     }
 
@@ -427,9 +421,7 @@ impl PreparePayResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .uri())
     }
 
@@ -438,9 +430,7 @@ impl PreparePayResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .uri_address();
         Address::new(&uri_address)
     }
@@ -449,17 +439,13 @@ impl PreparePayResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .uri_amount())
     }
 
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
-        let mut response = lock.take().ok_or_else(|| LwkError::Generic {
-            msg: "This PreparePayResponse already called complete_pay or errored".to_string(),
-        })?;
+        let mut response = lock.take().ok_or_else(|| LwkError::ObjectConsumed)?;
         Ok(match response.advance() {
             Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);
@@ -488,9 +474,7 @@ impl InvoiceResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .bolt11_invoice();
         Ok(Bolt11Invoice::from(bolt11_invoice))
     }
@@ -500,9 +484,7 @@ impl InvoiceResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .swap_id())
     }
 
@@ -514,25 +496,19 @@ impl InvoiceResponse {
             .inner
             .lock()?
             .as_ref()
-            .ok_or_else(|| LwkError::Generic {
-                msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-            })?
+            .ok_or_else(|| LwkError::ObjectConsumed)?
             .serialize()?)
     }
 
     pub fn complete_pay(&self) -> Result<bool, LwkError> {
         let mut lock = self.inner.lock()?;
-        let response = lock.take().ok_or_else(|| LwkError::Generic {
-            msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-        })?;
+        let response = lock.take().ok_or_else(|| LwkError::ObjectConsumed)?;
         Ok(response.complete_pay()?)
     }
 
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
-        let mut response = lock.take().ok_or_else(|| LwkError::Generic {
-            msg: "This InvoiceResponse already called complete_pay or errored".to_string(),
-        })?;
+        let mut response = lock.take().ok_or_else(|| LwkError::ObjectConsumed)?;
         Ok(match response.advance() {
             Ok(ControlFlow::Continue(_update)) => {
                 *lock = Some(response);

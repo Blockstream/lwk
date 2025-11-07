@@ -24,6 +24,9 @@ pub enum LwkError {
 
     #[error("There are no message to receive on the boltz web socket, continuing polling")]
     NoBoltzUpdate,
+
+    #[error("Calling a function on an object that has already been consumed, like for example calling complete() on object that already is completed")]
+    ObjectConsumed,
 }
 
 impl From<lwk_wollet::Error> for LwkError {

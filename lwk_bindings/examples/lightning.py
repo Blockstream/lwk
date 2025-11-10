@@ -73,10 +73,11 @@ def update_balance(wollet, esplora_client, desc):
 def invoice_thread(invoice_response, claim_address):
     """Thread function to handle invoice completion"""
     print("Waiting for invoice payment...")
+    swap_id = invoice_response.swap_id()
+
     while True:
         try:
             state = invoice_response.advance()
-            swap_id = invoice_response.swap_id()
             print(f"Invoice state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = invoice_response.serialize()
@@ -102,10 +103,10 @@ def invoice_thread(invoice_response, claim_address):
 def pay_invoice_thread(prepare_pay_response):
     """Thread function to handle payment completion"""
     print("Waiting for payment completion...")
+    swap_id = prepare_pay_response.swap_id()
     while True:
         try:
             state = prepare_pay_response.advance()
-            swap_id = prepare_pay_response.swap_id()
             print(f"Payment state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = prepare_pay_response.serialize()
@@ -131,10 +132,11 @@ def pay_invoice_thread(prepare_pay_response):
 def lockup_thread(lockup_response):
     """Thread function to handle chain swap completion"""
     print("Waiting for chain swap completion...")
+    swap_id = lockup_response.swap_id()
+
     while True:
         try:
             state = lockup_response.advance()
-            swap_id = lockup_response.swap_id()
             print(f"Chain swap state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = lockup_response.serialize()

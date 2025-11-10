@@ -248,12 +248,12 @@ impl LockupResponse {
         self.inner.expected_amount()
     }
 
-    pub fn from_chain(&self) -> Chain {
-        self.inner.from_chain()
+    pub fn chain_from(&self) -> Chain {
+        self.inner.chain_from()
     }
 
-    pub fn to_chain(&self) -> Chain {
-        self.inner.to_chain()
+    pub fn chain_to(&self) -> Chain {
+        self.inner.chain_to()
     }
 
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

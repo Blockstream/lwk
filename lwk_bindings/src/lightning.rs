@@ -621,23 +621,23 @@ impl LockupResponse {
             .expected_amount())
     }
 
-    pub fn from_chain(&self) -> Result<String, LwkError> {
+    pub fn chain_from(&self) -> Result<String, LwkError> {
         Ok(self
             .inner
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .from_chain()
+            .chain_from()
             .to_string())
     }
 
-    pub fn to_chain(&self) -> Result<String, LwkError> {
+    pub fn chain_to(&self) -> Result<String, LwkError> {
         Ok(self
             .inner
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .to_chain()
+            .chain_to()
             .to_string())
     }
 

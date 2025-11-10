@@ -226,11 +226,11 @@ impl LockupResponse {
         self.data.expected_lockup_amount
     }
 
-    pub fn from_chain(&self) -> Chain {
+    pub fn chain_from(&self) -> Chain {
         self.data.from_chain
     }
 
-    pub fn to_chain(&self) -> Chain {
+    pub fn chain_to(&self) -> Chain {
         self.data.to_chain
     }
 
@@ -255,7 +255,7 @@ impl LockupResponse {
             SwapState::ServerTransactionConfirmed => {
                 log::info!(
                     "Server lockup confirmed, claiming on {} chain",
-                    self.to_chain()
+                    self.chain_to()
                 );
                 sleep(WAIT_TIME).await; //TODO can we do better?
                 let tx = self

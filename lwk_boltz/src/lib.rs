@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 pub mod blocking;
+mod chain_data;
+mod chain_swaps;
 pub mod clients;
 mod error;
 mod invoice_data;
@@ -25,9 +27,12 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
+use boltz_client::network::electrum::ElectrumBitcoinClient;
+use boltz_client::network::BitcoinChain;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
 use boltz_client::swaps::ChainClient;
+use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
 use boltz_client::Keypair;
 use lightning::bitcoin::XKeyIdentifier;
@@ -40,6 +45,8 @@ use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
 
+pub use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
+pub use crate::chain_swaps::LockupResponse;
 use crate::clients::AnyClient;
 pub use crate::error::Error;
 pub use crate::invoice_data::to_invoice_data;
@@ -51,8 +58,11 @@ pub use crate::prepare_pay_data::PreparePayDataSerializable;
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;
+pub use boltz_client::boltz::ChainSwapStates;
 pub use boltz_client::boltz::{RevSwapStates, SubSwapStates, SwapRestoreResponse, Webhook};
 pub use boltz_client::Bolt11Invoice;
+use lwk_wollet::hashes::sha256;
+use lwk_wollet::hashes::Hash;
 
 pub use boltz_client::boltz::SwapRestoreType as SwapType;
 
@@ -115,7 +125,26 @@ impl BoltzSession {
         timeout_advance: Option<Duration>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
-        let chain_client = Arc::new(ChainClient::new().with_liquid(client));
+
+        // the following are using boltz-client default nodes, pointing at bull's electrum server
+        // TODO:make this configurable
+        let bitcoin_client = match network {
+            ElementsNetwork::Liquid => {
+                ElectrumBitcoinClient::default(BitcoinChain::Bitcoin, None).expect("TODO")
+            }
+            ElementsNetwork::LiquidTestnet => {
+                ElectrumBitcoinClient::default(BitcoinChain::BitcoinTestnet, None).expect("TODO")
+            }
+            ElementsNetwork::ElementsRegtest { .. } => {
+                ElectrumBitcoinClient::default(BitcoinChain::BitcoinRegtest, None).expect("TODO")
+            }
+        };
+
+        let chain_client = Arc::new(
+            ChainClient::new()
+                .with_liquid(client)
+                .with_bitcoin(bitcoin_client),
+        );
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();
@@ -423,7 +452,7 @@ pub async fn next_status(
 /// Derive a keypair from a mnemonic and index using the Boltz derivation path
 ///
 /// This derivation path is a constant for Boltz, by using this we are compatible with the web app and can use the same rescue file
-fn derive_keypair(index: u32, mnemonic: &Mnemonic) -> Result<Keypair, Error> {
+pub(crate) fn derive_keypair(index: u32, mnemonic: &Mnemonic) -> Result<Keypair, Error> {
     // Boltz derivation path: m/44/0/0/0/{index}
     let derivation_path = DerivationPath::from(vec![
         ChildNumber::from_normal_idx(44)?,

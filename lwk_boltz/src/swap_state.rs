@@ -21,9 +21,11 @@ pub enum SwapState {
     InvoiceSettled,
     InvoiceExpired,
     SwapExpired,
+    ServerTransactionMempool,
+    ServerTransactionConfirmed,
 }
 
-pub(crate) trait SwapStateTrait {
+pub trait SwapStateTrait {
     fn swap_state(&self) -> Result<SwapState, Error>;
 }
 impl SwapStateTrait for SwapStatus {
@@ -52,6 +54,8 @@ impl std::fmt::Display for SwapState {
             SwapState::InvoiceSettled => "invoice.settled",
             SwapState::InvoiceExpired => "invoice.expired",
             SwapState::SwapExpired => "swap.expired",
+            SwapState::ServerTransactionMempool => "transaction.server.mempool",
+            SwapState::ServerTransactionConfirmed => "transaction.server.confirmed",
         };
         write!(f, "{}", s)
     }
@@ -77,6 +81,8 @@ impl std::str::FromStr for SwapState {
             "invoice.settled" => Ok(SwapState::InvoiceSettled),
             "invoice.expired" => Ok(SwapState::InvoiceExpired),
             "swap.expired" => Ok(SwapState::SwapExpired),
+            "transaction.server.mempool" => Ok(SwapState::ServerTransactionMempool),
+            "transaction.server.confirmed" => Ok(SwapState::ServerTransactionConfirmed),
             _ => Err(format!("Unknown swap status: {}", s)),
         }
     }
@@ -122,6 +128,8 @@ mod tests {
             SwapState::InvoiceSettled,
             SwapState::InvoiceExpired,
             SwapState::SwapExpired,
+            SwapState::ServerTransactionMempool,
+            SwapState::ServerTransactionConfirmed,
         ]
     }
 

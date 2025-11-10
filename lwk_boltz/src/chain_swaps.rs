@@ -324,7 +324,7 @@ impl LockupResponse {
         Ok(serde_json::to_string(&s)?)
     }
 
-    pub async fn complete_lockup(mut self) -> Result<bool, Error> {
+    pub async fn complete(mut self) -> Result<bool, Error> {
         loop {
             match self.advance().await? {
                 ControlFlow::Continue(update) => {

@@ -303,7 +303,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let success = response.complete_lockup().await.unwrap();
+        let success = response.complete().await.unwrap();
         assert!(success, "BTC to LBTC swap should succeed");
 
         // Test LBTC to BTC swap
@@ -333,7 +333,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let success = response.complete_lockup().await.unwrap();
+        let success = response.complete().await.unwrap();
         assert!(success, "LBTC to BTC swap should succeed");
 
         // Test polling mode

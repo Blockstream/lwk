@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     ops::ControlFlow,
+    str::FromStr,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -9,9 +10,11 @@ use crate::{
     Address, Bolt11Invoice, ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic,
     Network,
 };
+use elements::bitcoin;
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
-    InvoiceDataSerializable, PreparePayDataSerializable, RevSwapStates, SubSwapStates,
+    ChainSwapStates, InvoiceDataSerializable, PreparePayDataSerializable, RevSwapStates,
+    SubSwapStates,
 };
 use std::fmt;
 
@@ -127,6 +130,11 @@ pub struct InvoiceResponse {
 #[uniffi::export(Display)]
 pub struct SwapList {
     inner: Vec<lwk_boltz::SwapRestoreResponse>,
+}
+
+#[derive(uniffi::Object)]
+pub struct LockupResponse {
+    inner: Mutex<Option<lwk_boltz::blocking::LockupResponse>>,
 }
 
 impl fmt::Display for SwapList {
@@ -317,6 +325,59 @@ impl BoltzSession {
         let data: InvoiceDataSerializable = serde_json::from_str(data)?;
         let response = self.inner.restore_invoice(data)?;
         Ok(InvoiceResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Create an onchain swap to convert BTC to LBTC
+    pub fn btc_to_lbtc(
+        &self,
+        amount: u64,
+        refund_address: &str, // TODO: convert to BitcoinAddress?
+        claim_address: &Address,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<LockupResponse, LwkError> {
+        let webhook = webhook
+            .as_ref()
+            .map(|w| lwk_boltz::Webhook::<ChainSwapStates> {
+                url: w.url.to_string(),
+                hash_swap_id: None,
+                status: None,
+            });
+        let refund_address = bitcoin::Address::from_str(refund_address)
+            .expect("TODO")
+            .assume_checked();
+        let response =
+            self.inner
+                .btc_to_lbtc(amount, &refund_address, claim_address.as_ref(), webhook)?;
+        Ok(LockupResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Create an onchain swap to convert LBTC to BTC
+    pub fn lbtc_to_btc(
+        &self,
+        amount: u64,
+        refund_address: &Address,
+        claim_address: &str,
+        webhook: Option<Arc<WebHook>>,
+    ) -> Result<LockupResponse, LwkError> {
+        let webhook = webhook
+            .as_ref()
+            .map(|w| lwk_boltz::Webhook::<ChainSwapStates> {
+                url: w.url.to_string(),
+                hash_swap_id: None,
+                status: None,
+            });
+
+        let claim_address = bitcoin::Address::from_str(claim_address)
+            .expect("TODO")
+            .assume_checked();
+        let response =
+            self.inner
+                .lbtc_to_btc(amount, refund_address.as_ref(), &claim_address, webhook)?;
+        Ok(LockupResponse {
             inner: Mutex::new(Some(response)),
         })
     }
@@ -527,6 +588,95 @@ impl InvoiceResponse {
             }
             Err(e) => return Err(e.into()),
         })
+    }
+}
+
+#[uniffi::export]
+impl LockupResponse {
+    pub fn swap_id(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .swap_id())
+    }
+
+    pub fn lockup_address(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .lockup_address()
+            .to_string())
+    }
+
+    pub fn expected_amount(&self) -> Result<u64, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .expected_amount())
+    }
+
+    pub fn from_chain(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .from_chain()
+            .to_string())
+    }
+
+    pub fn to_chain(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .to_chain()
+            .to_string())
+    }
+
+    pub fn advance(&self) -> Result<PaymentState, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        Ok(match response.advance() {
+            Ok(ControlFlow::Continue(_update)) => {
+                *lock = Some(response);
+                PaymentState::Continue
+            }
+            Ok(ControlFlow::Break(update)) => {
+                if update {
+                    PaymentState::Success
+                } else {
+                    PaymentState::Failed
+                }
+            }
+            Err(lwk_boltz::Error::NoBoltzUpdate) => {
+                *lock = Some(response);
+                return Err(LwkError::NoBoltzUpdate);
+            }
+            Err(e) => return Err(e.into()),
+        })
+    }
+
+    pub fn complete(&self) -> Result<bool, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let response = lock.take().ok_or(LwkError::ObjectConsumed)?;
+        Ok(response.complete()?)
+    }
+
+    pub fn serialize(&self) -> Result<String, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .serialize()?)
     }
 }
 

@@ -19,10 +19,17 @@ mod tests {
     use boltz_client::Keypair;
     use boltz_client::PublicKey;
     use boltz_client::Secp256k1;
-    use lwk_boltz::clients::ElectrumClient;
+    use lwk_boltz::{
+        clients::{AnyClient, ElectrumClient},
+        BoltzSession,
+    };
+    use lwk_wollet::bitcoin;
+    use lwk_wollet::elements;
     use lwk_wollet::secp256k1::rand::thread_rng;
     use lwk_wollet::ElementsNetwork;
+    use std::str::FromStr;
     use std::sync::Arc;
+    use std::time::Duration;
 
     const BTC_CHAIN: BitcoinChain = BitcoinChain::BitcoinRegtest;
     const LBTC_CHAIN: LiquidChain = LiquidChain::LiquidRegtest;
@@ -41,12 +48,14 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_chain_swaps_btc_lbtc() {
         let chain_client = create_chain_client_electrum();
         v2_chain(&chain_client, false, BTC_CHAIN.into(), LBTC_CHAIN.into()).await;
         v2_chain(&chain_client, true, BTC_CHAIN.into(), LBTC_CHAIN.into()).await;
     }
     #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_chain_swaps_lbtc_btc() {
         let chain_client = create_chain_client_electrum();
         v2_chain(&chain_client, false, LBTC_CHAIN.into(), BTC_CHAIN.into()).await;
@@ -247,5 +256,139 @@ mod tests {
 
         log::info!("Successfully broadcasted refund tx!");
         log::debug!("Refund Tx {tx:#?}");
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_onchain() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let _mining_handle = crate::utils::start_block_mining();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .build()
+            .await
+            .unwrap();
+
+        // Test BTC to LBTC swap
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+        let response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        log::info!(
+            "BTC to LBTC swap - Lockup address: {}",
+            response.lockup_address()
+        );
+        crate::utils::send_to_address(
+            BTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+        let success = response.complete_lockup().await.unwrap();
+        assert!(success, "BTC to LBTC swap should succeed");
+
+        // Test LBTC to BTC swap
+        let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address_str)
+            .unwrap()
+            .assume_checked();
+        let response = session
+            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        log::info!(
+            "LBTC to BTC swap - Lockup address: {}",
+            response.lockup_address()
+        );
+        crate::utils::send_to_address(
+            LBTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+        let success = response.complete_lockup().await.unwrap();
+        assert!(success, "LBTC to BTC swap should succeed");
+
+        // Test polling mode
+        let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .polling(true)
+            .build()
+            .await
+            .unwrap();
+
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+        let mut response = session_polling
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        log::info!(
+            "Polling BTC to LBTC swap - Lockup address: {}",
+            response.lockup_address()
+        );
+        crate::utils::send_to_address(
+            BTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+
+        // Poll for updates until swap is complete
+        loop {
+            match response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(update)) => {
+                    log::info!("Polling: Received update. status:{}", update.status);
+                }
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Polling: Swap completed with result: {}", result);
+                    assert!(result, "Polling swap should succeed");
+                    break;
+                }
+                Err(lwk_boltz::Error::NoBoltzUpdate) => {
+                    log::info!("Polling: No update available, sleeping and retrying...");
+                    sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    panic!("Polling: Unexpected error: {}", e);
+                }
+            }
+        }
     }
 }

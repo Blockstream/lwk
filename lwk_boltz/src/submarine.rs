@@ -245,7 +245,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         referral_id: None,
         swap_tree: refund_details.tree.clone(),
         timeout_block_height: refund_details.timeout_block_height as u64,
-        blinding_key: Some(refund_details.blinding_key.clone()),
+        blinding_key: refund_details.blinding_key.clone(),
     };
 
     // Parse the status to SwapState

@@ -494,6 +494,7 @@ mod tests {
     use std::str::FromStr;
 
     use bip39::Mnemonic;
+    use boltz_client::boltz::SwapRestoreResponse;
     use lightning::offers::offer::Offer;
     use lwk_wollet::bitcoin::NetworkKind;
 
@@ -547,5 +548,12 @@ mod tests {
         let bolt12_str = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
         let bolt12 = Offer::from_str(bolt12_str).unwrap();
         assert_eq!(bolt12.to_string(), bolt12_str);
+    }
+
+    #[test]
+    fn test_parse_swap_restore() {
+        let data = include_str!("../tests/data/swap_restore_response.json");
+        let data: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
+        assert_eq!(data.len(), 32);
     }
 }

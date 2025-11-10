@@ -29,7 +29,7 @@
     {
         "id": "EpSPRCTDMaLf",
         "type": "reverse",
-        "status": "invoice.expired",
+        "status": "swap.expired",
         "createdAt": 1760445770,
         "from": "BTC",
         "to": "L-BTC",
@@ -87,7 +87,7 @@
     {
         "id": "W9dIofIubs8p",
         "type": "reverse",
-        "status": "swap.created",
+        "status": "swap.expired",
         "createdAt": 1760531307,
         "from": "BTC",
         "to": "L-BTC",
@@ -114,7 +114,7 @@
     {
         "id": "Nz3gYZQpb6n1",
         "type": "reverse",
-        "status": "swap.created",
+        "status": "swap.expired",
         "createdAt": 1760531585,
         "from": "BTC",
         "to": "L-BTC",
@@ -141,7 +141,7 @@
     {
         "id": "7sNun9gAfFP6",
         "type": "submarine",
-        "status": "invoice.set",
+        "status": "transaction.claimed",
         "createdAt": 1760686745,
         "from": "L-BTC",
         "to": "BTC",
@@ -156,11 +156,818 @@
                     "output": "20d59e910f3f824b52fb4d98cf1248323f43f0f2dbf35058ab00b977022d252f9cad03d1d936b1"
                 }
             },
+            "amount": 351,
             "keyIndex": 6,
+            "transaction": {
+                "id": "78bba05aaf982ba84f3d9030e85e160b118ad72ef8e5b59fab5a1bba4a9895b4",
+                "vout": 0
+            },
             "lockupAddress": "lq1pq0h49egqtyuhystdtkcl0af04a4qtwrr6tjv055umku3g98w4pyyk8p2r26ydfug979k6yqg37q923fmhchvt432ka6js3gjnw4jzk3krjn0cquhrdlr",
             "serverPublicKey": "037e9b13a01ea898b591e73463bd48794ae8095b1a77d000cbd42fd152f7d87345",
             "timeoutBlockHeight": 3594705,
             "blindingKey": "647b0dd8a7acab20f51b18f1ce2e1877e4e8c4587671a399eb3a3f451543a426"
+        }
+    },
+    {
+        "id": "JIHfTsx5sBot",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1760687567,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914a909ef0a1e2acdb847b338045fc34db227b8bf6088203cdbcdff942d0e25e16b20ec6eac16e1c50c392f29ae455bc23c6dbdd1efa664ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "2068e5b01dac5cb508da620774f5664eaae4f5b4a18950a78aafd3284a3fc573a4ad03dfd936b1"
+                }
+            },
+            "amount": 351,
+            "keyIndex": 7,
+            "transaction": {
+                "id": "38405fc1b977ccf824217eacb392a5986f3ea14305fdaac721c458a1083fe7c2",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqfulzv0270pyfxzed34xvfgajzzgyqg8e8me07wkkxdwx3way0q3tpxkdehkshpqm50tphmawhf52xs65qdmgttrq5t2xh8qel3my7pnkk6yqjwjj6qp",
+            "serverPublicKey": "023cdbcdff942d0e25e16b20ec6eac16e1c50c392f29ae455bc23c6dbdd1efa664",
+            "timeoutBlockHeight": 3594719,
+            "blindingKey": "4f3f355657e3a503a6397cc40e73d45053a77f19a0d4e5eae25d1834a9b29617"
+        }
+    },
+    {
+        "id": "uRuCcpZHZxFy",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1760688579,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a91493a3cf299cb281f2636075e788ce96625d96366488207293c0ad9b64c4c47cadba13e26ed1c3fa701d3a1fb8bd4ee906ecf583cf6e00ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20430b858ade8a7b96dfe47600441910a600b195a05a30279e72634ee46cb7dca0ad03f0d936b1"
+                }
+            },
+            "amount": 351,
+            "keyIndex": 8,
+            "transaction": {
+                "id": "ecebdf75f523c67a61d61d1d231003e45ad0ddf24dd935fa60f05b9042e774db",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqg5hh6prp79twc9whtlhpe4kds789x4m6jpr4w7jt8w62ntegnapjj0c7tvfq9yeak2wh8s40723s4jz4uk0w52lma04p4l06wr9xkgcznh4fdsampky",
+            "serverPublicKey": "027293c0ad9b64c4c47cadba13e26ed1c3fa701d3a1fb8bd4ee906ecf583cf6e00",
+            "timeoutBlockHeight": 3594736,
+            "blindingKey": "36e5cc0f1b5fa5d7b6ce12201ebcd1a95e783d06d6ba5004ec7bfc1c1f223016"
+        }
+    },
+    {
+        "id": "rWgvA4R6otYc",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1760704957,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914a4c26f5d61a41b783c293027f7e20173c5c8dad48820ed60bd73ab86d2a3976a9ccce9c16d11103e1a6a4a4bf6652657ddd669bbe141ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "203149cc6c1cfdc8cfbf5c38287f9d332194b9cd3929eb6264d420501473466fe9ad0301db36b1"
+                }
+            },
+            "amount": 351,
+            "keyIndex": 9,
+            "transaction": {
+                "id": "755d6700cfa59da82c9d61d1b2817f769438097b085e4c3fcc0f873d33dcd85b",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqwums4u2ausr2h3qv5t2xqk8mnzm7dy4ry32hgp8gqrmhzl7ed3s0uf9ttzzda63telcfv8l36g5zszhvf7vhj3ku85nctgdqul9shnxfpu5eztpsx9g",
+            "serverPublicKey": "02ed60bd73ab86d2a3976a9ccce9c16d11103e1a6a4a4bf6652657ddd669bbe141",
+            "timeoutBlockHeight": 3595009,
+            "blindingKey": "61890b418795019dcd83f191f0754a7d8dfb9c56b2d7ab68ee6bdbd2513f6cb2"
+        }
+    },
+    {
+        "id": "QBHbSdUQbxhu",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761034408,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914e5dfa3a3df5dbd14a99f7666abb5eae93834008b88203ee84ad064e8f257499ff8004355d03458ed58b7b061fcd86cf33288a579db65ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20a89095f7d6e01db557f75c3a1f7a6999143b03473782aaf9be36cc812af8d7a6ad0374f036b1"
+                }
+            },
+            "amount": 251,
+            "keyIndex": 10,
+            "transaction": {
+                "id": "e407259c767ffab5515526e068789a3635f6e44f087e8c47c1bac90ecc244e2c",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pq2wy5p484tzqrjfsksxu24yeap5s52f6r76vzrcudkcqpcptmm987ygx98jy63v2tmgapkm3qjsxjua745lc9c779u6vfmlskytn0hh3wpgrvletqm4x",
+            "serverPublicKey": "023ee84ad064e8f257499ff8004355d03458ed58b7b061fcd86cf33288a579db65",
+            "timeoutBlockHeight": 3600500,
+            "blindingKey": "c4a8c248f17d2258f48bff2cb6e98f18d6252af047a5c95f9fd7e04e1f5aaf1a"
+        }
+    },
+    {
+        "id": "fKrtRAYXm8ag",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761064098,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a9146a3801daac467648ec1616ce521cd6e9f7a249108820b99b957bce27205a3b001f7f634c35e5eb47c277c4b73562abea96d8e28fbaf1ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "209f0f65a131aa68c0d375ac998199b3a2b8b07617c578f34b51915292cded76cfad03a3d036b1"
+                }
+            },
+            "amount": 1968,
+            "keyIndex": 11,
+            "transaction": {
+                "id": "31371f6f2773283a79f74d69f0b3bf6c5b5f9366fcb53d8338b0466af4f05729",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqgm87w7ctlf7t9z924ppwh99zda3ymllg4qqr6jag98nzlv9ay4mpvs24dhyz8pk7le3tmvanygf5uwhs8ntuwqtq05rj930s66k6aaa0nzr95hpfrhr",
+            "serverPublicKey": "029f0f65a131aa68c0d375ac998199b3a2b8b07617c578f34b51915292cded76cf",
+            "timeoutBlockHeight": 3592355,
+            "blindingKey": "5e3bcccc4443c1cff43224c9f58c4c85016a4ce7ce105a5d9a2fdd9e78235db1",
+            "preimageHash": "f9954cf10179d730437045bb8f16f04a2242dafd8c9ad753cca082fb576c0eac"
+        }
+    },
+    {
+        "id": "KweLxZHhJG1T",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761064206,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914ba874379e845baf4f950301fc076c16dad0423a58820b535ee339b64ec41960fe20790957b7644259e77a17956e13dc35f768611e5b6ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "202394531c6e546cfa767d517313127da3d6996bdcccef0f9de488fd04386341e1ad0364f236b1"
+                }
+            },
+            "amount": 2333,
+            "keyIndex": 12,
+            "transaction": {
+                "id": "01f7e092120ae6e73acca41d3189ec8535340328c57cae6e08e7f895e94ea8ec",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqvp45kxhpeeqqrhr7ffjyndg8jm9d5xrch23pjegsa7yfuwqnjzm6ed23gzuy96z87r88py3gm4tmntg9dtsh2vcqj5r0y7wqr4rwdlxhtuvjgy3zawv",
+            "serverPublicKey": "03b535ee339b64ec41960fe20790957b7644259e77a17956e13dc35f768611e5b6",
+            "timeoutBlockHeight": 3600996,
+            "blindingKey": "112a8b3e4cc38dd2ab70083841c39fe5c1e980ae6b66470f1c2653cf15617899"
+        }
+    },
+    {
+        "id": "mMTxZh7263rA",
+        "type": "reverse",
+        "status": "swap.expired",
+        "createdAt": 1761461901,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a914030daf447cace92f1381d2069cdd322e1085eb3288208302964b14291934f7440972f4fc07f386147e6dfbf94862da8352c78a979760ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "204124e9fceffe56d9f08aec76106abebcc66e82da89d0f42bc7d51ff390e61bb0ad0384ea36b1"
+                }
+            },
+            "amount": 2390,
+            "keyIndex": 13,
+            "lockupAddress": "lq1pq23e7xtss77zqzhendznu082audfjr8h34063lhx8m07pr32fe58ug8xpjc8krh37v4az2qyp87jyz2gu9x34dulq7fz8e9hx3rrd34x8l59t5sec62y",
+            "serverPublicKey": "034124e9fceffe56d9f08aec76106abebcc66e82da89d0f42bc7d51ff390e61bb0",
+            "timeoutBlockHeight": 3598980,
+            "blindingKey": "d9e62e278a351e38da7c8a72108af5674dae9f1f55e64ae1cc8e4c4711b78eb8",
+            "preimageHash": "337f6e900e34a9f6bdb0090fd2632462de1e92d17a29155568635ca33071772b"
+        }
+    },
+    {
+        "id": "wwNf4HJF7FID",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761461947,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914e17c2dbc37832e86dad623297030cfaa14b858d58820c93890ec941d3322e515741fbea33ee3233b19bd5654c9d5cd8d1d403998e635ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20fce45bde9fd296e9077558f726d6da499fd12d343761ffd4bf84a91c08be87c9ad03440c37b1"
+                }
+            },
+            "amount": 251,
+            "keyIndex": 14,
+            "transaction": {
+                "id": "4b2bdb88974668a6513c11607f648ccdb100420d5b9ff362cdc384cf97b9deb1",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqtvj7c2m8k0vzeyxlcy6uasyuj830aw7zcn5ajewhy8msr9srqayecagum9vgxper08hc0v7332p8n5vr8d6kucxeqcgc408frtdpdzmtl3hzp9d2cul",
+            "serverPublicKey": "02c93890ec941d3322e515741fbea33ee3233b19bd5654c9d5cd8d1d403998e635",
+            "timeoutBlockHeight": 3607620,
+            "blindingKey": "5e226f4b7c0aa19c29bd1da9577e937db09faeb30675971697439bfd3704aa32"
+        }
+    },
+    {
+        "id": "TADAczPxIem9",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761465829,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91471443c1cf516f022eb6cb01e9855d727069dee9c88202e18d54de72903486fdc03f78b12a4649886893b86ded95068165a6251abe2cbac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "2072a8f8f0249139936da8ae7edef20b99b1d2796adee5613b77c3962fd2397a1cad03c5ea36b1"
+                }
+            },
+            "amount": 372,
+            "keyIndex": 15,
+            "transaction": {
+                "id": "36725b7430171328993dbee0257a44fd45bb5e95effe6b3afe826c42d9bba321",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqvht8u75rg5ny93ncamsg07kgdrglpel692kvgtnhf39c00r34qkaa2jjm4usfv5e7nvgretngfw4gkljyy8e7kh2chek3qenz7589tgmph52cyf8sur",
+            "serverPublicKey": "0372a8f8f0249139936da8ae7edef20b99b1d2796adee5613b77c3962fd2397a1c",
+            "timeoutBlockHeight": 3599045,
+            "blindingKey": "f4699c9472e4d573a4159cbf21071707968c6af42d5638216fe344bacf77ae1b",
+            "preimageHash": "4103ce32aecefe5b09b15665f7374dcfc426394fcc21478f42f90d6b4d1087e0"
+        }
+    },
+    {
+        "id": "dD28dKLNmfPz",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761560885,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a914edfd952726cc9c21a71cda4840b0d01300c35b0c88209e7183b3bc4ec5806f8311339ee4e7b5db3de32f417805c0b3bb897cf2dc515cac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20c1dc15192c64761cc8cbfa0fe17bab88b1742df46b9e8ec75a9847500a47a7a3ad03f5f036b1"
+                }
+            },
+            "amount": 2390,
+            "keyIndex": 16,
+            "transaction": {
+                "id": "acb75e5f295c0ff1a5e01a86b38fadb6c9dbbbc3c9264768772d3b2f91d23615",
+                "vout": 1
+            },
+            "lockupAddress": "lq1pqfz3jc0a09m0wh44ttef8dh9wjm2m87vkduwj0vu3c0tmkvp7wmdyz795dknhgv77cd95695fcgrryugrjxy0g8lz6unm6qt9sdxsr2taqpv728xzdfs",
+            "serverPublicKey": "03c1dc15192c64761cc8cbfa0fe17bab88b1742df46b9e8ec75a9847500a47a7a3",
+            "timeoutBlockHeight": 3600629,
+            "blindingKey": "502bd70b73137ee894d437329f8161ce87a655f84ff8b40fbf770da74639938f",
+            "preimageHash": "edbef0874341b26645787c7f62ebd3493fe65dd93894866493dabb83fcb43a14"
+        }
+    },
+    {
+        "id": "9VVfu4QuNEu3",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761582940,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91491384e3493b3ce7cf691a4995676b293a5852db78820f73ed3ad92dc4baa1e0f66bda027ad67b628e0491375cacad0c40f4f21082289ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20ebbdf1c17370b0e9f5fc18710af46087cffb6f73e753829d74ae439daeb92cb2ad0365f236b1"
+                }
+            },
+            "amount": 194,
+            "keyIndex": 17,
+            "transaction": {
+                "id": "9b95049eb4570dbe21ac7f10cbd78756f2677f44b3a8dd4b893564fb8c887fab",
+                "vout": 1
+            },
+            "lockupAddress": "lq1pqg38yhtww3aens4p7f77zjvajeefc5mshn4r2ct67nq95e4dhse4tw3mhcnha5ngzj4ezf0nlrfw4dx4tj65uzz8w3gf5ja4a2e2m9zktqvrvsrrsqkc",
+            "serverPublicKey": "03ebbdf1c17370b0e9f5fc18710af46087cffb6f73e753829d74ae439daeb92cb2",
+            "timeoutBlockHeight": 3600997,
+            "blindingKey": "9534c3ae113a22000845e3801d37b9503e478cc865e4030c82f5589b4a0394e3",
+            "preimageHash": "3e53121361a53c912d9170717ac1202af15432426fc9ae98eb90fe3537555aa6"
+        }
+    },
+    {
+        "id": "CJpHvHnm2cX1",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761583224,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914545273f6ffd3692e96da188792f9588767d3104c8820ef67fa958d2a11b1dab91c1be4f41cba285277606f5327fa880baf7559ff2e74ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "2076c451ac4577f020a041859724b7fb77b3306c514a06eee4355cea23fec39f7ead032a1437b1"
+                }
+            },
+            "amount": 251,
+            "keyIndex": 18,
+            "transaction": {
+                "id": "7bda1c00a367de609f9cecdeace59faa552140cf2689b32e4d4c70db753598d9",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqfnd4u7gud44exj48n92vg7g269meyfeqzxfp7nqvnywt7z2fv2uqlcjtfm9w5qx9f5v5myxezmwvtjvhefdwq50ljxretmxxctsrh9cg7ls8zc0zfmv",
+            "serverPublicKey": "03ef67fa958d2a11b1dab91c1be4f41cba285277606f5327fa880baf7559ff2e74",
+            "timeoutBlockHeight": 3609642,
+            "blindingKey": "ea9d175d0dae57af3a3437822febf965456e2cb5b7f02db007a1d247ac41b2d3"
+        }
+    },
+    {
+        "id": "bV15WXAWIanP",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761583334,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a914699db4fedb74a4eb89ff1de9f83c5fd31c1bc49e8820db8a65ddb347dafe65ed1929306ed2cb4b794f46baf9091cad8d54ea9acd8cf4ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "206fa84c66d8d3b3a9e42554a1999a56e2edb176cb896ebffbee9e4c4f75cc5965ad036cf236b1"
+                }
+            },
+            "amount": 194,
+            "keyIndex": 19,
+            "transaction": {
+                "id": "ab4dd333f98a64f8da73cfbed12c65239e263c2efb106477ea749c6cd1d89c32",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqfqgjujuv8w9a992deuvreh8da7taez2aldfjmy78f6p6hkqnhsldcfv6ej6luyemsavjfe55tz55m6ztfj0pm4ed0kxc9pk8xrvk6e5fg3ccanruka5",
+            "serverPublicKey": "026fa84c66d8d3b3a9e42554a1999a56e2edb176cb896ebffbee9e4c4f75cc5965",
+            "timeoutBlockHeight": 3601004,
+            "blindingKey": "0c3994d88f713ec3ad7c0e4b74a6c93bcee326d157d7c418c000c15053759083",
+            "preimageHash": "7155a30bcff52510d137f5963636ec52775b2aff91544e5f2ec06207c44a5852"
+        }
+    },
+    {
+        "id": "gyUboRKamKwu",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761583873,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a9145b7ec446a3294e0a676e087efc96295ea92d877b882010bf84010f143165b1464f6c2c711d9c37040991195b7eca9ae4c4e74573a728ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20291207ba4bfe519e8c1dbed995bda4dfdbb92d27563034b16fe76c6ff451eabbad0374f236b1"
+                }
+            },
+            "amount": 2189,
+            "keyIndex": 20,
+            "transaction": {
+                "id": "a209866d5f76d15b159f9850c1eabb257d0e6bcef4bc9704b1c9bec06fa9a5b0",
+                "vout": 1
+            },
+            "lockupAddress": "lq1pqtzhvk9y7p9thx8squyumlhy9fsds7av2kdvdyref2s7asac6nac76p6l8rkmmqkkeus4f03wuqgkjcrp80nxseelprpuempgahms0yy4pkw0tfh9qpu",
+            "serverPublicKey": "02291207ba4bfe519e8c1dbed995bda4dfdbb92d27563034b16fe76c6ff451eabb",
+            "timeoutBlockHeight": 3601012,
+            "blindingKey": "deef23560aa0c6299c8698f8ec4fc5e3f04d6efe5ce2c802f4d0e1c557a52e21",
+            "preimageHash": "77ab174258ce0a4f3c1c1d282e8371b29fb08dca581b5712d332647f9ec97221"
+        }
+    },
+    {
+        "id": "5LDo9CwoRI7b",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1761655097,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91452452bca8a715dc48593c76406cf2e03632b192e8820da6f1277d88ae3350bf20c8db22dc6881e69643023df495e739c30f53af4ffedac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "209e63acde105c18fa76ceb12b3e9f1669d76a17427ec27e58daf919450209dabdad0318f736b1"
+                }
+            },
+            "amount": 970,
+            "keyIndex": 21,
+            "transaction": {
+                "id": "9ae6f045e9d720549957da3aec31a6ae110a5c799d53dd97f3a79fe0c14c013b",
+                "vout": 1
+            },
+            "lockupAddress": "lq1pqwlgsr2yck2tp5d4qf4n8ct3e6dz9ezqcu2qzvhxndl6thhckrs69t44gfds67fnf5wgc9r4m57499s8ay84fxmh99jvprlxs8mtkm23fasnvl57q5ed",
+            "serverPublicKey": "039e63acde105c18fa76ceb12b3e9f1669d76a17427ec27e58daf919450209dabd",
+            "timeoutBlockHeight": 3602200,
+            "blindingKey": "cfb259c238948ba11c0885909c5c84915dca99009d17be5a8582edc411a064e0",
+            "preimageHash": "9e1b2005a888345ad798232ad9383f130f7a508861d24e970558ca39e6f22988"
+        }
+    },
+    {
+        "id": "syYq24pGIMaE",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761655201,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a9143df34179f32474eaac09b5af706d3c912bf442cd882027f77f5f0fe7da55f5acc656bbc0b36911ff69eb0672bc3f7804f94114ac0435ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20c436e8ba085248eb9695ce67618694032e24c50e60b792f52e7026504d9b0d1bad03d91837b1"
+                }
+            },
+            "amount": 1252,
+            "keyIndex": 22,
+            "transaction": {
+                "id": "3b5aa781bb81774beb6e31e560b0b23db0c743e9bab489013039672272a33b40",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqvwddzcg4ur9v29kl78c3k4v3t9h477vc8hxf2p9ql8c7e5a8868ddjq88g69hvwly99ejes3j22wdmf5j4lmxvkhhscz6qtly23ypwpwzdn3kqy2y8g",
+            "serverPublicKey": "0327f77f5f0fe7da55f5acc656bbc0b36911ff69eb0672bc3f7804f94114ac0435",
+            "timeoutBlockHeight": 3610841,
+            "blindingKey": "a4517e5a4e7c195233277ccc73a660c35893717b18cbdf511072fb3b4dbef5bd"
+        }
+    },
+    {
+        "id": "dq8fyNuy6hTY",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761756627,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914d415f95014f29e935f715e1c6bde97912fce161a8820d719d918b4f1089a1aaaf670cedef2346fc0dedc683723bcb091fd783b4f55d6ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "2085ff5c0809b9aea2b29b6732b621f433b72a63dd33f1beacef9d2b0f40a8450bad03741f37b1"
+                }
+            },
+            "amount": 1252,
+            "keyIndex": 23,
+            "transaction": {
+                "id": "60bc283cc599fa4ae59ce634a745e4aa8b547f75f4eea0d016b04f03a1069c76",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqww4hhstkfajxj5vc8jlusf3gr6vs4v0ky38j3htckglpuxt0aerlfp3pfrdt8la0t3ug6yeckn7vuqenka3t8sxjtq7m8ln0nsj2gvlqlvcesjh03u5",
+            "serverPublicKey": "02d719d918b4f1089a1aaaf670cedef2346fc0dedc683723bcb091fd783b4f55d6",
+            "timeoutBlockHeight": 3612532,
+            "blindingKey": "8191508333d769d279ccc4e9d15d36edd8fcf0d1557d1dde412fdaffeb1091cc"
+        }
+    },
+    {
+        "id": "39CofVwWfnt8",
+        "type": "reverse",
+        "status": "swap.expired",
+        "createdAt": 1761811347,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a914d42bf36a984b4dfd58468861f5c04608e6d591a68820743441dc2227400de1a356adb2df18f02d10870cc401c7202e94b038230a462bac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "208a567bae07857ff0ce134a1cc6b6a7f50375b6a3bca95d3647aab93562801f3cad03440137b1"
+                }
+            },
+            "amount": 2290,
+            "keyIndex": 24,
+            "lockupAddress": "lq1pq0updje3pf89ccfrhg2umk69xfqvvmj83aslk4gl0scem8qext6htdm9sy99gfzpmz7uq79n07tklgk5wfkwnuxtuucdt7qcrwjrzrxxmpuv8pa5jt54",
+            "serverPublicKey": "028a567bae07857ff0ce134a1cc6b6a7f50375b6a3bca95d3647aab93562801f3c",
+            "timeoutBlockHeight": 3604804,
+            "blindingKey": "e3e9c5cd835328c5c0394560fd01e63d983f509d7ab872a350a09c2f19e9f613",
+            "preimageHash": "155357b14ebda0feca363545c70c79dbcb50cfb5cdf8bcb141d45b25a52f5755"
+        }
+    },
+    {
+        "id": "n2Dy9BTHvbkD",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1761815607,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914ca889ac0f52e670f4ed5faba454dd8c28c1fe3ea8820e3f2e3abca0ff05f16138c95a020846c96c242d81f8eae916feabab98fe81916ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "200c61aaf6ffaf7166ea92baf95f7bcae01b2d6c037a773fcd6225cae7670f067aad034b2337b1"
+                }
+            },
+            "amount": 1252,
+            "keyIndex": 25,
+            "transaction": {
+                "id": "d20e887204dfbcd73eb959d7bb095a56ebb85424e4b6230c9bee192eb6964f17",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pq0qpmm6femt2w4ljqpzqv266yc5qvfxxm6pewy065hdaz4hjltztgm2rmute57lxspcd8lpweyz873g4dl3cva4z6yt5cst4zsuk7vtawy83wdz5kevm",
+            "serverPublicKey": "03e3f2e3abca0ff05f16138c95a020846c96c242d81f8eae916feabab98fe81916",
+            "timeoutBlockHeight": 3613515,
+            "blindingKey": "8b5c78418460b0e16aff7a60c740e7320f61e0d7793582e3ee62213c5e10ae66"
+        }
+    },
+    {
+        "id": "c8HHLCzndowx",
+        "type": "reverse",
+        "status": "swap.expired",
+        "createdAt": 1761922609,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91487308a3bb503d1a9c3f913d033fb7084e51ecee68820c911fca19db79f53a44905dd0a300f267611d43ad7f61abab2570390f3a66cc9ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "203bdeef0976130f0ffa093a6aef70990349e39ebe4a35a8c81e4df2abb5f19ab6ad03820837b1"
+                }
+            },
+            "amount": 2189,
+            "keyIndex": 26,
+            "lockupAddress": "lq1pqv9h0kllajt0fw0m0s2uev8y72uh08w5myunzvqclqqskvaygs3syegnlhc09m92c8j8y2092g5enztgpqvr7apnmm4hr0rh7a8crkd2yct66j2d35ya",
+            "serverPublicKey": "023bdeef0976130f0ffa093a6aef70990349e39ebe4a35a8c81e4df2abb5f19ab6",
+            "timeoutBlockHeight": 3606658,
+            "blindingKey": "74c49d1bafc0ed967779d465b4eb4818d3466c79161b033af8a672531dc9ce06",
+            "preimageHash": "22fc3cabe40cc83c2fd652b6925c07d3ab3fe2d8da3b1ff386ddc6dd256a8488"
+        }
+    },
+    {
+        "id": "RbPcRwNT91np",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1762420187,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914d40e991c711260432b42b355301ad14db3be5b0e88205034fa2b3cf0b64c1362958334b5124a6872028f16a7286e6f1575db2f9e8631ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20bbc1762cc6d362b71e9e8260e6abab1f46526dcf5e69d940da07accc792e69f6ad03a24a37b1"
+                }
+            },
+            "amount": 220,
+            "keyIndex": 27,
+            "transaction": {
+                "id": "7a37e753e90bc296a4127f155f9cf1f82f91534fb9b3973a11ae6c7a8640ff35",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqf7fmz88j3v9dm0gvvq2jtlevkaxaua2ncnmnnlr7yeneyaddzsejs0fdn5wv2gajn45r78dzxx9px399fzmdvd3aex2n0ecgus2ql8qcz4ecgajf95q",
+            "serverPublicKey": "035034fa2b3cf0b64c1362958334b5124a6872028f16a7286e6f1575db2f9e8631",
+            "timeoutBlockHeight": 3623586,
+            "blindingKey": "d7048ca349018d443bdca159318990fd0a4389d9cd3687bd11633ac7542c9f5e"
+        }
+    },
+    {
+        "id": "VppqSk7dRXaN",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1762438817,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a914c4217115738276c0763b70cfda92d6af8bf1427d88204dc86c18444e63ca179e5a05af8f7ed385d1df3745ac9a950d6e31348b880449ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20fc89fb00100c756fa2f86420dfcab46c9fdc62f14f5bc00b63147d2327bb3856ad03d94b37b1"
+                }
+            },
+            "amount": 220,
+            "keyIndex": 28,
+            "transaction": {
+                "id": "d7653af1b2ec59c11d8523d14cedfad2ecde7669f14fb1f5ca4df5bccd356655",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pq0eun88ymqhdtmfzrcah7n4vkeeg0a3975zjzng8kzfv3fsvtz9gntdhdm4ylcxats6qk04ugzjsrp8lg44qw5ndy3kgxk3a7aamcj3gh3s63wnq8f73",
+            "serverPublicKey": "024dc86c18444e63ca179e5a05af8f7ed385d1df3745ac9a950d6e31348b880449",
+            "timeoutBlockHeight": 3623897,
+            "blindingKey": "2e0f17d03b6047900ae85619a089b0c1cc7046071d5dba9e9174a7bd995b15ae"
+        }
+    },
+    {
+        "id": "NaE1XxU6Ryoa",
+        "type": "submarine",
+        "status": "transaction.claimed",
+        "createdAt": 1762439116,
+        "from": "L-BTC",
+        "to": "BTC",
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "a9142241c25ad79f4330e03cbbdec82d7e4168989af3882018ffa9b2156a1ce1508f9d193d1853d40125e0d094818bf61df447122b985b0dac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20829493bfae2b362b310a888e63698b73bf585a5f7e3aac1f5edf64234371e94dad03de4b37b1"
+                }
+            },
+            "amount": 220,
+            "keyIndex": 29,
+            "transaction": {
+                "id": "9a94369939ee25412e79912c9e0c303c4ec319ba7590c52dd98a0ce0e3a0fa14",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqtnvn40ywexf6htlj8ytj3c3axxkhm02ztmsqp3yngpf5kftrwj3ec86hxvxaraz34spsjafmzu97cmtseeytnhhrd6dnjjjfp4hu9stx04gfk8xwm45",
+            "serverPublicKey": "0218ffa9b2156a1ce1508f9d193d1853d40125e0d094818bf61df447122b985b0d",
+            "timeoutBlockHeight": 3623902,
+            "blindingKey": "84873e55a195c03385e189044b58c493b6a4f7aa06f4990e16395cdc2dd27bca"
+        }
+    },
+    {
+        "id": "cobTkp3nLs7I",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1762439683,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91471652b8a1d8b8d51939aec350504bb991e2a4af58820c2e482599be25f902d0c20a42fb110ded1c1c58d42981687909df0e3c34e56a0ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "204983ed2e014c9d7b67ce094efebdba49bd7cf1134c7fb467ee636585467e41efad03272a37b1"
+                }
+            },
+            "amount": 305,
+            "keyIndex": 30,
+            "transaction": {
+                "id": "ac5f2b128cc887ed35228b8c1530ec9d565b203b723b1fe3a05392821629a973",
+                "vout": 1
+            },
+            "lockupAddress": "lq1pq0dwttp4d7tkrhcvwsc4ss87fdj4ntdta30zdr7pem858ld9cfe86gwej4cg2c5njtg0nqy0gm8rwqa54cs6xd0h9a8y4339fq8twa45l82jlhplklz7",
+            "serverPublicKey": "024983ed2e014c9d7b67ce094efebdba49bd7cf1134c7fb467ee636585467e41ef",
+            "timeoutBlockHeight": 3615271,
+            "blindingKey": "14dc49ff76d6aa5ed1915bb766894b37b5fec312305399d915ef99007ebcf086",
+            "preimageHash": "658d127183655b3e09b216b358b272d956adf2d18f44daa2054e068c68f65380"
+        }
+    },
+    {
+        "id": "ANXZX9Y8unHT",
+        "type": "reverse",
+        "status": "invoice.settled",
+        "createdAt": 1762783779,
+        "from": "BTC",
+        "to": "L-BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a91408639ea88ca45ab24699670bc6c27cdcfc9f744788204acbf0eac25da4b08e1e4db40eefcb4766f9afa59172358d5f92329e1010a0d8ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20e30ea1b5176ebf49571944a170dddae6a955285641985c6506bbd706825c26e8ad038e4037b1"
+                }
+            },
+            "amount": 24910,
+            "keyIndex": 33,
+            "transaction": {
+                "id": "3ab89f27c8fccd8d1e02e37e2083b9a82053236e3675a00afb3242f7bae44344",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqwesn8yymntmk2gtj7nn9hkyv6kjns2eq7jwnvwmtxqdxhedlu6e6q3qk0vskfny2jd2cnxv8cs5lants8wxarpqdjfrjkgv24u89zjpttkfy6d2gs3x",
+            "serverPublicKey": "02e30ea1b5176ebf49571944a170dddae6a955285641985c6506bbd706825c26e8",
+            "timeoutBlockHeight": 3621006,
+            "blindingKey": "daaa35f2dd9134998692afa86944e797d50554224e3500adfbf700890e4396bf",
+            "preimageHash": "22de5613bc6001c553ea8353474394bee7d0b5262d90054b75672acf80895943"
+        }
+    },
+    {
+        "id": "RSsktcDX8p7Y",
+        "type": "chain",
+        "status": "transaction.claimed",
+        "createdAt": 1762783852,
+        "from": "L-BTC",
+        "to": "BTC",
+        "claimDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 192,
+                    "output": "82012088a914741f2387c1e655c9d87049b2fb2611a10c3fbf92882096532e140c346e4646f202b67e02ca21552a536a8d0c534351553cc2cd4b7b84ac"
+                },
+                "refundLeaf": {
+                    "version": 192,
+                    "output": "20646b226614906d1e1fd5dc4da16a25615cdc7854839c0d058b2d16d63eb16462ad030b160eb1"
+                }
+            },
+            "amount": 24340,
+            "keyIndex": 34,
+            "transaction": {
+                "id": "82b3dec54572c00d95b2552a3fbf64ade077615ada64ace3f32008508071030b",
+                "vout": 1
+            },
+            "lockupAddress": "bc1p0uveatmefw9f9yfpmpmydw0a5sj8tm74tmwuamukkg7y9y76mv7scarfdx",
+            "serverPublicKey": "02646b226614906d1e1fd5dc4da16a25615cdc7854839c0d058b2d16d63eb16462",
+            "timeoutBlockHeight": 923147,
+            "preimageHash": "09f1f430b236056206f8e5959984ca523aeb2e7672ce425d5d06427330c14db7"
+        },
+        "refundDetails": {
+            "tree": {
+                "claimLeaf": {
+                    "version": 196,
+                    "output": "82012088a914741f2387c1e655c9d87049b2fb2611a10c3fbf928820d612cf7cbc76bce415f52bfddf8579b79f79ee9efafeff9d2f17304dc16c5226ac"
+                },
+                "refundLeaf": {
+                    "version": 196,
+                    "output": "20f6009e7b43b9270fefb33bbab87515eb87080166036a5318a3c8d35e090488f0ad035f4337b1"
+                }
+            },
+            "amount": 25000,
+            "keyIndex": 35,
+            "transaction": {
+                "id": "30033fccf180206182b4cd7508b75715f732e8eb64b58560343828a3df629e8b",
+                "vout": 0
+            },
+            "lockupAddress": "lq1pqwtmrp62urp48r2r9759e0nz5s5u5c7m5zd3f9rmj8vxe3thttqhwdwc7lv77u2ly7peeckwf3j0r4pkptgk7mxn8u304qaxugjtqw6tx3cl3294at29",
+            "serverPublicKey": "03d612cf7cbc76bce415f52bfddf8579b79f79ee9efafeff9d2f17304dc16c5226",
+            "timeoutBlockHeight": 3621727,
+            "blindingKey": "36b9c4d3279395a185e06715e793bafd524bac0946db0323a8b09fc28b12f62f"
         }
     }
 ]

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-boltz-client = { git = "https://github.com/RCasatta/boltz-rust/", rev = "c83030c809ca540b941f4ba7652dd22db3909f4c", features = [
+boltz-client = { git = "https://github.com/RCasatta/boltz-rust/", rev = "1b213574743d95aa08b0a84682f52f693452eeaf", features = [
     "ws",
     "electrum",
 ] }

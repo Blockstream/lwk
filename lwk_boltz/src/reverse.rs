@@ -228,7 +228,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         refund_public_key,
         timeout_block_height: claim_details.timeout_block_height,
         onchain_amount: claim_details.amount,
-        blinding_key: Some(claim_details.blinding_key.clone()),
+        blinding_key: claim_details.blinding_key.clone(),
     };
 
     // Parse the status to SwapState

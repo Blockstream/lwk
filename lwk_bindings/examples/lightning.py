@@ -122,6 +122,32 @@ def pay_invoice_thread(prepare_pay_response):
             print(f"Error in payment thread: {e}")
             break
 
+def lockup_thread(lockup_response):
+    """Thread function to handle chain swap completion"""
+    print("Waiting for chain swap completion...")
+    while True:
+        try:
+            state = lockup_response.advance()
+            swap_id = lockup_response.swap_id()
+            if state == PaymentState.CONTINUE:
+                data = lockup_response.serialize()
+                save_swap_data(swap_id, data)
+            elif state == PaymentState.SUCCESS:
+                print("Chain swap completed successfully!")
+                delete_swap_data(swap_id)
+                break
+            elif state == PaymentState.FAILED:
+                print("Chain swap failed!")
+                rename_swap_data(swap_id)
+                break
+        except LwkError.NoBoltzUpdate as e:
+            print("No update available, continuing polling...")
+            time.sleep(1)
+            continue
+        except Exception as e:
+            print(f"Error in chain swap thread: {e}")
+            break
+
 def show_invoice(boltz_session, wollet):
     """Create and show an invoice"""
     # Ask for the invoice amount
@@ -345,6 +371,80 @@ def show_swaps_info(boltz_session):
     except Exception as e:
         print(f"Error fetching swaps info: {e}")
 
+def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
+    """Create a swap to convert LBTC to BTC"""
+    # Ask for the swap amount
+    while True:
+        try:
+            amount_str = input("Enter amount in satoshis to swap from LBTC to BTC: ").strip()
+            amount = int(amount_str)
+            if amount <= 0:
+                print("Amount must be positive. Please try again.")
+                continue
+            break
+        except ValueError:
+            print("Invalid amount. Please enter a valid number.")
+
+    # Ask for the Bitcoin claim address
+    claim_address = input("Enter Bitcoin address to receive BTC: ").strip()
+
+    # Get a Liquid refund address from the wallet
+    refund_address = wollet.address(None).address()
+    print(f"Refund address (Liquid): {refund_address}")
+
+    try:
+        # Create the swap
+        webhook_url = os.getenv('WEBHOOK')
+        webhook = WebHook(webhook_url) if webhook_url else None
+        lockup_response = boltz_session.lbtc_to_btc(amount, refund_address, claim_address, webhook)
+
+        # Get swap details
+        swap_id = lockup_response.swap_id()
+        lockup_address = lockup_response.lockup_address()
+        expected_amount = lockup_response.expected_amount()
+        from_chain = lockup_response.from_chain()
+        to_chain = lockup_response.to_chain()
+
+        print(f"Swap ID: {swap_id}")
+        print(f"Lockup address: {lockup_address}")
+        print(f"Expected amount: {expected_amount}")
+        print(f"From chain: {from_chain}")
+        print(f"To chain: {to_chain}")
+
+        # Save swap data
+        data = lockup_response.serialize()
+        save_swap_data(swap_id, data)
+
+        # Build and send transaction to the lockup address
+        print(f"Sending {expected_amount} sats to {lockup_address}...")
+        builder = network.tx_builder()
+        lbtc_asset = network.policy_asset()
+        lockup_addr = Address(lockup_address)
+        builder.add_recipient(lockup_addr, expected_amount, lbtc_asset)
+
+        # Create the PSET
+        pset = builder.finish(wollet)
+
+        # Sign the PSET
+        signed_pset = signer.sign(pset)
+
+        # Finalize and extract transaction
+        finalized_pset = wollet.finalize(signed_pset)
+        tx = finalized_pset.extract_tx()
+
+        # Broadcast the transaction
+        txid = esplora_client.broadcast(tx)
+        print(f"Transaction broadcasted! TXID: {txid}")
+
+        # Start thread to monitor swap completion
+        thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+        thread.daemon = True
+        thread.start()
+        print("Started thread to monitor chain swap completion.")
+
+    except Exception as e:
+        print(f"Error creating LBTC to BTC swap: {e}")
+
 def main():
     # Get mnemonic from environment variable
     mnemonic_str = os.getenv('MNEMONIC')
@@ -467,6 +567,7 @@ def main():
         print("7) Fetch restorable submarine swaps")
         print("8) List all swaps")
         print("9) Show swaps info")
+        print("10) Swap LBTC to BTC (chain swap)")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -509,6 +610,9 @@ def main():
         elif choice == '9':
             print("\n=== Showing Swaps Info ===")
             show_swaps_info(boltz_session)
+        elif choice == '10':
+            print("\n=== Swapping LBTC to BTC ===")
+            lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer)
         elif choice == 'q':
             print("Goodbye!")
             break

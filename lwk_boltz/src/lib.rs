@@ -148,6 +148,14 @@ impl BoltzSession {
         Chain::Liquid(self.liquid_chain)
     }
 
+    fn btc_chain(&self) -> Chain {
+        match self.liquid_chain {
+            LiquidChain::Liquid => Chain::Bitcoin(BitcoinChain::Bitcoin),
+            LiquidChain::LiquidTestnet => Chain::Bitcoin(BitcoinChain::BitcoinTestnet),
+            LiquidChain::LiquidRegtest => Chain::Bitcoin(BitcoinChain::BitcoinRegtest),
+        }
+    }
+
     fn network(&self) -> ElementsNetwork {
         liquid_chain_to_elements_network(self.liquid_chain)
     }

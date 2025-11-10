@@ -94,7 +94,9 @@ def invoice_thread(invoice_response, claim_address):
             time.sleep(1)
             continue
         except Exception as e:
-            print(f"Error in invoice thread: {e}")
+            print(f"Error in invoice thread - type: {type(e).__name__}, details: {e}")
+            import traceback
+            traceback.print_exc()
             break
 
 def pay_invoice_thread(prepare_pay_response):
@@ -121,7 +123,9 @@ def pay_invoice_thread(prepare_pay_response):
             time.sleep(1)
             continue
         except Exception as e:
-            print(f"Error in payment thread: {e}")
+            print(f"Error in payment thread - type: {type(e).__name__}, details: {e}")
+            import traceback
+            traceback.print_exc()
             break
 
 def lockup_thread(lockup_response):
@@ -148,7 +152,9 @@ def lockup_thread(lockup_response):
             time.sleep(1)
             continue
         except Exception as e:
-            print(f"Error in chain swap thread: {e}")
+            print(f"Error in chain swap thread - type: {type(e).__name__}, details: {e}")
+            import traceback
+            traceback.print_exc()
             break
 
 def show_invoice(boltz_session, wollet):

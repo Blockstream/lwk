@@ -5,6 +5,7 @@ use boltz_client::{
         ChainSwapStates, GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates,
         SubSwapStates, SwapRestoreResponse, Webhook,
     },
+    network::Chain,
     Bolt11Invoice,
 };
 use elements::bitcoin;
@@ -12,7 +13,7 @@ use lwk_wollet::elements;
 
 use crate::{
     prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData, InvoiceDataSerializable,
-    LightningPayment, LockupResponse, PreparePayData, RescueFile, SwapStatus,
+    LightningPayment, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -27,6 +28,11 @@ pub struct PreparePayResponse {
 
 pub struct InvoiceResponse {
     inner: super::InvoiceResponse,
+    runtime: Arc<tokio::runtime::Runtime>,
+}
+
+pub struct LockupResponse {
+    inner: super::LockupResponse,
     runtime: Arc<tokio::runtime::Runtime>,
 }
 
@@ -109,7 +115,10 @@ impl BoltzSession {
             claim_address,
             webhook,
         ))?;
-        Ok(inner)
+        Ok(LockupResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
     }
 
     pub fn lbtc_to_btc(
@@ -125,7 +134,10 @@ impl BoltzSession {
             claim_address,
             webhook,
         ))?;
-        Ok(inner)
+        Ok(LockupResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
     }
 
     pub fn rescue_file(&self) -> RescueFile {
@@ -220,5 +232,41 @@ impl InvoiceResponse {
 
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
+    }
+}
+
+impl LockupResponse {
+    pub fn swap_id(&self) -> String {
+        self.inner.swap_id()
+    }
+
+    pub fn lockup_address(&self) -> &str {
+        self.inner.lockup_address()
+    }
+
+    pub fn expected_amount(&self) -> u64 {
+        self.inner.expected_amount()
+    }
+
+    pub fn from_chain(&self) -> Chain {
+        self.inner.from_chain()
+    }
+
+    pub fn to_chain(&self) -> Chain {
+        self.inner.to_chain()
+    }
+
+    pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
+        let inner = self.runtime.block_on(self.inner.advance())?;
+        Ok(inner)
+    }
+
+    pub fn serialize(&self) -> Result<String, Error> {
+        self.inner.serialize()
+    }
+
+    pub fn complete(self) -> Result<bool, Error> {
+        let inner = self.runtime.block_on(self.inner.complete())?;
+        Ok(inner)
     }
 }

@@ -291,6 +291,11 @@ fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {
     }
 }
 
+pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
+    let hashed_bytes = sha256::Hash::hash(&our_keys.secret_bytes());
+    Ok(Preimage::from_vec(hashed_bytes.as_byte_array().to_vec())?)
+}
+
 pub(crate) fn mnemonic_identifier(mnemonic: &Mnemonic) -> Result<XKeyIdentifier, Error> {
     let seed = mnemonic.to_seed("");
     let xpriv = Xpriv::new_master(NetworkKind::Test, &seed[..])?;

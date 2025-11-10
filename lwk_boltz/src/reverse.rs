@@ -19,19 +19,16 @@ use boltz_client::swaps::ChainClient;
 use boltz_client::swaps::SwapScript;
 use boltz_client::swaps::SwapTransactionParams;
 use boltz_client::swaps::TransactionOptions;
-use boltz_client::util::secrets::Preimage;
 use boltz_client::Bolt11Invoice;
-use boltz_client::Keypair;
 use boltz_client::PublicKey;
 use lwk_wollet::elements;
-use lwk_wollet::hashes::sha256;
-use lwk_wollet::hashes::Hash;
 
 use crate::derive_keypair;
 use crate::error::Error;
 use crate::invoice_data::InvoiceData;
 use crate::invoice_data::InvoiceDataSerializable;
 use crate::mnemonic_identifier;
+use crate::preimage_from_keypair;
 use crate::swap_state::SwapStateTrait;
 use crate::to_invoice_data;
 use crate::SwapType;
@@ -253,11 +250,6 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         key_index: claim_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
     })
-}
-
-pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
-    let hashed_bytes = sha256::Hash::hash(&our_keys.secret_bytes());
-    Ok(Preimage::from_vec(hashed_bytes.as_byte_array().to_vec())?)
 }
 
 impl InvoiceResponse {

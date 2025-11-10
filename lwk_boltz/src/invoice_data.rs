@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::derive_keypair;
 use crate::error::Error;
 use crate::mnemonic_identifier;
-use crate::reverse::preimage_from_keypair;
+use crate::preimage_from_keypair;
 use crate::SwapState;
 use crate::SwapType;
 

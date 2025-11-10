@@ -77,6 +77,7 @@ def invoice_thread(invoice_response, claim_address):
         try:
             state = invoice_response.advance()
             swap_id = invoice_response.swap_id()
+            print(f"Invoice state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = invoice_response.serialize()
                 save_swap_data(swap_id, data)
@@ -103,6 +104,7 @@ def pay_invoice_thread(prepare_pay_response):
         try:
             state = prepare_pay_response.advance()
             swap_id = prepare_pay_response.swap_id()
+            print(f"Payment state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = prepare_pay_response.serialize()
                 save_swap_data(swap_id, data)
@@ -129,6 +131,7 @@ def lockup_thread(lockup_response):
         try:
             state = lockup_response.advance()
             swap_id = lockup_response.swap_id()
+            print(f"Chain swap state for swap {swap_id}: {state}")
             if state == PaymentState.CONTINUE:
                 data = lockup_response.serialize()
                 save_swap_data(swap_id, data)

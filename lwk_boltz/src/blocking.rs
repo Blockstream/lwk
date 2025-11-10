@@ -2,16 +2,17 @@ use std::{ops::ControlFlow, sync::Arc};
 
 use boltz_client::{
     boltz::{
-        GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates, SubSwapStates,
-        SwapRestoreResponse, Webhook,
+        ChainSwapStates, GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates,
+        SubSwapStates, SwapRestoreResponse, Webhook,
     },
     Bolt11Invoice,
 };
+use elements::bitcoin;
 use lwk_wollet::elements;
 
 use crate::{
     prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData, InvoiceDataSerializable,
-    LightningPayment, PreparePayData, RescueFile, SwapStatus,
+    LightningPayment, LockupResponse, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -93,6 +94,38 @@ impl BoltzSession {
             inner,
             runtime: self.runtime.clone(),
         })
+    }
+
+    pub fn btc_to_lbtc(
+        &self,
+        amount: u64,
+        refund_address: &bitcoin::Address,
+        claim_address: &elements::Address,
+        webhook: Option<Webhook<ChainSwapStates>>,
+    ) -> Result<LockupResponse, Error> {
+        let inner = self.runtime.block_on(self.inner.btc_to_lbtc(
+            amount,
+            refund_address,
+            claim_address,
+            webhook,
+        ))?;
+        Ok(inner)
+    }
+
+    pub fn lbtc_to_btc(
+        &self,
+        amount: u64,
+        refund_address: &elements::Address,
+        claim_address: &bitcoin::Address,
+        webhook: Option<Webhook<ChainSwapStates>>,
+    ) -> Result<LockupResponse, Error> {
+        let inner = self.runtime.block_on(self.inner.lbtc_to_btc(
+            amount,
+            refund_address,
+            claim_address,
+            webhook,
+        ))?;
+        Ok(inner)
     }
 
     pub fn rescue_file(&self) -> RescueFile {

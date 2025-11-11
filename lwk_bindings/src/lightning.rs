@@ -13,8 +13,8 @@ use crate::{
 use elements::bitcoin;
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
-    ChainSwapStates, InvoiceDataSerializable, PreparePayDataSerializable, RevSwapStates,
-    SubSwapStates,
+    ChainSwapDataSerializable, ChainSwapStates, InvoiceDataSerializable,
+    PreparePayDataSerializable, RevSwapStates, SubSwapStates,
 };
 use std::fmt;
 
@@ -389,6 +389,15 @@ impl BoltzSession {
         let response =
             self.inner
                 .lbtc_to_btc(amount, refund_address.as_ref(), &claim_address, webhook)?;
+        Ok(LockupResponse {
+            inner: Mutex::new(Some(response)),
+        })
+    }
+
+    /// Restore an onchain swap from its serialized data see `LockupResponse::serialize`
+    pub fn restore_lockup(&self, data: &str) -> Result<LockupResponse, LwkError> {
+        let data = ChainSwapDataSerializable::deserialize(data)?;
+        let response = self.inner.restore_lockup(data)?;
         Ok(LockupResponse {
             inner: Mutex::new(Some(response)),
         })

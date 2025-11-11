@@ -74,3 +74,9 @@ test-reverse-concurrent: export-env-vars
     #!/usr/bin/env bash
     set -e
     RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture --ignored
+
+# Run chain swap restore test
+test-chain-restore: export-env-vars
+    #!/usr/bin/env bash
+    set -e
+    RUST_LOG=info cargo test --test chain_swaps -- test_session_restore_chain_swaps --nocapture --ignored

@@ -12,8 +12,8 @@ use elements::bitcoin;
 use lwk_wollet::elements;
 
 use crate::{
-    prepare_pay_data::PreparePayDataSerializable, Error, InvoiceData, InvoiceDataSerializable,
-    LightningPayment, PreparePayData, RescueFile, SwapStatus,
+    prepare_pay_data::PreparePayDataSerializable, ChainSwapDataSerializable, Error, InvoiceData,
+    InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -134,6 +134,14 @@ impl BoltzSession {
             claim_address,
             webhook,
         ))?;
+        Ok(LockupResponse {
+            inner,
+            runtime: self.runtime.clone(),
+        })
+    }
+
+    pub fn restore_lockup(&self, data: ChainSwapDataSerializable) -> Result<LockupResponse, Error> {
+        let inner = self.runtime.block_on(self.inner.restore_lockup(data))?;
         Ok(LockupResponse {
             inner,
             runtime: self.runtime.clone(),

@@ -99,6 +99,8 @@ pub struct BoltzSessionBuilder {
     timeout_advance: Option<u64>,
     #[uniffi(default = None)]
     next_index_to_use: Option<u32>,
+    #[uniffi(default = None)]
+    referral_id: Option<String>,
 }
 
 /// A session to pay and receive lightning payments.
@@ -193,6 +195,7 @@ impl BoltzSession {
             polling: false,
             timeout_advance: None,
             next_index_to_use: None,
+            referral_id: None,
         };
         Self::from_builder(builder)
     }
@@ -254,6 +257,9 @@ impl BoltzSession {
         }
         if let Some(next_index_to_use) = builder.next_index_to_use {
             lwk_builder = lwk_builder.next_index_to_use(next_index_to_use);
+        }
+        if let Some(referral_id) = builder.referral_id {
+            lwk_builder = lwk_builder.referral_id(referral_id);
         }
 
         let inner = lwk_builder

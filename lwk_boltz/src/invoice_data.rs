@@ -17,6 +17,7 @@ use crate::SwapType;
 pub struct InvoiceData {
     pub last_state: SwapState,
     pub swap_type: SwapType,
+    pub claim_broadcasted: bool,
 
     /// The fee of the swap provider if known
     pub fee: Option<u64>,
@@ -40,6 +41,8 @@ pub struct InvoiceDataSerializable {
 
     /// Extended fingerprint of mnemonic used for this boltz swap
     pub mnemonic_identifier: XKeyIdentifier,
+
+    pub claim_broadcasted: Option<bool>, // TODO: remove Option if breaking change
 }
 
 pub fn to_invoice_data(
@@ -66,6 +69,7 @@ pub fn to_invoice_data(
         claim_address: i.claim_address,
         key_index: i.key_index,
         mnemonic_identifier: i.mnemonic_identifier,
+        claim_broadcasted: i.claim_broadcasted.unwrap_or(false),
     })
 }
 
@@ -79,6 +83,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             key_index: i.key_index,
             mnemonic_identifier: i.mnemonic_identifier,
             claim_address: i.claim_address,
+            claim_broadcasted: Some(i.claim_broadcasted),
         }
     }
 }

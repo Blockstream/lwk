@@ -42,7 +42,6 @@ pub struct InvoiceResponse {
     swap_script: SwapScript,
     api: Arc<BoltzApiClientV2>,
     chain_client: Arc<ChainClient>,
-    claim_broadcasted: bool,
     polling: bool,
     timeout_advance: Duration,
 }
@@ -122,12 +121,12 @@ impl BoltzSession {
                 claim_address: claim_address.clone(),
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
+                claim_broadcasted: false,
             },
             rx,
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-            claim_broadcasted: false,
         })
     }
 
@@ -157,7 +156,6 @@ impl BoltzSession {
             swap_script,
             api: self.api.clone(),
             chain_client: self.chain_client.clone(),
-            claim_broadcasted: false,
         })
     }
 
@@ -249,6 +247,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         claim_address: claim_address.clone(),
         key_index: claim_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
+        claim_broadcasted: false,
     })
 }
 
@@ -262,7 +261,7 @@ impl InvoiceResponse {
         &mut self,
         update: SwapStatus,
     ) -> Result<ControlFlow<bool, SwapStatus>, Error> {
-        if self.claim_broadcasted {
+        if self.data.claim_broadcasted {
             return Ok(ControlFlow::Continue(update));
         }
 
@@ -284,7 +283,7 @@ impl InvoiceResponse {
             .await?;
 
         broadcast_tx_with_retry(&self.chain_client, &tx).await?;
-        self.claim_broadcasted = true;
+        self.data.claim_broadcasted = true;
 
         log::info!("Successfully broadcasted claim tx!");
         log::debug!("Claim Tx {tx:?}");

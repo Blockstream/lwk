@@ -338,4 +338,14 @@ pub trait BlockchainBackend {
 
         Ok(result)
     }
+
+    /// Get a transaction
+    fn get_transaction(&self, txid: Txid) -> Result<Transaction, Error> {
+        Ok(self
+            .get_transactions(&[txid])?
+            .into_iter()
+            .nth(0)
+            .ok_or(Error::MissingTransaction)?
+            .clone())
+    }
 }

@@ -410,9 +410,11 @@ pub mod blocking {
         pub fn fetch_with_tx(
             &self,
             asset_id: AssetId,
-            client: &crate::asyncr::EsploraClient,
+            client: &impl crate::clients::blocking::BlockchainBackend,
         ) -> Result<(super::Contract, Transaction), Error> {
-            self.rt.block_on(self.inner.fetch_with_tx(asset_id, client))
+            let data = self.fetch(asset_id)?;
+            let tx = client.get_transaction(data.issuance_txin.txid)?;
+            Ok((data.contract, tx))
         }
 
         /// Post a contract to the registry

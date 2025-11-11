@@ -118,6 +118,7 @@ impl BoltzSession {
     }
 
     /// Internal initialization method that connects to the Boltz API and starts a WebSocket connection
+    #[allow(clippy::too_many_arguments)] // it's just internal
     async fn initialize(
         network: ElementsNetwork,
         client: AnyClient,

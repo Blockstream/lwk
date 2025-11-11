@@ -14,24 +14,18 @@ def save_swap_data(swap_id, data):
         f.write(data)
     print(f"Swap data saved to {swap_file}")
 
-def delete_swap_data(swap_id):
-    """Delete swap data file"""
-    swap_file = f"{swaps_dir}/{swap_id}.json"
-    try:
-        os.remove(swap_file)
-        print(f"Swap data deleted: {swap_file}")
-    except FileNotFoundError:
-        print(f"Swap data file not found: {swap_file}")
-    except Exception as e:
-        print(f"Error deleting swap data: {e}")
-
-def rename_swap_data(swap_id):
-    """Move swap data file to failed directory"""
+def rename_swap_data(swap_id, status):
+    """Move swap data file to completed or failed directory
+    
+    Args:
+        swap_id: The swap identifier
+        status: Either "completed" or "failed"
+    """
     src_file = f"{swaps_dir}/{swap_id}.json"
-    dst_file = f"{swaps_dir}/failed/{swap_id}.json"
+    dst_file = f"{swaps_dir}/{status}/{swap_id}.json"
     try:
         shutil.move(src_file, dst_file)
-        print(f"Swap data moved to failed: {dst_file}")
+        print(f"Swap data moved to {status}: {dst_file}")
     except FileNotFoundError:
         print(f"Swap data file not found: {src_file}")
     except Exception as e:
@@ -84,11 +78,11 @@ def invoice_thread(invoice_response, claim_address):
                 save_swap_data(swap_id, data)
             elif state == PaymentState.SUCCESS:
                 print("Invoice payment completed successfully!")
-                delete_swap_data(swap_id)
+                rename_swap_data(swap_id, "completed")
                 break
             elif state == PaymentState.FAILED:
                 print("Invoice payment failed!")
-                rename_swap_data(swap_id)
+                rename_swap_data(swap_id, "failed")
                 break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
@@ -113,11 +107,11 @@ def pay_invoice_thread(prepare_pay_response):
                 save_swap_data(swap_id, data)
             elif state == PaymentState.SUCCESS:
                 print("Payment completed successfully!")
-                delete_swap_data(swap_id)
+                rename_swap_data(swap_id, "completed")
                 break
             elif state == PaymentState.FAILED:
                 print("Payment failed!")
-                rename_swap_data(swap_id)
+                rename_swap_data(swap_id, "failed")
                 break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
@@ -143,11 +137,11 @@ def lockup_thread(lockup_response):
                 save_swap_data(swap_id, data)
             elif state == PaymentState.SUCCESS:
                 print("Chain swap completed successfully!")
-                delete_swap_data(swap_id)
+                rename_swap_data(swap_id, "completed")
                 break
             elif state == PaymentState.FAILED:
                 print("Chain swap failed!")
-                rename_swap_data(swap_id)
+                rename_swap_data(swap_id, "failed")
                 break
         except LwkError.NoBoltzUpdate as e:
             print("No update available, continuing polling...")
@@ -481,6 +475,7 @@ def main():
     os.makedirs("swaps", exist_ok=True)
     os.makedirs(swaps_dir, exist_ok=True)
     os.makedirs(f"{swaps_dir}/failed", exist_ok=True)
+    os.makedirs(f"{swaps_dir}/completed", exist_ok=True)
 
     b = EsploraClientBuilder(
         base_url="https://waterfalls.liquidwebwallet.org/liquid/api",
@@ -541,7 +536,7 @@ def main():
                     print(f"Started monitoring thread for submarine swap {swap_id}")
                 except LwkError.SwapExpired as e:
                     print(f"Submarine swap {swap_id} has expired, moving to failed directory")
-                    rename_swap_data(swap_id)
+                    rename_swap_data(swap_id, "failed")
                 except Exception as e:
                     print(f"Error restoring submarine swap {swap_id}: {e}")
 
@@ -556,7 +551,7 @@ def main():
                     print(f"Started monitoring thread for reverse swap {swap_id}")
                 except LwkError.SwapExpired as e:
                     print(f"Reverse swap {swap_id} has expired, moving to failed directory")
-                    rename_swap_data(swap_id)
+                    rename_swap_data(swap_id, "failed")
                 except Exception as e:
                     print(f"Error restoring reverse swap {swap_id}: {e}")
 

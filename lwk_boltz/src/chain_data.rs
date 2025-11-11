@@ -69,6 +69,15 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
     }
 }
 
+fn chain_from_str(chain: &str) -> Result<Chain, Error> {
+    // Display format of the chain is "BTC" or "L-BTC" for regtest/testnet/mainnet
+    match chain {
+        "BTC" => Ok(Chain::Bitcoin(BitcoinChain::BitcoinRegtest)),
+        "L-BTC" => Ok(Chain::Liquid(LiquidChain::LiquidRegtest)),
+        s => Err(Error::SwapRestoration(format!("Unknown chain: {}", s))),
+    }
+}
+
 pub fn to_chain_data(
     data: ChainSwapDataSerializable,
     mnemonic: &Mnemonic,
@@ -83,16 +92,8 @@ pub fn to_chain_data(
             data.mnemonic_identifier,
         ));
     }
-    let from_chain = match data.from_chain.as_str() {
-        "bitcoin" => Chain::Bitcoin(BitcoinChain::BitcoinRegtest),
-        "liquid" => Chain::Liquid(LiquidChain::LiquidRegtest),
-        s => return Err(Error::SwapRestoration(format!("Unknown from chain: {}", s))),
-    };
-    let to_chain = match data.to_chain.as_str() {
-        "bitcoin" => Chain::Bitcoin(BitcoinChain::BitcoinRegtest),
-        "liquid" => Chain::Liquid(LiquidChain::LiquidRegtest),
-        s => return Err(Error::SwapRestoration(format!("Unknown to chain: {}", s))),
-    };
+    let from_chain: Chain = chain_from_str(&data.from_chain)?;
+    let to_chain: Chain = chain_from_str(&data.to_chain)?;
     Ok(ChainSwapData {
         last_state: data.last_state,
         swap_type: data.swap_type,

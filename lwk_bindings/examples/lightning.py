@@ -590,7 +590,20 @@ def main():
                     rename_swap_data(swap_id, "failed")
                 except Exception as e:
                     print(f"Error restoring reverse swap {swap_id}: {e}")
-
+            elif swap_type == 'chain':
+                print(f"Restoring chain swap {swap_id}...")
+                try:
+                    lockup_response = boltz_session.restore_lockup(data)
+                    # Start thread to monitor invoice
+                    thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
+                    thread.daemon = True
+                    thread.start()
+                    print(f"Started monitoring thread for chain swap {swap_id}")
+                except LwkError.SwapExpired as e:
+                    print(f"Chain swap {swap_id} has expired, moving to failed directory")
+                    rename_swap_data(swap_id, "failed")
+                except Exception as e:
+                    print(f"Error restoring chain swap {swap_id}: {e}")
             else:
                 print(f"Unknown swap type '{swap_type}' in file {swap_file}")
 

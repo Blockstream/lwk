@@ -13,7 +13,7 @@ variables:
     when:
       - runner_system_failure
       - unknown_failure
-      - stuck_or_timeout_failure  
+      - stuck_or_timeout_failure
   services:
     - docker:20.10.12-dind
 
@@ -140,7 +140,7 @@ doc:
     - cargo +nightly doc --no-deps -p lwk_wasm --all-features
     - cargo +nightly doc --no-deps -p lwk_wollet --all-features
     - cargo +nightly doc --no-deps -p lwk_bindings --features foreign_bindings
-    
+
 examples:
   extends: .base
   script:
@@ -167,6 +167,20 @@ csharp:
   artifacts:
     paths:
       - csharp
+
+cpp:
+  extends: .base
+  script:
+    - cargo build --release -p lwk_bindings
+    - mkdir cpp
+    - cp target/release/liblwk.so cpp/
+    - uniffi-bindgen-cpp --library cpp/liblwk.so --out-dir cpp
+    # this is an hack, but make it work until we understand how to properly convert default value for Option<Arc<Mnemonic>> and  Option<Arc<dyn Logging>>
+    # upstream issue: https://github.com/NordSecurity/uniffi-bindgen-cpp/issues/60
+    - sed -i -e '/std::shared_ptr<Mnemonic>/ s/std::nullopt/nullptr_t/g' -e '/std::shared_ptr<Logging>/ s/std::nullopt/nullptr_t/g' cpp/lwk.hpp
+  artifacts:
+    paths:
+      - cpp
 
 just:
   extends: .base

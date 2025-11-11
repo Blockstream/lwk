@@ -539,6 +539,7 @@ def main():
         logging=logger,
         polling=polling,
         next_index_to_use=next_index,
+        referral_id="LWK python example",
     )
     boltz_session = BoltzSession.from_builder(builder)
 

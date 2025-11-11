@@ -105,7 +105,7 @@ impl BoltzSession {
             user_lock_amount: Some(amount),
             server_lock_amount: None,
             pair_hash: None,
-            referral_id: None,
+            referral_id: self.referral_id.clone(),
             webhook,
         };
 

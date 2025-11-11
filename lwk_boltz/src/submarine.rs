@@ -81,7 +81,7 @@ impl BoltzSession {
             invoice: bolt11_invoice_str.clone(),
             refund_public_key,
             pair_hash: None,
-            referral_id: None,
+            referral_id: self.referral_id.clone(),
             webhook,
         };
 
@@ -242,7 +242,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         claim_public_key,
         expected_amount: 0, // Not available in restore response
         id: e.id.clone(),
-        referral_id: None,
+        referral_id: None, // This is important only at creation time
         swap_tree: refund_details.tree.clone(),
         timeout_block_height: refund_details.timeout_block_height as u64,
         blinding_key: refund_details.blinding_key.clone(),

@@ -80,6 +80,8 @@ pub struct BoltzSession {
 
     polling: bool,
     timeout_advance: Duration,
+
+    referral_id: Option<String>,
 }
 
 impl BoltzSession {
@@ -124,6 +126,7 @@ impl BoltzSession {
         polling: bool,
         timeout_advance: Option<Duration>,
         next_index_to_use: Option<u32>,
+        referral_id: Option<String>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
 
@@ -176,6 +179,7 @@ impl BoltzSession {
             timeout: timeout.unwrap_or(Duration::from_secs(10)),
             polling,
             timeout_advance: timeout_advance.unwrap_or(Duration::from_secs(180)),
+            referral_id,
         })
     }
 
@@ -248,6 +252,7 @@ pub struct BoltzSessionBuilder {
     polling: bool,
     timeout_advance: Option<Duration>,
     next_index_to_use: Option<u32>,
+    referral_id: Option<String>,
 }
 
 impl BoltzSessionBuilder {
@@ -261,6 +266,7 @@ impl BoltzSessionBuilder {
             polling: false,
             timeout_advance: None,
             next_index_to_use: None,
+            referral_id: None,
         }
     }
 
@@ -310,6 +316,12 @@ impl BoltzSessionBuilder {
         self
     }
 
+    /// Set the referral id for the BoltzSession
+    pub fn referral_id(mut self, referral_id: String) -> Self {
+        self.referral_id = Some(referral_id);
+        self
+    }
+
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
         BoltzSession::initialize(
@@ -320,6 +332,7 @@ impl BoltzSessionBuilder {
             self.polling,
             self.timeout_advance,
             self.next_index_to_use,
+            self.referral_id,
         )
         .await
     }

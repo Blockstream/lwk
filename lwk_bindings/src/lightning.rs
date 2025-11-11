@@ -97,6 +97,8 @@ pub struct BoltzSessionBuilder {
     polling: bool,
     #[uniffi(default = None)]
     timeout_advance: Option<u64>,
+    #[uniffi(default = None)]
+    next_index_to_use: Option<u32>,
 }
 
 /// A session to pay and receive lightning payments.
@@ -190,6 +192,7 @@ impl BoltzSession {
             logging: None,
             polling: false,
             timeout_advance: None,
+            next_index_to_use: None,
         };
         Self::from_builder(builder)
     }
@@ -248,6 +251,9 @@ impl BoltzSession {
         lwk_builder = lwk_builder.polling(builder.polling);
         if let Some(timeout_advance_secs) = builder.timeout_advance {
             lwk_builder = lwk_builder.timeout_advance(Duration::from_secs(timeout_advance_secs));
+        }
+        if let Some(next_index_to_use) = builder.next_index_to_use {
+            lwk_builder = lwk_builder.next_index_to_use(next_index_to_use);
         }
 
         let inner = lwk_builder

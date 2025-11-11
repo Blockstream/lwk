@@ -123,6 +123,7 @@ impl BoltzSession {
         mnemonic: Option<Mnemonic>,
         polling: bool,
         timeout_advance: Option<Duration>,
+        next_index_to_use: Option<u32>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
 
@@ -154,10 +155,15 @@ impl BoltzSession {
         tokio::spawn(future); // TODO handle wasm
 
         let (next_index_to_use, mnemonic) = match mnemonic {
-            Some(mnemonic) => (
-                fetch_next_index_to_use(&mnemonic, network_kind(liquid_chain), &api).await?,
-                mnemonic,
-            ),
+            Some(mnemonic) => {
+                let next_index_to_use = match next_index_to_use {
+                    Some(next_index_to_use) => next_index_to_use,
+                    None => {
+                        fetch_next_index_to_use(&mnemonic, network_kind(liquid_chain), &api).await?
+                    }
+                };
+                (next_index_to_use, mnemonic)
+            }
             None => (0, Mnemonic::generate(12).expect("12 is a valid word count")),
         };
         Ok(Self {
@@ -241,6 +247,7 @@ pub struct BoltzSessionBuilder {
     mnemonic: Option<Mnemonic>,
     polling: bool,
     timeout_advance: Option<Duration>,
+    next_index_to_use: Option<u32>,
 }
 
 impl BoltzSessionBuilder {
@@ -253,6 +260,7 @@ impl BoltzSessionBuilder {
             mnemonic: None,
             polling: false,
             timeout_advance: None,
+            next_index_to_use: None,
         }
     }
 
@@ -295,6 +303,8 @@ impl BoltzSessionBuilder {
     ///
     /// Should be always set when reusing a mnemonic to avoid abusing the boltz API to recover
     /// this information.
+    ///
+    /// When the mnemonic is not set, this is ignored.
     pub fn next_index_to_use(mut self, next_index_to_use: u32) -> Self {
         self.next_index_to_use = Some(next_index_to_use);
         self
@@ -309,6 +319,7 @@ impl BoltzSessionBuilder {
             self.mnemonic,
             self.polling,
             self.timeout_advance,
+            self.next_index_to_use,
         )
         .await
     }

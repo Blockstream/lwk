@@ -51,9 +51,10 @@ impl Script {
         self.inner.as_bytes().to_vec()
     }
 
+    // "asm" is a reserved keyword in some target languages, do not use it
     /// Return the string representation of the script showing op codes and their arguments.
     /// For example: "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
-    pub fn asm(&self) -> String {
+    pub fn to_asm(&self) -> String {
         self.inner.asm()
     }
 
@@ -89,7 +90,7 @@ mod tests {
         assert_eq!(script.bytes(), script_bytes);
 
         assert_eq!(
-            script.asm(),
+            script.to_asm(),
             "OP_0 OP_PUSHBYTES_32 d2e99f0c38089c08e5e1080ff6658c6075afaa7699d384333d956c470881afde"
         );
 

@@ -446,6 +446,14 @@ impl BoltzSession {
         let result_json = serde_json::to_string(&result)?;
         Ok(result_json)
     }
+
+    /// Get the next index to use for deriving keypairs
+    ///
+    /// Users should call this after each created swap and store in persisting memory, so that is passed
+    /// when creating a new session with the same mnemonic.
+    pub fn next_index_to_use(&self) -> u32 {
+        self.inner.next_index_to_use()
+    }
 }
 
 #[uniffi::export]

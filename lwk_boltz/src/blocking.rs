@@ -171,6 +171,10 @@ impl BoltzSession {
         Ok(inner)
     }
 
+    pub fn next_index_to_use(&self) -> u32 {
+        self.inner.next_index_to_use()
+    }
+
     pub fn fetch_swaps_info(
         &self,
     ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {

@@ -195,6 +195,14 @@ impl BoltzSession {
         Ok((index, keypair))
     }
 
+    /// Get the next index to use for deriving keypairs
+    ///
+    /// Users should call this after each created swap and store in persisting memory, so that is passed
+    /// when creating a new session with the same mnemonic via [`BoltzSessionBuilder::next_index_to_use()`].
+    pub fn next_index_to_use(&self) -> u32 {
+        self.next_index_to_use.load(Ordering::Relaxed)
+    }
+
     /// Generate a rescue file with the lightning session mnemonic.
     ///
     /// The rescue file is a JSON file that contains the swaps mnemonic.
@@ -280,6 +288,15 @@ impl BoltzSessionBuilder {
     /// If true, the timeout_advance will be ignored even if set.
     pub fn polling(mut self, polling: bool) -> Self {
         self.polling = polling;
+        self
+    }
+
+    /// Set the next index to use for deriving keypairs
+    ///
+    /// Should be always set when reusing a mnemonic to avoid abusing the boltz API to recover
+    /// this information.
+    pub fn next_index_to_use(mut self, next_index_to_use: u32) -> Self {
+        self.next_index_to_use = Some(next_index_to_use);
         self
     }
 

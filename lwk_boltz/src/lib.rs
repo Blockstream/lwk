@@ -244,6 +244,14 @@ impl BoltzSession {
     }
 }
 
+fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
+    match network {
+        ElementsNetwork::Liquid => BitcoinChain::Bitcoin,
+        ElementsNetwork::LiquidTestnet => BitcoinChain::BitcoinTestnet,
+        ElementsNetwork::ElementsRegtest { .. } => BitcoinChain::BitcoinRegtest,
+    }
+}
+
 /// Builder for creating a [`BoltzSession`]
 pub struct BoltzSessionBuilder {
     network: ElementsNetwork,

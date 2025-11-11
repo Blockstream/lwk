@@ -521,7 +521,7 @@ dependencies = [
 [[package]]
 name = "boltz-client"
 version = "0.3.0"
-source = "git+https://github.com/RCasatta/boltz-rust/?rev=1b213574743d95aa08b0a84682f52f693452eeaf#1b213574743d95aa08b0a84682f52f693452eeaf"
+source = "git+https://github.com/RCasatta/boltz-rust/?rev=ec5b5b5087e7109a12e6eb1523c6678445d323fa#ec5b5b5087e7109a12e6eb1523c6678445d323fa"
 dependencies = [
  "async-trait",
  "bip39",
@@ -2603,7 +2603,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.0.0"
-source = "git+https://github.com/RCasatta/boltz-rust/?rev=1b213574743d95aa08b0a84682f52f693452eeaf#1b213574743d95aa08b0a84682f52f693452eeaf"
+source = "git+https://github.com/RCasatta/boltz-rust/?rev=ec5b5b5087e7109a12e6eb1523c6678445d323fa#ec5b5b5087e7109a12e6eb1523c6678445d323fa"
 dependencies = [
  "proc-macro2",
  "quote",

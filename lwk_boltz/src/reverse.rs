@@ -225,7 +225,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         lockup_address: claim_details.lockup_address.clone(),
         refund_public_key,
         timeout_block_height: claim_details.timeout_block_height,
-        onchain_amount: claim_details.amount,
+        onchain_amount: claim_details.amount.unwrap_or(0), // TODO, not sure how to handle this better
         blinding_key: claim_details.blinding_key.clone(),
     };
 

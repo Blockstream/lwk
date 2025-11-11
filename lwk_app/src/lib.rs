@@ -930,7 +930,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let tx = if let Some(tx) = wollet.transaction(&txid)? {
                 tx.tx.clone()
             } else if r.from_explorer {
-                let client = s.config.esplora_blocking_client()?;
+                let client = s.config.electrum_client()?;
                 let mut txs = client.get_transactions(&[txid])?;
                 txs.pop().ok_or(Error::WalletTxNotFound(r.txid, r.name))?
             } else {
@@ -997,7 +997,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let txid = proposal.needed_tx()?;
             let client = {
                 let s = state.lock()?;
-                s.config.esplora_blocking_client()?
+                s.config.electrum_client()?
             };
             let tx = client.get_transactions(&[txid])?.pop().expect("tx");
             let proposal = proposal.validate(tx)?;
@@ -1173,7 +1173,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             }
             let registry = lwk_wollet::registry::blocking::Registry::new(&s.config.registry_url)?;
             let (contract, issuance_tx) =
-                registry.fetch_with_tx(asset_id, &s.config.esplora_client())?;
+                registry.fetch_with_tx(asset_id, &s.config.electrum_client()?)?;
             s.insert_asset(asset_id, issuance_tx, contract)?;
             // convert the request to an AssetInsert to skip network calls
             let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");

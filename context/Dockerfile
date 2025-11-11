@@ -40,4 +40,5 @@ RUN cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bin
 
 # Install Node.js LTS using official binaries
 RUN curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
-    
+
+RUN cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26 # v0.7.3+v0.28.3

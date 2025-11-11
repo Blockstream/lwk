@@ -28,6 +28,7 @@ use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
 use boltz_client::network::electrum::ElectrumBitcoinClient;
+use boltz_client::network::electrum::DEFAULT_ELECTRUM_TIMEOUT;
 use boltz_client::network::BitcoinChain;
 use boltz_client::network::Chain;
 use boltz_client::network::LiquidChain;
@@ -41,6 +42,7 @@ use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
+use lwk_wollet::ElectrumUrl;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
@@ -128,21 +130,27 @@ impl BoltzSession {
         timeout_advance: Option<Duration>,
         next_index_to_use: Option<u32>,
         referral_id: Option<String>,
+        bitcoin_electrum_client: Option<ElectrumUrl>,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
+        let bitcoin_network = bitcoin_chain_from_network(network);
 
-        // the following are using boltz-client default nodes, pointing at bull's electrum server
-        // TODO:make this configurable
-        let bitcoin_client = match network {
-            ElementsNetwork::Liquid => {
-                ElectrumBitcoinClient::default(BitcoinChain::Bitcoin, None).expect("TODO")
-            }
-            ElementsNetwork::LiquidTestnet => {
-                ElectrumBitcoinClient::default(BitcoinChain::BitcoinTestnet, None).expect("TODO")
-            }
-            ElementsNetwork::ElementsRegtest { .. } => {
-                ElectrumBitcoinClient::default(BitcoinChain::BitcoinRegtest, None).expect("TODO")
-            }
+        let bitcoin_client = match bitcoin_electrum_client {
+            Some(ElectrumUrl::Tls(url, validate_domain)) => ElectrumBitcoinClient::new(
+                bitcoin_network,
+                &url,
+                true,
+                validate_domain,
+                DEFAULT_ELECTRUM_TIMEOUT,
+            )?,
+            Some(ElectrumUrl::Plaintext(url)) => ElectrumBitcoinClient::new(
+                bitcoin_network,
+                &url,
+                false,
+                false,
+                DEFAULT_ELECTRUM_TIMEOUT,
+            )?,
+            None => ElectrumBitcoinClient::default(bitcoin_network, None)?,
         };
 
         let chain_client = Arc::new(
@@ -262,6 +270,7 @@ pub struct BoltzSessionBuilder {
     timeout_advance: Option<Duration>,
     next_index_to_use: Option<u32>,
     referral_id: Option<String>,
+    bitcoin_electrum_client: Option<ElectrumUrl>,
 }
 
 impl BoltzSessionBuilder {
@@ -276,6 +285,7 @@ impl BoltzSessionBuilder {
             timeout_advance: None,
             next_index_to_use: None,
             referral_id: None,
+            bitcoin_electrum_client: None,
         }
     }
 
@@ -331,6 +341,12 @@ impl BoltzSessionBuilder {
         self
     }
 
+    /// Set the url of the bitcoin electrum client
+    pub fn bitcoin_electrum_client(mut self, bitcoin_electrum_client: ElectrumUrl) -> Self {
+        self.bitcoin_electrum_client = Some(bitcoin_electrum_client);
+        self
+    }
+
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
         BoltzSession::initialize(
@@ -342,6 +358,7 @@ impl BoltzSessionBuilder {
             self.timeout_advance,
             self.next_index_to_use,
             self.referral_id,
+            self.bitcoin_electrum_client,
         )
         .await
     }

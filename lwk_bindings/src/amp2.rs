@@ -60,8 +60,9 @@ impl Amp2 {
         Ok(self.inner.descriptor_from_str(keyorigin_xpub)?.into())
     }
 
+    // "register" is a reserved keyword in some target languages, do not use it
     /// Register an AMP2 wallet with the AMP2 server
-    pub fn register(&self, desc: &Amp2Descriptor) -> Result<String, LwkError> {
+    pub fn register_wallet(&self, desc: &Amp2Descriptor) -> Result<String, LwkError> {
         Ok(self.inner.blocking_register(desc.into())?.wid)
     }
 

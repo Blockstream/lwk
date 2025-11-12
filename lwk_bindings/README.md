@@ -3,7 +3,7 @@
 
 To generate bindings the projects use [Mozilla uniffi](https://mozilla.github.io/uniffi-rs/) giving support for: Kotlin, Swift, Python, Ruby and also third party support for Kotlin multiplatform, Go, C++, C# and Dart.
 
-There is an architectural refactor already planned for the crates the bindings are created on, this initial version is for experimentation only, 
+There is an architectural refactor already planned for the crates the bindings are created on, this initial version is for experimentation only,
 expect **breaking changes** in the API
 
 Most of the rust types in this crate are wrappers on types in [`lwk_wollet`] and [`lwk_signer`] which satisfy uniffi requirements such as:
@@ -105,3 +105,41 @@ just kotlin-multiplatform
 ### Example
 
 * [List transactions](./tests/bindings/list_transactions.swift) of a wpkh/slip77 wallet
+
+## C++
+
+### Example
+
+* [List transactions](./tests/bindings/list_transactions.cpp) of a wpkh/slip77 wallet
+
+### Build
+
+Install uniffi-bindgen-cpp:
+
+```shell
+uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26
+```
+
+Build the bindings and generate the shared C++ sources:
+
+```shell
+cargo build --release -p lwk_bindings
+mkdir cpp
+cp target/release/liblwk.so cpp/
+uniffi-bindgen-cpp --library cpp/liblwk.so --out-dir cpp
+```
+
+Import resources to your project:
+
+* LWK library (liblwk.so/dll/dylib)
+* lwk.hpp
+* lwk.cpp
+
+Include `lwk.cpp` in source files of your project and link LWK library in project build.
+
+### CI
+
+C++ bindings are generated in CI artifacts:
+
+* LWK library in `bindings_<platfrom>` (for ex. `bindings-x86_64-unknown-linux-gnu`)
+* Source and header files `bindings_interface_cpp`

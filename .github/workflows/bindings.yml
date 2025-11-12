@@ -67,7 +67,28 @@ jobs:
             target/${{ matrix.target }}/release/liblwk.a
         if:  matrix.os == 'macos-14'
 
-  build-language:
+  build-cpp:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: target/
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --rev f02896c3e9fdce2f374656a32c46ae14c0051a26
+          uniffi-bindgen-cpp --library target/liblwk.so --out-dir target
+      - run: ls -l target
+      - name: Archive cpp language interface
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-interface-cpp
+          path: target/lwk*
+
+  build-csharp:
     needs: build
     runs-on: ubuntu-22.04
     steps:
@@ -89,7 +110,7 @@ jobs:
           path: target/lwk.cs
 
   build-nuget:
-    needs: build-language
+    needs: build-csharp
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout

@@ -106,11 +106,11 @@ fn setup_cli(
         .map(|r| format!("--registry-url http://{}/", r.url))
         .unwrap_or("".to_owned());
 
-    let electrum_url = &server.electrs.electrum_url;
+    let electrum_url = format!("--electrum-url tcp://{}", &server.electrs.electrum_url);
     let addr = get_available_addr().unwrap();
 
     let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} --electrum-url {electrum_url} {registry_url}");
+    let params = format!("--datadir {datadir} {electrum_url} {registry_url}");
 
     let t = {
         let cli = cli.clone();

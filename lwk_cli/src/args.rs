@@ -708,9 +708,9 @@ pub enum WalletCommand {
         #[arg(short, long)]
         txid: String,
 
-        /// Use the explorer if necessary
+        /// Attempt to fetch the transaction if not available locally
         #[arg(long, action)]
-        from_explorer: bool,
+        fetch: bool,
     },
 
     /// Set a wallet tx memo

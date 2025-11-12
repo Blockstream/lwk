@@ -929,7 +929,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let txid = Txid::from_str(&r.txid)?;
             let tx = if let Some(tx) = wollet.transaction(&txid)? {
                 tx.tx.clone()
-            } else if r.from_explorer {
+            } else if r.fetch {
                 let client = s.config.electrum_client()?;
                 let mut txs = client.get_transactions(&[txid])?;
                 txs.pop().ok_or(Error::WalletTxNotFound(r.txid, r.name))?

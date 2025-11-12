@@ -940,10 +940,6 @@ pub enum ServerCommand {
         /// Needed only in regtest because public network have their official defaults
         registry_url: Option<String>,
 
-        #[arg(long)]
-        /// Esplora API URL, if not specified a reasonable default is used according to the network
-        esplora_api_url: Option<String>,
-
         /// Location for logs, server state, and other LWK data
         ///
         /// Default is `$HOME/.lwk`, or `./.lwk` if unable to determine the home dir

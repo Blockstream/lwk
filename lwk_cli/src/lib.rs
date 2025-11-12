@@ -77,7 +77,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     electrum_url,
                     #[cfg(feature = "registry")]
                     registry_url,
-                    esplora_api_url,
                     datadir,
                     timeout,
                     scanning_interval,
@@ -106,9 +105,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         config.electrum_url = url;
                     } else if let Network::Regtest = args.network {
                         anyhow::bail!("on regtest you have to specify --electrum-url");
-                    };
-                    if let Some(url) = esplora_api_url {
-                        config.esplora_api_url = url;
                     };
 
                     #[cfg(feature = "registry")]

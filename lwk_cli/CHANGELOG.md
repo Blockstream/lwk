@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-* Rename `cli asset from-explorer` to `lwk_cli asset from-registry`
+* Rename `lwk_cli asset from-explorer` to `lwk_cli asset from-registry`
+* Rename `lwk_cli wallet tx --from-explorer` to `lwk_cli wallet tx --fetch`
 
 ## 0.5.1
 

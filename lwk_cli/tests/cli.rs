@@ -382,7 +382,7 @@ fn test_start_stop_persist() {
         "{cli} asset insert --asset {asset} --contract '{contract}' --issuance-tx {tx}"
     ));
 
-    let err = sh_err(&format!("{cli} asset from-explorer --asset {asset}"));
+    let err = sh_err(&format!("{cli} asset from-registry --asset {asset}"));
     assert!(err.contains("already inserted"));
 
     let expected_signers = sh(&format!("{cli} signer list"));
@@ -1420,7 +1420,7 @@ fn test_registry_publish() {
 
     sh(&format!("{cli} asset list"));
 
-    sh(&format!("{cli} asset from-explorer --asset {asset}"));
+    sh(&format!("{cli} asset from-registry --asset {asset}"));
 
     sh(&format!("{cli} asset list"));
     assert_eq!(get_len(&r, "assets"), 3);

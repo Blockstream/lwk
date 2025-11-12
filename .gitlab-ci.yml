@@ -177,7 +177,12 @@ cpp:
     - uniffi-bindgen-cpp --library cpp/liblwk.so --out-dir cpp
     # this is an hack, but make it work until we understand how to properly convert default value for Option<Arc<Mnemonic>> and  Option<Arc<dyn Logging>>
     # upstream issue: https://github.com/NordSecurity/uniffi-bindgen-cpp/issues/60
-    - sed -i -e '/std::shared_ptr<Mnemonic>/ s/std::nullopt/nullptr_t/g' -e '/std::shared_ptr<Logging>/ s/std::nullopt/nullptr_t/g' cpp/lwk.hpp
+    - sed -i -e '/std::shared_ptr<Mnemonic>/ s/std::nullopt/nullptr/g' -e '/std::shared_ptr<Logging>/ s/std::nullopt/nullptr/g' cpp/lwk.hpp
+    - cp lwk_bindings/tests/bindings/list_transactions.cpp cpp
+    - cd cpp
+    - g++ -std=c++20 -L./ -Wl,-rpath,./ -o test list_transactions.cpp lwk.cpp -llwk
+    - ./test && cd -
+    - rm -rf cpp/test cpp/list_transactions.cpp # cleanup
   artifacts:
     paths:
       - cpp

@@ -17,7 +17,7 @@ pub struct Config {
     /// The address where the RPC server is listening or the client is connecting to
     pub addr: SocketAddr,
     pub datadir: PathBuf,
-    pub electrum_url: String,
+    pub server_url: String,
     pub network: ElementsNetwork,
 
     pub explorer_url: String,
@@ -32,7 +32,7 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
+            server_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
             network: ElementsNetwork::LiquidTestnet,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             registry_url: "https://assets-testnet.blockstream.info/".into(),
@@ -45,7 +45,7 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: format!("ssl://{LIQUID_SOCKET}"),
+            server_url: format!("ssl://{LIQUID_SOCKET}"),
             network: ElementsNetwork::Liquid,
             explorer_url: "https://blockstream.info/liquid/".into(),
             registry_url: "https://assets.blockstream.info/".into(),
@@ -62,7 +62,7 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: "".into(),
+            server_url: "".into(),
             network: ElementsNetwork::ElementsRegtest { policy_asset },
             explorer_url: "".into(),
             registry_url: "".into(),
@@ -108,7 +108,7 @@ impl Config {
     }
 
     fn electrum_url(&self) -> Result<lwk_wollet::ElectrumUrl, Error> {
-        Ok(self.electrum_url.parse().map_err(lwk_wollet::Error::Url)?)
+        Ok(self.server_url.parse().map_err(lwk_wollet::Error::Url)?)
     }
 
     pub fn blockchain_client(

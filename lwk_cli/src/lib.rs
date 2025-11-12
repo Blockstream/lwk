@@ -102,7 +102,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                         config.scanning_interval = Duration::from_secs(scanning_interval);
                     };
                     if let Some(url) = electrum_url {
-                        config.electrum_url = url;
+                        config.server_url = url;
                     } else if let Network::Regtest = args.network {
                         anyhow::bail!("on regtest you have to specify --electrum-url");
                     };

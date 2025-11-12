@@ -342,9 +342,10 @@ impl BoltzSessionBuilder {
     }
 
     /// Set the url of the bitcoin electrum client
-    pub fn bitcoin_electrum_client(mut self, bitcoin_electrum_client: ElectrumUrl) -> Self {
-        self.bitcoin_electrum_client = Some(bitcoin_electrum_client);
-        self
+    pub fn bitcoin_electrum_client(mut self, bitcoin_electrum_client: &str) -> Result<Self, Error> {
+        let url = bitcoin_electrum_client.parse::<ElectrumUrl>()?;
+        self.bitcoin_electrum_client = Some(url);
+        Ok(self)
     }
 
     /// Build the `BoltzSession`

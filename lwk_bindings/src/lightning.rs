@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    Address, Bolt11Invoice, ElectrumClient, ElectrumUrl, EsploraClient, LightningPayment, LwkError,
-    Mnemonic, Network,
+    Address, Bolt11Invoice, ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic,
+    Network,
 };
 use elements::bitcoin;
 use log::{Level, Metadata, Record};
@@ -102,7 +102,7 @@ pub struct BoltzSessionBuilder {
     #[uniffi(default = None)]
     referral_id: Option<String>,
     #[uniffi(default = None)]
-    bitcoin_electrum_client: Option<Arc<ElectrumUrl>>,
+    bitcoin_electrum_client_url: Option<String>,
 }
 
 /// A session to pay and receive lightning payments.
@@ -198,7 +198,7 @@ impl BoltzSession {
             timeout_advance: None,
             next_index_to_use: None,
             referral_id: None,
-            bitcoin_electrum_client: None,
+            bitcoin_electrum_client_url: None,
         };
         Self::from_builder(builder)
     }

@@ -5,6 +5,9 @@ use lightning::bitcoin::XKeyIdentifier;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Invalid electrum url: {0}")]
+    InvalidElectrumUrl(#[from] lwk_wollet::UrlError),
+
     #[error("Invalid swap state: {0}")]
     InvalidSwapState(String),
 

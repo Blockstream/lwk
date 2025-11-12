@@ -54,7 +54,7 @@ pub use crate::signer::{Bip, Signer};
 pub use crate::wollet::Wollet;
 pub use chain::Chain;
 pub use desc::WolletDescriptor;
-pub use electrum_client::{ElectrumClient, ElectrumUrl};
+pub use electrum_client::ElectrumClient;
 pub use error::LwkError;
 pub use esplora_client::{EsploraClient, EsploraClientBuilder};
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};

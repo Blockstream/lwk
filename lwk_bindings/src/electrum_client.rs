@@ -12,12 +12,6 @@ pub struct ElectrumClient {
     url: lwk_wollet::ElectrumUrl,
 }
 
-/// An url to an electrum server
-#[derive(uniffi::Object, Debug)]
-pub struct ElectrumUrl {
-    inner: lwk_wollet::ElectrumUrl,
-}
-
 #[uniffi::export]
 impl ElectrumClient {
     /// Construct an Electrum client
@@ -38,11 +32,14 @@ impl ElectrumClient {
 
     #[uniffi::constructor]
     /// Construct an electrum client from an Electrum URL
-    pub fn from_url(electrum_url: &ElectrumUrl) -> Result<Arc<Self>, LwkError> {
-        let client = lwk_wollet::ElectrumClient::new(&electrum_url.inner)?;
+    pub fn from_url(electrum_url: &str) -> Result<Arc<Self>, LwkError> {
+        let url = electrum_url
+            .parse::<lwk_wollet::ElectrumUrl>()
+            .map_err(|e| LwkError::Generic { msg: e.to_string() })?;
+        let client = lwk_wollet::ElectrumClient::new(&url)?;
         Ok(Arc::new(Self {
             inner: Arc::new(Mutex::new(client)),
-            url: electrum_url.inner.clone(),
+            url,
         }))
     }
 
@@ -108,17 +105,6 @@ impl ElectrumClient {
     pub fn tip(&self) -> Result<Arc<BlockHeader>, LwkError> {
         let tip = self.inner.lock()?.tip()?;
         Ok(Arc::new(tip.into()))
-    }
-}
-
-#[uniffi::export]
-impl ElectrumUrl {
-    /// Create a new electrum url
-    #[uniffi::constructor]
-    pub fn new(url: &str, tls: bool, validate_domain: bool) -> Result<Self, LwkError> {
-        let url = lwk_wollet::ElectrumUrl::new(url, tls, validate_domain)
-            .map_err(lwk_wollet::Error::Url)?;
-        Ok(Self { inner: url })
     }
 }
 

@@ -434,8 +434,8 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
         swap_id = lockup_response.swap_id()
         lockup_address = lockup_response.lockup_address()
         expected_amount = lockup_response.expected_amount()
-        from_chain = lockup_response.from_chain()
-        to_chain = lockup_response.to_chain()
+        from_chain = lockup_response.chain_from()
+        to_chain = lockup_response.chain_to()
 
         print(f"Swap ID: {swap_id}")
         print(f"Lockup address: {lockup_address}")
@@ -531,6 +531,9 @@ def main():
     # Load the persisted next_index_to_use if available
     next_index = load_next_index()
 
+    # Use blockstream electrum instance for bitcoin, without specifying this, bull bitcoin electrum instances will be used
+    bitcoin_electrum_url = ElectrumUrl("bitcoin-mainnet.blockstream.info:50002", tls=True, validate_domain=True) 
+
     builder = BoltzSessionBuilder(
         network=network,
         client=lightning_client,
@@ -540,6 +543,7 @@ def main():
         polling=polling,
         next_index_to_use=next_index,
         referral_id="LWK python example",
+        bitcoin_electrum_client=bitcoin_electrum_url,
     )
     boltz_session = BoltzSession.from_builder(builder)
 

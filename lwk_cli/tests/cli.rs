@@ -291,12 +291,12 @@ fn send(
 #[test]
 fn test_state_regression() {
     let server = lwk_test_util::setup();
-    let electrum_url = &server.electrs.electrum_url;
+    let server_url = format!("--server-url tcp://{}", &server.electrs.electrum_url);
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
     let cli = format!("cli --addr {addr} -n regtest");
-    let params = format!("--datadir {datadir} --electrum-url {electrum_url}");
+    let params = format!("--datadir {datadir} {server_url}");
 
     // copy static state into data dir
     let state = include_str!("./test_data/state.json");

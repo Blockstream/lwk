@@ -182,8 +182,8 @@ impl App {
                 (wollets_names, config)
             };
 
-            match config.electrum_client() {
-                Ok(mut electrum_client) => {
+            match config.blockchain_client() {
+                Ok(mut blockchain_client) => {
                     for name in wollets_names {
                         let state = match state_scanning
                             .lock()
@@ -195,7 +195,7 @@ impl App {
                             Err(_) => continue,
                         };
 
-                        match electrum_client.full_scan(&state) {
+                        match blockchain_client.full_scan(&state) {
                             Ok(Some(update)) => {
                                 let mut s = state_scanning.lock().expect("state lock poison");
                                 let _ = match s.wollets.get_mut(&name) {
@@ -729,10 +729,10 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let mut pset =
                 PartiallySignedTransaction::from_str(&r.pset).map_err(|e| e.to_string())?;
             let tx = wollet.finalize(&mut pset)?;
-            let electrum_client = s.config.electrum_client()?;
+            let blockchain_client = s.config.blockchain_client()?;
 
             if !r.dry_run {
-                electrum_client.broadcast(&tx)?;
+                blockchain_client.broadcast(&tx)?;
             }
 
             Response::result(
@@ -930,7 +930,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let tx = if let Some(tx) = wollet.transaction(&txid)? {
                 tx.tx.clone()
             } else if r.fetch {
-                let client = s.config.electrum_client()?;
+                let client = s.config.blockchain_client()?;
                 let mut txs = client.get_transactions(&[txid])?;
                 txs.pop().ok_or(Error::WalletTxNotFound(r.txid, r.name))?
             } else {
@@ -997,7 +997,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             let txid = proposal.needed_tx()?;
             let client = {
                 let s = state.lock()?;
-                s.config.electrum_client()?
+                s.config.blockchain_client()?
             };
             let tx = client.get_transactions(&[txid])?.pop().expect("tx");
             let proposal = proposal.validate(tx)?;
@@ -1173,7 +1173,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             }
             let registry = lwk_wollet::registry::blocking::Registry::new(&s.config.registry_url)?;
             let (contract, issuance_tx) =
-                registry.fetch_with_tx(asset_id, &s.config.electrum_client()?)?;
+                registry.fetch_with_tx(asset_id, &s.config.blockchain_client()?)?;
             s.insert_asset(asset_id, issuance_tx, contract)?;
             // convert the request to an AssetInsert to skip network calls
             let asset_insert_request = s.get_asset(&asset_id)?.request().expect("asset");

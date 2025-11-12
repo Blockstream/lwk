@@ -122,7 +122,9 @@ impl Config {
         )
     }
 
-    pub fn electrum_client(&self) -> Result<impl lwk_wollet::clients::blocking::BlockchainBackend, Error> {
+    pub fn blockchain_client(
+        &self,
+    ) -> Result<impl lwk_wollet::clients::blocking::BlockchainBackend, Error> {
         // TODO cache it instead of recreating every time
         Ok(lwk_wollet::ElectrumClient::new(&self.electrum_url()?)?)
     }

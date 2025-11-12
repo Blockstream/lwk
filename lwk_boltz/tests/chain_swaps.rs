@@ -24,10 +24,10 @@ mod tests {
         clients::{AnyClient, ElectrumClient},
         BoltzSession,
     };
-    use lwk_wollet::bitcoin;
     use lwk_wollet::elements;
     use lwk_wollet::secp256k1::rand::thread_rng;
     use lwk_wollet::ElementsNetwork;
+    use lwk_wollet::{bitcoin, ElectrumUrl};
     use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
@@ -420,6 +420,7 @@ mod tests {
         // Test polling mode
         let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
             .polling(true)
+            .bitcoin_electrum_client(ElectrumUrl::new(DEFAULT_REGTEST_NODE, false, false).unwrap()) // it's the same endpoint, just testing the builder setting
             .build()
             .await
             .unwrap();

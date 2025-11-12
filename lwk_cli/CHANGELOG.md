@@ -5,6 +5,7 @@
 * Rename `lwk_cli asset from-explorer` to `lwk_cli asset from-registry`
 * Rename `lwk_cli wallet tx --from-explorer` to `lwk_cli wallet tx --fetch`
 * Remove `--esplora-api-url` option from `lwk_cli server start`
+* Rename `lwk_cli server start --electrum-url` to `lwk_cli server start --server-url`
 
 ## 0.5.1
 

@@ -115,7 +115,15 @@ impl Config {
         &self,
     ) -> Result<impl lwk_wollet::clients::blocking::BlockchainBackend, Error> {
         // TODO cache it instead of recreating every time
-        let electrum_url = self.server_url.parse().map_err(lwk_wollet::Error::Url)?;
-        Ok(lwk_wollet::ElectrumClient::new(&electrum_url)?)
+        match self.server_type.as_ref() {
+            "electrum" => {
+                let electrum_url = self.server_url.parse().map_err(lwk_wollet::Error::Url)?;
+                Ok(lwk_wollet::ElectrumClient::new(&electrum_url)?)
+            }
+            _ => Err(Error::Generic(format!(
+                "Unsupported server type: {}",
+                self.server_type
+            ))),
+        }
     }
 }

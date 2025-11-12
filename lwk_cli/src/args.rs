@@ -933,6 +933,15 @@ pub enum ServerType {
     Esplora,
 }
 
+impl std::fmt::Display for ServerType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ServerType::Electrum => write!(f, "electrum"),
+            ServerType::Esplora => write!(f, "esplora"),
+        }
+    }
+}
+
 #[derive(Debug, Subcommand)]
 pub enum ServerCommand {
     /// Start the server

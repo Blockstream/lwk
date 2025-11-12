@@ -927,6 +927,12 @@ pub struct ServerArgs {
     pub command: ServerCommand,
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum ServerType {
+    Electrum,
+    Esplora,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum ServerCommand {
     /// Start the server
@@ -934,6 +940,10 @@ pub enum ServerCommand {
         /// Server URL, if not specified a reasonable default is used according to the network
         #[arg(short, long)]
         server_url: Option<String>,
+
+        /// Server type
+        #[arg(long, default_value = "electrum")]
+        server_type: ServerType,
 
         #[arg(long)]
         #[cfg(feature = "registry")]

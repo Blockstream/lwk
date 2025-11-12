@@ -75,6 +75,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             match a.command {
                 ServerCommand::Start {
                     server_url,
+                    server_type: _,
                     #[cfg(feature = "registry")]
                     registry_url,
                     datadir,

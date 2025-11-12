@@ -1164,8 +1164,8 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
             s.persist_all()?;
             Response::result(request.id, serde_json::to_value(response::Empty {})?)
         }
-        Method::AssetFromExplorer => {
-            let r: request::AssetFromExplorer = serde_json::from_value(params)?;
+        Method::AssetFromRegistry => {
+            let r: request::AssetFromRegistry = serde_json::from_value(params)?;
             let mut s = state.lock()?;
             let asset_id = AssetId::from_str(&r.asset_id)?;
             if s.get_asset(&asset_id).is_ok() {

@@ -447,8 +447,8 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 let r = client.asset_remove(asset)?;
                 serde_json::to_value(r)?
             }
-            AssetCommand::FromExplorer { asset } => {
-                let r = client.asset_from_explorer(asset)?;
+            AssetCommand::FromRegistry { asset } => {
+                let r = client.asset_from_registry(asset)?;
                 serde_json::to_value(r)?
             }
             AssetCommand::Publish { asset } => {

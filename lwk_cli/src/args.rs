@@ -869,10 +869,10 @@ pub enum AssetCommand {
         asset: String,
     },
 
-    /// Insert an asset getting data from the block explorer
+    /// Insert an asset getting data from the asset registry
     ///
     /// This is worse from a privacy perspective.
-    FromExplorer {
+    FromRegistry {
         /// Asset ID in hex
         #[arg(short, long)]
         asset: String,

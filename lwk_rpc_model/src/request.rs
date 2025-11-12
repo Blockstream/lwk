@@ -426,9 +426,9 @@ pub struct AssetRemove {
     pub asset_id: String,
 }
 
-/// Request to insert an asset retrieving information from the explorer
+/// Request to insert an asset retrieving information from the asset registry
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct AssetFromExplorer {
+pub struct AssetFromRegistry {
     /// The asset identifier
     pub asset_id: String,
 }

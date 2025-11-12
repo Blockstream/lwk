@@ -55,7 +55,7 @@ android: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64
     cp -a target/release/android/jniLibs lwk_bindings/android_bindings/lib/src/androidMain
 
 # Build the kotlin multiplatform interface and android, ios and jvm
-kotlin-multiplatform: ios ios-sim android
+kotlin-multiplatform: ios ios-sim android jvm
     cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0
     gobley-uniffi-bindgen --config ./lwk_bindings/uniffi.kotlin-multiplatform.toml --library target/aarch64-apple-ios/release/liblwk.a  --out-dir target/release/kotlin-multiplatform
     cp -a target/release/kotlin-multiplatform/* lwk_bindings/android_bindings/lib/src/
@@ -63,6 +63,18 @@ kotlin-multiplatform: ios ios-sim android
     mkdir -p ./lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
     cp target/aarch64-apple-ios/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-arm64/
     cp target/lipo-ios-sim/release/liblwk.a lwk_bindings/android_bindings/lib/src/libs/ios-simulator-arm64/
+
+jvm: aarch64-apple-darwin # x86_64-unknown-linux-gnu
+    mkdir -p lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64
+    cp -a target/aarch64-apple-darwin/release/liblwk.dylib lwk_bindings/android_bindings/lib/src/jvmMain/resources/darwin-aarch64/
+
+# Build aarch64-apple-darwin
+aarch64-apple-darwin:
+    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-darwin -p lwk_bindings
+
+# Build x86_64-unknown-linux-gnu
+x86_64-unknown-linux-gnu:
+    cargo build --release --target x86_64-unknown-linux-gnu -p lwk_bindings
 
 # Build ios (works only on mac)
 ios: aarch64-apple-ios

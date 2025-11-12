@@ -74,7 +74,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         CliCommand::Server(a) => {
             match a.command {
                 ServerCommand::Start {
-                    electrum_url,
+                    server_url,
                     #[cfg(feature = "registry")]
                     registry_url,
                     datadir,
@@ -101,7 +101,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     if let Some(scanning_interval) = scanning_interval {
                         config.scanning_interval = Duration::from_secs(scanning_interval);
                     };
-                    if let Some(url) = electrum_url {
+                    if let Some(url) = server_url {
                         config.server_url = url;
                     } else if let Network::Regtest = args.network {
                         anyhow::bail!("on regtest you have to specify --electrum-url");

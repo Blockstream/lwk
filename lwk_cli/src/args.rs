@@ -931,9 +931,9 @@ pub struct ServerArgs {
 pub enum ServerCommand {
     /// Start the server
     Start {
-        /// Electrum URL, if not specified a reasonable default is used according to the network
+        /// Server URL, if not specified a reasonable default is used according to the network
         #[arg(short, long)]
-        electrum_url: Option<String>,
+        server_url: Option<String>,
 
         #[arg(long)]
         #[cfg(feature = "registry")]

@@ -19,8 +19,6 @@ pub struct Config {
     pub datadir: PathBuf,
     pub electrum_url: String,
     pub network: ElementsNetwork,
-    pub tls: bool,
-    pub validate_domain: bool,
 
     pub explorer_url: String,
 
@@ -34,10 +32,8 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: LIQUID_TESTNET_SOCKET.into(),
+            electrum_url: format!("ssl://{LIQUID_TESTNET_SOCKET}"),
             network: ElementsNetwork::LiquidTestnet,
-            tls: true,
-            validate_domain: true,
             explorer_url: "https://blockstream.info/liquidtestnet/".into(),
             registry_url: "https://assets-testnet.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -49,10 +45,8 @@ impl Config {
         Self {
             addr: consts::DEFAULT_ADDR.into(),
             datadir,
-            electrum_url: LIQUID_SOCKET.into(),
+            electrum_url: format!("ssl://{LIQUID_SOCKET}"),
             network: ElementsNetwork::Liquid,
-            tls: true,
-            validate_domain: true,
             explorer_url: "https://blockstream.info/liquid/".into(),
             registry_url: "https://assets.blockstream.info/".into(),
             timeout: TIMEOUT,
@@ -70,8 +64,6 @@ impl Config {
             datadir,
             electrum_url: "".into(),
             network: ElementsNetwork::ElementsRegtest { policy_asset },
-            tls: false,
-            validate_domain: false,
             explorer_url: "".into(),
             registry_url: "".into(),
             timeout: TIMEOUT,
@@ -116,10 +108,7 @@ impl Config {
     }
 
     fn electrum_url(&self) -> Result<lwk_wollet::ElectrumUrl, Error> {
-        Ok(
-            lwk_wollet::ElectrumUrl::new(&self.electrum_url, self.tls, self.validate_domain)
-                .map_err(lwk_wollet::Error::Url)?,
-        )
+        Ok(self.electrum_url.parse().map_err(lwk_wollet::Error::Url)?)
     }
 
     pub fn blockchain_client(

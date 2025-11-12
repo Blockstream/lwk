@@ -587,7 +587,7 @@ def main():
     next_index = load_next_index()
 
     # Use blockstream electrum instance for bitcoin, without specifying this, bull bitcoin electrum instances will be used
-    bitcoin_electrum_url = ElectrumUrl("bitcoin-mainnet.blockstream.info:50002", tls=True, validate_domain=True) 
+    bitcoin_electrum_url = "ssl://bitcoin-mainnet.blockstream.info:50002"
 
     builder = BoltzSessionBuilder(
         network=network,

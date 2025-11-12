@@ -110,8 +110,7 @@ fn setup_cli(
     let addr = get_available_addr().unwrap();
 
     let cli = format!("cli --addr {addr} -n regtest");
-    let params =
-        format!("--datadir {datadir} --electrum-url {electrum_url} {registry_url}");
+    let params = format!("--datadir {datadir} --electrum-url {electrum_url} {registry_url}");
 
     let t = {
         let cli = cli.clone();
@@ -1040,9 +1039,7 @@ fn test_issue() {
     assert!(err.contains("was not found in wallet 'w2'"));
 
     // w2 can get the tx from the explorer
-    sh(&format!(
-        "{cli} wallet tx -w w2 -t {issuance_txid} --fetch"
-    ));
+    sh(&format!("{cli} wallet tx -w w2 -t {issuance_txid} --fetch"));
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();

@@ -302,11 +302,7 @@ impl Client {
         txid: String,
         fetch: bool,
     ) -> Result<response::WalletTx, Error> {
-        let req = request::WalletTx {
-            name,
-            txid,
-            fetch,
-        };
+        let req = request::WalletTx { name, txid, fetch };
         self.make_request(Method::WalletTx, Some(req))
     }
 

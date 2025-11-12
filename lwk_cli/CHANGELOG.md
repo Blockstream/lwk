@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Rename `cli asset from-explorer` to `lwk_cli asset from-registry`
+
 ## 0.5.1
 
 Add wallet drain (send all) support for L-BTC.

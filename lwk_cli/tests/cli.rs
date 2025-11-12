@@ -1620,3 +1620,46 @@ fn test_utxos() {
 
     t.join().unwrap();
 }
+
+#[test]
+fn test_esplora_backend() {
+    let (t, _tmp, cli, params, server, _) = setup_cli(false);
+
+    sw_signer(&cli, "s");
+    singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
+    let _ = fund(&server, &cli, "w", 1_000_000);
+
+    assert_eq!(txs(&cli, "w").len(), 1);
+
+    // Stop the server
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+
+    // Start again with a Esplora backend
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+
+        // replace "--server-url tcp://..." (last param)
+        // with "--server-url http://... --server-type esplora"
+        let s = "--server-url";
+        let idx = params.find(s).unwrap();
+        let esplora_params = format!(
+            "{} http://{} --server-type esplora",
+            &params[..idx + s.len()],
+            server.electrs.esplora_url.as_ref().unwrap()
+        );
+
+        std::thread::spawn(move || {
+            sh(&format!("{cli} server start {esplora_params}"));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+
+    assert_eq!(txs(&cli, "w").len(), 1);
+    let _ = fund(&server, &cli, "w", 1_000_000);
+    assert_eq!(txs(&cli, "w").len(), 2);
+
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}

@@ -1048,7 +1048,7 @@ fn test_issue() {
 
     // w2 can get the tx from the explorer
     sh(&format!(
-        "{cli} wallet tx -w w2 -t {issuance_txid} --from-explorer"
+        "{cli} wallet tx -w w2 -t {issuance_txid} --fetch"
     ));
 
     sh(&format!("{cli} server stop"));

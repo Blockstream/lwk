@@ -2,7 +2,9 @@ use lwk_common::electrum_ssl::LIQUID_SOCKET;
 use lwk_common::electrum_ssl::LIQUID_TESTNET_SOCKET;
 use lwk_common::Network as JadeNetwork;
 use lwk_jade::TIMEOUT;
+use lwk_wollet::clients::blocking::EsploraClient;
 use lwk_wollet::elements::AssetId;
+use lwk_wollet::ElectrumClient;
 use lwk_wollet::ElementsNetwork;
 use std::fs;
 use std::net::SocketAddr;
@@ -10,7 +12,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::{consts, Error};
+use crate::{blockchain_client::BlockchainClient, consts, Error};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -111,14 +113,17 @@ impl Config {
         matches!(self.network, ElementsNetwork::Liquid)
     }
 
-    pub fn blockchain_client(
-        &self,
-    ) -> Result<impl lwk_wollet::clients::blocking::BlockchainBackend, Error> {
+    pub fn blockchain_client(&self) -> Result<BlockchainClient, Error> {
         // TODO cache it instead of recreating every time
         match self.server_type.as_ref() {
             "electrum" => {
                 let electrum_url = self.server_url.parse().map_err(lwk_wollet::Error::Url)?;
-                Ok(lwk_wollet::ElectrumClient::new(&electrum_url)?)
+                let electrum_client = ElectrumClient::new(&electrum_url)?;
+                Ok(BlockchainClient::Electrum(electrum_client))
+            }
+            "esplora" => {
+                let esplora_client = EsploraClient::new(&self.server_url, self.network)?;
+                Ok(BlockchainClient::Esplora(esplora_client))
             }
             _ => Err(Error::Generic(format!(
                 "Unsupported server type: {}",

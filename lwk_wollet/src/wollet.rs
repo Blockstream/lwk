@@ -259,6 +259,7 @@ impl Wollet {
     }
 
     /// Whether the wallet is AMP0
+    #[cfg(feature = "amp0")]
     pub fn is_amp0(&self) -> bool {
         self.descriptor.is_amp0()
     }

@@ -248,18 +248,23 @@ pub enum Error {
     #[error(transparent)]
     SignerError(#[from] lwk_signer::NewError),
 
+    #[cfg(feature = "amp0")]
     #[error(transparent)]
     RmpvDecodeError(#[from] rmpv::decode::Error),
 
+    #[cfg(feature = "amp0")]
     #[error(transparent)]
     RmpvEncodeError(#[from] rmpv::encode::Error),
 
+    #[cfg(feature = "amp0")]
     #[error(transparent)]
     RmpvExtError(#[from] rmpv::ext::Error),
 
+    #[cfg(feature = "amp0")]
     #[error(transparent)]
     RmpSerdeDecodeError(#[from] rmp_serde::decode::Error),
 
+    #[cfg(feature = "amp0")]
     #[error(transparent)]
     RmpSerdeEncodeError(#[from] rmp_serde::encode::Error),
 

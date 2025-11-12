@@ -109,6 +109,7 @@ mod store;
 mod tx_builder;
 mod update;
 mod util;
+#[cfg(feature = "amp0")]
 mod wamp;
 mod wollet;
 

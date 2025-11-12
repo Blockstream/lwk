@@ -75,7 +75,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
             match a.command {
                 ServerCommand::Start {
                     server_url,
-                    server_type: _,
+                    server_type,
                     #[cfg(feature = "registry")]
                     registry_url,
                     datadir,
@@ -107,6 +107,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     } else if let Network::Regtest = args.network {
                         anyhow::bail!("on regtest you have to specify --electrum-url");
                     };
+                    config.server_type = server_type.to_string();
 
                     #[cfg(feature = "registry")]
                     if let Some(url) = registry_url {

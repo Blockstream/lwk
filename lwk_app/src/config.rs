@@ -107,14 +107,11 @@ impl Config {
         matches!(self.network, ElementsNetwork::Liquid)
     }
 
-    fn electrum_url(&self) -> Result<lwk_wollet::ElectrumUrl, Error> {
-        Ok(self.server_url.parse().map_err(lwk_wollet::Error::Url)?)
-    }
-
     pub fn blockchain_client(
         &self,
     ) -> Result<impl lwk_wollet::clients::blocking::BlockchainBackend, Error> {
         // TODO cache it instead of recreating every time
-        Ok(lwk_wollet::ElectrumClient::new(&self.electrum_url()?)?)
+        let electrum_url = self.server_url.parse().map_err(lwk_wollet::Error::Url)?;
+        Ok(lwk_wollet::ElectrumClient::new(&electrum_url)?)
     }
 }

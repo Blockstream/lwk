@@ -4,6 +4,7 @@ use lwk_wollet::elements::{BlockHash, BlockHeader, Script, Transaction, Txid};
 use lwk_wollet::{ElectrumClient, Error};
 use std::collections::HashMap;
 
+#[allow(clippy::large_enum_variant)]
 pub enum BlockchainClient {
     Electrum(ElectrumClient),
     Esplora(EsploraClient),

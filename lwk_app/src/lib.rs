@@ -57,6 +57,7 @@ pub use config::Config;
 pub use error::Error;
 pub use lwk_tiny_jrpc::RpcError;
 
+mod blockchain_client;
 mod client;
 mod config;
 pub mod consts;

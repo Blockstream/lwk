@@ -1,5 +1,14 @@
 async function runAmp0DailyOps() {
     try {
+        const ciBranchName = process.env.CI_COMMIT_BRANCH;
+        if (ciBranchName !== undefined) {
+            // We are in a CI job
+            if (ciBranchName !== "master") {
+                console.log("Skipping test");
+                process.exit(0);
+            }
+        }
+
         const WebSocket = require('ws');
         global.WebSocket = WebSocket;
 

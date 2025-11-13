@@ -14,6 +14,7 @@
 .cxx
 local.properties
 *.so
+*.dylib
 *.a
 .kotlin
 

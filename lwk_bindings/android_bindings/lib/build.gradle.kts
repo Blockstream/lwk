@@ -144,3 +144,13 @@ mavenPublishing {
 extensions.configure<SigningExtension> {
     useGpgCmd()
 }
+
+// Do not require signing when publishing to Maven Local
+// Allows `./gradlew publishToMavenLocal` (or `publishToLocalMaven`) without GPG setup
+tasks.withType<Sign>().configureEach {
+    onlyIf {
+        val taskNames = gradle.startParameter.taskNames
+        // Skip signing if the build is targeting the local Maven repository
+        taskNames.none { it.contains("publishToMavenLocal", ignoreCase = true) || it.contains("publishToLocalMaven", ignoreCase = true) }
+    }
+}

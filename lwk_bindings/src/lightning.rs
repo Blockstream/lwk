@@ -302,7 +302,7 @@ impl BoltzSession {
             .map(|w| lwk_boltz::Webhook::<SubSwapStates> {
                 url: w.url.to_string(),
                 hash_swap_id: None,
-                status: status,
+                status,
             });
         let response =
             self.inner

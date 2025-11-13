@@ -214,7 +214,8 @@ wasm:
     - npm install
     - node network.js
     - node list_transactions.js
-    - node amp0.js
+    - node amp0-setup.js
+    - node amp0-daily-ops.js
     - node bip85.js
   artifacts:
     paths:

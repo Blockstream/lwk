@@ -1,3 +1,7 @@
+mod waterfalls;
+
+use waterfalls::WaterfallsD;
+
 use electrsd::bitcoind::BitcoinD;
 use elements_miniscript::elements::{self, BlockHeader};
 
@@ -157,6 +161,7 @@ pub struct TestElectrumServer {
     pub electrs: electrsd::ElectrsD,
 
     bitcoind: Option<BitcoinD>,
+    waterfallsd: Option<WaterfallsD>,
 }
 
 impl TestElectrumServer {
@@ -165,6 +170,22 @@ impl TestElectrumServer {
         elementsd_exec: String,
         enable_esplora_http: bool,
         bitcoind_exec: Option<String>,
+    ) -> Self {
+        Self::new_with_waterfalls(
+            electrs_exec,
+            elementsd_exec,
+            enable_esplora_http,
+            bitcoind_exec,
+            None,
+        )
+    }
+
+    pub fn new_with_waterfalls(
+        electrs_exec: String,
+        elementsd_exec: String,
+        enable_esplora_http: bool,
+        bitcoind_exec: Option<String>,
+        waterfalls_exec: Option<String>,
     ) -> Self {
         init_logging();
 
@@ -248,11 +269,25 @@ impl TestElectrumServer {
             thread::sleep(Duration::from_millis(500));
         }
 
+        let waterfallsd = if let Some(exe) = waterfalls_exec {
+            let esplora_url = electrs.esplora_url.clone().unwrap();
+            Some(WaterfallsD::new(exe, &esplora_url).unwrap())
+        } else {
+            None
+        };
+
         Self {
             elementsd: node,
             electrs,
             bitcoind,
+            waterfallsd,
         }
+    }
+
+    pub fn waterfalls_url(&self) -> Option<String> {
+        self.waterfallsd
+            .as_ref()
+            .map(|w| w.waterfalls_url().to_string())
     }
 
     // methods on elementsd

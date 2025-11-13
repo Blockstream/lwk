@@ -2489,6 +2489,7 @@ dependencies = [
 name = "lwk_test_util"
 version = "0.12.0"
 dependencies = [
+ "anyhow",
  "bip39",
  "electrsd",
  "elements-miniscript",

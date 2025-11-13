@@ -507,6 +507,13 @@ impl BoltzSession {
     pub fn next_index_to_use(&self) -> u32 {
         self.inner.next_index_to_use()
     }
+
+    /// Set the next index to use for deriving keypairs
+    ///
+    /// This may be necessary to handle multiple sessions with the same mnemonic.
+    pub fn set_next_index_to_use(&self, next_index_to_use: u32) {
+        self.inner.set_next_index_to_use(next_index_to_use);
+    }
 }
 
 #[uniffi::export]

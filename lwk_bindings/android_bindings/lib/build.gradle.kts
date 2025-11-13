@@ -103,7 +103,8 @@ android {
     }
 }
 
-val libraryVersion: String by project
+val libraryVersion: String = file("../../Cargo.toml").readText().lineSequence().find { "version = " in it }?.split('"')?.get(1) ?: error("Could not find version in Cargo.toml")
+println(">>>>>>>>>>> Parsed libraryVersion: $libraryVersion")
 
 mavenPublishing {
     coordinates(groupId = "com.blockstream", artifactId = "lwk", version = libraryVersion)

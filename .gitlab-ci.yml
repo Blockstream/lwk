@@ -250,12 +250,12 @@ publish_to_maven:
   stage: deploy
   tags:
     - m4
-  when: manual
+  #when: manual
   needs: []
   script:
     - just kotlin-multiplatform
     - cd lwk_bindings/android_bindings
-    - ./gradlew publish --no-daemon --stacktrace --info
+    #- ./gradlew publish --no-daemon --stacktrace --info
   artifacts:
     paths:
       - lwk_bindings/android_bindings/lib/build/libs

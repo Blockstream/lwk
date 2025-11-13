@@ -1,5 +1,6 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
+#[cfg(feature = "blocking")]
 pub mod blocking;
 mod chain_data;
 mod chain_swaps;
@@ -27,7 +28,9 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::BOLTZ_MAINNET_URL_V2;
 use boltz_client::boltz::BOLTZ_REGTEST;
 use boltz_client::boltz::BOLTZ_TESTNET_URL_V2;
+#[cfg(not(target_arch = "wasm32"))]
 use boltz_client::network::electrum::ElectrumBitcoinClient;
+#[cfg(not(target_arch = "wasm32"))]
 use boltz_client::network::electrum::DEFAULT_ELECTRUM_TIMEOUT;
 use boltz_client::network::BitcoinChain;
 use boltz_client::network::Chain;
@@ -42,6 +45,7 @@ use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
+#[cfg(not(target_arch = "wasm32"))]
 use lwk_wollet::ElectrumUrl;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
@@ -367,6 +371,7 @@ impl BoltzSessionBuilder {
     /// Build a blocking `BoltzSession`
     ///
     /// This creates a new tokio runtime and wraps the async session for synchronous use.
+    #[cfg(feature = "blocking")]
     pub fn build_blocking(self) -> Result<blocking::BoltzSession, Error> {
         let runtime = Arc::new(tokio::runtime::Runtime::new()?);
         let _guard = runtime.enter();

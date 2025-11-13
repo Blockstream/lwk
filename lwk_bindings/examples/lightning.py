@@ -195,7 +195,7 @@ def show_invoice(boltz_session, wollet):
 
     # Create invoice
     webhook_url = os.getenv('WEBHOOK')
-    webhook = WebHook(webhook_url) if webhook_url else None
+    webhook = WebHook(webhook_url, status=[]) if webhook_url else None
     invoice_response = boltz_session.invoice(amount, "Lightning payment", claim_address, webhook) 
 
     # Get and print the bolt11 invoice
@@ -233,7 +233,7 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
 
         # Prepare payment
         webhook_url = os.getenv('WEBHOOK')
-        webhook = WebHook(webhook_url) if webhook_url else None
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
         prepare_pay_response = boltz_session.prepare_pay(lightning_payment, refund_address, webhook) 
 
         data=prepare_pay_response.serialize()
@@ -427,7 +427,7 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
     try:
         # Create the swap
         webhook_url = os.getenv('WEBHOOK')
-        webhook = WebHook(webhook_url) if webhook_url else None
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
         lockup_response = boltz_session.lbtc_to_btc(amount, refund_address, claim_address, webhook)
 
         # Get swap details
@@ -504,7 +504,7 @@ def btc_to_lbtc_swap(boltz_session, wollet):
     try:
         # Create the swap
         webhook_url = os.getenv('WEBHOOK')
-        webhook = WebHook(webhook_url) if webhook_url else None
+        webhook = WebHook(webhook_url, status=[]) if webhook_url else None
         lockup_response = boltz_session.btc_to_lbtc(amount, refund_address, claim_address, webhook)
 
         # Get swap details

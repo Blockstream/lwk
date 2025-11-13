@@ -124,6 +124,7 @@ pub struct PreparePayResponse {
 #[derive(uniffi::Object)]
 pub struct WebHook {
     url: String,
+    status: Vec<String>,
 }
 
 #[derive(uniffi::Object)]
@@ -283,12 +284,25 @@ impl BoltzSession {
         refund_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<PreparePayResponse, LwkError> {
+        let status = webhook
+            .as_ref()
+            .filter(|w| !w.status.is_empty())
+            .map(|w| {
+                w.status
+                    .iter()
+                    .map(|s| s.parse::<SubSwapStates>())
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()
+            .map_err(|_| LwkError::Generic {
+                msg: "Invalid status".to_string(),
+            })?;
         let webhook = webhook
             .as_ref()
             .map(|w| lwk_boltz::Webhook::<SubSwapStates> {
                 url: w.url.to_string(),
                 hash_swap_id: None,
-                status: None,
+                status: status,
             });
         let response =
             self.inner
@@ -316,12 +330,25 @@ impl BoltzSession {
         claim_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<InvoiceResponse, LwkError> {
+        let status = webhook
+            .as_ref()
+            .filter(|w| !w.status.is_empty())
+            .map(|w| {
+                w.status
+                    .iter()
+                    .map(|s| s.parse::<RevSwapStates>())
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()
+            .map_err(|_| LwkError::Generic {
+                msg: "Invalid status".to_string(),
+            })?;
         let webhook = webhook
             .as_ref()
             .map(|w| lwk_boltz::Webhook::<RevSwapStates> {
                 url: w.url.to_string(),
                 hash_swap_id: None,
-                status: None,
+                status,
             });
         let response = self
             .inner
@@ -715,7 +742,7 @@ impl LockupResponse {
 #[uniffi::export]
 impl WebHook {
     #[uniffi::constructor]
-    pub fn new(url: String) -> Arc<Self> {
-        Arc::new(Self { url })
+    pub fn new(url: String, status: Vec<String>) -> Arc<Self> {
+        Arc::new(Self { url, status })
     }
 }

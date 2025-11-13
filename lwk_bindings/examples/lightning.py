@@ -598,7 +598,7 @@ def main():
         polling=polling,
         next_index_to_use=next_index,
         referral_id="LWK python example",
-        bitcoin_electrum_client=bitcoin_electrum_url,
+        bitcoin_electrum_client_url=bitcoin_electrum_url,
     )
     boltz_session = BoltzSession.from_builder(builder)
 

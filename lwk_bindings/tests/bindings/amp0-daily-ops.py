@@ -1,4 +1,14 @@
 from lwk import *
+import os
+
+
+ci_branch_name = os.environ.get("CI_COMMIT_BRANCH")
+if ci_branch_name is not None:
+    # We are in a CI job
+    if ci_branch_name != "master":
+        print("Skipping test")
+        quit()
+
 
 # ANCHOR: amp0-daily-ops
 # Signer

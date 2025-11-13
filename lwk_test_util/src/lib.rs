@@ -21,6 +21,10 @@ use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 
+mod test_env;
+mod waterfalls;
+pub use test_env::{TestEnv, TestEnvBuilder};
+
 const DEFAULT_FEE_RATE: f32 = 100.0;
 
 pub const TEST_MNEMONIC: &str =

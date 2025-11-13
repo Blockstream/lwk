@@ -226,6 +226,14 @@ impl BoltzSession {
         self.next_index_to_use.load(Ordering::Relaxed)
     }
 
+    /// Set the next index to use for deriving keypairs
+    ///
+    /// This may be necessary to handle multiple sessions with the same mnemonic.
+    pub fn set_next_index_to_use(&self, next_index_to_use: u32) {
+        self.next_index_to_use
+            .store(next_index_to_use, Ordering::Relaxed);
+    }
+
     /// Generate a rescue file with the lightning session mnemonic.
     ///
     /// The rescue file is a JSON file that contains the swaps mnemonic.

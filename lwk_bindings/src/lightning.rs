@@ -108,6 +108,8 @@ pub struct BoltzSessionBuilder {
 /// A session to pay and receive lightning payments.
 ///
 /// Lightning payments are done via LBTC swaps using Boltz.
+///
+/// See `BoltzSessionBuilder` for various options to configure the session.
 #[derive(uniffi::Object)]
 pub struct BoltzSession {
     inner: lwk_boltz::blocking::BoltzSession,

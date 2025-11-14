@@ -38,6 +38,7 @@ fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
 }
 
 pub fn test_client_electrum(url: &str) -> ElectrumClient {
+    let url = &url.replace("tcp://", "");
     let tls = false;
     let validate_domain = false;
     let electrum_url = ElectrumUrl::new(url, tls, validate_domain).unwrap();

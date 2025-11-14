@@ -48,9 +48,9 @@ impl PinServer {
         let mut volumes = HashMap::new();
         volumes.insert(
             format!("{}", file_path.display()),
-            format!("/{}", SERVER_PRIVATE_KEY),
+            format!("/{SERVER_PRIVATE_KEY}"),
         );
-        volumes.insert(format!("{}", dir.path().display()), format!("/{}", PINS));
+        volumes.insert(format!("{}", dir.path().display()), format!("/{PINS}"));
 
         Ok(Self {
             volumes,

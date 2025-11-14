@@ -2498,6 +2498,7 @@ dependencies = [
  "lwk_containers",
  "pulldown-cmark",
  "rand 0.8.5",
+ "reqwest",
  "serde_json",
  "tempfile",
 ]

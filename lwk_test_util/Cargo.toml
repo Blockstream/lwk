@@ -19,3 +19,12 @@ rand = "0.8.5"
 tempfile = "3.8.0"
 pulldown-cmark = "0.9.3"
 bip39 = "2.0.0"
+
+reqwest = { version = "0.12", default-features = false, features = [
+    "charset",
+    "http2",
+    "macos-system-configuration",
+    "blocking",
+    "json",
+    "rustls-tls",
+] }

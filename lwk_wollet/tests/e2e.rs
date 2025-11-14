@@ -1378,13 +1378,13 @@ async fn test_esplora_wasm_local_waterfalls() {
 
 #[test]
 fn test_tip() {
-    let server = setup();
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, TEST_DESCRIPTOR);
     w.wait_height(101); // node mines 101 blocks on start
     assert_eq!(w.tip().height(), 101);
     assert!(w.tip().timestamp().is_some());
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     w.wait_height(102);
     assert_eq!(w.tip().height(), 102);
     assert!(w.tip().timestamp().is_some());

@@ -16,6 +16,8 @@ variables:
       - stuck_or_timeout_failure
   services:
     - docker:20.10.12-dind
+  before_script:
+    - cp /usr/local/cargo/bin/waterfalls /bin/waterfalls_b8818e1
 
 
 fmt_clippy:

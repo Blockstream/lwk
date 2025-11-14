@@ -17,6 +17,7 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
@@ -171,6 +172,8 @@ impl BoltzSession {
         let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
         let future = BoltzWsApi::run_ws_loop(ws.clone());
+
+        #[cfg(feature = "blocking")]
         tokio::spawn(future); // TODO handle wasm
 
         let (next_index_to_use, mnemonic) = match mnemonic {
@@ -518,7 +521,7 @@ pub async fn next_status(
     swap_id: &str,
     polling: bool,
 ) -> Result<SwapStatus, Error> {
-    let deadline = tokio::time::Instant::now() + timeout;
+    let deadline = Instant::now() + timeout;
 
     loop {
         let update = if polling {
@@ -531,7 +534,7 @@ pub async fn next_status(
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
-            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            let remaining = deadline.saturating_duration_since(Instant::now());
             tokio::select! {
                 update = rx.recv() => update?,
                 _ = tokio::time::sleep(remaining) => {

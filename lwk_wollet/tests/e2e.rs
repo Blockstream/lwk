@@ -2086,19 +2086,10 @@ fn wait_esplora_tx_update(client: &mut blocking::EsploraClient, wollet: &Wollet)
 #[test]
 fn test_waterfalls_esplora() {
     // TODO: use TestWollet also for EsploraClient
-    // FIXME: add launch_sync or similar to waterfalls
-
-    init_logging();
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
-
-    let url = format!("{}/blocks/tip/hash", test_env.base_url());
-    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
     let mut client = clients::blocking::EsploraClient::new_waterfalls(
-        test_env.base_url(),
+        &env.waterfalls_url(),
         ElementsNetwork::default_regtest(),
     )
     .unwrap();
@@ -2114,15 +2105,14 @@ fn test_waterfalls_esplora() {
 
     let sats = 1_000;
     let address = wollet.address(None).unwrap();
-    let _txid = test_env.send_to(&to_be(address.address()), sats);
+    let _txid = env.elementsd_sendtoaddress(address.address(), sats, None);
 
     let update = wait_esplora_tx_update(&mut client, &wollet);
     wollet.apply_update(update).unwrap();
     let balance = wollet.balance().unwrap();
     assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
 
-    let address = test_env.get_new_address(None);
-    let address = address.elements().unwrap();
+    let address = env.elementsd_getnewaddress();
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
@@ -2154,8 +2144,6 @@ fn test_waterfalls_esplora() {
     assert_eq!(history.len(), 1);
     assert_eq!(history[0].len(), 1);
     assert_eq!(history[0][0].txid, txid);
-
-    rt.block_on(test_env.shutdown());
 }
 
 #[cfg(feature = "esplora")]

@@ -481,7 +481,7 @@ impl std::fmt::Display for WalletType {
             WalletType::Wpkh => write!(f, "wpkh"),
             WalletType::ShWpkh => write!(f, "sh_wpkh"),
             WalletType::WshMulti(threshold, num_pubkeys) => {
-                write!(f, "wsh_multi_{}of{}", threshold, num_pubkeys)
+                write!(f, "wsh_multi_{threshold}of{num_pubkeys}")
             }
         }
     }

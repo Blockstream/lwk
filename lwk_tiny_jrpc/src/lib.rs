@@ -89,7 +89,7 @@ impl JsonRpcServer {
                         }
                         Err(err) => {
                             // not much to do if recv fails
-                            log::error!("recv error: {}", err);
+                            log::error!("recv error: {err}");
                             continue;
                         }
                     };
@@ -119,7 +119,7 @@ impl JsonRpcServer {
                                 Ok(mut file) => {
                                     let mut buf = Vec::new();
                                     match file.read_to_end(&mut buf) {
-                                        Ok(n) => log::trace!("GET: read {} bytes", n),
+                                        Ok(n) => log::trace!("GET: read {n} bytes"),
                                         Err(e) => {
                                             let message = "500: Internal error";
                                             let response = HttpResponse::from_string(message)
@@ -127,7 +127,7 @@ impl JsonRpcServer {
                                             send_http_response(
                                                 http_request,
                                                 response,
-                                                format!("{}: {}", message, e).as_str(),
+                                                format!("{message}: {e}").as_str(),
                                             );
                                             continue;
                                         }
@@ -152,7 +152,7 @@ impl JsonRpcServer {
                                     send_http_response(
                                         http_request,
                                         response,
-                                        format!("{}: {}", message, e).as_str(),
+                                        format!("{message}: {e}").as_str(),
                                     );
                                 }
                             }
@@ -197,12 +197,12 @@ impl JsonRpcServer {
                             if let Err(err) =
                                 send_jsonrpc_response(http_request, response, &config.headers)
                             {
-                                log::error!("send_response error: {}", err);
+                                log::error!("send_response error: {err}");
                             }
                         }
                         other => {
                             let message =
-                                format!("500: Internal error - method {} not implemented.", other);
+                                format!("500: Internal error - method {other} not implemented.");
                             let response =
                                 HttpResponse::from_string(&message).with_status_code(500);
                             send_http_response(http_request, response, &message);
@@ -248,11 +248,9 @@ where
     let status = response.status_code();
     match http_request.respond(response) {
         Ok(()) => log::debug!(
-            "Sent response with status code: {:?} and response message: {}",
-            status,
-            message
+            "Sent response with status code: {status:?} and response message: {message}"
         ),
-        Err(e) => log::error!("Error sending response: {}", e),
+        Err(e) => log::error!("Error sending response: {e}"),
     }
 }
 
@@ -321,7 +319,7 @@ where
         Ok(response) => response,
         Err(Error::Stop) => return Err(Error::Stop),
         Err(Error::Inner(err)) => {
-            log::error!("Error processing request: {}", err);
+            log::error!("Error processing request: {err}");
             Response::from_error(id, err)
         }
         Err(Error::Implementation(err)) => Response::from_error(id, err),
@@ -416,7 +414,7 @@ pub struct RpcError {
 
 impl Display for RpcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

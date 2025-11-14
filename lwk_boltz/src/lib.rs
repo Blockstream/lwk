@@ -46,7 +46,6 @@ use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
 use lwk_wollet::bitcoin::bip32::Xpub;
 use lwk_wollet::bitcoin::NetworkKind;
-#[cfg(not(target_arch = "wasm32"))]
 use lwk_wollet::ElectrumUrl;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};

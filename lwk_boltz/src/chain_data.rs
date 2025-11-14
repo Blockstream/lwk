@@ -94,7 +94,7 @@ pub fn to_chain_data(
     let claim_keys = derive_keypair(data.claim_key_index, mnemonic)?;
     let refund_keys = derive_keypair(data.refund_key_index, mnemonic)?;
     let preimage = match data.preimage.as_ref() {
-        Some(preimage) => Preimage::from_str(&preimage)?,
+        Some(preimage) => Preimage::from_str(preimage)?,
         None => preimage_from_keypair(&claim_keys),
     };
 

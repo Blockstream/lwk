@@ -316,6 +316,7 @@ mod tests {
             .unwrap();
 
         let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        assert!(data.preimage.is_none());
         assert_eq!(
             data.mnemonic_identifier.to_string(),
             "e92cd0870c080a91a063345362b7e76d4ad3a4b4"

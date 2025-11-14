@@ -248,6 +248,7 @@ mod tests {
         .await
         .unwrap();
         let data: InvoiceDataSerializable = serde_json::from_str(&serialized_data).unwrap();
+        assert!(data.preimage.is_none());
         let invoice_response = session.restore_invoice(data).await.unwrap();
         utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
         invoice_response.complete_pay().await.unwrap();

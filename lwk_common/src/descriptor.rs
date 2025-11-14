@@ -15,27 +15,27 @@ pub fn singlesig_desc<S: Signer + ?Sized>(
     script_variant: Singlesig,
     blinding_variant: DescriptorBlindingKey,
 ) -> Result<String, String> {
-    let is_mainnet = signer.is_mainnet().map_err(|e| format!("{:?}", e))?;
+    let is_mainnet = signer.is_mainnet().map_err(|e| format!("{e:?}"))?;
     let coin_type = if is_mainnet { 1776 } else { 1 };
     let (prefix, path, suffix) = match script_variant {
         Singlesig::Wpkh => ("elwpkh", format!("84h/{coin_type}h/0h"), ""),
         Singlesig::ShWpkh => ("elsh(wpkh", format!("49h/{coin_type}h/0h"), ")"),
     };
 
-    let fingerprint = signer.fingerprint().map_err(|e| format!("{:?}", e))?;
+    let fingerprint = signer.fingerprint().map_err(|e| format!("{e:?}"))?;
 
     let xpub = signer
         .derive_xpub(
-            &DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{:?}", e))?,
+            &DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{e:?}"))?,
         )
-        .map_err(|e| format!("{:?}", e))?;
+        .map_err(|e| format!("{e:?}"))?;
 
     let blinding_key = match blinding_variant {
         DescriptorBlindingKey::Slip77 => format!(
             "slip77({})",
             signer
                 .slip77_master_blinding_key()
-                .map_err(|e| format!("{:?}", e))?
+                .map_err(|e| format!("{e:?}"))?
         ),
         DescriptorBlindingKey::Slip77Rand => {
             return Err("Random slip77 key not supported in singlesig descriptor generation".into())
@@ -45,7 +45,7 @@ pub fn singlesig_desc<S: Signer + ?Sized>(
 
     // m / purpose' / coin_type' / account' / change / address_index
     let desc = format!("ct({blinding_key},{prefix}([{fingerprint}/{path}]{xpub}/<0;1>/*){suffix})");
-    let checksum = desc_checksum(&desc).map_err(|e| format!("{:?}", e))?;
+    let checksum = desc_checksum(&desc).map_err(|e| format!("{e:?}"))?;
     Ok(format!("{desc}#{checksum}"))
 }
 
@@ -98,7 +98,7 @@ pub fn multisig_desc(
         .collect::<Vec<_>>()
         .join(",");
     let desc = format!("ct({blinding_key},{prefix}({threshold},{xpubs}){suffix})");
-    let checksum = desc_checksum(&desc).map_err(|e| format!("{:?}", e))?;
+    let checksum = desc_checksum(&desc).map_err(|e| format!("{e:?}"))?;
     Ok(format!("{desc}#{checksum}"))
 }
 

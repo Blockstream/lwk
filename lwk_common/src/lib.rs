@@ -3,10 +3,10 @@
 
 //! A crate containing common code used in multiple other crate in the workspace, such as:
 //!
-//!   * Utils to inspect a PSET: get the net effect of a PSET on a given wallet [`pset_balance()`], or get how many
-//!     signatures are missing , and which signers should provide them [`pset_signatures()`].
+//!  * Utils to inspect a PSET: get the net effect of a PSET on a given wallet [`pset_balance()`], or get how many
+//!    signatures are missing , and which signers should provide them [`pset_signatures()`].
 //!  * [`Signer`] trait: contains the methods to be implemented by a signer such as signing a pset or
-//!     returning an xpub
+//!    returning an xpub
 //!
 //!  To avoid circular dependencies this crate must not depend on other crate of the workspace
 
@@ -351,7 +351,7 @@ pub fn burn_script() -> Script {
 
 /// Create a debug string of a PSET, but remove new lines on number arrays.
 pub fn pset_debug(pset: &PartiallySignedTransaction) -> String {
-    let debug_str = format!("{:#?}", pset);
+    let debug_str = format!("{pset:#?}");
     let mut result = String::new();
 
     // Remove new line for lines that contain only a number ending with a comma so that the output is more readable

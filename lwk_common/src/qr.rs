@@ -14,9 +14,9 @@ fn address_to_qr_text(address: &Address) -> String {
         _ => address.to_string(),
     };
     if address.params == &AddressParams::LIQUID_TESTNET {
-        format!("liquidtestnet:{}", address_string)
+        format!("liquidtestnet:{address_string}")
     } else {
-        format!("liquidnetwork:{}", address_string)
+        format!("liquidnetwork:{address_string}")
     }
 }
 
@@ -70,7 +70,7 @@ pub fn address_to_uri_qr(
     let delegate = enc.finish()?;
 
     let base64 = String::from_utf8(delegate)?;
-    Ok(format!("data:image/bmp;base64,{}", base64))
+    Ok(format!("data:image/bmp;base64,{base64}"))
 }
 
 #[cfg(test)]

@@ -129,8 +129,8 @@ pub mod amp0 {
     impl std::fmt::Display for Amp0SignerData {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match serde_json::to_string(self) {
-                Ok(s) => write!(f, "{}", s),
-                Err(e) => write!(f, "Error serializing: {}", e),
+                Ok(s) => write!(f, "{s}"),
+                Err(e) => write!(f, "Error serializing: {e}"),
             }
         }
     }
@@ -214,7 +214,7 @@ pub mod amp0 {
         /// AMP0 account xpub
         fn amp0_account_xpub(&self, account: u32) -> Result<Xpub, Self::Error> {
             // TODO: return error if account is > 2**31
-            let path = DerivationPath::from_str(&format!("m/3h/{}h", account)).expect("TODO");
+            let path = DerivationPath::from_str(&format!("m/3h/{account}h")).expect("TODO");
             self.derive_xpub(&path)
         }
     }

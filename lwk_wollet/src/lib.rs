@@ -162,7 +162,7 @@ pub type BlindingPublicKey = elements::secp256k1_zkp::PublicKey;
 pub(crate) mod hex {
     use elements::{hashes::hex::DisplayHex, hex::Error, hex::FromHex};
 
-    pub fn encode(data: &[u8]) -> String {
+    pub fn _encode(data: &[u8]) -> String {
         data.to_lower_hex_string()
     }
 

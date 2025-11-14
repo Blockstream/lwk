@@ -951,7 +951,7 @@ fn encrypt_credentials(username: &str, password: &str) -> (String, String) {
     let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_U, 2048, &mut u_blob);
     let _ = pbkdf2::<Hmac<Sha512>>(&entropy, &WO_SEED_P, 2048, &mut p_blob);
 
-    (hex::encode(&u_blob), hex::encode(&p_blob))
+    (hex::_encode(&u_blob), hex::_encode(&p_blob))
 }
 
 fn decrypt_blob_key(
@@ -1744,7 +1744,7 @@ fn derive_gait_path(xpub: &Xpub) -> String {
     mac.update(&input);
     let gait_path_bytes = mac.finalize().into_bytes();
 
-    hex::encode(&gait_path_bytes)
+    hex::_encode(&gait_path_bytes)
 }
 
 fn derive_blob_keys(client_secret_xpub: &Xpub) -> (Vec<u8>, Vec<u8>) {
@@ -1782,7 +1782,7 @@ fn encrypt_blob_key(username: &str, password: &str, enc_key: &[u8]) -> Result<St
 
     let mut blob_key = iv.to_vec();
     blob_key.extend(cyphertext);
-    Ok(hex::encode(&blob_key))
+    Ok(hex::_encode(&blob_key))
 }
 
 #[cfg(test)]

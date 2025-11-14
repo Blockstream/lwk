@@ -9,6 +9,10 @@ FNAME=electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid && \
 curl -Ls https://github.com/RCasatta/electrsd/releases/download/electrs_releases/${FNAME}.gz | gunzip > ${FNAME} && \
 chmod +x $FNAME
 
+# waterfalls
+FNAME=waterfalls_b8818e1
+curl -Ls https://github.com/LeoComandini/waterfalls/releases/download/b8818e1/${FNAME}.gz | gunzip > ${FNAME}
+chmod +x $FNAME
 
 # elementsd
 curl -Ls https://github.com/ElementsProject/elements/releases/download/elements-23.2.4/elements-23.2.4-x86_64-linux-gnu.tar.gz | tar -xz

@@ -335,6 +335,94 @@ mod tests {
 
         let success = response.complete().await.unwrap();
         assert!(success, "Restored BTC to LBTC swap should succeed");
+        drop(session);
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
+    async fn test_session_restore_chain_swaps_with_random_preimages() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = crate::utils::start_block_mining();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .random_preimages(true)
+            .build()
+            .await
+            .unwrap();
+
+        // Test BTC to LBTC swap with restore
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+
+        let response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        // Serialize and drop
+        let serialized_data = response.serialize().unwrap();
+        let lockup_address = response.lockup_address().to_string();
+        let expected_amount = response.expected_amount();
+        drop(response);
+        drop(session);
+
+        // Restore session and swap
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .random_preimages(true)
+            .build()
+            .await
+            .unwrap();
+
+        let data = lwk_boltz::ChainSwapDataSerializable::deserialize(&serialized_data).unwrap();
+        assert!(data.preimage.is_some());
+        assert_eq!(
+            data.mnemonic_identifier.to_string(),
+            "e92cd0870c080a91a063345362b7e76d4ad3a4b4"
+        );
+
+        let response = session.restore_lockup(data).await.unwrap();
+
+        log::info!(
+            "Restored BTC to LBTC swap with random preimages - Lockup address: {}",
+            response.lockup_address()
+        );
+
+        crate::utils::send_to_address(BTC_CHAIN.into(), &lockup_address, expected_amount)
+            .await
+            .unwrap();
+
+        let success = response.complete().await.unwrap();
+        assert!(
+            success,
+            "Restored BTC to LBTC swap with random preimages should succeed"
+        );
+        drop(session);
 
         // Stop the mining task
         mining_handle.abort();

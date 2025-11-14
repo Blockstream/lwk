@@ -955,7 +955,7 @@ impl Wollet {
                 if !pset.inputs().iter().all(seems_finalized) {
                     // Failed to finalize all inputs
                     // TODO: do not use Generic
-                    return Err(Error::Generic(format!("{:?}", errors)));
+                    return Err(Error::Generic(format!("{errors:?}")));
                 }
             }
             // If some inputs have been finalized ignore the other errors

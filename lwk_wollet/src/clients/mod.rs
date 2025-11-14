@@ -22,6 +22,8 @@ pub mod blocking;
 
 pub mod asyncr;
 
+pub(crate) mod electrum_url;
+
 /// A builder for the [`crate::clients::asyncr::EsploraClient`] or [`crate::clients::blocking::EsploraClient`]
 #[derive(Debug, Clone)]
 pub struct EsploraClientBuilder {

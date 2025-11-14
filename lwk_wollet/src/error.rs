@@ -215,7 +215,7 @@ pub enum Error {
 
     #[cfg(feature = "electrum")]
     #[error(transparent)]
-    Url(#[from] crate::clients::blocking::electrum_client::UrlError),
+    Url(#[from] crate::UrlError),
 
     #[error("Manual coin selection is not allowed when assets are involved (this limitation will be removed in the future)")]
     ManualCoinSelectionOnlyLbtc,

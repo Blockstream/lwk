@@ -113,6 +113,7 @@ mod util;
 mod wamp;
 mod wollet;
 
+pub use crate::clients::electrum_url::{ElectrumUrl, UrlError};
 pub use crate::clients::{Capability, History};
 pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
@@ -135,7 +136,7 @@ pub use crate::wollet::full_scan_to_index_with_electrum_client;
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_with_electrum_client;
 #[cfg(feature = "electrum")]
-pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions, ElectrumUrl};
+pub use clients::blocking::electrum_client::{ElectrumClient, ElectrumOptions};
 
 #[cfg(feature = "esplora")]
 pub use age;
@@ -150,9 +151,6 @@ pub use clients::blocking::ElementsRpcClient;
 
 #[cfg(feature = "elements_rpc")]
 pub use bitcoincore_rpc;
-
-#[cfg(feature = "electrum")]
-pub use crate::clients::blocking::electrum_client::UrlError;
 
 pub use elements_miniscript;
 pub use elements_miniscript::elements;

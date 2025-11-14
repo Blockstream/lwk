@@ -66,7 +66,8 @@ test-submarine-restore: export-env-vars
 test-reverse-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test reverse -- test_session_restore_reverse --nocapture --ignored
+    RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse --nocapture --exact --ignored
+    RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse_with_random_preimages --nocapture --exact --ignored
 
 
 # Run reverse swap test

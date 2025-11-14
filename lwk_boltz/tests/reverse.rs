@@ -259,6 +259,72 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_reverse_with_random_preimages() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .random_preimages(true)
+        .build()
+        .await
+        .unwrap();
+
+        // test restore swap after drop
+        let invoice_response = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
+
+        let serialized_data = invoice_response.serialize().unwrap();
+        drop(invoice_response);
+        drop(session);
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .random_preimages(true)
+        .build()
+        .await
+        .unwrap();
+        let data: InvoiceDataSerializable = serde_json::from_str(&serialized_data).unwrap();
+        assert!(data.preimage.is_some());
+        let invoice_response = session.restore_invoice(data).await.unwrap();
+        utils::start_pay_invoice_lnd(invoice_response.bolt11_invoice().to_string());
+        invoice_response.complete_pay().await.unwrap();
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_reverse_concurrent() {
         let _ = env_logger::try_init();
 

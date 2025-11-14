@@ -49,7 +49,7 @@ impl std::fmt::Display for ElectrumUrl {
 }
 
 impl ElectrumUrl {
-    /// Create an electrum url to create an [`ElectrumClient`]
+    /// Create an electrum url to create an [`crate::ElectrumClient`]
     ///
     /// The given `host_port` is a domain name or an ip with the port and without the scheme,
     /// eg. `example.com:50001` or `127.0.0.1:50001`

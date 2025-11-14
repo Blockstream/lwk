@@ -136,35 +136,41 @@ impl BoltzSession {
         timeout_advance: Option<Duration>,
         next_index_to_use: Option<u32>,
         referral_id: Option<String>,
-        bitcoin_electrum_client: Option<ElectrumUrl>,
+        _bitcoin_electrum_client: Option<ElectrumUrl>,
         random_preimages: bool,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
-        let bitcoin_network = bitcoin_chain_from_network(network);
 
-        let bitcoin_client = match bitcoin_electrum_client {
-            Some(ElectrumUrl::Tls(url, validate_domain)) => ElectrumBitcoinClient::new(
-                bitcoin_network,
-                &url,
-                true,
-                validate_domain,
-                DEFAULT_ELECTRUM_TIMEOUT,
-            )?,
-            Some(ElectrumUrl::Plaintext(url)) => ElectrumBitcoinClient::new(
-                bitcoin_network,
-                &url,
-                false,
-                false,
-                DEFAULT_ELECTRUM_TIMEOUT,
-            )?,
-            None => ElectrumBitcoinClient::default(bitcoin_network, None)?,
+        // TODO for the sake of wasm compilation this is temporarily feature gated
+        #[cfg(feature = "blocking")]
+        let chain_client = {
+            let bitcoin_network = bitcoin_chain_from_network(network);
+            let bitcoin_client = match _bitcoin_electrum_client {
+                Some(ElectrumUrl::Tls(url, validate_domain)) => ElectrumBitcoinClient::new(
+                    bitcoin_network,
+                    &url,
+                    true,
+                    validate_domain,
+                    DEFAULT_ELECTRUM_TIMEOUT,
+                )?,
+                Some(ElectrumUrl::Plaintext(url)) => ElectrumBitcoinClient::new(
+                    bitcoin_network,
+                    &url,
+                    false,
+                    false,
+                    DEFAULT_ELECTRUM_TIMEOUT,
+                )?,
+                None => ElectrumBitcoinClient::default(bitcoin_network, None)?,
+            };
+            Arc::new(
+                ChainClient::new()
+                    .with_liquid(client)
+                    .with_bitcoin(bitcoin_client),
+            )
         };
+        #[cfg(not(feature = "blocking"))]
+        let chain_client = Arc::new(ChainClient::new().with_liquid(client));
 
-        let chain_client = Arc::new(
-            ChainClient::new()
-                .with_liquid(client)
-                .with_bitcoin(bitcoin_client),
-        );
         let url = boltz_default_url(network);
         let api = Arc::new(BoltzApiClientV2::new(url.to_string(), timeout));
         let config = BoltzWsConfig::default();
@@ -279,6 +285,7 @@ impl BoltzSession {
     }
 }
 
+#[cfg(feature = "blocking")]
 fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
     match network {
         ElementsNetwork::Liquid => BitcoinChain::Bitcoin,

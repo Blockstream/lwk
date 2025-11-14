@@ -176,10 +176,8 @@ impl BoltzSession {
         let config = BoltzWsConfig::default();
         let ws_url = url.replace("http", "ws") + "/ws"; // api.get_ws_url() is private
         let ws = Arc::new(BoltzWsApi::new(ws_url, config));
-        let future = BoltzWsApi::run_ws_loop(ws.clone());
 
-        #[cfg(feature = "blocking")]
-        tokio::spawn(future); // TODO handle wasm
+        start_ws(ws.clone());
 
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => {
@@ -291,6 +289,21 @@ fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
         ElementsNetwork::Liquid => BitcoinChain::Bitcoin,
         ElementsNetwork::LiquidTestnet => BitcoinChain::BitcoinTestnet,
         ElementsNetwork::ElementsRegtest { .. } => BitcoinChain::BitcoinRegtest,
+    }
+}
+
+pub fn start_ws(ws: Arc<BoltzWsApi>) {
+    let future = ws.run_ws_loop();
+
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+    {
+        tokio::spawn(future);
+    }
+
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    {
+        // In WASM, we can use spawn_local since we don't need Send
+        wasm_bindgen_futures::spawn_local(future);
     }
 }
 

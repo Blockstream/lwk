@@ -103,6 +103,8 @@ pub struct BoltzSessionBuilder {
     referral_id: Option<String>,
     #[uniffi(default = None)]
     bitcoin_electrum_client_url: Option<String>,
+    #[uniffi(default = false)]
+    random_preimages: bool,
 }
 
 /// A session to pay and receive lightning payments.
@@ -202,6 +204,7 @@ impl BoltzSession {
             next_index_to_use: None,
             referral_id: None,
             bitcoin_electrum_client_url: None,
+            random_preimages: false,
         };
         Self::from_builder(builder)
     }
@@ -267,6 +270,7 @@ impl BoltzSession {
         if let Some(referral_id) = builder.referral_id {
             lwk_builder = lwk_builder.referral_id(referral_id);
         }
+        lwk_builder = lwk_builder.random_preimages(builder.random_preimages);
 
         let inner = lwk_builder
             .build_blocking()

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bip39::Mnemonic;
 use boltz_client::boltz::CreateChainResponse;
 use boltz_client::network::{BitcoinChain, Chain, LiquidChain};
@@ -30,6 +32,7 @@ pub struct ChainSwapData {
     pub mnemonic_identifier: XKeyIdentifier,
     pub from_chain: Chain,
     pub to_chain: Chain,
+    pub random_preimage: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,6 +50,9 @@ pub struct ChainSwapDataSerializable {
     pub mnemonic_identifier: XKeyIdentifier,
     pub from_chain: String,
     pub to_chain: String,
+
+    /// It's some if created at random, otherwise can be derived from mnemonic and key_index
+    pub preimage: Option<String>,
 }
 
 impl From<ChainSwapData> for ChainSwapDataSerializable {
@@ -65,6 +71,9 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
             mnemonic_identifier: data.mnemonic_identifier,
             from_chain: data.from_chain.to_string(),
             to_chain: data.to_chain.to_string(),
+            preimage: data
+                .random_preimage
+                .then_some(data.preimage.to_string().expect("preimage has 32 bytes")),
         }
     }
 }
@@ -84,7 +93,11 @@ pub fn to_chain_data(
 ) -> Result<ChainSwapData, Error> {
     let claim_keys = derive_keypair(data.claim_key_index, mnemonic)?;
     let refund_keys = derive_keypair(data.refund_key_index, mnemonic)?;
-    let preimage = preimage_from_keypair(&claim_keys)?;
+    let preimage = match data.preimage.as_ref() {
+        Some(preimage) => Preimage::from_str(&preimage)?,
+        None => preimage_from_keypair(&claim_keys),
+    };
+
     let mnemonic_identifier = mnemonic_identifier(mnemonic)?;
     if mnemonic_identifier != data.mnemonic_identifier {
         return Err(Error::MnemonicIdentifierMismatch(
@@ -111,6 +124,7 @@ pub fn to_chain_data(
         mnemonic_identifier,
         from_chain,
         to_chain,
+        random_preimage: data.preimage.is_some(),
     })
 }
 

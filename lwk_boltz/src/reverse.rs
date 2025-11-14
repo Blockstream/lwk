@@ -56,7 +56,7 @@ impl BoltzSession {
     ) -> Result<InvoiceResponse, Error> {
         let chain = self.chain();
         let (key_index, our_keys) = self.derive_next_keypair()?;
-        let preimage = preimage_from_keypair(&our_keys)?;
+        let preimage = self.preimage(&our_keys);
 
         let claim_public_key = PublicKey {
             compressed: true,
@@ -122,6 +122,7 @@ impl BoltzSession {
                 key_index,
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
                 claim_broadcasted: false,
+                random_preimage: self.random_preimages,
             },
             rx,
             swap_script,
@@ -205,7 +206,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     // Derive the keypair from the mnemonic at the key_index
     let our_keys = derive_keypair(claim_details.key_index, mnemonic)?;
 
-    let preimage = preimage_from_keypair(&our_keys)?;
+    let preimage = preimage_from_keypair(&our_keys);
 
     // Parse the server public key
     let refund_public_key_bitcoin = lwk_wollet::bitcoin::PublicKey::from_str(
@@ -248,6 +249,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         key_index: claim_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
         claim_broadcasted: false,
+        random_preimage: false, // when trying to restore from boltz only deterministic preimage are supported
     })
 }
 

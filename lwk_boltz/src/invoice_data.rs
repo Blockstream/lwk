@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bip39::Mnemonic;
 use boltz_client::boltz::CreateReverseResponse;
 use boltz_client::util::secrets::Preimage;
@@ -28,6 +30,7 @@ pub struct InvoiceData {
     pub(crate) our_keys: Keypair,
     pub(crate) preimage: Preimage,
     pub(crate) claim_address: elements::Address,
+    pub random_preimage: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -43,6 +46,9 @@ pub struct InvoiceDataSerializable {
     pub mnemonic_identifier: XKeyIdentifier,
 
     pub claim_broadcasted: Option<bool>, // TODO: remove Option if breaking change
+
+    /// It's some if created at random, otherwise can be derived from mnemonic and key_index
+    pub preimage: Option<String>,
 }
 
 pub fn to_invoice_data(
@@ -50,7 +56,10 @@ pub fn to_invoice_data(
     mnemonic: &Mnemonic,
 ) -> Result<InvoiceData, Error> {
     let our_keys = derive_keypair(i.key_index, mnemonic)?;
-    let preimage = preimage_from_keypair(&our_keys)?;
+    let preimage = match i.preimage.as_ref() {
+        Some(preimage) => Preimage::from_str(preimage)?,
+        None => preimage_from_keypair(&our_keys),
+    };
     let identifier = mnemonic_identifier(mnemonic)?;
     if identifier != i.mnemonic_identifier {
         return Err(Error::MnemonicIdentifierMismatch(
@@ -70,6 +79,7 @@ pub fn to_invoice_data(
         key_index: i.key_index,
         mnemonic_identifier: i.mnemonic_identifier,
         claim_broadcasted: i.claim_broadcasted.unwrap_or(false),
+        random_preimage: i.preimage.is_some(),
     })
 }
 
@@ -84,6 +94,9 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             mnemonic_identifier: i.mnemonic_identifier,
             claim_address: i.claim_address,
             claim_broadcasted: Some(i.claim_broadcasted),
+            preimage: i
+                .random_preimage
+                .then_some(i.preimage.to_string().expect("preimage has bytes")),
         }
     }
 }

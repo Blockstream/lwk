@@ -15,7 +15,6 @@ use lwk_wollet::elements::bitcoin;
 
 use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 use crate::error::Error;
-use crate::preimage_from_keypair;
 use crate::swap_state::SwapStateTrait;
 use crate::{broadcast_tx_with_retry, mnemonic_identifier, next_status, WAIT_TIME};
 use crate::{BoltzSession, SwapState, SwapType};
@@ -84,7 +83,7 @@ impl BoltzSession {
         webhook: Option<Webhook<ChainSwapStates>>,
     ) -> Result<LockupResponse, Error> {
         let (claim_key_index, claim_keys) = self.derive_next_keypair()?;
-        let preimage = preimage_from_keypair(&claim_keys)?;
+        let preimage = self.preimage(&claim_keys);
         let (refund_key_index, refund_keys) = self.derive_next_keypair()?;
 
         let claim_public_key = PublicKey {
@@ -153,6 +152,7 @@ impl BoltzSession {
                 mnemonic_identifier: mnemonic_identifier(&self.mnemonic)?,
                 from_chain: from,
                 to_chain: to,
+                random_preimage: self.random_preimages,
             },
             lockup_script,
             claim_script,

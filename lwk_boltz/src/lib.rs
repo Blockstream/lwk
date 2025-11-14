@@ -266,6 +266,15 @@ impl BoltzSession {
         let b = self.api.get_submarine_pairs().await?;
         Ok((a, b))
     }
+
+    /// Returns a preimage from the keys or a random one according to flag `self.random_preimage`
+    pub(crate) fn preimage(&self, our_keys: &Keypair) -> Preimage {
+        if self.random_preimages {
+            Preimage::new()
+        } else {
+            preimage_from_keypair(our_keys)
+        }
+    }
 }
 
 fn bitcoin_chain_from_network(network: ElementsNetwork) -> BitcoinChain {
@@ -366,10 +375,14 @@ impl BoltzSessionBuilder {
         Ok(self)
     }
 
-    /// Set the deterministic preimages flag
+    /// Set the random preimages flag
     ///
-    /// If true, the preimages will be deterministic and the rescue file will be compatible with the Boltz web app.
-    /// If false, the preimages will be random potentially allowing concurrent sessions with the same mnemonic
+    /// The default is false, the preimages will be deterministic and the rescue file will be
+    /// compatible with the Boltz web app.
+    /// If true, the preimages will be random potentially allowing concurrent sessions with the same
+    /// mnemonic, but completing the swap will be possible only with the preimage data. For example
+    /// the boltz web app will be able only to refund the swap, not to bring it to completion.
+    /// If true, when serializing the swap data, the preimage will be saved in the data.
     pub fn random_preimages(mut self, random_preimages: bool) -> Self {
         self.random_preimages = random_preimages;
         self
@@ -417,9 +430,9 @@ fn network_kind(liquid_chain: LiquidChain) -> NetworkKind {
     }
 }
 
-pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Result<Preimage, Error> {
+pub(crate) fn preimage_from_keypair(our_keys: &Keypair) -> Preimage {
     let hashed_bytes = sha256::Hash::hash(&our_keys.secret_bytes());
-    Ok(Preimage::from_vec(hashed_bytes.as_byte_array().to_vec())?)
+    Preimage::from_vec(hashed_bytes.as_byte_array().to_vec()).expect("sha256 result is 32 bytes")
 }
 
 pub(crate) fn mnemonic_identifier(mnemonic: &Mnemonic) -> Result<XKeyIdentifier, Error> {

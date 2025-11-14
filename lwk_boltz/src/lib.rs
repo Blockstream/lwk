@@ -88,6 +88,8 @@ pub struct BoltzSession {
     timeout_advance: Duration,
 
     referral_id: Option<String>,
+
+    random_preimages: bool,
 }
 
 impl BoltzSession {
@@ -135,6 +137,7 @@ impl BoltzSession {
         next_index_to_use: Option<u32>,
         referral_id: Option<String>,
         bitcoin_electrum_client: Option<ElectrumUrl>,
+        random_preimages: bool,
     ) -> Result<Self, Error> {
         let liquid_chain = elements_network_to_liquid_chain(network);
         let bitcoin_network = bitcoin_chain_from_network(network);
@@ -193,6 +196,7 @@ impl BoltzSession {
             polling,
             timeout_advance: timeout_advance.unwrap_or(Duration::from_secs(180)),
             referral_id,
+            random_preimages,
         })
     }
 
@@ -283,6 +287,7 @@ pub struct BoltzSessionBuilder {
     next_index_to_use: Option<u32>,
     referral_id: Option<String>,
     bitcoin_electrum_client: Option<ElectrumUrl>,
+    random_preimages: bool,
 }
 
 impl BoltzSessionBuilder {
@@ -298,6 +303,7 @@ impl BoltzSessionBuilder {
             next_index_to_use: None,
             referral_id: None,
             bitcoin_electrum_client: None,
+            random_preimages: false,
         }
     }
 
@@ -360,6 +366,15 @@ impl BoltzSessionBuilder {
         Ok(self)
     }
 
+    /// Set the deterministic preimages flag
+    ///
+    /// If true, the preimages will be deterministic and the rescue file will be compatible with the Boltz web app.
+    /// If false, the preimages will be random potentially allowing concurrent sessions with the same mnemonic
+    pub fn random_preimages(mut self, random_preimages: bool) -> Self {
+        self.random_preimages = random_preimages;
+        self
+    }
+
     /// Build the `BoltzSession`
     pub async fn build(self) -> Result<BoltzSession, Error> {
         BoltzSession::initialize(
@@ -372,6 +387,7 @@ impl BoltzSessionBuilder {
             self.next_index_to_use,
             self.referral_id,
             self.bitcoin_electrum_client,
+            self.random_preimages,
         )
         .await
     }

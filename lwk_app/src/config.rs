@@ -125,6 +125,11 @@ impl Config {
                 let esplora_client = EsploraClient::new(&self.server_url, self.network)?;
                 Ok(BlockchainClient::Esplora(esplora_client))
             }
+            "waterfalls" => {
+                let waterfalls_client =
+                    EsploraClient::new_waterfalls(&self.server_url, self.network)?;
+                Ok(BlockchainClient::Esplora(waterfalls_client))
+            }
             _ => Err(Error::Generic(format!(
                 "Unsupported server type: {}",
                 self.server_type

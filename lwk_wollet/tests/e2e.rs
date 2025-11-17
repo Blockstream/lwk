@@ -1534,12 +1534,12 @@ fn ct_discount() {
 fn claim_pegin() {
     // TODO this test makes a pegin using the node as a reference implementation to implement the pegin
     // in the lwk wallet
-    let server = setup_with_bitcoind();
+    let env = TestEnvBuilder::from_env().with_bitcoind().build();
 
-    server.bitcoind_generate(101);
-    let (mainchain_address, claim_script) = server.elementsd_getpeginaddress();
-    let txid = server.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
-    let tx = server.bitcoind_getrawtransaction(txid);
+    env.bitcoind_generate(101);
+    let (mainchain_address, claim_script) = env.elementsd_getpeginaddress();
+    let txid = env.bitcoind_sendtoaddress(&mainchain_address, 100_000_000);
+    let tx = env.bitcoind_getrawtransaction(txid);
     let tx_bytes = bitcoin::consensus::serialize(&tx);
 
     let pegin_vout = tx
@@ -1548,12 +1548,12 @@ fn claim_pegin() {
         .position(|o| o.script_pubkey == mainchain_address.script_pubkey())
         .unwrap();
 
-    server.bitcoind_generate(101);
-    let proof = server.bitcoind_gettxoutproof(txid);
+    env.bitcoind_generate(101);
+    let proof = env.bitcoind_gettxoutproof(txid);
 
-    server.elementsd_generate(2);
+    env.elementsd_generate(2);
 
-    let address_lbtc = server.elementsd_getnewaddress().to_string();
+    let address_lbtc = env.elementsd_getnewaddress().to_string();
 
     let inputs = serde_json::json!([ {"txid":txid, "vout": pegin_vout,"pegin_bitcoin_tx": tx_bytes.to_hex(), "pegin_txout_proof": proof, "pegin_claim_script": claim_script } ]);
     let outputs = serde_json::json!([
@@ -1561,13 +1561,13 @@ fn claim_pegin() {
         {"fee": "0.1" }
     ]);
 
-    let psbt = server.elementsd_raw_createpsbt(inputs, outputs);
+    let psbt = env.elementsd_raw_createpsbt(inputs, outputs);
 
-    assert_eq!(server.elementsd_expected_next(&psbt), "updater");
-    let psbt = server.elementsd_walletprocesspsbt(&psbt);
-    assert_eq!(server.elementsd_expected_next(&psbt), "extractor");
-    let tx_hex = server.elementsd_finalizepsbt(&psbt);
-    let _txid = server.elementsd_sendrawtransaction(&tx_hex);
+    assert_eq!(env.elementsd_expected_next(&psbt), "updater");
+    let psbt = env.elementsd_walletprocesspsbt(&psbt);
+    assert_eq!(env.elementsd_expected_next(&psbt), "extractor");
+    let tx_hex = env.elementsd_finalizepsbt(&psbt);
+    let _txid = env.elementsd_sendrawtransaction(&tx_hex);
 }
 
 #[test]

@@ -931,6 +931,7 @@ pub struct ServerArgs {
 pub enum ServerType {
     Electrum,
     Esplora,
+    Waterfalls,
 }
 
 impl std::fmt::Display for ServerType {
@@ -938,6 +939,7 @@ impl std::fmt::Display for ServerType {
         match self {
             ServerType::Electrum => write!(f, "electrum"),
             ServerType::Esplora => write!(f, "esplora"),
+            ServerType::Waterfalls => write!(f, "waterfalls"),
         }
     }
 }

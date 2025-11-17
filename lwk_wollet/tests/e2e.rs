@@ -2892,18 +2892,21 @@ fn test_no_wildcard_waterfalls() {
 
 #[test]
 fn test_no_wildcard() {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
 
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
     let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     // Receive
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     // Send
     let balance_before = wallet.balance_btc();
@@ -2943,7 +2946,7 @@ fn test_no_wildcard() {
     )
     .unwrap();
 
-    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let esplora_url = env.esplora_url();
     let mut esplora_client = clients::blocking::EsploraClient::new(&esplora_url, network).unwrap();
 
     let update = esplora_client.full_scan(&esplora_wollet).unwrap();

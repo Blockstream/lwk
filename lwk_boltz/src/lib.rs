@@ -17,7 +17,6 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 
 use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
@@ -540,7 +539,7 @@ pub async fn next_status(
     swap_id: &str,
     polling: bool,
 ) -> Result<SwapStatus, Error> {
-    let deadline = Instant::now() + timeout;
+    let deadline = tokio::time::Instant::now() + timeout;
 
     loop {
         let update = if polling {
@@ -553,7 +552,7 @@ pub async fn next_status(
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
-            let remaining = deadline.saturating_duration_since(Instant::now());
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             tokio::select! {
                 update = rx.recv() => update?,
                 _ = tokio::time::sleep(remaining) => {

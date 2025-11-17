@@ -147,7 +147,7 @@ impl BoltzSession {
     /// Get the rescue file
     pub fn rescue_file(&self) -> Result<String, Error> {
         let r = self.inner.rescue_file();
-        Ok(serde_json::to_string(&r).map_err(|e| Error::Generic(e.to_string()))?)
+        serde_json::to_string(&r).map_err(|e| Error::Generic(e.to_string()))
     }
 
     /// Prepare a lightning invoice payment
@@ -164,7 +164,7 @@ impl BoltzSession {
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         // TODO this method should return a PreparePayResponse object
-        Ok(r.serialize().map_err(|e| Error::Generic(e.to_string()))?)
+        r.serialize().map_err(|e| Error::Generic(e.to_string()))
     }
 }
 

@@ -2725,14 +2725,14 @@ fn liquidex<C: BlockchainBackend>(
 
 #[test]
 fn test_liquidex() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     // Alice
     let signer_a = generate_signer();
     let view_key = generate_view_key();
     let desc_a = format!("ct({},elwpkh({}/*))", view_key, signer_a.xpub());
     let sa = AnySigner::Software(signer_a);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wa = TestWollet::new(client, &desc_a);
 
     // Bob
@@ -2740,11 +2740,11 @@ fn test_liquidex() {
     let view_key = generate_view_key();
     let desc_b = format!("ct({},elwpkh({}/*))", view_key, signer_b.xpub());
     let sb = AnySigner::Software(signer_b);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wb = TestWollet::new(client, &desc_b);
 
-    wa.fund_btc(&server);
-    wb.fund_btc(&server);
+    wa.fund_btc_(&env);
+    wb.fund_btc_(&env);
 
     let (asset_1, _) = wa.issueasset(&[&sa], 10, 1, None, None);
     let (asset_2, _) = wb.issueasset(&[&sb], 10, 1, None, None);

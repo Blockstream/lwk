@@ -3005,7 +3005,7 @@ fn test_sh_multi() {
 
 #[test]
 fn test_singlekey() {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
     let sk_a = secp256k1::SecretKey::from_str(
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -3023,14 +3023,14 @@ fn test_singlekey() {
     let pk_b = sk_b.public_key(&EC);
     let pk_c = sk_c.public_key(&EC);
     let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     let balance_before = wallet.balance_btc();
 
     // Send some L-BTC to another address
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
     let satoshi = 5000;
 
     // Create tx

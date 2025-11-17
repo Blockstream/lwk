@@ -3702,7 +3702,7 @@ fn test_blinding_nonces() {
 #[test]
 #[allow(unused)]
 fn basics() -> Result<(), Box<dyn std::error::Error>> {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env().with_esplora().build();
 
     // ANCHOR: generate-signer
     use lwk_signer::{bip39::Mnemonic, SwSigner};
@@ -3741,7 +3741,7 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     let balance = wollet.balance()?;
     // ANCHOR_END: txs
 
-    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let url = env.esplora_url();
 
     // ANCHOR: electrum_client
     use lwk_wollet::{ElectrumClient, ElectrumUrl};
@@ -3793,10 +3793,10 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR_END: client
 
     // Receive some funds
-    let txid = server.elementsd_sendtoaddress(addr.address(), 10_000, None);
+    let txid = env.elementsd_sendtoaddress(addr.address(), 10_000, None);
     wait_for_tx(&mut wollet, &mut client, &txid);
 
-    let address = server.elementsd_getnewaddress();
+    let address = env.elementsd_getnewaddress();
     let sats = 1000;
     let lbtc = network.policy_asset();
 

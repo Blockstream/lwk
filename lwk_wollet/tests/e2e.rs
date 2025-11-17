@@ -3122,13 +3122,13 @@ fn test_issuance_amount_limits() {
 
 #[test]
 fn test_non_std_legacy_multisig() {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env().with_esplora().build();
 
     // Receiver wallet
     let recv_signer = generate_signer();
     let recv_xpub = recv_signer.xpub();
     let recv_desc = format!("ct(elip151,elwpkh({}/*))", recv_xpub);
-    let recv_client = test_client_electrum(&server.electrs.electrum_url);
+    let recv_client = test_client_electrum(&env.electrum_url());
     let mut recv_wallet = TestWollet::new(recv_client, &recv_desc);
     let recv_addr = recv_wallet.address();
     assert_eq!(recv_wallet.balance_btc(), 0);
@@ -3152,7 +3152,7 @@ fn test_non_std_legacy_multisig() {
     let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
 
     // Create the wallet
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     // Get an address
@@ -3167,8 +3167,8 @@ fn test_non_std_legacy_multisig() {
 
     // Fund the address with an asset
     let satoshi = 10_000;
-    let asset = server.elementsd_issueasset(satoshi);
-    let txid = server.elementsd_sendtoaddress(&addr, satoshi, Some(asset));
+    let asset = env.elementsd_issueasset(satoshi);
+    let txid = env.elementsd_sendtoaddress(&addr, satoshi, Some(asset));
     wallet.wait_for_tx_outside_list(&txid);
 
     // Get external utxo
@@ -3177,7 +3177,7 @@ fn test_non_std_legacy_multisig() {
     let external_utxo = utxos.pop().unwrap();
 
     // Fund with some btc for the fees
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     // Create spending tx
     let mut pset = wallet

@@ -2957,8 +2957,7 @@ fn test_no_wildcard() {
 
 #[test]
 fn test_sh_multi() {
-    //let server = setup_with_esplora();
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let slip77_key = generate_slip77();
     let signer1 = generate_signer();
@@ -2970,11 +2969,11 @@ fn test_sh_multi() {
         slip77_key, xpub1, xpub2
     );
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     // Receive
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     // Send
     let balance_before = wallet.balance_btc();

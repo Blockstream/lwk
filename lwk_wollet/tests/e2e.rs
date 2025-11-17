@@ -3558,24 +3558,24 @@ fn test_skip_signing_utxo() {
 #[test]
 fn test_fee_service() {
     // User uses a Fee Service to pay for its transactions fees
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     // User wallet, that will never hold LBTC
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 
     // Fee Service wallet, that pays for fee for user
     let signer_fee = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer_fee.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wf = TestWollet::new(client, &desc);
 
     let lbtc = w.policy_asset();
-    wf.fund_btc(&server);
+    wf.fund_btc_(&env);
 
     // Issue an asset and send it to the user
     let signers_fee = [&AnySigner::Software(signer_fee.clone())];

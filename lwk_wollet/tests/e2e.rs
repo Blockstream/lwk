@@ -2808,21 +2808,21 @@ fn test_liquidex() {
 
 #[test]
 fn test_no_wildcard_with_path_after() {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
     let desc = format!("ct(slip77({}),elwpkh({}/0/0))", slip77_key, xpub);
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     let balance_1 = wallet.balance_btc();
     assert_eq!(balance_1, 0);
 
     // Fund
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     let balance_2 = wallet.balance_btc();
     assert!(balance_1 < balance_2);
@@ -2847,7 +2847,7 @@ fn test_no_wildcard_with_path_after() {
 
     // Address match the first from the descriptor with wildcard
     let desc = format!("ct(slip77({}),elwpkh({}/<0;1>/*))", slip77_key, xpub);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let wallet = TestWollet::new(client, &desc);
 
     // for some reason the first last unused has index 1 instead of 0

@@ -2182,12 +2182,12 @@ fn test_persistence_reload_after_only_tip() {
 
 #[test]
 fn test_non_standard_gap_limit() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let wollet_desc = WolletDescriptor::from_str(&desc).unwrap();
-    let mut client = test_client_electrum(&server.electrs.electrum_url);
+    let mut client = test_client_electrum(&env.electrum_url());
     let network = ElementsNetwork::default_regtest();
     let satoshi = 1_000_000;
 
@@ -2205,8 +2205,8 @@ fn test_non_standard_gap_limit() {
     let address_check = wollet_longer_gap.address(i).unwrap().address().clone();
     assert_eq!(address_after_gap_limit, address_check);
 
-    let txid = server.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
-    server.elementsd_generate(1);
+    let txid = env.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
+    env.elementsd_generate(1);
 
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {

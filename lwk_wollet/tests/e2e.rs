@@ -2548,18 +2548,18 @@ fn test_update_v2_after_old_updates() {
 #[test]
 fn test_update_transaction() {
     // Get a transaction in the wallet before it's returned by the blockchain client
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let view_key = generate_view_key();
     let signer = generate_signer();
     let xpub = signer.xpub();
     let desc_str = format!("ct({},elwpkh({}/*))", view_key, xpub);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc_str);
 
-    w.fund_btc(&server);
+    w.fund_btc_(&env);
 
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
     let mut pset = w
         .tx_builder()
         .add_lbtc_recipient(&node_addr, 1_000)

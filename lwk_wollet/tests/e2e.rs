@@ -3445,7 +3445,7 @@ fn test_explicit_send() {
 #[test]
 fn test_finalize_diff_sighashes() {
     // Finalize a transaction with an input signed with different sighashes
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let view_key = generate_view_key();
     let s1 = generate_signer();
@@ -3454,12 +3454,12 @@ fn test_finalize_diff_sighashes() {
     let xpub2 = s2.xpub();
     let desc_str = format!("ct({view_key},elwsh(multi(2,{xpub1}/<0;1>/*,{xpub2}/<0;1>/*)))");
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
-    let addr = server.elementsd_getnewaddress();
+    let addr = env.elementsd_getnewaddress();
     let mut pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&addr, 1_000)

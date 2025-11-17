@@ -39,7 +39,12 @@ impl WaterfallsD {
         ];
         let waterfalls_url = format!("http://{addr}");
 
-        let mut process = Command::new(&exe).args(args).spawn().unwrap();
+        let mut process = Command::new(&exe)
+            .args(args)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
 
         match process.try_wait() {
             Ok(Some(_)) | Err(_) => {

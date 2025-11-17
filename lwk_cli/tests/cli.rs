@@ -18,7 +18,7 @@ use lwk_cli::{
     inner_main, AssetSubCommandsEnum, Cli, ServerSubCommandsEnum, SignerSubCommandsEnum,
     WalletSubCommandsEnum,
 };
-use lwk_test_util::TestElectrumServer;
+use lwk_test_util::{TestElectrumServer, TestEnv, TestEnvBuilder};
 use tempfile::TempDir;
 
 /// Returns a non-used local port if available.
@@ -235,6 +235,16 @@ fn asset_ids_from_issuance_pset(cli: &str, wallet: &str, pset: &str) -> (String,
     let asset = get_str(&issuances[0], "asset").to_string();
     let token = get_str(&issuances[0], "token").to_string();
     (asset, token)
+}
+
+fn fund_(env: &TestEnv, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
+    let addr = Address::from_str(&address(cli, wallet)).unwrap();
+
+    let txid = env.elementsd_sendtoaddress(&addr, sats, None);
+    // Only 2 blocks are necessary to make coinbase spendable
+    env.elementsd_generate(2);
+    wait_tx(cli, wallet, &txid.to_string());
+    (txid, addr)
 }
 
 fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
@@ -1660,6 +1670,41 @@ fn test_esplora_backend() {
     let _ = fund(&server, &cli, "w", 1_000_000);
     assert_eq!(txs(&cli, "w").len(), 2);
 
+    sh(&format!("{cli} server stop"));
+    t.join().unwrap();
+}
+
+#[test]
+fn test_waterfalls() {
+    // TODO: merge/replace with setup_cli
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
+
+    let addr = get_available_addr().unwrap();
+    let cli = format!("cli --addr {addr} -n regtest");
+
+    let tmp = tempfile::tempdir().unwrap();
+    let datadir = tmp.path().display().to_string();
+    let url = env.waterfalls_url();
+    let params = format!("--datadir {datadir} --server-type waterfalls --server-url {url}");
+
+    let t = {
+        let cli = cli.clone();
+        let params = params.clone();
+        std::thread::spawn(move || {
+            sh(&format!(
+                "{cli} server start --scanning-interval 1 {params}"
+            ));
+        })
+    };
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    sw_signer(&cli, "s");
+    singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
+    let _ = fund_(&env, &cli, "w", 1_000_000);
+
+    assert_eq!(txs(&cli, "w").len(), 1);
+
+    // Stop the server
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

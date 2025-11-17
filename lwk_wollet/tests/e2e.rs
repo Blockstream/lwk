@@ -3054,14 +3054,14 @@ fn test_singlekey() {
 
 #[test]
 fn test_issuance_amount_limits() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     // Let's test an issuance of 21M*10^8,
     let amount_21m = 21_000_000 * 100_000_000;
@@ -3097,7 +3097,7 @@ fn test_issuance_amount_limits() {
     // let tx_hex = elements::encode::serialize(&tx).to_hex();
 
     // // The node rejects more than 21M BTC issuance.
-    // assert!(!server.elementsd_testmempoolaccept(&tx_hex));
+    // assert!(!env.elementsd_testmempoolaccept(&tx_hex));
 
     let amount = 21_000_000 * 100_000_000;
     let mut pset = wallet

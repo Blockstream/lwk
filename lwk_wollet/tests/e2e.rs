@@ -3497,17 +3497,17 @@ fn test_skip_signing_utxo() {
     // we edit the PSET and we set the input "bip32_derivation"
     // to the empty map, removing references to the signer
     // fingerprint in the input.
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let fp = signer.fingerprint();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 
-    w.fund_btc(&server);
-    w.fund_btc(&server);
+    w.fund_btc_(&env);
+    w.fund_btc_(&env);
 
     // Send all funds
     let pset = w.tx_builder().drain_lbtc_wallet().finish().unwrap();

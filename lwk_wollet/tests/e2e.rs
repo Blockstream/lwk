@@ -3318,19 +3318,19 @@ fn test_sync_high_index() {
 fn test_chain_tx() {
     // Create a chain of transaction spending the outputs of the previous one, while the previous
     // transaction is still unspent
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
 
     // Create 1st tx
     let mut pset0 = wallet

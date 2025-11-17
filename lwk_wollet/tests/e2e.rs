@@ -3958,7 +3958,7 @@ fn test_amp0_daily_ops() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 #[allow(unused)]
 fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env().with_esplora().build();
 
     use lwk_signer::{bip39::Mnemonic, SwSigner};
     use lwk_wollet::clients::blocking::EsploraClient;
@@ -4012,7 +4012,7 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
 
     // Update the wollet state
     let url = "https://blockstream.info/liquidtestnet/api";
-    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap()); // ANCHOR: ignore
+    let url = env.esplora_url(); // ANCHOR: ignore
     let mut client = EsploraClient::new(&url, network)?;
 
     if let Some(update) = client.full_scan(&wollet_c)? {
@@ -4021,13 +4021,13 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
     // ANCHOR_END: multisig-receive
 
     // Receive some funds
-    let txid = server.elementsd_sendtoaddress(addr.address(), 10_000, None);
+    let txid = env.elementsd_sendtoaddress(addr.address(), 10_000, None);
     wait_for_tx(&mut wollet_c, &mut client, &txid);
 
     // ANCHOR: multisig-send
     // Carol creates a transaction send few sats to a certain address
     let address = "<address>";
-    let address = server.elementsd_getnewaddress(); // ANCHOR: ingore
+    let address = env.elementsd_getnewaddress(); // ANCHOR: ingore
     let sats = 1000;
     let lbtc = network.policy_asset();
 

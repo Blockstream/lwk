@@ -3667,18 +3667,18 @@ fn to_be(addr: &elements::Address) -> be::Address {
 #[test]
 fn test_blinding_nonces() {
     // Construct a transaction and obtain the blinding nonces
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 
     let lbtc = w.policy_asset();
-    w.fund_btc(&server);
+    w.fund_btc_(&env);
 
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
     let amp0pset = w
         .tx_builder()
         .add_recipient(&node_addr, 1000, lbtc)

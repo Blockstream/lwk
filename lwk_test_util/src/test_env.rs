@@ -112,6 +112,7 @@ impl TestEnvBuilder {
             "-initialfreecoins=2100000000",
             "-acceptdiscountct=1",
             "-rest",
+            "-txindex=1",
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
             //TODO remove this bad code once Conf::args is not Vec<&str>

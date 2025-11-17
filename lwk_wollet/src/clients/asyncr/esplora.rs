@@ -1196,19 +1196,29 @@ mod tests {
 
     #[ignore = "requires internet connection and env vars"]
     #[tokio::test]
-    async fn esplora_authenticated_wallet_scan() {
+    async fn esplora_authenticated_wallet_scan_staging() {
+        esplora_authenticated_wallet_scan_env(".staging.").await;
+    }
+
+    #[ignore = "requires internet connection and env vars"]
+    #[tokio::test]
+    async fn esplora_authenticated_wallet_scan_prod() {
+        esplora_authenticated_wallet_scan_env(".").await;
+    }
+
+    async fn esplora_authenticated_wallet_scan_env(env: &str) {
         lwk_test_util::init_logging();
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-        let staging_login = "https://login.staging.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+        let staging_login = format!("https://login{env}blockstream.com/realms/blockstream-public/protocol/openid-connect/token");
 
         for waterfalls in [false, true] {
             let base_url = if waterfalls {
-                "https://enterprise.staging.blockstream.info/liquid/api/waterfalls"
+                format!("https://enterprise{env}blockstream.info/liquid/api/waterfalls")
             } else {
-                "https://enterprise.staging.blockstream.info/liquid/api"
+                format!("https://enterprise{env}blockstream.info/liquid/api")
             };
-            let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+            let mut client = EsploraClientBuilder::new(&base_url, ElementsNetwork::Liquid)
                 .token_provider(TokenProvider::Blockstream {
                     url: staging_login.to_string(),
                     client_id: client_id.clone(),

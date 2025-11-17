@@ -2860,41 +2860,11 @@ fn test_no_wildcard_with_path_after() {
 }
 
 #[test]
-fn test_no_wildcard_waterfalls() {
-    let network = ElementsNetwork::default_regtest();
-
-    let slip77_key = generate_slip77();
-    let signer = generate_signer();
-    let xpub = signer.xpub();
-    let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
-    let desc: WolletDescriptor = desc.parse().unwrap();
-    let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
-
-    let address = wollet.address(None).unwrap();
-    let _txid = test_env.send_to(&to_be(address.address()), 10000);
-    std::thread::sleep(std::time::Duration::from_secs(10));
-
-    let mut waterfalls_client =
-        clients::blocking::EsploraClient::new_waterfalls(test_env.base_url(), network).unwrap();
-
-    let update = waterfalls_client.full_scan(&wollet).unwrap().unwrap();
-
-    wollet.apply_update(update).unwrap();
-
-    let waterfalls_txs = wollet.transactions().unwrap();
-    assert_eq!(waterfalls_txs.len(), 1);
-
-    rt.block_on(test_env.shutdown());
-}
-
-#[test]
 fn test_no_wildcard() {
     let env = TestEnvBuilder::from_env()
         .with_electrum()
         .with_esplora()
+        .with_waterfalls()
         .build();
 
     let slip77_key = generate_slip77();
@@ -2956,6 +2926,22 @@ fn test_no_wildcard() {
 
     let esplora_txs = esplora_wollet.transactions().unwrap();
     assert_eq!(esplora_txs.len(), 2);
+
+    // Use waterfalls client
+    let mut waterfalls_wollet = Wollet::without_persist(network, desc.parse().unwrap()).unwrap();
+
+    let mut waterfalls_client =
+        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
+
+    // TODO: improve this
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+    let update = waterfalls_client.full_scan(&waterfalls_wollet).unwrap();
+    if let Some(update) = update {
+        waterfalls_wollet.apply_update(update).unwrap();
+    }
+
+    let waterfalls_txs = waterfalls_wollet.transactions().unwrap();
+    assert_eq!(waterfalls_txs.len(), 2);
 }
 
 #[test]

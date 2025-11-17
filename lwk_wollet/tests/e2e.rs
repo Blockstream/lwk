@@ -3204,18 +3204,14 @@ fn test_non_std_legacy_multisig() {
 
 #[test]
 fn test_sync_high_index() {
-    init_logging();
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
     // TODO: extend to test also with Esplora and Electrum
     // This test was reported as a waterfalls issue, but it actually affects also the other clients
     // (tested locally) ideally we should extend this test to also be run for the other clients.
     let network = ElementsNetwork::default_regtest();
 
-    // Start Waterfalls
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
     let mut client =
-        clients::blocking::EsploraClient::new_waterfalls(test_env.base_url(), network).unwrap();
+        clients::blocking::EsploraClient::new_waterfalls(&env.waterfalls_url(), network).unwrap();
 
     // Signer
     let slip77_key = generate_slip77();
@@ -3240,8 +3236,8 @@ fn test_sync_high_index() {
     // w1 receive funds from node
     let addr = w1.address(None).unwrap();
 
-    let txid = test_env.send_to(&to_be(addr.address()), 10000);
-    wait_for_tx(&mut w1, &mut client, &txid.elements());
+    let txid = env.elementsd_sendtoaddress(addr.address(), 10000, None);
+    wait_for_tx(&mut w1, &mut client, &txid);
 
     // w1 sends to w2 on 2 addresses
     let addr0 = w2.address(Some(0)).unwrap();
@@ -3310,8 +3306,6 @@ fn test_sync_high_index() {
     // Output was unblinded, w3 does not see outputs that it cannot unblind anymore
     assert_eq!(0, w3.txos_cannot_unblind().unwrap().len());
     assert_eq!(0, w3.reunblind().unwrap().len());
-
-    rt.block_on(test_env.shutdown());
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use wasm_bindgen::prelude::*;
 
@@ -143,6 +143,31 @@ impl BoltzSessionBuilder {
     }
 }
 
+impl BoltzSession {
+    /// Get the rescue file
+    pub fn rescue_file(&self) -> Result<String, Error> {
+        let r = self.inner.rescue_file();
+        Ok(serde_json::to_string(&r).map_err(|e| Error::Generic(e.to_string()))?)
+    }
+
+    /// Prepare a lightning invoice payment
+    pub async fn prepare_pay(&self, invoice: &str, refund_address: &str) -> Result<String, Error> {
+        let refund_address = lwk_wollet::elements::Address::from_str(refund_address)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        let lightning_payment = lwk_boltz::LightningPayment::Bolt11(Box::new(
+            lwk_boltz::Bolt11Invoice::from_str(invoice)
+                .map_err(|e| Error::Generic(e.to_string()))?,
+        ));
+        let r = self
+            .inner
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        // TODO this method should return a PreparePayResponse object
+        Ok(r.serialize().map_err(|e| Error::Generic(e.to_string()))?)
+    }
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use wasm_bindgen_test::*;
@@ -156,7 +181,13 @@ mod tests {
         let network = Network::mainnet();
         let builder = BoltzSessionBuilder::new(&network);
         let session = builder.build().await.unwrap();
-        // Basic smoke test - session was created successfully
-        assert!(true);
+        let rescue_file = session.rescue_file().unwrap();
+        assert_ne!(rescue_file, "");
+        let err = session.prepare_pay("lnbc2220n1p534hfqpp5kqs680arwtec67pcl2lq0mvvcyww056wkvrlsc3222qwez0x8lcqdquf35kw6r5de5kueeqwpshjmt9de6qcqzxrxqyp2xqrzjqgvw6stfqrph8t0qq6g5y0ut35cfxun2hzysmdskrdp9hdy6tvnvjzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2gsp5v724rcrc2puam2e9dy00qhvz3h5467he46eh75vx7fhm6skwqfus9qxpqysgqqa6fea42v5ttr84efdwndqcr3nyxe0pfegmu04xscrwcau5ufg4x7f6lvf9tre9w5t99xn2y8slvwasnaa2sk98rdyege5lec8u42qsq5nzzjs", "lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").await.unwrap_err();
+        assert!(err.to_string().contains("magic routing hint"));
+        let err = session.prepare_pay("lnbc2u1p534c9jsp5n6497xhz7a0c44elx56fajryf7lwrpuhh6mnmpxk2pasq7gvqx2spp5mmvw9lh8wwxl8zlqrmfwerc073cfr2y5qrtsldrczup77zx54m4sdqgd3skyetvxqyjw5qcqpjrzjqdx5l2zdly4gg6chmr4rypjvkrdmw6k9tfjxy75z05x0kxsya5xs2rwazuqq0egqqqqqqqlgqqqqqzsqyg9qxpqysgqrnk5e6n8rfam7cytfu46s3zh6uuyjy8mye94ks2du8asq53tv2erv93mnaqedcf0mhk2s9luea36we9950er8f646trk8vtqsfncdqsp0kun79", "lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").await.unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("a swap with this invoice exists already"));
     }
 }

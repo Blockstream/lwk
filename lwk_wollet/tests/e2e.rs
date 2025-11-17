@@ -2344,21 +2344,21 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
 
 #[test]
 fn test_manual_coin_selection() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
 
     let policy_asset = w.policy_asset();
 
     // Fund the wallet with 2 L-BTC UTXOs
-    w.fund(&server, 100_000, None, None);
-    w.fund(&server, 500_000, None, None);
-    server.elementsd_generate(1);
+    w.fund_(&env, 100_000, None, None);
+    w.fund_(&env, 500_000, None, None);
+    env.elementsd_generate(1);
 
     assert_eq!(w.balance(&policy_asset), 600_000);
     let utxos = w.wollet.utxos().unwrap();
@@ -2399,7 +2399,7 @@ fn test_manual_coin_selection() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
     let mut pset = w
         .tx_builder()
@@ -2413,7 +2413,7 @@ fn test_manual_coin_selection() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
     let non_wallet_outpoint = OutPoint::new(txid_test_vector(), 0);
     let err = w
@@ -2427,7 +2427,7 @@ fn test_manual_coin_selection() {
 
     let signers = [&AnySigner::Software(signer.clone())];
     let (asset, token) = w.issueasset(&signers, 10, 1, None, None);
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     let utxos = w.wollet.utxos().unwrap();
     assert_eq!(utxos.len(), 3);
     let asset_utxo = &utxos[1];
@@ -2465,7 +2465,7 @@ fn test_manual_coin_selection() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
     // Two assets and LBTC
     let mut pset = w
@@ -2486,7 +2486,7 @@ fn test_manual_coin_selection() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
     // Two assets, LBTC and no recipient
     // If the recipient is not specified, funds are sent back to the wallet as change.
@@ -2504,7 +2504,7 @@ fn test_manual_coin_selection() {
     signer.sign(&mut pset).unwrap();
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
-    assert!(server.elementsd_testmempoolaccept(&tx.to_hex()));
+    assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 }
 
 #[ignore = "This test connects to liquid testnet"]

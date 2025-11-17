@@ -1605,29 +1605,29 @@ fn test_fetch_last_full_header(mut client: ElectrumClient, network: ElementsNetw
 #[test]
 fn few_lbtc() {
     // Send from a wallet with few lbtc
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     let address = wallet.address();
-    wallet.fund(&server, 1000, Some(address), None);
+    wallet.fund_(&env, 1000, Some(address), None);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_btc(&signers, None, Some((node_address, 1)));
 
     // Drain the wallet and fund it with a single utxo insufficient to pay for the fee
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
 
     let address = wallet.address();
-    wallet.fund(&server, 10, Some(address), None);
+    wallet.fund_(&env, 10, Some(address), None);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     let err = wallet
         .tx_builder()
         .add_lbtc_recipient(&node_address, 1)
@@ -1637,7 +1637,7 @@ fn few_lbtc() {
     assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Send an asset to the wallet and check that we have the same error
-    let asset = wallet.fund_asset(&server);
+    let asset = wallet.fund_asset_(&env);
     assert!(wallet.balance(&asset) > 0);
 
     let err = wallet
@@ -1650,7 +1650,7 @@ fn few_lbtc() {
 
     // Send some more lbtc and we can send the asset and lbtc
     let address = wallet.address();
-    wallet.fund(&server, 1000, Some(address), None);
+    wallet.fund_(&env, 1000, Some(address), None);
     wallet.send_asset(&signers, &node_address, &asset, None);
     wallet.send_btc(&signers, None, Some((node_address, 1)));
 }

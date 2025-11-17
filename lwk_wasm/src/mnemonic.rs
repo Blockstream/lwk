@@ -18,6 +18,18 @@ impl From<bip39::Mnemonic> for Mnemonic {
     }
 }
 
+impl From<Mnemonic> for bip39::Mnemonic {
+    fn from(mnemonic: Mnemonic) -> Self {
+        mnemonic.inner
+    }
+}
+
+impl From<&Mnemonic> for bip39::Mnemonic {
+    fn from(mnemonic: &Mnemonic) -> Self {
+        mnemonic.inner.clone()
+    }
+}
+
 impl Display for Mnemonic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

@@ -2241,8 +2241,8 @@ fn test_non_standard_gap_limit() {
 #[tokio::test]
 #[cfg(feature = "esplora")]
 async fn test_non_standard_gap_limit_esplora() {
-    let server = setup_with_esplora();
-    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let url = env.esplora_url();
     let network = ElementsNetwork::default_regtest();
     let mut client = clients::asyncr::EsploraClient::new(network, &url);
     let signer = generate_signer();
@@ -2256,8 +2256,8 @@ async fn test_non_standard_gap_limit_esplora() {
     let i = Some(25);
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
 
-    let txid = server.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
-    server.elementsd_generate(1);
+    let txid = env.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
+    env.elementsd_generate(1);
 
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {

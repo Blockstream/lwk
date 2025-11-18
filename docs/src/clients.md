@@ -153,7 +153,7 @@ Use authenticated clients when:
 
 ### Authenticated Waterfalls
 
-Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to authenticated Esplora clients. Simply enable the waterfalls feature when building an authenticated client.
+Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to authenticated Esplora clients.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

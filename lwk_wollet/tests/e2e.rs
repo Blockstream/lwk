@@ -53,25 +53,25 @@ fn liquid_issue_software_signer() {
 }
 
 fn liquid_send(signers: &[&AnySigner]) {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!(
         "ct(slip77({}),elwpkh({}/*))",
         slip77_key,
         signers[0].xpub().unwrap()
     );
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
-    let asset = wallet.fund_asset(&server);
-    server.elementsd_generate(1);
+    wallet.fund_btc_(&env);
+    let asset = wallet.fund_asset_(&env);
+    env.elementsd_generate(1);
 
     wallet.send_btc(signers, None, None);
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
-    let node_address1 = server.elementsd_getnewaddress();
-    let node_address2 = server.elementsd_getnewaddress();
+    let node_address1 = env.elementsd_getnewaddress();
+    let node_address2 = env.elementsd_getnewaddress();
     wallet.send_many(
         signers,
         &node_address1,

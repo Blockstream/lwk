@@ -2015,10 +2015,10 @@ fn test_spend_blinded_utxo_with_custom_blinding_key() {
 #[cfg(feature = "elements_rpc")]
 #[test]
 fn test_elements_rpc() {
-    let server = setup();
-    assert_eq!(server.elementsd_height(), 101);
-    let url = server.elements_rpc_url();
-    let (user, pass) = server.elements_rpc_credentials();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    assert_eq!(env.elementsd_height(), 101);
+    let url = env.elements_rpc_url();
+    let (user, pass) = env.elements_rpc_credentials();
     let network = ElementsNetwork::default_regtest();
     let elements_rpc_client =
         ElementsRpcClient::new_from_credentials(network, &url, &user, &pass).unwrap();
@@ -2031,16 +2031,16 @@ fn test_elements_rpc() {
     // Create wallet fund wallet
     let signer = generate_signer();
     let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
     let wd = wallet.wollet.wollet_descriptor();
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
     assert_eq!(utxos.len(), 0);
 
     // Confirm funds
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
     assert_eq!(utxos.len(), 1);
 }

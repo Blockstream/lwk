@@ -232,7 +232,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
 
     pub fn fund_explicit(
         &mut self,
-        server: &TestElectrumServer,
+        env: &TestEnv,
         satoshi: u64,
         address: Option<Address>,
         asset: Option<AssetId>,
@@ -242,7 +242,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         let address = address
             .unwrap_or_else(|| self.address())
             .to_unconfidential();
-        let txid = server.elementsd_sendtoaddress(&address, satoshi, asset);
+        let txid = env.elementsd_sendtoaddress(&address, satoshi, asset);
         self.wait_for_tx_outside_list(&txid);
 
         let explicit_utxos_after = self.wollet.explicit_utxos().unwrap().len();

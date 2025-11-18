@@ -1870,12 +1870,12 @@ fn test_external_utxo() {
 #[test]
 fn test_unblinded_utxo() {
     // Receive unblinded utxo and spend it
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
     let signers = [&AnySigner::Software(signer)];
 
@@ -1883,14 +1883,14 @@ fn test_unblinded_utxo() {
 
     // Fund the wallet with an unblinded UTXO
     let satoshi = 100_000;
-    w.fund_explicit(&server, satoshi, None, None);
+    w.fund_explicit(&env, satoshi, None, None);
 
     assert_eq!(w.balance(&policy_asset), 0);
 
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
 
     // Create tx sending the unblinded utxo
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
 
     let mut pset = w
         .tx_builder()
@@ -1915,7 +1915,7 @@ fn test_unblinded_utxo() {
     assert!(w.balance(&policy_asset) > 0);
 
     // Fund the wallet with another unblinded UTXO
-    w.fund_explicit(&server, satoshi, None, None);
+    w.fund_explicit(&env, satoshi, None, None);
 
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
     assert_eq!(explicit_utxos.len(), 1);
@@ -1943,13 +1943,14 @@ fn test_unblinded_utxo() {
     assert_eq!(w.balance(&policy_asset), 0);
 
     // 1 unblinded input, 1 blinded output: we can still blind the transaction
-    w.fund_explicit(&server, satoshi, None, None);
+    w.fund_explicit(&env, satoshi, None, None);
 
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
     let external_utxo = explicit_utxos.last().unwrap().clone();
 
     // Send all funds
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
+
     let mut pset = w
         .tx_builder()
         .add_external_utxos(vec![external_utxo])

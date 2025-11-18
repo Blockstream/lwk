@@ -1460,17 +1460,17 @@ fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
 #[test]
 fn ct_discount() {
     // Send transactions with ELIP200 discounted fees for Confidential Transactions
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signer = AnySigner::Software(signer);
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
-    wallet.fund_btc(&server);
-    let node_address = server.elementsd_getnewaddress();
+    wallet.fund_btc_(&env);
+    let node_address = env.elementsd_getnewaddress();
 
     // Send without CT discount
     let mut pset = wallet
@@ -1503,7 +1503,7 @@ fn ct_discount() {
     assert_fee_rate(compute_fee_rate(&pset), None);
 
     // Confirm the transactions
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     wait_tx_update(&mut wallet);
     let txs = wallet.wollet.transactions().unwrap();
     for tx in txs {

@@ -456,12 +456,12 @@ fn contract() {
 fn multiple_descriptors() {
     // Use a different descriptors for the asset and the reissuance token
 
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     // Asset descriptor and signers
     let signer_a = generate_signer();
     let view_key_a = generate_view_key();
     let desc_a = format!("ct({},elwpkh({}/*))", view_key_a, signer_a.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet_a = TestWollet::new(client, &desc_a);
     // Token descriptor and signers
     let signer_t1 = generate_signer();
@@ -473,12 +473,12 @@ fn multiple_descriptors() {
         signer_t1.xpub(),
         signer_t2.xpub()
     );
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet_t = TestWollet::new(client, &desc_t);
 
     // Fund both wallets
-    wallet_a.fund_btc(&server);
-    wallet_t.fund_btc(&server);
+    wallet_a.fund_btc_(&env);
+    wallet_t.fund_btc_(&env);
 
     // Issue an asset, sending the asset to asset wallet, and the token to the token wallet
     let satoshi_a = 100_000;
@@ -543,10 +543,10 @@ fn multiple_descriptors() {
     let signer_nt = generate_signer();
     let view_key_nt = generate_view_key();
     let desc_nt = format!("ct({},elwpkh({}/*))", view_key_nt, signer_nt.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet_nt = TestWollet::new(client, &desc_nt);
 
-    wallet_nt.fund_btc(&server);
+    wallet_nt.fund_btc_(&env);
     let address_nt = wallet_nt.address();
     let mut pset = wallet_t
         .tx_builder()

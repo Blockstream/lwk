@@ -153,7 +153,17 @@ Use authenticated clients when:
 
 ### Authenticated Waterfalls
 
-Authentication support for Waterfalls clients is planned for a future release. This will enable private Waterfalls instances with OAuth2 authentication, similar to authenticated Esplora clients.
+Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to authenticated Esplora clients. Simply enable the waterfalls feature when building an authenticated client.
+
+<custom-tabs category="lang">
+<div slot="title">Rust</div>
+<section>
+
+```rust,ignore
+{{#include ../../lwk_wollet/tests/e2e.rs:authenticated_waterfalls_client}}
+```
+</section>
+</custom-tabs>
 
 
 

@@ -3639,6 +3639,23 @@ fn clients() -> Result<(), Box<dyn std::error::Error>> {
     let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
     // ANCHOR_END: waterfalls_client
 
+    // ANCHOR: authenticated_waterfalls_client
+    let base_url = "https://enterprise.blockstream.info/liquid/api/waterfalls";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+        .waterfalls(true)
+        .token_provider(TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
+        .build()?;
+    // ANCHOR_END: authenticated_waterfalls_client
+
     Ok(())
 }
 

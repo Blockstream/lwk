@@ -419,15 +419,15 @@ fn contract() {
     // Issue an asset with a contract
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":8,\"ticker\":\"TEST\",\"version\":0}";
 
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     wallet.send_btc(&signers, None, None);
     let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, Some(contract), None);
 

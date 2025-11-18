@@ -1202,6 +1202,12 @@ mod tests {
 
     #[ignore = "requires internet connection and env vars"]
     #[tokio::test]
+    async fn esplora_authenticated_wallet_scan_uat() {
+        esplora_authenticated_wallet_scan_env(".uat.").await;
+    }
+
+    #[ignore = "requires internet connection and env vars"]
+    #[tokio::test]
     async fn esplora_authenticated_wallet_scan_prod() {
         esplora_authenticated_wallet_scan_env(".").await;
     }

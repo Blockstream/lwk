@@ -1713,32 +1713,32 @@ fn test_prune() {
 #[test]
 fn test_external_utxo() {
     // Send tx with external utxos
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer1 = generate_signer();
     let view_key1 = generate_view_key();
     let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer1.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w1 = TestWollet::new(client, &desc1);
 
     let signer2 = generate_signer();
     let view_key2 = generate_view_key();
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w2 = TestWollet::new(client, &desc2);
 
     let policy_asset = w1.policy_asset();
 
     let address = w1.address();
-    w1.fund(&server, 100_000, Some(address), None);
+    w1.fund_(&env, 100_000, Some(address), None);
 
     let address = w2.address();
-    w2.fund(&server, 100_000, Some(address), None);
+    w2.fund_(&env, 100_000, Some(address), None);
 
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
@@ -1771,7 +1771,7 @@ fn test_external_utxo() {
 
     // External UTXO can be asset UTXOs
     w2.sync();
-    let asset = w2.fund_asset(&server);
+    let asset = w2.fund_asset_(&env);
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
     assert_eq!(w1.balance(&asset), 0);

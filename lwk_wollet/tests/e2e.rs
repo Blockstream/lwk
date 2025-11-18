@@ -872,7 +872,7 @@ fn jade_sign_wollet_pset() {
 
 #[test]
 fn jade_single_sig() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let mnemonic = TEST_MNEMONIC;
     let docker = Cli::default();
     let jade_init = jade_setup(&docker, mnemonic);
@@ -884,15 +884,15 @@ fn jade_single_sig() {
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
     let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     let satoshi_utxo1 = wallet.balance(&wallet.policy_asset());
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 
     let satoshi = satoshi_utxo1 + 1;
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
 
     let mut pset = wallet
         .tx_builder()

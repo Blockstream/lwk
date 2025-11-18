@@ -2287,17 +2287,10 @@ async fn test_non_standard_gap_limit_esplora() {
 #[cfg(feature = "esplora")]
 fn test_non_standard_gap_limit_waterfalls_esplora() {
     // TODO: use TestWollet also for EsploraClient
-    // FIXME: add launch_sync or similar to waterfalls
-
-    init_logging();
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = rt.block_on(waterfalls::test_env::launch(exe, Family::Elements));
-    let url = format!("{}/blocks/tip/hash", test_env.base_url());
-    let _r = reqwest::blocking::get(url).unwrap().text().unwrap();
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
     let mut client = clients::blocking::EsploraClient::new_waterfalls(
-        test_env.base_url(),
+        &env.waterfalls_url(),
         ElementsNetwork::default_regtest(),
     )
     .unwrap();
@@ -2313,8 +2306,8 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
     let address_after_gap_limit = wollet.address(i).unwrap().address().clone();
 
     let satoshi = 1_000_000;
-    let txid = test_env.send_to(&to_be(&address_after_gap_limit), satoshi);
-    rt.block_on(test_env.node_generate(1));
+    let txid = env.elementsd_sendtoaddress(&address_after_gap_limit, satoshi, None);
+    env.elementsd_generate(1);
 
     // custom wait_for_tx using custom gap limit
     for i in 0..60 {
@@ -2326,7 +2319,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
             .transactions()
             .unwrap()
             .iter()
-            .any(|tx| tx.txid == txid.elements());
+            .any(|tx| tx.txid == txid);
         if tx_found {
             break;
         }
@@ -2338,8 +2331,6 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
 
     let balance = wollet.balance().unwrap();
     assert_eq!(balance.get(&network.policy_asset()).unwrap(), &satoshi);
-
-    rt.block_on(test_env.shutdown());
 }
 
 #[test]

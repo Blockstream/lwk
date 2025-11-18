@@ -1666,19 +1666,18 @@ pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
 
 #[test]
 fn test_prune() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     let address = wallet.address();
-    let _ = server.elementsd_sendtoaddress(&address, 100_000, None);
+    let _ = env.elementsd_sendtoaddress(&address, 100_000, None);
 
-    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
-    let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
     let mut attempts = 50;
     let mut update = loop {
         if let Some(u) = client.full_scan(&wallet.wollet).unwrap() {

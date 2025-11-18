@@ -2048,21 +2048,25 @@ fn test_elements_rpc() {
 #[cfg(feature = "esplora")]
 #[test]
 fn test_clients() {
-    let server = setup_with_esplora();
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .with_waterfalls()
+        .build();
 
-    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
-    let electrum_client = ElectrumClient::new(&electrum_url).unwrap();
+    let electrum_client = test_client_electrum(&env.electrum_url());
 
-    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-    let esplora_client =
-        clients::blocking::EsploraClient::new(&esplora_url, ElementsNetwork::default_regtest())
-            .unwrap();
+    let esplora_client = clients::blocking::EsploraClient::new(
+        &env.esplora_url(),
+        ElementsNetwork::default_regtest(),
+    )
+    .unwrap();
 
     assert_eq!(electrum_client.capabilities().len(), 0);
     assert_eq!(esplora_client.capabilities().len(), 0);
 
     let esplora_waterfalls_client = clients::blocking::EsploraClient::new_waterfalls(
-        &esplora_url,
+        &env.waterfalls_url(),
         ElementsNetwork::default_regtest(),
     )
     .unwrap();

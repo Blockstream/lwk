@@ -1572,10 +1572,8 @@ fn claim_pegin() {
 
 #[test]
 fn test_fetch_full_header_regtest() {
-    let server = setup();
-    let url = &server.electrs.electrum_url;
-    let electrum_url = ElectrumUrl::new(url, false, false).unwrap();
-    let client = ElectrumClient::new(&electrum_url).unwrap();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let client = test_client_electrum(&env.electrum_url());
 
     test_fetch_last_full_header(client, ElementsNetwork::default_regtest());
 }

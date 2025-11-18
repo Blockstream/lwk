@@ -907,23 +907,22 @@ fn jade_single_sig() {
 
 #[test]
 fn address_status() {
-    let server = setup();
-    let electrum_url = ElectrumUrl::new(&server.electrs.electrum_url, false, false).unwrap();
-    let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let mut client = test_client_electrum(&env.electrum_url());
     client.ping().unwrap();
-    let address = server.elementsd_getnewaddress();
+    let address = env.elementsd_getnewaddress();
     let initial_status = client.address_status(&address).unwrap();
     assert_eq!(initial_status, None);
 
-    server.elementsd_sendtoaddress(&address, 10000, None);
+    env.elementsd_sendtoaddress(&address, 10000, None);
 
     let new_status = wait_status_change(&mut client, &address, initial_status);
 
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
 
     let last_status = wait_status_change(&mut client, &address, new_status);
 
-    let mut client = ElectrumClient::new(&electrum_url).unwrap();
+    let mut client = test_client_electrum(&env.electrum_url());
     let new_client_status = client.address_status(&address).unwrap();
     assert_eq!(last_status, new_client_status);
 }

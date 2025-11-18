@@ -387,21 +387,21 @@ fn fee_rate() {
     // Use a fee rate different from the default one
     let fee_rate = Some(200.0);
 
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     wallet.send_btc(&signers, fee_rate, None);
     let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None, fee_rate);
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_asset(&signers, &node_address, &asset, fee_rate);
-    let node_address1 = server.elementsd_getnewaddress();
-    let node_address2 = server.elementsd_getnewaddress();
+    let node_address1 = env.elementsd_getnewaddress();
+    let node_address2 = env.elementsd_getnewaddress();
     wallet.send_many(
         &signers,
         &node_address1,

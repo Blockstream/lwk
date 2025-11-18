@@ -1970,19 +1970,19 @@ fn test_unblinded_utxo() {
 
 #[test]
 fn test_spend_blinded_utxo_with_custom_blinding_key() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let blinding_key = secp256k1::SecretKey::new(&mut rand::thread_rng());
     let desc = format!("ct(elip151,elwpkh({}/*))", signer.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
     let policy_asset = w.policy_asset();
     let mut address_with_custom_blinding = w.address();
     address_with_custom_blinding.blinding_pubkey = Some(blinding_key.public_key(&EC));
 
     let amount = 100_000;
-    let txid = server.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
-    server.elementsd_generate(1);
+    let txid = env.elementsd_sendtoaddress(&address_with_custom_blinding, amount, None);
+    env.elementsd_generate(1);
 
     w.wait_for_tx_outside_list(&txid);
 

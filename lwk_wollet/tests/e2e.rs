@@ -1000,8 +1000,8 @@ async fn wait_update_with_txs(
 async fn test_esplora_requests_counter() {
     use std::collections::HashMap;
 
-    let server = setup_with_esplora();
-    let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let esplora_url = env.esplora_url();
 
     let mut client =
         clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &esplora_url);

@@ -3598,23 +3598,11 @@ fn test_blinding_nonces() {
     assert!(res.is_err());
 }
 
-#[test]
+#[tokio::test]
+#[ignore = "requires internet connection and env vars"]
 #[allow(unused)]
-fn clients() -> Result<(), Box<dyn std::error::Error>> {
-    // ANCHOR: electrum_client
-    use lwk_wollet::{ElectrumClient, ElectrumUrl};
-
-    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
-    let client = ElectrumClient::new(&electrum_url)?;
-    // ANCHOR_END: electrum_client
-
-    // ANCHOR: esplora_client
-    use lwk_wollet::clients::blocking::EsploraClient;
-
-    let esplora_url = "https://blockstream.info/liquid/api";
-    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
-    // ANCHOR_END: esplora_client
-
+async fn async_clients() -> Result<(), Box<dyn std::error::Error>> {
+    init_logging();
     // ANCHOR: authenticated_esplora_client
     use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
     use lwk_wollet::clients::TokenProvider;
@@ -3622,6 +3610,8 @@ fn clients() -> Result<(), Box<dyn std::error::Error>> {
     let base_url = "https://enterprise.blockstream.info/liquid/api";
     let client_id = "your_client_id";
     let client_secret = "your_client_secret";
+    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
+    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
@@ -3633,16 +3623,24 @@ fn clients() -> Result<(), Box<dyn std::error::Error>> {
         })
         .build()?;
     // ANCHOR_END: authenticated_esplora_client
+    let tip = client.tip().await.unwrap();
+    assert!(tip.height > 100);
 
     // ANCHOR: waterfalls_client
     let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
-    let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
+    let mut client = EsploraClientBuilder::new(waterfalls_url, ElementsNetwork::Liquid)
+        .waterfalls(true)
+        .build()?;
     // ANCHOR_END: waterfalls_client
+    let tip = client.tip().await.unwrap();
+    assert!(tip.height > 100);
 
     // ANCHOR: authenticated_waterfalls_client
     let base_url = "https://enterprise.blockstream.info/liquid/api/waterfalls"; // <- changed
     let client_id = "your_client_id";
     let client_secret = "your_client_secret";
+    let client_id = std::env::var("CLIENT_ID").unwrap(); // ANCHOR: ignore
+    let client_secret = std::env::var("CLIENT_SECRET").unwrap(); // ANCHOR: ignore
     let login_url =
         "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
 
@@ -3655,6 +3653,34 @@ fn clients() -> Result<(), Box<dyn std::error::Error>> {
         })
         .build()?;
     // ANCHOR_END: authenticated_waterfalls_client
+    let tip = client.tip().await.unwrap();
+    assert!(tip.height > 100);
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "requires internet connection"]
+#[allow(unused)]
+fn blocking_clients() -> Result<(), Box<dyn std::error::Error>> {
+    init_logging();
+    // ANCHOR: electrum_client
+    use lwk_wollet::{ElectrumClient, ElectrumUrl};
+
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
+    let mut client = ElectrumClient::new(&electrum_url)?;
+    // ANCHOR_END: electrum_client
+    let tip = client.tip().unwrap();
+    assert!(tip.height > 100);
+
+    // ANCHOR: esplora_client
+    use lwk_wollet::clients::blocking::EsploraClient;
+
+    let esplora_url = "https://blockstream.info/liquid/api";
+    let mut client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
+    // ANCHOR_END: esplora_client
+    let tip = client.tip().unwrap();
+    assert!(tip.height > 100);
 
     Ok(())
 }

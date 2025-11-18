@@ -154,7 +154,7 @@ fn origin() {
 
 #[test]
 fn roundtrip() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer1 = generate_signer();
     let slip77_key = generate_slip77();
@@ -208,11 +208,11 @@ fn roundtrip() {
             (&signers6[..], desc6),
             (&signers7[..], desc7),
         ] {
-            let server = &server;
-            let client = test_client_electrum(&server.electrs.electrum_url);
+            let env = &env;
+            let client = test_client_electrum(&env.electrum_url());
             let wallet = TestWollet::new(client, &desc);
             s.spawn(move || {
-                roundtrip_inner(wallet, server, signers);
+                roundtrip_inner(wallet, env, signers);
             });
         }
     });
@@ -220,17 +220,17 @@ fn roundtrip() {
 
 fn roundtrip_inner<C: BlockchainBackend>(
     mut wallet: TestWollet<C>,
-    server: &TestElectrumServer,
+    env: &TestEnv,
     signers: &[&AnySigner],
 ) {
-    wallet.fund_btc(server);
-    server.elementsd_generate(1);
+    wallet.fund_btc_(env);
+    env.elementsd_generate(1);
     wallet.send_btc(signers, None, None);
     let (asset, _token) = wallet.issueasset(signers, 100_000, 1, None, None);
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_asset(signers, &node_address, &asset, None);
-    let node_address1 = server.elementsd_getnewaddress();
-    let node_address2 = server.elementsd_getnewaddress();
+    let node_address1 = env.elementsd_getnewaddress();
+    let node_address2 = env.elementsd_getnewaddress();
     wallet.send_many(
         signers,
         &node_address1,
@@ -241,7 +241,7 @@ fn roundtrip_inner<C: BlockchainBackend>(
     );
     wallet.reissueasset(signers, 10_000, &asset, None);
     wallet.burnasset(signers, 5_000, &asset, None);
-    server.elementsd_generate(2);
+    env.elementsd_generate(2);
 }
 
 #[test]
@@ -2075,8 +2075,8 @@ fn test_waterfalls_esplora() {
 #[cfg(feature = "esplora")]
 #[test]
 fn test_esplora_client() {
-    let server = setup_with_esplora();
-    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let url = env.esplora_url();
     let client =
         clients::blocking::EsploraClient::new(&url, ElementsNetwork::default_regtest()).unwrap();
 
@@ -2086,7 +2086,7 @@ fn test_esplora_client() {
     let signers = &[&AnySigner::Software(signer)];
 
     let wallet = TestWollet::new(client, &desc);
-    roundtrip_inner(wallet, &server, signers);
+    roundtrip_inner(wallet, &env, signers);
 }
 
 #[test]

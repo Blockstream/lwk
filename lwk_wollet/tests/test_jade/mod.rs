@@ -6,7 +6,7 @@ use lwk_jade::{
     TestJadeEmulator,
 };
 use lwk_signer::AnySigner;
-use lwk_test_util::{init_logging, TEST_MNEMONIC, TestEnv, TestEnvBuilder};
+use lwk_test_util::{init_logging, TestEnv, TestEnvBuilder, TEST_MNEMONIC};
 use lwk_wollet::WolletDescriptor;
 
 use crate::test_wollet::{generate_signer, multisig_desc, test_client_electrum, TestWollet};

@@ -10,8 +10,7 @@ use lwk_common::Signer;
 use lwk_signer::AnySigner;
 use lwk_signer::SwSigner;
 use lwk_test_util::{
-    add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt,
-    TestEnv,
+    add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt, TestEnv,
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::clients::blocking::BlockchainBackend;

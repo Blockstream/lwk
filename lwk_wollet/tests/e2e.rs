@@ -325,10 +325,10 @@ fn address() {
     assert_eq!(last_address.index(), gap_limit);
     let mid_address = Some(mid_address.address().clone());
     let last_address = Some(last_address.address().clone());
-    wallet.fund_(&env, satoshi, mid_address.clone(), None);
-    wallet.fund_(&env, satoshi, last_address, None);
+    wallet.fund(&env, satoshi, mid_address.clone(), None);
+    wallet.fund(&env, satoshi, last_address, None);
     let last_unused_before = wallet.address_result(None).index();
-    wallet.fund_(&env, satoshi, mid_address, None);
+    wallet.fund(&env, satoshi, mid_address, None);
     let last_unused_after = wallet.address_result(None).index();
     assert!(
         last_unused_before <= last_unused_after,
@@ -1537,7 +1537,7 @@ fn few_lbtc() {
     let mut wallet = TestWollet::new(client, &desc);
 
     let address = wallet.address();
-    wallet.fund_(&env, 1000, Some(address), None);
+    wallet.fund(&env, 1000, Some(address), None);
 
     let node_address = env.elementsd_getnewaddress();
     wallet.send_btc(&signers, None, Some((node_address, 1)));
@@ -1547,7 +1547,7 @@ fn few_lbtc() {
     wallet.send_all_btc(&signers, None, node_address);
 
     let address = wallet.address();
-    wallet.fund_(&env, 10, Some(address), None);
+    wallet.fund(&env, 10, Some(address), None);
 
     let node_address = env.elementsd_getnewaddress();
     let err = wallet
@@ -1572,7 +1572,7 @@ fn few_lbtc() {
 
     // Send some more lbtc and we can send the asset and lbtc
     let address = wallet.address();
-    wallet.fund_(&env, 1000, Some(address), None);
+    wallet.fund(&env, 1000, Some(address), None);
     wallet.send_asset(&signers, &node_address, &asset, None);
     wallet.send_btc(&signers, None, Some((node_address, 1)));
 }
@@ -1651,10 +1651,10 @@ fn test_external_utxo() {
     let policy_asset = w1.policy_asset();
 
     let address = w1.address();
-    w1.fund_(&env, 100_000, Some(address), None);
+    w1.fund(&env, 100_000, Some(address), None);
 
     let address = w2.address();
-    w2.fund_(&env, 100_000, Some(address), None);
+    w2.fund(&env, 100_000, Some(address), None);
 
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
@@ -2273,8 +2273,8 @@ fn test_manual_coin_selection() {
     let policy_asset = w.policy_asset();
 
     // Fund the wallet with 2 L-BTC UTXOs
-    w.fund_(&env, 100_000, None, None);
-    w.fund_(&env, 500_000, None, None);
+    w.fund(&env, 100_000, None, None);
+    w.fund(&env, 500_000, None, None);
     env.elementsd_generate(1);
 
     assert_eq!(w.balance(&policy_asset), 600_000);

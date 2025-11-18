@@ -11,7 +11,7 @@ use lwk_signer::AnySigner;
 use lwk_signer::SwSigner;
 use lwk_test_util::{
     add_checksum, assert_fee_rate, compute_fee_rate, n_issuances, n_reissuances, pset_rt,
-    TestElectrumServer, TestEnv,
+    TestEnv,
 };
 use lwk_test_util::{generate_mnemonic, generate_slip77};
 use lwk_wollet::clients::blocking::BlockchainBackend;
@@ -152,7 +152,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         self.wollet.transaction(txid).unwrap().unwrap()
     }
 
-    pub fn fund_(
+    pub fn fund(
         &mut self,
         env: &TestEnv,
         satoshi: u64,
@@ -181,52 +181,13 @@ impl<C: BlockchainBackend> TestWollet<C> {
     }
 
     pub fn fund_btc_(&mut self, env: &TestEnv) {
-        self.fund_(env, 1_000_000, Some(self.address()), None);
+        self.fund(env, 1_000_000, Some(self.address()), None);
     }
 
     pub fn fund_asset_(&mut self, env: &TestEnv) -> AssetId {
         let satoshi = 10_000;
         let asset = env.elementsd_issueasset(satoshi);
-        self.fund_(env, satoshi, Some(self.address()), Some(asset));
-        asset
-    }
-
-    pub fn fund(
-        &mut self,
-        server: &TestElectrumServer,
-        satoshi: u64,
-        address: Option<Address>,
-        asset: Option<AssetId>,
-    ) {
-        let utxos_before = self.wollet.utxos().unwrap().len();
-        let balance_before = self.balance(&asset.unwrap_or(self.policy_asset()));
-
-        let address = address.unwrap_or_else(|| self.address());
-        let txid = server.elementsd_sendtoaddress(&address, satoshi, asset);
-        self.wait_for_tx(&txid);
-        let tx = self.get_tx(&txid);
-        // We only received, all balances are positive
-        assert!(tx.balance.values().all(|v| *v > 0));
-        assert_eq!(&tx.type_, "incoming");
-        let wallet_txid = tx.tx.txid();
-        assert_eq!(txid, wallet_txid);
-        assert_eq!(tx.inputs.iter().filter(|o| o.is_some()).count(), 0);
-        assert_eq!(tx.outputs.iter().filter(|o| o.is_some()).count(), 1);
-
-        let utxos_after = self.wollet.utxos().unwrap().len();
-        let balance_after = self.balance(&asset.unwrap_or(self.policy_asset()));
-        assert_eq!(utxos_after, utxos_before + 1);
-        assert_eq!(balance_before + satoshi, balance_after);
-    }
-
-    pub fn fund_btc(&mut self, server: &TestElectrumServer) {
-        self.fund(server, 1_000_000, Some(self.address()), None);
-    }
-
-    pub fn fund_asset(&mut self, server: &TestElectrumServer) -> AssetId {
-        let satoshi = 10_000;
-        let asset = server.elementsd_issueasset(satoshi);
-        self.fund(server, satoshi, Some(self.address()), Some(asset));
+        self.fund(env, satoshi, Some(self.address()), Some(asset));
         asset
     }
 

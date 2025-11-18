@@ -14,7 +14,7 @@
   * [Blockchain Clients](clients.md) ✅
   * [Multisig](multisig.md) ✅
   * [Custom Wollet Persister]() #(persiter.md) ❌
-  * [Issuance]() #(issuance.md) ❌
+  * [Issuance](issuance.md) ✅
   * [Reissuance]() #(reissuance.md) ❌
   * [Burn]() #(burn.md) ❌
   * [Manual Coin Selection]() #(manual.md) ❌

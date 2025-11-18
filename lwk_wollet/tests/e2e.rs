@@ -3907,3 +3907,126 @@ fn test_add_input_rangeproofs() {
     assert!(pset_with.inputs()[0].in_utxo_rangeproof.is_some());
     assert!(pset_without.inputs()[0].in_utxo_rangeproof.is_none());
 }
+
+#[test]
+fn test_issue_asset() {
+    // Test based on Python bindings test issue_asset.py
+    let network = ElementsNetwork::default_regtest();
+    let policy_asset = network.policy_asset();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    // ANCHOR: test_issue_asset
+
+    let mut client = test_client_electrum(&env.electrum_url());
+
+    // Create wallet
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    let signer = SwSigner::new(mnemonic, false).unwrap();
+    let desc = signer.wpkh_slip77_descriptor().unwrap();
+    assert!(desc == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x"); // ANCHOR: ignore
+
+    let mut wollet =
+        Wollet::without_persist(network, WolletDescriptor::from_str(&desc).unwrap()).unwrap();
+    let wollet_address = wollet.address(None).unwrap();
+    assert!(wollet_address.index() == 0); // ANCHOR: ignore
+    let wallet_address_str = wollet_address.address().to_string();
+    assert!(wallet_address_str == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq"); // ANCHOR: ignore
+
+    let funded_satoshi = 100_000; // ANCHOR: ignore
+    let txid =
+        env.elementsd_sendtoaddress(wollet_address.address(), funded_satoshi, Some(policy_asset)); // ANCHOR: ignore
+    wait_for_tx(&mut wollet, &mut client, &txid); // ANCHOR: ignore
+    assert!(*wollet.balance().unwrap().get(&policy_asset).unwrap_or(&0) == funded_satoshi); // ANCHOR: ignore
+
+    // ANCHOR: contract
+    let contract_str = "{\"entity\":{\"domain\":\"ciao.it\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"name\",\"precision\":8,\"ticker\":\"TTT\",\"version\":0}";
+    let contract = Contract::from_str(contract_str).unwrap();
+    // assert!(contract.to_string() == ("{\"entity\":{\"domain\":\"ciao.it\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"name\",\"precision\":8,\"ticker\":\"TTT\",\"version\":0}")); // ANCHOR: ignore
+    // ANCHOR_END: contract
+
+    // ANCHOR: issue_asset
+    // Issue asset
+    let issued_asset = 10_000;
+    let reissuance_tokens = 1;
+
+    // Create a transaction builder and the issuance transaction
+    let builder = wollet.tx_builder();
+    //  isue asset
+    let mut pset = builder
+        .issue_asset(
+            issued_asset,
+            None,
+            reissuance_tokens,
+            None,
+            Some(contract.clone()),
+        )
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Sign the transaction and finalize it
+    let signatures_added = signer.sign(&mut pset).expect("signing failed");
+    assert!(signatures_added == 1); // ANCHOR: ignore
+    let _ = wollet.finalize(&mut pset).unwrap();
+    let tx = pset.extract_tx().unwrap();
+
+    // Broadcast the transaction
+    let txid = client.broadcast(&tx).unwrap();
+    // ANCHOR_END: issue_asset
+
+    // ANCHOR: issuance_ids
+    let asset_id = pset.inputs()[0].issuance_ids().0;
+    let token_id = pset.inputs()[0].issuance_ids().1;
+    // ANCHOR_END: issuance_ids
+    //let txin = tx.inputs()[0];
+    // ANCHOR_END: test_issue_asset
+    // assert!(derive_asset_id(txin, contract) == asset_id); // ANCHOR: ignore
+    // assert!(derive_token_id(txin, contract) == token_id); // ANCHOR: ignore
+
+    /*let issuance = pset.inputs()[0].clone();
+    assert!(issuance.asset == Some(asset_id)); // ANCHOR: ignore
+    assert!(issuance.token() == Some(token_id)); // ANCHOR: ignore
+    assert!(!issuance.is_confidential); // ANCHOR: ignore
+    assert!(!issuance.is_null); // ANCHOR: ignore
+    assert!(issuance.is_issuance); // ANCHOR: ignore
+    assert!(!issuance.is_reissuance); // ANCHOR: ignore
+    assert!(issuance.asset_satoshi == Some(issued_asset)); // ANCHOR: ignore
+    assert!(issuance.token_satoshi == Some(reissuance_tokens)); // ANCHOR: ignore
+    */
+
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    assert!(*wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset); // ANCHOR: ignore
+    assert!(*wollet.balance().unwrap().get(&token_id).unwrap_or(&0) == reissuance_tokens); // ANCHOR: ignore
+
+    // reissue the asset
+    let reissue_asset = 100;
+    let builder = wollet.tx_builder();
+    let mut pset = builder
+        .reissue_asset(asset_id, reissue_asset, None, None)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let signatures_added = signer.sign(&mut pset).unwrap();
+    assert!(signatures_added == 2); // ANCHOR: ignore
+    let _ = wollet.finalize(&mut pset).unwrap();
+    let tx = pset.extract_tx().unwrap();
+    let txid = client.broadcast(&tx).unwrap();
+
+    /*reissuance = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance())
+    assert!(reissuance.asset() == asset_id); // ANCHOR: ignore
+    assert!(reissuance.token() == token_id); // ANCHOR: ignore
+    assert!(!reissuance.is_confidential()); // ANCHOR: ignore
+    assert!(!reissuance.is_null()); // ANCHOR: ignore
+    assert!(!reissuance.is_issuance()); // ANCHOR: ignore
+    assert!(reissuance.is_reissuance()); // ANCHOR: ignore
+    assert!(reissuance.asset_satoshi() == reissue_asset); // ANCHOR: ignore
+    assert!(reissuance.token_satoshi() is None); // ANCHOR: ignore*/
+
+    wait_for_tx(&mut wollet, &mut client, &txid); // ANCHOR: ignore
+
+    assert!(
+        *wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset + reissue_asset
+    ); // ANCHOR: ignore
+}

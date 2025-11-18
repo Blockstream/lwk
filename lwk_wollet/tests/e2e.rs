@@ -131,7 +131,7 @@ fn view() {
 
 #[test]
 fn origin() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let fingerprint = signer.fingerprint();
     let path = "84h/1776h/0h";
@@ -141,14 +141,14 @@ fn origin() {
 
     let view_key = generate_view_key();
     let desc_str = format!("ct({view_key},elwpkh([{fingerprint}/{path}]{xpub}/*))");
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
     let signers: [&AnySigner; 1] = [&AnySigner::Software(signer)];
 
-    let address = server.elementsd_getnewaddress();
+    let address = env.elementsd_getnewaddress();
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     wallet.send_btc(&signers, None, Some((address, 10_000)));
 }
 

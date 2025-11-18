@@ -108,25 +108,25 @@ fn liquid_issue(signers: &[&AnySigner]) {
 
 #[test]
 fn view() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     // "view" descriptor
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let descriptor_blinding_key =
         "1111111111111111111111111111111111111111111111111111111111111111";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
-    let _asset = wallet.fund_asset(&server);
+    wallet.fund_btc_(&env);
+    let _asset = wallet.fund_asset_(&env);
 
     let descriptor_blinding_key =
         "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
     let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
 }
 
 #[test]

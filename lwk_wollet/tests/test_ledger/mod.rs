@@ -2,14 +2,14 @@ use lwk_common::{singlesig_desc, Singlesig};
 use lwk_containers::testcontainers::clients::Cli;
 use lwk_ledger::TestLedgerEmulator;
 use lwk_signer::AnySigner;
-use lwk_test_util::TestElectrumServer;
+use lwk_test_util::{TestEnv, TestEnvBuilder};
 
 use crate::test_wollet::{generate_signer, multisig_desc, test_client_electrum, TestWollet};
 
 use elements_miniscript::bitcoin::hashes::Hash;
 
 fn roundtrip(
-    server: &TestElectrumServer,
+    env: &TestEnv,
     signers: &[&AnySigner],
     variant: Option<lwk_common::Singlesig>,
     threshold: Option<usize>,
@@ -23,12 +23,12 @@ fn roundtrip(
         .unwrap(),
         _ => multisig_desc(signers, threshold.unwrap()),
     };
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc(server);
+    wallet.fund_btc_(env);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_btc(signers, None, Some((node_address, 10_000)));
 
     let contract = "{\"entity\":{\"domain\":\"test.com\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"Test\",\"precision\":2,\"ticker\":\"TEST\",\"version\":0}";
@@ -39,17 +39,17 @@ fn roundtrip(
 }
 
 fn emul_roundtrip_singlesig(variant: Singlesig) {
-    let server = lwk_test_util::setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let docker = Cli::default();
     let ledger = TestLedgerEmulator::new(&docker);
     // TODO
     let xpub_identifier = elements_miniscript::bitcoin::XKeyIdentifier::all_zeros();
     let signers = &[&AnySigner::Ledger(ledger.ledger, xpub_identifier)];
-    roundtrip(&server, signers, Some(variant), None);
+    roundtrip(&env, signers, Some(variant), None);
 }
 
 fn emul_roundtrip_multisig(threshold: usize) {
-    let server = lwk_test_util::setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let docker = Cli::default();
     let ledger = TestLedgerEmulator::new(&docker);
     let xpub_identifier = elements_miniscript::bitcoin::XKeyIdentifier::all_zeros();
@@ -58,7 +58,7 @@ fn emul_roundtrip_multisig(threshold: usize) {
         &AnySigner::Ledger(ledger.ledger, xpub_identifier),
         &AnySigner::Software(sw_signer),
     ];
-    roundtrip(&server, signers, None, Some(threshold));
+    roundtrip(&env, signers, None, Some(threshold));
 }
 
 #[test]

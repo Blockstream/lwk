@@ -39,7 +39,7 @@ fn roundtrip(
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(env);
+    wallet.fund_btc(env);
 
     let node_address = env.elementsd_getnewaddress();
     wallet.send_btc(signers, None, Some((node_address, 10_000)));
@@ -134,7 +134,7 @@ fn multi_multisig(env: &TestEnv, jade_signer: &AnySigner) {
     // Jade has now 2 registered multisigs
 
     // Fund multi1
-    w1.fund_btc_(env);
+    w1.fund_btc(env);
 
     // Spend from multi1 (with change)
     let node_address = env.elementsd_getnewaddress();

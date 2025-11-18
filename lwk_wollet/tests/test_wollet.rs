@@ -180,7 +180,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         assert_eq!(balance_before + satoshi, balance_after);
     }
 
-    pub fn fund_btc_(&mut self, env: &TestEnv) {
+    pub fn fund_btc(&mut self, env: &TestEnv) {
         self.fund(env, 1_000_000, Some(self.address()), None);
     }
 

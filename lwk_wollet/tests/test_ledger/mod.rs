@@ -26,7 +26,7 @@ fn roundtrip(
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(env);
+    wallet.fund_btc(env);
 
     let node_address = env.elementsd_getnewaddress();
     wallet.send_btc(signers, None, Some((node_address, 10_000)));

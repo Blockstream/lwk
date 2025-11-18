@@ -63,7 +63,7 @@ fn liquid_send(signers: &[&AnySigner]) {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let asset = wallet.fund_asset(&env);
     env.elementsd_generate(1);
 
@@ -95,7 +95,7 @@ fn liquid_issue(signers: &[&AnySigner]) {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let (asset, _token) = wallet.issueasset(signers, 10, 1, None, None);
     wallet.reissueasset(signers, 10, &asset, None);
@@ -117,7 +117,7 @@ fn view() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let _asset = wallet.fund_asset(&env);
 
     let descriptor_blinding_key =
@@ -126,7 +126,7 @@ fn view() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn origin() {
 
     let address = env.elementsd_getnewaddress();
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     wallet.send_btc(&signers, None, Some((address, 10_000)));
 }
 
@@ -223,7 +223,7 @@ fn roundtrip_inner<C: BlockchainBackend>(
     env: &TestEnv,
     signers: &[&AnySigner],
 ) {
-    wallet.fund_btc_(env);
+    wallet.fund_btc(env);
     env.elementsd_generate(1);
     wallet.send_btc(signers, None, None);
     let (asset, _token) = wallet.issueasset(signers, 100_000, 1, None, None);
@@ -351,14 +351,14 @@ fn different_blinding_keys() {
     let mut wallet1 = TestWollet::new(client, &desc1);
     wallet1.sync();
     assert_eq!(wallet1.address_result(None).index(), 0);
-    wallet1.fund_btc_(&env);
+    wallet1.fund_btc(&env);
     assert_eq!(wallet1.address_result(None).index(), 1);
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet2 = TestWollet::new(client, &desc2);
     wallet2.sync();
     assert_eq!(wallet2.address_result(None).index(), 0);
-    wallet2.fund_btc_(&env);
+    wallet2.fund_btc(&env);
     assert_eq!(wallet2.address_result(None).index(), 1);
 
     // Both wallets have 1 tx in the tx list,
@@ -395,7 +395,7 @@ fn fee_rate() {
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     wallet.send_btc(&signers, fee_rate, None);
     let (asset, _token) = wallet.issueasset(&signers, 100_000, 1, None, fee_rate);
     let node_address = env.elementsd_getnewaddress();
@@ -427,7 +427,7 @@ fn contract() {
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     wallet.send_btc(&signers, None, None);
     let (_asset, _token) = wallet.issueasset(&signers, 100_000, 1, Some(contract), None);
 
@@ -477,8 +477,8 @@ fn multiple_descriptors() {
     let mut wallet_t = TestWollet::new(client, &desc_t);
 
     // Fund both wallets
-    wallet_a.fund_btc_(&env);
-    wallet_t.fund_btc_(&env);
+    wallet_a.fund_btc(&env);
+    wallet_t.fund_btc(&env);
 
     // Issue an asset, sending the asset to asset wallet, and the token to the token wallet
     let satoshi_a = 100_000;
@@ -546,7 +546,7 @@ fn multiple_descriptors() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet_nt = TestWollet::new(client, &desc_nt);
 
-    wallet_nt.fund_btc_(&env);
+    wallet_nt.fund_btc(&env);
     let address_nt = wallet_nt.address();
     let mut pset = wallet_t
         .tx_builder()
@@ -603,7 +603,7 @@ fn create_pset_error() {
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
     let (asset, token) = wallet.issueasset(
@@ -795,7 +795,7 @@ fn multisig_flow() {
 
     // * Multisig Sign: Start
     // Fund the wallet
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     // Create a simple PSET
     let satoshi = 1_000;
     let node_addr = env.elementsd_getnewaddress();
@@ -841,7 +841,7 @@ fn jade_sign_wollet_pset() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let my_addr = wallet.address();
 
@@ -887,9 +887,9 @@ fn jade_single_sig() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let satoshi_utxo1 = wallet.balance(&wallet.policy_asset());
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let satoshi = satoshi_utxo1 + 1;
     let node_addr = env.elementsd_getnewaddress();
@@ -1327,15 +1327,15 @@ fn drain() {
     let mut wallet = TestWollet::new(client, &desc);
 
     // One utxo L-BTC
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let node_address = env.elementsd_getnewaddress();
     wallet.assert_spent_unspent(0, 1);
     wallet.send_all_btc(&signers, None, node_address);
     wallet.assert_spent_unspent(1, 0);
 
     // Multiple utxos
-    wallet.fund_btc_(&env);
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
+    wallet.fund_btc(&env);
     wallet.assert_spent_unspent(1, 2);
 
     let node_address = env.elementsd_getnewaddress();
@@ -1343,7 +1343,7 @@ fn drain() {
     wallet.assert_spent_unspent(3, 0);
 
     // Drain ignores assets, since their change handling and coin selection is cosiderably easier
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     wallet.assert_spent_unspent(3, 1);
     let (asset, token) = wallet.issueasset(&signers, 10, 1, None, None);
     wallet.assert_spent_unspent(4, 3); // unspents are: asset+reissuance_token+change
@@ -1393,7 +1393,7 @@ fn ct_discount() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let node_address = env.elementsd_getnewaddress();
 
     // Send without CT discount
@@ -1957,7 +1957,7 @@ fn test_elements_rpc() {
     let mut wallet = TestWollet::new(client, &desc);
     let wd = wallet.wollet.wollet_descriptor();
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let utxos = elements_rpc_client.confirmed_utxos(&wd, 20).unwrap();
     assert_eq!(utxos.len(), 0);
 
@@ -2474,7 +2474,7 @@ fn test_update_transaction() {
     let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc_str);
 
-    w.fund_btc_(&env);
+    w.fund_btc(&env);
 
     let node_addr = env.elementsd_getnewaddress();
     let mut pset = w
@@ -2660,8 +2660,8 @@ fn test_liquidex() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wb = TestWollet::new(client, &desc_b);
 
-    wa.fund_btc_(&env);
-    wb.fund_btc_(&env);
+    wa.fund_btc(&env);
+    wb.fund_btc(&env);
 
     let (asset_1, _) = wa.issueasset(&[&sa], 10, 1, None, None);
     let (asset_2, _) = wb.issueasset(&[&sb], 10, 1, None, None);
@@ -2739,7 +2739,7 @@ fn test_no_wildcard_with_path_after() {
     assert_eq!(balance_1, 0);
 
     // Fund
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let balance_2 = wallet.balance_btc();
     assert!(balance_1 < balance_2);
@@ -2793,7 +2793,7 @@ fn test_no_wildcard() {
     let mut wallet = TestWollet::new(client, &desc);
 
     // Receive
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     // Send
     let balance_before = wallet.balance_btc();
@@ -2879,7 +2879,7 @@ fn test_sh_multi() {
     let mut wallet = TestWollet::new(client, &desc);
 
     // Receive
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     // Send
     let balance_before = wallet.balance_btc();
@@ -2931,7 +2931,7 @@ fn test_singlekey() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
     let balance_before = wallet.balance_btc();
 
     // Send some L-BTC to another address
@@ -2966,7 +2966,7 @@ fn test_issuance_amount_limits() {
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     // Let's test an issuance of 21M*10^8,
     let amount_21m = 21_000_000 * 100_000_000;
@@ -3082,7 +3082,7 @@ fn test_non_std_legacy_multisig() {
     let external_utxo = utxos.pop().unwrap();
 
     // Fund with some btc for the fees
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     // Create spending tx
     let mut pset = wallet
@@ -3227,7 +3227,7 @@ fn test_chain_tx() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let node_addr = env.elementsd_getnewaddress();
 
@@ -3286,7 +3286,7 @@ fn test_explicit_send() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let lbtc = wallet.policy_asset();
     let mut addr_explicit = env.elementsd_getnewaddress();
@@ -3356,7 +3356,7 @@ fn test_finalize_diff_sighashes() {
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
-    wallet.fund_btc_(&env);
+    wallet.fund_btc(&env);
 
     let addr = env.elementsd_getnewaddress();
     let mut pset = wallet
@@ -3405,8 +3405,8 @@ fn test_skip_signing_utxo() {
     let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 
-    w.fund_btc_(&env);
-    w.fund_btc_(&env);
+    w.fund_btc(&env);
+    w.fund_btc(&env);
 
     // Send all funds
     let pset = w.tx_builder().drain_lbtc_wallet().finish().unwrap();
@@ -3474,7 +3474,7 @@ fn test_fee_service() {
     let mut wf = TestWollet::new(client, &desc);
 
     let lbtc = w.policy_asset();
-    wf.fund_btc_(&env);
+    wf.fund_btc(&env);
 
     // Issue an asset and send it to the user
     let signers_fee = [&AnySigner::Software(signer_fee.clone())];
@@ -3575,7 +3575,7 @@ fn test_blinding_nonces() {
     let mut w = TestWollet::new(client, &desc);
 
     let lbtc = w.policy_asset();
-    w.fund_btc_(&env);
+    w.fund_btc(&env);
 
     let node_addr = env.elementsd_getnewaddress();
     let amp0pset = w

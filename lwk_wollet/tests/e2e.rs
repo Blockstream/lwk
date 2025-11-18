@@ -339,7 +339,7 @@ fn address() {
 #[test]
 fn different_blinding_keys() {
     // Two wallet with same "bitcoin" descriptor but different blinding keys
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let view_key1 = generate_view_key();
@@ -347,18 +347,18 @@ fn different_blinding_keys() {
     let desc1 = format!("ct({},elwpkh({}/*))", view_key1, signer.xpub());
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer.xpub());
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet1 = TestWollet::new(client, &desc1);
     wallet1.sync();
     assert_eq!(wallet1.address_result(None).index(), 0);
-    wallet1.fund_btc(&server);
+    wallet1.fund_btc_(&env);
     assert_eq!(wallet1.address_result(None).index(), 1);
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet2 = TestWollet::new(client, &desc2);
     wallet2.sync();
     assert_eq!(wallet2.address_result(None).index(), 0);
-    wallet2.fund_btc(&server);
+    wallet2.fund_btc_(&env);
     assert_eq!(wallet2.address_result(None).index(), 1);
 
     // Both wallets have 1 tx in the tx list,

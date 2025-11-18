@@ -1213,6 +1213,7 @@ mod tests {
         let staging_login = format!("https://login{env}blockstream.com/realms/blockstream-public/protocol/openid-connect/token");
 
         for waterfalls in [false, true] {
+            log::info!("starting testing with waterfalls={waterfalls}");
             let base_url = if waterfalls {
                 format!("https://enterprise{env}blockstream.info/liquid/api/waterfalls")
             } else {
@@ -1225,6 +1226,7 @@ mod tests {
                     client_secret: client_secret.clone(),
                 })
                 .waterfalls(waterfalls)
+                .concurrency(4)
                 .build()
                 .unwrap();
 
@@ -1242,6 +1244,7 @@ mod tests {
             assert!(update.is_some());
             wollet.apply_update(update.unwrap()).unwrap();
             assert!(wollet.transactions().unwrap().len() > 16);
+            log::info!("ending testing with waterfalls={waterfalls}");
         }
     }
 

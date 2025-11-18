@@ -946,8 +946,8 @@ fn wait_status_change(
 #[cfg(feature = "esplora")]
 #[tokio::test]
 async fn test_esplora_wasm_client() {
-    let server = setup_with_esplora();
-    let url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+    let env = TestEnvBuilder::from_env().with_esplora().build();
+    let url = env.esplora_url();
     let mut client = clients::asyncr::EsploraClient::new(ElementsNetwork::default_regtest(), &url);
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -962,7 +962,7 @@ async fn test_esplora_wasm_client() {
     wollet.apply_update(update).unwrap();
 
     let address = wollet.address(None).unwrap();
-    let txid = server.elementsd_sendtoaddress(address.address(), 10000, None);
+    let txid = env.elementsd_sendtoaddress(address.address(), 10000, None);
 
     let update = wait_update_with_txs(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
@@ -970,7 +970,7 @@ async fn test_esplora_wasm_client() {
     assert!(tx.height.is_none());
     assert!(wollet.tip().timestamp().is_some());
 
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     let update = wait_update_with_txs(&mut client, &wollet).await;
     wollet.apply_update(update).unwrap();
     let tx = wollet.transaction(&txid).unwrap().unwrap();

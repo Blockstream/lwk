@@ -64,7 +64,7 @@ fn liquid_send(signers: &[&AnySigner]) {
     let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc_(&env);
-    let asset = wallet.fund_asset_(&env);
+    let asset = wallet.fund_asset(&env);
     env.elementsd_generate(1);
 
     wallet.send_btc(signers, None, None);
@@ -118,7 +118,7 @@ fn view() {
     let mut wallet = TestWollet::new(client, &desc_str);
 
     wallet.fund_btc_(&env);
-    let _asset = wallet.fund_asset_(&env);
+    let _asset = wallet.fund_asset(&env);
 
     let descriptor_blinding_key =
         "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
@@ -1559,7 +1559,7 @@ fn few_lbtc() {
     assert!(matches!(err, Error::InsufficientFunds { .. }));
 
     // Send an asset to the wallet and check that we have the same error
-    let asset = wallet.fund_asset_(&env);
+    let asset = wallet.fund_asset(&env);
     assert!(wallet.balance(&asset) > 0);
 
     let err = wallet
@@ -1692,7 +1692,7 @@ fn test_external_utxo() {
 
     // External UTXO can be asset UTXOs
     w2.sync();
-    let asset = w2.fund_asset_(&env);
+    let asset = w2.fund_asset(&env);
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
     assert_eq!(w1.balance(&asset), 0);

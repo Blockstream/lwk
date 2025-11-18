@@ -184,7 +184,7 @@ impl<C: BlockchainBackend> TestWollet<C> {
         self.fund(env, 1_000_000, Some(self.address()), None);
     }
 
-    pub fn fund_asset_(&mut self, env: &TestEnv) -> AssetId {
+    pub fn fund_asset(&mut self, env: &TestEnv) -> AssetId {
         let satoshi = 10_000;
         let asset = env.elementsd_issueasset(satoshi);
         self.fund(env, satoshi, Some(self.address()), Some(asset));

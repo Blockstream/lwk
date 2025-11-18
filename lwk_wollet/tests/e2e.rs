@@ -288,13 +288,13 @@ fn unsupported_descriptor() {
 
 #[test]
 fn address() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     let gap_limit: u32 = 20;
@@ -325,10 +325,10 @@ fn address() {
     assert_eq!(last_address.index(), gap_limit);
     let mid_address = Some(mid_address.address().clone());
     let last_address = Some(last_address.address().clone());
-    wallet.fund(&server, satoshi, mid_address.clone(), None);
-    wallet.fund(&server, satoshi, last_address, None);
+    wallet.fund_(&env, satoshi, mid_address.clone(), None);
+    wallet.fund_(&env, satoshi, last_address, None);
     let last_unused_before = wallet.address_result(None).index();
-    wallet.fund(&server, satoshi, mid_address, None);
+    wallet.fund_(&env, satoshi, mid_address, None);
     let last_unused_after = wallet.address_result(None).index();
     assert!(
         last_unused_before <= last_unused_after,

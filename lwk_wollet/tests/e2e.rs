@@ -596,14 +596,14 @@ fn multiple_descriptors() {
 
 #[test]
 fn create_pset_error() {
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     let satoshi_a = 100_000;
     let satoshi_t = 1;
     let (asset, token) = wallet.issueasset(
@@ -712,7 +712,7 @@ fn create_pset_error() {
     let signer2 = generate_signer();
     let view_key2 = generate_view_key();
     let desc2 = format!("ct({},elwpkh({}/*))", view_key2, signer2.xpub());
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let wallet2 = TestWollet::new(client, &desc2);
 
     // Send token elsewhere

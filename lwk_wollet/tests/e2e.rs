@@ -761,7 +761,7 @@ fn create_pset_error() {
 #[test]
 fn multisig_flow() {
     // Simulate a multisig workflow
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
 
     // * Multisig Setup: Start
     // We have 2 signers
@@ -785,7 +785,7 @@ fn multisig_flow() {
         signer1.xpub(),
         signer2_xpub
     );
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
     // Sharing desc_str grants watch only access to the wallet.
@@ -795,10 +795,10 @@ fn multisig_flow() {
 
     // * Multisig Sign: Start
     // Fund the wallet
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     // Create a simple PSET
     let satoshi = 1_000;
-    let node_addr = server.elementsd_getnewaddress();
+    let node_addr = env.elementsd_getnewaddress();
     let pset = wallet
         .tx_builder()
         .add_lbtc_recipient(&node_addr, satoshi)

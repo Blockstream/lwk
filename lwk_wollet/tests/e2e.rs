@@ -3600,6 +3600,50 @@ fn test_blinding_nonces() {
 
 #[test]
 #[allow(unused)]
+fn clients() -> Result<(), Box<dyn std::error::Error>> {
+    // ANCHOR: electrum_client
+    use lwk_wollet::{ElectrumClient, ElectrumUrl};
+
+    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
+    let client = ElectrumClient::new(&electrum_url)?;
+    // ANCHOR_END: electrum_client
+
+    // ANCHOR: esplora_client
+    use lwk_wollet::clients::blocking::EsploraClient;
+
+    let esplora_url = "https://blockstream.info/liquid/api";
+    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
+    // ANCHOR_END: esplora_client
+
+    // ANCHOR: authenticated_esplora_client
+    use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
+    use lwk_wollet::clients::TokenProvider;
+
+    let base_url = "https://enterprise.blockstream.info/liquid/api";
+    let client_id = "your_client_id";
+    let client_secret = "your_client_secret";
+    let login_url =
+        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
+
+    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
+        .token_provider(TokenProvider::Blockstream {
+            url: login_url.to_string(),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+        })
+        .build()?;
+    // ANCHOR_END: authenticated_esplora_client
+
+    // ANCHOR: waterfalls_client
+    let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
+    let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
+    // ANCHOR_END: waterfalls_client
+
+    Ok(())
+}
+
+#[test]
+#[allow(unused)]
 fn basics() -> Result<(), Box<dyn std::error::Error>> {
     let env = TestEnvBuilder::from_env().with_esplora().build();
 
@@ -3642,45 +3686,8 @@ fn basics() -> Result<(), Box<dyn std::error::Error>> {
 
     let url = env.esplora_url();
 
-    // ANCHOR: electrum_client
-    use lwk_wollet::{ElectrumClient, ElectrumUrl};
-
-    let electrum_url = ElectrumUrl::new("blockstream.info:995", true, true)?;
-    let client = ElectrumClient::new(&electrum_url)?;
-    // ANCHOR_END: electrum_client
-
-    // ANCHOR: esplora_client
-    use lwk_wollet::clients::blocking::EsploraClient;
-
-    let esplora_url = "https://blockstream.info/liquid/api";
-    let client = EsploraClient::new(esplora_url, ElementsNetwork::Liquid)?;
-    // ANCHOR_END: esplora_client
-
-    // ANCHOR: authenticated_esplora_client
-    use lwk_wollet::clients::asyncr::{EsploraClient as AsyncEsploraClient, EsploraClientBuilder};
-    use lwk_wollet::clients::TokenProvider;
-
-    let base_url = "https://enterprise.blockstream.info/liquid/api";
-    let client_id = "your_client_id";
-    let client_secret = "your_client_secret";
-    let login_url =
-        "https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token";
-
-    let mut client = EsploraClientBuilder::new(base_url, ElementsNetwork::Liquid)
-        .token_provider(TokenProvider::Blockstream {
-            url: login_url.to_string(),
-            client_id: client_id.to_string(),
-            client_secret: client_secret.to_string(),
-        })
-        .build()?;
-    // ANCHOR_END: authenticated_esplora_client
-
-    // ANCHOR: waterfalls_client
-    let waterfalls_url = "https://waterfalls.liquidwebwallet.org/liquid/api";
-    let client = EsploraClient::new_waterfalls(waterfalls_url, ElementsNetwork::Liquid).unwrap();
-    // ANCHOR_END: waterfalls_client
-
     // ANCHOR: client
+    use lwk_wollet::clients::blocking::EsploraClient;
     // let url = "https://blockstream.info/liquidtestnet/api";
     // let url = "https://blockstream.info/liquid/api";
 

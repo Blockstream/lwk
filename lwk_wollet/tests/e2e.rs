@@ -1393,37 +1393,37 @@ fn test_tip() {
 #[test]
 fn drain() {
     // Send all funds from a wallet
-    let server = setup();
+    let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
     let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
     let signers = [&AnySigner::Software(signer)];
 
-    let client = test_client_electrum(&server.electrs.electrum_url);
+    let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
     // One utxo L-BTC
-    wallet.fund_btc(&server);
-    let node_address = server.elementsd_getnewaddress();
+    wallet.fund_btc_(&env);
+    let node_address = env.elementsd_getnewaddress();
     wallet.assert_spent_unspent(0, 1);
     wallet.send_all_btc(&signers, None, node_address);
     wallet.assert_spent_unspent(1, 0);
 
     // Multiple utxos
-    wallet.fund_btc(&server);
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
+    wallet.fund_btc_(&env);
     wallet.assert_spent_unspent(1, 2);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
     wallet.assert_spent_unspent(3, 0);
 
     // Drain ignores assets, since their change handling and coin selection is cosiderably easier
-    wallet.fund_btc(&server);
+    wallet.fund_btc_(&env);
     wallet.assert_spent_unspent(3, 1);
     let (asset, token) = wallet.issueasset(&signers, 10, 1, None, None);
     wallet.assert_spent_unspent(4, 3); // unspents are: asset+reissuance_token+change
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     wallet.send_all_btc(&signers, None, node_address);
     wallet.assert_spent_unspent(5, 2);
 
@@ -1431,7 +1431,7 @@ fn drain() {
     assert!(wallet.balance(&token) > 0);
 
     // Confirm the transactions
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     wait_tx_update(&mut wallet);
     let txs = wallet.wollet.transactions().unwrap();
     for tx in txs {

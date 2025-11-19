@@ -367,6 +367,12 @@ impl PreparePayResponse {
             }),
         };
 
+        if let Ok(ControlFlow::Break(_)) = flow.as_ref() {
+            // if the swap is terminated, but the caller call advance() again we don't
+            // want to error for timeout (it will trigger NoBoltzUpdate)
+            self.polling = true;
+        }
+
         self.data.last_state = update_status;
 
         flow

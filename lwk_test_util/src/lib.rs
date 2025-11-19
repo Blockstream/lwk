@@ -16,7 +16,6 @@ use elements_miniscript::descriptor::checksum::desc_checksum;
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
-use std::env;
 use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
@@ -459,34 +458,6 @@ impl TestElectrumServer {
 
 pub fn regtest_policy_asset() -> AssetId {
     AssetId::from_str("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225").unwrap()
-}
-
-pub fn setup() -> TestElectrumServer {
-    inner_setup(false, false)
-}
-
-pub fn setup_with_esplora() -> TestElectrumServer {
-    inner_setup(true, false)
-}
-
-pub fn setup_with_bitcoind() -> TestElectrumServer {
-    inner_setup(false, true)
-}
-
-fn inner_setup(enable_esplora_http: bool, validate_pegin: bool) -> TestElectrumServer {
-    let electrs_exec = env::var("ELECTRS_LIQUID_EXEC").expect("set ELECTRS_LIQUID_EXEC");
-    let elementsd_exec = env::var("ELEMENTSD_EXEC").expect("set ELEMENTSD_EXEC");
-    let bitcoind_exec = if validate_pegin {
-        Some(env::var("BITCOIND_EXEC").expect("set BITCOIND_EXEC"))
-    } else {
-        None
-    };
-    TestElectrumServer::new(
-        electrs_exec,
-        elementsd_exec,
-        enable_esplora_http,
-        bitcoind_exec,
-    )
 }
 
 pub fn init_logging() {

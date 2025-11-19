@@ -22,7 +22,7 @@ wollet = Wollet(network, desc, datadir=None)
 addr = wollet.address(None)
 
 # ANCHOR_END: address
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 
 sats = 100000
 txid = node.send_to_address(addr.address(), sats, asset=None)
@@ -55,7 +55,7 @@ client = EsploraClient.new_waterfalls(url, Network.mainnet())
 # ANCHOR: client
 url = "https://blockstream.info/liquidtestnet/api"
 client = EsploraClient(url, network)
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)  # ANCHOR: ignore
+client = ElectrumClient.from_url(node.electrum_url())  # ANCHOR: ignore
 
 update = client.full_scan(wollet)
 wollet.apply_update(update)

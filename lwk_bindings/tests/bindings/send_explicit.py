@@ -8,7 +8,7 @@ desc = signer.wpkh_slip77_descriptor()
 wollet = Wollet(network, desc, datadir=None)
 
 policy_asset = network.policy_asset()
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 
 addr = wollet.address(0).address()
 sats = 10000

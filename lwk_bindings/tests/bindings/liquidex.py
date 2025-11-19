@@ -6,7 +6,7 @@ node = LwkTestEnv() # launch electrs and elementsd
 mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 signer = Signer(mnemonic, network)
 desc = signer.wpkh_slip77_descriptor()
 maker = Wollet(network, desc, datadir=None)

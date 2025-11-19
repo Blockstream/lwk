@@ -5,7 +5,7 @@ node = LwkTestEnv()
 
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 
 # Create receiver wallet
 recv_mnemonic = Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")

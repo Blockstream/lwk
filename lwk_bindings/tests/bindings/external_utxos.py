@@ -5,7 +5,7 @@ node = LwkTestEnv()
 
 network = Network.regtest_default()
 policy_asset = network.policy_asset()
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 
 # Wallet 1
 s1 = Signer(Mnemonic.from_random(12), network)

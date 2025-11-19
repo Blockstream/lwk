@@ -45,14 +45,14 @@ balance = wollet_c.balance();
 # Update the wollet state
 url = "https://blockstream.info/liquidtestnet/api"
 client = EsploraClient(url, network)
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)  # ANCHOR: ignore
+client = ElectrumClient.from_url(node.electrum_url())  # ANCHOR: ignore
 
 update = client.full_scan(wollet_c)
 wollet_c.apply_update(update)
 # ANCHOR_END: multisig-receive
 
 # Receive some funds
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 txid = node.send_to_address(wollet_c.address(0).address(), 10_000, asset=None)
 wollet_c.wait_for_tx(txid, client)
 

@@ -14,7 +14,7 @@ xpub1 = s1.keyorigin_xpub(Bip.new_bip87())
 xpub2 = s2.keyorigin_xpub(Bip.new_bip87())
 
 # Create wallets
-client = ElectrumClient(node.electrum_url(), tls=False, validate_domain=False)
+client = ElectrumClient.from_url(node.electrum_url())
 
 # Multisig
 desc = f"ct(elip151,elwsh(multi(2,{xpub1}/<0;1>/*,{xpub2}/<0;1>/*)))"

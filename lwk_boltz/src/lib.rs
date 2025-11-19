@@ -275,7 +275,7 @@ impl BoltzSession {
     /// Returns a preimage from the keys or a random one according to flag `self.random_preimage`
     pub(crate) fn preimage(&self, our_keys: &Keypair) -> Preimage {
         if self.random_preimages {
-            Preimage::new()
+            Preimage::random()
         } else {
             preimage_from_keypair(our_keys)
         }

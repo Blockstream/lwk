@@ -252,7 +252,7 @@ impl<T: Transport> LiquidClient<T> {
         index: u32,
     ) -> Result<Address, LiquidClientError<T::Error>> {
         let map_str_err = |e: LiquidClientError<T::Error>, message: &str| {
-            LiquidClientError::ClientError(format!("{} {}", message, e))
+            LiquidClientError::ClientError(format!("{message} {e}"))
         };
         let version = Version::V2;
         let coin_type = if self.network == lwk_common::Network::Liquid {
@@ -264,7 +264,7 @@ impl<T: Transport> LiquidClient<T> {
             lwk_common::Singlesig::Wpkh => 84,
             lwk_common::Singlesig::ShWpkh => 49,
         };
-        let path = format!("m/{}h/{}h/0h", purpose, coin_type)
+        let path = format!("m/{purpose}h/{coin_type}h/0h")
             .parse()
             .expect("static");
         let xpub = self

@@ -81,17 +81,17 @@ impl WalletPolicy {
         let keys_str = keys
             .iter()
             .enumerate()
-            .map(|(i, _)| format!("@{}{}", i, key_placeholder_suffix))
+            .map(|(i, _)| format!("@{i}{key_placeholder_suffix}"))
             .collect::<Vec<String>>()
             .join(",");
 
         let mut descriptor_template = match address_type {
-            AddressType::Legacy => format!("sh({}({},{}))", multisig_op, threshold, keys_str),
+            AddressType::Legacy => format!("sh({multisig_op}({threshold},{keys_str}))"),
             AddressType::NativeSegwit => {
-                format!("wsh({}({},{}))", multisig_op, threshold, keys_str)
+                format!("wsh({multisig_op}({threshold},{keys_str}))")
             }
             AddressType::NestedSegwit => {
-                format!("sh(wsh({}({},{})))", multisig_op, threshold, keys_str)
+                format!("sh(wsh({multisig_op}({threshold},{keys_str})))")
             }
             _ => return Err(WalletError::UnsupportedAddressType),
         };
@@ -151,7 +151,7 @@ impl WalletPolicy {
         let mut desc = self.descriptor_template.clone();
 
         for (i, key) in self.keys.iter().enumerate().rev() {
-            desc = desc.replace(&format!("@{}", i), &key.to_string());
+            desc = desc.replace(&format!("@{i}"), &key.to_string());
         }
 
         desc = desc.replace("/**", &format!("/{}/{}", if change { 1 } else { 0 }, "*"));
@@ -247,10 +247,10 @@ impl FromStr for WalletPubKey {
             let derivation_path = if path_str.is_empty() {
                 DerivationPath::master()
             } else {
-                DerivationPath::from_str(&format!("m/{}", path_str))?
+                DerivationPath::from_str(&format!("m/{path_str}"))?
             };
             let (xpub_str, multipath) = if let Some((xpub, multipath)) = xpub_str.rsplit_once('/') {
-                (xpub, Some(format!("/{}", multipath)))
+                (xpub, Some(format!("/{multipath}")))
             } else {
                 (xpub_str, None)
             };
@@ -335,7 +335,7 @@ mod tests {
     #[test]
     fn test_walletpubkey_tostr() {
         let key = WalletPubKey::from_str(KEY_EXAMPLE).unwrap();
-        assert_eq!(key.to_string(), format!("{}", KEY_EXAMPLE));
+        assert_eq!(key.to_string(), format!("{KEY_EXAMPLE}"));
     }
 
     #[test]

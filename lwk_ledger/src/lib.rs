@@ -270,7 +270,7 @@ impl<T: Transport> Signer for &Ledger<T> {
 }
 
 fn to_dbg(e: impl std::fmt::Debug) -> Error {
-    Error::ClientError(format!("{:?}", e))
+    Error::ClientError(format!("{e:?}"))
 }
 
 impl<T: Transport> Signer for Ledger<T> {

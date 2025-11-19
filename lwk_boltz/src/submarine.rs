@@ -332,7 +332,7 @@ impl PreparePayResponse {
                     .construct_refund(SwapTransactionParams {
                         keys: self.data.our_keys,
                         output_address: self.data.refund_address.to_string(),
-                        fee: Fee::Relative(1.0), // TODO: improve
+                        fee: Fee::Relative(0.12), // TODO make it configurable
                         swap_id: self.swap_id(),
                         chain_client: &self.chain_client,
                         boltz_client: &self.api,

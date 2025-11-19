@@ -1203,6 +1203,19 @@ impl<'a> WolletTxBuilder<'a> {
         self.inner.finish_for_amp0(self.wollet)
     }
 
+    /// Consume this builder and create a PSET returning also the blinding nonces
+    pub fn finish_with_bfs(
+        self,
+    ) -> Result<
+        (
+            PartiallySignedTransaction,
+            Vec<Option<(AssetBlindingFactor, ValueBlindingFactor)>>,
+        ),
+        Error,
+    > {
+        self.inner.finish_with_bfs(self.wollet)
+    }
+
     /// Wrapper of [`TxBuilder::add_recipient()`]
     pub fn add_recipient(
         self,

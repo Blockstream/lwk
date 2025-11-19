@@ -162,7 +162,7 @@ mod tests {
                 Err(lwk_boltz::Error::NoBoltzUpdate) => { // expected
                 }
                 _ => {
-                    assert!(false);
+                    panic!("unexpected status");
                 }
             }
         }

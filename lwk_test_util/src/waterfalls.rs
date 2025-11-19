@@ -57,7 +57,7 @@ impl WaterfallsD {
 
         // Wait for waterfalls to start
         let mut started = false;
-        let url = format!("{}/blocks/tip/hash", waterfalls_url);
+        let url = format!("{waterfalls_url}/blocks/tip/hash");
         for _ in 0..50 {
             std::thread::sleep(Duration::from_millis(100));
             if let Ok(r) = reqwest::blocking::get(&url) {

@@ -95,7 +95,7 @@ This client is ideal for web applications and scenarios where HTTP-based communi
 
 ### Authenticated Esplora
 
-Some Esplora servers, particularly enterprise deployments like Blockstream Enterprise, require authentication for access. LWK supports OAuth2-based authentication with automatic token refresh.
+Some Esplora servers, particularly enterprise deployments like [Blockstream Enterprise](https://blockstream.info/explorer-api), require authentication for access. LWK supports OAuth2-based authentication with automatic token refresh.
 
 Use authenticated clients when:
 - Connecting to private or enterprise Esplora instances
@@ -153,7 +153,7 @@ Use authenticated clients when:
 
 ### Authenticated Waterfalls
 
-Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to authenticated Esplora clients.
+Waterfalls clients also support OAuth2-based authentication for enterprise deployments, similar to the [Blockstream Enterprise](https://blockstream.info/explorer-api) authenticated Esplora clients.
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

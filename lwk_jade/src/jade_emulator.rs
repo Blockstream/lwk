@@ -22,7 +22,7 @@ impl<'a> TestJadeEmulator<'a> {
     pub fn new(docker: &'a Cli) -> Self {
         let container = docker.run(JadeEmulator);
         let port = container.get_host_port_ipv4(EMULATOR_PORT);
-        let stream = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let stream = std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         let network = Network::LocaltestLiquid;
         let jade = Jade::new(stream.into(), network);
         Self {
@@ -54,7 +54,7 @@ impl<'a> TestJadeEmulator<'a> {
         assert_eq!(pin_server_pub_key.to_bytes().len(), 33);
         let pin_container = docker.run(pin_server);
         let port = pin_container.get_host_port_ipv4(PIN_SERVER_PORT);
-        let pin_server_url = format!("http://127.0.0.1:{}", port);
+        let pin_server_url = format!("http://127.0.0.1:{port}");
 
         let params = UpdatePinserverParams {
             reset_details: false,

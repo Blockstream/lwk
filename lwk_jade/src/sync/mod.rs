@@ -238,7 +238,7 @@ impl Jade {
                     }
                     let bytes = &resp.bytes()?;
                     let value: serde_json::Value = serde_json::from_slice(bytes.as_ref())?;
-                    log::debug!("RECEIVED from {url} data: {:?}", value);
+                    log::debug!("RECEIVED from {url} data: {value:?}");
 
                     let params: serde_cbor::Value = json_to_cbor(&value)?;
 

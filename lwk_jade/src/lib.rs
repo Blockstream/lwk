@@ -93,7 +93,7 @@ where
         Err(e) => {
             let res = serde_cbor::from_reader::<serde_cbor::Value, &[u8]>(reader);
             if let Ok(value) = res {
-                log::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {:?}", value);
+                log::warn!("The value returned is a valid CBOR, but our structs doesn't map it correctly: {value:?}");
                 return Some(Err(Error::SerdeCbor(e)));
             }
         }

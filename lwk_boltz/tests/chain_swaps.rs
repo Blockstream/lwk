@@ -506,6 +506,56 @@ mod tests {
         let success = response.complete().await.unwrap();
         assert!(success, "LBTC to BTC swap should succeed");
 
+        // Test LBTC to BTC swap using advance()
+        let refund_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address_str).unwrap();
+        let claim_address = bitcoin::Address::from_str(&claim_address_str)
+            .unwrap()
+            .assume_checked();
+        let mut response = session
+            .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+        log::info!(
+            "LBTC to BTC swap - Lockup address: {}",
+            response.lockup_address()
+        );
+        crate::utils::send_to_address(
+            LBTC_CHAIN.into(),
+            response.lockup_address(),
+            response.expected_amount(),
+        )
+        .await
+        .unwrap();
+        loop {
+            match response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Payment completed with result: {}", result);
+                    assert!(result, "Payment should succeed");
+                    break;
+                }
+                Err(e) => {
+                    panic!("Unexpected error: {}", e);
+                }
+            }
+        }
+        // repeatly calling advance on a terminated swap don't timeout
+        for _ in 0..10 {
+            match response.advance().await {
+                Err(lwk_boltz::Error::NoBoltzUpdate) => { // expected
+                }
+                _ => {
+                    assert!(false);
+                }
+            }
+        }
+
         // Test polling mode
         let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
             .polling(true)

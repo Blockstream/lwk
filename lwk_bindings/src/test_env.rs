@@ -17,6 +17,7 @@ impl LwkTestEnv {
     pub fn new() -> LwkTestEnv {
         let inner = lwk_test_util::TestEnvBuilder::from_env()
             .with_electrum()
+            .with_esplora()
             .build();
         LwkTestEnv { inner }
     }
@@ -51,5 +52,10 @@ impl LwkTestEnv {
     /// Get the Electrum URL of the test environment
     pub fn electrum_url(&self) -> String {
         self.inner.electrum_url()
+    }
+
+    /// Get the Esplora URL of the test environment
+    pub fn esplora_url(&self) -> String {
+        self.inner.esplora_url()
     }
 }

@@ -18,7 +18,7 @@ use lwk_cli::{
     inner_main, AssetSubCommandsEnum, Cli, ServerSubCommandsEnum, SignerSubCommandsEnum,
     WalletSubCommandsEnum,
 };
-use lwk_test_util::{TestElectrumServer, TestEnv, TestEnvBuilder};
+use lwk_test_util::{TestEnv, TestEnvBuilder};
 use tempfile::TempDir;
 
 /// Returns a non-used local port if available.
@@ -72,10 +72,13 @@ fn setup_cli(
     TempDir,
     String,
     String,
-    TestElectrumServer,
+    TestEnv,
     Option<RegistryProc>,
 ) {
-    let server = lwk_test_util::setup_with_esplora();
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
 
@@ -88,7 +91,7 @@ fn setup_cli(
     let child = if with_registry {
         let addr = get_available_addr().unwrap();
         let url = format!("127.0.0.1:{}", addr.port());
-        let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
+        let esplora_url = env.esplora_url();
         let child = Command::new("server")
             .args(["--addr", &url])
             .args(["--db-path", &datadir])
@@ -106,7 +109,7 @@ fn setup_cli(
         .map(|r| format!("--registry-url http://{}/", r.url))
         .unwrap_or("".to_owned());
 
-    let server_url = format!("--server-url tcp://{}", &server.electrs.electrum_url);
+    let server_url = format!("--server-url {}", &env.electrum_url());
     let addr = get_available_addr().unwrap();
 
     let cli = format!("cli --addr {addr} -n regtest");
@@ -123,7 +126,7 @@ fn setup_cli(
     };
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    (t, tmp, cli, params, server, child)
+    (t, tmp, cli, params, env, child)
 }
 
 fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -237,22 +240,12 @@ fn asset_ids_from_issuance_pset(cli: &str, wallet: &str, pset: &str) -> (String,
     (asset, token)
 }
 
-fn fund_(env: &TestEnv, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
+fn fund(env: &TestEnv, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
     let addr = Address::from_str(&address(cli, wallet)).unwrap();
 
     let txid = env.elementsd_sendtoaddress(&addr, sats, None);
     // Only 2 blocks are necessary to make coinbase spendable
     env.elementsd_generate(2);
-    wait_tx(cli, wallet, &txid.to_string());
-    (txid, addr)
-}
-
-fn fund(server: &TestElectrumServer, cli: &str, wallet: &str, sats: u64) -> (Txid, Address) {
-    let addr = Address::from_str(&address(cli, wallet)).unwrap();
-
-    let txid = server.elementsd_sendtoaddress(&addr, sats, None);
-    // Only 2 blocks are necessary to make coinbase spendable
-    server.elementsd_generate(2);
     wait_tx(cli, wallet, &txid.to_string());
     (txid, addr)
 }
@@ -300,8 +293,8 @@ fn send(
 
 #[test]
 fn test_state_regression() {
-    let server = lwk_test_util::setup();
-    let server_url = format!("--server-url tcp://{}", &server.electrs.electrum_url);
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let server_url = format!("--server-url {}", &env.electrum_url());
     let addr = get_available_addr().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
@@ -340,7 +333,7 @@ fn test_state_regression() {
 
 #[test]
 fn test_start_stop_persist() {
-    let (t, _tmp, cli, params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, params, _env, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
@@ -454,7 +447,7 @@ fn test_start_stop_persist() {
 
 #[test]
 fn test_signer_load_unload_list() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
@@ -492,7 +485,7 @@ fn test_signer_load_unload_list() {
 
 #[test]
 fn test_signer_external() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     let name = "ext";
     let fingerprint = "11111111";
@@ -528,7 +521,7 @@ fn test_signer_external() {
 
 #[test]
 fn test_wallet_load_unload_list() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     let r = sh(&format!("{cli} wallet list"));
     assert_eq!(get_len(&r, "wallets"), 0);
@@ -567,7 +560,7 @@ fn test_wallet_load_unload_list() {
 
 #[test]
 fn test_wallet_memos() {
-    let (t, _tmp, cli, params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, params, env, _) = setup_cli(false);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -576,7 +569,7 @@ fn test_wallet_memos() {
     singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
 
     // Fund w1
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
     // Send from w1 to w2
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -675,7 +668,7 @@ fn test_liquidex() {
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -683,8 +676,8 @@ fn test_liquidex() {
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
 
-    let _ = fund(&server, &cli, "w1", 1_000_000);
-    let _ = fund(&server, &cli, "w2", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w2", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -752,7 +745,7 @@ fn test_liquidex() {
 
 #[test]
 fn test_wallet_details() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -848,15 +841,15 @@ fn test_wallet_details() {
 
 #[test]
 fn test_broadcast() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     assert_eq!(1_000_000, get_balance(&cli, "w1", policy_asset));
-    let addr = server.elementsd_getnewaddress().to_string();
+    let addr = env.elementsd_getnewaddress().to_string();
     send(&cli, "w1", &addr, policy_asset, 1000, &["s1"]);
     assert!(1_000_000 > get_balance(&cli, "w1", policy_asset));
 
@@ -866,11 +859,11 @@ fn test_broadcast() {
 
 #[test]
 fn test_issue() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -955,7 +948,7 @@ fn test_issue() {
     assert_eq!(get_len(&r, "assets"), 2);
 
     let asset_balance_pre = get_balance(&cli, "w1", asset);
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     let recipient = format!("--recipient {node_address}:1:{asset}");
     let r = sh(&format!("{cli} wallet send --wallet w1 {recipient}"));
     // TODO: add PSET introspection verifying there are asset metadata
@@ -1003,7 +996,7 @@ fn test_issue() {
         assert!(url.contains(policy_asset));
     }
 
-    server.elementsd_generate(1);
+    env.elementsd_generate(1);
     sh(&format!("{cli} server scan"));
 
     let r = sh(&format!("{cli} wallet txs --wallet w1 --with-tickers"));
@@ -1021,7 +1014,7 @@ fn test_issue() {
     // Move the reissuance token to another wallet and perform an "external" reissuance
     sw_signer(&cli, "s2");
     singlesig_wallet(&cli, "w2", "s2", "slip77", "wpkh");
-    let _ = fund(&server, &cli, "w2", 1_000_000);
+    let _ = fund(&env, &cli, "w2", 1_000_000);
     let w2_addr = address(&cli, "w2");
     let txid = send(&cli, "w1", &w2_addr, token, 1, &["s1"]);
     wait_tx(&cli, "w2", &txid);
@@ -1057,7 +1050,7 @@ fn test_issue() {
 
 #[test]
 fn test_jade_emulator() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
@@ -1083,7 +1076,7 @@ fn test_jade_emulator() {
     sw_signer(&cli, "sw");
     let signers = &["sw", "emul"];
     multisig_wallet(&cli, "multi", 2, signers, "slip77-rand");
-    let _ = fund(&server, &cli, "multi", 10_000);
+    let _ = fund(&env, &cli, "multi", 10_000);
     let addr = address(&cli, "multi");
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     send(&cli, "multi", &addr, policy_asset, 1_000, signers);
@@ -1107,7 +1100,7 @@ fn test_jade_emulator() {
 
 #[test]
 fn test_commands() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
@@ -1119,7 +1112,7 @@ fn test_commands() {
     let err = sh_err(&format!("{cli} wallet load --wallet wrong -d wrong"));
     assert!(err.contains("Invalid descriptor: Not a CT Descriptor"));
 
-    let _ = fund(&server, &cli, "custody", 1_000_000);
+    let _ = fund(&env, &cli, "custody", 1_000_000);
 
     let result = sh(&format!("{cli}  wallet balance --wallet custody"));
     let balance_obj = result.get("balance").unwrap();
@@ -1203,7 +1196,7 @@ fn test_commands() {
 
 #[test]
 fn test_multisig() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1217,9 +1210,9 @@ fn test_multisig() {
     let desc = r.get("descriptor").unwrap().as_str().unwrap();
     sh(&format!("{cli} wallet load --wallet multi -d {desc}"));
 
-    let _ = fund(&server, &cli, "multi", 1_000_000);
+    let _ = fund(&env, &cli, "multi", 1_000_000);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     let satoshi = 1000;
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
     let recipient = format!("{node_address}:{satoshi}:{policy_asset}");
@@ -1313,7 +1306,7 @@ fn test_multisig() {
 
 #[test]
 fn test_inconsistent_network() {
-    let (_t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (_t, _tmp, cli, _params, _env, _) = setup_cli(false);
     let cli_addr = cli.split(" -n").next().unwrap();
     let err = sh_err(&format!("{cli_addr} -n testnet wallet list"));
     assert!(err.contains("Inconsistent network"));
@@ -1321,7 +1314,7 @@ fn test_inconsistent_network() {
 
 #[test]
 fn test_schema() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     for a in ServerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
@@ -1373,11 +1366,11 @@ fn test_schema() {
 )]
 #[test]
 fn test_registry_publish() {
-    let (t, _tmp, cli, _params, server, _registry) = setup_cli(true);
+    let (t, _tmp, cli, _params, env, _registry) = setup_cli(true);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
@@ -1400,7 +1393,7 @@ fn test_registry_publish() {
         "{cli} wallet broadcast --wallet w1 --pset {pset_signed}"
     ));
 
-    server.elementsd_generate(2);
+    env.elementsd_generate(2);
     wait_ms(6_000); // otherwise registry may find the issuance tx unconfirmed, wait_tx is not enough
 
     sh(&format!("{cli} server scan"));
@@ -1431,7 +1424,7 @@ fn test_registry_publish() {
 
 #[test]
 fn test_elip151() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1491,7 +1484,7 @@ fn test_elip151() {
 
 #[test]
 fn test_3of5() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1502,7 +1495,7 @@ fn test_3of5() {
     let signers = &["s1", "s2", "s3", "s4", "s5"];
     multisig_wallet(&cli, "multi", 3, signers, "elip151");
 
-    let _ = fund(&server, &cli, "multi", 1_000_000);
+    let _ = fund(&env, &cli, "multi", 1_000_000);
 
     let r = sh(&format!(
         "{cli} wallet issue --wallet multi --satoshi-asset 1000 --satoshi-token 1"
@@ -1527,7 +1520,7 @@ fn test_3of5() {
 
 #[test]
 fn test_start_errors() {
-    let (t, _tmp, cli, params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, params, _env, _) = setup_cli(false);
 
     let err = sh_err(&format!("{cli} server start {params}"));
     assert!(err.contains("It is probably already running."));
@@ -1538,15 +1531,15 @@ fn test_start_errors() {
 
 #[test]
 fn test_send_all() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
     let signers = &["sw"];
 
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
-    let node_address = server.elementsd_getnewaddress();
+    let node_address = env.elementsd_getnewaddress();
     let r = sh(&format!(
         "{cli} wallet drain -w w1 --address {node_address}"
     ));
@@ -1560,15 +1553,15 @@ fn test_send_all() {
 
 #[test]
 fn test_ct_discount() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
     let signers = &["sw"];
 
-    let _ = fund(&server, &cli, "w1", 1_000_000);
+    let _ = fund(&env, &cli, "w1", 1_000_000);
 
-    let address = server.elementsd_getnewaddress();
+    let address = env.elementsd_getnewaddress();
     let sats = 1_000;
     let recipient = format!(" --recipient {address}:{sats}");
 
@@ -1587,7 +1580,7 @@ fn test_ct_discount() {
 
 #[test]
 fn test_amp2() {
-    let (t, _tmp, cli, _params, _server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, _env, _) = setup_cli(false);
 
     sw_signer(&cli, "sw");
     let err = sh_err(&format!("{cli} amp2 descriptor -s sw"));
@@ -1607,11 +1600,11 @@ fn test_amp2() {
 
 #[test]
 fn test_utxos() {
-    let (t, _tmp, cli, _params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, _params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
-    let (txid, addr) = fund(&server, &cli, "w1", 1_000_000);
+    let (txid, addr) = fund(&env, &cli, "w1", 1_000_000);
 
     let r = sh(&format!("{cli} wallet utxos --wallet w1"));
     assert_eq!(get_len(&r, "utxos"), 1);
@@ -1633,11 +1626,11 @@ fn test_utxos() {
 
 #[test]
 fn test_esplora_backend() {
-    let (t, _tmp, cli, params, server, _) = setup_cli(false);
+    let (t, _tmp, cli, params, env, _) = setup_cli(false);
 
     sw_signer(&cli, "s");
     singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
-    let _ = fund(&server, &cli, "w", 1_000_000);
+    let _ = fund(&env, &cli, "w", 1_000_000);
 
     assert_eq!(txs(&cli, "w").len(), 1);
 
@@ -1655,9 +1648,9 @@ fn test_esplora_backend() {
         let s = "--server-url";
         let idx = params.find(s).unwrap();
         let esplora_params = format!(
-            "{} http://{} --server-type esplora",
+            "{} {} --server-type esplora",
             &params[..idx + s.len()],
-            server.electrs.esplora_url.as_ref().unwrap()
+            env.esplora_url()
         );
 
         std::thread::spawn(move || {
@@ -1667,7 +1660,7 @@ fn test_esplora_backend() {
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
     assert_eq!(txs(&cli, "w").len(), 1);
-    let _ = fund(&server, &cli, "w", 1_000_000);
+    let _ = fund(&env, &cli, "w", 1_000_000);
     assert_eq!(txs(&cli, "w").len(), 2);
 
     sh(&format!("{cli} server stop"));
@@ -1700,7 +1693,7 @@ fn test_waterfalls() {
 
     sw_signer(&cli, "s");
     singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
-    let _ = fund_(&env, &cli, "w", 1_000_000);
+    let _ = fund(&env, &cli, "w", 1_000_000);
 
     assert_eq!(txs(&cli, "w").len(), 1);
 

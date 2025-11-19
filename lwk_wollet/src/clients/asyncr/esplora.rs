@@ -1068,10 +1068,11 @@ mod tests {
     #[ignore = "Should be integration test, but it is testing private function"]
     #[tokio::test]
     async fn esplora_wasm_local() {
-        let server = lwk_test_util::setup_with_esplora();
+        let env = lwk_test_util::TestEnvBuilder::from_env()
+            .with_esplora()
+            .build();
 
-        let esplora_url = format!("http://{}", server.electrs.esplora_url.as_ref().unwrap());
-        test_esplora_url(&esplora_url).await;
+        test_esplora_url(&env.esplora_url()).await;
     }
 
     #[tokio::test]

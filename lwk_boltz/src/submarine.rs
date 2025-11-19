@@ -348,7 +348,7 @@ impl PreparePayResponse {
             SwapState::TransactionClaimPending => self.handle_cooperative_claim(update).await,
             SwapState::TransactionConfirmed => Ok(ControlFlow::Continue(update)),
             SwapState::InvoicePending => Ok(ControlFlow::Continue(update)),
-            SwapState::InvoicePaid => self.handle_cooperative_claim(update).await,
+            SwapState::InvoicePaid => Ok(ControlFlow::Continue(update)),
             SwapState::TransactionClaimed => {
                 log::info!("transaction.claimed Boltz claimed funding tx");
                 Ok(ControlFlow::Break(true))

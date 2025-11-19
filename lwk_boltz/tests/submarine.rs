@@ -126,6 +126,47 @@ mod tests {
         .unwrap();
         prepare_pay_response.complete_pay().await.unwrap();
 
+        // complete a payment via advance()
+        let bolt11_invoice = utils::generate_invoice_lnd(500_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let mut prepare_pay_response = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.data.create_swap_response.address,
+            prepare_pay_response
+                .data
+                .create_swap_response
+                .expected_amount,
+        )
+        .await
+        .unwrap();
+        loop {
+            match prepare_pay_response.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Payment completed with result: {}", result);
+                    assert!(result, "Payment should succeed");
+                    break;
+                }
+                Err(e) => {
+                    panic!("Unexpected error: {}", e);
+                }
+            }
+        }
+        // repeatly calling advance on a terminated swap don't timeout
+        for _ in 0..10 {
+            match prepare_pay_response.advance().await {
+                Err(lwk_boltz::Error::NoBoltzUpdate) => { // expected
+                }
+                _ => {
+                    assert!(false);
+                }
+            }
+        }
+
         // Test underpay which triggers a refund to the refund address
         let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
         let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();

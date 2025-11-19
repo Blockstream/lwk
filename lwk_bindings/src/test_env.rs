@@ -6,7 +6,7 @@ use crate::{types::AssetId, Address, Txid};
 /// useful for testing only, wrapper over [`lwk_test_util::TestElectrumServer`]
 #[derive(uniffi::Object)]
 pub struct LwkTestEnv {
-    inner: lwk_test_util::TestElectrumServer,
+    inner: lwk_test_util::TestEnv,
 }
 
 #[uniffi::export]
@@ -15,9 +15,10 @@ impl LwkTestEnv {
     #[allow(clippy::new_without_default)]
     #[uniffi::constructor]
     pub fn new() -> LwkTestEnv {
-        LwkTestEnv {
-            inner: lwk_test_util::setup_with_esplora(),
-        }
+        let inner = lwk_test_util::TestEnvBuilder::from_env()
+            .with_electrum()
+            .build();
+        LwkTestEnv { inner }
     }
 
     /// Generate `blocks` blocks from the node
@@ -49,6 +50,6 @@ impl LwkTestEnv {
 
     /// Get the Electrum URL of the test environment
     pub fn electrum_url(&self) -> String {
-        self.inner.electrs.electrum_url.clone()
+        self.inner.electrum_url()
     }
 }

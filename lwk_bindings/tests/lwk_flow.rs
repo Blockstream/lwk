@@ -9,11 +9,13 @@ fn test_lwk_flow() {
     let network: Network = ElementsNetwork::default_regtest().into();
     let signer = Signer::new(&Mnemonic::new(mnemonic).unwrap(), &network).unwrap();
 
-    let server = lwk_test_util::setup();
+    let env = lwk_test_util::TestEnvBuilder::from_env()
+        .with_electrum()
+        .build();
 
     let singlesig_desc = signer.wpkh_slip77_descriptor().unwrap();
 
-    let electrum_client = ElectrumClient::new(&server.electrs.electrum_url, false, false).unwrap();
+    let electrum_client = ElectrumClient::from_url(&env.electrum_url()).unwrap();
 
     let wollet = Wollet::new(&network, &singlesig_desc, None).unwrap();
     let _latest_address = wollet.address(None); // lastUnused
@@ -21,7 +23,7 @@ fn test_lwk_flow() {
     let expected_address_0 = "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq";
     assert_eq!(expected_address_0, address_0.address().to_string());
 
-    let txid = server.elementsd_sendtoaddress(
+    let txid = env.elementsd_sendtoaddress(
         &elements::Address::from_str(expected_address_0).unwrap(),
         100000000,
         None,
@@ -66,9 +68,9 @@ fn test_lwk_flow() {
         .unwrap();
     println!("BROADCASTED TX!\nTXID: {:?}", txid);
 
-    let asset = server.elementsd_issueasset(10000000);
+    let asset = env.elementsd_issueasset(10000000);
     let txid =
-        server.elementsd_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
+        env.elementsd_sendtoaddress(&expected_address_1.parse().unwrap(), 100000, Some(asset));
     let txid = Txid::from_str(&txid.to_string()).unwrap();
     let _tx = wollet.wait_for_tx(&txid, &electrum_client).unwrap();
 

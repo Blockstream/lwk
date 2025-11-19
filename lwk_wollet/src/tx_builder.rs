@@ -755,6 +755,7 @@ impl TxBuilder {
     /// The returned values are:
     /// * the (blinded) PSET
     /// * a vec of blinding factors (if available) for each output
+    #[allow(clippy::type_complexity)]
     pub fn finish_with_bfs(
         self,
         _wollet: &Wollet,
@@ -1204,6 +1205,7 @@ impl<'a> WolletTxBuilder<'a> {
     }
 
     /// Consume this builder and create a PSET returning also the blinding nonces
+    #[allow(clippy::type_complexity)]
     pub fn finish_with_bfs(
         self,
     ) -> Result<

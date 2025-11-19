@@ -152,6 +152,41 @@ mod tests {
         utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
         invoice.complete_pay().await.unwrap();
 
+        // complete a pay using advance
+        let claim_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let claim_address = elements::Address::from_str(&claim_address).unwrap();
+        let mut invoice = session
+            .invoice(100000, None, &claim_address, None)
+            .await
+            .unwrap();
+        log::info!("Invoice: {}", invoice.bolt11_invoice());
+        utils::start_pay_invoice_lnd(invoice.bolt11_invoice().to_string());
+        loop {
+            match invoice.advance().await {
+                Ok(std::ops::ControlFlow::Continue(_)) => {}
+                Ok(std::ops::ControlFlow::Break(result)) => {
+                    log::info!("Payment completed with result: {}", result);
+                    assert!(result, "Payment should succeed");
+                    break;
+                }
+                Err(e) => {
+                    panic!("Unexpected error: {}", e);
+                }
+            }
+        }
+        // repeatly calling advance on a terminated swap don't timeout
+        for _ in 0..10 {
+            match invoice.advance().await {
+                Err(lwk_boltz::Error::NoBoltzUpdate) => { // expected
+                }
+                _ => {
+                    assert!(false);
+                }
+            }
+        }
+
         // test polling
         let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
             .polling(true)

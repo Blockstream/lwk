@@ -220,7 +220,7 @@ pub struct TestEnv {
 impl TestEnv {
     pub fn electrum_url(&self) -> String {
         let url = &self.electrsd.as_ref().unwrap().electrum_url;
-        format!("tcp://{}", url)
+        format!("tcp://{url}")
     }
 
     pub fn esplora_url(&self) -> String {
@@ -231,7 +231,7 @@ impl TestEnv {
             .esplora_url
             .as_ref()
             .unwrap();
-        format!("http://{}", url)
+        format!("http://{url}")
     }
 
     pub fn waterfalls_url(&self) -> String {

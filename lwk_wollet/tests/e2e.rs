@@ -8,6 +8,7 @@ use electrum_client::ScriptStatus;
 use elements::bitcoin::{bip32::DerivationPath, XKeyIdentifier};
 use elements::encode::{deserialize, serialize};
 use elements::hex::{FromHex, ToHex};
+use elements::secp256k1_zkp::{Generator, PedersenCommitment};
 use elements::{OutPoint, Transaction};
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 use lwk_common::Signer;
@@ -3596,6 +3597,50 @@ fn test_blinding_nonces() {
     let fake_blinding_nonces = vec![String::new(); blinding_nonces.len()];
     let res = crate::amp0::Amp0Pset::new(pset, fake_blinding_nonces);
     assert!(res.is_err());
+}
+
+#[test]
+fn test_blinding_factors() {
+    // Construct a transaction and obtain the blinding factors
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    w.fund_btc(&env);
+
+    let node_addr = env.elementsd_getnewaddress();
+    let (pset, bfs) = w
+        .tx_builder()
+        .add_recipient(&node_addr, 1000, lbtc)
+        .unwrap()
+        .finish_with_bfs()
+        .unwrap();
+
+    // 2 blinded outputs, 1 (fee) unblinded output
+    assert_eq!(pset.outputs().len(), bfs.len());
+    assert_eq!(bfs.len(), 3);
+    for (idx, o) in pset.outputs().into_iter().enumerate() {
+        if o.is_fully_blinded() {
+            let (abf, vbf) = bfs[idx].unwrap();
+            let asset_comm = Generator::new_blinded(
+                &EC,
+                o.asset.unwrap().into_inner().to_byte_array().into(),
+                abf.into_inner(),
+            );
+            let value_comm =
+                PedersenCommitment::new(&EC, o.amount.unwrap(), vbf.into_inner(), asset_comm);
+            assert_eq!(asset_comm, o.asset_comm.unwrap());
+            assert_eq!(value_comm, o.amount_comm.unwrap());
+        } else {
+            assert_eq!(idx, bfs.len() - 1);
+            assert!(bfs[idx].is_none());
+        }
+    }
 }
 
 #[tokio::test]

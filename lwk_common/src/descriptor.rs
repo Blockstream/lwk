@@ -25,9 +25,7 @@ pub fn singlesig_desc<S: Signer + ?Sized>(
     let fingerprint = signer.fingerprint().map_err(|e| format!("{e:?}"))?;
 
     let xpub = signer
-        .derive_xpub(
-            &DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{e:?}"))?,
-        )
+        .derive_xpub(&DerivationPath::from_str(&format!("m/{path}")).map_err(|e| format!("{e:?}"))?)
         .map_err(|e| format!("{e:?}"))?;
 
     let blinding_key = match blinding_variant {

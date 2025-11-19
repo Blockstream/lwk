@@ -192,7 +192,7 @@ mod tests {
     fn test_address_display() {
         let addr = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";
         let address = Address::parse(addr, Network::Liquid).unwrap();
-        assert_eq!(format!("{}", address), addr);
+        assert_eq!(format!("{address}"), addr);
     }
 
     #[test]

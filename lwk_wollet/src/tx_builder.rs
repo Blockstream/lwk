@@ -746,6 +746,28 @@ impl TxBuilder {
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 
+    /// Finish building the transaction returning the output blinding factors
+    ///
+    /// While for wallet output the blinding factors are recoverable from the
+    /// rangeproofs, for non-wallet outputs in general they cannot be recovered.
+    /// This allows to get blinding factors for storage.
+    ///
+    /// The returned values are:
+    /// * the (blinded) PSET
+    /// * a vec of blinding factors (if available) for each output
+    pub fn finish_with_bfs(
+        self,
+        _wollet: &Wollet,
+    ) -> Result<
+        (
+            PartiallySignedTransaction,
+            Vec<Option<(AssetBlindingFactor, ValueBlindingFactor)>>,
+        ),
+        Error,
+    > {
+        todo!()
+    }
+
     /// Finish building the transaction
     pub fn finish(self, wollet: &Wollet) -> Result<PartiallySignedTransaction, Error> {
         let (pset, _blinding_nonces) = self.finish_inner(wollet, false)?;

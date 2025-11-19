@@ -18,6 +18,7 @@ impl LwkTestEnv {
         let inner = lwk_test_util::TestEnvBuilder::from_env()
             .with_electrum()
             .with_esplora()
+            .with_waterfalls()
             .build();
         LwkTestEnv { inner }
     }
@@ -57,5 +58,10 @@ impl LwkTestEnv {
     /// Get the Esplora URL of the test environment
     pub fn esplora_url(&self) -> String {
         self.inner.esplora_url()
+    }
+
+    /// Get the Waterfalls URL of the test environment
+    pub fn waterfalls_url(&self) -> String {
+        self.inner.waterfalls_url()
     }
 }

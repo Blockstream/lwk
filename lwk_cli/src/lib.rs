@@ -42,7 +42,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
         Err(_) => log::debug!("logging already initialized"),
     }
 
-    log::info!("CLI initialized with args: {:?}", args);
+    log::info!("CLI initialized with args: {args:?}");
 
     // TODO: improve network types conversion or comparison
     let (network, default_port) = match args.network {
@@ -60,7 +60,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
     if args.command.requires_server_running() {
         let version = client
             .version()
-            .with_context(|| format!("Is the server at {:?} running?", addr))?;
+            .with_context(|| format!("Is the server at {addr:?} running?"))?;
         let server_network = version.network;
 
         if server_network != network {
@@ -121,7 +121,7 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
 
                     // get the app version
                     let version = client.version()?.version;
-                    log::info!("App running version {}", version);
+                    log::info!("App running version {version}");
 
                     loop {
                         match rx.recv_timeout(Duration::from_millis(100)) {

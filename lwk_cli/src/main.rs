@@ -17,6 +17,6 @@ fn main() -> anyhow::Result<()> {
             }
         }
     };
-    println!("{:#}", value);
+    println!("{value:#}");
     Ok(())
 }

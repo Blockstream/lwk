@@ -718,7 +718,7 @@ fn test_liquidex() {
     let pset = get_str(&result, "pset");
 
     let result = sh(&format!("{cli} wallet pset-details --wallet w1 -p {pset}"));
-    println!("result w1: {:?}", result); // TODO: check
+    println!("result w1: {result:?}"); // TODO: check
 
     //let result = sh(&format!("{cli} wallet pset-details --wallet w2 -p {pset}"));
     //println!("result w2: {:?}", result);
@@ -1055,7 +1055,7 @@ fn test_jade_emulator() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let jade_addr = format!("127.0.0.1:{}", port);
+    let jade_addr = format!("127.0.0.1:{port}");
 
     let result = sh(&format!("{cli} signer jade-id --emulator {jade_addr}"));
     let identifier = result.get("identifier").unwrap().as_str().unwrap();
@@ -1320,40 +1320,40 @@ fn test_schema() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
         let result = sh(&format!("{cli} schema request server {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
 
         let result = sh(&format!("{cli} schema response server {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
     }
 
     for a in WalletSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
         let result = sh(&format!("{cli} schema request wallet {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
 
         let result = sh(&format!("{cli} schema response wallet {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
     }
 
     for a in SignerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
         let result = sh(&format!("{cli} schema request signer {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
 
         let result = sh(&format!("{cli} schema response signer {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
     }
 
     for a in AssetSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
         let cmd = a.map(|e| e.get_name().to_string()).unwrap();
         let result = sh(&format!("{cli} schema request asset {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
 
         let result = sh(&format!("{cli} schema response asset {cmd}"));
-        assert!(result.get("$schema").is_some(), "failed for {}", cmd);
+        assert!(result.get("$schema").is_some(), "failed for {cmd}");
     }
 
     sh(&format!("{cli} server stop"));
@@ -1442,7 +1442,7 @@ fn test_elip151() {
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
     let port = container.get_host_port_ipv4(EMULATOR_PORT);
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("127.0.0.1:{port}");
     let r = sh(&format!("{cli} signer jade-id --emulator {addr}"));
     let id = r.get("identifier").unwrap().as_str().unwrap();
     assert_eq!(id, "e3ebcc79ebfedb4f2ae34406827dc1c5cb48e11f");

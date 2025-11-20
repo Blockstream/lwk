@@ -89,7 +89,7 @@ fn update_pinserver() {
     let pub_key: Vec<u8> = pin_server.pub_key().to_bytes();
     let container = docker.run(pin_server);
     let port = container.get_host_port_ipv4(PIN_SERVER_PORT);
-    let url_a = format!("http://127.0.0.1:{}", port);
+    let url_a = format!("http://127.0.0.1:{port}");
 
     let params = UpdatePinserverParams {
         reset_details: false,
@@ -232,7 +232,7 @@ fn jade_max_multisigs() {
 
     fn _params(jade_signer: &MultisigSigner, index: u32) -> RegisterMultisigParams {
         let s = (0..32)
-            .map(|_| format!("{:02}", index))
+            .map(|_| format!("{index:02}"))
             .collect::<Vec<_>>()
             .join("");
         RegisterMultisigParams {
@@ -269,7 +269,7 @@ fn jade_max_multisigs() {
         .jade
         .register_multisig(_params(&jade_signer, 16))
         .unwrap_err();
-    assert!(format!("{:?}", err).contains("Already have maximum number of multisig wallets"));
+    assert!(format!("{err:?}").contains("Already have maximum number of multisig wallets"));
 }
 
 #[test]
@@ -417,7 +417,7 @@ async fn async_ping() {
 
     let container = docker.run(lwk_containers::JadeEmulator);
     let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
-    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
         .await
         .unwrap();
     let network = lwk_common::Network::LocaltestLiquid;
@@ -437,7 +437,7 @@ async fn async_sign() {
 
     let container = docker.run(lwk_containers::JadeEmulator);
     let port = container.get_host_port_ipv4(lwk_containers::EMULATOR_PORT);
-    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port))
+    let stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
         .await
         .unwrap();
     let network = lwk_common::Network::LocaltestLiquid;

@@ -83,7 +83,7 @@ impl UnvalidatedLiquidexProposal {
 
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 
@@ -118,7 +118,7 @@ impl ValidatedLiquidexProposal {
 
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 #[cfg(all(test, target_arch = "wasm32"))]

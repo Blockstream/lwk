@@ -44,7 +44,7 @@ impl Pset {
     /// The string can be used to re-create the Pset via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Extract the Transaction from a Pset by filling in

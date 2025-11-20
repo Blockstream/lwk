@@ -46,7 +46,7 @@ impl WolletDescriptor {
     /// This representation can be used to recreate the descriptor via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Create a new multisig descriptor, where each participant is a keyorigin_xpub and it requires at least threshold signatures to spend.

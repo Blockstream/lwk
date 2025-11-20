@@ -73,7 +73,7 @@ impl Transaction {
     /// Return the hex representation of the transaction. More precisely, they are the consensus encoded bytes of the transaction converted in hex.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 
@@ -116,7 +116,7 @@ impl Txid {
     /// This representation can be used to recreate the transaction identifier via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 

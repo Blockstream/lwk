@@ -87,7 +87,7 @@ impl Address {
     /// This representation can be used to recreate the address via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Returns a string encoding an image in a uri

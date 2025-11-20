@@ -56,7 +56,7 @@ impl Contract {
     // TODO: implement the viceversa Contract::from_str
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Return the domain of the issuer of the contract.

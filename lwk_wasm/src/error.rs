@@ -71,7 +71,7 @@ impl From<Error> for JsValue {
         if let Error::JsVal(e) = val {
             e
         } else {
-            format!("{}", val).into()
+            format!("{val}").into()
         }
     }
 }

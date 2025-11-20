@@ -51,7 +51,7 @@ impl Mnemonic {
     /// Note this is secret information, do not log it.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Creates a Mnemonic from entropy, at least 16 bytes are needed.

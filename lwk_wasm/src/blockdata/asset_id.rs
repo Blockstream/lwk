@@ -102,7 +102,7 @@ impl AssetId {
     /// This representation can be used to recreate the asset identifier via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 
@@ -118,7 +118,7 @@ impl AssetIds {
     /// Return the string representation of this list of asset identifiers.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     // TODO: implement entries()

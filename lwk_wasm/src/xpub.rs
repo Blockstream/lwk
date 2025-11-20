@@ -35,7 +35,7 @@ impl Xpub {
     /// This representation can be used to recreate the Xpub via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Return the identifier of the Xpub.

@@ -61,7 +61,7 @@ impl Script {
     /// This representation can be used to recreate the script via `new()`
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 

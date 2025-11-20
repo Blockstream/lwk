@@ -112,7 +112,7 @@ impl Network {
     /// Return a string representation of the network, like "liquid", "liquid-testnet" or "liquid-regtest"
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 
     /// Return the policy asset for this network

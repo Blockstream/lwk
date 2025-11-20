@@ -30,7 +30,7 @@ impl Amp2Descriptor {
     /// Return the string representation of the descriptor.
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 

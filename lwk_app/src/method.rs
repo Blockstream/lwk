@@ -300,7 +300,7 @@ impl std::fmt::Display for Method {
             Method::Amp2Register => "amp2_register",
             Method::Amp2Cosign => "amp2_cosign",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

@@ -311,7 +311,7 @@ impl Signers {
         timeout: Option<Duration>,
     ) -> Result<&AnySigner, Error> {
         let app_signer = self.get(name)?;
-        log::debug!("get_available({}) return {:?}", name, app_signer);
+        log::debug!("get_available({name}) return {app_signer:?}");
         let jade = match &app_signer.inner {
             #[cfg(not(feature = "serial"))]
             AppSignerInner::JadeId(_, _) => {
@@ -548,7 +548,7 @@ impl State {
                 .create_new(!path.exists())
                 .append(true)
                 .open(path)?;
-            writeln!(file, "{}", data)?;
+            writeln!(file, "{data}")?;
             file.sync_all()?;
         }
         Ok(())
@@ -565,7 +565,7 @@ impl State {
         let mut file = File::create(&temp)?;
         for req in self.as_requests()? {
             let data = serde_json::to_string(&req)?;
-            writeln!(file, "{}", data)?;
+            writeln!(file, "{data}")?;
         }
         std::fs::rename(temp, path)?;
         file.sync_all()?;

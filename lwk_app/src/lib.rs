@@ -79,7 +79,7 @@ pub struct App {
 
 impl App {
     pub fn new(config: Config) -> Result<App, Error> {
-        log::info!("Creating new app with config: {:?}", config);
+        log::info!("Creating new app with config: {config:?}");
 
         Ok(App {
             rpc: None,
@@ -713,7 +713,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
 
             let derived_mnemonic = sw_signer
                 .derive_bip85_mnemonic(r.index, r.word_count)
-                .map_err(|e| Error::Generic(format!("BIP85 derivation failed: {}", e)))?;
+                .map_err(|e| Error::Generic(format!("BIP85 derivation failed: {e}")))?;
 
             Response::result(
                 request.id,
@@ -1188,7 +1188,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 let s = state.lock()?;
                 (s.config.jade_network(), Some(s.config.timeout))
             };
-            log::debug!("jade network: {}", network);
+            log::debug!("jade network: {network}");
 
             let jade = match r.emulator {
                 Some(emulator) => Jade::from_socket(emulator, network)?,

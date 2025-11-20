@@ -36,7 +36,7 @@ fn test_lwk_flow() {
     assert_eq!(expected_address_1, address_1.address().to_string());
 
     let balance = wollet.balance();
-    println!("{:?}", balance);
+    println!("{balance:?}");
     let txs = wollet.transactions().unwrap();
     for tx in txs {
         for output in tx.outputs() {
@@ -48,7 +48,7 @@ fn test_lwk_flow() {
                 Some(out) => out.unblinded().value(),
                 None => 0,
             };
-            println!("script_pubkey: {:?}, value: {}", script_pubkey, value)
+            println!("script_pubkey: {script_pubkey:?}, value: {value}")
         }
     }
 
@@ -66,7 +66,7 @@ fn test_lwk_flow() {
     let txid = electrum_client
         .broadcast(&finalized_pset.extract_tx().unwrap())
         .unwrap();
-    println!("BROADCASTED TX!\nTXID: {:?}", txid);
+    println!("BROADCASTED TX!\nTXID: {txid:?}");
 
     let asset = env.elementsd_issueasset(10000000);
     let txid =
@@ -86,5 +86,5 @@ fn test_lwk_flow() {
     let txid = electrum_client
         .broadcast(&finalized_pset.extract_tx().unwrap())
         .unwrap();
-    println!("BROADCASTED TX!\nTXID: {:?}", txid);
+    println!("BROADCASTED TX!\nTXID: {txid:?}");
 }

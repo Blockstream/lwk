@@ -4,8 +4,9 @@ use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
     issuance::ContractHash,
     pset::{raw::ProprietaryKey, Output, PartiallySignedTransaction, PsbtSighashType},
-    secp256k1_zkp::{self, ZERO_TWEAK},
-    Address, AssetId, BlindAssetProofs, EcdsaSighashType, OutPoint, Script, Transaction,
+    secp256k1_zkp::{self, RangeProof, SurjectionProof, ZERO_TWEAK},
+    Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
+    Transaction,
 };
 use rand::thread_rng;
 
@@ -57,7 +58,7 @@ fn add_external_input(
     inp_txout_sec: &mut HashMap<usize, elements::TxOutSecrets>,
     inp_weight: &mut usize,
     utxo: &ExternalUtxo,
-) {
+) -> Result<(), Error> {
     let mut input = elements::pset::Input::from_prevout(utxo.outpoint);
     let mut txout = utxo.txout.clone();
     // This field is used by stateless blinders or signers to
@@ -67,7 +68,7 @@ fn add_external_input(
     // Note that we explicitly remove the txout rangeproof to avoid
     // relying on its presence.
     input.in_utxo_rangeproof = txout.witness.rangeproof.take();
-    input.witness_utxo = Some(txout);
+    input.witness_utxo = Some(txout.clone());
     if let Some(tx) = &utxo.tx {
         // For pre-segwit add non_witness_utxo
         let mut tx = tx.clone();
@@ -83,10 +84,33 @@ fn add_external_input(
         input.non_witness_utxo = Some(tx);
     }
 
+    input.asset = Some(utxo.unblinded.asset);
+    input.amount = Some(utxo.unblinded.value);
+    if let (Some(value_comm), Some(asset_gen)) =
+        (txout.value.commitment(), txout.asset.commitment())
+    {
+        let mut rng = rand::thread_rng();
+        input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
+            &mut rng,
+            &EC,
+            utxo.unblinded.asset,
+            utxo.unblinded.asset_bf,
+        )?));
+        input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
+            &mut rng,
+            &EC,
+            utxo.unblinded.value,
+            value_comm,
+            asset_gen,
+            utxo.unblinded.value_bf,
+        )?));
+    }
+
     pset.add_input(input);
     let idx = pset.inputs().len() - 1;
     inp_txout_sec.insert(idx, utxo.unblinded);
     *inp_weight += utxo.max_weight_to_satisfy;
+    Ok(())
 }
 
 /// A transaction builder
@@ -823,7 +847,7 @@ impl TxBuilder {
                 if utxo.unblinded.asset != asset {
                     continue;
                 }
-                add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
+                add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
                 satoshi_in += utxo.unblinded.value;
             }
 
@@ -881,7 +905,7 @@ impl TxBuilder {
             if utxo.unblinded.asset != policy_asset {
                 continue;
             }
-            add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo);
+            add_external_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, utxo)?;
             satoshi_in += utxo.unblinded.value;
         }
 

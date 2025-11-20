@@ -3,6 +3,7 @@ use std::{str::FromStr, time::Duration};
 use wasm_bindgen::prelude::*;
 
 use crate::{Error, Network};
+use lwk_wollet::elements;
 
 /// Wrapper over [`lwk_boltz::BoltzSessionBuilder`]
 #[wasm_bindgen]
@@ -160,6 +161,7 @@ impl From<PreparePayResponse> for lwk_boltz::PreparePayResponse {
     }
 }
 
+#[wasm_bindgen]
 impl PreparePayResponse {
     /// Serialize the response to JSON string for JS interop
     pub fn serialize(&self) -> Result<String, Error> {
@@ -169,6 +171,34 @@ impl PreparePayResponse {
     }
 }
 
+/// Wrapper over [`lwk_boltz::InvoiceResponse`]
+#[wasm_bindgen]
+pub struct InvoiceResponse {
+    inner: lwk_boltz::InvoiceResponse,
+}
+
+impl From<lwk_boltz::InvoiceResponse> for InvoiceResponse {
+    fn from(inner: lwk_boltz::InvoiceResponse) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<InvoiceResponse> for lwk_boltz::InvoiceResponse {
+    fn from(wrapper: InvoiceResponse) -> Self {
+        wrapper.inner
+    }
+}
+
+impl InvoiceResponse {
+    /// Serialize the response to JSON string for JS interop
+    pub fn serialize(&self) -> Result<String, Error> {
+        self.inner
+            .serialize()
+            .map_err(|e| Error::Generic(e.to_string()))
+    }
+}
+
+#[wasm_bindgen]
 impl BoltzSession {
     /// Get the rescue file
     pub fn rescue_file(&self) -> Result<String, Error> {
@@ -182,7 +212,7 @@ impl BoltzSession {
         invoice: &str,
         refund_address: &str,
     ) -> Result<PreparePayResponse, Error> {
-        let refund_address = lwk_wollet::elements::Address::from_str(refund_address)
+        let refund_address = elements::Address::from_str(refund_address)
             .map_err(|e| Error::Generic(e.to_string()))?;
         let lightning_payment = lwk_boltz::LightningPayment::Bolt11(Box::new(
             lwk_boltz::Bolt11Invoice::from_str(invoice)
@@ -191,6 +221,23 @@ impl BoltzSession {
         let r = self
             .inner
             .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        Ok(r.into())
+    }
+
+    /// Create a lightning invoice for receiving payment
+    pub async fn invoice(
+        &self,
+        amount: u64,
+        description: Option<String>,
+        claim_address: &str,
+    ) -> Result<InvoiceResponse, Error> {
+        let claim_address = elements::Address::from_str(claim_address)
+            .map_err(|e| Error::Generic(e.to_string()))?;
+        let r = self
+            .inner
+            .invoice(amount, description, &claim_address, None)
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         Ok(r.into())

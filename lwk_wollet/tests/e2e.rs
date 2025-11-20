@@ -2870,9 +2870,7 @@ fn test_sh_multi() {
     let signer2 = generate_signer();
     let xpub1 = signer1.xpub();
     let xpub2 = signer2.xpub();
-    let desc = format!(
-        "ct(slip77({slip77_key}),elsh(multi(1,{xpub1}/*,{xpub2}/*)))"
-    );
+    let desc = format!("ct(slip77({slip77_key}),elsh(multi(1,{xpub1}/*,{xpub2}/*)))");
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);

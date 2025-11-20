@@ -1192,9 +1192,7 @@ mod tests {
         let master_blinding_key =
             "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let checksum = "qw2qy2ml";
-        let desc_str = format!(
-            "ct(slip77({master_blinding_key}),elwpkh({xpub}))#{checksum}"
-        );
+        let desc_str = format!("ct(slip77({master_blinding_key}),elwpkh({xpub}))#{checksum}");
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let addr = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         let expected_addr = "el1qqthj9zn320epzlcgd07kktp5ae2xgx82fkm42qqxaqg80l0fszueszj4mdsceqqfpv24x0cmkvd8awux8agrc32m9nj9sp0hk";

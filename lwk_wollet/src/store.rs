@@ -186,9 +186,7 @@ mod tests {
         let master_blinding_key =
             "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let checksum = "8w7cjcha";
-        let desc_str = format!(
-            "ct(slip77({master_blinding_key}),elwpkh({xpub}/*))#{checksum}"
-        );
+        let desc_str = format!("ct(slip77({master_blinding_key}),elwpkh({xpub}/*))#{checksum}");
         let desc = ConfidentialDescriptor::<_>::from_str(&desc_str).unwrap();
         let desc: WolletDescriptor = desc.try_into().unwrap();
         let addr1 = desc.address(0, &AddressParams::LIQUID_TESTNET).unwrap();

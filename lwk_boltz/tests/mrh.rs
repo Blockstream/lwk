@@ -70,9 +70,7 @@ mod tests {
         );
 
         let (mrh_address, mrh_amount) = mrh_result.unwrap();
-        log::info!(
-            "Found MRH - Address: {mrh_address}, Amount: {mrh_amount}"
-        );
+        log::info!("Found MRH - Address: {mrh_address}, Amount: {mrh_amount}");
 
         // Verify the MRH amount is less than the invoice amount (due to fees)
         assert!(

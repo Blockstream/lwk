@@ -183,7 +183,7 @@ pub fn start_block_mining() -> JoinHandle<()> {
         loop {
             interval.tick().await;
             if let Err(e) = mine_blocks(1).await {
-                log::error!("Failed to mine block: {:?}", e);
+                log::error!("Failed to mine block: {e:?}");
             } else {
                 log::info!("Mined a block");
             }

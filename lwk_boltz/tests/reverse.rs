@@ -46,7 +46,7 @@ mod tests {
         .await
         .unwrap();
         let mainnet_addr = elements::Address::from_str("lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww").unwrap();
-        log::info!("creating invoice for mainnet address: {}", mainnet_addr);
+        log::info!("creating invoice for mainnet address: {mainnet_addr}");
 
         for _ in 0..10 {
             let invoice_response = session
@@ -64,7 +64,7 @@ mod tests {
                     // it happens sometimes that the invoice is not created with:
                     // [2025-10-02T11:03:52Z WARN  boltz_client::swaps::status_stream] Failed to broadcast update: channel closed
                     // in this case we retry, testing the capability of the session to retry
-                    log::error!("Error creating invoice: {:?}", e);
+                    log::error!("Error creating invoice: {e:?}");
                 }
             }
         }
@@ -83,7 +83,7 @@ mod tests {
         let desc = signer.wpkh_slip77_descriptor().unwrap();
         let desc: lwk_wollet::WolletDescriptor = desc.parse().unwrap();
         let claim_address = desc.address(2, network.address_params()).unwrap();
-        log::info!("Claim Address: {}", claim_address);
+        log::info!("Claim Address: {claim_address}");
         let client = ElectrumClient::new(
             "elements-mainnet.blockstream.info:50002",
             true,
@@ -103,7 +103,7 @@ mod tests {
         log::info!("Invoice Response: {}", response.bolt11_invoice());
         log::info!("Waiting for invoice to be paid");
         let result = response.complete_pay().await;
-        log::info!("Complete Pay Result: {:?}", result);
+        log::info!("Complete Pay Result: {result:?}");
     }
 
     #[tokio::test]
@@ -167,12 +167,12 @@ mod tests {
             match invoice.advance().await {
                 Ok(std::ops::ControlFlow::Continue(_)) => {}
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Payment completed with result: {}", result);
+                    log::info!("Payment completed with result: {result}");
                     assert!(result, "Payment should succeed");
                     break;
                 }
                 Err(e) => {
-                    panic!("Unexpected error: {}", e);
+                    panic!("Unexpected error: {e}");
                 }
             }
         }
@@ -213,7 +213,7 @@ mod tests {
                     log::info!("Polling: Received update. status:{}", update.status);
                 }
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Polling: Payment completed with result: {}", result);
+                    log::info!("Polling: Payment completed with result: {result}");
                     assert!(result, "Payment should succeed");
                     break;
                 }
@@ -222,7 +222,7 @@ mod tests {
                     sleep(Duration::from_secs(1)).await;
                 }
                 Err(e) => {
-                    panic!("Polling: Unexpected error: {}", e);
+                    panic!("Polling: Unexpected error: {e}");
                 }
             }
         }

@@ -536,12 +536,12 @@ mod tests {
             match response.advance().await {
                 Ok(std::ops::ControlFlow::Continue(_)) => {}
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Payment completed with result: {}", result);
+                    log::info!("Payment completed with result: {result}");
                     assert!(result, "Payment should succeed");
                     break;
                 }
                 Err(e) => {
-                    panic!("Unexpected error: {}", e);
+                    panic!("Unexpected error: {e}");
                 }
             }
         }
@@ -559,7 +559,7 @@ mod tests {
         // Test polling mode
         let session_polling = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
             .polling(true)
-            .bitcoin_electrum_client(&format!("tcp://{}", DEFAULT_REGTEST_NODE)) // it's the same endpoint, just testing the builder setting
+            .bitcoin_electrum_client(&format!("tcp://{DEFAULT_REGTEST_NODE}")) // it's the same endpoint, just testing the builder setting
             .unwrap()
             .build()
             .await
@@ -599,7 +599,7 @@ mod tests {
                     log::info!("Polling: Received update. status:{}", update.status);
                 }
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Polling: Swap completed with result: {}", result);
+                    log::info!("Polling: Swap completed with result: {result}");
                     assert!(result, "Polling swap should succeed");
                     break;
                 }
@@ -608,7 +608,7 @@ mod tests {
                     sleep(Duration::from_secs(1)).await;
                 }
                 Err(e) => {
-                    panic!("Polling: Unexpected error: {}", e);
+                    panic!("Polling: Unexpected error: {e}");
                 }
             }
         }

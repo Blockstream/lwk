@@ -53,7 +53,7 @@ mod tests {
             "MAINNET_REFUND_ADDRESS environment variable must be set for mainnet submarine test",
         );
 
-        log::info!("Preparing payment for invoice: {}", bolt11_invoice);
+        log::info!("Preparing payment for invoice: {bolt11_invoice}");
 
         let refund_address = elements::Address::from_str(&refund_address).unwrap();
         let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
@@ -75,7 +75,7 @@ mod tests {
         // Note: In a real test, you would need to send funds to prepare_pay_response.address
         // with amount prepare_pay_response.amount before calling complete_pay()
         let result = prepare_pay_response.complete_pay().await;
-        log::info!("Complete Pay Result: {:?}", result);
+        log::info!("Complete Pay Result: {result:?}");
     }
 
     #[tokio::test]
@@ -147,12 +147,12 @@ mod tests {
             match prepare_pay_response.advance().await {
                 Ok(std::ops::ControlFlow::Continue(_)) => {}
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Payment completed with result: {}", result);
+                    log::info!("Payment completed with result: {result}");
                     assert!(result, "Payment should succeed");
                     break;
                 }
                 Err(e) => {
-                    panic!("Unexpected error: {}", e);
+                    panic!("Unexpected error: {e}");
                 }
             }
         }
@@ -221,7 +221,7 @@ mod tests {
                     log::info!("Polling: Received update. status:{}", update.status);
                 }
                 Ok(std::ops::ControlFlow::Break(result)) => {
-                    log::info!("Polling: Payment completed with result: {}", result);
+                    log::info!("Polling: Payment completed with result: {result}");
                     assert!(result, "Payment should succeed");
                     break;
                 }
@@ -230,7 +230,7 @@ mod tests {
                     sleep(Duration::from_secs(1)).await;
                 }
                 Err(e) => {
-                    panic!("Polling: Unexpected error: {}", e);
+                    panic!("Polling: Unexpected error: {e}");
                 }
             }
         }

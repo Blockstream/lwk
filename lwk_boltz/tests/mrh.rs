@@ -50,7 +50,7 @@ mod tests {
             )
             .await
             .unwrap();
-        log::info!("claim_address: {}", claim_address);
+        log::info!("claim_address: {claim_address}");
         log::info!("Receiver created invoice: {}", invoice.bolt11_invoice());
         log::info!("Invoice fee: {:?}", invoice.data.fee);
 
@@ -71,9 +71,7 @@ mod tests {
 
         let (mrh_address, mrh_amount) = mrh_result.unwrap();
         log::info!(
-            "Found MRH - Address: {}, Amount: {}",
-            mrh_address,
-            mrh_amount
+            "Found MRH - Address: {mrh_address}, Amount: {mrh_amount}"
         );
 
         // Verify the MRH amount is less than the invoice amount (due to fees)
@@ -117,7 +115,7 @@ mod tests {
             utils::send_to_address(Chain::Liquid(LiquidChain::LiquidRegtest), &address, amount)
                 .await
                 .unwrap();
-            log::info!("Sent {} sats to {} or use uri {}", amount, address, uri);
+            log::info!("Sent {amount} sats to {address} or use uri {uri}");
         }
 
         invoice.complete_pay().await.unwrap();

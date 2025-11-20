@@ -189,11 +189,21 @@ impl From<InvoiceResponse> for lwk_boltz::InvoiceResponse {
     }
 }
 
+#[wasm_bindgen]
 impl InvoiceResponse {
     /// Serialize the response to JSON string for JS interop
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner
             .serialize()
+            .map_err(|e| Error::Generic(e.to_string()))
+    }
+
+    /// Complete the payment by advancing through the swap states until completion or failure
+    /// Consumes self as the inner method does
+    pub async fn complete_pay(self) -> Result<bool, Error> {
+        self.inner
+            .complete_pay()
+            .await
             .map_err(|e| Error::Generic(e.to_string()))
     }
 }

@@ -4,7 +4,7 @@ use elements::{
     confidential::{AssetBlindingFactor, Nonce, Value, ValueBlindingFactor},
     issuance::ContractHash,
     pset::{raw::ProprietaryKey, Output, PartiallySignedTransaction, PsbtSighashType},
-    secp256k1_zkp::{self, ZERO_TWEAK},
+    secp256k1_zkp::{self, SecretKey, ZERO_TWEAK},
     Address, AssetId, BlindAssetProofs, EcdsaSighashType, OutPoint, Script, Transaction,
 };
 use rand::thread_rng;
@@ -385,7 +385,7 @@ impl TxBuilder {
     fn finish_liquidex_make(
         self,
         wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    ) -> Result<(PartiallySignedTransaction, HashMap<usize, SecretKey>), Error> {
         // Create PSET
         let mut pset = PartiallySignedTransaction::new_v2();
         let mut inp_txout_sec = HashMap::new();
@@ -520,15 +520,15 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        // TODO: blinding nonces
-        Ok((pset, vec![]))
+        // TODO: blinders
+        Ok((pset, HashMap::new()))
     }
 
     /// Finish building a transaction that takes LiquiDEX proposals
     fn finish_liquidex_take(
         self,
         wollet: &Wollet,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    ) -> Result<(PartiallySignedTransaction, HashMap<usize, SecretKey>), Error> {
         let [proposal] = self.liquidex_proposals.as_slice() else {
             return Err(Error::LiquidexError(LiquidexError::TakerInvalidParams));
         };
@@ -735,14 +735,32 @@ impl TxBuilder {
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        // TODO: blinding nonces
-        Ok((pset, vec![]))
+        // TODO: blinders
+        Ok((pset, HashMap::new()))
     }
 
     /// Finish building the transaction for AMP0
     #[cfg(feature = "amp0")]
     pub fn finish_for_amp0(self, wollet: &Wollet) -> Result<crate::amp0::Amp0Pset, Error> {
-        let (pset, blinding_nonces) = self.finish_inner(wollet, true)?;
+        let (pset, m) = self.finish_inner(wollet, true)?;
+
+        let mut blinding_nonces = vec![];
+        for idx in 0..pset.n_outputs() {
+            let bn = if let Some(eph_sk) = m.get(&idx) {
+                let blinding_pubkey = pset.outputs()[idx]
+                    .blinding_key
+                    .ok_or_else(|| Error::Generic("Missing blinding key".into()))?;
+                let (_nonce, shared_secret) = elements::confidential::Nonce::with_ephemeral_sk(
+                    &EC,
+                    *eph_sk,
+                    &blinding_pubkey.inner,
+                );
+                shared_secret.display_secret().to_string()
+            } else {
+                "".to_string()
+            };
+            blinding_nonces.push(bn);
+        }
         crate::amp0::Amp0Pset::new(pset, blinding_nonces)
     }
 
@@ -779,7 +797,7 @@ impl TxBuilder {
         self,
         wollet: &Wollet,
         for_amp0: bool,
-    ) -> Result<(PartiallySignedTransaction, Vec<String>), Error> {
+    ) -> Result<(PartiallySignedTransaction, HashMap<usize, SecretKey>), Error> {
         if self.is_liquidex_make {
             return self.finish_liquidex_make(wollet);
         } else if !self.liquidex_proposals.is_empty() {
@@ -1148,32 +1166,14 @@ impl TxBuilder {
                 ty: elements26::CtLocationType::Input,
             } = ct_location
             {
-                m.insert(input_index, eph_sk);
+                m.insert(*input_index, *eph_sk);
             }
-        }
-
-        let mut blinding_nonces = vec![];
-        for idx in 0..pset.n_outputs() {
-            let bn = if let Some(eph_sk) = m.get(&idx) {
-                let blinding_pubkey = pset.outputs()[idx]
-                    .blinding_key
-                    .ok_or_else(|| Error::Generic("Missing blinding key".into()))?;
-                let (_nonce, shared_secret) = elements::confidential::Nonce::with_ephemeral_sk(
-                    &EC,
-                    **eph_sk,
-                    &blinding_pubkey.inner,
-                );
-                shared_secret.display_secret().to_string()
-            } else {
-                "".to_string()
-            };
-            blinding_nonces.push(bn);
         }
 
         // Add details to the pset from our descriptor, like bip32derivation and keyorigin
         wollet.add_details(&mut pset)?;
 
-        Ok((pset, blinding_nonces))
+        Ok((pset, m))
     }
 }
 

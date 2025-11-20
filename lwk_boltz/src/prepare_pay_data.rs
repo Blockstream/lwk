@@ -102,13 +102,13 @@ mod tests {
         let json_data = include_str!("../tests/data/preapre_pay_data_serializable.json");
         let deserialized: PreparePayDataSerializable = serde_json::from_str(json_data)
             .expect("Failed to deserialize PreparePayDataSerializable from JSON");
-        println!("deserialized: {:?}", deserialized);
+        println!("deserialized: {deserialized:?}");
         let mnemonic = Mnemonic::from_str(
             "damp cart merit asset obvious idea chef traffic absent armed road link",
         )
         .unwrap();
         let prepare_pay_data = to_prepare_pay_data(deserialized, &mnemonic).unwrap();
-        println!("prepare_pay_data: {:?}", prepare_pay_data);
+        println!("prepare_pay_data: {prepare_pay_data:?}");
         assert_eq!(
             prepare_pay_data.our_keys.secret_bytes().to_hex(),
             "70f75e954300859f9b32dfea93dfc5667e6cf71d1fad77602d6d6757fd347b01"

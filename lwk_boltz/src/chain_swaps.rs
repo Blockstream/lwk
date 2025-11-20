@@ -300,7 +300,7 @@ impl LockupResponse {
                     })
                     .await?;
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
-                log::info!("Refund transaction broadcasted: {}", txid);
+                log::info!("Refund transaction broadcasted: {txid}");
                 Ok(ControlFlow::Break(true))
             }
             SwapState::SwapExpired => {

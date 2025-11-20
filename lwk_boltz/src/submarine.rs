@@ -51,7 +51,7 @@ impl BoltzSession {
                 return Err(Error::Bolt12Unsupported);
             }
         };
-        let webhook_str = format!("{:?}", webhook);
+        let webhook_str = format!("{webhook:?}");
 
         let (key_index, our_keys) = self.derive_next_keypair()?;
         let refund_public_key = PublicKey {
@@ -228,7 +228,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
 
     // Parse the server public key
     let claim_public_key_bitcoin = BitcoinPublicKey::from_str(&refund_details.server_public_key)
-        .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {}", e)))?;
+        .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {e}")))?;
     let claim_public_key = PublicKey {
         inner: claim_public_key_bitcoin.inner,
         compressed: claim_public_key_bitcoin.compressed,

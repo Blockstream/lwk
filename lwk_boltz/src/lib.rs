@@ -468,7 +468,7 @@ async fn fetch_next_index_to_use(
     client: &BoltzApiClientV2,
 ) -> Result<u32, Error> {
     let xpub = derive_xpub_from_mnemonic(mnemonic, network_kind)?;
-    log::info!("xpub for restore is: {}", xpub);
+    log::info!("xpub for restore is: {xpub}");
 
     let result = client.post_swap_restore(&xpub.to_string()).await?;
     log::info!("swap_restore api returns {} elements", result.len());
@@ -556,7 +556,7 @@ pub async fn next_status(
             tokio::select! {
                 update = rx.recv() => update?,
                 _ = tokio::time::sleep(remaining) => {
-                    log::warn!("Timeout while waiting state for swap id {}", swap_id );
+                    log::warn!("Timeout while waiting state for swap id {swap_id}");
                     return Err(Error::Timeout(swap_id.to_string()));
                 }
             }

@@ -83,7 +83,7 @@ fn chain_from_str(chain: &str) -> Result<Chain, Error> {
     match chain {
         "BTC" => Ok(Chain::Bitcoin(BitcoinChain::BitcoinRegtest)),
         "L-BTC" => Ok(Chain::Liquid(LiquidChain::LiquidRegtest)),
-        s => Err(Error::SwapRestoration(format!("Unknown chain: {}", s))),
+        s => Err(Error::SwapRestoration(format!("Unknown chain: {s}"))),
     }
 }
 

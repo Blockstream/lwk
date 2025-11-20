@@ -62,7 +62,7 @@ impl BoltzSession {
             compressed: true,
             inner: our_keys.public_key(),
         };
-        let webhook_str = format!("{:?}", webhook);
+        let webhook_str = format!("{webhook:?}");
 
         let addrs_sig = sign_address(&claim_address.to_string(), &our_keys)?;
         let create_reverse_req = CreateReverseRequest {
@@ -212,7 +212,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     let refund_public_key_bitcoin = lwk_wollet::bitcoin::PublicKey::from_str(
         &claim_details.server_public_key,
     )
-    .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {}", e)))?;
+    .map_err(|e| Error::SwapRestoration(format!("Failed to parse server public key: {e}")))?;
     let refund_public_key = PublicKey {
         inner: refund_public_key_bitcoin.inner,
         compressed: refund_public_key_bitcoin.compressed,
@@ -233,8 +233,8 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     // Parse the status to SwapState
     let last_state = e.status.parse::<SwapState>().map_err(|err| {
         Error::SwapRestoration(format!(
-            "Failed to parse status '{}' as SwapState: {}",
-            e.status, err
+            "Failed to parse status '{}' as SwapState: {err}",
+            e.status
         ))
     })?;
 

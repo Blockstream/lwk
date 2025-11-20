@@ -57,7 +57,7 @@ impl std::fmt::Display for SwapState {
             SwapState::ServerTransactionMempool => "transaction.server.mempool",
             SwapState::ServerTransactionConfirmed => "transaction.server.confirmed",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -83,7 +83,7 @@ impl std::str::FromStr for SwapState {
             "swap.expired" => Ok(SwapState::SwapExpired),
             "transaction.server.mempool" => Ok(SwapState::ServerTransactionMempool),
             "transaction.server.confirmed" => Ok(SwapState::ServerTransactionConfirmed),
-            _ => Err(format!("Unknown swap status: {}", s)),
+            _ => Err(format!("Unknown swap status: {s}")),
         }
     }
 }
@@ -139,7 +139,7 @@ mod tests {
             // Test Display -> FromStr roundtrip
             let status_str = status.to_string();
             let parsed: SwapState = status_str.parse().unwrap();
-            assert_eq!(status, parsed, "Failed roundtrip for status: {:?}", status);
+            assert_eq!(status, parsed, "Failed roundtrip for status: {status:?}");
         }
     }
 
@@ -151,21 +151,18 @@ mod tests {
             let deserialized: SwapState = serde_json::from_str(&json).unwrap();
             assert_eq!(
                 status, deserialized,
-                "Failed serde roundtrip for status: {:?}",
-                status
+                "Failed serde roundtrip for status: {status:?}"
             );
 
             // Verify the JSON contains the dot-separated format (without quotes for simplicity)
             assert!(
                 !json.contains("InvoiceSet"),
-                "JSON should not contain PascalCase: {}",
-                json
+                "JSON should not contain PascalCase: {json}"
             );
-            let expected = format!("\"{}\"", status);
+            let expected = format!("\"{status}\"");
             assert_eq!(
                 json, expected,
-                "JSON should match Display format: expected {}, got {}",
-                expected, json
+                "JSON should match Display format: expected {expected}, got {json}"
             );
         }
     }

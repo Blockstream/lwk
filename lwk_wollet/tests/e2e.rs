@@ -113,7 +113,7 @@ fn view() {
     let xpub = "tpubD6NzVbkrYhZ4Was8nwnZi7eiWUNJq2LFpPSCMQLioUfUtT1e72GkRbmVeRAZc26j5MRUz2hRLsaVHJfs6L7ppNfLUrm9btQTuaEsLrT7D87";
     let descriptor_blinding_key =
         "1111111111111111111111111111111111111111111111111111111111111111";
-    let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
+    let desc_str = format!("ct({descriptor_blinding_key},elwpkh({xpub}/*))");
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
@@ -122,7 +122,7 @@ fn view() {
 
     let descriptor_blinding_key =
         "slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023)";
-    let desc_str = format!("ct({},elwpkh({}/*))", descriptor_blinding_key, xpub);
+    let desc_str = format!("ct({descriptor_blinding_key},elwpkh({xpub}/*))");
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
@@ -883,7 +883,7 @@ fn jade_single_sig() {
     let xpub = SwSigner::new(mnemonic, false).unwrap().xpub();
 
     let slip77_key = "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
-    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let desc_str = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
 
@@ -1581,7 +1581,7 @@ pub fn new_unsupported_wallet(desc: &str, expected: lwk_wollet::Error) {
     let r: Result<WolletDescriptor, _> = add_checksum(desc).parse();
 
     match r {
-        Ok(_) => panic!("Expected unsupported descriptor\n{}\n{:?}", desc, expected),
+        Ok(_) => panic!("Expected unsupported descriptor\n{desc}\n{expected:?}"),
         Err(err) => assert_eq!(err.to_string(), expected.to_string()),
     }
 }
@@ -1591,7 +1591,7 @@ fn test_prune() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
@@ -2470,7 +2470,7 @@ fn test_update_transaction() {
     let view_key = generate_view_key();
     let signer = generate_signer();
     let xpub = signer.xpub();
-    let desc_str = format!("ct({},elwpkh({}/*))", view_key, xpub);
+    let desc_str = format!("ct({view_key},elwpkh({xpub}/*))");
     let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc_str);
 
@@ -2492,7 +2492,7 @@ fn test_update_transaction() {
     // Apply the transaction to the wallet
     let net = w.wollet.apply_transaction(tx.clone()).unwrap();
     assert_eq!(
-        format!("{:?}", net),
+        format!("{net:?}"),
         "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1026})"
     );
 
@@ -2515,7 +2515,7 @@ fn test_update_transaction() {
 
     // Applying the transaction again does nothing
     let net = w.wollet.apply_transaction(tx.clone()).unwrap();
-    assert_eq!(format!("{:?}", net), "SignedBalance({})");
+    assert_eq!(format!("{net:?}"), "SignedBalance({})");
 
     let txs = w.wollet.transactions().unwrap();
     assert_eq!(txs.len(), 2);
@@ -2541,7 +2541,7 @@ fn test_update_transaction() {
     // Apply the transaction
     let net = w.wollet.apply_transaction(tx.clone()).unwrap();
     assert_eq!(
-        format!("{:?}", net),
+        format!("{net:?}"),
         "SignedBalance({5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225: -1026})"
     );
 
@@ -2730,7 +2730,7 @@ fn test_no_wildcard_with_path_after() {
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
-    let desc = format!("ct(slip77({}),elwpkh({}/0/0))", slip77_key, xpub);
+    let desc = format!("ct(slip77({slip77_key}),elwpkh({xpub}/0/0))");
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
@@ -2763,7 +2763,7 @@ fn test_no_wildcard_with_path_after() {
     assert_eq!(wallet.address(), wallet.address());
 
     // Address match the first from the descriptor with wildcard
-    let desc = format!("ct(slip77({}),elwpkh({}/<0;1>/*))", slip77_key, xpub);
+    let desc = format!("ct(slip77({slip77_key}),elwpkh({xpub}/<0;1>/*))");
     let client = test_client_electrum(&env.electrum_url());
     let wallet = TestWollet::new(client, &desc);
 
@@ -2787,7 +2787,7 @@ fn test_no_wildcard() {
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
-    let desc = format!("ct(slip77({}),elwpkh({}))", slip77_key, xpub);
+    let desc = format!("ct(slip77({slip77_key}),elwpkh({xpub}))");
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
@@ -2871,8 +2871,7 @@ fn test_sh_multi() {
     let xpub1 = signer1.xpub();
     let xpub2 = signer2.xpub();
     let desc = format!(
-        "ct(slip77({}),elsh(multi(1,{}/*,{}/*)))",
-        slip77_key, xpub1, xpub2
+        "ct(slip77({slip77_key}),elsh(multi(1,{xpub1}/*,{xpub2}/*)))"
     );
 
     let client = test_client_electrum(&env.electrum_url());
@@ -2927,7 +2926,7 @@ fn test_singlekey() {
     let pk_a = sk_a.public_key(&EC);
     let pk_b = sk_b.public_key(&EC);
     let pk_c = sk_c.public_key(&EC);
-    let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
+    let desc = format!("ct({view_key},elsh(multi(2,{pk_a},{pk_b},{pk_c})))");
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc);
 
@@ -3032,7 +3031,7 @@ fn test_non_std_legacy_multisig() {
     // Receiver wallet
     let recv_signer = generate_signer();
     let recv_xpub = recv_signer.xpub();
-    let recv_desc = format!("ct(elip151,elwpkh({}/*))", recv_xpub);
+    let recv_desc = format!("ct(elip151,elwpkh({recv_xpub}/*))");
     let recv_client = test_client_electrum(&env.electrum_url());
     let mut recv_wallet = TestWollet::new(recv_client, &recv_desc);
     let recv_addr = recv_wallet.address();
@@ -3054,7 +3053,7 @@ fn test_non_std_legacy_multisig() {
     // A temporary descriptor blinding key
     let view_key = "1111111111111111111111111111111111111111111111111111111111111111";
     // P2SH 2of3 with 3 single pubkeys
-    let desc = format!("ct({},elsh(multi(2,{},{},{})))", view_key, pk_a, pk_b, pk_c);
+    let desc = format!("ct({view_key},elsh(multi(2,{pk_a},{pk_b},{pk_c})))");
 
     // Create the wallet
     let client = test_client_electrum(&env.electrum_url());
@@ -3124,11 +3123,11 @@ fn test_sync_high_index() {
     let xpub = signer.xpub();
 
     // Descriptor 1
-    let d1 = format!("ct(slip77({}),elwsh(pkh({}/*)))", slip77_key, xpub);
+    let d1 = format!("ct(slip77({slip77_key}),elwsh(pkh({xpub}/*)))");
     let d1: WolletDescriptor = d1.parse().unwrap();
 
     // Descriptor 2
-    let d2 = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let d2 = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
     let d2: WolletDescriptor = d2.parse().unwrap();
 
     // Wallet 1: receives from node, sends 2 outputs to w2 in the same tx
@@ -3222,7 +3221,7 @@ fn test_chain_tx() {
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
-    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let desc_str = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
@@ -3281,7 +3280,7 @@ fn test_explicit_send() {
     let slip77_key = generate_slip77();
     let signer = generate_signer();
     let xpub = signer.xpub();
-    let desc_str = format!("ct(slip77({}),elwpkh({}/*))", slip77_key, xpub);
+    let desc_str = format!("ct(slip77({slip77_key}),elwpkh({xpub}/*))");
 
     let client = test_client_electrum(&env.electrum_url());
     let mut wallet = TestWollet::new(client, &desc_str);
@@ -3462,14 +3461,14 @@ fn test_fee_service() {
     // User wallet, that will never hold LBTC
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
     let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 
     // Fee Service wallet, that pays for fee for user
     let signer_fee = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer_fee.xpub());
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer_fee.xpub());
     let client = test_client_electrum(&env.electrum_url());
     let mut wf = TestWollet::new(client, &desc);
 
@@ -3570,7 +3569,7 @@ fn test_blinding_nonces() {
 
     let signer = generate_signer();
     let view_key = generate_view_key();
-    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
     let client = test_client_electrum(&env.electrum_url());
     let mut w = TestWollet::new(client, &desc);
 

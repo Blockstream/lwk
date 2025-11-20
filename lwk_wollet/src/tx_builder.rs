@@ -1098,7 +1098,7 @@ impl TxBuilder {
                 .collect();
             let blind_secrets = pset26
                 .blind_last(&mut rng, &EC, &inp_txout_sec)
-                .map_err(|e| Error::Generic(format!("elements26 blind error: {}", e)))?;
+                .map_err(|e| Error::Generic(format!("elements26 blind error: {e}")))?;
             // erase all non witness utxo surjection and range proofs
             // this appears to be necessary for pre-segwit inputs
             for input in pset26.inputs_mut() {

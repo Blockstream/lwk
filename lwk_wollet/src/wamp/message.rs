@@ -417,7 +417,7 @@ impl<'de> Deserialize<'de> for Msg {
                     EVENT_ID => self.de_event(v),
                     CALL_ID => self.de_call(v),
                     RESULT_ID => self.de_result(v),
-                    id => Err(Error::custom(format!("Unknown message id : {}", id))),
+                    id => Err(Error::custom(format!("Unknown message id : {id}"))),
                 }
             }
         }

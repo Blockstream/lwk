@@ -182,9 +182,9 @@ impl ElectrumUrl {
         let builder = ConfigBuilder::new();
         let (url, builder) = match self {
             ElectrumUrl::Tls(url, validate) => {
-                (format!("ssl://{}", url), builder.validate_domain(*validate))
+                (format!("ssl://{url}"), builder.validate_domain(*validate))
             }
-            ElectrumUrl::Plaintext(url) => (format!("tcp://{}", url), builder),
+            ElectrumUrl::Plaintext(url) => (format!("tcp://{url}"), builder),
         };
         let builder = builder.timeout(options.timeout);
         Ok(Client::from_config(&url, builder.build())?)

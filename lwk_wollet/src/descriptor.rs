@@ -519,7 +519,7 @@ fn remove_checksum_if_any(s: &str) -> String {
 fn to_bitcoin_descriptor(s: &str) -> String {
     let s = remove_checksum_if_any(&s[2..]);
     let c = elements_miniscript::descriptor::checksum::desc_checksum(&s).unwrap_or("".into());
-    format!("{}#{}", s, c)
+    format!("{s}#{c}")
 }
 
 impl AsRef<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {

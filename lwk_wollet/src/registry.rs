@@ -351,8 +351,7 @@ impl Registry {
         } else {
             let body = response.text().await.unwrap_or_default();
             Err(Error::Generic(format!(
-                "Failed to post contract to registry: {} {}",
-                status, body
+                "Failed to post contract to registry: {status} {body}"
             )))
         }
     }

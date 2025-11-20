@@ -128,7 +128,7 @@ mod tests {
     use elements::{encode::Decodable, BlockHash};
 
     fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
-        let url = format!("{}/block/{}/raw", base_url, hash);
+        let url = format!("{base_url}/block/{hash}/raw");
         let response = reqwest::blocking::get(url).unwrap();
         elements::Block::consensus_decode(&response.bytes().unwrap()[..]).unwrap()
     }
@@ -151,7 +151,7 @@ mod tests {
     }
 
     fn test_esplora_url(esplora_url: &str) {
-        println!("{}", esplora_url);
+        println!("{esplora_url}");
 
         let mut client =
             EsploraClient::new(esplora_url, ElementsNetwork::default_regtest()).unwrap();

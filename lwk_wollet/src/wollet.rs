@@ -440,7 +440,7 @@ impl Wollet {
                 .cache
                 .all_txs
                 .get(tx_id)
-                .ok_or_else(|| Error::Generic(format!("txos no tx {}", tx_id)))?;
+                .ok_or_else(|| Error::Generic(format!("txos no tx {tx_id}")))?;
             let tx_txos = tx
                 .output
                 .iter()
@@ -711,7 +711,7 @@ impl Wollet {
                 .cache
                 .all_txs
                 .get(*txid)
-                .ok_or_else(|| Error::Generic(format!("list_tx no tx {}", txid)))?;
+                .ok_or_else(|| Error::Generic(format!("list_tx no tx {txid}")))?;
 
             let balance = tx_balance(**txid, tx, &txos);
             if balance.is_empty() {
@@ -1193,8 +1193,7 @@ mod tests {
             "9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023";
         let checksum = "qw2qy2ml";
         let desc_str = format!(
-            "ct(slip77({}),elwpkh({}))#{}",
-            master_blinding_key, xpub, checksum
+            "ct(slip77({master_blinding_key}),elwpkh({xpub}))#{checksum}"
         );
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let addr = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
@@ -1209,7 +1208,7 @@ mod tests {
         let xprv = Xpriv::new_master(Network::Regtest, &seed).unwrap();
         let xpub = Xpub::from_priv(&EC, &xprv);
         let checksum = "h0ej28gv";
-        let desc_str = format!("ct({},elwpkh({}))#{}", xprv, xpub, checksum);
+        let desc_str = format!("ct({xprv},elwpkh({xpub}))#{checksum}");
         let desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
         let address = desc.address(&EC, &AddressParams::ELEMENTS).unwrap();
         // and extract the public blinding key
@@ -1231,13 +1230,13 @@ mod tests {
         let descriptor_blinding_key =
             "1111111111111111111111111111111111111111111111111111111111111111";
         let xpub = "tpubDD7tXK8KeQ3YY83yWq755fHY2JW8Ha8Q765tknUM5rSvjPcGWfUppDFMpQ1ScziKfW3ZNtZvAD7M3u7bSs7HofjTD3KP3YxPK7X6hwV8Rk2";
-        let desc_str = format!("ct({},elwpkh({}))", descriptor_blinding_key, xpub);
-        let desc_str = format!("{}#{}", desc_str, desc_checksum(&desc_str).unwrap());
+        let desc_str = format!("ct({descriptor_blinding_key},elwpkh({xpub}))");
+        let desc_str = format!("{desc_str}#{}", desc_checksum(&desc_str).unwrap());
         let _desc = ConfidentialDescriptor::<DefiniteDescriptorKey>::from_str(&desc_str).unwrap();
     }
 
     fn new_wollet(desc: &str) -> Wollet {
-        let desc: WolletDescriptor = format!("{}#{}", desc, desc_checksum(desc).unwrap())
+        let desc: WolletDescriptor = format!("{desc}#{}", desc_checksum(desc).unwrap())
             .parse()
             .unwrap();
         Wollet::new(ElementsNetwork::LiquidTestnet, NoPersist::new(), desc).unwrap()
@@ -1275,7 +1274,7 @@ mod tests {
     #[test]
     fn test_restore_only_tip() {
         let desc_str = "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84'/1'/0']tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))";
-        let desc: WolletDescriptor = format!("{}#{}", desc_str, desc_checksum(desc_str).unwrap())
+        let desc: WolletDescriptor = format!("{desc_str}#{}", desc_checksum(desc_str).unwrap())
             .parse()
             .unwrap();
 
@@ -1460,7 +1459,7 @@ mod tests {
         let start = std::time::Instant::now();
         let _txs = wollet.transactions().unwrap();
         let duration = start.elapsed();
-        println!("duration: {:?}", duration);
+        println!("duration: {duration:?}");
         assert!(duration < MAX_DURATION);
 
         let start = std::time::Instant::now();
@@ -1506,9 +1505,7 @@ mod tests {
             assert_eq!(
                 paginated_txs.len(),
                 expected_count,
-                "Wrong number of transactions for offset={}, limit={}",
-                offset,
-                limit
+                "Wrong number of transactions for offset={offset}, limit={limit}",
             );
 
             // Verify the transactions match the expected slice of all transactions
@@ -1516,8 +1513,7 @@ mod tests {
                 let expected_txs = &all_txs[offset..offset + paginated_txs.len()];
                 assert_eq!(
                     paginated_txs, expected_txs,
-                    "Transactions don't match for offset={}, limit={}",
-                    offset, limit
+                    "Transactions don't match for offset={offset}, limit={limit}",
                 );
             }
         }

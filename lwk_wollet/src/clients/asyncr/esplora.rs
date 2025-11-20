@@ -697,7 +697,7 @@ impl EsploraClient {
 
                             match try_unblind(output, descriptor) {
                                     Ok(unblinded) => unblinds.push((outpoint, unblinded)),
-                                    Err(_) => log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint),
+                                    Err(_) => log::info!("{outpoint} cannot unblind, ignoring (could be sender messed up with the blinding process)"),
                                 }
                         }
                     }
@@ -1059,7 +1059,7 @@ mod tests {
     use tokio::time::sleep;
 
     async fn get_block(base_url: &str, hash: BlockHash) -> elements::Block {
-        let url = format!("{}/block/{}/raw", base_url, hash);
+        let url = format!("{base_url}/block/{hash}/raw");
         let client = EsploraClient::new(ElementsNetwork::Liquid, base_url);
         let response = client.get_with_retry(&url).await.unwrap();
         elements::Block::consensus_decode(&response.bytes().await.unwrap()[..]).unwrap()

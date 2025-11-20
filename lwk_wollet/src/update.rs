@@ -195,7 +195,7 @@ impl Wollet {
                         unblinds.push((outpoint, unblinded));
                     }
                     Err(_) => {
-                        log::info!("{} cannot unblind, ignoring (could be sender messed up with the blinding process)", outpoint);
+                        log::info!("{outpoint} cannot unblind, ignoring (could be sender messed up with the blinding process)");
                     }
                 }
             }

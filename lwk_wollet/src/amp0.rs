@@ -573,7 +573,7 @@ impl<S: Stream> Amp0Inner<S> {
         self.stream
             .write(&msg)
             .await
-            .map_err(|e| Error::Generic(format!("Failed to do call: {}", e)))?;
+            .map_err(|e| Error::Generic(format!("Failed to do call: {e}")))?;
 
         // Wait for response
         let mut response_buf = vec![0u8; 10000];
@@ -585,14 +585,14 @@ impl<S: Stream> Amp0Inner<S> {
         )
         .await
         .map_err(|_| Error::Generic("Response timeout after 10 seconds".to_string()))?
-        .map_err(|e| Error::Generic(format!("Failed to read response: {}", e)))?;
+        .map_err(|e| Error::Generic(format!("Failed to read response: {e}")))?;
 
         #[cfg(target_arch = "wasm32")]
         let response_bytes = self
             .stream
             .read(&mut response_buf)
             .await
-            .map_err(|e| Error::Generic(format!("Failed to read response: {}", e)))?;
+            .map_err(|e| Error::Generic(format!("Failed to read response: {e}")))?;
 
         if is_hello {
             if let Ok(Msg::Welcome { .. }) = serde_json::from_slice(&response_buf[..response_bytes])
@@ -615,7 +615,7 @@ impl<S: Stream> Amp0Inner<S> {
             }
         }
         let response = String::from_utf8_lossy(&response_buf[..response_bytes]);
-        Err(Error::Generic(format!("call failed, got: {}", response)))
+        Err(Error::Generic(format!("call failed, got: {response}")))
     }
 
     /// Open a WAMP session
@@ -911,7 +911,7 @@ fn get_entropy(username: &str, password: &str) -> [u8; 64] {
     // https://gl.blockstream.io/blockstream/green/gdk/-/blame/master/src/utils.cpp#L334
     let salt_string: &[u8] = &WATCH_ONLY_SALT;
 
-    let u_p = format!("{}{}", username, password);
+    let u_p = format!("{username}{password}");
     let mut entropy = vec![0u8; 4 + u_p.len()];
 
     // Write username length as 32-bit integer
@@ -1869,12 +1869,11 @@ mod tests {
             .unwrap_err();
 
         // Should get an error response like: [8,48,1,{},"com.greenaddress.error",["http://greenaddressit.com/error#usernotfound","User not found or invalid password",{}]]
-        let response_str = format!("{:?}", response);
+        let response_str = format!("{response:?}");
         assert!(!response_str.is_empty(), "Response should not be empty");
         assert!(
             response_str.contains("com.greenaddress.error") || response_str.contains("error"),
-            "Response should contain error information, got: {}",
-            response_str
+            "Response should contain error information, got: {response_str}"
         );
     }
 
@@ -2002,12 +2001,12 @@ mod tests {
         assert_eq!(amp0ext.amp_subaccount, 1);
         assert!(amp0ext.last_index > 20);
         let desc = amp0ext.wollet_descriptor().to_string();
-        println!("{}", desc);
+        println!("{desc}");
 
         // Get a new address
         let last_index = amp0ext.last_index;
         let addr = amp0ext.address(None).await.unwrap();
-        println!("{:?}", addr);
+        println!("{addr:?}");
         assert_eq!(addr.index(), last_index + 1);
         // Last index increased
         assert_eq!(amp0ext.last_index, last_index + 1);
@@ -2098,12 +2097,12 @@ mod tests {
 
         // Check we have enough funds to send a transaction
         let balance = wollet.balance().unwrap();
-        println!("Balance: {:?}", balance);
+        println!("Balance: {balance:?}");
         let lbtc = wollet.policy_asset();
         let balance_before = *balance.get(&lbtc).unwrap_or(&0);
         if balance_before < 500 {
             let addr = amp0.address(Some(1)).unwrap();
-            println!("Address: {:?}", addr);
+            println!("Address: {addr:?}");
             panic!("Send some tLBTC to {}", addr.address());
         }
 
@@ -2129,7 +2128,7 @@ mod tests {
 
         // Broadcast the transaction
         let txid = client.broadcast(&tx).unwrap();
-        println!("txid: {}", txid);
+        println!("txid: {txid}");
 
         // Apply the transaction
         wollet.apply_transaction(tx).unwrap();
@@ -2280,9 +2279,9 @@ mod tests {
         let (signer, mnemonic) = SwSigner::random(false).unwrap();
         let username = format!("user{}", signer.fingerprint());
         let password = format!("pass{}", signer.fingerprint());
-        println!("mnemonic: {}", mnemonic);
-        println!("username: {}", username);
-        println!("password: {}", password);
+        println!("mnemonic: {mnemonic}");
+        println!("username: {username}");
+        println!("password: {password}");
 
         // Collect signer data
         let signer_data = signer.amp0_signer_data().unwrap();

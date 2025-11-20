@@ -143,6 +143,32 @@ impl BoltzSessionBuilder {
     }
 }
 
+#[wasm_bindgen]
+pub struct PreparePayResponse {
+    inner: lwk_boltz::PreparePayResponse,
+}
+
+impl From<lwk_boltz::PreparePayResponse> for PreparePayResponse {
+    fn from(inner: lwk_boltz::PreparePayResponse) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<PreparePayResponse> for lwk_boltz::PreparePayResponse {
+    fn from(wrapper: PreparePayResponse) -> Self {
+        wrapper.inner
+    }
+}
+
+impl PreparePayResponse {
+    /// Serialize the response to JSON string for JS interop
+    pub fn serialize(&self) -> Result<String, Error> {
+        self.inner
+            .serialize()
+            .map_err(|e| Error::Generic(e.to_string()))
+    }
+}
+
 impl BoltzSession {
     /// Get the rescue file
     pub fn rescue_file(&self) -> Result<String, Error> {
@@ -151,7 +177,11 @@ impl BoltzSession {
     }
 
     /// Prepare a lightning invoice payment
-    pub async fn prepare_pay(&self, invoice: &str, refund_address: &str) -> Result<String, Error> {
+    pub async fn prepare_pay(
+        &self,
+        invoice: &str,
+        refund_address: &str,
+    ) -> Result<PreparePayResponse, Error> {
         let refund_address = lwk_wollet::elements::Address::from_str(refund_address)
             .map_err(|e| Error::Generic(e.to_string()))?;
         let lightning_payment = lwk_boltz::LightningPayment::Bolt11(Box::new(
@@ -163,8 +193,7 @@ impl BoltzSession {
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
-        // TODO this method should return a PreparePayResponse object
-        r.serialize().map_err(|e| Error::Generic(e.to_string()))
+        Ok(r.into())
     }
 }
 

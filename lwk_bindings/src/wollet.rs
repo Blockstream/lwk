@@ -236,7 +236,7 @@ impl Wollet {
 
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
-        panic!("I wait 30s but I didn't see {}", txid);
+        panic!("I wait 30s but I didn't see {txid}");
     }
 
     /// Get the utxo with unspent transaction outputs of the wallet

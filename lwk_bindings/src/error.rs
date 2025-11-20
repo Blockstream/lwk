@@ -32,7 +32,7 @@ pub enum LwkError {
 impl From<lwk_wollet::Error> for LwkError {
     fn from(value: lwk_wollet::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -40,7 +40,7 @@ impl From<lwk_wollet::Error> for LwkError {
 impl From<ParseError> for LwkError {
     fn from(value: ParseError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -48,7 +48,7 @@ impl From<ParseError> for LwkError {
 impl From<elements::pset::Error> for LwkError {
     fn from(value: elements::pset::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -56,7 +56,7 @@ impl From<elements::pset::Error> for LwkError {
 impl From<elements::encode::Error> for LwkError {
     fn from(value: elements::encode::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -64,7 +64,7 @@ impl From<elements::encode::Error> for LwkError {
 impl From<elements::bitcoin::transaction::ParseOutPointError> for LwkError {
     fn from(value: elements::bitcoin::transaction::ParseOutPointError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -72,7 +72,7 @@ impl From<elements::bitcoin::transaction::ParseOutPointError> for LwkError {
 impl From<elements::bitcoin::key::FromWifError> for LwkError {
     fn from(value: elements::bitcoin::key::FromWifError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -80,7 +80,7 @@ impl From<elements::bitcoin::key::FromWifError> for LwkError {
 impl From<elements::hashes::hex::HexToBytesError> for LwkError {
     fn from(value: elements::hashes::hex::HexToBytesError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -88,7 +88,7 @@ impl From<elements::hashes::hex::HexToBytesError> for LwkError {
 impl From<elements::hashes::hex::HexToArrayError> for LwkError {
     fn from(value: elements::hashes::hex::HexToArrayError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -96,7 +96,7 @@ impl From<elements::hashes::hex::HexToArrayError> for LwkError {
 impl From<elements::AddressError> for LwkError {
     fn from(value: elements::AddressError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -104,7 +104,7 @@ impl From<elements::AddressError> for LwkError {
 impl From<lwk_signer::bip39::Error> for LwkError {
     fn from(value: lwk_signer::bip39::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -112,7 +112,7 @@ impl From<lwk_signer::bip39::Error> for LwkError {
 impl From<lwk_signer::NewError> for LwkError {
     fn from(value: lwk_signer::NewError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -120,7 +120,7 @@ impl From<lwk_signer::NewError> for LwkError {
 impl From<lwk_signer::SignError> for LwkError {
     fn from(value: lwk_signer::SignError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -128,7 +128,7 @@ impl From<lwk_signer::SignError> for LwkError {
 impl From<serde_json::Error> for LwkError {
     fn from(value: serde_json::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -136,7 +136,7 @@ impl From<serde_json::Error> for LwkError {
 impl From<lwk_common::QrError> for LwkError {
     fn from(value: lwk_common::QrError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -164,7 +164,7 @@ impl<T> From<PoisonError<MutexGuard<'_, T>>> for LwkError {
 impl From<lwk_common::precision::Error> for LwkError {
     fn from(value: lwk_common::precision::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -172,7 +172,7 @@ impl From<lwk_common::precision::Error> for LwkError {
 impl From<elements::bitcoin::secp256k1::Error> for LwkError {
     fn from(value: elements::bitcoin::secp256k1::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -180,7 +180,7 @@ impl From<elements::bitcoin::secp256k1::Error> for LwkError {
 impl From<elements::bitcoin::bip32::Error> for LwkError {
     fn from(value: elements::bitcoin::bip32::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -188,7 +188,7 @@ impl From<elements::bitcoin::bip32::Error> for LwkError {
 impl From<elements::UnblindError> for LwkError {
     fn from(value: elements::UnblindError) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -196,7 +196,7 @@ impl From<elements::UnblindError> for LwkError {
 impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
         LwkError::Generic {
-            msg: format!("{:?}", value),
+            msg: format!("{value:?}"),
         }
     }
 }
@@ -219,7 +219,7 @@ impl From<lwk_boltz::Error> for LwkError {
             }
             lwk_boltz::Error::NoBoltzUpdate => LwkError::NoBoltzUpdate,
             _ => LwkError::Generic {
-                msg: format!("{:?}", value),
+                msg: format!("{value:?}"),
             },
         }
     }

@@ -119,7 +119,7 @@ impl LightningPayment {
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner =
             lwk_boltz::LightningPayment::from_str(s).map_err(|(e1, e2)| LwkError::Generic {
-                msg: format!("Failed to create lightning payment: {:?}, {:?}", e1, e2),
+                msg: format!("Failed to create lightning payment: {e1:?}, {e2:?}"),
             })?;
         Ok(Arc::new(Self { inner }))
     }

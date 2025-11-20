@@ -151,7 +151,7 @@ pub struct LockupResponse {
 impl fmt::Display for SwapList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let json = serde_json::to_string(&self.inner).map_err(|_| fmt::Error)?;
-        write!(f, "{}", json)
+        write!(f, "{json}")
     }
 }
 
@@ -275,7 +275,7 @@ impl BoltzSession {
         let inner = lwk_builder
             .build_blocking()
             .map_err(|e| LwkError::Generic {
-                msg: format!("Failed to create blocking lightning session: {:?}", e),
+                msg: format!("Failed to create blocking lightning session: {e:?}"),
             })?;
         Ok(Self {
             inner,
@@ -360,7 +360,7 @@ impl BoltzSession {
             .inner
             .invoice(amount, description, claim_address.as_ref(), webhook)
             .map_err(|e| LwkError::Generic {
-                msg: format!("Invoice failed: {:?}", e),
+                msg: format!("Invoice failed: {e:?}"),
             })?;
 
         Ok(InvoiceResponse {

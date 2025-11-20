@@ -218,7 +218,7 @@ impl SwSigner {
 
         // Create a standard bitcoin Xpriv from the seed
         let bitcoin_xprv = bitcoin::bip32::Xpriv::new_master(bitcoin::Network::Bitcoin, &seed)
-            .map_err(|e| SignError::Bip85Derivation(format!("Failed to create Xpriv: {}", e)))?;
+            .map_err(|e| SignError::Bip85Derivation(format!("Failed to create Xpriv: {e}")))?;
 
         // Implement BIP85 derivation directly
         let derived_mnemonic = Self::bip85_derive_mnemonic(&bitcoin_xprv, index, word_count)?;
@@ -260,13 +260,13 @@ impl SwSigner {
             .map(|&i| bitcoin::bip32::ChildNumber::from_hardened_idx(i))
             .collect();
         let child_numbers = child_numbers
-            .map_err(|e| SignError::Bip85Derivation(format!("Path creation failed: {}", e)))?;
+            .map_err(|e| SignError::Bip85Derivation(format!("Path creation failed: {e}")))?;
         let derivation_path = bitcoin::bip32::DerivationPath::from(child_numbers);
 
         // Derive the key using the path
         let derived_key = xprv
             .derive_priv(&bitcoin::secp256k1::Secp256k1::new(), &derivation_path)
-            .map_err(|e| SignError::Bip85Derivation(format!("Key derivation failed: {}", e)))?;
+            .map_err(|e| SignError::Bip85Derivation(format!("Key derivation failed: {e}")))?;
 
         // HMAC-SHA512 the derived private key with the fixed BIP85 key
         let mut hmac_engine = HmacEngine::<sha512::Hash>::new(BIP85_ENTROPY_HMAC_KEY);
@@ -282,7 +282,7 @@ impl SwSigner {
 
         // Create mnemonic from entropy
         let mnemonic = Mnemonic::from_entropy(entropy)
-            .map_err(|e| SignError::Bip85Derivation(format!("Mnemonic creation failed: {}", e)))?;
+            .map_err(|e| SignError::Bip85Derivation(format!("Mnemonic creation failed: {e}")))?;
 
         Ok(mnemonic)
     }
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn new_signer() {
         let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
-        assert_eq!(format!("{:?}", signer), "Signer(73c5da0a)");
+        assert_eq!(format!("{signer:?}"), "Signer(73c5da0a)");
         assert_eq!(
             "mnemonic has an invalid word count: 1. Word count must be 12, 15, 18, 21, or 24",
             SwSigner::new("bad", false).expect_err("test").to_string()
@@ -455,7 +455,7 @@ mod tests {
         );
 
         let slip77 = signer.slip77_master_blinding_key().unwrap();
-        assert_eq!(slip77.as_bytes().to_hex(), format!("{}", slip77));
+        assert_eq!(slip77.as_bytes().to_hex(), format!("{slip77}"));
         assert_eq!(
             slip77.as_bytes().to_hex(),
             lwk_test_util::TEST_MNEMONIC_SLIP77

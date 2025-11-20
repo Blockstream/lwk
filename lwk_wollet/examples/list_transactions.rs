@@ -31,9 +31,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("TXID: {}", tx.txid);
         for (asset, amount) in tx.balance.as_ref() {
             if *amount > 0 {
-                println!(" * received: {} of asset {}", amount, asset);
+                println!(" * received: {amount} of asset {asset}");
             } else {
-                println!(" * sent:     {} of asset {}", -amount, asset);
+                println!(" * sent:     {} of asset {asset}", -amount);
             }
         }
     }

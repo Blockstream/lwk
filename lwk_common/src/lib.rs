@@ -441,6 +441,14 @@ mod test {
         let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
         let v = balance.balances.get(&asset_id).unwrap();
         assert_eq!(*v, -1);
+
+        // Same for newly created psets with blind proofs
+        let pset_str =
+            include_str!("../test_data/pset_details/pset2_with_input_blind_proofs.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
+        let v = balance.balances.get(&asset_id).unwrap();
+        assert_eq!(*v, -1);
     }
 
     #[test]

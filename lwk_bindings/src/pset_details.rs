@@ -254,6 +254,16 @@ mod tests {
     #[test]
     fn pset_details() {
         let pset = include_str!("../test_data/pset_details/pset.base64");
+        pset_details_(pset);
+    }
+
+    #[test]
+    fn pset_details_with_input_blind_proofs() {
+        let pset = include_str!("../test_data/pset_details/pset_with_input_blind_proofs.base64");
+        pset_details_(pset);
+    }
+
+    fn pset_details_(pset: &str) {
         let pset = Pset::new(pset).unwrap();
 
         let descriptor = include_str!("../test_data/pset_details/desc");

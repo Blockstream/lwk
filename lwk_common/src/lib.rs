@@ -421,6 +421,16 @@ mod test {
             !balance.balances.contains_key(&asset_id),
             "redeposit (balance = 0) should disappear from the list"
         );
+
+        // Same for newly created psets with blind proofs
+        let pset_str =
+            include_str!("../test_data/pset_details/pset_with_input_blind_proofs.base64");
+        let pset: PartiallySignedTransaction = pset_str.parse().unwrap();
+        let balance = pset_balance(&pset, &desc, &elements::AddressParams::LIQUID_TESTNET).unwrap();
+        assert!(
+            !balance.balances.contains_key(&asset_id),
+            "redeposit (balance = 0) should disappear from the list"
+        );
     }
 
     #[test]

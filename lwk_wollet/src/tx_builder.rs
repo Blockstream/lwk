@@ -127,6 +127,8 @@ pub(crate) fn add_input_inner(
             asset_gen,
             unblinded.value_bf,
         )?));
+    } else if !allow_explicit_input {
+        return Err(Error::NotConfidentialInput);
     }
 
     pset.add_input(input);

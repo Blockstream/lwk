@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::{fmt, str::FromStr, time::Duration};
 
 use wasm_bindgen::prelude::*;
 
@@ -256,6 +256,12 @@ pub struct LightningPayment {
     inner: lwk_boltz::LightningPayment,
 }
 
+impl fmt::Display for LightningPayment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
 impl From<lwk_boltz::LightningPayment> for LightningPayment {
     fn from(inner: lwk_boltz::LightningPayment) -> Self {
         Self { inner }
@@ -276,6 +282,12 @@ impl LightningPayment {
         let payment = lwk_boltz::LightningPayment::from_str(invoice)
             .map_err(|(e1, e2)| Error::Generic(format!("{:?}, {:?}", e1, e2)))?;
         Ok(payment.into())
+    }
+
+    /// Return a string representation of the LightningPayment
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_js(&self) -> String {
+        format!("{}", self)
     }
 }
 

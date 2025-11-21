@@ -1,14 +1,15 @@
 use crate::bitcoin::PublicKey as BitcoinPublicKey;
 use crate::elements::confidential::AssetBlindingFactor;
 use crate::elements::issuance::ContractHash;
-use crate::elements::pset::{Input, Output, PartiallySignedTransaction};
+use crate::elements::pset::{Output, PartiallySignedTransaction};
 use crate::elements::{Address, AssetId, OutPoint, Transaction, TxOut, TxOutSecrets, Txid};
 use crate::error::Error;
 use crate::hashes::Hash;
 use crate::model::{Recipient, WalletTxOut};
 use crate::registry::Contract;
+use crate::tx_builder::add_input_inner;
 use crate::wollet::Wollet;
-use crate::{ElementsNetwork, EC};
+use crate::ElementsNetwork;
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use std::collections::HashMap;
 
@@ -67,70 +68,24 @@ impl Wollet {
         inp_weight: &mut usize,
         utxo: &WalletTxOut,
     ) -> Result<usize, Error> {
-        if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
-            return Err(Error::TooManyInputs(pset.inputs().len()));
-        }
-
-        let mut input = Input::from_prevout(utxo.outpoint);
-        let mut txout = self.get_txout(&utxo.outpoint)?;
-        let (Some(value_comm), Some(asset_gen)) =
-            (txout.value.commitment(), txout.asset.commitment())
-        else {
-            return Err(Error::NotConfidentialInput);
+        let tx = if self.is_segwit() {
+            None
+        } else {
+            // For pre-segwit we want to add non_witness_utxo
+            Some(self.get_tx(&utxo.outpoint.txid)?)
         };
-        // This field is used by stateless blinders or signers to
-        // learn the blinding factors and unblinded values of this input.
-        // We need this since the output witness, which includes the
-        // rangeproof, is not serialized.
-        // Note that we explicitly remove the txout rangeproof to avoid
-        // relying on its presence.
-        input.in_utxo_rangeproof = txout.witness.rangeproof.take();
-        input.witness_utxo = Some(txout);
 
-        if !self.is_segwit() {
-            // For pre-segwit add non_witness_utxo
-            let mut tx = self.get_tx(&utxo.outpoint.txid)?;
-            // Remove the rangeproof to match the witness utxo,
-            // to pass the checks done by elements-miniscript
-            let _ = tx
-                .output
-                .get_mut(utxo.outpoint.vout as usize)
-                .expect("got txout above")
-                .witness
-                .rangeproof
-                .take();
-            input.non_witness_utxo = Some(tx);
-        }
-
-        // Needed by ledger
-        let mut rng = rand::thread_rng();
-        let secp = &EC;
-        use elements::secp256k1_zkp::{RangeProof, SurjectionProof};
-        use elements::{BlindAssetProofs, BlindValueProofs};
-
-        input.asset = Some(utxo.unblinded.asset);
-        input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
-            &mut rng,
-            secp,
-            utxo.unblinded.asset,
-            utxo.unblinded.asset_bf,
-        )?));
-        input.amount = Some(utxo.unblinded.value);
-        input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
-            &mut rng,
-            secp,
-            utxo.unblinded.value,
-            value_comm,
-            asset_gen,
-            utxo.unblinded.value_bf,
-        )?));
-
-        pset.add_input(input);
-        let idx = pset.inputs().len() - 1;
-        let desc = self.definite_descriptor(&utxo.script_pubkey)?;
-        inp_txout_sec.insert(idx, utxo.unblinded);
-        *inp_weight += desc.max_weight_to_satisfy()?;
-        Ok(idx)
+        add_input_inner(
+            pset,
+            inp_txout_sec,
+            inp_weight,
+            utxo.outpoint,
+            self.get_txout(&utxo.outpoint)?,
+            &tx,
+            utxo.unblinded,
+            self.max_weight_to_satisfy(),
+            false, // wallet inputs cannot be explicit
+        )
     }
 
     pub(crate) fn set_issuance(

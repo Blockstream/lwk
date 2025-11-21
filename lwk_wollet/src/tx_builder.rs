@@ -89,33 +89,16 @@ pub(crate) fn add_input_inner(
     }
 
     let mut input = elements::pset::Input::from_prevout(outpoint);
-    // This field is used by stateless blinders or signers to
-    // learn the blinding factors and unblinded values of this input.
-    // We need this since the output witness, which includes the
-    // rangeproof, is not serialized.
-    // Note that we explicitly remove the txout rangeproof to avoid
-    // relying on its presence.
-    input.in_utxo_rangeproof = txout.witness.rangeproof.take();
-    input.witness_utxo = Some(txout.clone());
-    if let Some(mut tx) = tx {
-        // For pre-segwit add non_witness_utxo
-        // Remove the rangeproof to match the witness utxo,
-        // to pass the checks done by elements-miniscript
-        let _ = tx
-            .output
-            .get_mut(outpoint.vout as usize)
-            .expect("got txout above")
-            .witness
-            .rangeproof
-            .take();
-        input.non_witness_utxo = Some(tx);
-    }
 
     input.asset = Some(unblinded.asset);
     input.amount = Some(unblinded.value);
     if let (Some(value_comm), Some(asset_gen)) =
         (txout.value.commitment(), txout.asset.commitment())
     {
+        // Add the blind proofs
+        // These are used to prove that the asset and amount field commit to
+        // the asset and value/amount commitment of the output that is being
+        // spent.
         let mut rng = rand::thread_rng();
         input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
             &mut rng,
@@ -133,6 +116,29 @@ pub(crate) fn add_input_inner(
         )?));
     } else if !allow_explicit_input {
         return Err(Error::NotConfidentialInput);
+    }
+
+    // This field is used by stateless blinders or signers to
+    // learn the blinding factors and unblinded values of this input.
+    // We need this since the output witness, which includes the
+    // rangeproof, is not serialized.
+    // Note that we explicitly remove the txout rangeproof to avoid
+    // relying on its presence.
+    input.in_utxo_rangeproof = txout.witness.rangeproof.take();
+    input.witness_utxo = Some(txout.clone());
+
+    if let Some(mut tx) = tx {
+        // For pre-segwit add non_witness_utxo
+        // Remove the rangeproof to match the witness utxo,
+        // to pass the checks done by elements-miniscript
+        let _ = tx
+            .output
+            .get_mut(outpoint.vout as usize)
+            .expect("got txout above")
+            .witness
+            .rangeproof
+            .take();
+        input.non_witness_utxo = Some(tx);
     }
 
     pset.add_input(input);

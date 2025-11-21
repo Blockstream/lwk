@@ -145,6 +145,7 @@ impl BoltzSessionBuilder {
 }
 
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct PreparePayResponse {
     inner: lwk_boltz::PreparePayResponse,
 }
@@ -173,6 +174,7 @@ impl PreparePayResponse {
 
 /// Wrapper over [`lwk_boltz::InvoiceResponse`]
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct InvoiceResponse {
     inner: lwk_boltz::InvoiceResponse,
 }
@@ -252,6 +254,7 @@ impl BoltzSession {
 
 /// Wrapper over [`lwk_boltz::LightningPayment`]
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct LightningPayment {
     inner: lwk_boltz::LightningPayment,
 }

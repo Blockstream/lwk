@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::ControlFlow;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -34,6 +35,12 @@ pub struct PreparePayResponse {
     rx: tokio::sync::broadcast::Receiver<boltz_client::boltz::SwapStatus>,
     polling: bool,
     timeout_advance: Duration,
+}
+
+impl fmt::Debug for PreparePayResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "PreparePayResponse {{ data: {:?}, swap_script: {:?},  api: {:?}, rx: {:?}, polling: {:?}, timeout_advance: {:?} }}", self.data, self.swap_script, self.api, self.rx, self.polling, self.timeout_advance)
+    }
 }
 
 impl BoltzSession {

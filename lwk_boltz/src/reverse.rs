@@ -1,3 +1,4 @@
+use std::fmt;
 use std::ops::ControlFlow;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -44,6 +45,12 @@ pub struct InvoiceResponse {
     chain_client: Arc<ChainClient>,
     polling: bool,
     timeout_advance: Duration,
+}
+
+impl fmt::Debug for InvoiceResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "InvoiceResponse {{ data: {:?}, rx: {:?}, swap_script: {:?}, api: {:?}, polling: {:?}, timeout_advance: {:?} }}", self.data, self.rx, self.swap_script, self.api, self.polling, self.timeout_advance)
+    }
 }
 
 impl BoltzSession {

@@ -14,7 +14,7 @@ use crate::{
     hashes::Hash,
     liquidex::{self, LiquidexError, Validated},
     model::{ExternalUtxo, IssuanceDetails, Recipient},
-    pset_create::{validate_address, IssuanceRequest},
+    pset_create::{validate_address, IssuanceRequest, SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS},
     Contract, ElementsNetwork, Error, LiquidexProposal, UnvalidatedRecipient, Wollet, EC,
 };
 
@@ -83,6 +83,10 @@ pub(crate) fn add_input_inner(
     max_weight_to_satisfy: usize,
     allow_explicit_input: bool,
 ) -> Result<usize, Error> {
+    if pset.inputs().len() >= SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
+        return Err(Error::TooManyInputs(pset.inputs().len()));
+    }
+
     let mut input = elements::pset::Input::from_prevout(outpoint);
     // This field is used by stateless blinders or signers to
     // learn the blinding factors and unblinded values of this input.

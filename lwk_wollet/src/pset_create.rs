@@ -12,7 +12,7 @@ use crate::{ElementsNetwork, EC};
 use elements::pset::elip100::{AssetMetadata, TokenMetadata};
 use std::collections::HashMap;
 
-const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
+pub const SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS: usize = 256;
 
 #[derive(Debug)]
 // We make issuance and reissuance are mutually exclusive for simplicity

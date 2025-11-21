@@ -256,6 +256,14 @@ impl TxBuilder {
             Some(inner.liquidex_take(proposals.into_iter().map(|p| p.as_ref().into()).collect())?);
         Ok(())
     }
+
+    /// Add input rangeproofs
+    pub fn add_input_rangeproofs(&self, add_rangeproofs: bool) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_finished)?;
+        *lock = Some(inner.add_input_rangeproofs(add_rangeproofs));
+        Ok(())
+    }
 }
 
 impl TxBuilder {

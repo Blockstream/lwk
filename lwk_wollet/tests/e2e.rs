@@ -4029,3 +4029,43 @@ fn snippet_multisig() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_add_input_rangeproofs() {
+    // Construct with and without input rangeproofs
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    w.fund_btc(&env);
+
+    let node_addr = env.elementsd_getnewaddress();
+    let pset_default = w
+        .tx_builder()
+        .add_lbtc_recipient(&node_addr, 1000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let pset_with = w
+        .tx_builder()
+        .add_input_rangeproofs(true)
+        .add_lbtc_recipient(&node_addr, 1000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let pset_without = w
+        .tx_builder()
+        .add_input_rangeproofs(false)
+        .add_lbtc_recipient(&node_addr, 1000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    assert!(pset_default.inputs()[0].in_utxo_rangeproof.is_some());
+    assert!(pset_with.inputs()[0].in_utxo_rangeproof.is_some());
+    assert!(pset_without.inputs()[0].in_utxo_rangeproof.is_none());
+}

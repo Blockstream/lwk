@@ -320,5 +320,10 @@ mod tests {
         assert!(err
             .to_string()
             .contains("a swap with this invoice exists already"));
+
+        let invoice_response = session
+            .invoice(1000, Some("test".to_string()), address)
+            .await
+            .unwrap();
     }
 }

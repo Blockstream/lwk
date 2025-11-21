@@ -40,6 +40,8 @@ use boltz_client::util::secrets::Preimage;
 use boltz_client::util::sleep;
 use boltz_client::Keypair;
 use lightning::bitcoin::XKeyIdentifier;
+use lwk_wollet::asyncr::async_now;
+use lwk_wollet::asyncr::async_sleep;
 use lwk_wollet::bitcoin::bip32::ChildNumber;
 use lwk_wollet::bitcoin::bip32::DerivationPath;
 use lwk_wollet::bitcoin::bip32::Xpriv;
@@ -539,7 +541,7 @@ pub async fn next_status(
     swap_id: &str,
     polling: bool,
 ) -> Result<SwapStatus, Error> {
-    let deadline = tokio::time::Instant::now() + timeout;
+    let deadline = async_now().await + timeout.as_millis() as u64;
 
     loop {
         let update = if polling {
@@ -552,10 +554,10 @@ pub async fn next_status(
             }
         } else {
             // since we can receive updates for all swaps, we need to check the deadline
-            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            let remaining = deadline - async_now().await;
             tokio::select! {
                 update = rx.recv() => update?,
-                _ = tokio::time::sleep(remaining) => {
+                _ = async_sleep(remaining) => {
                     log::warn!("Timeout while waiting state for swap id {swap_id}");
                     return Err(Error::Timeout(swap_id.to_string()));
                 }

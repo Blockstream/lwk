@@ -53,6 +53,7 @@ pub use blockdata::transaction::{Transaction, Txid};
 pub use blockdata::tx_out_secrets::TxOutSecrets;
 pub use blockdata::wallet_tx::WalletTx;
 pub use blockdata::wallet_tx_out::{OptionWalletTxOut, WalletTxOut};
+pub use boltz::LightningPayment;
 pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
 pub use descriptor::WolletDescriptor;

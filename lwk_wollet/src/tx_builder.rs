@@ -6,7 +6,7 @@ use elements::{
     pset::{raw::ProprietaryKey, Output, PartiallySignedTransaction, PsbtSighashType},
     secp256k1_zkp::{self, RangeProof, SurjectionProof, ZERO_TWEAK},
     Address, AssetId, BlindAssetProofs, BlindValueProofs, EcdsaSighashType, OutPoint, Script,
-    Transaction,
+    Transaction, TxOut, TxOutSecrets,
 };
 use rand::thread_rng;
 
@@ -58,9 +58,32 @@ fn add_external_input(
     inp_txout_sec: &mut HashMap<usize, elements::TxOutSecrets>,
     inp_weight: &mut usize,
     utxo: &ExternalUtxo,
-) -> Result<(), Error> {
-    let mut input = elements::pset::Input::from_prevout(utxo.outpoint);
-    let mut txout = utxo.txout.clone();
+) -> Result<usize, Error> {
+    add_input_inner(
+        pset,
+        inp_txout_sec,
+        inp_weight,
+        utxo.outpoint,
+        utxo.txout.clone(),
+        &utxo.tx,
+        utxo.unblinded,
+        utxo.max_weight_to_satisfy,
+        true, // external inputs can be explicit
+    )
+}
+
+pub(crate) fn add_input_inner(
+    pset: &mut PartiallySignedTransaction,
+    inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,
+    inp_weight: &mut usize,
+    outpoint: OutPoint,
+    mut txout: TxOut,
+    tx: &Option<Transaction>,
+    unblinded: TxOutSecrets,
+    max_weight_to_satisfy: usize,
+    allow_explicit_input: bool,
+) -> Result<usize, Error> {
+    let mut input = elements::pset::Input::from_prevout(outpoint);
     // This field is used by stateless blinders or signers to
     // learn the blinding factors and unblinded values of this input.
     // We need this since the output witness, which includes the
@@ -69,14 +92,14 @@ fn add_external_input(
     // relying on its presence.
     input.in_utxo_rangeproof = txout.witness.rangeproof.take();
     input.witness_utxo = Some(txout.clone());
-    if let Some(tx) = &utxo.tx {
+    if let Some(tx) = &tx {
         // For pre-segwit add non_witness_utxo
         let mut tx = tx.clone();
         // Remove the rangeproof to match the witness utxo,
         // to pass the checks done by elements-miniscript
         let _ = tx
             .output
-            .get_mut(utxo.outpoint.vout as usize)
+            .get_mut(outpoint.vout as usize)
             .expect("got txout above")
             .witness
             .rangeproof
@@ -84,8 +107,8 @@ fn add_external_input(
         input.non_witness_utxo = Some(tx);
     }
 
-    input.asset = Some(utxo.unblinded.asset);
-    input.amount = Some(utxo.unblinded.value);
+    input.asset = Some(unblinded.asset);
+    input.amount = Some(unblinded.value);
     if let (Some(value_comm), Some(asset_gen)) =
         (txout.value.commitment(), txout.asset.commitment())
     {
@@ -93,24 +116,24 @@ fn add_external_input(
         input.blind_asset_proof = Some(Box::new(SurjectionProof::blind_asset_proof(
             &mut rng,
             &EC,
-            utxo.unblinded.asset,
-            utxo.unblinded.asset_bf,
+            unblinded.asset,
+            unblinded.asset_bf,
         )?));
         input.blind_value_proof = Some(Box::new(RangeProof::blind_value_proof(
             &mut rng,
             &EC,
-            utxo.unblinded.value,
+            unblinded.value,
             value_comm,
             asset_gen,
-            utxo.unblinded.value_bf,
+            unblinded.value_bf,
         )?));
     }
 
     pset.add_input(input);
     let idx = pset.inputs().len() - 1;
-    inp_txout_sec.insert(idx, utxo.unblinded);
-    *inp_weight += utxo.max_weight_to_satisfy;
-    Ok(())
+    inp_txout_sec.insert(idx, unblinded);
+    *inp_weight += max_weight_to_satisfy;
+    Ok(idx)
 }
 
 /// A transaction builder

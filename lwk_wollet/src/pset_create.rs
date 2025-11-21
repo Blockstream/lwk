@@ -67,6 +67,7 @@ impl Wollet {
         inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,
         inp_weight: &mut usize,
         utxo: &WalletTxOut,
+        add_input_rangeproofs: bool,
     ) -> Result<usize, Error> {
         let tx = if self.is_segwit() {
             None
@@ -85,6 +86,7 @@ impl Wollet {
             utxo.unblinded,
             self.max_weight_to_satisfy(),
             false, // wallet inputs cannot be explicit
+            add_input_rangeproofs,
         )
     }
 
@@ -242,10 +244,22 @@ mod test {
         let mut inp_weight = 0usize;
         let dummy_utxo = wollet.utxos().unwrap()[0].clone();
         for _ in 0..SECP256K1_SURJECTIONPROOF_MAX_N_INPUTS {
-            let res = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+            let res = wollet.add_input(
+                &mut pset,
+                &mut inp_txout_sec,
+                &mut inp_weight,
+                &dummy_utxo,
+                false,
+            );
             assert!(res.is_ok());
         }
-        let result = wollet.add_input(&mut pset, &mut inp_txout_sec, &mut inp_weight, &dummy_utxo);
+        let result = wollet.add_input(
+            &mut pset,
+            &mut inp_txout_sec,
+            &mut inp_weight,
+            &dummy_utxo,
+            false,
+        );
 
         match result {
             Err(Error::TooManyInputs(count)) => {

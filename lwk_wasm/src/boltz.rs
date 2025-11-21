@@ -219,18 +219,14 @@ impl BoltzSession {
     /// Prepare a lightning invoice payment
     pub async fn prepare_pay(
         &self,
-        invoice: &str,
+        lightning_payment: &LightningPayment,
         refund_address: &str,
     ) -> Result<PreparePayResponse, Error> {
         let refund_address = elements::Address::from_str(refund_address)
             .map_err(|e| Error::Generic(e.to_string()))?;
-        let lightning_payment = lwk_boltz::LightningPayment::Bolt11(Box::new(
-            lwk_boltz::Bolt11Invoice::from_str(invoice)
-                .map_err(|e| Error::Generic(e.to_string()))?,
-        ));
         let r = self
             .inner
-            .prepare_pay(&lightning_payment, &refund_address, None)
+            .prepare_pay(&lightning_payment.inner, &refund_address, None)
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         Ok(r.into())
@@ -251,6 +247,35 @@ impl BoltzSession {
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         Ok(r.into())
+    }
+}
+
+/// Wrapper over [`lwk_boltz::LightningPayment`]
+#[wasm_bindgen]
+pub struct LightningPayment {
+    inner: lwk_boltz::LightningPayment,
+}
+
+impl From<lwk_boltz::LightningPayment> for LightningPayment {
+    fn from(inner: lwk_boltz::LightningPayment) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<LightningPayment> for lwk_boltz::LightningPayment {
+    fn from(wrapper: LightningPayment) -> Self {
+        wrapper.inner
+    }
+}
+
+#[wasm_bindgen]
+impl LightningPayment {
+    /// Create a LightningPayment from a bolt11 invoice string
+    #[wasm_bindgen(constructor)]
+    pub fn new(invoice: &str) -> Result<LightningPayment, Error> {
+        let payment = lwk_boltz::LightningPayment::from_str(invoice)
+            .map_err(|(e1, e2)| Error::Generic(format!("{:?}, {:?}", e1, e2)))?;
+        Ok(payment.into())
     }
 }
 

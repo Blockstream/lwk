@@ -171,6 +171,8 @@ pub struct TxBuilder {
 
     selected_utxos: Option<Vec<OutPoint>>,
 
+    add_input_rangeproofs: bool,
+
     // LiquiDEX fields
     is_liquidex_make: bool,
     liquidex_proposals: Vec<LiquidexProposal<Validated>>,
@@ -189,6 +191,7 @@ impl TxBuilder {
             drain_to: None,
             external_utxos: vec![],
             selected_utxos: None,
+            add_input_rangeproofs: true,
             is_liquidex_make: false,
             liquidex_proposals: vec![],
         }
@@ -293,6 +296,34 @@ impl TxBuilder {
     /// Do not use ELIP200 discounted fees for Confidential Transactions
     pub fn disable_ct_discount(mut self) -> Self {
         self.ct_discount = false;
+        self
+    }
+
+    /// Construct the PSET adding the input rangeproofs
+    ///
+    /// Default: `true`.
+    ///
+    /// To verify the asset and amount/value of an input, you can use either
+    /// the blind proofs or the rangeproof.
+    ///
+    /// LWK now always adds the blind proofs, so the rangeproofs are technically
+    /// redudant. However old versions of LWK did not add the blind proofs and
+    /// only added only the input rangeproofs.
+    /// Consistently, the old LWK verification code ignored the blind proofs
+    /// and only looked at the input rangeproofs.
+    ///
+    /// So for backward compatibility purposes, now LWK verification code looks
+    /// for both blind proofs and rangeproofs, and when constructing a PSET LWK
+    /// adds both blind proofs and rangeproofs.
+    ///
+    /// This is not ideal since rangeproofs are large and redundant, but you can
+    /// skip adding the input rangeproofs passing `false` to this function.
+    ///
+    /// By passing `true` you can preserve the addition of input rangeproofs.
+    ///
+    /// After a grace period, we plan to switch the default to `false`.
+    pub fn add_input_rangeproofs(mut self, add_rangeproofs: bool) -> Self {
+        self.add_input_rangeproofs = add_rangeproofs;
         self
     }
 
@@ -1335,6 +1366,14 @@ impl<'a> WolletTxBuilder<'a> {
         Self {
             wollet: self.wollet,
             inner: self.inner.disable_ct_discount(),
+        }
+    }
+
+    /// Wrapper of [`TxBuilder::add_input_rangeproofs()`]
+    pub fn add_input_rangeproofs(self, add_rangeproofs: bool) -> Self {
+        Self {
+            wollet: self.wollet,
+            inner: self.inner.add_input_rangeproofs(add_rangeproofs),
         }
     }
 

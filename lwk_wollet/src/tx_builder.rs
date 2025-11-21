@@ -65,7 +65,7 @@ fn add_external_input(
         inp_weight,
         utxo.outpoint,
         utxo.txout.clone(),
-        &utxo.tx,
+        utxo.tx.clone(),
         utxo.unblinded,
         utxo.max_weight_to_satisfy,
         true, // external inputs can be explicit
@@ -79,7 +79,7 @@ pub(crate) fn add_input_inner(
     inp_weight: &mut usize,
     outpoint: OutPoint,
     mut txout: TxOut,
-    tx: &Option<Transaction>,
+    tx: Option<Transaction>,
     unblinded: TxOutSecrets,
     max_weight_to_satisfy: usize,
     allow_explicit_input: bool,
@@ -97,9 +97,8 @@ pub(crate) fn add_input_inner(
     // relying on its presence.
     input.in_utxo_rangeproof = txout.witness.rangeproof.take();
     input.witness_utxo = Some(txout.clone());
-    if let Some(tx) = &tx {
+    if let Some(mut tx) = tx {
         // For pre-segwit add non_witness_utxo
-        let mut tx = tx.clone();
         // Remove the rangeproof to match the witness utxo,
         // to pass the checks done by elements-miniscript
         let _ = tx

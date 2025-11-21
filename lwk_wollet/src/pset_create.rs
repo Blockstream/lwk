@@ -81,7 +81,7 @@ impl Wollet {
             inp_weight,
             utxo.outpoint,
             self.get_txout(&utxo.outpoint)?,
-            &tx,
+            tx,
             utxo.unblinded,
             self.max_weight_to_satisfy(),
             false, // wallet inputs cannot be explicit

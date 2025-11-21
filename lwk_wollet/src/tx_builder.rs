@@ -72,6 +72,7 @@ fn add_external_input(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn add_input_inner(
     pset: &mut PartiallySignedTransaction,
     inp_txout_sec: &mut HashMap<usize, TxOutSecrets>,

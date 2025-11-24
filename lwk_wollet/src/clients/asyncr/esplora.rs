@@ -6,8 +6,8 @@ use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::descriptor::url_encode_descriptor;
 use crate::BlindingPublicKey;
 use crate::{
+    cache::{Height, RawCache, Timestamp, BATCH_SIZE},
     clients::Data,
-    store::{Height, RawCache, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
     wollet::WolletState,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,

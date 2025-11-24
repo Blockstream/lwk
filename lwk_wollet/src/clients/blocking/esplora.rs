@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 use tokio::runtime::Runtime;
 
 use crate::{
+    cache::Height,
     clients::{asyncr, Capability, Data, EsploraClientBuilder, History},
-    store::Height,
     wollet::WolletState,
     ElementsNetwork, Error, WolletDescriptor,
 };

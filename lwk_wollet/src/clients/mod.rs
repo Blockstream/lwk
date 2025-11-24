@@ -1,7 +1,7 @@
 //! Clients to fetch data from the Blockchain.
 
 use crate::{
-    store::{Height, Timestamp},
+    cache::{Height, Timestamp},
     BlindingPublicKey, Chain, DownloadTxResult, ElementsNetwork, Error, WolletDescriptor, EC,
 };
 use elements::{

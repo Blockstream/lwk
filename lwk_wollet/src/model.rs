@@ -1,8 +1,8 @@
+use crate::cache::Timestamp;
 use crate::descriptor::Chain;
 use crate::elements::{Address, AssetId, OutPoint, Script, Transaction, TxOutSecrets, Txid};
 use crate::pset_create::validate_address;
 use crate::secp256k1::PublicKey;
-use crate::store::Timestamp;
 use crate::{ElementsNetwork, Error};
 use elements::bitcoin;
 

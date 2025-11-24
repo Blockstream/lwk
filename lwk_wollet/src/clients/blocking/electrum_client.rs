@@ -1,5 +1,5 @@
+use crate::cache::Height;
 use crate::clients::electrum_url::ElectrumUrl;
-use crate::store::Height;
 use crate::Error;
 use crate::History;
 

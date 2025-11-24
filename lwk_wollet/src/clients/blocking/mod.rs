@@ -1,8 +1,8 @@
 //! Blocking clients to fetch data from the Blockchain.
 
 use crate::{
+    cache::{Height, Timestamp, BATCH_SIZE},
     clients::{create_dummy_tx, try_unblind},
-    store::{Height, Timestamp, BATCH_SIZE},
     update::{DownloadTxResult, Update},
     wollet::WolletState,
     BlindingPublicKey, Chain, Error, WolletDescriptor,

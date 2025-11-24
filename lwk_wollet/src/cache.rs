@@ -160,7 +160,7 @@ impl RawCache {
 
 #[cfg(test)]
 mod tests {
-    use crate::{store::RawCache, WolletDescriptor};
+    use crate::{cache::RawCache, WolletDescriptor};
     use elements::{Address, AddressParams, Txid};
     use elements_miniscript::ConfidentialDescriptor;
     use std::{

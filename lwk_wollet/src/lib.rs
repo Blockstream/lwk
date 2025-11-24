@@ -94,6 +94,7 @@ pub mod amp0;
 #[cfg(feature = "amp2")]
 pub mod amp2;
 
+mod cache;
 pub mod clients;
 mod descriptor;
 mod domain;
@@ -105,7 +106,6 @@ pub mod pegin;
 mod persister;
 mod pset_create;
 pub mod registry;
-mod store;
 mod tx_builder;
 mod update;
 mod util;

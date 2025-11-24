@@ -1,4 +1,5 @@
 use crate::bitcoin::bip32::Fingerprint;
+use crate::cache::{Height, RawCache, ScriptBatch, Timestamp, BATCH_SIZE};
 use crate::clients::{try_unblind, LastUnused};
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
@@ -11,7 +12,6 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::persister::PersistError;
-use crate::store::{Height, RawCache, ScriptBatch, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::ElementsNetwork;

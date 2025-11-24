@@ -30,6 +30,14 @@ regtest-env-stop:
     # Clean up sensitive environment variables
     rm -f ../.env
 
+regtest-env-pull:
+    #!/usr/bin/env bash
+    set -e
+    cd regtest
+    docker compose pull
+    cd ../proxy
+    docker compose build
+
 # Run reverse swap test
 test-reverse: export-env-vars
     #!/usr/bin/env bash

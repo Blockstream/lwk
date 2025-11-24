@@ -298,7 +298,9 @@ impl LightningPayment {
 mod tests {
     use wasm_bindgen_test::*;
 
-    use crate::{BoltzSessionBuilder, LightningPayment, Network};
+    use crate::{
+        BoltzSessionBuilder, EsploraClient, LightningPayment, Mnemonic, Network, Signer, Wollet,
+    };
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -325,5 +327,35 @@ mod tests {
             .invoice(1000, Some("test".to_string()), address)
             .await
             .unwrap();
+    }
+
+    #[ignore = "requires regtest environment"]
+    #[wasm_bindgen_test]
+    async fn test_boltz_session_builder_regtest() {
+        let network = Network::regtest_default();
+        let builder = BoltzSessionBuilder::new(&network);
+        let session = builder.build().await.unwrap();
+
+        // Create a wpkh slip77 Wollet with the abandon mnemonic
+        let mnemonic = Mnemonic::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+        let desc = signer.wpkh_slip77_descriptor().unwrap();
+        let mut wollet = Wollet::new(&network, &desc).unwrap();
+
+        // Perform a full scan and check the balance
+        let mut client =
+            EsploraClient::new(&network, "http://127.0.0.1:3003/", false, 4, false).unwrap();
+        let update = client.full_scan(&wollet).await.unwrap(); // TODO: fix cors errors
+        if let Some(update) = update {
+            wollet.apply_update(&update).unwrap();
+        }
+        let balance = wollet.balance().unwrap();
+        use std::collections::HashMap;
+        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
+            serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
+        let policy_asset = network.policy_asset().into();
+        assert!(!balance.is_empty());
+        assert!(balance.contains_key(&policy_asset));
+        assert!(*balance.get(&policy_asset).unwrap_or(&0) >= 0);
     }
 }

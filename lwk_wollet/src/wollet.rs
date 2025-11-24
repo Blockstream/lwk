@@ -68,7 +68,29 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        Wollet::new(self.network, self.persister, self.descriptor)
+        let config = Config::new(self.network)?;
+
+        let store = Store::default();
+        let max_weight_to_satisfy = self
+            .descriptor
+            .definite_descriptor(Chain::External, 0)?
+            .max_weight_to_satisfy()?;
+        let mut wollet = Wollet {
+            store,
+            config,
+            descriptor: self.descriptor,
+            persister: self.persister,
+            max_weight_to_satisfy,
+        };
+
+        for i in 0.. {
+            match wollet.persister.get(i)? {
+                Some(update) => wollet.apply_update_no_persist(update)?,
+                None => break,
+            }
+        }
+
+        Ok(wollet)
     }
 }
 
@@ -253,28 +275,9 @@ impl Wollet {
         persister: Arc<dyn Persister + Send + Sync>,
         descriptor: WolletDescriptor,
     ) -> Result<Self, Error> {
-        let config = Config::new(network)?;
-
-        let store = Store::default();
-        let max_weight_to_satisfy = descriptor
-            .definite_descriptor(Chain::External, 0)?
-            .max_weight_to_satisfy()?;
-        let mut wollet = Wollet {
-            store,
-            config,
-            descriptor,
-            persister,
-            max_weight_to_satisfy,
-        };
-
-        for i in 0.. {
-            match wollet.persister.get(i)? {
-                Some(update) => wollet.apply_update_no_persist(update)?,
-                None => break,
-            }
-        }
-
-        Ok(wollet)
+        WolletBuilder::new(network, descriptor)
+            .with_persister(persister)
+            .build()
     }
 
     /// Whether the wallet is segwit (BIP141)

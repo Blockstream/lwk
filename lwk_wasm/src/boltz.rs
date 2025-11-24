@@ -170,6 +170,29 @@ impl PreparePayResponse {
             .serialize()
             .map_err(|e| Error::Generic(e.to_string()))
     }
+
+    pub fn swap_id(&self) -> String {
+        self.inner.swap_id().to_string()
+    }
+
+    pub fn uri(&self) -> String {
+        self.inner.uri().to_string()
+    }
+
+    pub fn uri_address(&self) -> String {
+        self.inner.uri_address().to_string()
+    }
+
+    pub fn uri_amount(&self) -> u64 {
+        self.inner.uri_amount()
+    }
+
+    pub async fn complete_pay(self) -> Result<bool, Error> {
+        self.inner
+            .complete_pay()
+            .await
+            .map_err(|e| Error::Generic(e.to_string()))
+    }
 }
 
 /// Wrapper over [`lwk_boltz::InvoiceResponse`]

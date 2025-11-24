@@ -303,8 +303,8 @@ mod tests {
         let prepare_pay_response = session.restore_prepare_pay(data).await.unwrap();
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
-            &prepare_pay_response.address(),
-            prepare_pay_response.amount(),
+            &prepare_pay_response.uri_address(),
+            prepare_pay_response.uri_amount(),
         )
         .await
         .unwrap();

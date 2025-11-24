@@ -186,10 +186,10 @@ pub enum Error {
     #[error("Contract does not commit to asset id")]
     ContractDoesNotCommitToAssetId,
 
-    #[error("Update height {update_tip_height} too old (internal height {store_tip_height})")]
+    #[error("Update height {update_tip_height} too old (internal height {cache_tip_height})")]
     UpdateHeightTooOld {
         update_tip_height: u32,
-        store_tip_height: u32,
+        cache_tip_height: u32,
     },
 
     #[error("Update created on a wallet with status {update_status} while current wallet has {wollet_status}")]

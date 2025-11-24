@@ -71,7 +71,10 @@ async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn Error
 
     let res = client
         .post(PROXY_URL)
-        .header("Grpc-Metadata-macaroon", LND_MACAROON_HEX.unwrap())
+        .header(
+            "Grpc-Metadata-macaroon",
+            LND_MACAROON_HEX.expect("LND_MACAROON_HEX is not set"),
+        )
         .header("X-Proxy-URL", url)
         .json(&params)
         .send()

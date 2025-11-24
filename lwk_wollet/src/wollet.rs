@@ -1,6 +1,5 @@
 use crate::bitcoin::bip32::Fingerprint;
 use crate::clients::{try_unblind, LastUnused};
-use crate::config::ElementsNetwork;
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use crate::elements::pset::PartiallySignedTransaction;
@@ -15,6 +14,7 @@ use crate::persister::PersistError;
 use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
+use crate::ElementsNetwork;
 use crate::{BlindingPublicKey, FsPersister, NoPersist, Persister, Update, WolletDescriptor};
 use elements::bitcoin::bip32::ChildNumber;
 use elements::{bitcoin, Address, AddressParams};

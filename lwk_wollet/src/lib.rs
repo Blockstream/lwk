@@ -95,12 +95,12 @@ pub mod amp0;
 pub mod amp2;
 
 pub mod clients;
-mod config;
 mod descriptor;
 mod domain;
 mod error;
 mod liquidex;
 mod model;
+mod network;
 pub mod pegin;
 mod persister;
 mod pset_create;
@@ -115,7 +115,6 @@ mod wollet;
 
 pub use crate::clients::electrum_url::{ElectrumUrl, UrlError};
 pub use crate::clients::{Capability, History};
-pub use crate::config::ElementsNetwork;
 pub use crate::descriptor::{Chain, WolletDescriptor};
 pub use crate::error::Error;
 pub use crate::liquidex::{AssetAmount, LiquidexProposal, Unvalidated, Validated};
@@ -123,6 +122,7 @@ pub use crate::model::{
     AddressResult, ExternalUtxo, IssuanceDetails, Recipient, UnvalidatedRecipient, WalletTx,
     WalletTxOut,
 };
+pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity, RegistryAssetData};

@@ -6,13 +6,13 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 
-use crate::config::{
-    LIQUID_DEFAULT_REGTEST_ASSET_STR, LIQUID_POLICY_ASSET_STR, LIQUID_TESTNET_POLICY_ASSET_STR,
-};
 use crate::domain::verify_domain_name;
 use crate::elements::hashes::{sha256, Hash};
 use crate::elements::{AssetId, ContractHash, OutPoint};
 use crate::error::Error;
+use crate::network::{
+    LIQUID_DEFAULT_REGTEST_ASSET_STR, LIQUID_POLICY_ASSET_STR, LIQUID_TESTNET_POLICY_ASSET_STR,
+};
 use crate::util::{serde_from_hex, serde_to_hex, verify_pubkey};
 use crate::ElementsNetwork;
 use elements::hashes::sha256::Midstate;

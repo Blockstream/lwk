@@ -206,15 +206,15 @@ impl PreparePayResponse {
     }
 
     pub fn uri(&self) -> String {
-        self.inner.data.create_swap_response.bip21.clone()
+        self.inner.uri()
     }
 
     pub fn uri_address(&self) -> String {
-        self.inner.data.create_swap_response.address.clone()
+        self.inner.uri_address()
     }
 
     pub fn uri_amount(&self) -> u64 {
-        self.inner.data.create_swap_response.expected_amount
+        self.inner.uri_amount()
     }
 
     pub fn serialize(&self) -> Result<String, Error> {

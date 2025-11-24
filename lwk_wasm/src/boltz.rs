@@ -322,10 +322,18 @@ mod tests {
     use wasm_bindgen_test::*;
 
     use crate::{
-        BoltzSessionBuilder, EsploraClient, LightningPayment, Mnemonic, Network, Signer, Wollet,
+        Address, BoltzSessionBuilder, EsploraClient, LightningPayment, Mnemonic, Network, Signer,
+        TxBuilder, Wollet,
     };
 
+    use reqwest::Client;
+    use serde_json::{json, Value};
+
     wasm_bindgen_test_configure!(run_in_browser);
+
+    const LND_URL: &str = "https://localhost:8081";
+
+    const PROXY_URL: &str = "http://localhost:51234/proxy";
 
     #[wasm_bindgen_test]
     async fn test_boltz_session_builder() {
@@ -352,9 +360,9 @@ mod tests {
             .unwrap();
     }
 
-    #[ignore = "requires regtest environment"]
+    // #[ignore = "requires regtest environment"]
     #[wasm_bindgen_test]
-    async fn test_boltz_session_builder_regtest() {
+    async fn test_boltz_submarine_reverse() {
         let network = Network::regtest_default();
         let builder = BoltzSessionBuilder::new(&network);
         let session = builder.build().await.unwrap();
@@ -367,7 +375,7 @@ mod tests {
 
         // Perform a full scan and check the balance
         let mut client =
-            EsploraClient::new(&network, "http://127.0.0.1:3003/", false, 4, false).unwrap();
+            EsploraClient::new(&network, "http://127.0.0.1:4003/api/", false, 4, false).unwrap();
         let update = client.full_scan(&wollet).await.unwrap(); // TODO: fix cors errors
         if let Some(update) = update {
             wollet.apply_update(&update).unwrap();
@@ -377,8 +385,95 @@ mod tests {
         let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
             serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
         let policy_asset = network.policy_asset().into();
-        assert!(!balance.is_empty());
-        assert!(balance.contains_key(&policy_asset));
-        assert!(*balance.get(&policy_asset).unwrap_or(&0) >= 0);
+        assert!(*balance.get(&policy_asset).unwrap_or(&0) > 0);
+
+        let invoice_amount = 1000;
+        let invoice = generate_invoice_lnd(invoice_amount).await.unwrap();
+        assert!(invoice.starts_with("lnbcrt1"));
+
+        let refund_address = wollet.address(None).unwrap();
+        let invoice = LightningPayment::new(&invoice).unwrap();
+        let invoice_response = session
+            .prepare_pay(&invoice, &refund_address.address().to_string())
+            .await
+            .unwrap();
+        let address = invoice_response.uri_address();
+        let amount = invoice_response.uri_amount();
+        assert!(address.starts_with("el1"));
+        assert!(amount > invoice_amount);
+
+        // Create a transaction to send the amount to the address
+        let recipient_address = Address::new(&address).unwrap();
+        let mut builder = TxBuilder::new(&network);
+        builder = builder
+            .add_lbtc_recipient(&recipient_address, amount)
+            .unwrap();
+        let mut pset = builder.finish(&wollet).unwrap();
+
+        // Sign the transaction
+        pset = signer.sign(pset).unwrap();
+
+        // Finalize the transaction
+        pset = wollet.finalize(pset).unwrap();
+
+        // Extract and broadcast the transaction
+        let tx = pset.extract_tx().unwrap();
+        let txid = client.broadcast_tx(&tx).await.unwrap();
+
+        // Optionally apply the transaction to the wallet
+        wollet.apply_transaction(&tx).unwrap();
+
+        // Verify the transaction was broadcast
+        assert!(!txid.to_string().is_empty());
+
+        let result = invoice_response.complete_pay().await.unwrap();
+        assert!(result);
+    }
+
+    // copied from lwk_boltz::tests::utils::lnd_request
+    async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let url = format!("{LND_URL}/{method}");
+
+        // can't use option_env!("LND_MACAROON_HEX") because it's in lwk_boltz crate.
+        // just reading .env which is expected when the boltz regtest is running
+        let env = include_str!("../../lwk_boltz/.env");
+        let mac = env
+            .split("\n")
+            .find(|line| line.starts_with("LND_MACAROON_HEX="))
+            .unwrap()
+            .split("=")
+            .nth(1)
+            .unwrap();
+
+        let res = client
+            .post(PROXY_URL)
+            .header("Grpc-Metadata-macaroon", mac)
+            .header("X-Proxy-URL", url)
+            .json(&params)
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        // Parse the last JSON in the response (multiple JSONs separated by newlines)
+        let last_json_line = res
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .ok_or("Empty response")?;
+
+        let parsed: Value = serde_json::from_str(last_json_line)?;
+        Ok(parsed)
+    }
+
+    pub async fn generate_invoice_lnd(
+        amount_sat: u64,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let response = lnd_request("v1/invoices", json!({ "value": amount_sat })).await?;
+        response["payment_request"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Missing payment_request field".into())
     }
 }

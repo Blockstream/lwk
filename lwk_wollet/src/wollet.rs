@@ -86,7 +86,6 @@ pub struct WolletConciseState {
     last_unused: LastUnused,
 }
 
-#[allow(unused)]
 pub trait WolletState {
     fn get_script_batch(
         &self,

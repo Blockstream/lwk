@@ -35,7 +35,7 @@ use std::sync::{atomic, Arc};
 
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
-    pub(crate) config: Config,
+    pub(crate) network: ElementsNetwork,
     pub(crate) store: Store,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     pub(crate) descriptor: WolletDescriptor,
@@ -68,8 +68,6 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        let config = Config::new(self.network)?;
-
         let store = Store::default();
         let max_weight_to_satisfy = self
             .descriptor
@@ -77,7 +75,7 @@ impl WolletBuilder {
             .max_weight_to_satisfy()?;
         let mut wollet = Wollet {
             store,
-            config,
+            network: self.network,
             descriptor: self.descriptor,
             persister: self.persister,
             max_weight_to_satisfy,
@@ -262,7 +260,7 @@ impl WolletState for Wollet {
 
 impl std::hash::Hash for Wollet {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.config.hash(state);
+        self.network.hash(state);
         self.store.hash(state);
         self.descriptor.hash(state);
     }
@@ -341,7 +339,7 @@ impl Wollet {
 
     /// Get the network policy asset
     pub fn policy_asset(&self) -> AssetId {
-        self.config.policy_asset()
+        self.network.policy_asset()
     }
 
     /// Creates a transaction builder with a reference to this wallet
@@ -351,7 +349,7 @@ impl Wollet {
 
     /// Get the network
     pub fn network(&self) -> ElementsNetwork {
-        self.config.network()
+        self.network
     }
 
     /// Get a reference of the wallet descriptor
@@ -389,7 +387,7 @@ impl Wollet {
 
         let address = self
             .descriptor
-            .address(index, self.config.address_params())?;
+            .address(index, self.network.address_params())?;
         Ok(AddressResult::new(address, index))
     }
 
@@ -450,7 +448,7 @@ impl Wollet {
 
         let address = self
             .descriptor
-            .change(index, self.config.address_params())?;
+            .change(index, self.network.address_params())?;
         Ok(AddressResult::new(address, index))
     }
 
@@ -831,7 +829,7 @@ impl Wollet {
     /// Get the PSET details with respect to the wallet
     pub fn get_details(&self, pset: &PartiallySignedTransaction) -> Result<PsetDetails, Error> {
         Ok(PsetDetails {
-            balance: pset_balance(pset, self.descriptor(), self.config.address_params())?,
+            balance: pset_balance(pset, self.descriptor(), self.network.address_params())?,
             sig_details: pset_signatures(pset),
             issuances: pset_issuances(pset),
         })

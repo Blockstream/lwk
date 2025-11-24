@@ -6,7 +6,7 @@ use crate::clients::{EsploraClientBuilder, LastUnused};
 use crate::descriptor::url_encode_descriptor;
 use crate::BlindingPublicKey;
 use crate::{
-    cache::{Height, RawCache, Timestamp, BATCH_SIZE},
+    cache::{Cache, Height, Timestamp, BATCH_SIZE},
     clients::Data,
     update::DownloadTxResult,
     wollet::WolletState,
@@ -412,7 +412,7 @@ impl EsploraClient {
     async fn get_history(
         &mut self,
         descriptor: &WolletDescriptor,
-        cache: &RawCache,
+        cache: &Cache,
         index: u32,
         last_unused: LastUnused,
     ) -> Result<Data, Error> {
@@ -659,7 +659,7 @@ impl EsploraClient {
         &self,
         history_txs_id: &HashSet<Txid>,
         scripts: &HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
-        cache: &RawCache,
+        cache: &Cache,
         descriptor: &WolletDescriptor,
     ) -> Result<DownloadTxResult, Error> {
         let mut txs = vec![];
@@ -709,7 +709,7 @@ impl EsploraClient {
         history_txs_heights_plus_tip: &HashSet<Height>,
         height_blockhash: &HashMap<Height, BlockHash>,
         height_timestamp: &HashMap<Height, Timestamp>,
-        cache: &RawCache,
+        cache: &Cache,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
         let heights_in_db: HashSet<Height> = cache.timestamps.keys().cloned().collect();

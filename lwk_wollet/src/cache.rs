@@ -11,9 +11,9 @@ pub const BATCH_SIZE: u32 = 20;
 pub type Height = u32;
 pub type Timestamp = u32;
 
-/// `RawCache` is a cache of wallet data, like wallet transactions.
+/// `Cache` is a cache of wallet data, like wallet transactions.
 /// It is fully reconstructable from the CT Descriptor and the blockchain.
-pub struct RawCache {
+pub struct Cache {
     /// contains all my tx and all prevouts
     pub all_txs: HashMap<Txid, Transaction>,
 
@@ -42,7 +42,7 @@ pub struct RawCache {
     pub last_unused_internal: AtomicU32,
 }
 
-impl Default for RawCache {
+impl Default for Cache {
     fn default() -> Self {
         Self {
             all_txs: HashMap::default(),
@@ -58,7 +58,7 @@ impl Default for RawCache {
     }
 }
 
-impl std::hash::Hash for RawCache {
+impl std::hash::Hash for Cache {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let mut vec: Vec<_> = self.all_txs.keys().collect();
         vec.sort();
@@ -103,7 +103,7 @@ pub struct ScriptBatch {
     pub value: Vec<(Script, (Chain, ChildNumber, BlindingPublicKey))>,
 }
 
-impl RawCache {
+impl Cache {
     pub fn get_script_batch(
         &self,
         batch: u32,
@@ -160,7 +160,7 @@ impl RawCache {
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::RawCache, WolletDescriptor};
+    use crate::{cache::Cache, WolletDescriptor};
     use elements::{Address, AddressParams, Txid};
     use elements_miniscript::ConfidentialDescriptor;
     use std::{
@@ -185,7 +185,7 @@ mod tests {
         let desc: WolletDescriptor = desc.try_into().unwrap();
         let addr1 = desc.address(0, &AddressParams::LIQUID_TESTNET).unwrap();
 
-        let cache = RawCache::default();
+        let cache = Cache::default();
 
         let x = cache
             .get_script_batch(0, &desc.as_single_descriptors().unwrap()[0])
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_cache_hash() {
-        let mut cache = RawCache::default();
+        let mut cache = Cache::default();
         let mut hasher = DefaultHasher::new();
         cache.hash(&mut hasher);
         assert_eq!(11565483422739161174, hasher.finish());

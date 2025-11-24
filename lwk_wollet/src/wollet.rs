@@ -1,5 +1,5 @@
 use crate::bitcoin::bip32::Fingerprint;
-use crate::cache::{Height, RawCache, ScriptBatch, Timestamp, BATCH_SIZE};
+use crate::cache::{Cache, Height, ScriptBatch, Timestamp, BATCH_SIZE};
 use crate::clients::{try_unblind, LastUnused};
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
@@ -36,7 +36,7 @@ use std::sync::{atomic, Arc};
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) network: ElementsNetwork,
-    pub(crate) cache: RawCache,
+    pub(crate) cache: Cache,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     pub(crate) descriptor: WolletDescriptor,
     // cached value
@@ -68,7 +68,7 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        let cache = RawCache::default();
+        let cache = Cache::default();
         let max_weight_to_satisfy = self
             .descriptor
             .definite_descriptor(Chain::External, 0)?

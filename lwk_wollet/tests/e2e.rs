@@ -955,7 +955,7 @@ async fn test_esplora_wasm_client() {
 
     let descriptor: WolletDescriptor = descriptor.parse().unwrap();
 
-    let mut wollet = Wollet::new(network, NoPersist::new(), descriptor).unwrap();
+    let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
 
     let update = client.full_scan(&wollet).await.unwrap().unwrap();
     wollet.apply_update(update).unwrap();

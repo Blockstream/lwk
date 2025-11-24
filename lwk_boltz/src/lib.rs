@@ -472,22 +472,9 @@ async fn fetch_next_index_to_use(
     let xpub = derive_xpub_from_mnemonic(mnemonic, network_kind)?;
     log::info!("xpub for restore is: {xpub}");
 
-    let result = client.post_swap_restore(&xpub.to_string()).await?;
-    log::info!("swap_restore api returns {} elements", result.len());
+    let result = client.post_swap_restore_index(&xpub.to_string()).await?;
 
-    let next_index_to_use = match result
-        .iter()
-        .filter_map(|e| {
-            e.claim_details
-                .as_ref()
-                .map(|d| d.key_index)
-                .or_else(|| e.refund_details.as_ref().map(|d| d.key_index))
-        })
-        .max()
-    {
-        Some(index) => index + 1,
-        None => 0,
-    };
+    let next_index_to_use = (result.index + 1) as u32;
 
     log::info!("next index to use is: {next_index_to_use}");
     Ok(next_index_to_use)

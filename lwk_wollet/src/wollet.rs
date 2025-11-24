@@ -1551,12 +1551,8 @@ mod tests {
         let descriptor = lwk_test_util::wollet_descriptor_many_transactions();
         let descriptor: WolletDescriptor = descriptor.parse().unwrap();
         let update = Update::deserialize(&update).unwrap();
-        let mut wollet = Wollet::new(
-            ElementsNetwork::LiquidTestnet,
-            std::sync::Arc::new(NoPersist {}),
-            descriptor,
-        )
-        .unwrap();
+        let network = ElementsNetwork::LiquidTestnet;
+        let mut wollet = WolletBuilder::new(network, descriptor).build().unwrap();
         wollet.apply_update(update).unwrap();
         wollet
     }

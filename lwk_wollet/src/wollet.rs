@@ -43,6 +43,35 @@ pub struct Wollet {
     max_weight_to_satisfy: usize,
 }
 
+/// A builder for constructing [`Wollet`] instances
+pub struct WolletBuilder {
+    network: ElementsNetwork,
+    descriptor: WolletDescriptor,
+    persister: Arc<dyn Persister + Send + Sync>,
+}
+
+impl WolletBuilder {
+    /// Create a `Wollet` builder
+    pub fn new(network: ElementsNetwork, descriptor: WolletDescriptor) -> Self {
+        Self {
+            network,
+            descriptor,
+            persister: Arc::new(NoPersist {}),
+        }
+    }
+
+    /// Specify the `Wollet` persister
+    pub fn with_persister(mut self, persister: Arc<dyn Persister + Send + Sync>) -> Self {
+        self.persister = persister;
+        self
+    }
+
+    /// Build the `Wollet`
+    pub fn build(self) -> Result<Wollet, Error> {
+        Wollet::new(self.network, self.persister, self.descriptor)
+    }
+}
+
 /// A coincise state of the wallet, in particular having only transactions ids instead of full
 /// transactions and missing other things not strictly needed for a scan.
 /// By using this instead of a borrow of the wallet we can release locks

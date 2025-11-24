@@ -108,7 +108,7 @@ pub struct ScriptBatch {
     pub value: Vec<(Script, (Chain, ChildNumber, BlindingPublicKey))>,
 }
 
-impl Store {
+impl RawCache {
     pub fn get_script_batch(
         &self,
         batch: u32,
@@ -141,7 +141,7 @@ impl Store {
         child: ChildNumber,
         descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
-        let opt_script = self.cache.scripts.get(&(ext_int, child));
+        let opt_script = self.scripts.get(&(ext_int, child));
         let (script, blinding_pubkey, cached) = match opt_script {
             Some((script, blinding_pubkey)) => (script.clone(), *blinding_pubkey, true),
             None => {
@@ -155,7 +155,6 @@ impl Store {
 
     pub fn spent(&self) -> Result<HashSet<OutPoint>, Error> {
         Ok(self
-            .cache
             .all_txs
             .values()
             .flat_map(|tx| tx.input.iter())
@@ -166,7 +165,7 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
-    use crate::{store::Store, WolletDescriptor};
+    use crate::{store::RawCache, WolletDescriptor};
     use elements::{Address, AddressParams, Txid};
     use elements_miniscript::ConfidentialDescriptor;
     use std::{
@@ -191,9 +190,9 @@ mod tests {
         let desc: WolletDescriptor = desc.try_into().unwrap();
         let addr1 = desc.address(0, &AddressParams::LIQUID_TESTNET).unwrap();
 
-        let store = Store::default();
+        let cache = RawCache::default();
 
-        let x = store
+        let x = cache
             .get_script_batch(0, &desc.as_single_descriptors().unwrap()[0])
             .unwrap();
         assert_eq!(format!("{:?}", x.value[0]), "(Script(OP_0 OP_PUSHBYTES_20 d11ef9e68385138627b09d52d6fe12662d049224), (External, Normal { index: 0 }, PublicKey(0525054b498a69342d90750ed5e8f91cb6fb4da48735fd7011fdbcfc0e8edee1f0a30ed1e5c1d730e281b73f70f02dec2cbe20d0ac864d3d3d6942a02d66c6e3)))");
@@ -209,17 +208,16 @@ mod tests {
 
     #[test]
     fn test_store_hash() {
-        let mut store = Store::default();
+        let mut cache = RawCache::default();
         let mut hasher = DefaultHasher::new();
-        store.hash(&mut hasher);
+        cache.hash(&mut hasher);
         assert_eq!(11565483422739161174, hasher.finish());
 
-        store
-            .cache
+        cache
             .heights
             .insert(<Txid as elements::hashes::Hash>::all_zeros(), None);
         let mut hasher = DefaultHasher::new();
-        store.hash(&mut hasher);
+        cache.hash(&mut hasher);
         assert_eq!(12004253425667158821, hasher.finish());
 
         // TODO test other fields change the hash

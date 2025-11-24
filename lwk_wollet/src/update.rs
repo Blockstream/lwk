@@ -97,7 +97,7 @@ impl Update {
 
     /// Prune the update, removing unneeded data from transactions.
     pub fn prune(&mut self, wallet: &Wollet) {
-        self.new_txs.prune(&wallet.store.cache.paths);
+        self.new_txs.prune(&wallet.cache.paths);
     }
 
     /// Serialize an [`Update`] to a byte array
@@ -188,7 +188,7 @@ impl Wollet {
         let mut unblinds = vec![];
         let txid = tx.txid();
         for (vout, output) in tx.output.iter().enumerate() {
-            if self.store.cache.paths.contains_key(&output.script_pubkey) {
+            if self.cache.paths.contains_key(&output.script_pubkey) {
                 let outpoint = OutPoint::new(txid, vout as u32);
                 match try_unblind(output, &self.descriptor) {
                     Ok(unblinded) => {
@@ -256,7 +256,7 @@ impl Wollet {
             }
         }
         let descriptor = self.wollet_descriptor();
-        let store = &mut self.store;
+        let cache = &mut self.cache;
         let Update {
             version: _,
             wollet_status: _,
@@ -272,32 +272,29 @@ impl Wollet {
             compute_blinding_pubkey_if_missing(scripts_with_blinding_pubkey, descriptor)?;
 
         if tip != default_blockheader() {
-            if tip.height + 1 < store.cache.tip.0 {
+            if tip.height + 1 < cache.tip.0 {
                 // Checking we are not applying an old update while giving enough space for a single block reorg
                 return Err(Error::UpdateHeightTooOld {
                     update_tip_height: tip.height,
-                    store_tip_height: store.cache.tip.0,
+                    store_tip_height: cache.tip.0,
                 });
             }
 
-            store.cache.tip = (tip.height, tip.block_hash());
+            cache.tip = (tip.height, tip.block_hash());
         }
 
-        store.cache.unblinded.extend(new_txs.unblinds);
-        store.cache.all_txs.extend(new_txs.txs);
-        store
-            .cache
-            .heights
-            .retain(|k, _| !txid_height_delete.contains(k));
-        store.cache.heights.extend(txid_height_new.clone());
-        store.cache.timestamps.extend(timestamps);
-        store.cache.scripts.extend(
+        cache.unblinded.extend(new_txs.unblinds);
+        cache.all_txs.extend(new_txs.txs);
+        cache.heights.retain(|k, _| !txid_height_delete.contains(k));
+        cache.heights.extend(txid_height_new.clone());
+        cache.timestamps.extend(timestamps);
+        cache.scripts.extend(
             scripts_with_blinding_pubkey
                 .clone()
                 .into_iter()
                 .map(|(a, b, c, d)| ((a, b), (c, d))),
         );
-        store.cache.paths.extend(
+        cache.paths.extend(
             scripts_with_blinding_pubkey
                 .clone()
                 .into_iter()
@@ -306,10 +303,9 @@ impl Wollet {
         let mut last_used_internal = None;
         let mut last_used_external = None;
         for (txid, _) in txid_height_new {
-            if let Some(tx) = store.cache.all_txs.get(&txid) {
+            if let Some(tx) = cache.all_txs.get(&txid) {
                 for (vout, output) in tx.output.iter().enumerate() {
-                    if !store
-                        .cache
+                    if !cache
                         .unblinded
                         .contains_key(&OutPoint::new(txid, vout as u32))
                     {
@@ -317,7 +313,7 @@ impl Wollet {
                         continue;
                     }
                     if let Some((ext_int, ChildNumber::Normal { index })) =
-                        store.cache.paths.get(&output.script_pubkey)
+                        cache.paths.get(&output.script_pubkey)
                     {
                         match ext_int {
                             Chain::External => match last_used_external {
@@ -336,14 +332,12 @@ impl Wollet {
             }
         }
         if let Some(last_used_external) = last_used_external {
-            store
-                .cache
+            cache
                 .last_unused_external
                 .fetch_max(last_used_external + 1, atomic::Ordering::Relaxed);
         }
         if let Some(last_used_internal) = last_used_internal {
-            store
-                .cache
+            cache
                 .last_unused_internal
                 .fetch_max(last_used_internal + 1, atomic::Ordering::Relaxed);
         }

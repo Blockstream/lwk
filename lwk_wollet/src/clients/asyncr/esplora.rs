@@ -7,7 +7,7 @@ use crate::descriptor::url_encode_descriptor;
 use crate::BlindingPublicKey;
 use crate::{
     clients::Data,
-    store::{Height, Store, Timestamp, BATCH_SIZE},
+    store::{Height, RawCache, Timestamp, BATCH_SIZE},
     update::DownloadTxResult,
     wollet::WolletState,
     Chain, ElementsNetwork, Error, Update, Wollet, WolletDescriptor,
@@ -297,7 +297,7 @@ impl EsploraClient {
         index: u32,
     ) -> Result<Option<Update>, Error> {
         let descriptor = wollet.wollet_descriptor();
-        let store = &wollet.store;
+        let cache = &wollet.cache;
 
         let Data {
             txid_height,
@@ -314,13 +314,13 @@ impl EsploraClient {
             {
                 Ok(d) => d,
                 Err(Error::UsingWaterfallsWithElip151) => {
-                    self.get_history(&descriptor, store, index, wollet.last_unused())
+                    self.get_history(&descriptor, cache, index, wollet.last_unused())
                         .await?
                 }
                 Err(e) => return Err(e),
             }
         } else {
-            self.get_history(&descriptor, store, index, wollet.last_unused())
+            self.get_history(&descriptor, cache, index, wollet.last_unused())
                 .await?
         };
 
@@ -332,7 +332,7 @@ impl EsploraClient {
 
         let history_txs_id: HashSet<Txid> = txid_height.keys().cloned().collect();
         let mut new_txs = self
-            .download_txs(&history_txs_id, &scripts, store, &descriptor)
+            .download_txs(&history_txs_id, &scripts, cache, &descriptor)
             .await?;
 
         if self.utxo_only {
@@ -350,18 +350,12 @@ impl EsploraClient {
                 &history_txs_heights_plus_tip,
                 &height_blockhash,
                 &height_timestamp,
-                store,
+                cache,
             )
             .await?;
 
-        let store_last_unused_external = store
-            .cache
-            .last_unused_external
-            .load(atomic::Ordering::Relaxed);
-        let store_last_unused_internal = store
-            .cache
-            .last_unused_internal
-            .load(atomic::Ordering::Relaxed);
+        let store_last_unused_external = cache.last_unused_external.load(atomic::Ordering::Relaxed);
+        let store_last_unused_internal = cache.last_unused_internal.load(atomic::Ordering::Relaxed);
 
         let last_unused_changed = store_last_unused_external != last_unused.external
             || store_last_unused_internal != last_unused.internal;
@@ -370,21 +364,20 @@ impl EsploraClient {
             || last_unused_changed
             || !scripts.is_empty()
             || !timestamps.is_empty()
-            || store.cache.tip != (tip.height, tip.block_hash());
+            || cache.tip != (tip.height, tip.block_hash());
 
         if changed {
             log::debug!("something changed: !new_txs.txs.is_empty():{} last_unused_changed:{} !scripts.is_empty():{} !timestamps.is_empty():{}", !new_txs.txs.is_empty(), last_unused_changed, !scripts.is_empty(), !timestamps.is_empty() );
 
             let txid_height_new: Vec<_> = txid_height
                 .iter()
-                .filter(|(k, v)| match store.cache.heights.get(*k) {
+                .filter(|(k, v)| match cache.heights.get(*k) {
                     Some(e) => e != *v,
                     None => true,
                 })
                 .map(|(k, v)| (*k, *v))
                 .collect();
-            let txid_height_delete: Vec<_> = store
-                .cache
+            let txid_height_delete: Vec<_> = cache
                 .heights
                 .keys()
                 .filter(|k| !txid_height.contains_key(*k))
@@ -419,7 +412,7 @@ impl EsploraClient {
     async fn get_history(
         &mut self,
         descriptor: &WolletDescriptor,
-        store: &Store,
+        cache: &RawCache,
         index: u32,
         last_unused: LastUnused,
     ) -> Result<Data, Error> {
@@ -430,7 +423,7 @@ impl EsploraClient {
             let chain: Chain = (&descriptor).try_into().unwrap_or(Chain::External);
             let index = index.max(last_unused[chain]);
             loop {
-                let batch = store.get_script_batch(batch_count, &descriptor)?;
+                let batch = cache.get_script_batch(batch_count, &descriptor)?;
 
                 let s: Vec<_> = batch.value.iter().map(|e| &e.0).collect();
                 let result: Vec<Vec<History>> = self.get_scripts_history(&s).await?;
@@ -504,7 +497,7 @@ impl EsploraClient {
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
-        store: &S,
+        cache: &S,
         to_index: u32,
     ) -> Result<Data, Error> {
         let descriptor_url = format!("{}/v2/waterfalls", self.base_url);
@@ -610,7 +603,7 @@ impl EsploraClient {
                         descriptor: desc.clone(),
                     };
                     let (script, blinding_pubkey, cached) =
-                        store.get_or_derive(chain, child, &ct_desc)?;
+                        cache.get_or_derive(chain, child, &ct_desc)?;
                     if !cached {
                         data.scripts.insert(script, (chain, child, blinding_pubkey));
                     }
@@ -666,13 +659,13 @@ impl EsploraClient {
         &self,
         history_txs_id: &HashSet<Txid>,
         scripts: &HashMap<Script, (Chain, ChildNumber, BlindingPublicKey)>,
-        store: &Store,
+        cache: &RawCache,
         descriptor: &WolletDescriptor,
     ) -> Result<DownloadTxResult, Error> {
         let mut txs = vec![];
         let mut unblinds = vec![];
 
-        let mut txs_in_db = store.cache.all_txs.keys().cloned().collect();
+        let mut txs_in_db = cache.all_txs.keys().cloned().collect();
         let txs_to_download: Vec<Txid> = history_txs_id.difference(&txs_in_db).cloned().collect();
 
         let mut stream = iter(txs_to_download.iter().cloned())
@@ -688,8 +681,8 @@ impl EsploraClient {
                     txs_in_db.insert(txid);
 
                     for (i, output) in tx.output.iter().enumerate() {
-                        // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
-                        if store.cache.paths.contains_key(&output.script_pubkey)
+                        // could be the searched script it's not yet in the cache, because created in the current run, thus it's searched also in the `scripts`
+                        if cache.paths.contains_key(&output.script_pubkey)
                             || scripts.contains_key(&output.script_pubkey)
                         {
                             let vout = i as u32;
@@ -716,10 +709,10 @@ impl EsploraClient {
         history_txs_heights_plus_tip: &HashSet<Height>,
         height_blockhash: &HashMap<Height, BlockHash>,
         height_timestamp: &HashMap<Height, Timestamp>,
-        store: &Store,
+        cache: &RawCache,
     ) -> Result<Vec<(Height, Timestamp)>, Error> {
         let mut result = vec![];
-        let heights_in_db: HashSet<Height> = store.cache.timestamps.keys().cloned().collect();
+        let heights_in_db: HashSet<Height> = cache.timestamps.keys().cloned().collect();
         let heights_in_response: HashSet<Height> = height_timestamp.keys().cloned().collect();
         let heights_in_both: HashSet<Height> =
             heights_in_db.union(&heights_in_response).cloned().collect();

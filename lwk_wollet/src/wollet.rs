@@ -11,7 +11,7 @@ use crate::model::{
     AddressResult, BitcoinAddressResult, ExternalUtxo, IssuanceDetails, WalletTx, WalletTxOut,
 };
 use crate::persister::PersistError;
-use crate::store::{Height, ScriptBatch, Store, Timestamp, BATCH_SIZE};
+use crate::store::{Height, RawCache, ScriptBatch, Timestamp, BATCH_SIZE};
 use crate::tx_builder::{extract_issuances, WolletTxBuilder};
 use crate::util::EC;
 use crate::ElementsNetwork;
@@ -36,7 +36,7 @@ use std::sync::{atomic, Arc};
 /// A watch-only wallet defined by a CT descriptor.
 pub struct Wollet {
     pub(crate) network: ElementsNetwork,
-    pub(crate) store: Store,
+    pub(crate) cache: RawCache,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     pub(crate) descriptor: WolletDescriptor,
     // cached value
@@ -68,13 +68,13 @@ impl WolletBuilder {
 
     /// Build the `Wollet`
     pub fn build(self) -> Result<Wollet, Error> {
-        let store = Store::default();
+        let cache = RawCache::default();
         let max_weight_to_satisfy = self
             .descriptor
             .definite_descriptor(Chain::External, 0)?
             .max_weight_to_satisfy()?;
         let mut wollet = Wollet {
-            store,
+            cache,
             network: self.network,
             descriptor: self.descriptor,
             persister: self.persister,
@@ -213,7 +213,7 @@ impl WolletState for Wollet {
         batch: u32,
         descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     ) -> Result<ScriptBatch, Error> {
-        self.store.get_script_batch(batch, descriptor)
+        self.cache.get_script_batch(batch, descriptor)
     }
 
     fn get_or_derive(
@@ -222,23 +222,23 @@ impl WolletState for Wollet {
         child: ChildNumber,
         descriptor: &ConfidentialDescriptor<DescriptorPublicKey>,
     ) -> Result<(Script, BlindingPublicKey, bool), Error> {
-        self.store.get_or_derive(ext_int, child, descriptor)
+        self.cache.get_or_derive(ext_int, child, descriptor)
     }
 
     fn heights(&self) -> &HashMap<Txid, Option<Height>> {
-        &self.store.cache.heights
+        &self.cache.heights
     }
 
     fn paths(&self) -> &HashMap<Script, (Chain, ChildNumber)> {
-        &self.store.cache.paths
+        &self.cache.paths
     }
 
     fn txs(&self) -> HashSet<Txid> {
-        self.store.cache.all_txs.keys().cloned().collect()
+        self.cache.all_txs.keys().cloned().collect()
     }
 
     fn tip(&self) -> (Height, BlockHash) {
-        self.store.cache.tip
+        self.cache.tip
     }
 
     fn last_unused(&self) -> LastUnused {
@@ -261,7 +261,7 @@ impl WolletState for Wollet {
 impl std::hash::Hash for Wollet {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.network.hash(state);
-        self.store.hash(state);
+        self.cache.hash(state);
         self.descriptor.hash(state);
     }
 }
@@ -300,7 +300,7 @@ impl Wollet {
 
     /// Get a concise state of the wallet, allowing to perform a scan (like [`crate::clients::blocking::BlockchainBackend::full_scan()`]) without holding the lock on the wallet.
     pub fn state(&self) -> WolletConciseState {
-        let cache = &self.store.cache;
+        let cache = &self.cache;
         WolletConciseState {
             wollet_status: self.status(),
             descriptor: self.wollet_descriptor(),
@@ -364,8 +364,8 @@ impl Wollet {
 
     /// Get the blockchain tip
     pub fn tip(&self) -> Tip {
-        let (height, hash) = self.store.cache.tip;
-        let timestamp = self.store.cache.timestamps.get(&height).cloned();
+        let (height, hash) = self.cache.tip;
+        let timestamp = self.cache.timestamps.get(&height).cloned();
         Tip {
             height,
             hash,
@@ -415,12 +415,12 @@ impl Wollet {
     }
 
     pub(crate) fn last_unused_external(&self) -> u32 {
-        let cache = &self.store.cache;
+        let cache = &self.cache;
         cache.last_unused_external.load(atomic::Ordering::Relaxed)
     }
 
     pub(crate) fn last_unused_internal(&self) -> u32 {
-        let cache = &self.store.cache;
+        let cache = &self.cache;
         cache.last_unused_internal.load(atomic::Ordering::Relaxed)
     }
 
@@ -462,10 +462,9 @@ impl Wollet {
 
     fn txos_inner(&self) -> Result<Vec<WalletTxOut>, Error> {
         let mut txos = vec![];
-        let spent = self.store.spent()?;
-        for (tx_id, height) in self.store.cache.heights.iter() {
+        let spent = self.cache.spent()?;
+        for (tx_id, height) in self.cache.heights.iter() {
             let tx = self
-                .store
                 .cache
                 .all_txs
                 .get(tx_id)
@@ -482,10 +481,9 @@ impl Wollet {
                     (out_point, output, spent.contains(&out_point))
                 })
                 .filter_map(|(outpoint, output, is_spent)| {
-                    if let Some(unblinded) = self.store.cache.unblinded.get(&outpoint) {
+                    if let Some(unblinded) = self.cache.unblinded.get(&outpoint) {
                         let index = self.index(&output.script_pubkey).ok()?;
                         let blinding_pubkey = self
-                            .store
                             .cache
                             .scripts
                             .get(&(index.0, index.1.into()))
@@ -545,15 +543,15 @@ impl Wollet {
     ///
     /// They can be spent as external utxos using [`crate::TxBuilder::add_external_utxos()`].
     pub fn explicit_utxos(&self) -> Result<Vec<ExternalUtxo>, Error> {
-        let spent = self.store.spent()?;
+        let spent = self.cache.spent()?;
         let mut utxos = vec![];
-        for (txid, tx) in self.store.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs.iter() {
             for (vout, o) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 if !o.script_pubkey.is_empty()
                     && o.asset.is_explicit()
                     && o.value.is_explicit()
-                    && self.store.cache.paths.contains_key(&o.script_pubkey)
+                    && self.cache.paths.contains_key(&o.script_pubkey)
                     && !spent.contains(&outpoint)
                 {
                     let unblinded = TxOutSecrets::new(
@@ -592,7 +590,7 @@ impl Wollet {
         let tx = pset.extract_tx()?;
         let txid = tx.txid();
         for (vout, output) in pset.outputs().iter().enumerate() {
-            if self.store.cache.paths.contains_key(&output.script_pubkey) {
+            if self.cache.paths.contains_key(&output.script_pubkey) {
                 let outpoint = OutPoint::new(txid, vout as u32);
                 // FIXME: also extract explicit utxos
                 let txout = output.to_txout();
@@ -620,12 +618,12 @@ impl Wollet {
     /// In some particular situation they can be unblinded with [`crate::Wollet::reunblind()`].
     pub fn txos_cannot_unblind(&self) -> Result<Vec<OutPoint>, Error> {
         let mut txos = vec![];
-        for (txid, tx) in self.store.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs.iter() {
             for (vout, o) in tx.output.iter().enumerate() {
                 let outpoint = OutPoint::new(*txid, vout as u32);
                 if !o.script_pubkey.is_empty()
-                    && self.store.cache.paths.contains_key(&o.script_pubkey)
-                    && !self.store.cache.unblinded.contains_key(&outpoint)
+                    && self.cache.paths.contains_key(&o.script_pubkey)
+                    && !self.cache.unblinded.contains_key(&outpoint)
                 {
                     txos.push(outpoint);
                 }
@@ -645,11 +643,11 @@ impl Wollet {
         blinding_key: bitcoin::secp256k1::SecretKey,
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
-        let spent = self.store.spent()?;
-        let store_unblinded = &self.store.cache.unblinded;
-        for (txid, tx) in self.store.cache.all_txs.iter() {
+        let spent = self.cache.spent()?;
+        let store_unblinded = &self.cache.unblinded;
+        for (txid, tx) in self.cache.all_txs.iter() {
             for (i, txout) in tx.output.iter().enumerate() {
-                if self.store.cache.paths.contains_key(&txout.script_pubkey) {
+                if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
                     if !spent.contains(&outpoint) && !store_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
@@ -680,11 +678,11 @@ impl Wollet {
     /// its transaction outputs. This function allows to attempt to unblind them again.
     pub fn reunblind(&mut self) -> Result<Vec<OutPoint>, Error> {
         let mut txos = vec![];
-        for (txid, tx) in self.store.cache.all_txs.iter() {
+        for (txid, tx) in self.cache.all_txs.iter() {
             for (vout, txout) in tx.output.iter().enumerate() {
-                if self.store.cache.paths.contains_key(&txout.script_pubkey) {
+                if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, vout as u32);
-                    if let Entry::Vacant(e) = self.store.cache.unblinded.entry(outpoint) {
+                    if let Entry::Vacant(e) = self.cache.unblinded.entry(outpoint) {
                         if let Ok(unblinded) = try_unblind(txout, &self.descriptor) {
                             e.insert(unblinded);
                             txos.push(outpoint);
@@ -724,7 +722,7 @@ impl Wollet {
         limit: usize,
     ) -> Result<Vec<WalletTx>, Error> {
         let mut txs = vec![];
-        let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.store.cache.heights.iter().collect();
+        let mut my_txids: Vec<(&Txid, &Option<u32>)> = self.cache.heights.iter().collect();
         my_txids.sort_by(|a, b| {
             let height_cmp = b.1.unwrap_or(u32::MAX).cmp(&a.1.unwrap_or(u32::MAX));
             match height_cmp {
@@ -736,7 +734,6 @@ impl Wollet {
         let txos = self.txos_map()?;
         for (txid, height) in my_txids.iter().skip(offset).take(limit) {
             let tx = self
-                .store
                 .cache
                 .all_txs
                 .get(*txid)
@@ -751,7 +748,7 @@ impl Wollet {
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
-            let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
+            let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
             let outputs = tx_outputs(**txid, tx, &txos);
             txs.push(WalletTx {
@@ -777,8 +774,8 @@ impl Wollet {
 
     /// Get a wallet transaction
     pub fn transaction(&self, txid: &Txid) -> Result<Option<WalletTx>, Error> {
-        let height = self.store.cache.heights.get(txid);
-        let tx = self.store.cache.all_txs.get(txid);
+        let height = self.cache.heights.get(txid);
+        let tx = self.cache.all_txs.get(txid);
         if let (Some(height), Some(tx)) = (height, tx) {
             let txos = self.txos_map()?;
 
@@ -786,7 +783,7 @@ impl Wollet {
             let fee = tx_fee(tx);
             let policy_asset = self.policy_asset();
             let type_ = tx_type(tx, &policy_asset, &balance, fee);
-            let timestamp = height.and_then(|h| self.store.cache.timestamps.get(&h).cloned());
+            let timestamp = height.and_then(|h| self.cache.timestamps.get(&h).cloned());
             let inputs = tx_inputs(tx, &txos);
             let outputs = tx_outputs(*txid, tx, &txos);
 
@@ -837,7 +834,6 @@ impl Wollet {
 
     pub(crate) fn index(&self, script_pubkey: &Script) -> Result<(Chain, u32), Error> {
         let (ext_int, index) = self
-            .store
             .cache
             .paths
             .get(script_pubkey)
@@ -1020,7 +1016,7 @@ impl Wollet {
 
     /// Returns true if this wollet has never received an updated applyed to it
     pub fn never_scanned(&self) -> bool {
-        self.store.cache.tip == (0, BlockHash::all_zeros())
+        self.cache.tip == (0, BlockHash::all_zeros())
     }
 }
 

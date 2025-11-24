@@ -26,7 +26,6 @@ pub enum IssuanceRequest {
 impl Wollet {
     fn get_tx(&self, txid: &Txid) -> Result<Transaction, Error> {
         Ok(self
-            .store
             .cache
             .all_txs
             .get(txid)

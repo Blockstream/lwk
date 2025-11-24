@@ -644,12 +644,12 @@ impl Wollet {
     ) -> Result<Vec<ExternalUtxo>, Error> {
         let mut utxos = vec![];
         let spent = self.cache.spent()?;
-        let store_unblinded = &self.cache.unblinded;
+        let cache_unblinded = &self.cache.unblinded;
         for (txid, tx) in self.cache.all_txs.iter() {
             for (i, txout) in tx.output.iter().enumerate() {
                 if self.cache.paths.contains_key(&txout.script_pubkey) {
                     let outpoint = OutPoint::new(*txid, i as u32);
-                    if !spent.contains(&outpoint) && !store_unblinded.contains_key(&outpoint) {
+                    if !spent.contains(&outpoint) && !cache_unblinded.contains_key(&outpoint) {
                         if let Ok(unblinded) = txout.unblind(&EC, blinding_key) {
                             let tx_ = if self.is_segwit() {
                                 None
@@ -1003,7 +1003,7 @@ impl Wollet {
     }
 
     /// A deterministic value derived from the descriptor, the config and the content of this wollet,
-    /// including what's in the wallet store (transactions etc)
+    /// including what's in the wallet cache (transactions etc)
     ///
     /// In this case, we don't need cryptographic assurance guaranteed by the std default hasher (siphash)
     /// And we can use a much faster hasher, which is used also in the rust compiler.

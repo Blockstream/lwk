@@ -354,11 +354,11 @@ impl EsploraClient {
             )
             .await?;
 
-        let store_last_unused_external = cache.last_unused_external.load(atomic::Ordering::Relaxed);
-        let store_last_unused_internal = cache.last_unused_internal.load(atomic::Ordering::Relaxed);
+        let cache_last_unused_external = cache.last_unused_external.load(atomic::Ordering::Relaxed);
+        let cache_last_unused_internal = cache.last_unused_internal.load(atomic::Ordering::Relaxed);
 
-        let last_unused_changed = store_last_unused_external != last_unused.external
-            || store_last_unused_internal != last_unused.internal;
+        let last_unused_changed = cache_last_unused_external != last_unused.external
+            || cache_last_unused_internal != last_unused.internal;
 
         let changed = !new_txs.txs.is_empty()
             || last_unused_changed

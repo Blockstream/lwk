@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_store_hash() {
+    fn test_cache_hash() {
         let mut cache = RawCache::default();
         let mut hasher = DefaultHasher::new();
         cache.hash(&mut hasher);

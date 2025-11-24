@@ -216,11 +216,11 @@ pub trait BlockchainBackend {
         let timestamps =
             self.download_headers(&history_txs_heights_plus_tip, &height_blockhash, state)?;
 
-        let store_last_unused_external = state.last_unused()[Chain::External];
-        let store_last_unused_internal = state.last_unused()[Chain::Internal];
+        let cache_last_unused_external = state.last_unused()[Chain::External];
+        let cache_last_unused_internal = state.last_unused()[Chain::Internal];
 
-        let last_unused_changed = store_last_unused_external != last_unused.external
-            || store_last_unused_internal != last_unused.internal;
+        let last_unused_changed = cache_last_unused_external != last_unused.external
+            || cache_last_unused_internal != last_unused.internal;
 
         let changed = !new_txs.txs.is_empty()
             || last_unused_changed
@@ -291,7 +291,7 @@ pub trait BlockchainBackend {
             txs_in_db.insert(txid);
 
             for (i, output) in tx.output.iter().enumerate() {
-                // could be the searched script it's not yet in the store, because created in the current run, thus it's searched also in the `scripts`
+                // could be the searched script it's not yet in the cache, because created in the current run, thus it's searched also in the `scripts`
                 if state.paths().contains_key(&output.script_pubkey)
                     || scripts.contains_key(&output.script_pubkey)
                 {
@@ -314,7 +314,7 @@ pub trait BlockchainBackend {
         Ok(DownloadTxResult { txs, unblinds })
     }
 
-    /// Download the headers if not available in the store
+    /// Download the headers if not available in the cache
     fn download_headers<S: WolletState>(
         &self,
         history_txs_heights_plus_tip: &HashSet<Height>,

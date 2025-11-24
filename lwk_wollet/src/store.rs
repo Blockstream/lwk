@@ -97,11 +97,6 @@ impl std::hash::Hash for RawCache {
     }
 }
 
-#[derive(Default, Hash)]
-pub struct Store {
-    pub cache: RawCache,
-}
-
 #[derive(Default, Debug)]
 pub struct ScriptBatch {
     pub cached: bool,

@@ -1,6 +1,6 @@
 use crate::bitcoin::bip32::Fingerprint;
 use crate::clients::{try_unblind, LastUnused};
-use crate::config::{Config, ElementsNetwork};
+use crate::config::ElementsNetwork;
 use crate::descriptor::Chain;
 use crate::elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use crate::elements::pset::PartiallySignedTransaction;

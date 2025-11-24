@@ -2,7 +2,6 @@ use elements::hashes::Hash;
 use serde::{Deserialize, Serialize};
 
 use crate::elements::{AddressParams, AssetId, BlockHash};
-use crate::error::Error;
 use std::str::FromStr;
 
 pub const LIQUID_POLICY_ASSET_STR: &str =
@@ -122,29 +121,6 @@ impl ElementsNetwork {
     }
 }
 
-#[derive(Debug, Clone, Hash)]
-pub struct Config {
-    network: ElementsNetwork,
-}
-
-impl Config {
-    pub fn new(network: ElementsNetwork) -> Result<Self, Error> {
-        Ok(Config { network })
-    }
-
-    pub fn address_params(&self) -> &'static AddressParams {
-        self.network.address_params()
-    }
-
-    pub fn policy_asset(&self) -> AssetId {
-        self.network.policy_asset()
-    }
-
-    pub fn network(&self) -> ElementsNetwork {
-        self.network
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::{
@@ -153,7 +129,7 @@ mod test {
         str::FromStr,
     };
 
-    use super::Config;
+    use super::ElementsNetwork;
 
     #[test]
     fn test_config_hash() {
@@ -161,14 +137,14 @@ mod test {
         // so its hash is the same as the field hash
         #[derive(Hash)]
         struct Config {
-             network: ElementsNetwork,
+            network: ElementsNetwork,
         }
-        let config = Config::new(crate::ElementsNetwork::Liquid).unwrap();
+        let network = ElementsNetwork::Liquid;
+        let config = Config { network };
         let mut hasher = DefaultHasher::new();
         config.hash(&mut hasher);
         assert_eq!(13646096770106105413, hasher.finish());
 
-        let network = crate::ElementsNetwork::Liquid;
         let mut hasher = DefaultHasher::new();
         network.hash(&mut hasher);
         assert_eq!(13646096770106105413, hasher.finish());
@@ -176,7 +152,7 @@ mod test {
 
     #[test]
     fn test_genesis_block_hash() {
-        let network = crate::ElementsNetwork::Liquid;
+        let network = ElementsNetwork::Liquid;
         assert_eq!(
             network.genesis_block_hash(),
             elements::BlockHash::from_str(
@@ -185,7 +161,7 @@ mod test {
             .unwrap()
         );
 
-        let network = crate::ElementsNetwork::LiquidTestnet;
+        let network = ElementsNetwork::LiquidTestnet;
         assert_eq!(
             network.genesis_block_hash(),
             elements::BlockHash::from_str(
@@ -194,7 +170,7 @@ mod test {
             .unwrap()
         );
 
-        let network = crate::ElementsNetwork::default_regtest();
+        let network = ElementsNetwork::default_regtest();
         assert_eq!(
             network.genesis_block_hash(),
             elements::BlockHash::from_str(

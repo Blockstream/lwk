@@ -157,9 +157,20 @@ mod test {
 
     #[test]
     fn test_config_hash() {
+        // Old Config struct had a single field,
+        // so its hash is the same as the field hash
+        #[derive(Hash)]
+        struct Config {
+             network: ElementsNetwork,
+        }
         let config = Config::new(crate::ElementsNetwork::Liquid).unwrap();
         let mut hasher = DefaultHasher::new();
         config.hash(&mut hasher);
+        assert_eq!(13646096770106105413, hasher.finish());
+
+        let network = crate::ElementsNetwork::Liquid;
+        let mut hasher = DefaultHasher::new();
+        network.hash(&mut hasher);
         assert_eq!(13646096770106105413, hasher.finish());
     }
 

@@ -14,27 +14,6 @@ def save_swap_data(swap_id, data):
         f.write(data)
     print(f"Swap data saved to {swap_file}")
 
-def save_next_index(next_index):
-    """Save the next key index to use"""
-    index_file = f"{swaps_dir}/next_index.txt"
-    with open(index_file, "w") as f:
-        f.write(str(next_index))
-    print(f"Next index saved: {next_index}")
-
-def load_next_index():
-    """Load the next key index to use, returns None if not found"""
-    index_file = f"{swaps_dir}/next_index.txt"
-    try:
-        with open(index_file, "r") as f:
-            index = int(f.read().strip())
-            print(f"Loaded next index: {index}")
-            return index
-    except FileNotFoundError:
-        print("No saved next index found, will use default")
-        return None
-    except Exception as e:
-        print(f"Error loading next index: {e}")
-        return None
 
 def rename_swap_data(swap_id, status):
     """Move swap data file to completed or failed directory
@@ -209,9 +188,6 @@ def show_invoice(boltz_session, wollet):
     # Save swap data to file
     save_swap_data(swap_id, data)
 
-    # Save next index after creating swap
-    save_next_index(boltz_session.next_index_to_use())
-
     # Start thread to wait for payment
     thread = threading.Thread(target=invoice_thread, args=(invoice_response, claim_address))
     thread.daemon = True
@@ -241,9 +217,6 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
 
         # Save swap data to file
         save_swap_data(swap_id, data)
-
-        # Save next index after creating swap
-        save_next_index(boltz_session.next_index_to_use())
 
         # Get the URI for payment
         uri = prepare_pay_response.uri()
@@ -447,9 +420,6 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
         data = lockup_response.serialize()
         save_swap_data(swap_id, data)
 
-        # Save next index after creating swap
-        save_next_index(boltz_session.next_index_to_use())
-
         # Build and send transaction to the lockup address
         print(f"Sending {expected_amount} sats to {lockup_address}...")
         builder = network.tx_builder()
@@ -523,9 +493,6 @@ def btc_to_lbtc_swap(boltz_session, wollet):
         data = lockup_response.serialize()
         save_swap_data(swap_id, data)
 
-        # Save next index after creating swap
-        save_next_index(boltz_session.next_index_to_use())
-
         # Start thread to monitor swap completion
         thread = threading.Thread(target=lockup_thread, args=(lockup_response,))
         thread.daemon = True
@@ -583,9 +550,6 @@ def main():
     lightning_client = AnyClient.from_esplora(esplora_client)
     logger = MyLogger()
 
-    # Load the persisted next_index_to_use if available
-    next_index = load_next_index()
-
     # Use blockstream electrum instance for bitcoin, without specifying this, bull bitcoin electrum instances will be used
     bitcoin_electrum_url = "ssl://bitcoin-mainnet.blockstream.info:50002"
 
@@ -596,7 +560,6 @@ def main():
         mnemonic=mnemonic_lightning,
         logging=logger,
         polling=polling,
-        next_index_to_use=next_index,
         referral_id="LWK python example",
         bitcoin_electrum_client_url=bitcoin_electrum_url,
     )

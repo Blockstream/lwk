@@ -221,6 +221,12 @@ impl InvoiceResponse {
             .map_err(|e| Error::Generic(e.to_string()))
     }
 
+    /// Return the bolt11 invoice string
+    #[wasm_bindgen(js_name = bolt11Invoice)]
+    pub fn bolt11_invoice(&self) -> String {
+        self.inner.bolt11_invoice().to_string()
+    }
+
     /// Complete the payment by advancing through the swap states until completion or failure
     /// Consumes self as the inner method does
     pub async fn complete_pay(self) -> Result<bool, Error> {

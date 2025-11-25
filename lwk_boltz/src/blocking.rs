@@ -209,7 +209,7 @@ impl PreparePayResponse {
         self.inner.uri()
     }
 
-    pub fn uri_address(&self) -> String {
+    pub fn uri_address(&self) -> Result<elements::Address, Error> {
         self.inner.uri_address()
     }
 

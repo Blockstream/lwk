@@ -407,8 +407,10 @@ impl PreparePayResponse {
         self.data.create_swap_response.id.clone()
     }
 
-    pub fn uri_address(&self) -> String {
-        self.data.create_swap_response.address.clone()
+    pub fn uri_address(&self) -> Result<elements::Address, Error> {
+        Ok(elements::Address::from_str(
+            &self.data.create_swap_response.address,
+        )?)
     }
     pub fn uri_amount(&self) -> u64 {
         self.data.create_swap_response.expected_amount

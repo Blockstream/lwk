@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr, time::Duration};
 
 use wasm_bindgen::prelude::*;
 
-use crate::{Error, Network};
+use crate::{Address, Error, Network};
 use lwk_wollet::elements;
 
 /// Wrapper over [`lwk_boltz::BoltzSessionBuilder`]
@@ -176,8 +176,8 @@ impl PreparePayResponse {
         self.inner.uri().to_string()
     }
 
-    pub fn uri_address(&self) -> String {
-        self.inner.uri_address().to_string()
+    pub fn uri_address(&self) -> Result<Address, Error> {
+        Ok(self.inner.uri_address()?.into())
     }
 
     pub fn uri_amount(&self) -> u64 {

@@ -1,4 +1,5 @@
 use crate::SwapState;
+use boltz_client::elements::AddressError;
 use boltz_client::error::Error as BoltzError;
 use boltz_client::lightning_invoice::ParseOrSemanticError;
 use lightning::bitcoin::XKeyIdentifier;
@@ -16,6 +17,9 @@ pub enum Error {
 
     #[error("Boltz API error: {0}")]
     BoltzApi(BoltzError),
+
+    #[error("Elements address error: {0}")]
+    ElementsAddressError(#[from] AddressError),
 
     #[error("Receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),

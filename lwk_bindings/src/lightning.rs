@@ -561,8 +561,8 @@ impl PreparePayResponse {
             .lock()?
             .as_ref()
             .ok_or(LwkError::ObjectConsumed)?
-            .uri_address();
-        Address::new(&uri_address)
+            .uri_address()?;
+        Ok(Arc::new(uri_address.into()))
     }
     pub fn uri_amount(&self) -> Result<u64, LwkError> {
         Ok(self

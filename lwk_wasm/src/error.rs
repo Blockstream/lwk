@@ -3,6 +3,9 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
+    Boltz(#[from] lwk_boltz::Error),
+
+    #[error(transparent)]
     HexToArray(#[from] lwk_wollet::bitcoin::hashes::hex::HexToArrayError),
 
     #[error(transparent)]

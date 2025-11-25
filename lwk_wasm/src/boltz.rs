@@ -3,7 +3,6 @@ use std::{fmt, str::FromStr, time::Duration};
 use wasm_bindgen::prelude::*;
 
 use crate::{Address, Error, Network};
-use lwk_wollet::elements;
 
 /// Wrapper over [`lwk_boltz::BoltzSessionBuilder`]
 #[wasm_bindgen]
@@ -263,13 +262,11 @@ impl BoltzSession {
         &self,
         amount: u64,
         description: Option<String>,
-        claim_address: &str,
+        claim_address: &Address,
     ) -> Result<InvoiceResponse, Error> {
-        let claim_address = elements::Address::from_str(claim_address)
-            .map_err(|e| Error::Generic(e.to_string()))?;
         let r = self
             .inner
-            .invoice(amount, description, &claim_address, None)
+            .invoice(amount, description, claim_address.as_ref(), None)
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         Ok(r.into())
@@ -361,7 +358,7 @@ mod tests {
             .contains("a swap with this invoice exists already"));
 
         let _invoice_response = session
-            .invoice(1000, Some("test".to_string()), &address.to_string())
+            .invoice(1000, Some("test".to_string()), &address)
             .await
             .unwrap();
     }
@@ -433,11 +430,7 @@ mod tests {
         assert!(balance2 < balance1);
         let claim_address = wollet.address(None).unwrap();
         let invoice = session
-            .invoice(
-                1000,
-                Some("test".to_string()),
-                &claim_address.address().to_string(),
-            )
+            .invoice(1000, Some("test".to_string()), &claim_address.address())
             .await
             .unwrap();
         pay_invoice_lnd(&invoice.bolt11_invoice()).await.unwrap();

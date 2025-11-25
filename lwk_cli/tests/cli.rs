@@ -1644,10 +1644,11 @@ fn test_utxos() {
 }
 
 #[test]
-fn test_esplora_backend() {
+fn test_esplora_waterfalls_backend() {
     let env = TestEnvBuilder::from_env()
         .with_electrum()
         .with_esplora()
+        .with_waterfalls()
         .build();
     let (t, _tmp, cli, params, env, _) = setup_cli(env, false);
 
@@ -1688,39 +1689,32 @@ fn test_esplora_backend() {
 
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
-}
 
-#[test]
-fn test_waterfalls() {
-    // TODO: merge/replace with setup_cli
-    let env = TestEnvBuilder::from_env().with_waterfalls().build();
-
-    let addr = get_available_addr().unwrap();
-    let cli = format!("cli --addr {addr} -n regtest");
-
-    let tmp = tempfile::tempdir().unwrap();
-    let datadir = tmp.path().display().to_string();
-    let url = env.waterfalls_url();
-    let params = format!("--datadir {datadir} --server-type waterfalls --server-url {url}");
-
+    // Start again with a Waterfalls backend
     let t = {
         let cli = cli.clone();
         let params = params.clone();
+
+        // replace "--server-url tcp://..." (last param)
+        // with "--server-url http://... --server-type waterfalls"
+        let s = "--server-url";
+        let idx = params.find(s).unwrap();
+        let waterfalls_params = format!(
+            "{} {} --server-type waterfalls",
+            &params[..idx + s.len()],
+            env.waterfalls_url()
+        );
+
         std::thread::spawn(move || {
-            sh(&format!(
-                "{cli} server start --scanning-interval 1 {params}"
-            ));
+            sh(&format!("{cli} server start {waterfalls_params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
-    sw_signer(&cli, "s");
-    singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
+    assert_eq!(txs(&cli, "w").len(), 2);
     let _ = fund(&env, &cli, "w", 1_000_000);
+    assert_eq!(txs(&cli, "w").len(), 3);
 
-    assert_eq!(txs(&cli, "w").len(), 1);
-
-    // Stop the server
     sh(&format!("{cli} server stop"));
     t.join().unwrap();
 }

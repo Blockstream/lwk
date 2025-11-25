@@ -330,8 +330,11 @@ mod tests {
         TxBuilder, Wollet,
     };
 
+    use lwk_wollet::asyncr::async_sleep;
     use reqwest::Client;
     use serde_json::{json, Value};
+    use std::collections::HashMap;
+    use std::error::Error;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
@@ -342,7 +345,8 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_boltz_session_builder() {
         let network = Network::mainnet();
-        let builder = BoltzSessionBuilder::new(&network);
+        let client = network.default_esplora_client();
+        let builder = BoltzSessionBuilder::new(&network, &client).unwrap();
         let session = builder.build().await.unwrap();
         let rescue_file = session.rescue_file().unwrap();
         assert_ne!(rescue_file, "");
@@ -368,8 +372,6 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_boltz_submarine_reverse() {
         let network = Network::regtest_default();
-        let builder = BoltzSessionBuilder::new(&network);
-        let session = builder.build().await.unwrap();
 
         // Create a wpkh slip77 Wollet with the abandon mnemonic
         let mnemonic = Mnemonic::new("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
@@ -377,24 +379,21 @@ mod tests {
         let desc = signer.wpkh_slip77_descriptor().unwrap();
         let mut wollet = Wollet::new(&network, &desc).unwrap();
 
-        // Perform a full scan and check the balance
         let mut client =
             EsploraClient::new(&network, "http://127.0.0.1:4003/api/", false, 4, false).unwrap();
-        let update = client.full_scan(&wollet).await.unwrap(); // TODO: fix cors errors
-        if let Some(update) = update {
-            wollet.apply_update(&update).unwrap();
-        }
-        let balance = wollet.balance().unwrap();
-        use std::collections::HashMap;
-        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
-            serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
-        let policy_asset = network.policy_asset().into();
-        assert!(*balance.get(&policy_asset).unwrap_or(&0) > 0);
 
+        // Create BoltzSession with the same Esplora client used for wallet scanning
+        let builder = BoltzSessionBuilder::new(&network, &client).unwrap();
+        let session = builder.build().await.unwrap();
+
+        scan_wollet(&mut wollet, &mut client).await;
+        let balance1 = lbtc_balance(&wollet);
+        assert!(balance1 > 0);
+
+        // Pay a lightning invoice
         let invoice_amount = 1000;
         let invoice = generate_invoice_lnd(invoice_amount).await.unwrap();
         assert!(invoice.starts_with("lnbcrt1"));
-
         let refund_address = wollet.address(None).unwrap();
         let invoice = LightningPayment::new(&invoice).unwrap();
         let invoice_response = session
@@ -432,10 +431,56 @@ mod tests {
 
         let result = invoice_response.complete_pay().await.unwrap();
         assert!(result);
+
+        // Receive a lightning payment
+        scan_wollet(&mut wollet, &mut client).await;
+        let balance2 = lbtc_balance(&wollet);
+        assert!(balance2 < balance1);
+        let claim_address = wollet.address(None).unwrap();
+        let invoice = session
+            .invoice(
+                1000,
+                Some("test".to_string()),
+                &claim_address.address().to_string(),
+            )
+            .await
+            .unwrap();
+        pay_invoice_lnd(&invoice.bolt11_invoice()).await.unwrap();
+        let result = invoice.complete_pay().await.unwrap();
+        assert!(result);
+        let wait_secs = 20;
+        for i in 0..wait_secs {
+            async_sleep(1_000).await;
+            scan_wollet(&mut wollet, &mut client).await;
+            let balance3 = lbtc_balance(&wollet);
+            if balance3 > balance2 {
+                break;
+            }
+            assert!(
+                i < wait_secs,
+                "Balance did not increase after {wait_secs} seconds"
+            );
+        }
+    }
+
+    async fn scan_wollet(wollet: &mut Wollet, client: &mut EsploraClient) {
+        let update = client.full_scan(wollet).await.unwrap();
+        if let Some(update) = update {
+            wollet.apply_update(&update).unwrap();
+        }
+    }
+
+    fn lbtc_balance(wollet: &Wollet) -> u64 {
+        let network = Network::regtest_default();
+        let balance = wollet.balance().unwrap();
+        let balance: HashMap<lwk_wollet::elements::AssetId, u64> =
+            serde_wasm_bindgen::from_value(balance.entries().unwrap()).unwrap();
+        let policy_asset = network.policy_asset().into();
+        *balance.get(&policy_asset).unwrap_or(&0)
     }
 
     // copied from lwk_boltz::tests::utils::lnd_request
-    async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn std::error::Error>> {
+    async fn lnd_request(method: &str, params: Value) -> Result<Value, Box<dyn Error>> {
         let client = Client::new();
         let url = format!("{LND_URL}/{method}");
 
@@ -471,13 +516,24 @@ mod tests {
         Ok(parsed)
     }
 
-    pub async fn generate_invoice_lnd(
-        amount_sat: u64,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn generate_invoice_lnd(amount_sat: u64) -> Result<String, Box<dyn Error>> {
         let response = lnd_request("v1/invoices", json!({ "value": amount_sat })).await?;
         response["payment_request"]
             .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| "Missing payment_request field".into())
+    }
+
+    pub async fn pay_invoice_lnd(invoice: &str) -> Result<(), Box<dyn Error>> {
+        let invoice = invoice.to_string();
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = lnd_request(
+                "v2/router/send",
+                json!({ "payment_request": invoice, "timeout_seconds": 1 }),
+            )
+            .await
+            .unwrap();
+        });
+        Ok(())
     }
 }

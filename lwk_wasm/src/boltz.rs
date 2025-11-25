@@ -284,7 +284,7 @@ impl From<LightningPayment> for lwk_boltz::LightningPayment {
 
 #[wasm_bindgen]
 impl LightningPayment {
-    /// Create a LightningPayment from a bolt11 invoice string
+    /// Create a LightningPayment from a bolt11 invoice string or a bolt12 offer
     #[wasm_bindgen(constructor)]
     pub fn new(invoice: &str) -> Result<LightningPayment, Error> {
         let payment = lwk_boltz::LightningPayment::from_str(invoice)
@@ -296,6 +296,13 @@ impl LightningPayment {
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
         format!("{self}")
+    }
+
+    /// Return a QR code image uri for the LightningPayment
+    #[wasm_bindgen(js_name = toUriQr)]
+    pub fn to_uri_qr(&self, pixel_per_module: Option<u8>) -> Result<String, Error> {
+        let uri = format!("lightning:{}", self.to_string().to_ascii_uppercase());
+        Ok(lwk_common::string_to_qr(&uri, pixel_per_module)?)
     }
 }
 

@@ -306,14 +306,14 @@ impl LightningPayment {
     #[wasm_bindgen(constructor)]
     pub fn new(invoice: &str) -> Result<LightningPayment, Error> {
         let payment = lwk_boltz::LightningPayment::from_str(invoice)
-            .map_err(|(e1, e2)| Error::Generic(format!("{:?}, {:?}", e1, e2)))?;
+            .map_err(|(e1, e2)| Error::Generic(format!("{e1:?}, {e2:?}")))?;
         Ok(payment.into())
     }
 
     /// Return a string representation of the LightningPayment
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string_js(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 

@@ -72,10 +72,7 @@ impl Address {
     /// and use styling to scale up the image in the browser. eg
     /// `style="image-rendering: pixelated; border: 20px solid white;"`
     pub fn qr_code_uri(&self, pixel_per_module: Option<u8>) -> Result<String, LwkError> {
-        Ok(lwk_common::address_to_uri_qr(
-            &self.inner,
-            pixel_per_module,
-        )?)
+        Ok(lwk_common::address_to_qr(&self.inner, pixel_per_module)?)
     }
 
     /// Returns a string of the QR code printable in a terminal environment

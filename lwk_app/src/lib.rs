@@ -21,7 +21,7 @@ use std::thread::{sleep, JoinHandle};
 use std::time::Duration;
 
 use lwk_common::{
-    address_to_text_qr, address_to_uri_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
+    address_to_text_qr, address_to_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
     InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant,
     Signer,
 };
@@ -444,7 +444,7 @@ fn inner_method_handler(request: Request, state: Arc<Mutex<State>>) -> Result<Re
                 .with_uri_qr
                 .map(|e| {
                     let pixel_per_module = (e != 0).then_some(e);
-                    address_to_uri_qr(addr.address(), pixel_per_module)
+                    address_to_qr(addr.address(), pixel_per_module)
                 })
                 .transpose()?;
 

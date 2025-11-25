@@ -1679,7 +1679,7 @@ fn test_esplora_waterfalls_backend() {
             sh(&format!("{cli} server start {esplora_params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     assert_eq!(txs(&cli, "w").len(), 1);
     let _ = fund(&env, &cli, "w", 1_000_000);
@@ -1695,7 +1695,7 @@ fn test_esplora_waterfalls_backend() {
             sh(&format!("{cli} server start {waterfalls_params}"));
         })
     };
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     assert_eq!(txs(&cli, "w").len(), 2);
     let _ = fund(&env, &cli, "w", 1_000_000);

@@ -43,7 +43,7 @@ pub enum QrError {
     Utf8(#[from] FromUtf8Error),
 }
 
-/// Convert the given elements address to an image uri
+/// Convert the given elements address to a QR code image uri
 ///
 /// The image format is monocromatic bitmap, encoded in base64 in the uri.
 ///
@@ -56,7 +56,17 @@ pub fn address_to_uri_qr(
     pixel_per_module: Option<u8>,
 ) -> Result<String, QrError> {
     let address = address_to_qr_text(address);
-    let qr_code = qr_code::QrCode::new(address)?;
+    string_to_uri_qr(&address, pixel_per_module)
+}
+
+/// Convert the given string to a QR code image uri
+///
+/// The image format is monocromatic bitmap, encoded in base64 in the uri.
+///
+/// Without `pixel_per_module` the default is no border, and 1 pixel per module, to be used
+/// for example in html: `style="image-rendering: pixelated; border: 20px solid white;"`
+pub fn string_to_uri_qr(str: &str, pixel_per_module: Option<u8>) -> Result<String, QrError> {
+    let qr_code = qr_code::QrCode::new(str)?;
     let mut bmp = qr_code.to_bmp();
     if let Some(pixel_per_module) = pixel_per_module {
         bmp = bmp.add_white_border(2)?;

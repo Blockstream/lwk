@@ -562,6 +562,7 @@ def main():
         polling=polling,
         referral_id="LWK python example",
         bitcoin_electrum_client_url=bitcoin_electrum_url,
+        random_preimages=True,
     )
     boltz_session = BoltzSession.from_builder(builder)
 

@@ -109,10 +109,10 @@ impl BoltzSessionBuilder {
         self,
         bitcoin_electrum_client: &str,
     ) -> Result<BoltzSessionBuilder, Error> {
-        self.inner
+        Ok(self
+            .inner
             .bitcoin_electrum_client(bitcoin_electrum_client)
-            .map_err(|e| Error::Generic(e.to_string()))
-            .map(Into::into)
+            .map(Into::into)?)
     }
 
     /// Set the random preimages flag
@@ -131,11 +131,7 @@ impl BoltzSessionBuilder {
     /// Build the BoltzSession
     #[wasm_bindgen]
     pub async fn build(self) -> Result<BoltzSession, Error> {
-        let inner = self
-            .inner
-            .build()
-            .await
-            .map_err(|e| Error::Generic(e.to_string()))?;
+        let inner = self.inner.build().await?;
         Ok(BoltzSession { inner })
     }
 }
@@ -162,9 +158,7 @@ impl From<PreparePayResponse> for lwk_boltz::PreparePayResponse {
 impl PreparePayResponse {
     /// Serialize the response to JSON string for JS interop
     pub fn serialize(&self) -> Result<String, Error> {
-        self.inner
-            .serialize()
-            .map_err(|e| Error::Generic(e.to_string()))
+        Ok(self.inner.serialize()?)
     }
 
     pub fn swap_id(&self) -> String {
@@ -184,10 +178,7 @@ impl PreparePayResponse {
     }
 
     pub async fn complete_pay(self) -> Result<bool, Error> {
-        self.inner
-            .complete_pay()
-            .await
-            .map_err(|e| Error::Generic(e.to_string()))
+        Ok(self.inner.complete_pay().await?)
     }
 }
 
@@ -214,9 +205,7 @@ impl From<InvoiceResponse> for lwk_boltz::InvoiceResponse {
 impl InvoiceResponse {
     /// Serialize the response to JSON string for JS interop
     pub fn serialize(&self) -> Result<String, Error> {
-        self.inner
-            .serialize()
-            .map_err(|e| Error::Generic(e.to_string()))
+        Ok(self.inner.serialize()?)
     }
 
     /// Return the bolt11 invoice string
@@ -228,10 +217,7 @@ impl InvoiceResponse {
     /// Complete the payment by advancing through the swap states until completion or failure
     /// Consumes self as the inner method does
     pub async fn complete_pay(self) -> Result<bool, Error> {
-        self.inner
-            .complete_pay()
-            .await
-            .map_err(|e| Error::Generic(e.to_string()))
+        Ok(self.inner.complete_pay().await?)
     }
 }
 
@@ -240,7 +226,7 @@ impl BoltzSession {
     /// Get the rescue file
     pub fn rescue_file(&self) -> Result<String, Error> {
         let r = self.inner.rescue_file();
-        serde_json::to_string(&r).map_err(|e| Error::Generic(e.to_string()))
+        Ok(serde_json::to_string(&r)?)
     }
 
     /// Prepare a lightning invoice payment
@@ -252,8 +238,7 @@ impl BoltzSession {
         let r = self
             .inner
             .prepare_pay(&lightning_payment.inner, refund_address.as_ref(), None)
-            .await
-            .map_err(|e| Error::Generic(e.to_string()))?;
+            .await?;
         Ok(r.into())
     }
 
@@ -267,8 +252,7 @@ impl BoltzSession {
         let r = self
             .inner
             .invoice(amount, description, claim_address.as_ref(), None)
-            .await
-            .map_err(|e| Error::Generic(e.to_string()))?;
+            .await?;
         Ok(r.into())
     }
 }

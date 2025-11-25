@@ -1652,6 +1652,16 @@ fn test_esplora_waterfalls_backend() {
         .build();
     let (t, _tmp, cli, params, env, _) = setup_cli(env, false);
 
+    // replace "--server-url tcp://..." (last param)
+    // with "--server-url http://... --server-type ..."
+    let s = "--server-url";
+    let idx = params.find(s).unwrap();
+    let params_ = &params[..idx + s.len()];
+    let url = env.esplora_url();
+    let esplora_params = format!("{params_} {url} --server-type esplora");
+    let url = env.waterfalls_url();
+    let waterfalls_params = format!("{params_} {url} --server-type waterfalls",);
+
     sw_signer(&cli, "s");
     singlesig_wallet(&cli, "w", "s", "slip77", "wpkh");
     let _ = fund(&env, &cli, "w", 1_000_000);
@@ -1665,18 +1675,6 @@ fn test_esplora_waterfalls_backend() {
     // Start again with a Esplora backend
     let t = {
         let cli = cli.clone();
-        let params = params.clone();
-
-        // replace "--server-url tcp://..." (last param)
-        // with "--server-url http://... --server-type esplora"
-        let s = "--server-url";
-        let idx = params.find(s).unwrap();
-        let esplora_params = format!(
-            "{} {} --server-type esplora",
-            &params[..idx + s.len()],
-            env.esplora_url()
-        );
-
         std::thread::spawn(move || {
             sh(&format!("{cli} server start {esplora_params}"));
         })
@@ -1693,18 +1691,6 @@ fn test_esplora_waterfalls_backend() {
     // Start again with a Waterfalls backend
     let t = {
         let cli = cli.clone();
-        let params = params.clone();
-
-        // replace "--server-url tcp://..." (last param)
-        // with "--server-url http://... --server-type waterfalls"
-        let s = "--server-url";
-        let idx = params.find(s).unwrap();
-        let waterfalls_params = format!(
-            "{} {} --server-type waterfalls",
-            &params[..idx + s.len()],
-            env.waterfalls_url()
-        );
-
         std::thread::spawn(move || {
             sh(&format!("{cli} server start {waterfalls_params}"));
         })

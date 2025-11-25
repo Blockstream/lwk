@@ -90,8 +90,7 @@ impl BoltzSessionBuilder {
 
     /// Set the next index to use for deriving keypairs
     ///
-    /// Should be always set when reusing a mnemonic to avoid abusing the boltz API to recover
-    /// this information.
+    /// Avoid a call to the boltz API to recover this information.
     ///
     /// When the mnemonic is not set, this is ignored.
     #[wasm_bindgen(js_name = nextIndexToUse)]

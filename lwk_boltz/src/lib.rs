@@ -230,9 +230,6 @@ impl BoltzSession {
     }
 
     /// Get the next index to use for deriving keypairs
-    ///
-    /// Users should call this after each created swap and store in persisting memory, so that is passed
-    /// when creating a new session with the same mnemonic via [`BoltzSessionBuilder::next_index_to_use()`].
     pub fn next_index_to_use(&self) -> u32 {
         self.next_index_to_use.load(Ordering::Relaxed)
     }
@@ -376,8 +373,7 @@ impl BoltzSessionBuilder {
 
     /// Set the next index to use for deriving keypairs
     ///
-    /// Should be always set when reusing a mnemonic to avoid abusing the boltz API to recover
-    /// this information.
+    /// Avoid a call to the boltz API to recover this information.
     ///
     /// When the mnemonic is not set, this is ignored.
     pub fn next_index_to_use(mut self, next_index_to_use: u32) -> Self {

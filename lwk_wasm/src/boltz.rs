@@ -248,13 +248,11 @@ impl BoltzSession {
     pub async fn prepare_pay(
         &self,
         lightning_payment: &LightningPayment,
-        refund_address: &str,
+        refund_address: &Address,
     ) -> Result<PreparePayResponse, Error> {
-        let refund_address = elements::Address::from_str(refund_address)
-            .map_err(|e| Error::Generic(e.to_string()))?;
         let r = self
             .inner
-            .prepare_pay(&lightning_payment.inner, &refund_address, None)
+            .prepare_pay(&lightning_payment.inner, refund_address.as_ref(), None)
             .await
             .map_err(|e| Error::Generic(e.to_string()))?;
         Ok(r.into())
@@ -352,17 +350,18 @@ mod tests {
         let address = "lq1qqvp9g33gw9y05xava3dvcpq8pnkv82yj3tdnzp547eyp9yrztz2lkyxrhscd55ev4p7lj2n72jtkn5u4xnj4v577c42jhf3ww";
         let invoice_str = "lnbc2220n1p534hfqpp5kqs680arwtec67pcl2lq0mvvcyww056wkvrlsc3222qwez0x8lcqdquf35kw6r5de5kueeqwpshjmt9de6qcqzxrxqyp2xqrzjqgvw6stfqrph8t0qq6g5y0ut35cfxun2hzysmdskrdp9hdy6tvnvjzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2gsp5v724rcrc2puam2e9dy00qhvz3h5467he46eh75vx7fhm6skwqfus9qxpqysgqqa6fea42v5ttr84efdwndqcr3nyxe0pfegmu04xscrwcau5ufg4x7f6lvf9tre9w5t99xn2y8slvwasnaa2sk98rdyege5lec8u42qsq5nzzjs";
         let invoice = LightningPayment::new(invoice_str).unwrap();
-        let err = session.prepare_pay(&invoice, address).await.unwrap_err();
+        let address = Address::new(address).unwrap();
+        let err = session.prepare_pay(&invoice, &address).await.unwrap_err();
         assert!(err.to_string().contains("magic routing hint"));
         let invoice_str = "lnbc2u1p534c9jsp5n6497xhz7a0c44elx56fajryf7lwrpuhh6mnmpxk2pasq7gvqx2spp5mmvw9lh8wwxl8zlqrmfwerc073cfr2y5qrtsldrczup77zx54m4sdqgd3skyetvxqyjw5qcqpjrzjqdx5l2zdly4gg6chmr4rypjvkrdmw6k9tfjxy75z05x0kxsya5xs2rwazuqq0egqqqqqqqlgqqqqqzsqyg9qxpqysgqrnk5e6n8rfam7cytfu46s3zh6uuyjy8mye94ks2du8asq53tv2erv93mnaqedcf0mhk2s9luea36we9950er8f646trk8vtqsfncdqsp0kun79";
         let invoice = LightningPayment::new(invoice_str).unwrap();
-        let err = session.prepare_pay(&invoice, address).await.unwrap_err();
+        let err = session.prepare_pay(&invoice, &address).await.unwrap_err();
         assert!(err
             .to_string()
             .contains("a swap with this invoice exists already"));
 
         let _invoice_response = session
-            .invoice(1000, Some("test".to_string()), address)
+            .invoice(1000, Some("test".to_string()), &address.to_string())
             .await
             .unwrap();
     }
@@ -396,20 +395,17 @@ mod tests {
         let refund_address = wollet.address(None).unwrap();
         let invoice = LightningPayment::new(&invoice).unwrap();
         let invoice_response = session
-            .prepare_pay(&invoice, &refund_address.address().to_string())
+            .prepare_pay(&invoice, &refund_address.address())
             .await
             .unwrap();
-        let address = invoice_response.uri_address();
+        let address = invoice_response.uri_address().unwrap();
         let amount = invoice_response.uri_amount();
-        assert!(address.starts_with("el1"));
+        assert!(address.to_string().starts_with("el1"));
         assert!(amount > invoice_amount);
 
         // Create a transaction to send the amount to the address
-        let recipient_address = Address::new(&address).unwrap();
         let mut builder = TxBuilder::new(&network);
-        builder = builder
-            .add_lbtc_recipient(&recipient_address, amount)
-            .unwrap();
+        builder = builder.add_lbtc_recipient(&address, amount).unwrap();
         let mut pset = builder.finish(&wollet).unwrap();
 
         // Sign the transaction

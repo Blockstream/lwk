@@ -35,20 +35,18 @@ impl BoltzSessionBuilder {
     ///
     /// This creates a builder with default Esplora client for the network.
     #[wasm_bindgen(constructor)]
-    pub fn new(network: &Network) -> BoltzSessionBuilder {
-        // Create an EsploraClient for the network using the same URLs as default_esplora_client
-        let url = if network.is_mainnet() {
-            "https://blockstream.info/liquid/api"
-        } else if network.is_testnet() {
-            "https://blockstream.info/liquidtestnet/api"
-        } else {
-            "http://127.0.0.1:3000"
-        };
+    pub fn new(
+        network: &Network,
+        esplora_client: &crate::EsploraClient,
+    ) -> Result<BoltzSessionBuilder, crate::Error> {
+        let async_client = esplora_client.clone_async_client()?;
+        let boltz_client = lwk_boltz::clients::EsploraClient::from_client(
+            std::sync::Arc::new(async_client),
+            network.into(),
+        );
+        let client = lwk_boltz::clients::AnyClient::Esplora(std::sync::Arc::new(boltz_client));
 
-        let esplora_client = lwk_boltz::clients::EsploraClient::new(url, network.into());
-        let client = lwk_boltz::clients::AnyClient::Esplora(std::sync::Arc::new(esplora_client));
-
-        lwk_boltz::BoltzSession::builder(network.into(), client).into()
+        Ok(lwk_boltz::BoltzSession::builder(network.into(), client).into())
     }
 
     /// Set the timeout for creating swaps

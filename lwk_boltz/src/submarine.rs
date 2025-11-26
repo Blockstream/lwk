@@ -425,6 +425,6 @@ impl PreparePayResponse {
     /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice.
     /// Does not include the fee of the onchain transaction.
     pub fn fee(&self) -> Option<u64> {
-        self.data.fee.clone()
+        self.data.fee
     }
 }

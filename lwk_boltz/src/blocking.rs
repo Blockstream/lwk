@@ -217,6 +217,11 @@ impl PreparePayResponse {
         self.inner.uri_amount()
     }
 
+    /// See [`crate::PreparePayResponse::fee()`]
+    pub fn fee(&self) -> Option<u64> {
+        self.inner.fee()
+    }
+
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
     }

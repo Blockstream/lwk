@@ -177,6 +177,14 @@ impl PreparePayResponse {
         self.inner.uri_amount()
     }
 
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice
+    /// Does not include the fee of the onchain transaction.
+    pub fn fee(&self) -> Option<u64> {
+        self.inner.fee()
+    }
+
     pub async fn complete_pay(self) -> Result<bool, Error> {
         Ok(self.inner.complete_pay().await?)
     }

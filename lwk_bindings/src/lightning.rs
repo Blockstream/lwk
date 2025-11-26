@@ -573,6 +573,19 @@ impl PreparePayResponse {
             .uri_amount())
     }
 
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice
+    /// Does not include the fee of the onchain transaction.
+    pub fn fee(&self) -> Result<Option<u64>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .fee())
+    }
+
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;

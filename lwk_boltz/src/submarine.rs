@@ -419,4 +419,12 @@ impl PreparePayResponse {
     pub fn uri(&self) -> String {
         self.data.create_swap_response.bip21.clone()
     }
+
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice.
+    /// Does not include the fee of the onchain transaction.
+    pub fn fee(&self) -> Option<u64> {
+        self.data.fee.clone()
+    }
 }

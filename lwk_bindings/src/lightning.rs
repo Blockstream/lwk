@@ -632,6 +632,19 @@ impl InvoiceResponse {
             .swap_id())
     }
 
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the amount of the invoice minus the amount of the onchain transaction.
+    /// Does not include the fee of the onchain transaction.
+    pub fn fee(&self) -> Result<Option<u64>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .fee())
+    }
+
     /// Serialize the prepare pay response data to a json string
     ///
     /// This can be used to restore the prepare pay response after a crash

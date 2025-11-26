@@ -222,6 +222,14 @@ impl InvoiceResponse {
         self.inner.bolt11_invoice().to_string()
     }
 
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the amount of the invoice minus the amount of the onchain transaction.
+    /// Does not include the fee of the onchain transaction.
+    pub fn fee(&self) -> Option<u64> {
+        self.inner.fee()
+    }
+
     /// Complete the payment by advancing through the swap states until completion or failure
     /// Consumes self as the inner method does
     pub async fn complete_pay(self) -> Result<bool, Error> {

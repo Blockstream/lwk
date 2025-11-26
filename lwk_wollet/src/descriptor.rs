@@ -970,3 +970,77 @@ mod test {
         assert_eq!(err.to_string(), expected_err);
     }
 }
+
+#[test]
+fn test_elip_dwid() {
+    // Generate ELIP test vectors with
+    // cargo test -p lwk_wollet elip_dwid -- --nocapture
+    use lwk_common::{Bip, Network, Signer};
+    use lwk_signer::SwSigner;
+    let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let bip = Bip::Bip84;
+    let signer = SwSigner::new(mnemonic, true).unwrap();
+    let signer_test = SwSigner::new(mnemonic, false).unwrap();
+    let ko_xpub = signer.keyorigin_xpub(bip, true).unwrap();
+    let ko_xpub_test = signer_test.keyorigin_xpub(bip, false).unwrap();
+    let view = "3e129856c574c66d94023ac98b7f69aca9774d10aee4dc087f0c52a498687189";
+    let view_151 = "9fc48763c2aa01aa7b26edb3c8e32f709e4a6b5a83d4379c85864c7e613c5d65";
+    let xpub = &ko_xpub[23..];
+    let mut i = 0;
+    for (descriptor, description, network) in [
+        (
+            format!("ct({view},elwpkh({ko_xpub}/0/*))"),
+            "Liquid",
+            Network::Liquid,
+        ),
+        (
+            format!("ct({view},elwpkh({ko_xpub_test}/0/*))"),
+            "Liquid Testnet",
+            Network::TestnetLiquid,
+        ),
+        (
+            format!("ct({view},elwpkh({ko_xpub_test}/0/*))"),
+            "Liquid Regtest",
+            Network::LocaltestLiquid,
+        ),
+        (
+            format!("ct({view},elwpkh({xpub}/0/*))"),
+            "equivalent descriptor",
+            Network::Liquid,
+        ),
+        (
+            format!("ct({view},elwpkh({ko_xpub}/<0;1>/*))"),
+            "multi-path",
+            Network::Liquid,
+        ),
+        (
+            format!("ct(elip151,elwpkh({ko_xpub}/0/*))"),
+            "different blinding key",
+            Network::Liquid,
+        ),
+        (
+            format!("ct({view_151},elwpkh({ko_xpub}/0/*))"),
+            "equivalent blinding key",
+            Network::Liquid,
+        ),
+        (
+            format!("ct({view},elwpkh({ko_xpub}/0))"),
+            "no wildcard",
+            Network::Liquid,
+        ),
+    ] {
+        i += 1;
+        let d: WolletDescriptor = descriptor.parse().unwrap();
+        let dwid = d.dwid(network).unwrap();
+        let network_str = match network {
+            Network::Liquid => "Liquid",
+            Network::TestnetLiquid => "Liquid Testnet",
+            Network::LocaltestLiquid => "Liquid Regtest",
+        };
+        println!("* Test Vector {i}");
+        println!("** Description: {description}");
+        println!("** Network: {network_str}");
+        println!("** CT Descriptor: <code>{descriptor}</code>");
+        println!("** DWID: <code>{dwid}</code>\n");
+    }
+}

@@ -287,7 +287,7 @@ impl BoltzSession {
 
     /// Restore a swap from its serialized data
     #[wasm_bindgen(js_name = restorePreparePay)]
-    pub async fn restore_prepare_pay(self, data: &str) -> Result<PreparePayResponse, Error> {
+    pub async fn restore_prepare_pay(&self, data: &str) -> Result<PreparePayResponse, Error> {
         let data = PreparePayDataSerializable::deserialize(data)?;
         let r = self.inner.restore_prepare_pay(data).await?;
         Ok(r.into())
@@ -295,7 +295,7 @@ impl BoltzSession {
 
     /// Restore a swap from its serialized data
     #[wasm_bindgen(js_name = restoreInvoice)]
-    pub async fn restore_invoice(self, data: &str) -> Result<InvoiceResponse, Error> {
+    pub async fn restore_invoice(&self, data: &str) -> Result<InvoiceResponse, Error> {
         let data = InvoiceDataSerializable::deserialize(data)?;
         let r = self.inner.restore_invoice(data).await?;
         Ok(r.into())

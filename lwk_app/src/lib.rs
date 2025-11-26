@@ -21,7 +21,7 @@ use std::thread::{sleep, JoinHandle};
 use std::time::Duration;
 
 use lwk_common::{
-    address_to_text_qr, address_to_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
+    address_to_qr, address_to_text_qr, keyorigin_xpub_from_str, multisig_desc, singlesig_desc,
     InvalidBipVariant, InvalidBlindingKeyVariant, InvalidMultisigVariant, InvalidSinglesigVariant,
     Signer,
 };

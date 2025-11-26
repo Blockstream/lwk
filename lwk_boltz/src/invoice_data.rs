@@ -101,6 +101,12 @@ impl From<InvoiceData> for InvoiceDataSerializable {
     }
 }
 
+impl InvoiceDataSerializable {
+    pub fn deserialize(data: &str) -> Result<Self, Error> {
+        Ok(serde_json::from_str(data)?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::mnemonic_identifier;

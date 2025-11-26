@@ -226,6 +226,11 @@ impl InvoiceResponse {
         self.inner.bolt11_invoice().to_string()
     }
 
+    #[wasm_bindgen(js_name = swapId)]
+    pub fn swap_id(&self) -> String {
+        self.inner.swap_id().to_string()
+    }
+
     /// The fee of the swap provider
     ///
     /// It is equal to the amount of the invoice minus the amount of the onchain transaction.

@@ -177,6 +177,9 @@ def show_invoice(boltz_session, wollet):
     webhook = WebHook(webhook_url, status=[]) if webhook_url else None
     invoice_response = boltz_session.invoice(amount, "Lightning payment", claim_address, webhook) 
 
+    fee = invoice_response.fee()
+    print(f"Fee: {fee}")
+
     # Get and print the bolt11 invoice
     bolt11_invoice_obj = invoice_response.bolt11_invoice()
     bolt11_invoice = str(bolt11_invoice_obj)
@@ -211,6 +214,9 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
         webhook_url = os.getenv('WEBHOOK')
         webhook = WebHook(webhook_url, status=[]) if webhook_url else None
         prepare_pay_response = boltz_session.prepare_pay(lightning_payment, refund_address, webhook) 
+
+        fee = prepare_pay_response.fee()
+        print(f"Fee: {fee}")
 
         data=prepare_pay_response.serialize()
         swap_id=prepare_pay_response.swap_id()

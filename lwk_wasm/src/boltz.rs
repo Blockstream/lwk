@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr, time::Duration};
 
+use lwk_boltz::{InvoiceDataSerializable, PreparePayDataSerializable};
 use wasm_bindgen::prelude::*;
 
 use crate::{Address, Error, Network};
@@ -281,6 +282,22 @@ impl BoltzSession {
             .inner
             .invoice(amount, description, claim_address.as_ref(), None)
             .await?;
+        Ok(r.into())
+    }
+
+    /// Restore a swap from its serialized data
+    #[wasm_bindgen(js_name = restorePreparePay)]
+    pub async fn restore_prepare_pay(self, data: &str) -> Result<PreparePayResponse, Error> {
+        let data = PreparePayDataSerializable::deserialize(data)?;
+        let r = self.inner.restore_prepare_pay(data).await?;
+        Ok(r.into())
+    }
+
+    /// Restore a swap from its serialized data
+    #[wasm_bindgen(js_name = restoreInvoice)]
+    pub async fn restore_invoice(self, data: &str) -> Result<InvoiceResponse, Error> {
+        let data = InvoiceDataSerializable::deserialize(data)?;
+        let r = self.inner.restore_invoice(data).await?;
         Ok(r.into())
     }
 }

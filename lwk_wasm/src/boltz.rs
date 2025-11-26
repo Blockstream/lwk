@@ -161,6 +161,7 @@ impl PreparePayResponse {
         Ok(self.inner.serialize()?)
     }
 
+    #[wasm_bindgen(js_name = swapId)]
     pub fn swap_id(&self) -> String {
         self.inner.swap_id().to_string()
     }
@@ -169,10 +170,12 @@ impl PreparePayResponse {
         self.inner.uri().to_string()
     }
 
+    #[wasm_bindgen(js_name = uriAddress)]
     pub fn uri_address(&self) -> Result<Address, Error> {
         Ok(self.inner.uri_address()?.into())
     }
 
+    #[wasm_bindgen(js_name = uriAmount)]
     pub fn uri_amount(&self) -> u64 {
         self.inner.uri_amount()
     }
@@ -185,6 +188,7 @@ impl PreparePayResponse {
         self.inner.fee()
     }
 
+    #[wasm_bindgen(js_name = completePay)]
     pub async fn complete_pay(self) -> Result<bool, Error> {
         Ok(self.inner.complete_pay().await?)
     }
@@ -232,6 +236,7 @@ impl InvoiceResponse {
 
     /// Complete the payment by advancing through the swap states until completion or failure
     /// Consumes self as the inner method does
+    #[wasm_bindgen(js_name = completePay)]
     pub async fn complete_pay(self) -> Result<bool, Error> {
         Ok(self.inner.complete_pay().await?)
     }
@@ -240,12 +245,14 @@ impl InvoiceResponse {
 #[wasm_bindgen]
 impl BoltzSession {
     /// Get the rescue file
+    #[wasm_bindgen(js_name = rescueFile)]
     pub fn rescue_file(&self) -> Result<String, Error> {
         let r = self.inner.rescue_file();
         Ok(serde_json::to_string(&r)?)
     }
 
     /// Prepare a lightning invoice payment
+    #[wasm_bindgen(js_name = preparePay)]
     pub async fn prepare_pay(
         &self,
         lightning_payment: &LightningPayment,

@@ -58,6 +58,7 @@ pub use boltz::{BoltzSession, BoltzSessionBuilder};
 pub use contract::Contract;
 pub use descriptor::WolletDescriptor;
 pub(crate) use error::Error;
+pub use error::MagicRoutingHint;
 pub use esplora::EsploraClient;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use jade::{Jade, Singlesig};

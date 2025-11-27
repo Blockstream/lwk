@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::js_sys::{self, Reflect};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -131,11 +132,75 @@ impl Error {
 }
 
 impl From<Error> for JsValue {
-    fn from(val: Error) -> JsValue {
-        if let Error::JsVal(e) = val {
-            e
-        } else {
-            format!("{val}").into()
+    fn from(err: Error) -> Self {
+        if let Error::JsVal(e) = err {
+            return e;
+        }
+
+        let msg = format!("{err}");
+        let code = err.code();
+
+        let js_error = js_sys::Error::new(&msg);
+
+        js_error.set_name("LwkError");
+
+        let _ = Reflect::set(&js_error, &JsValue::from("code"), &JsValue::from(code));
+
+        if let Error::Boltz(e) = err {
+            if let Ok(magic_routing_hint) = MagicRoutingHint::try_from(e) {
+                let _ = Reflect::set(
+                    &js_error,
+                    &JsValue::from("details"),
+                    &magic_routing_hint.into(),
+                );
+            }
+        }
+
+        JsValue::from(js_error)
+    }
+}
+
+/// A struct representing a magic routing hint, with details on how to pay directly without using Boltz
+#[wasm_bindgen]
+pub struct MagicRoutingHint {
+    address: String,
+    amount: u64,
+    uri: String,
+}
+
+#[wasm_bindgen]
+impl MagicRoutingHint {
+    /// The address to pay directly to
+    pub fn address(&self) -> String {
+        self.address.clone()
+    }
+
+    /// The amount to pay directly to
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// The URI to pay directly to
+    pub fn uri(&self) -> String {
+        self.uri.clone()
+    }
+}
+
+impl TryFrom<lwk_boltz::Error> for MagicRoutingHint {
+    type Error = ();
+
+    fn try_from(err: lwk_boltz::Error) -> Result<Self, Self::Error> {
+        match err {
+            lwk_boltz::Error::MagicRoutingHint {
+                address,
+                amount,
+                uri,
+            } => Ok(Self {
+                address,
+                amount,
+                uri,
+            }),
+            _ => Err(()),
         }
     }
 }

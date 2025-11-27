@@ -1,4 +1,42 @@
+use crate::test_wollet::*;
+use lwk_common::Signer;
+use lwk_test_util::*;
 use lwk_wollet::clients::blocking::BlockchainBackend;
+
+#[test]
+fn test_blinding_nonces() {
+    // Construct a transaction and obtain the blinding nonces
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({view_key},elwpkh({}/*))", signer.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w = TestWollet::new(client, &desc);
+
+    let lbtc = w.policy_asset();
+    w.fund_btc(&env);
+
+    let node_addr = env.elementsd_getnewaddress();
+    let amp0pset = w
+        .tx_builder()
+        .add_recipient(&node_addr, 1000, lbtc)
+        .unwrap()
+        .finish_for_amp0()
+        .unwrap();
+    let mut pset = amp0pset.pset().clone();
+    let blinding_nonces = amp0pset.blinding_nonces();
+
+    let sigs = signer.sign(&mut pset).unwrap();
+    assert!(sigs > 0);
+
+    w.send(&mut pset);
+
+    // Amp0Pset::new checks that blinding nonces and PSET are consistent
+    let fake_blinding_nonces = vec![String::new(); blinding_nonces.len()];
+    let res = lwk_wollet::amp0::Amp0Pset::new(pset, fake_blinding_nonces);
+    assert!(res.is_err());
+}
 
 #[test]
 #[allow(unused)]

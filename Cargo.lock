@@ -2368,7 +2368,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.12.6"
+version = "0.12.7"
 dependencies = [
  "elements 0.25.2",
  "log",

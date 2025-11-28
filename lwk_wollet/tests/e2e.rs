@@ -3981,26 +3981,13 @@ fn test_issue_asset() {
     // ANCHOR_END: issuance_ids
     //let txin = tx.inputs()[0];
     // ANCHOR_END: test_issue_asset
-    // assert!(derive_asset_id(txin, contract) == asset_id); // ANCHOR: ignore
-    // assert!(derive_token_id(txin, contract) == token_id); // ANCHOR: ignore
-
-    /*let issuance = pset.inputs()[0].clone();
-    assert!(issuance.asset == Some(asset_id)); // ANCHOR: ignore
-    assert!(issuance.token() == Some(token_id)); // ANCHOR: ignore
-    assert!(!issuance.is_confidential); // ANCHOR: ignore
-    assert!(!issuance.is_null); // ANCHOR: ignore
-    assert!(issuance.is_issuance); // ANCHOR: ignore
-    assert!(!issuance.is_reissuance); // ANCHOR: ignore
-    assert!(issuance.asset_satoshi == Some(issued_asset)); // ANCHOR: ignore
-    assert!(issuance.token_satoshi == Some(reissuance_tokens)); // ANCHOR: ignore
-    */
 
     wait_for_tx(&mut wollet, &mut client, &txid);
 
-    assert!(*wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset); // ANCHOR: ignore
-    assert!(*wollet.balance().unwrap().get(&token_id).unwrap_or(&0) == reissuance_tokens); // ANCHOR: ignore
+    assert!(*wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset);
+    assert!(*wollet.balance().unwrap().get(&token_id).unwrap_or(&0) == reissuance_tokens);
 
-    // reissue the asset
+    // ANCHOR: reissue_asset
     let reissue_asset = 100;
     let builder = wollet.tx_builder();
     let mut pset = builder
@@ -4013,20 +4000,11 @@ fn test_issue_asset() {
     let _ = wollet.finalize(&mut pset).unwrap();
     let tx = pset.extract_tx().unwrap();
     let txid = client.broadcast(&tx).unwrap();
+    // ANCHOR_END: reissue_asset
 
-    /*reissuance = next(e.issuance() for e in unsigned_pset.inputs() if e.issuance())
-    assert!(reissuance.asset() == asset_id); // ANCHOR: ignore
-    assert!(reissuance.token() == token_id); // ANCHOR: ignore
-    assert!(!reissuance.is_confidential()); // ANCHOR: ignore
-    assert!(!reissuance.is_null()); // ANCHOR: ignore
-    assert!(!reissuance.is_issuance()); // ANCHOR: ignore
-    assert!(reissuance.is_reissuance()); // ANCHOR: ignore
-    assert!(reissuance.asset_satoshi() == reissue_asset); // ANCHOR: ignore
-    assert!(reissuance.token_satoshi() is None); // ANCHOR: ignore*/
-
-    wait_for_tx(&mut wollet, &mut client, &txid); // ANCHOR: ignore
+    wait_for_tx(&mut wollet, &mut client, &txid);
 
     assert!(
         *wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset + reissue_asset
-    ); // ANCHOR: ignore
+    );
 }

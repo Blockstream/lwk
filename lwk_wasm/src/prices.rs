@@ -30,6 +30,7 @@ impl From<PricesFetcherBuilder> for lwk_wollet::PricesFetcherBuilder {
 impl PricesFetcherBuilder {
     /// Create a new PricesFetcherBuilder with default settings
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::new_without_default)]
     pub fn new() -> PricesFetcherBuilder {
         lwk_wollet::PricesFetcher::builder().into()
     }

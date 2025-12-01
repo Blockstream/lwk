@@ -27,40 +27,12 @@ impl From<PricesFetcherBuilder> for lwk_wollet::PricesFetcherBuilder {
 }
 
 #[wasm_bindgen]
-impl PricesFetcherBuilder {
-    /// Create a new PricesFetcherBuilder with default settings
-    #[wasm_bindgen(constructor)]
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> PricesFetcherBuilder {
-        lwk_wollet::PricesFetcher::builder().into()
-    }
-
-    /// Set the timeout for HTTP requests in seconds
-    ///
-    /// Default is 10 seconds
-    pub fn timeout(self, timeout_seconds: u8) -> PricesFetcherBuilder {
-        self.inner.timeout(timeout_seconds).into()
-    }
-
-    /// Build the PricesFetcher
-    pub fn build(self) -> Result<PricesFetcher, Error> {
-        let inner = self.inner.build()?;
-        Ok(PricesFetcher { inner })
-    }
-}
-
-#[wasm_bindgen]
 impl PricesFetcher {
     /// Create a new PricesFetcher with default settings
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<PricesFetcher, Error> {
         let inner = lwk_wollet::PricesFetcher::new()?;
         Ok(PricesFetcher { inner })
-    }
-
-    /// Get a builder for configuring the PricesFetcher
-    pub fn builder() -> PricesFetcherBuilder {
-        lwk_wollet::PricesFetcher::builder().into()
     }
 
     /// Fetch exchange rates for the given currency (e.g., "USD", "EUR", "CHF")
@@ -126,8 +98,8 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_prices_fetcher_builder() {
-        let builder = PricesFetcherBuilder::new();
-        let fetcher = builder.timeout(15).build().unwrap();
+        let fetcher = PricesFetcher::new().unwrap();
+
         let rates = fetcher.rates("EUR").await.unwrap();
 
         assert!(rates.median() > 0.0);

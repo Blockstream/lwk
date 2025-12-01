@@ -5,7 +5,6 @@
 mod sources;
 
 use iso4217::CurrencyCode;
-use std::time::Duration;
 
 /// A fetcher for exchange rates
 pub struct PricesFetcher {
@@ -36,7 +35,7 @@ impl PricesFetcherBuilder {
 
         // Timeout is not supported in WASM
         #[cfg(not(target_arch = "wasm32"))]
-        let builder = builder.timeout(Duration::from_secs(self.timeout as u64));
+        let builder = builder.timeout(std::time::Duration::from_secs(self.timeout as u64));
 
         let client = builder.build().map_err(|e| Error::Http(e.to_string()))?;
 

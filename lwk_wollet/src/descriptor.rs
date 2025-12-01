@@ -1028,6 +1028,11 @@ fn test_elip_dwid() {
             "no wildcard",
             Network::Liquid,
         ),
+        (
+            format!("ct({view},elwpkh({ko_xpub}/0/2147483647))"),
+            "explicit index 2^31-1",
+            Network::Liquid,
+        ),
     ] {
         i += 1;
         let d: WolletDescriptor = descriptor.parse().unwrap();

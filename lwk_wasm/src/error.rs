@@ -63,6 +63,9 @@ pub enum Error {
     #[error(transparent)]
     AddressParse(#[from] lwk_common::AddressParseError),
 
+    #[error(transparent)]
+    Prices(#[from] lwk_wollet::prices::Error),
+
     #[error("{0}")]
     Generic(String),
 
@@ -126,6 +129,14 @@ impl Error {
             Error::Keyorigin(_) => "Keyorigin",
             Error::Precision(_) => "Precision",
             Error::AddressParse(_) => "AddressParse",
+            Error::Prices(inner) => match inner {
+                lwk_wollet::prices::Error::UnrecognizedCurrency(_) => {
+                    "Prices::UnrecognizedCurrency"
+                }
+                lwk_wollet::prices::Error::UnsupportedCurrency(_) => "Prices::UnsupportedCurrency",
+                lwk_wollet::prices::Error::NotEnoughSources(_) => "Prices::NotEnoughSources",
+                lwk_wollet::prices::Error::Http(_) => "Prices::Http",
+            },
             Error::Generic(_) => "Generic",
         }
     }

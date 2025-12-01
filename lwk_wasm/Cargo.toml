@@ -27,6 +27,7 @@ lwk_wollet = { version = "0.12.0", default-features = false, features = [
     "esplora",
     "amp2",
     "amp0",
+    "prices",
 ] }
 lwk_boltz = { version = "0.1.0", default-features = false }
 lwk_common = "0.12.0"

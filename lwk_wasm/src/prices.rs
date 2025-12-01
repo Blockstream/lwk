@@ -1,0 +1,149 @@
+use wasm_bindgen::prelude::*;
+
+use crate::Error;
+
+/// Wrapper over [`lwk_wollet::PricesFetcher`]
+#[wasm_bindgen]
+pub struct PricesFetcher {
+    inner: lwk_wollet::PricesFetcher,
+}
+
+/// Wrapper over [`lwk_wollet::PricesFetcherBuilder`]
+#[wasm_bindgen]
+pub struct PricesFetcherBuilder {
+    inner: lwk_wollet::PricesFetcherBuilder,
+}
+
+impl From<lwk_wollet::PricesFetcherBuilder> for PricesFetcherBuilder {
+    fn from(inner: lwk_wollet::PricesFetcherBuilder) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<PricesFetcherBuilder> for lwk_wollet::PricesFetcherBuilder {
+    fn from(builder: PricesFetcherBuilder) -> Self {
+        builder.inner
+    }
+}
+
+#[wasm_bindgen]
+impl PricesFetcherBuilder {
+    /// Create a new PricesFetcherBuilder with default settings
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> PricesFetcherBuilder {
+        lwk_wollet::PricesFetcher::builder().into()
+    }
+
+    /// Set the timeout for HTTP requests in seconds
+    ///
+    /// Default is 10 seconds
+    pub fn timeout(self, timeout_seconds: u8) -> PricesFetcherBuilder {
+        self.inner.timeout(timeout_seconds).into()
+    }
+
+    /// Build the PricesFetcher
+    pub fn build(self) -> Result<PricesFetcher, Error> {
+        let inner = self.inner.build()?;
+        Ok(PricesFetcher { inner })
+    }
+}
+
+#[wasm_bindgen]
+impl PricesFetcher {
+    /// Create a new PricesFetcher with default settings
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<PricesFetcher, Error> {
+        let inner = lwk_wollet::PricesFetcher::new()?;
+        Ok(PricesFetcher { inner })
+    }
+
+    /// Get a builder for configuring the PricesFetcher
+    pub fn builder() -> PricesFetcherBuilder {
+        lwk_wollet::PricesFetcher::builder().into()
+    }
+
+    /// Fetch exchange rates for the given currency (e.g., "USD", "EUR", "CHF")
+    ///
+    /// Returns an ExchangeRates object containing rates from multiple sources and the median
+    pub async fn rates(&self, currency: &str) -> Result<ExchangeRates, Error> {
+        let inner = self.inner.rates(currency).await?;
+        Ok(ExchangeRates { inner })
+    }
+}
+
+/// Multiple exchange rates against BTC provided from various sources
+#[wasm_bindgen]
+pub struct ExchangeRates {
+    inner: lwk_wollet::ExchangeRates,
+}
+
+#[wasm_bindgen]
+impl ExchangeRates {
+    /// Get the median exchange rate
+    pub fn median(&self) -> f64 {
+        self.inner.median
+    }
+
+    /// Get the individual exchange rates as a JSON array
+    ///
+    /// Each rate contains: rate, currency, source, and timestamp
+    pub fn results(&self) -> Result<JsValue, Error> {
+        Ok(serde_wasm_bindgen::to_value(&self.inner.results)?)
+    }
+
+    /// Get the number of sources that provided rates
+    #[wasm_bindgen(js_name = resultsCount)]
+    pub fn results_count(&self) -> usize {
+        self.inner.results.len()
+    }
+
+    /// Serialize the entire response to JSON string
+    pub fn serialize(&self) -> Result<String, Error> {
+        Ok(serde_json::to_string(&self.inner)?)
+    }
+}
+
+#[cfg(all(test, target_arch = "wasm32"))]
+mod tests {
+    use wasm_bindgen_test::*;
+
+    use super::*;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    async fn test_prices_fetcher() {
+        let fetcher = PricesFetcher::new().unwrap();
+        let rates = fetcher.rates("USD").await.unwrap();
+
+        assert!(rates.median() > 0.0);
+        assert!(rates.results_count() >= 3);
+
+        let json = rates.serialize().unwrap();
+        assert!(json.contains("median"));
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_prices_fetcher_builder() {
+        let builder = PricesFetcherBuilder::new();
+        let fetcher = builder.timeout(15).build().unwrap();
+        let rates = fetcher.rates("EUR").await.unwrap();
+
+        assert!(rates.median() > 0.0);
+        assert!(rates.results_count() >= 3);
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_invalid_currency() {
+        let fetcher = PricesFetcher::new().unwrap();
+        let err = fetcher.rates("INVALID").await;
+        assert!(err.is_err());
+    }
+
+    #[wasm_bindgen_test]
+    async fn test_unsupported_currency() {
+        let fetcher = PricesFetcher::new().unwrap();
+        let err = fetcher.rates("JPY").await;
+        assert!(err.is_err());
+    }
+}

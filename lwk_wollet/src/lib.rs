@@ -113,6 +113,9 @@ mod util;
 mod wamp;
 mod wollet;
 
+#[cfg(feature = "prices")]
+pub mod prices;
+
 pub use crate::clients::electrum_url::{ElectrumUrl, UrlError};
 pub use crate::clients::{Capability, History};
 pub use crate::descriptor::{Chain, WolletDescriptor};
@@ -130,6 +133,9 @@ pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
 pub use crate::util::EC;
 pub use crate::wollet::{Tip, Wollet, WolletBuilder};
+
+#[cfg(feature = "prices")]
+pub use crate::prices::{ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder};
 
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_to_index_with_electrum_client;

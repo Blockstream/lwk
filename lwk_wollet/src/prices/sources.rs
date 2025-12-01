@@ -1,7 +1,7 @@
 use crate::asyncr::async_now;
 
 use super::{Error, ExchangeRate};
-use iso4217::CurrencyCode;
+use crate::prices::currency_code::CurrencyCode;
 use serde::Deserialize;
 use serde_json::Value;
 

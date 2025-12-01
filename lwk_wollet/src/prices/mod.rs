@@ -2,9 +2,11 @@
 //!
 //! This module provides a fetcher for exchange rates of fiat currencies against BTC.
 
-mod sources;
+use crate::prices::currency_code::CurrencyCode;
 
-use iso4217::CurrencyCode;
+mod codes;
+mod currency_code;
+mod sources;
 
 /// A fetcher for exchange rates
 pub struct PricesFetcher {
@@ -74,8 +76,9 @@ pub struct ExchangeRate {
 }
 
 mod currency_code_serde {
-    use iso4217::CurrencyCode;
     use serde::{Deserialize, Deserializer, Serializer};
+
+    use crate::prices::currency_code::{self, CurrencyCode};
 
     pub fn serialize<S>(currency: &CurrencyCode, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -89,7 +92,7 @@ mod currency_code_serde {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        iso4217::alpha3(&s)
+        currency_code::alpha3(&s)
             .cloned()
             .ok_or_else(|| serde::de::Error::custom(format!("Unknown currency: {s}")))
     }
@@ -129,7 +132,7 @@ impl PricesFetcher {
     ///
     /// Multiple sources are used to fetch the rates
     pub async fn rates(&self, currency: &str) -> Result<ExchangeRates, Error> {
-        let currency_code = match iso4217::alpha3(currency) {
+        let currency_code = match currency_code::alpha3(currency) {
             Some(currency) => {
                 if !SUPPORTED_CURRENCIES.contains(&currency.alpha3) {
                     return Err(Error::UnsupportedCurrency(currency.name.to_string()));
@@ -185,11 +188,11 @@ impl PricesFetcher {
 
 #[cfg(test)]
 mod test {
-    use super::{Error, PricesFetcher};
+    use super::{currency_code, Error, PricesFetcher};
 
     #[test]
     fn test_iso() {
-        let currency = iso4217::alpha3("EUR").unwrap();
+        let currency = currency_code::alpha3("EUR").unwrap();
         assert_eq!(currency.name, "Euro");
     }
 

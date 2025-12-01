@@ -2095,12 +2095,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
-name = "iso4217"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a0ea2a998704e0177b5e9cbd428f2f01cbed6c56d9de68d4d3743e10bc82230"
-
-[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2603,7 +2597,6 @@ dependencies = [
  "fxhash",
  "hmac",
  "idna",
- "iso4217",
  "js-sys",
  "log",
  "lwk_common",

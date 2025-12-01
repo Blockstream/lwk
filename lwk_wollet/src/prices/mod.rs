@@ -168,7 +168,7 @@ impl PricesFetcher {
 
         // Calculate median
         let mut prices: Vec<f64> = rates.iter().map(|r| r.rate).collect();
-        prices.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        prices.sort_by(|a, b| a.total_cmp(b));
 
         let median = if prices.len() % 2 == 0 {
             let mid = prices.len() / 2;

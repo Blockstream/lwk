@@ -9,7 +9,6 @@ use std::time::Duration;
 
 /// A fetcher for exchange rates
 pub struct PricesFetcher {
-    timeout: u8,
     client: reqwest::Client,
 }
 
@@ -41,10 +40,7 @@ impl PricesFetcherBuilder {
 
         let client = builder.build().map_err(|e| Error::Http(e.to_string()))?;
 
-        Ok(PricesFetcher {
-            timeout: self.timeout,
-            client,
-        })
+        Ok(PricesFetcher { client })
     }
 }
 

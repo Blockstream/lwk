@@ -1,13 +1,19 @@
+//! # Prices
+//!
+//! This module provides a fetcher for exchange rates of fiat currencies against BTC.
+
 mod sources;
 
 use iso4217::CurrencyCode;
 use std::time::Duration;
 
+/// A fetcher for exchange rates
 pub struct PricesFetcher {
     timeout: u8,
     client: reqwest::Client,
 }
 
+/// A builder for the [`PricesFetcher`]
 pub struct PricesFetcherBuilder {
     timeout: u8,
 }
@@ -19,11 +25,13 @@ impl Default for PricesFetcherBuilder {
 }
 
 impl PricesFetcherBuilder {
+    /// Set the timeout for HTTP requests in seconds
     pub fn timeout(mut self, timeout: u8) -> Self {
         self.timeout = timeout;
         self
     }
 
+    /// Build the PricesFetcher
     pub fn build(self) -> Result<PricesFetcher, Error> {
         let builder = reqwest::Client::builder();
 
@@ -43,17 +51,30 @@ impl PricesFetcherBuilder {
 /// Multiple exchange rates against BTC provided from various sources
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct ExchangeRates {
+    /// The list of exchange rates
     pub results: Vec<ExchangeRate>,
+
+    /// The median of the exchange rates
+    ///
+    /// The median is the middle value of the exchange rates when sorted by rate.
+    /// It's useful cause it's robust by not beingaffected by the outliers.
     pub median: f64,
 }
 
 /// `rate` is the amount of `currency` needed to buy 1 BTC from `source`
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct ExchangeRate {
+    /// The rate of the currency in relation to BTC
     pub rate: f64,
+
+    /// The currency code
     #[serde(with = "currency_code_serde")]
     pub currency: CurrencyCode,
+
+    /// The source of the rate
     pub source: String,
+
+    /// The fetch timestamp of the rate
     pub timestamp: u64,
 }
 
@@ -79,6 +100,7 @@ mod currency_code_serde {
     }
 }
 
+#[allow(missing_docs)]
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("Unrecognized currency: {0}")]
@@ -98,14 +120,19 @@ const SUPPORTED_CURRENCIES: [&str; 3] = ["USD", "EUR", "CHF"];
 const MIN_SOURCES: usize = 3;
 
 impl PricesFetcher {
+    /// Create a new PricesFetcher with default settings
     pub fn new() -> Result<Self, Error> {
         Self::builder().build()
     }
 
+    /// Get a builder for configuring the PricesFetcher
     pub fn builder() -> PricesFetcherBuilder {
         PricesFetcherBuilder::default()
     }
 
+    /// Fetch exchange rates for the given currency
+    ///
+    /// Multiple sources are used to fetch the rates
     pub async fn rates(&self, currency: &str) -> Result<ExchangeRates, Error> {
         let currency_code = match iso4217::alpha3(currency) {
             Some(currency) => {

@@ -98,3 +98,19 @@ assert reissuance.token_satoshi() is None
 wollet.wait_for_tx(txid, client)
 
 assert(wollet.balance()[asset_id] == issued_asset + reissue_asset)
+
+# ANCHOR: burn_asset
+burn_asset = 50
+builder = network.tx_builder()
+builder.add_burn(burn_asset, asset_id)
+unsigned_pset = builder.finish(wollet)
+signed_pset = signer.sign(unsigned_pset)
+finalized_pset = wollet.finalize(signed_pset)
+tx = finalized_pset.extract_tx()
+txid = client.broadcast(tx)
+# ANCHOR_END: burn_asset
+
+wollet.wait_for_tx(txid, client)
+
+assert(wollet.balance()[asset_id] == issued_asset + reissue_asset - burn_asset)
+

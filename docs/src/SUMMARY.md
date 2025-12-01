@@ -16,7 +16,7 @@
   * [Custom Wollet Persister]() #(persiter.md) ❌
   * [Issuance](issuance.md) ✅
   * [Reissuance](reissuance.md) ✅
-  * [Burn]() #(burn.md) ❌
+  * [Burn](burn.md) ✅
   * [Manual Coin Selection]() #(manual.md) ❌
   * [Add External Inputs]() #(external.md) ❌
   * [Send All Funds]() #(sendall.md) ❌

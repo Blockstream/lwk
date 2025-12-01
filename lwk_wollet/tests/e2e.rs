@@ -4007,4 +4007,26 @@ fn test_issue_asset() {
     assert!(
         *wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset + reissue_asset
     );
+
+    // ANCHOR: burn_asset
+    let burn_asset = 50;
+    let builder = wollet.tx_builder();
+    let mut pset = builder
+        .add_burn(burn_asset, asset_id)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let signatures_added = signer.sign(&mut pset).unwrap();
+    assert!(signatures_added == 2); // ANCHOR: ignore
+    let _ = wollet.finalize(&mut pset).unwrap();
+    let tx = pset.extract_tx().unwrap();
+    let txid = client.broadcast(&tx).unwrap();
+    // ANCHOR_END: burn_asset
+
+    wait_for_tx(&mut wollet, &mut client, &txid);
+
+    assert!(
+        *wollet.balance().unwrap().get(&asset_id).unwrap_or(&0)
+            == issued_asset + reissue_asset - burn_asset
+    );
 }

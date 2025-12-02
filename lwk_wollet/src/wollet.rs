@@ -39,6 +39,7 @@ pub struct Wollet {
     pub(crate) cache: Cache,
     pub(crate) persister: Arc<dyn Persister + Send + Sync>,
     pub(crate) descriptor: WolletDescriptor,
+    pub(crate) prune_witnesses: bool,
     // cached value
     max_weight_to_satisfy: usize,
 }
@@ -48,6 +49,7 @@ pub struct WolletBuilder {
     network: ElementsNetwork,
     descriptor: WolletDescriptor,
     persister: Arc<dyn Persister + Send + Sync>,
+    prune_witnesses: bool,
 }
 
 impl WolletBuilder {
@@ -57,12 +59,30 @@ impl WolletBuilder {
             network,
             descriptor,
             persister: Arc::new(NoPersist {}),
+            prune_witnesses: false,
         }
     }
 
     /// Specify the `Wollet` persister
     pub fn with_persister(mut self, persister: Arc<dyn Persister + Send + Sync>) -> Self {
         self.persister = persister;
+        self
+    }
+
+    /// Prune the transaction witnesses
+    ///
+    /// Remove all the input and output witnesses from the transactions before
+    /// loading and persisting them.
+    /// This reduces the memory and storage usage.
+    ///
+    /// This removes output rangeproofs (which often represent the largest
+    /// portion of transactions), causing functions that use those rangeproofs
+    /// to fail, specifically:
+    /// * [`Wollet::reunblind()`]
+    /// * [`Wollet::unblind_utxos_with()`]
+    /// * Transaction building fails if [`crate::TxBuilder::add_input_rangeproofs()`] is set to `true`.
+    pub fn prune_witnesses(mut self) -> Self {
+        self.prune_witnesses = true;
         self
     }
 
@@ -79,6 +99,7 @@ impl WolletBuilder {
             descriptor: self.descriptor,
             persister: self.persister,
             max_weight_to_satisfy,
+            prune_witnesses: self.prune_witnesses,
         };
 
         for i in 0.. {

@@ -46,8 +46,16 @@ fn test_prune() {
         .unwrap()
         .finish()
         .unwrap();
+    // Update.prune() preserves the input rangeproof for know wallet outputs
+    assert!(pset.inputs()[0].in_utxo_rangeproof.is_some());
     let _details = wallet.wollet.get_details(&pset).unwrap();
 
     wallet.sign(&signer, &mut pset);
-    wallet.send(&mut pset);
+    let tx = wallet.wollet.finalize(&mut pset).unwrap();
+    let txid = wallet.client.broadcast(&tx).unwrap();
+    sync_prune(&mut wallet);
+
+    let tx = wallet.wollet.transaction(&txid).unwrap().unwrap().tx;
+    assert!(tx.input.iter().all(|i| i.witness.is_empty()));
+    assert!(tx.output.iter().any(|o| !o.witness.is_empty()));
 }

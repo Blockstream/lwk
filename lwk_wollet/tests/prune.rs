@@ -1,4 +1,5 @@
 use crate::test_wollet::*;
+use lwk_common::derive_blinding_key;
 use lwk_test_util::*;
 use lwk_wollet::clients::blocking::BlockchainBackend;
 use lwk_wollet::*;
@@ -46,7 +47,7 @@ fn test_prune() {
         .unwrap()
         .finish()
         .unwrap();
-    // Update.prune() preserves the input rangeproof for know wallet outputs
+    // Update.prune() preserves the input rangeproofs for know wallet outputs
     assert!(pset.inputs()[0].in_utxo_rangeproof.is_some());
     let _details = wallet.wollet.get_details(&pset).unwrap();
 
@@ -58,4 +59,39 @@ fn test_prune() {
     let tx = wallet.wollet.transaction(&txid).unwrap().unwrap().tx;
     assert!(tx.input.iter().all(|i| i.witness.is_empty()));
     assert!(tx.output.iter().any(|o| !o.witness.is_empty()));
+
+    // For this wollet we prune all the witnesses
+    let mut client = test_client_electrum(&env.electrum_url());
+    let tmp_dir = tempfile::TempDir::new().unwrap();
+
+    let network = ElementsNetwork::default_regtest();
+    let wd: WolletDescriptor = desc.parse().unwrap();
+    let mut w_prune_wit = Wollet::with_fs_persist(network, wd, &tmp_dir).unwrap();
+
+    let mut update = client.full_scan(&w_prune_wit).unwrap().unwrap();
+    update.prune_witnesses();
+    w_prune_wit.apply_update(update).unwrap();
+
+    let pset = w_prune_wit
+        .tx_builder()
+        .add_lbtc_recipient(&address, 10_000)
+        .unwrap()
+        .finish()
+        .unwrap();
+    // Update.prune_witness() removes all input rangeproofs
+    assert!(pset.inputs()[0].in_utxo_rangeproof.is_none());
+
+    let tx = w_prune_wit.transaction(&txid).unwrap().unwrap().tx;
+    assert!(tx.input.iter().all(|i| i.witness.is_empty()));
+    assert!(tx.output.iter().all(|o| o.witness.is_empty()));
+
+    // reunblind and unblind_utxos_with work on rangeproofs, since there are none,
+    // they do nothing
+    let outpoints = w_prune_wit.reunblind().unwrap();
+    assert_eq!(outpoints.len(), 0);
+
+    let blinding_key =
+        derive_blinding_key(w_prune_wit.descriptor(), &address.script_pubkey()).unwrap();
+    let utxos = w_prune_wit.unblind_utxos_with(blinding_key).unwrap();
+    assert_eq!(utxos.len(), 0);
 }

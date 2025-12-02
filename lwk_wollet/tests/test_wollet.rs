@@ -29,7 +29,7 @@ pub struct TestWollet<C: BlockchainBackend> {
     db_root_dir: TempDir,
 }
 
-fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
+pub fn sync<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S) {
     let update = client.full_scan(wollet).unwrap();
     if let Some(update) = update {
         wollet.apply_update(update).unwrap();

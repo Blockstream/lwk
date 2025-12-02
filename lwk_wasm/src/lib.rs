@@ -85,6 +85,19 @@ pub use xpub::Xpub;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 pub use ledger::search_ledger_device;
 
+use wasm_bindgen::prelude::*;
+
+/// Convert the given string to a QR code image uri
+///
+/// The image format is monocromatic bitmap, returned as an encoded in base64 uri.
+///
+/// Without `pixel_per_module` the default is no border, and 1 pixel per module, to be used
+/// for example in html: `style="image-rendering: pixelated; border: 20px solid white;"`
+#[wasm_bindgen(js_name = stringToQr)]
+pub fn string_to_qr(str: &str, pixel_per_module: Option<u8>) -> Result<String, Error> {
+    Ok(lwk_common::string_to_qr(str, pixel_per_module)?)
+}
+
 #[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
     use std::collections::HashMap;

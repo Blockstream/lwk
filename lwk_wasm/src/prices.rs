@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use wasm_bindgen::prelude::*;
 
 use crate::Error;
@@ -38,9 +40,41 @@ impl PricesFetcher {
     /// Fetch exchange rates for the given currency (e.g., "USD", "EUR", "CHF")
     ///
     /// Returns an ExchangeRates object containing rates from multiple sources and the median
-    pub async fn rates(&self, currency: &str) -> Result<ExchangeRates, Error> {
-        let inner = self.inner.rates(currency).await?;
+    pub async fn rates(&self, currency: &CurrencyCode) -> Result<ExchangeRates, Error> {
+        let inner = self.inner.rates(currency.as_ref()).await?;
         Ok(ExchangeRates { inner })
+    }
+}
+
+#[wasm_bindgen]
+pub struct CurrencyCode {
+    inner: lwk_wollet::CurrencyCode,
+}
+
+impl AsRef<lwk_wollet::CurrencyCode> for CurrencyCode {
+    fn as_ref(&self) -> &lwk_wollet::CurrencyCode {
+        &self.inner
+    }
+}
+
+#[wasm_bindgen]
+impl CurrencyCode {
+    #[wasm_bindgen(constructor)]
+    pub fn new(code: &str) -> Result<CurrencyCode, Error> {
+        let inner = lwk_wollet::CurrencyCode::from_str(code)?;
+        Ok(CurrencyCode { inner })
+    }
+
+    pub fn name(&self) -> String {
+        self.inner.name.to_string()
+    }
+
+    pub fn alpha3(&self) -> String {
+        self.inner.alpha3.to_string()
+    }
+
+    pub fn exp(&self) -> i8 {
+        self.inner.exp
     }
 }
 

@@ -1,6 +1,30 @@
 use crate::test_wollet::*;
 use lwk_test_util::*;
 use lwk_wollet::clients::blocking::BlockchainBackend;
+use lwk_wollet::*;
+
+// Get the next Update with a transaction
+fn next_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) -> Update {
+    for _ in 0..50 {
+        if let Some(update) = wallet.client.full_scan(&wallet.wollet).unwrap() {
+            if !update.only_tip() {
+                return update;
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("update didn't arrive");
+}
+
+// Sync the wallet, prune the update before applying
+fn sync_prune<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
+    let mut update = next_tx_update(wallet);
+    let size_before = update.serialize().unwrap().len();
+    update.prune(&wallet.wollet);
+    let size_after = update.serialize().unwrap().len();
+    assert!(size_after < size_before);
+    wallet.wollet.apply_update(update).unwrap();
+}
 
 #[test]
 fn test_prune() {
@@ -14,26 +38,7 @@ fn test_prune() {
 
     let address = wallet.address();
     let _ = env.elementsd_sendtoaddress(&address, 100_000, None);
-
-    let mut client = test_client_electrum(&env.electrum_url());
-    let mut attempts = 50;
-    let mut update = loop {
-        if let Some(u) = client.full_scan(&wallet.wollet).unwrap() {
-            if !u.only_tip() {
-                break u;
-            }
-        }
-        attempts -= 1;
-        if attempts == 0 {
-            panic!("didn't receive an update")
-        }
-        std::thread::sleep(std::time::Duration::from_millis(200));
-    };
-    let size_before = update.serialize().unwrap().len();
-    update.prune(&wallet.wollet);
-    let size_after = update.serialize().unwrap().len();
-    assert!(size_after < size_before);
-    wallet.wollet.apply_update(update).unwrap();
+    sync_prune(&mut wallet);
 
     let mut pset = wallet
         .tx_builder()

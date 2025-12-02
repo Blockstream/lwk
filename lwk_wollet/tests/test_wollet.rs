@@ -56,6 +56,18 @@ pub fn wait_for_tx<S: BlockchainBackend>(wollet: &mut Wollet, client: &mut S, tx
     panic!("Wallet does not have {txid} in its list");
 }
 
+pub fn next_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) -> Update {
+    for _ in 0..50 {
+        if let Some(update) = wallet.client.full_scan(&wallet.wollet).unwrap() {
+            if !update.only_tip() {
+                return update;
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    panic!("update didn't arrive");
+}
+
 impl<C: BlockchainBackend> TestWollet<C> {
     pub fn new(mut client: C, desc: &str) -> Self {
         let db_root_dir = TempDir::new().unwrap();

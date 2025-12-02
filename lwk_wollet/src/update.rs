@@ -104,6 +104,33 @@ impl Update {
         self.new_txs.prune(&wallet.cache.paths);
     }
 
+    /// Prune witnesses from transactions
+    ///
+    /// Remove all input and output witnesses from transcations downloaded in
+    /// this update. This reduces memory and storage usage significantly.
+    ///
+    /// However pruning witnesses has effects on functions that use those
+    /// rangeproofs (which are part of output witness):
+    /// * When building transactions, it's possible to ask for the addition of
+    ///   input rangeproofs, using [`crate::TxBuilder::add_input_rangeproofs()`]
+    ///   or [`crate::WolletTxBuilder::add_input_rangeproofs()`]; however if the
+    ///   rangeproofs have been removed, they cannot be added to the created
+    ///   PSET.
+    /// * [`Wollet::unblind_utxos_with()`] cannot unblind utxos without
+    ///   witnesses.
+    /// * [`Wollet::reunblind()`] cannot unblind transactions without
+    ///   witnesses.
+    pub fn prune_witnesses(&mut self) {
+        for (_, tx) in self.new_txs.txs.iter_mut() {
+            for input in tx.input.iter_mut() {
+                input.witness = TxInWitness::empty();
+            }
+            for output in tx.output.iter_mut() {
+                output.witness = TxOutWitness::empty();
+            }
+        }
+    }
+
     /// Serialize an [`Update`] to a byte array
     pub fn serialize(&self) -> Result<Vec<u8>, elements::encode::Error> {
         let mut vec = vec![];

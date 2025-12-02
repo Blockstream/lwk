@@ -135,7 +135,9 @@ pub use crate::util::EC;
 pub use crate::wollet::{Tip, Wollet, WolletBuilder};
 
 #[cfg(feature = "prices")]
-pub use crate::prices::{ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder};
+pub use crate::prices::{
+    CurrencyCode, ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder,
+};
 
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_to_index_with_electrum_client;

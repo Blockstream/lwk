@@ -2,7 +2,7 @@
 //!
 //! This module provides a fetcher for exchange rates of fiat currencies against BTC.
 
-use crate::prices::currency_code::CurrencyCode;
+pub use crate::prices::currency_code::CurrencyCode;
 
 mod codes;
 mod currency_code;
@@ -131,16 +131,10 @@ impl PricesFetcher {
     /// Fetch exchange rates for the given currency
     ///
     /// Multiple sources are used to fetch the rates
-    pub async fn rates(&self, currency: &str) -> Result<ExchangeRates, Error> {
-        let currency_code = match currency_code::alpha3(currency) {
-            Some(currency) => {
-                if !SUPPORTED_CURRENCIES.contains(&currency.alpha3) {
-                    return Err(Error::UnsupportedCurrency(currency.name.to_string()));
-                }
-                currency
-            }
-            None => return Err(Error::UnrecognizedCurrency(currency.to_string())),
-        };
+    pub async fn rates(&self, currency: &CurrencyCode) -> Result<ExchangeRates, Error> {
+        if !SUPPORTED_CURRENCIES.contains(&currency.alpha3) {
+            return Err(Error::UnsupportedCurrency(currency.name.to_string()));
+        }
 
         // Fetch from all sources in parallel
         let fetchers = vec![
@@ -155,7 +149,7 @@ impl PricesFetcher {
             .into_iter()
             .map(|fetcher| {
                 let client = self.client.clone();
-                let currency = currency_code.clone();
+                let currency = currency.clone();
                 async move { fetcher.fetch(&client, &currency).await }
             })
             .collect();
@@ -188,6 +182,10 @@ impl PricesFetcher {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
+    use crate::CurrencyCode;
+
     use super::{currency_code, Error, PricesFetcher};
 
     #[test]
@@ -199,18 +197,19 @@ mod test {
     #[tokio::test]
     async fn test_validation() {
         let fetcher = PricesFetcher::new().unwrap();
-
-        let err = fetcher.rates("NOT_A_CURRENCY").await.unwrap_err();
+        let err = CurrencyCode::from_str("NOT_A_CURRENCY").unwrap_err();
         assert_eq!(
             err,
             Error::UnrecognizedCurrency("NOT_A_CURRENCY".to_string())
         );
+        let currency = CurrencyCode::from_str("JPY").unwrap();
+        assert_eq!(currency.name, "Japanese yen");
 
-        let err = fetcher.rates("JPY").await.unwrap_err();
+        let err = fetcher.rates(&currency).await.unwrap_err();
         assert_eq!(err, Error::UnsupportedCurrency("Japanese yen".to_string()));
     }
 
-    async fn test_fetch_rates(currency: &str) {
+    async fn test_fetch_rates(currency: &CurrencyCode) {
         let fetcher = PricesFetcher::new().unwrap();
         let rates = fetcher.rates(currency).await.unwrap();
 
@@ -228,7 +227,7 @@ mod test {
                 rate.rate,
                 rates.median
             );
-            assert_eq!(rate.currency.alpha3, currency);
+            assert_eq!(rate.currency, *currency);
             assert!(rate.timestamp > 0);
         }
 
@@ -246,18 +245,18 @@ mod test {
     #[tokio::test]
     #[ignore] // This test makes real API calls
     async fn test_fetch_usd_rates() {
-        test_fetch_rates("USD").await;
+        test_fetch_rates(&CurrencyCode::from_str("USD").unwrap()).await;
     }
 
     #[tokio::test]
     #[ignore] // This test makes real API calls
     async fn test_fetch_eur_rates() {
-        test_fetch_rates("EUR").await;
+        test_fetch_rates(&CurrencyCode::from_str("EUR").unwrap()).await;
     }
 
     #[tokio::test]
     #[ignore] // This test makes real API calls
     async fn test_fetch_chf_rates() {
-        test_fetch_rates("CHF").await;
+        test_fetch_rates(&CurrencyCode::from_str("CHF").unwrap()).await;
     }
 }

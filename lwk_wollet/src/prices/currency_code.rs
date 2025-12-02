@@ -24,10 +24,12 @@
 //
 // Originally by zeyla on GitHub.
 
+use crate::prices::Error;
+
 pub use super::codes::all;
 
 /// Data for each Currency Code defined by ISO 4217.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CurrencyCode {
     /// 3-letter code of the currency
     pub alpha3: &'static str,
@@ -41,7 +43,23 @@ pub struct CurrencyCode {
     pub num: &'static str,
 }
 
+impl std::fmt::Display for CurrencyCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.alpha3)
+    }
+}
+
 /// Returns the CurrencyCode with the given Alpha3 code, if one exists.
 pub fn alpha3(alpha3: &str) -> Option<&'static CurrencyCode> {
     all().iter().find(|c| c.alpha3 == alpha3)
+}
+
+impl std::str::FromStr for CurrencyCode {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        alpha3(s)
+            .cloned()
+            .ok_or(Error::UnrecognizedCurrency(s.to_string()))
+    }
 }

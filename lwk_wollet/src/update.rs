@@ -284,7 +284,29 @@ impl Wollet {
         }
 
         cache.unblinded.extend(new_txs.unblinds);
-        cache.all_txs.extend(new_txs.txs);
+
+        if self.prune_witnesses {
+            cache
+                .all_txs
+                .extend(new_txs.txs.into_iter().map(|(txid, mut tx)| {
+                    for input in tx.input.iter_mut() {
+                        input.witness = TxInWitness::empty();
+                    }
+
+                    // This removes all the output rangeproofs,
+                    // including the ones that are relevant for the wallet.
+                    // In most cases these rangeproof are no longer necessary,
+                    // since we have already unblinded,
+                    // so it's reasonable to drop them.
+                    for output in tx.output.iter_mut() {
+                        output.witness = TxOutWitness::empty();
+                    }
+
+                    (txid, tx)
+                }));
+        } else {
+            cache.all_txs.extend(new_txs.txs);
+        }
         cache.heights.retain(|k, _| !txid_height_delete.contains(k));
         cache.heights.extend(txid_height_new.clone());
         cache.timestamps.extend(timestamps);

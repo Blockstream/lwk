@@ -96,6 +96,10 @@ impl Update {
     }
 
     /// Prune the update, removing unneeded data from transactions.
+    ///
+    /// Note: this function removes less data than
+    /// [`Update::prune_witnesses()`] since it keeps the rangeproofs
+    /// of the outputs the [`Wollet`] owns.
     pub fn prune(&mut self, wallet: &Wollet) {
         self.new_txs.prune(&wallet.cache.paths);
     }

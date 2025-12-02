@@ -2011,7 +2011,7 @@ fn wait_esplora_tx_update(client: &mut blocking::EsploraClient, wollet: &Wollet)
 
 #[cfg(feature = "esplora")]
 #[test]
-fn test_waterfalls_esplora() {
+fn test_waterfalls_esplora() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: use TestWollet also for EsploraClient
     let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
@@ -2039,13 +2039,14 @@ fn test_waterfalls_esplora() {
     let balance = wollet.balance().unwrap();
     assert_eq!(sats, *balance.get(&network.policy_asset()).unwrap());
 
+    // ANCHOR: drain_lbtc_wallet
     let address = env.elementsd_getnewaddress();
     let mut pset = wollet
         .tx_builder()
         .drain_lbtc_wallet()
         .drain_lbtc_to(address.clone())
-        .finish()
-        .unwrap();
+        .finish()?;
+    // ANCHOR_END: drain_lbtc_wallet
 
     let sigs = signer.sign(&mut pset).unwrap();
     assert!(sigs > 0);
@@ -2071,6 +2072,8 @@ fn test_waterfalls_esplora() {
     assert_eq!(history.len(), 1);
     assert_eq!(history[0].len(), 1);
     assert_eq!(history[0][0].txid, txid);
+
+    Ok(())
 }
 
 #[cfg(feature = "esplora")]

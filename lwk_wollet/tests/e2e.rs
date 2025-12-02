@@ -3909,7 +3909,7 @@ fn test_add_input_rangeproofs() {
 }
 
 #[test]
-fn test_issue_asset() {
+fn test_issue_asset() -> Result<(), Box<dyn std::error::Error>> {
     // Test based on Python bindings test issue_asset.py
     let network = ElementsNetwork::default_regtest();
     let policy_asset = network.policy_asset();
@@ -3922,13 +3922,12 @@ fn test_issue_asset() {
     // Create wallet
     let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-    let signer = SwSigner::new(mnemonic, false).unwrap();
-    let desc = signer.wpkh_slip77_descriptor().unwrap();
+    let signer = SwSigner::new(mnemonic, false)?;
+    let desc = signer.wpkh_slip77_descriptor()?;
     assert!(desc == "ct(slip77(9c8e4f05c7711a98c838be228bcb84924d4570ca53f35fa1c793e58841d47023),elwpkh([73c5da0a/84h/1h/0h]tpubDC8msFGeGuwnKG9Upg7DM2b4DaRqg3CUZa5g8v2SRQ6K4NSkxUgd7HsL2XVWbVm39yBA4LAxysQAm397zwQSQoQgewGiYZqrA9DsP4zbQ1M/<0;1>/*))#xte2lx9x"); // ANCHOR: ignore
 
-    let mut wollet =
-        Wollet::without_persist(network, WolletDescriptor::from_str(&desc).unwrap()).unwrap();
-    let wollet_address = wollet.address(None).unwrap();
+    let mut wollet = Wollet::without_persist(network, WolletDescriptor::from_str(&desc)?)?;
+    let wollet_address = wollet.address(None)?;
     assert!(wollet_address.index() == 0); // ANCHOR: ignore
     let wallet_address_str = wollet_address.address().to_string();
     assert!(wallet_address_str == "el1qq2xvpcvfup5j8zscjq05u2wxxjcyewk7979f3mmz5l7uw5pqmx6xf5xy50hsn6vhkm5euwt72x878eq6zxx2z0z676mna6kdq"); // ANCHOR: ignore
@@ -3937,11 +3936,11 @@ fn test_issue_asset() {
     let txid =
         env.elementsd_sendtoaddress(wollet_address.address(), funded_satoshi, Some(policy_asset)); // ANCHOR: ignore
     wait_for_tx(&mut wollet, &mut client, &txid); // ANCHOR: ignore
-    assert!(*wollet.balance().unwrap().get(&policy_asset).unwrap_or(&0) == funded_satoshi); // ANCHOR: ignore
+    assert!(*wollet.balance()?.get(&policy_asset).unwrap_or(&0) == funded_satoshi); // ANCHOR: ignore
 
     // ANCHOR: contract
     let contract_str = "{\"entity\":{\"domain\":\"ciao.it\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"name\",\"precision\":8,\"ticker\":\"TTT\",\"version\":0}";
-    let contract = Contract::from_str(contract_str).unwrap();
+    let contract = Contract::from_str(contract_str)?;
     // assert!(contract.to_string() == ("{\"entity\":{\"domain\":\"ciao.it\"},\"issuer_pubkey\":\"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904\",\"name\":\"name\",\"precision\":8,\"ticker\":\"TTT\",\"version\":0}")); // ANCHOR: ignore
     // ANCHOR_END: contract
 
@@ -3956,45 +3955,43 @@ fn test_issue_asset() {
     let mut pset = builder
         .issue_asset(
             issued_asset,
-            None,
+            None, // None -> a wallet from the address is used
             reissuance_tokens,
-            None,
+            None, // None -> a wallet from the address is used
             Some(contract.clone()),
-        )
-        .unwrap()
-        .finish()
-        .unwrap();
+        )?
+        .finish()?;
 
     // Sign the transaction and finalize it
     let signatures_added = signer.sign(&mut pset).expect("signing failed");
     assert!(signatures_added == 1); // ANCHOR: ignore
-    let _ = wollet.finalize(&mut pset).unwrap();
-    let tx = pset.extract_tx().unwrap();
+    let _ = wollet.finalize(&mut pset)?;
+    let tx = pset.extract_tx()?;
 
     // Broadcast the transaction
-    let txid = client.broadcast(&tx).unwrap();
+    let txid = client.broadcast(&tx)?;
     // ANCHOR_END: issue_asset
 
     // ANCHOR: issuance_ids
     let asset_id = pset.inputs()[0].issuance_ids().0;
     let token_id = pset.inputs()[0].issuance_ids().1;
     // ANCHOR_END: issuance_ids
-    //let txin = tx.inputs()[0];
     // ANCHOR_END: test_issue_asset
+    //let txin = tx.inputs()[0];
 
     wait_for_tx(&mut wollet, &mut client, &txid);
 
-    assert!(*wollet.balance().unwrap().get(&asset_id).unwrap_or(&0) == issued_asset);
-    assert!(*wollet.balance().unwrap().get(&token_id).unwrap_or(&0) == reissuance_tokens);
+    assert!(*wollet.balance()?.get(&asset_id).unwrap_or(&0) == issued_asset);
+    assert!(*wollet.balance()?.get(&token_id).unwrap_or(&0) == reissuance_tokens);
 
     // ANCHOR: reissue_asset
     let reissue_asset = 100;
+    let asset_receiver = None; // Send the asset to the wollet creating the PSET
+    let issuance_tx = None; // issunce transaction is present in the same wallet
     let builder = wollet.tx_builder();
     let mut pset = builder
-        .reissue_asset(asset_id, reissue_asset, None, None)
-        .unwrap()
-        .finish()
-        .unwrap();
+        .reissue_asset(asset_id, reissue_asset, asset_receiver, issuance_tx)?
+        .finish()?;
     let signatures_added = signer.sign(&mut pset).unwrap();
     assert!(signatures_added == 2); // ANCHOR: ignore
     let _ = wollet.finalize(&mut pset).unwrap();
@@ -4011,22 +4008,20 @@ fn test_issue_asset() {
     // ANCHOR: burn_asset
     let burn_asset = 50;
     let builder = wollet.tx_builder();
-    let mut pset = builder
-        .add_burn(burn_asset, asset_id)
-        .unwrap()
-        .finish()
-        .unwrap();
-    let signatures_added = signer.sign(&mut pset).unwrap();
+    let mut pset = builder.add_burn(burn_asset, asset_id)?.finish()?;
+    let signatures_added = signer.sign(&mut pset)?;
     assert!(signatures_added == 2); // ANCHOR: ignore
-    let _ = wollet.finalize(&mut pset).unwrap();
-    let tx = pset.extract_tx().unwrap();
-    let txid = client.broadcast(&tx).unwrap();
+    let _ = wollet.finalize(&mut pset)?;
+    let tx = pset.extract_tx()?;
+    let txid = client.broadcast(&tx)?;
     // ANCHOR_END: burn_asset
 
     wait_for_tx(&mut wollet, &mut client, &txid);
 
     assert!(
-        *wollet.balance().unwrap().get(&asset_id).unwrap_or(&0)
+        *wollet.balance()?.get(&asset_id).unwrap_or(&0)
             == issued_asset + reissue_asset - burn_asset
     );
+
+    Ok(())
 }

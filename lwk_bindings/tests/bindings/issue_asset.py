@@ -27,7 +27,13 @@ wollet.wait_for_tx(txid, client) # ANCHOR: ignore
 assert(wollet.balance()[policy_asset] == funded_satoshi) # ANCHOR: ignore
 
 # ANCHOR: contract
-contract = Contract(domain = "ciao.it", issuer_pubkey = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904", name = "name", precision = 8, ticker = "TTT", version = 0)
+contract = Contract(
+    domain = "ciao.it", \
+    issuer_pubkey = "0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904", \
+    name = "name", \
+    precision = 8, 
+    ticker = "TTT", 
+    version = 0)
 assert(str(contract) == '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cceec0beea0232ebe14cba0197a9fbd45fcf2ec946749de920e71434c2b904","name":"name","precision":8,"ticker":"TTT","version":0}') # ANCHOR: ignore
 # ANCHOR_END: contract
 
@@ -35,11 +41,11 @@ assert(str(contract) == '{"entity":{"domain":"ciao.it"},"issuer_pubkey":"0337cce
 issued_asset = 10000
 reissuance_tokens = 1
 
-# Create a transaction builder and the issuance transaction 
+# Create an issuance transaction 
 builder = network.tx_builder()
 builder.issue_asset(issued_asset, wollet_adddress, reissuance_tokens, wollet_adddress, contract)
 unsigned_pset = builder.finish(wollet)
-
+# ANCHOR_END: issue_asset
 # Sign the transaction and finalize it
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
@@ -47,15 +53,13 @@ tx = finalized_pset.extract_tx()
 
 # Broadcast the transaction
 txid = client.broadcast(tx)
-# ANCHOR_END: issue_asset
 
 # ANCHOR: issuance_ids
 asset_id = signed_pset.inputs()[0].issuance_asset()
 token_id = signed_pset.inputs()[0].issuance_token()
 # ANCHOR_END: issuance_ids
-
-txin = tx.inputs()[0]
 # ANCHOR_END: test_issue_asset
+txin = tx.inputs()[0]
 assert derive_asset_id(txin, contract) == asset_id
 assert derive_token_id(txin, contract) == token_id
 
@@ -76,8 +80,10 @@ assert(wollet.balance()[token_id] == reissuance_tokens)
 
 # ANCHOR: reissue_asset
 reissue_asset = 100
+asset_receiver = None  # Send the asset to the wollet creating the PSET
+issuance_tx = None # issunce transaction is present in the same wallet
 builder = network.tx_builder()
-builder.reissue_asset(asset_id, reissue_asset, None, None)
+builder.reissue_asset(asset_id, reissue_asset, asset_receiver, issuance_tx)
 unsigned_pset = builder.finish(wollet)
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)

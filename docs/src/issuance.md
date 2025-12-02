@@ -1,5 +1,5 @@
 # Issuance
-Asset issuance on Liquid allows you to create new digital assets. When you issue an asset, you create a certain amount of that asset and optionally generate reissuance tokens that allow you to create more of the asset later.
+Asset issuance on Liquid allows you to create new digital assets. When you issue an asset, you create a certain amount of that asset and optionally you also create another asset, called reissuance token, that allows you to create more of the asset later.
 
 ## Understanding Asset Issuance
 
@@ -8,7 +8,9 @@ When issuing an asset, you need to specify:
 * **Asset receiver**: The address that will receive the newly issued asset (optional, defaults to a wallet address)
 * **Token amount**: The number of reissuance tokens to create (optional, can be 0)
 * **Token receiver**: The address that will receive the reissuance tokens (optional, defaults to a wallet address)
-* **Contract**: Metadata about the asset (optional, but recommended for asset registry)
+* **Contract**: Metadata about the asset (optional, necessary for asset registry)
+
+The asset receiver address and token receiver address can belong to different wallets with different spending policies, allowing for a more secure and customizable setup according to the issuer's needs.
 
 The asset ID is deterministically derived from the transaction input and contract metadata (if provided). This means that if you use the same contract and transaction input, you'll get the same asset ID.
 
@@ -23,6 +25,20 @@ A contract contains:
 * **precision**: Decimal precision (0-8, where 8 is like Bitcoin)
 * **ticker**: The ticker symbol (3-24 characters, letters, numbers, dots, and hyphens)
 * **version**: Contract version (currently only 0 is supported)
+
+Amounts expressed in satoshi are always whole numbers without any decimal places. If you want to represent decimal values, you should use the "precision" variable in the contract. This variable determines the number of decimal places, i.e., how many digits appear after the decimal point. The following table shows different precision values with the issuance of 1 million satoshi.
+
+|Satoshi  |Precision|Asset units|
+|---------|---------|-----------|
+|1.000.000|0        |1.000.000  |
+|1.000.000|1        |100.000,0  |
+|1.000.000|2        |10.000,00  |
+|1.000.000|3        |1.000,000  |
+|1.000.000|4        |100,000    |
+|1.000.000|5        |10,00000   |
+|1.000.000|6        |1,000000   |
+|1.000.000|8        |0.1000000  |
+|1.000.000|8        |0.01000000 |
 
 <custom-tabs category="lang">
 <div slot="title">Rust</div>

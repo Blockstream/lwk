@@ -1,5 +1,5 @@
 # Burn
-Asset burning on Liquid allows you to permanently destroy units of an asset, reducing the total supply. This is useful for various purposes such as token buybacks, reducing inflation, or implementing deflationary mechanisms.
+Asset burning on Liquid allows you to provably destroy units of an asset, reducing the total supply. This is useful for various purposes such as token buybacks, reducing inflation, or implementing deflationary mechanisms.
 
 When you burn an asset, the units are permanently removed from circulation and cannot be recovered. The burn operation creates a special output in the transaction that destroys the specified amount of the asset.
 

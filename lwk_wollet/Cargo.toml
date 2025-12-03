@@ -107,7 +107,7 @@ waterfalls = { version = "0.9.8", default-features = false, features = [
 criterion = "0.5.1"
 
 [features]
-default = ["esplora", "electrum", "elements_rpc", "amp2", "amp0", "prices"]
+default = ["esplora", "electrum", "elements_rpc", "amp2", "amp0", "prices", "registry"]
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
@@ -129,6 +129,7 @@ amp0 = [
     "rmp-serde",
 ]
 prices = ["reqwest"]
+registry = ["reqwest"]
 
 [[test]]
 name = "e2e"

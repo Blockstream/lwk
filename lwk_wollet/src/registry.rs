@@ -140,6 +140,7 @@ impl FromStr for Contract {
 }
 
 /// An asyncronous registry client, allowing to fetch and post assets metadata from the registry.
+#[cfg(feature = "registry")]
 #[derive(Clone)]
 pub struct Registry {
     client: reqwest::Client,
@@ -148,6 +149,7 @@ pub struct Registry {
 
 /// A registry cache contains a reference to the registry, and some cached asset metadata, hardcoded and fetched from the registry.
 /// It also contains a token cache, to quickly find the asset id of a reissuance token.
+#[cfg(feature = "registry")]
 pub struct RegistryCache {
     inner: Registry,
 
@@ -158,6 +160,7 @@ pub struct RegistryCache {
     token_cache: HashMap<AssetId, AssetId>, // token_id -> asset_id
 }
 
+#[cfg(feature = "registry")]
 fn init_cache() -> (HashMap<AssetId, RegistryData>, HashMap<AssetId, AssetId>) {
     let mut cache = HashMap::new();
     let mut token_cache = HashMap::new();
@@ -169,6 +172,7 @@ fn init_cache() -> (HashMap<AssetId, RegistryData>, HashMap<AssetId, AssetId>) {
     (cache, token_cache)
 }
 
+#[cfg(feature = "registry")]
 impl RegistryCache {
     /// Create a new registry cache, using only the hardcoded assets.
     ///
@@ -308,6 +312,7 @@ impl RegistryPost {
     }
 }
 
+#[cfg(feature = "registry")]
 impl Registry {
     /// Create a new registry with the given base URL, use [`Self::default_for_network()`] to get the default registry for the given network
     pub fn new(base_url: &str) -> Self {
@@ -378,11 +383,13 @@ pub mod blocking {
     use super::RegistryPost;
 
     /// A blocking registry client, allowing to fetch and post assets metadata from the registry.
+    #[cfg(feature = "registry")]
     pub struct Registry {
         inner: super::Registry,
         rt: Runtime,
     }
 
+    #[cfg(feature = "registry")]
     impl Registry {
         /// Create a new registry with the given base URL, use [`Self::default_for_network()`] to get the default registry for the given network
         pub fn new(base_url: &str) -> Result<Self, Error> {

@@ -1428,11 +1428,12 @@ fn test_registry_publish() {
 
     sh(&format!("{cli} asset remove --asset {token}"));
 
-    sh(&format!("{cli} asset list"));
+    let r = sh(&format!("{cli} asset list"));
+    assert_eq!(get_len(&r, "assets"), 1);
 
     sh(&format!("{cli} asset from-registry --asset {asset}"));
 
-    sh(&format!("{cli} asset list"));
+    let r = sh(&format!("{cli} asset list"));
     assert_eq!(get_len(&r, "assets"), 3);
 
     sh(&format!("{cli} server stop"));

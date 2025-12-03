@@ -89,7 +89,8 @@ fn setup_cli(
         let addr = get_available_addr().unwrap();
         let url = format!("127.0.0.1:{}", addr.port());
         let esplora_url = env.esplora_url();
-        let child = Command::new("server")
+        let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or("server".into());
+        let child = Command::new(registry_exec)
             .args(["--addr", &url])
             .args(["--db-path", &datadir])
             .args(["--esplora-url", &esplora_url])

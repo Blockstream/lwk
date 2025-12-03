@@ -225,7 +225,7 @@ wasm:
       - lwk_wasm/pkg
 
 nix:
-  image: nixos/nix:latest
+  image: xenoky/lwk-nix-builder@sha256:fc53940f376e607524570f19a5fc8e7378b0e38c2e47c032bdeeac9ec5364059
   variables:
       EXP_FEAT: --extra-experimental-features nix-command --extra-experimental-features flakes
       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it

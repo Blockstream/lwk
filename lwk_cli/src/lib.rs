@@ -76,7 +76,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                 ServerCommand::Start {
                     server_url,
                     server_type,
-                    #[cfg(feature = "registry")]
                     registry_url,
                     datadir,
                     timeout,

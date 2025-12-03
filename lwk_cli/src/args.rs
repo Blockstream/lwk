@@ -957,7 +957,6 @@ pub enum ServerCommand {
         server_type: ServerType,
 
         #[arg(long)]
-        #[cfg(feature = "registry")]
         /// Needed only in regtest because public network have their official defaults
         registry_url: Option<String>,
 

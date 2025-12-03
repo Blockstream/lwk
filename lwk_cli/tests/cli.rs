@@ -1421,7 +1421,8 @@ fn test_registry_publish() {
     let r = sh(&format!("{cli} asset list"));
     assert_eq!(get_len(&r, "assets"), 3);
 
-    sh(&format!("{cli} asset publish --asset {asset}"));
+    let r = sh(&format!("{cli} asset publish --asset {asset}"));
+    assert_eq!(get_str(&r, "asset_id"), asset);
 
     sh(&format!("{cli} asset remove --asset {asset}"));
 

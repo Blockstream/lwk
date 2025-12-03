@@ -1378,7 +1378,10 @@ fn test_schema() {
 )]
 #[test]
 fn test_registry_publish() {
-    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let env = TestEnvBuilder::from_env()
+        .with_electrum()
+        .with_esplora()
+        .build();
     let (t, _tmp, cli, _params, env, _registry) = setup_cli(env, true);
 
     sw_signer(&cli, "s1");

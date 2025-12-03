@@ -108,7 +108,6 @@ pub fn inner_main(args: args::Cli) -> anyhow::Result<Value> {
                     };
                     config.server_type = server_type.to_string();
 
-                    #[cfg(feature = "registry")]
                     if let Some(url) = registry_url {
                         config.registry_url = url;
                     };

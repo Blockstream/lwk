@@ -1388,7 +1388,7 @@ fn test_registry_publish() {
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
     let _ = fund(&env, &cli, "w1", 1_000_000);
 
-    let r = sh(&format!("{cli} asset contract --domain example.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
+    let r = sh(&format!("{cli} asset contract --domain liquidtestnet.com --issuer-pubkey 035d0f7b0207d9cc68870abfef621692bce082084ed3ca0c1ae432dd12d889be01 --name example --ticker EXMP"));
     let contract = serde_json::to_string(&r).unwrap();
     let r = sh(&format!(
         "{cli} wallet issue --wallet w1 --satoshi-asset 1000 --satoshi-token 1 --contract '{contract}'"

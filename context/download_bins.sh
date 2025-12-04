@@ -20,6 +20,10 @@ curl -Ls https://github.com/ElementsProject/elements/releases/download/elements-
 # bitcoind
 curl -Ls https://bitcoincore.org/bin/bitcoin-core-26.0/bitcoin-26.0-x86_64-linux-gnu.tar.gz | tar -xz
 
+# asset registry
+FNAME=asset_registry_server_5ecf533
+curl -Ls https://github.com/LeoComandini/asset_registry/releases/download/5ecf533/${FNAME}.gz | gunzip > ${FNAME}
+chmod +x $FNAME
 
 # Binaries for testing kotling bindings
 wget https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar

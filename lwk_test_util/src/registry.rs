@@ -28,7 +28,7 @@ impl RegistryD {
         let process = Command::new(&exe)
             .args(["--addr", &addr])
             .args(["--db-path", &datadir])
-            .args(["--esplora-url", &esplora_url])
+            .args(["--esplora-url", esplora_url])
             .stderr(std::process::Stdio::null())
             .spawn()
             .unwrap();

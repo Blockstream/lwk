@@ -1327,7 +1327,6 @@ fn test_schema() {
     t.join().unwrap();
 }
 
-#[ignore = "require registry `server` executable in path"]
 #[test]
 fn test_registry_publish() {
     let env = TestEnvBuilder::from_env()

@@ -2,7 +2,6 @@ use std::{
     collections::HashSet,
     fs,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    process::{Child, Command, Stdio},
     str::FromStr,
     thread::JoinHandle,
 };
@@ -54,58 +53,14 @@ fn sh_err(command: &str) -> String {
     format!("{:?}", sh_result(command).unwrap_err())
 }
 
-struct RegistryProc {
-    child: Child,
-    pub url: String,
-}
-
-impl Drop for RegistryProc {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-    }
-}
-
-fn setup_cli(
-    env: TestEnv,
-    with_registry: bool,
-) -> (
-    JoinHandle<()>,
-    TempDir,
-    String,
-    String,
-    TestEnv,
-    Option<RegistryProc>,
-) {
+fn setup_cli(env: TestEnv) -> (JoinHandle<()>, TempDir, String, String, TestEnv) {
     let tmp = tempfile::tempdir().unwrap();
     let datadir = tmp.path().display().to_string();
 
-    let stderr = if std::env::var_os("RUST_LOG").is_some() {
-        Stdio::inherit()
-    } else {
-        Stdio::null()
-    };
-
-    let child = if with_registry {
-        let addr = get_available_addr().unwrap();
-        let url = format!("127.0.0.1:{}", addr.port());
-        let esplora_url = env.esplora_url();
-        let registry_exec = std::env::var("ASSET_REGISTRY_EXEC").unwrap_or("server".into());
-        let child = Command::new(registry_exec)
-            .args(["--addr", &url])
-            .args(["--db-path", &datadir])
-            .args(["--esplora-url", &esplora_url])
-            .stderr(stderr)
-            .spawn()
-            .unwrap();
-        Some(RegistryProc { child, url })
-    } else {
-        None
-    };
-
-    let registry_url = child
-        .as_ref()
-        .map(|r| format!("--registry-url http://{}/", r.url))
-        .unwrap_or("".to_owned());
+    let mut registry_url = env.registry_url();
+    if !registry_url.is_empty() {
+        registry_url = format!("--registry-url {registry_url}");
+    }
 
     let server_url = format!("--server-url {}", &env.electrum_url());
     let addr = get_available_addr().unwrap();
@@ -124,7 +79,7 @@ fn setup_cli(
     };
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    (t, tmp, cli, params, env, child)
+    (t, tmp, cli, params, env)
 }
 
 fn get_str<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -332,7 +287,7 @@ fn test_state_regression() {
 #[test]
 fn test_start_stop_persist() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, params, _env) = setup_cli(env);
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
@@ -447,7 +402,7 @@ fn test_start_stop_persist() {
 #[test]
 fn test_signer_load_unload_list() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     let r = sh(&format!("{cli} signer list"));
     assert_eq!(get_len(&r, "signers"), 0);
@@ -486,7 +441,7 @@ fn test_signer_load_unload_list() {
 #[test]
 fn test_signer_external() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     let name = "ext";
     let fingerprint = "11111111";
@@ -523,7 +478,7 @@ fn test_signer_external() {
 #[test]
 fn test_wallet_load_unload_list() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     let r = sh(&format!("{cli} wallet list"));
     assert_eq!(get_len(&r, "wallets"), 0);
@@ -563,7 +518,7 @@ fn test_wallet_load_unload_list() {
 #[test]
 fn test_wallet_memos() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, params, env) = setup_cli(env);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -672,7 +627,7 @@ fn test_liquidex() {
     let policy_asset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     // Create 2 wallets
     sw_signer(&cli, "s1");
@@ -750,7 +705,7 @@ fn test_liquidex() {
 #[test]
 fn test_wallet_details() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -847,7 +802,7 @@ fn test_wallet_details() {
 #[test]
 fn test_broadcast() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
@@ -866,7 +821,7 @@ fn test_broadcast() {
 #[test]
 fn test_issue() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
@@ -1058,7 +1013,7 @@ fn test_issue() {
 #[test]
 fn test_jade_emulator() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     let docker = clients::Cli::default();
     let container = docker.run(JadeEmulator);
@@ -1109,7 +1064,7 @@ fn test_jade_emulator() {
 #[test]
 fn test_commands() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     let result = sh(&format!("{cli} signer generate"));
     assert!(result.get("mnemonic").is_some());
@@ -1206,7 +1161,7 @@ fn test_commands() {
 #[test]
 fn test_multisig() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1317,7 +1272,7 @@ fn test_multisig() {
 #[test]
 fn test_inconsistent_network() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (_t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (_t, _tmp, cli, _params, _env) = setup_cli(env);
     let cli_addr = cli.split(" -n").next().unwrap();
     let err = sh_err(&format!("{cli_addr} -n testnet wallet list"));
     assert!(err.contains("Inconsistent network"));
@@ -1326,7 +1281,7 @@ fn test_inconsistent_network() {
 #[test]
 fn test_schema() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     for a in ServerSubCommandsEnum::value_variants() {
         let a = a.to_possible_value();
@@ -1378,8 +1333,9 @@ fn test_registry_publish() {
     let env = TestEnvBuilder::from_env()
         .with_electrum()
         .with_esplora()
+        .with_registry()
         .build();
-    let (t, _tmp, cli, _params, env, _registry) = setup_cli(env, true);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
@@ -1440,7 +1396,7 @@ fn test_registry_publish() {
 #[test]
 fn test_elip151() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1501,7 +1457,7 @@ fn test_elip151() {
 #[test]
 fn test_3of5() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     sw_signer(&cli, "s2");
@@ -1538,7 +1494,7 @@ fn test_3of5() {
 #[test]
 fn test_start_errors() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, params, _env) = setup_cli(env);
 
     let err = sh_err(&format!("{cli} server start {params}"));
     assert!(err.contains("It is probably already running."));
@@ -1550,7 +1506,7 @@ fn test_start_errors() {
 #[test]
 fn test_send_all() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
@@ -1573,7 +1529,7 @@ fn test_send_all() {
 #[test]
 fn test_ct_discount() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "sw");
     singlesig_wallet(&cli, "w1", "sw", "slip77", "wpkh");
@@ -1601,7 +1557,7 @@ fn test_ct_discount() {
 #[test]
 fn test_amp2() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, _env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, _env) = setup_cli(env);
 
     sw_signer(&cli, "sw");
     let err = sh_err(&format!("{cli} amp2 descriptor -s sw"));
@@ -1622,7 +1578,7 @@ fn test_amp2() {
 #[test]
 fn test_utxos() {
     let env = TestEnvBuilder::from_env().with_electrum().build();
-    let (t, _tmp, cli, _params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, _params, env) = setup_cli(env);
 
     sw_signer(&cli, "s1");
     singlesig_wallet(&cli, "w1", "s1", "slip77", "wpkh");
@@ -1653,7 +1609,7 @@ fn test_esplora_waterfalls_backend() {
         .with_esplora()
         .with_waterfalls()
         .build();
-    let (t, _tmp, cli, params, env, _) = setup_cli(env, false);
+    let (t, _tmp, cli, params, env) = setup_cli(env);
 
     // replace "--server-url tcp://..." (last param)
     // with "--server-url http://... --server-type ..."

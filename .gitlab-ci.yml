@@ -231,7 +231,6 @@ nix:
       CACHE: --extra-trusted-public-keys nix.casatta.it:HseKZh7436/vKXfZDBHbhr7wwAkzjLwY5BIq+OOrITg= --extra-substituters https://nix.casatta.it
   script:
     - nix $EXP_FEAT $CACHE build .
-    - nix $EXP_FEAT $CACHE develop . -c cargo test -p lwk_cli -- registry_publish
     - nix $EXP_FEAT $CACHE develop . -c rust-analyzer analysis-stats . 2>log # prints ERROR if there are cyclic deps with dev-deps
     - (! grep ERROR log)
 

@@ -22,3 +22,10 @@ COPY . .
 
 # Build the main application
 RUN nix --extra-experimental-features 'nix-command flakes' build .
+
+# Build the dev environment
+RUN nix --extra-experimental-features 'nix-command flakes' develop --command true
+
+# Optimise the store to save space
+RUN nix --extra-experimental-features 'nix-command flakes' store optimise
+

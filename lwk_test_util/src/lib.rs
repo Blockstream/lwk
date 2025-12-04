@@ -13,6 +13,7 @@ use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use rand::{thread_rng, Rng};
 use std::str::FromStr;
 
+mod registry;
 mod test_env;
 mod waterfalls;
 pub use test_env::{TestEnv, TestEnvBuilder};

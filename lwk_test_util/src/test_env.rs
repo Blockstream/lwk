@@ -317,6 +317,11 @@ impl TestEnv {
 
     pub fn elementsd_generate(&self, blocks: u32) {
         Self::elementsd_generate_(&self.elementsd.client, blocks);
+
+        // After we generate blocks, trigger an electrs update
+        if let Some(electrsd) = &self.electrsd {
+            electrsd.trigger().unwrap();
+        }
     }
 
     fn elementsd_sweep_initialfreecoins_(client: &Client) {

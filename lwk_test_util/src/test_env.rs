@@ -276,7 +276,10 @@ impl TestEnv {
     }
 
     pub fn registry_url(&self) -> String {
-        self.registryd.as_ref().unwrap().url().to_string()
+        self.registryd
+            .as_ref()
+            .map(|r| r.url().to_string())
+            .unwrap_or_default()
     }
 
     // Functions for Elements RPC client

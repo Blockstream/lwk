@@ -30,6 +30,14 @@ docker-build:
 docker-push: docker-build
     docker push xenoky/lwk-builder # require credentials
 
+# build the docker "xenoky/lwk-nix-builder" used in the CI
+docker-nix-build:
+    docker build -f context/Dockerfile.nix . -t xenoky/lwk-nix-builder
+
+# push the docker "xenoky/lwk-nix-builder" on docker hub
+docker-nix-push: docker-nix-build
+    docker push xenoky/lwk-nix-builder # require credentials
+
 kotlin: build-bindings-lib
     cargo run --release --features bindings -- generate --library target/release/liblwk.so --language kotlin --out-dir target/release/kotlin
     cp -a target/release/kotlin/lwk lwk_bindings/android_bindings/lib/src/androidMain/kotlin

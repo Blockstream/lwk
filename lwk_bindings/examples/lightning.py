@@ -397,13 +397,15 @@ def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
             print("Invalid amount. Please enter a valid number.")
 
     # Ask for the Bitcoin claim address
-    claim_address = input("Enter Bitcoin address to receive BTC: ").strip()
+    claim_address_str = input("Enter Bitcoin address to receive BTC: ").strip()
 
     # Get a Liquid refund address from the wallet
     refund_address = wollet.address(None).address()
     print(f"Refund address (Liquid): {refund_address}")
 
     try:
+        claim_address = BitcoinAddress(claim_address_str)
+
         # Create the swap
         webhook_url = os.getenv('WEBHOOK')
         webhook = WebHook(webhook_url, status=[]) if webhook_url else None
@@ -475,9 +477,11 @@ def btc_to_lbtc_swap(boltz_session, wollet):
     print(f"Claim address (Liquid): {claim_address}")
 
     # Ask for the Bitcoin refund address
-    refund_address = input("Enter Bitcoin address for refunds: ").strip()
+    refund_address_str = input("Enter Bitcoin address for refunds: ").strip()
 
     try:
+        refund_address = BitcoinAddress(refund_address_str)
+        
         # Create the swap
         webhook_url = os.getenv('WEBHOOK')
         webhook = WebHook(webhook_url, status=[]) if webhook_url else None

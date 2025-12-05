@@ -201,6 +201,14 @@ impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     }
 }
 
+impl From<elements::bitcoin::address::ParseError> for LwkError {
+    fn from(value: elements::bitcoin::address::ParseError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 #[cfg(feature = "lightning")]
 impl From<lwk_boltz::Error> for LwkError {
     fn from(value: lwk_boltz::Error) -> Self {

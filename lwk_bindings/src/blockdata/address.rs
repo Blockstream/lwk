@@ -1,7 +1,9 @@
 //! Liquid address
 
+use elements::bitcoin;
+
 use crate::{LwkError, Script};
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, str::FromStr, sync::Arc};
 
 /// A Liquid address
 #[derive(uniffi::Object)]
@@ -78,6 +80,39 @@ impl Address {
     /// Returns a string of the QR code printable in a terminal environment
     pub fn qr_code_text(&self) -> Result<String, LwkError> {
         Ok(lwk_common::address_to_text_qr(&self.inner)?)
+    }
+}
+
+#[derive(uniffi::Object)]
+struct BitcoinAddress {
+    inner: bitcoin::Address,
+}
+
+impl From<bitcoin::Address> for BitcoinAddress {
+    fn from(inner: bitcoin::Address) -> Self {
+        Self { inner }
+    }
+}
+
+impl AsRef<bitcoin::Address> for BitcoinAddress {
+    fn as_ref(&self) -> &bitcoin::Address {
+        &self.inner
+    }
+}
+
+impl From<BitcoinAddress> for bitcoin::Address {
+    fn from(addr: BitcoinAddress) -> Self {
+        addr.inner
+    }
+}
+
+#[uniffi::export]
+impl BitcoinAddress {
+    /// Construct an Address object
+    #[uniffi::constructor]
+    pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
+        let inner = bitcoin::Address::from_str(s)?.assume_checked();
+        Ok(Arc::new(Self { inner }))
     }
 }
 

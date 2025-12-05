@@ -84,7 +84,9 @@ impl Address {
 }
 
 #[derive(uniffi::Object)]
-struct BitcoinAddress {
+#[uniffi::export(Display)]
+
+pub struct BitcoinAddress {
     inner: bitcoin::Address,
 }
 
@@ -103,6 +105,12 @@ impl AsRef<bitcoin::Address> for BitcoinAddress {
 impl From<BitcoinAddress> for bitcoin::Address {
     fn from(addr: BitcoinAddress) -> Self {
         addr.inner
+    }
+}
+
+impl Display for BitcoinAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
     }
 }
 

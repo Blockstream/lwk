@@ -6,6 +6,8 @@ variables:
 
 .base:
   image: xenoky/lwk-builder@sha256:688515310b737b51a672d49fbdce1dc7c98d3c1f8a7a62c20ec62df01bef87b7
+  variables:
+    DOCKER_API_VERSION: "1.41"
   tags:
     - cloud
   retry:

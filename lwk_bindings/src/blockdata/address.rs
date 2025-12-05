@@ -83,9 +83,9 @@ impl Address {
     }
 }
 
+/// A valid Bitcoin address
 #[derive(uniffi::Object)]
 #[uniffi::export(Display)]
-
 pub struct BitcoinAddress {
     inner: bitcoin::Address,
 }

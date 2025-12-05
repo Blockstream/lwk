@@ -1,16 +1,14 @@
 use std::{
     collections::HashMap,
     ops::ControlFlow,
-    str::FromStr,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use crate::{
-    Address, Bolt11Invoice, ElectrumClient, EsploraClient, LightningPayment, LwkError, Mnemonic,
-    Network,
+    blockdata::address::BitcoinAddress, Address, Bolt11Invoice, ElectrumClient, EsploraClient,
+    LightningPayment, LwkError, Mnemonic, Network,
 };
-use elements::bitcoin;
 use log::{Level, Metadata, Record};
 use lwk_boltz::{
     ChainSwapDataSerializable, ChainSwapStates, InvoiceDataSerializable,
@@ -381,7 +379,7 @@ impl BoltzSession {
     pub fn btc_to_lbtc(
         &self,
         amount: u64,
-        refund_address: &str, // TODO: convert to BitcoinAddress?
+        refund_address: &BitcoinAddress,
         claim_address: &Address,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<LockupResponse, LwkError> {
@@ -392,12 +390,12 @@ impl BoltzSession {
                 hash_swap_id: None,
                 status: None,
             });
-        let refund_address = bitcoin::Address::from_str(refund_address)
-            .expect("TODO")
-            .assume_checked();
-        let response =
-            self.inner
-                .btc_to_lbtc(amount, &refund_address, claim_address.as_ref(), webhook)?;
+        let response = self.inner.btc_to_lbtc(
+            amount,
+            refund_address.as_ref(),
+            claim_address.as_ref(),
+            webhook,
+        )?;
         Ok(LockupResponse {
             inner: Mutex::new(Some(response)),
         })
@@ -408,7 +406,7 @@ impl BoltzSession {
         &self,
         amount: u64,
         refund_address: &Address,
-        claim_address: &str,
+        claim_address: &BitcoinAddress,
         webhook: Option<Arc<WebHook>>,
     ) -> Result<LockupResponse, LwkError> {
         let webhook = webhook
@@ -419,12 +417,12 @@ impl BoltzSession {
                 status: None,
             });
 
-        let claim_address = bitcoin::Address::from_str(claim_address)
-            .expect("TODO")
-            .assume_checked();
-        let response =
-            self.inner
-                .lbtc_to_btc(amount, refund_address.as_ref(), &claim_address, webhook)?;
+        let response = self.inner.lbtc_to_btc(
+            amount,
+            refund_address.as_ref(),
+            claim_address.as_ref(),
+            webhook,
+        )?;
         Ok(LockupResponse {
             inner: Mutex::new(Some(response)),
         })

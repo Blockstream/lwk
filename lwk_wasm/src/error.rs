@@ -105,6 +105,7 @@ impl Error {
                 lwk_boltz::Error::SwapRestoration(_) => "Boltz::SwapRestoration",
                 lwk_boltz::Error::RetryBroadcastFailed => "Boltz::RetryBroadcastFailed",
                 lwk_boltz::Error::Bolt12Unsupported => "Boltz::Bolt12Unsupported",
+                lwk_boltz::Error::LnUrlUnsupported => "Boltz::LnUrlUnsupported",
                 lwk_boltz::Error::MnemonicIdentifierMismatch(_, _) => {
                     "Boltz::MnemonicIdentifierMismatch"
                 }

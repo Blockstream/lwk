@@ -1137,6 +1137,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "email_address"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1019fa28f600f5b581b7a603d515c3f1635da041ca211b5055804788673abfe"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2316,6 +2325,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
+name = "lnurl-rs"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41eacdd87b675792f7752f3dd0937a00241a504c3956c47f72986490662e1db4"
+dependencies = [
+ "aes",
+ "anyhow",
+ "base64 0.22.1",
+ "bech32 0.11.0",
+ "bitcoin",
+ "cbc",
+ "email_address",
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2393,6 +2420,7 @@ dependencies = [
  "boltz-client",
  "env_logger 0.11.8",
  "lightning",
+ "lnurl-rs",
  "log",
  "lwk_common",
  "lwk_signer",

@@ -80,6 +80,9 @@ pub enum Error {
     #[error("Bolt12 (offers) are not yet supported")]
     Bolt12Unsupported,
 
+    #[error("LnUrl are not supperted")]
+    LnUrlUnsupported,
+
     #[error("Mnemonic identifier mismatch: {0} != {1}")]
     MnemonicIdentifierMismatch(XKeyIdentifier, XKeyIdentifier),
 

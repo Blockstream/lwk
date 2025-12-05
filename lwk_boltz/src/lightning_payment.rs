@@ -2,22 +2,27 @@ use std::{fmt::Display, str::FromStr};
 
 use boltz_client::{lightning_invoice::ParseOrSemanticError, Bolt11Invoice};
 use lightning::offers::{offer::Offer, parse::Bolt12ParseError};
+use lnurl::lnurl::LnUrl;
 
 #[derive(Debug)]
 pub enum LightningPayment {
     Bolt11(Box<Bolt11Invoice>),
     Bolt12(Box<Offer>),
+    LnUrl(Box<LnUrl>),
 }
 
 impl FromStr for LightningPayment {
-    type Err = (ParseOrSemanticError, Bolt12ParseError);
+    type Err = (ParseOrSemanticError, Bolt12ParseError, lnurl::Error);
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match Bolt11Invoice::from_str(s) {
             Ok(invoice) => Ok(LightningPayment::Bolt11(Box::new(invoice))),
             Err(e1) => match Offer::from_str(s) {
                 Ok(offer) => Ok(LightningPayment::Bolt12(Box::new(offer))),
-                Err(e2) => Err((e1, e2)),
+                Err(e2) => match LnUrl::from_str(s) {
+                    Ok(lnurl) => Ok(LightningPayment::LnUrl(Box::new(lnurl))),
+                    Err(e3) => Err((e1, e2, e3)),
+                },
             },
         }
     }
@@ -28,6 +33,7 @@ impl Display for LightningPayment {
         match self {
             LightningPayment::Bolt11(invoice) => write!(f, "{invoice}"),
             LightningPayment::Bolt12(offer) => write!(f, "{offer}"),
+            LightningPayment::LnUrl(lnurl) => write!(f, "{lnurl}"),
         }
     }
 }
@@ -46,14 +52,19 @@ mod tests {
     fn test_from_str() {
         let invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
         let offer = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+        let lnurl =
+            "lnurl1dp68gurn8ghj7mn0wd68yene9e3k7mf0d3h82unvwqhkzurf9amrztmvde6hymp0xge7pp36";
         let payment = LightningPayment::from_str(invoice).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt11(_)));
         assert_eq!(payment.to_string(), invoice);
         let payment = LightningPayment::from_str(offer).unwrap();
         assert!(matches!(payment, LightningPayment::Bolt12(_)));
         assert_eq!(payment.to_string(), offer);
-        let err = "not a valid invoice or offer";
+        let payment = LightningPayment::from_str(lnurl).unwrap();
+        assert!(matches!(payment, LightningPayment::LnUrl(_)));
+        assert_eq!(payment.to_string(), lnurl);
+        let err = "not a valid invoice or offer or lnurl";
         let err = LightningPayment::from_str(err).unwrap_err();
-        assert!(matches!(err, (_, _)));
+        assert!(matches!(err, (_, _, _)));
     }
 }

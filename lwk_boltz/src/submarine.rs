@@ -57,6 +57,9 @@ impl BoltzSession {
             LightningPayment::Bolt12(_) => {
                 return Err(Error::Bolt12Unsupported);
             }
+            LightningPayment::LnUrl(_) => {
+                return Err(Error::LnUrlUnsupported);
+            }
         };
         let webhook_str = format!("{webhook:?}");
 

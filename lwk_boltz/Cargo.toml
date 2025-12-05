@@ -24,7 +24,7 @@ env_logger = "0.11.8"
 thiserror = "1"
 bip39 = { version = "2.0.0", features = ["rand"] }
 lightning = { version = "0.1.7", default-features = false }
-
+lnurl-rs = { version = "0.9.0", default-features = false }
 
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
 wasm-bindgen-futures = "0.4.50"

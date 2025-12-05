@@ -333,7 +333,7 @@ impl LightningPayment {
     #[wasm_bindgen(constructor)]
     pub fn new(invoice: &str) -> Result<LightningPayment, Error> {
         let payment = lwk_boltz::LightningPayment::from_str(invoice)
-            .map_err(|(e1, e2)| Error::Generic(format!("{e1:?}, {e2:?}")))?;
+            .map_err(|(e1, e2, e3)| Error::Generic(format!("{e1:?}, {e2:?}, {e3:?}")))?;
         Ok(payment.into())
     }
 

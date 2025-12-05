@@ -118,8 +118,8 @@ impl LightningPayment {
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
         let inner =
-            lwk_boltz::LightningPayment::from_str(s).map_err(|(e1, e2)| LwkError::Generic {
-                msg: format!("Failed to create lightning payment: {e1:?}, {e2:?}"),
+            lwk_boltz::LightningPayment::from_str(s).map_err(|(e1, e2, e3)| LwkError::Generic {
+                msg: format!("Failed to create lightning payment: {e1:?}, {e2:?}, {e3:?}"),
             })?;
         Ok(Arc::new(Self { inner }))
     }
@@ -139,6 +139,7 @@ impl LightningPayment {
                 Some(Arc::new(Bolt11Invoice::from((**invoice).clone())))
             }
             lwk_boltz::LightningPayment::Bolt12(_) => None,
+            lwk_boltz::LightningPayment::LnUrl(_) => None,
         }
     }
 }

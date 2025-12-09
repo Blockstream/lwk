@@ -420,6 +420,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b47c4ab7a93edb0c7198c5535ed9b52b63095f4e9b45279c6736cec4b856baf"
 
 [[package]]
+name = "bitcoin-payment-instructions"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd1e2069af33b2796a0d81097ffbe42eb0e85f9d9890bfc022f6960433f7399"
+dependencies = [
+ "bitcoin",
+ "dnssec-prover",
+ "getrandom 0.3.3",
+ "lightning",
+ "lightning-invoice 0.33.2",
+]
+
+[[package]]
 name = "bitcoin-private"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1056,6 +1069,10 @@ name = "dnssec-prover"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec4f825369fc7134da70ca4040fddc8e03b80a46d249ae38d9c1c39b7b4476bf"
+dependencies = [
+ "bitcoin_hashes 0.14.0",
+ "tokio",
+]
 
 [[package]]
 name = "dyn-clone"
@@ -2613,6 +2630,7 @@ dependencies = [
  "age",
  "base64 0.21.7",
  "bip39",
+ "bitcoin-payment-instructions",
  "bitcoincore-rpc",
  "cbc",
  "criterion",

@@ -102,6 +102,8 @@ mod error;
 mod liquidex;
 mod model;
 mod network;
+#[cfg(feature = "payment_instructions")]
+mod payment_instructions;
 pub mod pegin;
 mod persister;
 mod pset_create;

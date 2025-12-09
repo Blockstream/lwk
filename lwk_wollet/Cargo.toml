@@ -45,6 +45,7 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
     "rustls-tls",
 ] }
 
+bitcoin-payment-instructions = { version = "0.5", optional = true }
 scrypt = { version = "0.11.0", optional = true }
 pbkdf2 = { version = "0.12", optional = true }
 sha2 = { version = "0.10", optional = true }
@@ -107,7 +108,16 @@ waterfalls = { version = "0.9.8", default-features = false, features = [
 criterion = "0.5.1"
 
 [features]
-default = ["esplora", "electrum", "elements_rpc", "amp2", "amp0", "prices", "registry"]
+default = [
+    "esplora",
+    "electrum",
+    "elements_rpc",
+    "amp2",
+    "amp0",
+    "prices",
+    "registry",
+    "payment_instructions",
+]
 serial = ["lwk_jade/serial"] # this is a dev-dep feature
 esplora = ["reqwest", "age"]
 electrum = ["electrum-client"]
@@ -130,6 +140,7 @@ amp0 = [
 ]
 prices = ["reqwest"]
 registry = ["reqwest"]
+payment_instructions = ["bitcoin-payment-instructions"]
 
 [[test]]
 name = "e2e"

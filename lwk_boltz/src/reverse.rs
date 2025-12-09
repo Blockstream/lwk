@@ -342,7 +342,7 @@ impl InvoiceResponse {
 
     /// The txid of the claim transaction of the swap
     pub fn claim_txid(&self) -> Option<&str> {
-        self.data.claim_txid.as_ref().map(|txid| txid.as_str())
+        self.data.claim_txid.as_deref()
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

@@ -171,8 +171,14 @@ pub enum Error {
     )]
     UnsupportedMultipathDescriptor,
 
-    #[error("Descriptor with segwit not v0 is not supported")]
-    UnsupportedDescriptorNonV0, // TODO add non supported descriptor type as field or split it further: UnsupportedDescriptorPreSegwit, UnsupportedDescriptorTaproot, UnsupportedDescriptorUnknownSegwitVersion
+    #[error("Unsupported pre-segwit descriptor")]
+    UnsupportedDescriptorPreSegwit,
+
+    #[error("Unsupported taproot descriptor")]
+    UnsupportedDescriptorTaproot,
+
+    #[error("Descriptor not supported: unknown segwit version")]
+    UnsupportedDescriptorSegwitUnknownVersion,
 
     #[error("Missing PSET")]
     MissingPset,

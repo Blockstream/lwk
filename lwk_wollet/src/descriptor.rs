@@ -140,12 +140,18 @@ impl TryFrom<ConfidentialDescriptor<DescriptorPublicKey>> for WolletDescriptor {
         }
 
         match desc.descriptor.desc_type().segwit_version() {
+            None => Err(Self::Error::UnsupportedDescriptorPreSegwit),
             Some(WitnessVersion::V0) => Ok(WolletDescriptor {
                 inner: desc,
                 #[cfg(feature = "amp0")]
                 is_amp0,
             }),
-            _ => Err(Self::Error::UnsupportedDescriptorNonV0),
+            Some(WitnessVersion::V1) => Ok(WolletDescriptor {
+                inner: desc,
+                #[cfg(feature = "amp0")]
+                is_amp0,
+            }),
+            Some(_) => Err(Self::Error::UnsupportedDescriptorSegwitUnknownVersion),
         }
     }
 }

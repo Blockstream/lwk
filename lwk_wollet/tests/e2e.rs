@@ -257,7 +257,6 @@ fn unsupported_descriptor() {
     let view_key = generate_view_key();
     let desc_p2pkh = format!("ct({view_key},elpkh({xpub1}/*))");
     let desc_p2sh = format!("ct({view_key},elsh(pkh({xpub1}/*)))",);
-    let desc_p2tr = format!("ct({view_key},eltr({xpub1}/*))");
 
     let desc_multi_path_1 = format!("ct({view_key},elwpkh({xpub1}/<0;1;2>/*))");
     let desc_multi_path_2 = format!("ct({view_key},elwpkh({xpub1}/<0;1>/0/*))");
@@ -266,9 +265,8 @@ fn unsupported_descriptor() {
     let desc_multi_path_5 = format!("ct({view_key},elwsh(multi(2,{xpub1}/<0;1>/*,{xpub2}/0/*)))");
 
     for (desc, err) in [
-        (desc_p2pkh, Error::UnsupportedDescriptorNonV0),
-        (desc_p2sh, Error::UnsupportedDescriptorNonV0),
-        (desc_p2tr, Error::UnsupportedDescriptorNonV0),
+        (desc_p2pkh, Error::UnsupportedDescriptorPreSegwit),
+        (desc_p2sh, Error::UnsupportedDescriptorPreSegwit),
         (desc_multi_path_1, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_2, Error::UnsupportedMultipathDescriptor),
         (desc_multi_path_3, Error::UnsupportedMultipathDescriptor),

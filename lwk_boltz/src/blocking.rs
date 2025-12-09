@@ -256,6 +256,11 @@ impl InvoiceResponse {
         self.inner.fee()
     }
 
+    /// See [`crate::InvoiceResponse::boltz_fee()`]
+    pub fn boltz_fee(&self) -> Option<u64> {
+        self.inner.boltz_fee()
+    }
+
     pub fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let inner = self.runtime.block_on(self.inner.advance())?;
         Ok(inner)

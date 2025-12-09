@@ -24,6 +24,9 @@ pub struct InvoiceData {
     /// The fee of the swap provider and the network fee if known
     pub fee: Option<u64>,
 
+    /// The fee of the swap provider
+    pub boltz_fee: Option<u64>,
+
     pub(crate) create_reverse_response: CreateReverseResponse,
     pub(crate) key_index: u32,
     pub(crate) mnemonic_identifier: XKeyIdentifier,
@@ -38,6 +41,7 @@ pub struct InvoiceDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
     pub fee: Option<u64>,
+    pub boltz_fee: Option<u64>,
     pub create_reverse_response: CreateReverseResponse,
     pub key_index: u32,
     pub claim_address: elements::Address,
@@ -72,6 +76,7 @@ pub fn to_invoice_data(
         last_state: i.last_state,
         swap_type: i.swap_type,
         fee: i.fee,
+        boltz_fee: i.boltz_fee,
         create_reverse_response: i.create_reverse_response,
         our_keys,
         preimage,
@@ -89,6 +94,7 @@ impl From<InvoiceData> for InvoiceDataSerializable {
             last_state: i.last_state,
             swap_type: i.swap_type,
             fee: i.fee,
+            boltz_fee: i.boltz_fee,
             create_reverse_response: i.create_reverse_response,
             key_index: i.key_index,
             mnemonic_identifier: i.mnemonic_identifier,

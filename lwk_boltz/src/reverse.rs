@@ -98,6 +98,11 @@ impl BoltzSession {
             Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
         )?;
 
+        let reverse_info = self.api.get_reverse_pairs().await?;
+        let boltz_fee = reverse_info
+            .get_btc_to_lbtc_pair()
+            .map(|pair| ((amount as f64) * (pair.fees.percentage / 100.0)) as u64);
+
         let _ = check_for_mrh(&self.api, &invoice_str, chain).await?.ok_or(
             Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),
         )?;
@@ -122,6 +127,7 @@ impl BoltzSession {
                 last_state,
                 swap_type: SwapType::Reverse,
                 fee: Some(fee),
+                boltz_fee,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
@@ -248,7 +254,8 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
     Ok(InvoiceData {
         last_state,
         swap_type: SwapType::Reverse,
-        fee: None, // Fee information not available in restore response
+        fee: None,       // Fee information not available in restore response
+        boltz_fee: None, //
         create_reverse_response,
         our_keys,
         preimage,
@@ -320,6 +327,14 @@ impl InvoiceResponse {
     /// It is equal to the amount of the invoice minus the amount of the onchain transaction.
     pub fn fee(&self) -> Option<u64> {
         self.data.fee
+    }
+
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the invoice amount multiplied by the boltz fee rate.
+    /// For example for receiving an invoice of 10000 satoshi with a 0.25% rate would be 25 satoshi.
+    pub fn boltz_fee(&self) -> Option<u64> {
+        self.data.boltz_fee
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

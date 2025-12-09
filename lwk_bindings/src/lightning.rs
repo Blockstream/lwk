@@ -654,6 +654,19 @@ impl InvoiceResponse {
             .fee())
     }
 
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the invoice amount multiplied by the boltz fee rate.
+    /// For example for receiving an invoice of 10000 satoshi with a 0.25% rate would be 25 satoshi.
+    pub fn boltz_fee(&self) -> Result<Option<u64>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .boltz_fee())
+    }
+
     /// Serialize the prepare pay response data to a json string
     ///
     /// This can be used to restore the prepare pay response after a crash

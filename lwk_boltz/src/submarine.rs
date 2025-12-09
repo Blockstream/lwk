@@ -112,6 +112,11 @@ impl BoltzSession {
                 bolt11_invoice_str.clone(),
             ))?;
 
+        let submarine_info = self.api.get_submarine_pairs().await?;
+        let boltz_fee = submarine_info
+            .get_lbtc_to_btc_pair()
+            .map(|pair| ((bolt11_amount as f64) * (pair.fees.percentage / 100.0)) as u64);
+
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 
         create_swap_response.validate(&bolt11_invoice_str, &refund_public_key, chain)?;
@@ -143,6 +148,7 @@ impl BoltzSession {
                 last_state: SwapState::InvoiceSet,
                 swap_type: SwapType::Submarine,
                 fee: Some(fee),
+                boltz_fee,
                 bolt11_invoice: Some((**bolt11_invoice).clone()),
                 our_keys,
                 refund_address: refund_address.to_string(),
@@ -276,6 +282,7 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
         create_swap_response,
         key_index: refund_details.key_index,
         mnemonic_identifier: mnemonic_identifier(mnemonic)?,
+        boltz_fee: None, // TODO
     })
 }
 
@@ -423,11 +430,18 @@ impl PreparePayResponse {
         self.data.create_swap_response.bip21.clone()
     }
 
-    /// The fee of the swap provider
+    /// The fee of the swap provider and the network fee
     ///
     /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice.
-    /// Does not include the fee of the onchain transaction.
     pub fn fee(&self) -> Option<u64> {
         self.data.fee
+    }
+
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the invoice amount multiplied by the boltz fee rate.
+    /// For example for paying an invoice of 1000 satoshi with a 0.1% rate would be 1 satoshi.
+    pub fn boltz_fee(&self) -> Option<u64> {
+        self.data.boltz_fee
     }
 }

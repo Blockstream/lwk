@@ -18,6 +18,7 @@ pub struct PreparePayData {
 
     /// Fee in satoshi, it's equal to the `amount` less the bolt11 amount
     pub fee: Option<u64>,
+    pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<Bolt11Invoice>,
     pub create_swap_response: CreateSubmarineResponse,
     pub our_keys: Keypair,
@@ -31,6 +32,7 @@ pub struct PreparePayDataSerializable {
     pub last_state: SwapState,
     pub swap_type: SwapType,
     pub fee: Option<u64>,
+    pub boltz_fee: Option<u64>,
     pub bolt11_invoice: Option<String>,
     pub create_swap_response: CreateSubmarineResponse,
     pub key_index: u32,
@@ -51,6 +53,7 @@ impl From<PreparePayData> for PreparePayDataSerializable {
             key_index: data.key_index,
             refund_address: data.refund_address,
             mnemonic_identifier: data.mnemonic_identifier,
+            boltz_fee: data.boltz_fee,
         }
     }
 }
@@ -82,6 +85,7 @@ pub fn to_prepare_pay_data(
         refund_address: data.refund_address,
         key_index: data.key_index,
         mnemonic_identifier,
+        boltz_fee: data.boltz_fee,
     })
 }
 

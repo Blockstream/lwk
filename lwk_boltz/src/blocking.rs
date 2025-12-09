@@ -222,6 +222,11 @@ impl PreparePayResponse {
         self.inner.fee()
     }
 
+    /// See [`crate::PreparePayResponse::boltz_fee()`]
+    pub fn boltz_fee(&self) -> Option<u64> {
+        self.inner.boltz_fee()
+    }
+
     pub fn serialize(&self) -> Result<String, Error> {
         self.inner.serialize()
     }

@@ -179,6 +179,8 @@ def show_invoice(boltz_session, wollet):
 
     fee = invoice_response.fee()
     print(f"Fee: {fee}")
+    boltz_fee = invoice_response.boltz_fee()
+    print(f"Boltz fee: {boltz_fee}")
 
     # Get and print the bolt11 invoice
     bolt11_invoice_obj = invoice_response.bolt11_invoice()
@@ -217,6 +219,8 @@ def pay_invoice(boltz_session, wollet, esplora_client, signer, skip_completion_t
 
         fee = prepare_pay_response.fee()
         print(f"Fee: {fee}")
+        boltz_fee = prepare_pay_response.boltz_fee()
+        print(f"Boltz fee: {boltz_fee}")
 
         data=prepare_pay_response.serialize()
         swap_id=prepare_pay_response.swap_id()

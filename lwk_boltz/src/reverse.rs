@@ -315,10 +315,9 @@ impl InvoiceResponse {
         .expect("Invoice must be parsable or we would have errored on the BoltzSession::invoice")
     }
 
-    /// The fee of the swap provider
+    /// The fee of the swap provider and the network fee
     ///
     /// It is equal to the amount of the invoice minus the amount of the onchain transaction.
-    /// Does not include the fee of the onchain transaction.
     pub fn fee(&self) -> Option<u64> {
         self.data.fee
     }

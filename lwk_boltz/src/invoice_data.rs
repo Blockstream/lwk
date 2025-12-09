@@ -21,7 +21,7 @@ pub struct InvoiceData {
     pub swap_type: SwapType,
     pub claim_broadcasted: bool,
 
-    /// The fee of the swap provider if known
+    /// The fee of the swap provider and the network fee if known
     pub fee: Option<u64>,
 
     pub(crate) create_reverse_response: CreateReverseResponse,

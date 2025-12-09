@@ -571,10 +571,9 @@ impl PreparePayResponse {
             .uri_amount())
     }
 
-    /// The fee of the swap provider
+    /// The fee of the swap provider and the network fee
     ///
     /// It is equal to the amount requested onchain minus the amount of the bolt11 invoice
-    /// Does not include the fee of the onchain transaction.
     pub fn fee(&self) -> Result<Option<u64>, LwkError> {
         Ok(self
             .inner
@@ -630,10 +629,9 @@ impl InvoiceResponse {
             .swap_id())
     }
 
-    /// The fee of the swap provider
+    /// The fee of the swap provider and the network fee
     ///
     /// It is equal to the amount of the invoice minus the amount of the onchain transaction.
-    /// Does not include the fee of the onchain transaction.
     pub fn fee(&self) -> Result<Option<u64>, LwkError> {
         Ok(self
             .inner

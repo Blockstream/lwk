@@ -14,6 +14,16 @@ fn test_single_address_tr() {
     let mut w = TestWollet::new(client, &desc);
 
     w.fund_btc(&env);
-    assert!(w.balance_btc() > 0);
-    assert!(w.wollet.utxos().unwrap().len() > 0);
+    let balance = w.balance_btc();
+    assert!(balance > 0);
+    let utxos = w.wollet.utxos().unwrap();
+    assert_eq!(utxos.len(), 1);
+
+    // Receive unconfidential / explicit
+    let satoshi = 5_000;
+    w.fund_explicit(&env, satoshi, None, None);
+    assert_eq!(w.balance_btc(), balance);
+
+    let explicit_utxos = w.wollet.explicit_utxos().unwrap();
+    assert_eq!(explicit_utxos.len(), 1)
 }

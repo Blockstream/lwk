@@ -5,6 +5,7 @@ mod registry;
 mod test_jade;
 mod test_ledger;
 mod test_wollet;
+mod tr;
 
 use crate::test_jade::jade_setup;
 use clients::blocking::{self, BlockchainBackend};

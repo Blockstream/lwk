@@ -115,7 +115,7 @@ impl BoltzSession {
         let submarine_info = self.api.get_submarine_pairs().await?;
         let boltz_fee = submarine_info
             .get_lbtc_to_btc_pair()
-            .map(|pair| ((bolt11_amount as f64) * (pair.fees.percentage / 100.0)) as u64);
+            .map(|pair| pair.fees.boltz(bolt11_amount));
 
         log::info!("Got Swap Response from Boltz server {create_swap_response:?}");
 

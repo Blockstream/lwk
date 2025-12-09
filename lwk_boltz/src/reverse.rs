@@ -101,7 +101,7 @@ impl BoltzSession {
         let reverse_info = self.api.get_reverse_pairs().await?;
         let boltz_fee = reverse_info
             .get_btc_to_lbtc_pair()
-            .map(|pair| ((amount as f64) * (pair.fees.percentage / 100.0)) as u64);
+            .map(|pair| pair.fees.boltz(amount));
 
         let _ = check_for_mrh(&self.api, &invoice_str, chain).await?.ok_or(
             Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),

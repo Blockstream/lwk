@@ -128,6 +128,7 @@ impl BoltzSession {
                 swap_type: SwapType::Reverse,
                 fee: Some(fee),
                 boltz_fee,
+                claim_txid: None,
                 create_reverse_response: reverse_resp.clone(),
                 our_keys,
                 preimage,
@@ -256,6 +257,7 @@ pub(crate) fn convert_swap_restore_response_to_invoice_data(
         swap_type: SwapType::Reverse,
         fee: None,       // Fee information not available in restore response
         boltz_fee: None, //
+        claim_txid: None,
         create_reverse_response,
         our_keys,
         preimage,
@@ -298,7 +300,8 @@ impl InvoiceResponse {
             )
             .await?;
 
-        broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
+        self.data.claim_txid = Some(txid);
         self.data.claim_broadcasted = true;
 
         log::info!("Successfully broadcasted claim tx!");
@@ -337,6 +340,11 @@ impl InvoiceResponse {
         self.data.boltz_fee
     }
 
+    /// The txid of the claim transaction of the swap
+    pub fn claim_txid(&self) -> Option<&str> {
+        self.data.claim_txid.as_ref().map(|txid| txid.as_str())
+    }
+
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {
         let update = self.next_status().await?;
         let update_status = update.swap_state()?;
@@ -348,9 +356,11 @@ impl InvoiceResponse {
                 Ok(ControlFlow::Break(true))
             }
             SwapState::TransactionMempool => {
+                log::info!("transaction.mempool Boltz funding tx");
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::TransactionConfirmed => {
+                log::info!("transaction.confirmed Boltz funding tx");
                 self.handle_claim_transaction_if_necessary(update).await
             }
             SwapState::InvoiceSettled => {

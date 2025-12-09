@@ -78,7 +78,8 @@ def invoice_thread(invoice_response, claim_address):
                 data = invoice_response.serialize()
                 save_swap_data(swap_id, data)
             elif state == PaymentState.SUCCESS:
-                print("Invoice payment completed successfully!")
+                claim_txid = invoice_response.claim_txid()
+                print(f"Invoice payment completed successfully, received from txid: {claim_txid}!")
                 rename_swap_data(swap_id, "completed")
                 break
             elif state == PaymentState.FAILED:

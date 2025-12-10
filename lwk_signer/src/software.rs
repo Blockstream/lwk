@@ -52,6 +52,9 @@ pub enum SignError {
 
     #[error("BIP85 derivation failed: {0}")]
     Bip85Derivation(String),
+
+    #[error("Taproot signing is not supported")]
+    UnsupportedTaprootSigning,
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -316,7 +319,10 @@ impl Signer for SwSigner {
         // genesis hash is not used at all for sighash calculation
         let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
-        for i in 0..pset.inputs().len() {
+        for (i, inp) in pset.inputs().iter().enumerate() {
+            if inp.tap_internal_key.is_some() {
+                return Err(SignError::UnsupportedTaprootSigning);
+            }
             // computing all the messages to sign, it is not necessary if we are not going to sign
             // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for loop
             let msg = pset

@@ -1,4 +1,5 @@
 use crate::test_wollet::*;
+use lwk_common::Signer;
 use lwk_test_util::*;
 
 #[test]
@@ -25,5 +26,17 @@ fn test_single_address_tr() {
     assert_eq!(w.balance_btc(), balance);
 
     let explicit_utxos = w.wollet.explicit_utxos().unwrap();
-    assert_eq!(explicit_utxos.len(), 1)
+    assert_eq!(explicit_utxos.len(), 1);
+
+    // Signing is not supported
+    let mut pset = w
+        .tx_builder()
+        .add_lbtc_recipient(&w.address(), 1000)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    let signer = generate_signer();
+    let err = signer.sign(&mut pset).unwrap_err();
+    assert!(format!("{err}").contains("Taproot signing is not supported"));
 }

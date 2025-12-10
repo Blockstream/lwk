@@ -1747,6 +1747,54 @@ fn test_external_utxo() {
 }
 
 #[test]
+fn test_external_not_lwk() {
+    // Simulate a case where we need to sign a PSET where
+    // some of the inputs belong to an external wallet that
+    // is not LWK, and some information might be missing
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+
+    let s1 = generate_signer();
+    let d1 = format!("ct({},elwpkh({}/*))", generate_view_key(), s1.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w1 = TestWollet::new(client, &d1);
+
+    let s2 = generate_signer();
+    let d2 = format!("ct({},elwpkh({}/*))", generate_view_key(), s2.xpub());
+    let client = test_client_electrum(&env.electrum_url());
+    let mut w2 = TestWollet::new(client, &d2);
+
+    w1.fund_btc(&env);
+    w2.fund_btc(&env);
+
+    let utxo = &w2.wollet.utxos().unwrap()[0];
+    let external_utxo = w2.make_external(utxo);
+
+    let node_address = env.elementsd_getnewaddress();
+    let mut pset = w1
+        .tx_builder()
+        .add_lbtc_recipient(&node_address, 110_000)
+        .unwrap()
+        .add_external_utxos(vec![external_utxo])
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    // Remove data from the external UTXO: some external wallets
+    // do not share this data so we should not rely on them being there
+    let inp = &mut pset.inputs_mut()[0];
+    assert_eq!(inp.previous_txid, utxo.outpoint.txid);
+    inp.witness_utxo = None; // required to compute the sighash of input #0
+    inp.redeem_script = None; // required to compute sighash if p2sh
+    inp.witness_script = None;
+    inp.in_utxo_rangeproof = None;
+
+    // TODO: s1 should not care about this missing information and sign its inputs
+    let err = s1.sign(&mut pset).unwrap_err();
+    println!("{}", err);
+    assert!(format!("{}", err).contains("Missing Psbt spend utxos"));
+}
+
+#[test]
 fn test_unblinded_utxo() {
     // Receive unblinded utxo and spend it
     let env = TestEnvBuilder::from_env().with_electrum().build();

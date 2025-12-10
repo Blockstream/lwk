@@ -2264,7 +2264,7 @@ fn test_non_standard_gap_limit_waterfalls_esplora() {
 }
 
 #[test]
-fn test_manual_coin_selection() {
+fn test_manual_coin_selection() -> Result<(), Box<dyn std::error::Error>> {
     let env = TestEnvBuilder::from_env().with_electrum().build();
 
     let signer = generate_signer();
@@ -2282,7 +2282,9 @@ fn test_manual_coin_selection() {
     env.elementsd_generate(1);
 
     assert_eq!(w.balance(&policy_asset), 600_000);
-    let utxos = w.wollet.utxos().unwrap();
+    // ANCHOR: get_utxos
+    let utxos = w.wollet.utxos()?;
+    // ANCHOR_END: get_utxos
     assert_eq!(utxos.len(), 2);
     assert_eq!(
         utxos[0].unblinded.value, 500_000,
@@ -2308,18 +2310,21 @@ fn test_manual_coin_selection() {
         .unwrap_err();
     assert!(matches!(err, Error::InsufficientFunds { .. }));
 
+    // ANCHOR: manual_coin_selection
+    let sent_satoshi = 200_000;
     let mut pset = w
         .tx_builder()
-        .add_recipient(&node_address, 200_000, policy_asset)
-        .unwrap()
+        .add_recipient(&node_address, sent_satoshi, policy_asset)?
         .set_wallet_utxos(vec![utxos[0].outpoint])
-        .finish()
-        .unwrap();
-    assert_eq!(pset.inputs().len(), 1);
-    assert_eq!(pset.outputs().len(), 3); // recipient + change + fee
-    signer.sign(&mut pset).unwrap();
+        .finish()?;
+    assert_eq!(pset.inputs().len(), 1); // ANCHOR: Ignore
+    assert_eq!(pset.outputs().len(), 3); // ANCHOR: Ignore recipient + change + fee
+    signer.sign(&mut pset)?;
+
+    // Broadcast the transaction
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
+    // ANCHOR_END: manual_coin_selection
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
 
     let mut pset = w
@@ -2373,6 +2378,7 @@ fn test_manual_coin_selection() {
         .unwrap_err();
     assert!(matches!(err, Error::InsufficientFunds { .. }));
 
+    // ANCHOR: manual_coin_selection_asset
     // One asset and LBTC
     let mut pset = w
         .tx_builder()
@@ -2387,6 +2393,7 @@ fn test_manual_coin_selection() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+    // ANCHOR_END: manual_coin_selection_asset
 
     // Two assets and LBTC
     let mut pset = w
@@ -2426,6 +2433,8 @@ fn test_manual_coin_selection() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let tx = serialize(&tx);
     assert!(env.elementsd_testmempoolaccept(&tx.to_hex()));
+
+    Ok(())
 }
 
 #[ignore = "This test connects to liquid testnet"]

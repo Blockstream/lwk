@@ -1,3 +1,4 @@
+from tokenize import Ignore
 from lwk import *
 
 # Start nodes
@@ -24,19 +25,24 @@ wollet.wait_for_tx(txid, client)
 address = wollet.address(1)
 sent_satoshi = 1000
 node_address = node.get_new_address()
+# ANCHOR: get_utxos
 utxos = wollet.utxos()
+# ANCHOR_END: get_utxos
 
+# ANCHOR: manual_coin_selection
 builder = network.tx_builder()
 builder.add_lbtc_recipient(node_address, sent_satoshi)
 builder.set_wallet_utxos([utxos[0].outpoint()])
 unsigned_pset = builder.finish(wollet)
 
-assert len(unsigned_pset.inputs()) == 1
+assert len(unsigned_pset.inputs()) == 1 # ANCHOR: Ignore
 
 signed_pset = signer.sign(unsigned_pset)
 finalized_pset = wollet.finalize(signed_pset)
 
-# Broadcast the transaction
+
 tx = finalized_pset.extract_tx()
+# ANCHOR_END: manual_coin_selection
+# Broadcast the transaction
 txid = client.broadcast(tx)
 wollet.wait_for_tx(txid, client)

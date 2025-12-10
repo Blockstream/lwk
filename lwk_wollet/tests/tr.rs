@@ -37,6 +37,6 @@ fn test_single_address_tr() {
         .unwrap();
 
     let signer = generate_signer();
-    let err = signer.sign(&mut pset).unwrap_err();
-    assert!(format!("{err}").contains("Taproot signing is not supported"));
+    let sigs_added = signer.sign(&mut pset).unwrap();
+    assert_eq!(sigs_added, 0);
 }

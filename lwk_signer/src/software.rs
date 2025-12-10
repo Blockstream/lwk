@@ -52,9 +52,6 @@ pub enum SignError {
 
     #[error("BIP85 derivation failed: {0}")]
     Bip85Derivation(String),
-
-    #[error("Taproot signing is not supported")]
-    UnsupportedTaprootSigning,
 }
 
 /// Possible errors when creating a new software signer [`SwSigner`]
@@ -316,23 +313,33 @@ impl Signer for SwSigner {
         let mut sighash_cache = SighashCache::new(&tx);
         let mut signature_added = 0;
 
+        let signer_fingerprint = self.fingerprint();
         // genesis hash is not used at all for sighash calculation
         let genesis_hash = elements_miniscript::elements::BlockHash::all_zeros();
         let mut messages = vec![];
         for (i, inp) in pset.inputs().iter().enumerate() {
-            if inp.tap_internal_key.is_some() {
-                return Err(SignError::UnsupportedTaprootSigning);
-            }
-            // computing all the messages to sign, it is not necessary if we are not going to sign
-            // some input, but since the pset is borrowed, we can't do this action in a inputs_mut() for loop
-            let msg = pset
-                .sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
-                .to_secp_msg();
+            // computing all the messages to sign
+            // since the pset is borrowed, we can't do this action in a inputs_mut() for loop
+            let msg = if inp
+                .bip32_derivation
+                .values()
+                .any(|(fp, _)| fp == &signer_fingerprint)
+            {
+                Some(
+                    pset.sighash_msg(i, &mut sighash_cache, None, genesis_hash)?
+                        .to_secp_msg(),
+                )
+            } else {
+                None
+            };
             messages.push(msg);
         }
 
-        let signer_fingerprint = self.fingerprint();
         for (input, msg) in pset.inputs_mut().iter_mut().zip(messages) {
+            if msg.is_none() {
+                continue;
+            }
+            let msg = msg.expect("just checked");
             let hash_ty = input
                 .sighash_type
                 .map(|h| h.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All))

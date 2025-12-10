@@ -1785,9 +1785,8 @@ fn test_external_not_lwk() {
     assert_eq!(inp.previous_txid, utxo.outpoint.txid);
     inp.redeem_script = None; // required to compute sighash if p2sh
 
-    // TODO: s1 should not care about this missing information and sign its inputs
-    let err = s1.sign(&mut pset).unwrap_err();
-    assert!(format!("{}", err).contains("Missing Redeem Script"));
+    let sigs_added = s1.sign(&mut pset).unwrap();
+    assert_eq!(sigs_added, 1);
 }
 
 #[test]

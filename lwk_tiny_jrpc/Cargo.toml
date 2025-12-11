@@ -1,6 +1,6 @@
 [package]
 name = "lwk_tiny_jrpc"
-version = "0.12.0"
+version = "0.13.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Tiny JSON RPC Server"
 license = "MIT OR BSD-2-Clause"

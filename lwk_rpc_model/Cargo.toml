@@ -1,6 +1,6 @@
 [package]
 name = "lwk_rpc_model"
-version = "0.10.0"
+version = "0.13.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Model of data used with the RPC server"
 license = "MIT OR BSD-2-Clause"

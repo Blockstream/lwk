@@ -2371,7 +2371,7 @@ checksum = "1251ce8e8f9909600e127dcbe74ac50d8464e6685cf5953d37df7a741dbf9e9d"
 
 [[package]]
 name = "lwk_app"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "enum-iterator",
  "home",
@@ -2395,7 +2395,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_bindings"
-version = "0.12.8"
+version = "0.13.0"
 dependencies = [
  "elements 0.25.2",
  "log",
@@ -2412,7 +2412,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_boltz"
-version = "0.1.0"
+version = "0.13.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2435,7 +2435,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_cli"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2456,7 +2456,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_common"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "base64 0.21.7",
  "elements 0.25.2",
@@ -2471,7 +2471,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_containers"
-version = "0.10.0"
+version = "0.13.0"
 dependencies = [
  "elements 0.25.2",
  "rand 0.8.5",
@@ -2485,7 +2485,7 @@ version = "0.10.0"
 
 [[package]]
 name = "lwk_jade"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "base64 0.21.7",
  "elements 0.25.2",
@@ -2510,7 +2510,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_ledger"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "byteorder",
  "elements-miniscript",
@@ -2525,7 +2525,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_rpc_model"
-version = "0.10.0"
+version = "0.13.0"
 dependencies = [
  "schemars",
  "serde",
@@ -2534,7 +2534,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_signer"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "base64 0.21.7",
  "bip39",
@@ -2548,7 +2548,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_test_util"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "bip39",
  "electrsd",
@@ -2566,7 +2566,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_tiny_jrpc"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "jsonrpc",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "byteorder",
  "console_error_panic_hook",
@@ -2605,7 +2605,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wollet"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "aes",
  "aes-gcm",

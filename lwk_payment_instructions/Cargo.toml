@@ -1,0 +1,14 @@
+[package]
+name = "lwk_payment_instructions"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# rand std/std_rng features needed by lnurl-rs for bitcoin::secp256k1::rand::random
+rand = { version = "0.8", features = ["std", "std_rng"] }
+
+elements = { version = "0.25.0" }
+lightning = { version = "0.1.7", default-features = false }
+lnurl-rs = { version = "0.9.0", default-features = false }
+lightning-invoice = { version = "0.34", default-features = false }
+bip21 = { version = "0", default-features = false }

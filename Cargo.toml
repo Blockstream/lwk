@@ -16,6 +16,7 @@ members = [
     "lwk_test_util",
     "lwk_wasm",
     "lwk_boltz",
+    "lwk_payment_instructions",
 ]
 resolver = "2"
 

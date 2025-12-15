@@ -97,6 +97,7 @@ fn parse_with_schema<'a>(
                 ))
             }
         }
+        (LiquidNetwork, Err(_)) => parse_liquid_bip21(s, true),
         (LiquidTestnet, Ok(ref cat @ LiquidAddress(ref a))) => {
             if a.params != &AddressParams::LIQUID {
                 Ok(cat.clone())
@@ -106,6 +107,7 @@ fn parse_with_schema<'a>(
                 ))
             }
         }
+        (LiquidTestnet, Err(_)) => parse_liquid_bip21(s, false),
         (Lightning, Ok(cat @ LightningInvoice(_))) => Ok(cat),
         (Lightning, Ok(cat @ LightningOffer(_))) => Ok(cat),
         (Lightning, Ok(cat @ LnUrlCat(_))) => Ok(cat),
@@ -127,6 +129,44 @@ fn parse_with_schema<'a>(
         }
         _ => Err(format!("Invalid schema: {s}")),
     }
+}
+
+fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<PaymentCategory<'static>, String> {
+    let url = url::Url::from_str(s).map_err(|e| e.to_string())?;
+
+    let address_str = url.path();
+    let address = elements::Address::from_str(address_str).map_err(|e| e.to_string())?;
+
+    let is_liquid_mainnet = address.params == &AddressParams::LIQUID;
+    if is_mainnet && !is_liquid_mainnet {
+        return Err(format!(
+            "Using liquidnetwork schema with non-mainnet address: {s}"
+        ));
+    }
+    if !is_mainnet && is_liquid_mainnet {
+        return Err(format!(
+            "Using liquidtestnet schema with mainnet address: {s}"
+        ));
+    }
+
+    let asset_str = url
+        .query_pairs()
+        .find(|(key, _)| key == "assetid")
+        .map(|(_, value)| value)
+        .ok_or_else(|| "error".to_string())?;
+    let asset = AssetId::from_str(&asset_str).map_err(|e| e.to_string())?;
+    let amount_str = url
+        .query_pairs()
+        .find(|(key, _)| key == "amount")
+        .map(|(_, value)| value)
+        .ok_or_else(|| "error".to_string())?;
+    let amount = amount_str.parse::<u64>().map_err(|e| e.to_string())?;
+
+    Ok(PaymentCategory::LiquidBip21 {
+        address,
+        asset,
+        amount,
+    })
 }
 
 fn parse_no_schema<'a>(s: &str) -> Result<PaymentCategory<'a>, String> {
@@ -194,6 +234,10 @@ mod tests {
             payment_category,
             "Using liquidnetwork schema with non-mainnet address: liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m"
         );
+
+        // valid testnet address with testnet schema
+        let err = PaymentCategory::from_str("liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2").unwrap_err();
+        assert_eq!(err, "Using liquidtestnet schema with mainnet address: liquidtestnet:VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag?amount=10&assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2");
     }
 
     #[test]
@@ -284,6 +328,44 @@ mod tests {
             payment_category,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
         ));
+
+        let address =
+            "VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag";
+        let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
+        let amount = 10;
+        let liquid_bip21 = format!("liquidnetwork:{address}?amount={amount}&assetid={asset}");
+        let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
+        if let PaymentCategory::LiquidBip21 {
+            address: a,
+            asset: s,
+            amount: m,
+        } = payment_category
+        {
+            assert_eq!(a, elements::Address::from_str(address).unwrap());
+            assert_eq!(s, AssetId::from_str(asset).unwrap());
+            assert_eq!(m, amount);
+        } else {
+            panic!("Expected PaymentCategory::LiquidBip21");
+        }
+
+        let address =
+            "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m";
+        let asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
+        let amount = 10;
+        let liquid_bip21 = format!("liquidtestnet:{address}?amount={amount}&assetid={asset}");
+        let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
+        if let PaymentCategory::LiquidBip21 {
+            address: a,
+            asset: s,
+            amount: m,
+        } = payment_category
+        {
+            assert_eq!(a, elements::Address::from_str(address).unwrap());
+            assert_eq!(s, AssetId::from_str(asset).unwrap());
+            assert_eq!(m, amount);
+        } else {
+            panic!("Expected PaymentCategory::LiquidBip21");
+        }
     }
 
     #[test]

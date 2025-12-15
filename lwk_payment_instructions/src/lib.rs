@@ -240,6 +240,14 @@ mod tests {
         } else {
             panic!("Expected PaymentCategory::Bip21");
         }
+
+        let lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97";
+        let payment_category = PaymentCategory::from_str(&format!("lightning:{lnurl}")).unwrap();
+        let expected = LnUrl::from_str(lnurl).unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LnUrl(lnurl) if lnurl == expected
+        ));
     }
 
     #[test]

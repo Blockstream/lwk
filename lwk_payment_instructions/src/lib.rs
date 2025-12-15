@@ -1,12 +1,17 @@
 use std::{fmt::Display, str::FromStr};
 
-use elements::{bitcoin, AssetId};
+use bip21::NoExtras;
+use elements::{
+    bitcoin::{self, address::NetworkUnchecked},
+    AddressParams, AssetId,
+};
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 use lnurl::lnurl::LnUrl;
 
 #[allow(dead_code)]
 #[non_exhaustive]
+#[derive(Clone, Debug)]
 enum PaymentCategory<'a> {
     BitcoinAddress(bitcoin::Address<bitcoin::address::NetworkUnchecked>), // just the address, or bitcoin:<address>
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
@@ -14,7 +19,7 @@ enum PaymentCategory<'a> {
     LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
     LnUrl(LnUrl),                     // just lnurl or lightning:<lnurl>
     Bip353(String),                   // ₿matt@mattcorallo.com
-    Bip21(bip21::Uri<'a>),            // bitcoin:
+    Bip21(bip21::Uri<'a, NetworkUnchecked, NoExtras>), // bitcoin:
     LiquidBip21 {
         address: elements::Address,
         asset: AssetId,
@@ -53,13 +58,51 @@ impl FromStr for PaymentCategory<'_> {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split_once(':') {
             Some((prefix, rest)) => {
-                let _schema = Schema::from_str(prefix)?;
-                let _cat = parse_no_schema(rest)?;
-                // TODO exclude invalid matches, like bitcoin:<liquidaddress>
-                todo!()
+                let schema = Schema::from_str(prefix)?;
+                let cat = parse_no_schema(rest);
+                parse_with_schema(schema, cat, s)
             }
             None => parse_no_schema(s),
         }
+    }
+}
+
+fn parse_with_schema<'a>(
+    schema: Schema,
+    cat: Result<PaymentCategory<'a>, String>,
+    s: &str,
+) -> Result<PaymentCategory<'a>, String> {
+    use PaymentCategory::*;
+    use Schema::*;
+    match (schema, cat) {
+        (Bitcoin, Ok(cat @ BitcoinAddress(_))) => Ok(cat),
+        (Bitcoin, Err(_)) => {
+            let bip21_uri = bip21::Uri::from_str(s).map_err(|e| e.to_string())?;
+            Ok(Bip21(bip21_uri))
+        }
+
+        (LiquidNetwork, Ok(ref cat @ LiquidAddress(ref a))) => {
+            if a.params == &AddressParams::LIQUID {
+                Ok(cat.clone())
+            } else {
+                Err(format!(
+                    "Using liquidnetwork schema with non-mainnet address: {s}"
+                ))
+            }
+        }
+        (LiquidTestnet, Ok(ref cat @ LiquidAddress(ref a))) => {
+            if a.params != &AddressParams::LIQUID {
+                Ok(cat.clone())
+            } else {
+                Err(format!(
+                    "Using liquidtestnet schema with mainnet address: {s}"
+                ))
+            }
+        }
+        (Lightning, Ok(cat @ LightningInvoice(_))) => Ok(cat),
+        (Lightning, Ok(cat @ LightningOffer(_))) => Ok(cat),
+        (Lightning, Ok(cat @ LnUrl(_))) => Ok(cat),
+        _ => todo!("{s}"),
     }
 }
 
@@ -104,6 +147,58 @@ fn is_email(s: &str) -> bool {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn test_parse_with_schema_fails() {
+        let payment_category = PaymentCategory::from_str("bitcoin:invalid_address").unwrap_err();
+        assert_eq!(payment_category, "invalid BIP21 URI");
+
+        // valid mainnet address with testnet schema
+        let payment_category = PaymentCategory::from_str("liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0").unwrap_err();
+        assert_eq!(
+            payment_category,
+            "Using liquidtestnet schema with mainnet address: liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0"
+        );
+
+        // valid testnet address with mainnet schema
+        let payment_category = PaymentCategory::from_str("liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m").unwrap_err();
+        assert_eq!(
+            payment_category,
+            "Using liquidnetwork schema with non-mainnet address: liquidnetwork:tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m"
+        );
+    }
+
+    #[test]
+    fn test_parse_with_schema() {
+        let bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+        let payment_category =
+            PaymentCategory::from_str(&format!("bitcoin:{bitcoin_address}")).unwrap();
+        let expected =
+            bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
+                .unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::BitcoinAddress(addr) if addr == expected
+        ));
+
+        let liquid_address = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0";
+        let payment_category =
+            PaymentCategory::from_str(&format!("liquidnetwork:{liquid_address}")).unwrap();
+        let expected = elements::Address::from_str(liquid_address).unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LiquidAddress(addr) if addr == expected
+        ));
+
+        let lightning_invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl";
+        let payment_category =
+            PaymentCategory::from_str(&format!("lightning:{lightning_invoice}")).unwrap();
+        let expected = Bolt11Invoice::from_str(lightning_invoice).unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LightningInvoice(invoice) if invoice == expected
+        ));
+    }
 
     #[test]
     fn test_parse_no_schema() {

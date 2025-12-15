@@ -15,6 +15,8 @@ mod esplora_client;
 mod liquidex;
 mod mnemonic;
 mod network;
+mod payment_instructions;
+pub use payment_instructions::{LiquidBip21, PaymentCategory, PaymentCategoryKind};
 mod persister;
 mod precision;
 mod pset;

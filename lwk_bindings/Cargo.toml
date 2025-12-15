@@ -11,6 +11,7 @@ lwk_common = { version = "0.13.0" }
 lwk_signer = { version = "0.13.0" }
 lwk_wollet = { version = "0.13.0" }
 lwk_test_util = { version = "0.13.0" }
+lwk_payment_instructions = { version = "0.1.0" }
 lwk_boltz = { version = "0.13.0", optional = true }
 tokio = { version = "1.0", features = [
     "rt",

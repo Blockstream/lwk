@@ -32,6 +32,7 @@ lwk_test_util = { path = "lwk_test_util" }
 lwk_tiny_jrpc = { path = "lwk_tiny_jrpc" }
 lwk_wollet = { path = "lwk_wollet" }
 lwk_boltz = { path = "lwk_boltz" }
+lwk_payment_instructions = { path = "lwk_payment_instructions" }
 
 [profile.release-smaller]
 inherits = "release"

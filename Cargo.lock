@@ -2431,6 +2431,7 @@ dependencies = [
  "log",
  "lwk_boltz",
  "lwk_common",
+ "lwk_payment_instructions",
  "lwk_signer",
  "lwk_test_util",
  "lwk_wollet",

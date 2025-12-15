@@ -1172,13 +1172,15 @@ impl TxBuilder {
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
-        // Track whether we add a change/drain output (needed later for fee adjustment)
-        let has_change_output = self.drain_to.is_some() || !self.drain_lbtc;
+        // Track whether we add a change/drain output (needed later for fee adjustment).
+        // Skip change only when: drain_lbtc is set AND there are explicit recipients AND no drain_to.
+        // If there are no recipients (satoshi_out == 0), we always need a change/drain output.
+        let has_change_output = self.drain_to.is_some() || !self.drain_lbtc || satoshi_out == 0;
         if let Some(address) = self.drain_to {
             let addressee =
                 Recipient::from_address(satoshi_change, &address, wollet.policy_asset());
             wollet.add_output(&mut pset, &addressee)?;
-        } else if !self.drain_lbtc {
+        } else if !self.drain_lbtc || satoshi_out == 0 {
             let addressee = wollet.addressee_change(
                 satoshi_change,
                 wollet.policy_asset(),

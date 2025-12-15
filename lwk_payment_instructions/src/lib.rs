@@ -5,12 +5,13 @@ use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 use lnurl::lnurl::LnUrl;
 
+#[allow(dead_code)]
 #[non_exhaustive]
 enum PaymentCategory<'a> {
     BitcoinAddress(bitcoin::Address<bitcoin::address::NetworkUnchecked>), // just the address, or bitcoin:<address>
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
     LightningInvoice(Bolt11Invoice),  // just the invoice or lightning:<invoice>
-    LightningOffer(Offer),            // just the bolt12 or lightning:<bolt12>
+    LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
     LnUrl(LnUrl),                     // just lnurl or lightning:<lnurl>
     Bip353(String),                   // ₿matt@mattcorallo.com
     Bip21(bip21::Uri<'a>),            // bitcoin:
@@ -41,19 +42,19 @@ impl FromStr for Schema {
     }
 }
 
-impl<'a> Display for PaymentCategory<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for PaymentCategory<'_> {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
-impl<'a> FromStr for PaymentCategory<'a> {
+impl FromStr for PaymentCategory<'_> {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split_once(':') {
             Some((prefix, rest)) => {
-                let schema = Schema::from_str(prefix)?;
-                let cat = parse_no_schema(rest)?;
+                let _schema = Schema::from_str(prefix)?;
+                let _cat = parse_no_schema(rest)?;
                 // TODO exclude invalid matches, like bitcoin:<liquidaddress>
                 todo!()
             }
@@ -73,7 +74,7 @@ fn parse_no_schema<'a>(s: &str) -> Result<PaymentCategory<'a>, String> {
         return Ok(PaymentCategory::LightningInvoice(lightning_invoice));
     }
     if let Ok(lightning_offer) = Offer::from_str(s) {
-        return Ok(PaymentCategory::LightningOffer(lightning_offer));
+        return Ok(PaymentCategory::LightningOffer(Box::new(lightning_offer)));
     }
     if let Ok(lnurl) = LnUrl::from_str(s) {
         return Ok(PaymentCategory::LnUrl(lnurl));

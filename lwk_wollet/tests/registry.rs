@@ -49,6 +49,7 @@ fn test_registry() {
     // Publish on asset registry
     let registry = Registry::new(&env.registry_url()).unwrap();
     let payload = RegistryPost::new(contract.clone(), asset_id);
+    std::thread::sleep(std::time::Duration::from_secs(1));
     registry.post(&payload).unwrap();
 
     // Fetch from asset registry

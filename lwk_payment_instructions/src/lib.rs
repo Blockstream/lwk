@@ -24,6 +24,14 @@ pub enum PaymentCategoryKind {
 }
 
 #[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct LiquidBip21 {
+    pub address: elements::Address,
+    pub asset: AssetId,
+    pub amount: u64,
+}
+
+#[allow(dead_code)]
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 enum PaymentCategory<'a> {
@@ -34,11 +42,7 @@ enum PaymentCategory<'a> {
     LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
     Bip353(String),                   // ₿matt@mattcorallo.com
     Bip21(bip21::Uri<'a, NetworkUnchecked, NoExtras>), // bitcoin:
-    LiquidBip21 {
-        address: elements::Address,
-        asset: AssetId,
-        amount: u64,
-    }, // liquidnetwork: liquidtestnet:
+    LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
 }
 
 impl PaymentCategory<'_> {
@@ -51,7 +55,7 @@ impl PaymentCategory<'_> {
             PaymentCategory::LnUrlCat(_) => PaymentCategoryKind::LnUrl,
             PaymentCategory::Bip353(_) => PaymentCategoryKind::Bip353,
             PaymentCategory::Bip21(_) => PaymentCategoryKind::Bip21,
-            PaymentCategory::LiquidBip21 { .. } => PaymentCategoryKind::LiquidBip21,
+            PaymentCategory::LiquidBip21(_) => PaymentCategoryKind::LiquidBip21,
         }
     }
 }
@@ -191,11 +195,11 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<PaymentCategory<'stat
         .ok_or_else(|| "error".to_string())?;
     let amount = amount_str.parse::<u64>().map_err(|e| e.to_string())?;
 
-    Ok(PaymentCategory::LiquidBip21 {
+    Ok(PaymentCategory::LiquidBip21(LiquidBip21 {
         address,
         asset,
         amount,
-    })
+    }))
 }
 
 fn parse_no_schema<'a>(s: &str) -> Result<PaymentCategory<'a>, String> {
@@ -378,15 +382,10 @@ mod tests {
         let liquid_bip21 = format!("liquidnetwork:{address}?amount={amount}&assetid={asset}");
         let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LiquidBip21);
-        if let PaymentCategory::LiquidBip21 {
-            address: a,
-            asset: s,
-            amount: m,
-        } = payment_category
-        {
-            assert_eq!(a, elements::Address::from_str(address).unwrap());
-            assert_eq!(s, AssetId::from_str(asset).unwrap());
-            assert_eq!(m, amount);
+        if let PaymentCategory::LiquidBip21(bip21) = payment_category {
+            assert_eq!(bip21.address, elements::Address::from_str(address).unwrap());
+            assert_eq!(bip21.asset, AssetId::from_str(asset).unwrap());
+            assert_eq!(bip21.amount, amount);
         } else {
             panic!("Expected PaymentCategory::LiquidBip21");
         }
@@ -398,15 +397,10 @@ mod tests {
         let liquid_bip21 = format!("liquidtestnet:{address}?amount={amount}&assetid={asset}");
         let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LiquidBip21);
-        if let PaymentCategory::LiquidBip21 {
-            address: a,
-            asset: s,
-            amount: m,
-        } = payment_category
-        {
-            assert_eq!(a, elements::Address::from_str(address).unwrap());
-            assert_eq!(s, AssetId::from_str(asset).unwrap());
-            assert_eq!(m, amount);
+        if let PaymentCategory::LiquidBip21(bip21) = payment_category {
+            assert_eq!(bip21.address, elements::Address::from_str(address).unwrap());
+            assert_eq!(bip21.asset, AssetId::from_str(asset).unwrap());
+            assert_eq!(bip21.amount, amount);
         } else {
             panic!("Expected PaymentCategory::LiquidBip21");
         }

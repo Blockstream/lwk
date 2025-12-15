@@ -45,7 +45,7 @@ enum PaymentCategory<'a> {
     LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
 }
 
-impl PaymentCategory<'_> {
+impl<'a> PaymentCategory<'a> {
     pub fn kind(&self) -> PaymentCategoryKind {
         match self {
             PaymentCategory::BitcoinAddress(_) => PaymentCategoryKind::BitcoinAddress,
@@ -56,6 +56,62 @@ impl PaymentCategory<'_> {
             PaymentCategory::Bip353(_) => PaymentCategoryKind::Bip353,
             PaymentCategory::Bip21(_) => PaymentCategoryKind::Bip21,
             PaymentCategory::LiquidBip21(_) => PaymentCategoryKind::LiquidBip21,
+        }
+    }
+
+    pub fn bitcoin_address(&self) -> Option<&bitcoin::Address<NetworkUnchecked>> {
+        match self {
+            PaymentCategory::BitcoinAddress(addr) => Some(addr),
+            _ => None,
+        }
+    }
+
+    pub fn liquid_address(&self) -> Option<&elements::Address> {
+        match self {
+            PaymentCategory::LiquidAddress(addr) => Some(addr),
+            _ => None,
+        }
+    }
+
+    pub fn lightning_invoice(&self) -> Option<&Bolt11Invoice> {
+        match self {
+            PaymentCategory::LightningInvoice(invoice) => Some(invoice),
+            _ => None,
+        }
+    }
+
+    pub fn lightning_offer(&self) -> Option<&Offer> {
+        match self {
+            PaymentCategory::LightningOffer(offer) => Some(offer),
+            _ => None,
+        }
+    }
+
+    pub fn lnurl(&self) -> Option<&LnUrl> {
+        match self {
+            PaymentCategory::LnUrlCat(lnurl) => Some(lnurl),
+            _ => None,
+        }
+    }
+
+    pub fn bip353(&self) -> Option<&str> {
+        match self {
+            PaymentCategory::Bip353(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn bip21(&self) -> Option<&bip21::Uri<'a, NetworkUnchecked, NoExtras>> {
+        match self {
+            PaymentCategory::Bip21(uri) => Some(uri),
+            _ => None,
+        }
+    }
+
+    pub fn liquid_bip21(&self) -> Option<&LiquidBip21> {
+        match self {
+            PaymentCategory::LiquidBip21(bip21) => Some(bip21),
+            _ => None,
         }
     }
 }

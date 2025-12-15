@@ -338,6 +338,8 @@ mod tests {
             bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
                 .unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::BitcoinAddress);
+        assert_eq!(payment_category.bitcoin_address(), Some(&expected));
+        assert!(payment_category.liquid_address().is_none());
         assert!(matches!(
             payment_category,
             PaymentCategory::BitcoinAddress(addr) if addr == expected
@@ -348,6 +350,7 @@ mod tests {
             bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
                 .unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::BitcoinAddress);
+        assert_eq!(payment_category.bitcoin_address(), Some(&expected));
         assert!(matches!(
             payment_category,
             PaymentCategory::BitcoinAddress(addr) if addr == expected
@@ -358,6 +361,8 @@ mod tests {
             PaymentCategory::from_str(&format!("liquidnetwork:{liquid_address}")).unwrap();
         let expected = elements::Address::from_str(liquid_address).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LiquidAddress);
+        assert_eq!(payment_category.liquid_address(), Some(&expected));
+        assert!(payment_category.bitcoin_address().is_none());
         assert!(matches!(
             payment_category,
             PaymentCategory::LiquidAddress(addr) if addr == expected
@@ -371,6 +376,8 @@ mod tests {
             payment_category.kind(),
             PaymentCategoryKind::LightningInvoice
         );
+        assert_eq!(payment_category.lightning_invoice(), Some(&expected));
+        assert!(payment_category.lightning_offer().is_none());
         assert!(matches!(
             payment_category,
             PaymentCategory::LightningInvoice(invoice) if invoice == expected
@@ -380,6 +387,8 @@ mod tests {
         let payment_category = PaymentCategory::from_str(&format!("lightning:{bolt12}")).unwrap();
         let expected = Offer::from_str(bolt12).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LightningOffer);
+        assert_eq!(payment_category.lightning_offer(), Some(&expected));
+        assert!(payment_category.lightning_invoice().is_none());
         assert!(matches!(
             payment_category,
             PaymentCategory::LightningOffer(offer) if *offer == expected
@@ -388,6 +397,8 @@ mod tests {
         let bip21 = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = PaymentCategory::from_str(bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::Bip21);
+        assert!(payment_category.bip21().is_some());
+        assert!(payment_category.bitcoin_address().is_none());
         if let PaymentCategory::Bip21(uri) = payment_category {
             assert_eq!(uri.clone().assume_checked().to_string(), bip21);
         } else {
@@ -397,6 +408,7 @@ mod tests {
         let bip21_upper = "BITCOIN:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = PaymentCategory::from_str(bip21_upper).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::Bip21);
+        assert!(payment_category.bip21().is_some());
         if let PaymentCategory::Bip21(uri) = payment_category {
             assert_eq!(uri.clone().assume_checked().to_string(), bip21); // lower cased when displayed
         } else {
@@ -407,6 +419,8 @@ mod tests {
         let payment_category = PaymentCategory::from_str(&format!("lightning:{lnurl}")).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LnUrl);
+        assert_eq!(payment_category.lnurl(), Some(&expected));
+        assert!(payment_category.lightning_invoice().is_none());
         assert!(matches!(
             payment_category,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
@@ -416,6 +430,7 @@ mod tests {
         let payment_category = PaymentCategory::from_str(lnurlp).unwrap();
         let expected = LnUrl::from_url(lnurlp.to_string());
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LnUrl);
+        assert_eq!(payment_category.lnurl(), Some(&expected));
         assert!(matches!(
             payment_category,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
@@ -426,6 +441,7 @@ mod tests {
             PaymentCategory::from_str(format!("lightning:{lnurl_email}").as_str()).unwrap();
         let expected = LnUrl::from_url(lnurl_email.to_string());
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LnUrl);
+        assert_eq!(payment_category.lnurl(), Some(&expected));
         assert!(matches!(
             payment_category,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
@@ -438,13 +454,14 @@ mod tests {
         let liquid_bip21 = format!("liquidnetwork:{address}?amount={amount}&assetid={asset}");
         let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LiquidBip21);
-        if let PaymentCategory::LiquidBip21(bip21) = payment_category {
-            assert_eq!(bip21.address, elements::Address::from_str(address).unwrap());
-            assert_eq!(bip21.asset, AssetId::from_str(asset).unwrap());
-            assert_eq!(bip21.amount, amount);
-        } else {
-            panic!("Expected PaymentCategory::LiquidBip21");
-        }
+        let bip21_ref = payment_category.liquid_bip21().unwrap();
+        assert_eq!(
+            bip21_ref.address,
+            elements::Address::from_str(address).unwrap()
+        );
+        assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
+        assert_eq!(bip21_ref.amount, amount);
+        assert!(payment_category.liquid_address().is_none());
 
         let address =
             "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m";
@@ -453,13 +470,14 @@ mod tests {
         let liquid_bip21 = format!("liquidtestnet:{address}?amount={amount}&assetid={asset}");
         let payment_category = PaymentCategory::from_str(&liquid_bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::LiquidBip21);
-        if let PaymentCategory::LiquidBip21(bip21) = payment_category {
-            assert_eq!(bip21.address, elements::Address::from_str(address).unwrap());
-            assert_eq!(bip21.asset, AssetId::from_str(asset).unwrap());
-            assert_eq!(bip21.amount, amount);
-        } else {
-            panic!("Expected PaymentCategory::LiquidBip21");
-        }
+        let bip21_ref = payment_category.liquid_bip21().unwrap();
+        assert_eq!(
+            bip21_ref.address,
+            elements::Address::from_str(address).unwrap()
+        );
+        assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
+        assert_eq!(bip21_ref.amount, amount);
+        assert!(payment_category.liquid_address().is_none());
     }
 
     #[test]
@@ -470,6 +488,8 @@ mod tests {
             bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
                 .unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::BitcoinAddress);
+        assert_eq!(result.bitcoin_address(), Some(&expected));
+        assert!(result.liquid_address().is_none());
         assert!(matches!(
             result,
             PaymentCategory::BitcoinAddress(addr) if addr == expected
@@ -482,6 +502,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::BitcoinAddress);
+        assert_eq!(result.bitcoin_address(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::BitcoinAddress(addr) if addr == expected
@@ -494,6 +515,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::BitcoinAddress);
+        assert_eq!(result.bitcoin_address(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::BitcoinAddress(addr) if addr == expected
@@ -503,6 +525,8 @@ mod tests {
         let result = parse_no_schema(liquid_address).unwrap();
         let expected = elements::Address::from_str(liquid_address).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LiquidAddress);
+        assert_eq!(result.liquid_address(), Some(&expected));
+        assert!(result.bitcoin_address().is_none());
         assert!(matches!(
             result,
             PaymentCategory::LiquidAddress(addr) if addr == expected
@@ -512,6 +536,7 @@ mod tests {
         let result = parse_no_schema(&liquid_address_upper).unwrap();
         let expected = elements::Address::from_str(&liquid_address_upper).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LiquidAddress);
+        assert_eq!(result.liquid_address(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::LiquidAddress(addr) if addr == expected
@@ -521,6 +546,8 @@ mod tests {
         let result = parse_no_schema(lightning_invoice).unwrap();
         let expected = Bolt11Invoice::from_str(lightning_invoice).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LightningInvoice);
+        assert_eq!(result.lightning_invoice(), Some(&expected));
+        assert!(result.lightning_offer().is_none());
         assert!(matches!(
             result,
             PaymentCategory::LightningInvoice(invoice) if invoice == expected
@@ -530,6 +557,7 @@ mod tests {
         let result = parse_no_schema(&lightning_invoice_upper).unwrap();
         let expected = Bolt11Invoice::from_str(&lightning_invoice_upper).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LightningInvoice);
+        assert_eq!(result.lightning_invoice(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::LightningInvoice(invoice) if invoice == expected
@@ -539,6 +567,8 @@ mod tests {
         let result = parse_no_schema(offer).unwrap();
         let expected = Offer::from_str(offer).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LightningOffer);
+        assert_eq!(result.lightning_offer(), Some(&expected));
+        assert!(result.lightning_invoice().is_none());
         assert!(matches!(
             result,
             PaymentCategory::LightningOffer(offer) if *offer == expected
@@ -548,6 +578,7 @@ mod tests {
         let result = parse_no_schema(&offer_upper).unwrap();
         let expected = Offer::from_str(&offer_upper).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LightningOffer);
+        assert_eq!(result.lightning_offer(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::LightningOffer(offer) if *offer == expected
@@ -558,6 +589,8 @@ mod tests {
         let result = parse_no_schema(lnurl).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LnUrl);
+        assert_eq!(result.lnurl(), Some(&expected));
+        assert!(result.lightning_invoice().is_none());
         assert!(matches!(
             result,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
@@ -567,6 +600,7 @@ mod tests {
         let result = parse_no_schema(&lnurl_upper).unwrap();
         let expected = LnUrl::from_str(&lnurl_upper).unwrap();
         assert_eq!(result.kind(), PaymentCategoryKind::LnUrl);
+        assert_eq!(result.lnurl(), Some(&expected));
         assert!(matches!(
             result,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
@@ -576,6 +610,8 @@ mod tests {
         let result = parse_no_schema(bip353).unwrap();
         let expected = "matt@mattcorallo.com";
         assert_eq!(result.kind(), PaymentCategoryKind::Bip353);
+        assert_eq!(result.bip353(), Some(expected));
+        assert!(result.lnurl().is_none());
         assert!(matches!(
             result,
             PaymentCategory::Bip353(bip353) if bip353 == expected

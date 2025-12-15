@@ -43,12 +43,12 @@ impl FromStr for Schema {
             "liquidnetwork" => Ok(Schema::LiquidNetwork),
             "liquidtestnet" => Ok(Schema::LiquidTestnet),
             "lightning" => Ok(Schema::Lightning),
-            "lnurlpay" => Ok(Schema::LnUrlP),
+            "lnurlp" => Ok(Schema::LnUrlP),
             "BITCOIN" => Ok(Schema::Bitcoin),
             "LIQUIDNETWORK" => Ok(Schema::LiquidNetwork),
             "LIQUIDTESTNET" => Ok(Schema::LiquidTestnet),
             "LIGHTNING" => Ok(Schema::Lightning),
-            "LNURLPAY" => Ok(Schema::LnUrlP),
+            "LNURLP" => Ok(Schema::LnUrlP),
             _ => Err(format!("Invalid schema: {s}")),
         }
     }
@@ -109,8 +109,20 @@ fn parse_with_schema<'a>(
         (Lightning, Ok(cat @ LightningInvoice(_))) => Ok(cat),
         (Lightning, Ok(cat @ LightningOffer(_))) => Ok(cat),
         (Lightning, Ok(cat @ LnUrlCat(_))) => Ok(cat),
+        (Lightning, Err(_)) => {
+            // lightning:<email> can be an lnurl
+            let rest = &s[10..];
+            if is_email(rest) {
+                let lnurl = LnUrl::from_url(rest.to_string());
+                return Ok(LnUrlCat(lnurl));
+            } else {
+                todo!("{s}");
+            }
+        }
         (LnUrlP, _) => {
-            let lnurl = LnUrl::from_str(s).map_err(|e| e.to_string())?;
+            // lnurlp://<url> can be an lnurl
+            url::Url::from_str(s).map_err(|e| e.to_string())?;
+            let lnurl = LnUrl::from_url(s.to_string());
             Ok(LnUrlCat(lnurl))
         }
         _ => todo!("{s}"),
@@ -251,6 +263,23 @@ mod tests {
         let lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97";
         let payment_category = PaymentCategory::from_str(&format!("lightning:{lnurl}")).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
+        ));
+
+        let lnurlp = "lnurlp://geyser.fund/.well-known/lnurlp/citadel";
+        let payment_category = PaymentCategory::from_str(lnurlp).unwrap();
+        let expected = LnUrl::from_url(lnurlp.to_string());
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
+        ));
+
+        let lnurl_email = "citadel@geyser.fund";
+        let payment_category =
+            PaymentCategory::from_str(format!("lightning:{lnurl_email}").as_str()).unwrap();
+        let expected = LnUrl::from_url(lnurl_email.to_string());
         assert!(matches!(
             payment_category,
             PaymentCategory::LnUrlCat(lnurl) if lnurl == expected

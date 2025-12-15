@@ -2563,6 +2563,7 @@ dependencies = [
  "lightning-invoice 0.34.0",
  "lnurl-rs",
  "rand 0.8.5",
+ "url",
 ]
 
 [[package]]

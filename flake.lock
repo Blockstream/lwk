@@ -15,6 +15,21 @@
         "type": "github"
       }
     },
+    "crane_2": {
+      "locked": {
+        "lastModified": 1754269165,
+        "narHash": "sha256-0tcS8FHd4QjbCVoxN9jI+PjHgA4vc/IjkUSp+N3zy0U=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "444e81206df3f7d92780680e45858e31d2f07a08",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "electrs-flake": {
       "inputs": {
         "crane": [
@@ -156,7 +171,8 @@
         "nexus_relay": "nexus_relay",
         "nixpkgs": "nixpkgs_2",
         "registry-flake": "registry-flake",
-        "rust-overlay": "rust-overlay_2"
+        "rust-overlay": "rust-overlay_2",
+        "waterfalls-flake": "waterfalls-flake"
       }
     },
     "rust-overlay": {
@@ -197,6 +213,27 @@
         "type": "github"
       }
     },
+    "rust-overlay_3": {
+      "inputs": {
+        "nixpkgs": [
+          "waterfalls-flake",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1755485198,
+        "narHash": "sha256-C3042ST2lUg0nh734gmuP4lRRIBitA6Maegg2/jYRM4=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "aa45e63d431b28802ca4490cfc796b9e31731df7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
     "systems": {
       "locked": {
         "lastModified": 1681028828,
@@ -209,6 +246,31 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "waterfalls-flake": {
+      "inputs": {
+        "crane": "crane_2",
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": "rust-overlay_3"
+      },
+      "locked": {
+        "lastModified": 1764238865,
+        "narHash": "sha256-vFqN1jnixulWiBD5i7VCbGZrXJa9cJWie/bPCsHv1KI=",
+        "owner": "RCasatta",
+        "repo": "waterfalls",
+        "rev": "cbcfbc69dfedfbbb452fc63e4ffff06d00c25240",
+        "type": "github"
+      },
+      "original": {
+        "owner": "RCasatta",
+        "repo": "waterfalls",
         "type": "github"
       }
     }

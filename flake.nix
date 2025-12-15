@@ -133,6 +133,7 @@
             BITCOIND_EXEC = "${pkgs.bitcoind}/bin/bitcoind";
             ELECTRS_LIQUID_EXEC = electrs.program;
             WATERFALLS_EXEC = "${waterfalls}/bin/waterfalls";
+            ASSET_REGISTRY_EXEC = "${registry.default}/bin/server";
             NEXUS_RELAY_EXEC = "${nexus_relay.packages.${system}.default}/bin/nexus_relay";
             WEBSOCAT_EXEC = "${pkgs.websocat}/bin/websocat";
             SKIP_VERIFY_DOMAIN_LINK = "1"; # the registry server skips validation

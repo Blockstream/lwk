@@ -34,7 +34,7 @@ pub struct LiquidBip21 {
 #[allow(dead_code)]
 #[non_exhaustive]
 #[derive(Clone, Debug)]
-enum PaymentCategory<'a> {
+pub enum PaymentCategory<'a> {
     BitcoinAddress(bitcoin::Address<bitcoin::address::NetworkUnchecked>), // just the address, or bitcoin:<address>
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
     LightningInvoice(Bolt11Invoice),  // just the invoice or lightning:<invoice>

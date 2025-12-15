@@ -116,7 +116,7 @@ fn parse_with_schema<'a>(
             let rest = &s[10..];
             if is_email(rest) {
                 let lnurl = LnUrl::from_url(rest.to_string());
-                return Ok(LnUrlCat(lnurl));
+                Ok(LnUrlCat(lnurl))
             } else {
                 Err(format!("Invalid lightning schema: {s}"))
             }

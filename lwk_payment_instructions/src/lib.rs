@@ -216,6 +216,30 @@ mod tests {
             payment_category,
             PaymentCategory::LightningInvoice(invoice) if invoice == expected
         ));
+
+        let bolt12 = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+        let payment_category = PaymentCategory::from_str(&format!("lightning:{bolt12}")).unwrap();
+        let expected = Offer::from_str(bolt12).unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::LightningOffer(offer) if *offer == expected
+        ));
+
+        let bip21 = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
+        let payment_category = PaymentCategory::from_str(bip21).unwrap();
+        if let PaymentCategory::Bip21(uri) = payment_category {
+            assert_eq!(uri.clone().assume_checked().to_string(), bip21);
+        } else {
+            panic!("Expected PaymentCategory::Bip21");
+        }
+
+        let bip21_upper = "BITCOIN:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
+        let payment_category = PaymentCategory::from_str(bip21_upper).unwrap();
+        if let PaymentCategory::Bip21(uri) = payment_category {
+            assert_eq!(uri.clone().assume_checked().to_string(), bip21); // lower cased when displayed
+        } else {
+            panic!("Expected PaymentCategory::Bip21");
+        }
     }
 
     #[test]

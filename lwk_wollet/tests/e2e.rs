@@ -1401,6 +1401,7 @@ fn send_all_vs_send_balance_minus_fee() {
     let amount = balance - fee;
     let mut pset = wallet
         .tx_builder()
+        .drain_lbtc_wallet()
         .add_lbtc_recipient(&node_address, amount)
         .unwrap()
         .finish()

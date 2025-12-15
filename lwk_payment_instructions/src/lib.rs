@@ -116,7 +116,7 @@ fn parse_with_schema<'a>(
                 let lnurl = LnUrl::from_url(rest.to_string());
                 return Ok(LnUrlCat(lnurl));
             } else {
-                todo!("{s}");
+                Err(format!("Invalid lightning schema: {s}"))
             }
         }
         (LnUrlP, _) => {
@@ -125,7 +125,7 @@ fn parse_with_schema<'a>(
             let lnurl = LnUrl::from_url(s.to_string());
             Ok(LnUrlCat(lnurl))
         }
-        _ => todo!("{s}"),
+        _ => Err(format!("Invalid schema: {s}")),
     }
 }
 

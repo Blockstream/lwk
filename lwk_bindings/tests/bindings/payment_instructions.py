@@ -6,6 +6,8 @@ cat = PaymentCategory(bitcoin_address)
 assert cat.kind() == PaymentCategoryKind.BITCOIN_ADDRESS
 assert cat.bitcoin_address() == bitcoin_address
 assert cat.liquid_address() is None
+# Non-lightning categories should return None for lightning_payment()
+assert cat.lightning_payment() is None
 
 # Test Bitcoin address with schema
 cat = PaymentCategory(f"bitcoin:{bitcoin_address}")
@@ -37,10 +39,14 @@ cat = PaymentCategory(lightning_invoice)
 assert cat.kind() == PaymentCategoryKind.LIGHTNING_INVOICE
 assert cat.lightning_invoice() is not None
 assert cat.lightning_offer() is None
+# Test lightning_payment() returns a LightningPayment for invoices
+lp = cat.lightning_payment()
+assert lp is not None
 
 # Test Lightning invoice with schema
 cat = PaymentCategory(f"lightning:{lightning_invoice}")
 assert cat.kind() == PaymentCategoryKind.LIGHTNING_INVOICE
+assert cat.lightning_payment() is not None
 
 # Test Bolt12 offer
 bolt12 = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv"
@@ -48,20 +54,26 @@ cat = PaymentCategory(bolt12)
 assert cat.kind() == PaymentCategoryKind.LIGHTNING_OFFER
 assert cat.lightning_offer() is not None
 assert cat.lightning_invoice() is None
+# Test lightning_payment() returns a LightningPayment for offers
+assert cat.lightning_payment() is not None
 
 # Test Bolt12 offer with schema
 cat = PaymentCategory(f"lightning:{bolt12}")
 assert cat.kind() == PaymentCategoryKind.LIGHTNING_OFFER
+assert cat.lightning_payment() is not None
 
 # Test LNURL
 lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97"
 cat = PaymentCategory(lnurl)
 assert cat.kind() == PaymentCategoryKind.LN_URL
 assert cat.lnurl() is not None
+# Test lightning_payment() returns a LightningPayment for lnurl
+assert cat.lightning_payment() is not None
 
 # Test LNURL with lightning schema
 cat = PaymentCategory(f"lightning:{lnurl}")
 assert cat.kind() == PaymentCategoryKind.LN_URL
+assert cat.lightning_payment() is not None
 
 # Test lnurlp schema
 lnurlp = "lnurlp://geyser.fund/.well-known/lnurlp/citadel"

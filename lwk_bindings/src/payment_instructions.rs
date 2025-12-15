@@ -163,4 +163,26 @@ impl PaymentCategory {
             amount: bip21.amount,
         })
     }
+
+    /// Returns a LightningPayment if this category is payable via Lightning
+    ///
+    /// Returns Some for LightningInvoice, LightningOffer, and LnUrl categories.
+    /// The returned LightningPayment can be used with BoltzSession::prepare_pay().
+    #[cfg(feature = "lightning")]
+    pub fn lightning_payment(&self) -> Option<Arc<crate::LightningPayment>> {
+        match self.kind {
+            PaymentCategoryKind::LightningInvoice
+            | PaymentCategoryKind::LightningOffer
+            | PaymentCategoryKind::LnUrl => {
+                // Extract the payment string (strip schema prefix if present)
+                let payment_str = self
+                    .input
+                    .strip_prefix("lightning:")
+                    .or_else(|| self.input.strip_prefix("LIGHTNING:"))
+                    .unwrap_or(&self.input);
+                crate::LightningPayment::new(payment_str).ok()
+            }
+            _ => None,
+        }
+    }
 }

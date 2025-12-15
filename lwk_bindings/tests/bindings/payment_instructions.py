@@ -14,6 +14,11 @@ cat = PaymentCategory(f"bitcoin:{bitcoin_address}")
 assert cat.kind() == PaymentCategoryKind.BITCOIN_ADDRESS
 assert cat.bitcoin_address() == bitcoin_address
 
+# Test Bitcoin address with uppercase schema
+cat = PaymentCategory(f"BITCOIN:{bitcoin_address}")
+assert cat.kind() == PaymentCategoryKind.BITCOIN_ADDRESS
+assert cat.bitcoin_address() == bitcoin_address
+
 # Test Bitcoin segwit address
 bitcoin_segwit = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"
 cat = PaymentCategory(bitcoin_segwit)

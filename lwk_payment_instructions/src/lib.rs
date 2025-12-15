@@ -17,7 +17,7 @@ enum PaymentCategory<'a> {
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
     LightningInvoice(Bolt11Invoice),  // just the invoice or lightning:<invoice>
     LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
-    LnUrl(LnUrl),                     // just lnurl or lightning:<lnurl>
+    LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
     Bip353(String),                   // ₿matt@mattcorallo.com
     Bip21(bip21::Uri<'a, NetworkUnchecked, NoExtras>), // bitcoin:
     LiquidBip21 {
@@ -32,6 +32,7 @@ enum Schema {
     LiquidNetwork,
     LiquidTestnet,
     Lightning,
+    LnUrlP,
 }
 
 impl FromStr for Schema {
@@ -42,10 +43,12 @@ impl FromStr for Schema {
             "liquidnetwork" => Ok(Schema::LiquidNetwork),
             "liquidtestnet" => Ok(Schema::LiquidTestnet),
             "lightning" => Ok(Schema::Lightning),
+            "lnurlpay" => Ok(Schema::LnUrlP),
             "BITCOIN" => Ok(Schema::Bitcoin),
             "LIQUIDNETWORK" => Ok(Schema::LiquidNetwork),
             "LIQUIDTESTNET" => Ok(Schema::LiquidTestnet),
             "LIGHTNING" => Ok(Schema::Lightning),
+            "LNURLPAY" => Ok(Schema::LnUrlP),
             _ => Err(format!("Invalid schema: {s}")),
         }
     }
@@ -105,7 +108,11 @@ fn parse_with_schema<'a>(
         }
         (Lightning, Ok(cat @ LightningInvoice(_))) => Ok(cat),
         (Lightning, Ok(cat @ LightningOffer(_))) => Ok(cat),
-        (Lightning, Ok(cat @ LnUrl(_))) => Ok(cat),
+        (Lightning, Ok(cat @ LnUrlCat(_))) => Ok(cat),
+        (LnUrlP, _) => {
+            let lnurl = LnUrl::from_str(s).map_err(|e| e.to_string())?;
+            Ok(LnUrlCat(lnurl))
+        }
         _ => todo!("{s}"),
     }
 }
@@ -124,7 +131,7 @@ fn parse_no_schema<'a>(s: &str) -> Result<PaymentCategory<'a>, String> {
         return Ok(PaymentCategory::LightningOffer(Box::new(lightning_offer)));
     }
     if let Ok(lnurl) = LnUrl::from_str(s) {
-        return Ok(PaymentCategory::LnUrl(lnurl));
+        return Ok(PaymentCategory::LnUrlCat(lnurl));
     }
     if s.starts_with("₿") {
         let rest = s.chars().skip(1).collect::<String>();
@@ -246,7 +253,7 @@ mod tests {
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert!(matches!(
             payment_category,
-            PaymentCategory::LnUrl(lnurl) if lnurl == expected
+            PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
         ));
     }
 
@@ -338,7 +345,7 @@ mod tests {
         let expected = LnUrl::from_str(lnurl).unwrap();
         assert!(matches!(
             result,
-            PaymentCategory::LnUrl(lnurl) if lnurl == expected
+            PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
         ));
 
         let lnurl_upper = lnurl.to_uppercase();
@@ -346,7 +353,7 @@ mod tests {
         let expected = LnUrl::from_str(&lnurl_upper).unwrap();
         assert!(matches!(
             result,
-            PaymentCategory::LnUrl(lnurl) if lnurl == expected
+            PaymentCategory::LnUrlCat(lnurl) if lnurl == expected
         ));
 
         let bip353 = "₿matt@mattcorallo.com";

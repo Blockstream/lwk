@@ -42,6 +42,10 @@ impl FromStr for Schema {
             "liquidnetwork" => Ok(Schema::LiquidNetwork),
             "liquidtestnet" => Ok(Schema::LiquidTestnet),
             "lightning" => Ok(Schema::Lightning),
+            "BITCOIN" => Ok(Schema::Bitcoin),
+            "LIQUIDNETWORK" => Ok(Schema::LiquidNetwork),
+            "LIQUIDTESTNET" => Ok(Schema::LiquidTestnet),
+            "LIGHTNING" => Ok(Schema::Lightning),
             _ => Err(format!("Invalid schema: {s}")),
         }
     }
@@ -153,6 +157,11 @@ mod tests {
         let payment_category = PaymentCategory::from_str("bitcoin:invalid_address").unwrap_err();
         assert_eq!(payment_category, "invalid BIP21 URI");
 
+        // mixed case schema are not supported
+        let payment_category =
+            PaymentCategory::from_str("BITcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa").unwrap_err();
+        assert_eq!(payment_category, "Invalid schema: BITcoin");
+
         // valid mainnet address with testnet schema
         let payment_category = PaymentCategory::from_str("liquidtestnet:lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0").unwrap_err();
         assert_eq!(
@@ -173,6 +182,15 @@ mod tests {
         let bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
         let payment_category =
             PaymentCategory::from_str(&format!("bitcoin:{bitcoin_address}")).unwrap();
+        let expected =
+            bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
+                .unwrap();
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::BitcoinAddress(addr) if addr == expected
+        ));
+        let payment_category =
+            PaymentCategory::from_str(&format!("BITCOIN:{bitcoin_address}")).unwrap();
         let expected =
             bitcoin::Address::<bitcoin::address::NetworkUnchecked>::from_str(bitcoin_address)
                 .unwrap();

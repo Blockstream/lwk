@@ -176,7 +176,7 @@ mod tests {
         let expected = Offer::from_str(offer).unwrap();
         assert!(matches!(
             result,
-            PaymentCategory::LightningOffer(offer) if offer == expected
+            PaymentCategory::LightningOffer(offer) if *offer == expected
         ));
 
         let offer_upper = offer.to_uppercase();
@@ -184,7 +184,7 @@ mod tests {
         let expected = Offer::from_str(&offer_upper).unwrap();
         assert!(matches!(
             result,
-            PaymentCategory::LightningOffer(offer) if offer == expected
+            PaymentCategory::LightningOffer(offer) if *offer == expected
         ));
 
         let lnurl =

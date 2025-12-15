@@ -11,6 +11,20 @@ use lnurl::lnurl::LnUrl;
 
 #[allow(dead_code)]
 #[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaymentCategoryKind {
+    BitcoinAddress,
+    LiquidAddress,
+    LightningInvoice,
+    LightningOffer,
+    LnUrl,
+    Bip353,
+    Bip21,
+    LiquidBip21,
+}
+
+#[allow(dead_code)]
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 enum PaymentCategory<'a> {
     BitcoinAddress(bitcoin::Address<bitcoin::address::NetworkUnchecked>), // just the address, or bitcoin:<address>
@@ -25,6 +39,21 @@ enum PaymentCategory<'a> {
         asset: AssetId,
         amount: u64,
     }, // liquidnetwork: liquidtestnet:
+}
+
+impl PaymentCategory<'_> {
+    pub fn kind(&self) -> PaymentCategoryKind {
+        match self {
+            PaymentCategory::BitcoinAddress(_) => PaymentCategoryKind::BitcoinAddress,
+            PaymentCategory::LiquidAddress(_) => PaymentCategoryKind::LiquidAddress,
+            PaymentCategory::LightningInvoice(_) => PaymentCategoryKind::LightningInvoice,
+            PaymentCategory::LightningOffer(_) => PaymentCategoryKind::LightningOffer,
+            PaymentCategory::LnUrlCat(_) => PaymentCategoryKind::LnUrl,
+            PaymentCategory::Bip353(_) => PaymentCategoryKind::Bip353,
+            PaymentCategory::Bip21(_) => PaymentCategoryKind::Bip21,
+            PaymentCategory::LiquidBip21 { .. } => PaymentCategoryKind::LiquidBip21,
+        }
+    }
 }
 
 enum Schema {

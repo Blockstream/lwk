@@ -17,6 +17,8 @@ mod mnemonic;
 mod network;
 mod payment_instructions;
 pub use payment_instructions::{LiquidBip21, Payment, PaymentKind};
+mod bip21;
+pub use bip21::Bip21;
 mod persister;
 mod precision;
 mod pset;

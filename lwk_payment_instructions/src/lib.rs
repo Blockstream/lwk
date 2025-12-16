@@ -8,9 +8,8 @@ use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 use lnurl::lnurl::LnUrl;
 
-use crate::bip21::Bip21;
-
 mod bip21;
+pub use bip21::Bip21;
 
 #[allow(dead_code)]
 #[non_exhaustive]

@@ -25,27 +25,25 @@ pub enum PaymentCategoryKind {
     LiquidBip21,
 }
 
-impl From<lwk_payment_instructions::PaymentCategoryKind> for PaymentCategoryKind {
-    fn from(kind: lwk_payment_instructions::PaymentCategoryKind) -> Self {
+impl From<lwk_payment_instructions::PaymentKind> for PaymentCategoryKind {
+    fn from(kind: lwk_payment_instructions::PaymentKind) -> Self {
         match kind {
-            lwk_payment_instructions::PaymentCategoryKind::BitcoinAddress => {
+            lwk_payment_instructions::PaymentKind::BitcoinAddress => {
                 PaymentCategoryKind::BitcoinAddress
             }
-            lwk_payment_instructions::PaymentCategoryKind::LiquidAddress => {
+            lwk_payment_instructions::PaymentKind::LiquidAddress => {
                 PaymentCategoryKind::LiquidAddress
             }
-            lwk_payment_instructions::PaymentCategoryKind::LightningInvoice => {
+            lwk_payment_instructions::PaymentKind::LightningInvoice => {
                 PaymentCategoryKind::LightningInvoice
             }
-            lwk_payment_instructions::PaymentCategoryKind::LightningOffer => {
+            lwk_payment_instructions::PaymentKind::LightningOffer => {
                 PaymentCategoryKind::LightningOffer
             }
-            lwk_payment_instructions::PaymentCategoryKind::LnUrl => PaymentCategoryKind::LnUrl,
-            lwk_payment_instructions::PaymentCategoryKind::Bip353 => PaymentCategoryKind::Bip353,
-            lwk_payment_instructions::PaymentCategoryKind::Bip21 => PaymentCategoryKind::Bip21,
-            lwk_payment_instructions::PaymentCategoryKind::LiquidBip21 => {
-                PaymentCategoryKind::LiquidBip21
-            }
+            lwk_payment_instructions::PaymentKind::LnUrl => PaymentCategoryKind::LnUrl,
+            lwk_payment_instructions::PaymentKind::Bip353 => PaymentCategoryKind::Bip353,
+            lwk_payment_instructions::PaymentKind::Bip21 => PaymentCategoryKind::Bip21,
+            lwk_payment_instructions::PaymentKind::LiquidBip21 => PaymentCategoryKind::LiquidBip21,
             _ => unreachable!("Unknown PaymentCategoryKind variant"),
         }
     }

@@ -103,9 +103,9 @@ impl Payment {
         }
     }
 
-    pub fn bip21(&self) -> Option<&str> {
+    pub fn bip21(&self) -> Option<&Bip21> {
         match self {
-            Payment::Bip21(uri) => Some(uri.as_str()),
+            Payment::Bip21(bip21) => Some(bip21),
             _ => None,
         }
     }
@@ -389,7 +389,7 @@ mod tests {
         let bip21 = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = Payment::from_str(bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentKind::Bip21);
-        assert_eq!(payment_category.bip21(), Some(bip21));
+        assert_eq!(payment_category.bip21().map(|b| b.as_str()), Some(bip21));
         assert!(payment_category.bitcoin_address().is_none());
         assert!(matches!(
             payment_category,
@@ -399,7 +399,10 @@ mod tests {
         let bip21_upper = "BITCOIN:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = Payment::from_str(bip21_upper).unwrap();
         assert_eq!(payment_category.kind(), PaymentKind::Bip21);
-        assert_eq!(payment_category.bip21(), Some(bip21_upper));
+        assert_eq!(
+            payment_category.bip21().map(|b| b.as_str()),
+            Some(bip21_upper)
+        );
         assert!(matches!(
             payment_category,
             Payment::Bip21(ref uri) if uri == bip21_upper

@@ -134,11 +134,11 @@ impl Payment {
         self.inner.bip353().map(|s| s.to_string())
     }
 
-    /// Returns the BIP21 URI as a string if this is a Bip21 category, None otherwise
-    ///
-    /// Returns the original input string since it was parsed as a BIP21 URI
-    pub fn bip21(&self) -> Option<String> {
-        self.inner.bip21().map(|s| s.to_string())
+    /// Returns the BIP21 URI if this is a Bip21 category, None otherwise
+    pub fn bip21(&self) -> Option<Arc<crate::bip21::Bip21>> {
+        self.inner
+            .bip21()
+            .map(|bip21| Arc::new(crate::bip21::Bip21::from(bip21.clone())))
     }
 
     /// Returns the Liquid BIP21 details if this is a LiquidBip21 category, None otherwise

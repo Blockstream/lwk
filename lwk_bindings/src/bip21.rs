@@ -19,6 +19,12 @@ impl Display for Bip21 {
     }
 }
 
+impl From<lwk_payment_instructions::Bip21> for Bip21 {
+    fn from(inner: lwk_payment_instructions::Bip21) -> Self {
+        Self { inner }
+    }
+}
+
 #[uniffi::export]
 impl Bip21 {
     /// Parse a BIP21 URI string

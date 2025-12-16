@@ -1,8 +1,11 @@
 //! Liquid address
 
-use elements::bitcoin::{self, address::NetworkUnchecked};
+use elements::{
+    bitcoin::{self, address::NetworkUnchecked},
+    AddressParams,
+};
 
-use crate::{LwkError, Script};
+use crate::{LwkError, Network, Script};
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
 /// A Liquid address
@@ -80,6 +83,17 @@ impl Address {
     /// Returns a string of the QR code printable in a terminal environment
     pub fn qr_code_text(&self) -> Result<String, LwkError> {
         Ok(lwk_common::address_to_text_qr(&self.inner)?)
+    }
+
+    /// Returns the network of the address
+    pub fn network(&self) -> Network {
+        if self.inner.params == &AddressParams::LIQUID {
+            lwk_wollet::ElementsNetwork::Liquid.into()
+        } else if self.inner.params == &AddressParams::LIQUID_TESTNET {
+            lwk_wollet::ElementsNetwork::LiquidTestnet.into()
+        } else {
+            lwk_wollet::ElementsNetwork::default_regtest().into()
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use bip21::NoExtras;
 use elements::{
     bitcoin::{self, address::NetworkUnchecked},
     AddressParams, AssetId,
@@ -8,6 +7,10 @@ use elements::{
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 use lnurl::lnurl::LnUrl;
+
+use crate::bip21::Bip21;
+
+mod bip21;
 
 #[allow(dead_code)]
 #[non_exhaustive]
@@ -41,8 +44,8 @@ pub enum Payment {
     LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
     LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
     Bip353(String),                   // ₿matt@mattcorallo.com
-    Bip21(String), // bitcoin: (validated bip21::Uri stored as String to avoid polluting lifetime)
-    LiquidBip21(LiquidBip21), // liquidnetwork: liquidtestnet:
+    Bip21(Bip21),                     // bitcoin:
+    LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
 }
 
 impl Payment {
@@ -103,7 +106,7 @@ impl Payment {
 
     pub fn bip21(&self) -> Option<&str> {
         match self {
-            Payment::Bip21(uri) => Some(uri),
+            Payment::Bip21(uri) => Some(uri.as_str()),
             _ => None,
         }
     }
@@ -168,9 +171,8 @@ fn parse_with_schema(
         (Bitcoin, Ok(cat @ BitcoinAddress(_))) => Ok(cat),
         (Bitcoin, Err(_)) => {
             // Validate it's a correct bip21::Uri, then store as String
-            let _bip21_uri: bip21::Uri<'_, NetworkUnchecked, NoExtras> =
-                bip21::Uri::from_str(s).map_err(|e| e.to_string())?;
-            Ok(Bip21(s.to_string()))
+            let bip21 = bip21::Bip21::from_str(s)?;
+            Ok(Bip21(bip21))
         }
 
         (LiquidNetwork, Ok(ref cat @ LiquidAddress(ref a))) => {

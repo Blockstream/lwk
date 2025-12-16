@@ -116,6 +116,12 @@ pay = Payment(lnurlp)
 assert pay.kind() == PaymentKind.LN_URL
 assert pay.lnurl() is not None
 
+# Test LNURL with email format (lightning:email@domain)
+lnurl_email = "citadel@geyser.fund"
+pay = Payment(f"lightning:{lnurl_email}")
+assert pay.kind() == PaymentKind.LN_URL
+assert pay.lnurl() is not None
+
 # Test BIP21 - simple with amount
 bip21_simple = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50"
 pay = Payment(bip21_simple)

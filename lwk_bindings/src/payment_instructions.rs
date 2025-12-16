@@ -111,9 +111,12 @@ impl Payment {
             .map(|addr| Arc::new(Address::from(addr.clone())))
     }
 
-    /// Returns the Lightning invoice as a string if this is a LightningInvoice category, None otherwise
-    pub fn lightning_invoice(&self) -> Option<String> {
-        self.inner.lightning_invoice().map(|inv| inv.to_string())
+    /// Returns the Lightning invoice if this is a `LightningInvoice` category, `None` otherwise
+    #[cfg(feature = "lightning")]
+    pub fn lightning_invoice(&self) -> Option<Arc<crate::Bolt11Invoice>> {
+        self.inner
+            .lightning_invoice()
+            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
     }
 
     /// Returns the Lightning offer as a string if this is a LightningOffer category, None otherwise

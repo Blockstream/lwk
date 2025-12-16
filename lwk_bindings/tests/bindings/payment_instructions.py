@@ -69,7 +69,10 @@ assert pay.liquid_address().network() == Network.testnet()
 lightning_invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl"
 pay = Payment(lightning_invoice)
 assert pay.kind() == PaymentKind.LIGHTNING_INVOICE
-assert pay.lightning_invoice() is not None
+invoice = pay.lightning_invoice()
+assert invoice is not None
+assert str(invoice) == lightning_invoice
+assert invoice.amount_milli_satoshis() == 2323000
 assert pay.lightning_offer() is None
 # Test lightning_payment() returns a LightningPayment for invoices
 lp = pay.lightning_payment()

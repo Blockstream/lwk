@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
-use crate::{types::AssetId, Address, LwkError};
+use crate::{blockdata::address::BitcoinAddress, types::AssetId, Address, LwkError};
 
 /// The kind/type of a payment category without the associated data
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,16 +94,11 @@ impl Payment {
     /// Returns the Bitcoin address if this is a BitcoinAddress category, None otherwise
     ///
     /// Returns the address portion of the original input string
-    pub fn bitcoin_address(&self) -> Option<String> {
+    pub fn bitcoin_address(&self) -> Option<Arc<BitcoinAddress>> {
         let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.bitcoin_address().map(|_| {
-            // Strip the "bitcoin:" prefix if present, otherwise return as-is
-            self.input
-                .strip_prefix("bitcoin:")
-                .or_else(|| self.input.strip_prefix("BITCOIN:"))
-                .unwrap_or(&self.input)
-                .to_string()
-        })
+        parsed
+            .bitcoin_address()
+            .map(|addr| Arc::new(addr.clone().into()))
     }
 
     /// Returns the Liquid address if this is a LiquidAddress category, None otherwise

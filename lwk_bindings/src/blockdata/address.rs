@@ -1,6 +1,6 @@
 //! Liquid address
 
-use elements::bitcoin;
+use elements::bitcoin::{self, address::NetworkUnchecked};
 
 use crate::{LwkError, Script};
 use std::{fmt::Display, str::FromStr, sync::Arc};
@@ -93,6 +93,14 @@ pub struct BitcoinAddress {
 impl From<bitcoin::Address> for BitcoinAddress {
     fn from(inner: bitcoin::Address) -> Self {
         Self { inner }
+    }
+}
+
+impl From<bitcoin::Address<NetworkUnchecked>> for BitcoinAddress {
+    fn from(inner: bitcoin::Address<NetworkUnchecked>) -> Self {
+        Self {
+            inner: inner.assume_checked(),
+        }
     }
 }
 

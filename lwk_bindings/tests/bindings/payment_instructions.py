@@ -1,4 +1,4 @@
-from lwk import Payment, PaymentKind
+from lwk import Payment, PaymentKind, Network
 
 # Test Bitcoin address (no schema)
 bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
@@ -31,12 +31,27 @@ cat = Payment(liquid_address)
 assert cat.kind() == PaymentKind.LIQUID_ADDRESS
 assert cat.liquid_address() is not None
 assert str(cat.liquid_address()) == liquid_address
+assert cat.liquid_address().network() == Network.mainnet()
 assert cat.bitcoin_address() is None
 
 # Test Liquid address with schema
 cat = Payment(f"liquidnetwork:{liquid_address}")
 assert cat.kind() == PaymentKind.LIQUID_ADDRESS
 assert str(cat.liquid_address()) == liquid_address
+
+# Test Liquid testnet address (no schema)
+liquid_testnet_address = "tlq1qq02egjncr8g4qn890mrw3jhgupwqymekv383lwpmsfghn36hac5ptpmeewtnftluqyaraa56ung7wf47crkn5fjuhk422d68m"
+cat = Payment(liquid_testnet_address)
+assert cat.kind() == PaymentKind.LIQUID_ADDRESS
+assert cat.liquid_address() is not None
+assert str(cat.liquid_address()) == liquid_testnet_address
+assert cat.liquid_address().network() == Network.testnet()
+
+# Test Liquid testnet address with schema
+cat = Payment(f"liquidtestnet:{liquid_testnet_address}")
+assert cat.kind() == PaymentKind.LIQUID_ADDRESS
+assert str(cat.liquid_address()) == liquid_testnet_address
+assert cat.liquid_address().network() == Network.testnet()
 
 # Test Lightning invoice
 lightning_invoice = "lnbc23230n1p5sxxunsp5tep5yrw63cy3tk74j3hpzqzhhzwe806wk0apjfsfn5x9wmpkzkdspp5z4f40v2whks0aj3kx4zuwrrem094pna4ehutev2p63djtff02a2sdquf35kw6r5de5kueeqwpshjmt9de6qxqyp2xqcqzxrrzjqf6rgswuygn5qr0p5dt2mvklrrcz6yy8pnzqr3eq962tqwprpfrzkzzxeyqq28qqqqqqqqqqqqqqq9gq2yrzjqtnpp8ds33zeg5a6cumptreev23g7pwlp39cvcz8jeuurayvrmvdsrw9ysqqq9gqqqqqqqqpqqqqq9sq2g9qyysgqqufsg7s6qcmfmjxvkf0ulupufr0yfqeajnv3mvtyqzz2rfwre2796rnkzsw44lw3nja5frg4w4m59xqlwwu774h4f79ysm05uugckugqdf84yl"
@@ -109,6 +124,7 @@ assert cat.kind() == PaymentKind.LIQUID_BIP21
 bip21_data = cat.liquid_bip21()
 assert bip21_data is not None
 assert str(bip21_data.address) == address
+assert bip21_data.address.network() == Network.mainnet()
 assert bip21_data.asset == asset
 assert bip21_data.amount == amount
 assert cat.liquid_address() is None  # LiquidBip21 is different from plain address
@@ -121,6 +137,7 @@ assert cat.kind() == PaymentKind.LIQUID_BIP21
 bip21_data = cat.liquid_bip21()
 assert bip21_data is not None
 assert str(bip21_data.address) == address_testnet
+assert bip21_data.address.network() == Network.testnet()
 
 print("All payment instructions tests passed!")
 

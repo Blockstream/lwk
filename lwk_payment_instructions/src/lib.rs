@@ -34,18 +34,18 @@ pub struct LiquidBip21 {
 #[allow(dead_code)]
 #[non_exhaustive]
 #[derive(Clone, Debug)]
-pub enum PaymentCategory<'a> {
+pub enum PaymentCategory {
     BitcoinAddress(bitcoin::Address<bitcoin::address::NetworkUnchecked>), // just the address, or bitcoin:<address>
     LiquidAddress(elements::Address), // just the address, or liquidnetwork:<address> or liquidtestnet:<address>
     LightningInvoice(Bolt11Invoice),  // just the invoice or lightning:<invoice>
     LightningOffer(Box<Offer>),       // just the bolt12 or lightning:<bolt12>
     LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
     Bip353(String),                   // ₿matt@mattcorallo.com
-    Bip21(bip21::Uri<'a, NetworkUnchecked, NoExtras>), // bitcoin:
-    LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
+    Bip21(String), // bitcoin: (validated bip21::Uri stored as String to avoid polluting lifetime)
+    LiquidBip21(LiquidBip21), // liquidnetwork: liquidtestnet:
 }
 
-impl<'a> PaymentCategory<'a> {
+impl PaymentCategory {
     pub fn kind(&self) -> PaymentCategoryKind {
         match self {
             PaymentCategory::BitcoinAddress(_) => PaymentCategoryKind::BitcoinAddress,
@@ -101,7 +101,7 @@ impl<'a> PaymentCategory<'a> {
         }
     }
 
-    pub fn bip21(&self) -> Option<&bip21::Uri<'a, NetworkUnchecked, NoExtras>> {
+    pub fn bip21(&self) -> Option<&str> {
         match self {
             PaymentCategory::Bip21(uri) => Some(uri),
             _ => None,
@@ -143,13 +143,13 @@ impl FromStr for Schema {
     }
 }
 
-impl Display for PaymentCategory<'_> {
+impl Display for PaymentCategory {
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
 
-impl FromStr for PaymentCategory<'_> {
+impl FromStr for PaymentCategory {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split_once(':') {
@@ -163,18 +163,20 @@ impl FromStr for PaymentCategory<'_> {
     }
 }
 
-fn parse_with_schema<'a>(
+fn parse_with_schema(
     schema: Schema,
-    cat: Result<PaymentCategory<'a>, String>,
+    cat: Result<PaymentCategory, String>,
     s: &str,
-) -> Result<PaymentCategory<'a>, String> {
+) -> Result<PaymentCategory, String> {
     use PaymentCategory::*;
     use Schema::*;
     match (schema, cat) {
         (Bitcoin, Ok(cat @ BitcoinAddress(_))) => Ok(cat),
         (Bitcoin, Err(_)) => {
-            let bip21_uri = bip21::Uri::from_str(s).map_err(|e| e.to_string())?;
-            Ok(Bip21(bip21_uri))
+            // Validate it's a correct bip21::Uri, then store as String
+            let _bip21_uri: bip21::Uri<'_, NetworkUnchecked, NoExtras> =
+                bip21::Uri::from_str(s).map_err(|e| e.to_string())?;
+            Ok(Bip21(s.to_string()))
         }
 
         (LiquidNetwork, Ok(ref cat @ LiquidAddress(ref a))) => {
@@ -220,7 +222,7 @@ fn parse_with_schema<'a>(
     }
 }
 
-fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<PaymentCategory<'static>, String> {
+fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<PaymentCategory, String> {
     let url = url::Url::from_str(s).map_err(|e| e.to_string())?;
 
     let address_str = url.path();
@@ -258,7 +260,7 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<PaymentCategory<'stat
     }))
 }
 
-fn parse_no_schema<'a>(s: &str) -> Result<PaymentCategory<'a>, String> {
+fn parse_no_schema(s: &str) -> Result<PaymentCategory, String> {
     if let Ok(bitcoin_address) = bitcoin::Address::from_str(s) {
         return Ok(PaymentCategory::BitcoinAddress(bitcoin_address));
     }
@@ -397,23 +399,21 @@ mod tests {
         let bip21 = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = PaymentCategory::from_str(bip21).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::Bip21);
-        assert!(payment_category.bip21().is_some());
+        assert_eq!(payment_category.bip21(), Some(bip21));
         assert!(payment_category.bitcoin_address().is_none());
-        if let PaymentCategory::Bip21(uri) = payment_category {
-            assert_eq!(uri.clone().assume_checked().to_string(), bip21);
-        } else {
-            panic!("Expected PaymentCategory::Bip21");
-        }
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::Bip21(ref uri) if uri == bip21
+        ));
 
         let bip21_upper = "BITCOIN:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=50";
         let payment_category = PaymentCategory::from_str(bip21_upper).unwrap();
         assert_eq!(payment_category.kind(), PaymentCategoryKind::Bip21);
-        assert!(payment_category.bip21().is_some());
-        if let PaymentCategory::Bip21(uri) = payment_category {
-            assert_eq!(uri.clone().assume_checked().to_string(), bip21); // lower cased when displayed
-        } else {
-            panic!("Expected PaymentCategory::Bip21");
-        }
+        assert_eq!(payment_category.bip21(), Some(bip21_upper));
+        assert!(matches!(
+            payment_category,
+            PaymentCategory::Bip21(ref uri) if uri == bip21_upper
+        ));
 
         let lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97";
         let payment_category = PaymentCategory::from_str(&format!("lightning:{lnurl}")).unwrap();

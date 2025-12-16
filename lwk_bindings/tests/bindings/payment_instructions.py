@@ -123,6 +123,8 @@ assert pay.kind() == PaymentKind.BIP21
 bip21_obj = pay.bip21()
 assert bip21_obj is not None
 assert bip21_obj.as_str() == bip21_simple
+assert str(bip21_obj.address()) == "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+assert bip21_obj.address().is_mainnet()
 assert bip21_obj.amount() == 5000000000  # 50 BTC in sats
 assert bip21_obj.label() is None
 assert bip21_obj.message() is None
@@ -134,23 +136,28 @@ pay = Payment(bip21_full)
 assert pay.kind() == PaymentKind.BIP21
 bip21_obj = pay.bip21()
 assert bip21_obj is not None
+assert str(bip21_obj.address()) == "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
 assert bip21_obj.amount() == 10000  # 0.0001 BTC = 10000 sats
 assert bip21_obj.label() == "Test"
 assert bip21_obj.message() == "Hello, world!"
 
 # Test BIP21 directly constructed
 bip21_direct = Bip21("bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.0001&label=Test&message=Hello%2C%20world!")
+assert str(bip21_direct.address()) == "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
 assert bip21_direct.amount() == 10000
 assert bip21_direct.label() == "Test"
 assert bip21_direct.message() == "Hello, world!"
 
-# Test unified BIP21 with BOLT11 lightning invoice
+# Test unified BIP21 with BOLT11 lightning invoice (using segwit address)
 unified_bolt11_invoice = "LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6"
 unified_bolt11 = f"bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lightning={unified_bolt11_invoice}"
 pay = Payment(unified_bolt11)
 assert pay.kind() == PaymentKind.BIP21
 bip21_obj = pay.bip21()
 assert bip21_obj is not None
+# Segwit addresses are case-insensitive, compare lowercase
+assert str(bip21_obj.address()).lower() == "bc1qylh3u67j673h6y6alv70m0pl2yz53tzhvxgg7u"
+assert bip21_obj.address().is_mainnet()
 assert bip21_obj.amount() == 1000  # 0.00001 BTC = 1000 sats
 assert bip21_obj.label() == "sbddesign: For lunch Tuesday"
 assert bip21_obj.message() == "For lunch Tuesday"
@@ -165,6 +172,7 @@ pay = Payment(unified_bolt12)
 assert pay.kind() == PaymentKind.BIP21
 bip21_obj = pay.bip21()
 assert bip21_obj is not None
+assert str(bip21_obj.address()).lower() == "bc1qylh3u67j673h6y6alv70m0pl2yz53tzhvxgg7u"
 assert bip21_obj.amount() == 1000  # 0.00001 BTC = 1000 sats
 assert bip21_obj.label() == "sbddesign: For lunch Tuesday"
 assert bip21_obj.message() == "For lunch Tuesday"

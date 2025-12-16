@@ -40,6 +40,11 @@ impl Bip21 {
         self.inner.as_str().to_string()
     }
 
+    /// Returns the Bitcoin address from the BIP21 URI
+    pub fn address(&self) -> Arc<crate::blockdata::address::BitcoinAddress> {
+        Arc::new(self.inner.address().into())
+    }
+
     /// Returns the amount in satoshis if present
     pub fn amount(&self) -> Option<u64> {
         self.inner.amount()

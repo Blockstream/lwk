@@ -18,6 +18,11 @@ impl Bip21 {
         bip21_crate::Uri::from_str(&self.0).unwrap()
     }
 
+    /// Returns the Bitcoin address from the BIP21 URI
+    pub fn address(&self) -> elements::bitcoin::Address<NetworkUnchecked> {
+        self.parsed().address.clone()
+    }
+
     pub fn amount(&self) -> Option<u64> {
         self.parsed().amount.map(|a| a.to_sat())
     }

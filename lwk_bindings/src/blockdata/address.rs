@@ -144,6 +144,13 @@ impl BitcoinAddress {
         let inner = bitcoin::Address::from_str(s)?.assume_checked();
         Ok(Arc::new(Self { inner }))
     }
+
+    /// Returns the network of the address
+    pub fn is_mainnet(&self) -> bool {
+        self.inner
+            .as_unchecked()
+            .is_valid_for_network(bitcoin::Network::Bitcoin)
+    }
 }
 
 #[cfg(test)]

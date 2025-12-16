@@ -10,6 +10,23 @@ impl Bip21 {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    fn parsed(&self) -> bip21_crate::Uri<'_, NetworkUnchecked, NoExtras> {
+        // Safe to unwrap because we validated the string in from_str
+        bip21_crate::Uri::from_str(&self.0).unwrap()
+    }
+
+    pub fn amount(&self) -> Option<u64> {
+        self.parsed().amount.map(|a| a.to_sat())
+    }
+
+    pub fn label(&self) -> Option<String> {
+        self.parsed().label.and_then(|l| l.try_into().ok())
+    }
+
+    pub fn message(&self) -> Option<String> {
+        self.parsed().message.and_then(|m| m.try_into().ok())
+    }
 }
 
 impl FromStr for Bip21 {

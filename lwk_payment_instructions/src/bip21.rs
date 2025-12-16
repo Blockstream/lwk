@@ -2,6 +2,7 @@ use std::{convert::Infallible, fmt::Display, str::FromStr};
 
 use bip21_crate::de::{DeserializationError, DeserializationState, DeserializeParams, ParamKind};
 use elements::bitcoin::address::NetworkUnchecked;
+use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -32,6 +33,10 @@ impl Bip21 {
     pub fn lightning(&self) -> Option<Bolt11Invoice> {
         self.parsed().extras.lightning
     }
+
+    pub fn offer(&self) -> Option<Offer> {
+        self.parsed().extras.offer
+    }
 }
 
 impl PartialEq<str> for Bip21 {
@@ -56,10 +61,11 @@ impl Display for Bip21 {
     }
 }
 
-/// Extra BIP21 parameters including lightning invoice
+/// Extra BIP21 parameters including lightning invoice and BOLT12 offer
 #[derive(Clone, Debug, Default)]
 struct Extras {
     lightning: Option<Bolt11Invoice>,
+    offer: Option<Offer>,
 }
 
 impl DeserializationError for Extras {
@@ -73,13 +79,14 @@ impl<'a> DeserializeParams<'a> for Extras {
 #[derive(Default)]
 struct ExtrasState {
     lightning: Option<Bolt11Invoice>,
+    offer: Option<Offer>,
 }
 
 impl<'de> DeserializationState<'de> for ExtrasState {
     type Value = Extras;
 
     fn is_param_known(&self, key: &str) -> bool {
-        key.eq_ignore_ascii_case("lightning")
+        key.eq_ignore_ascii_case("lightning") || key.eq_ignore_ascii_case("lno")
     }
 
     fn deserialize_temp(
@@ -92,6 +99,11 @@ impl<'de> DeserializationState<'de> for ExtrasState {
                 self.lightning = Bolt11Invoice::from_str(&s).ok();
             }
             Ok(ParamKind::Known)
+        } else if key.eq_ignore_ascii_case("lno") {
+            if let Ok(s) = String::try_from(value) {
+                self.offer = Offer::from_str(&s).ok();
+            }
+            Ok(ParamKind::Known)
         } else {
             Ok(ParamKind::Unknown)
         }
@@ -100,6 +112,7 @@ impl<'de> DeserializationState<'de> for ExtrasState {
     fn finalize(self) -> Result<Extras, Infallible> {
         Ok(Extras {
             lightning: self.lightning,
+            offer: self.offer,
         })
     }
 }
@@ -128,5 +141,16 @@ mod tests {
             bip21.lightning(),
             Some(Bolt11Invoice::from_str(lightning_invoice).unwrap())
         );
+
+        let bolt12 = "lno1zcss9sy46p548rukhu2vt7g0dsy9r00n2jswepsrngjt7w988ac94hpv";
+        let unified_bolt12 = format!("bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lno={bolt12}");
+        let bip21 = Bip21::from_str(&unified_bolt12).unwrap();
+        assert_eq!(bip21.amount(), Some(1000)); // 0.00001 BTC = 1000 sats
+        assert_eq!(
+            bip21.label(),
+            Some("sbddesign: For lunch Tuesday".to_string())
+        );
+        assert_eq!(bip21.message(), Some("For lunch Tuesday".to_string()));
+        assert_eq!(bip21.offer(), Some(Offer::from_str(bolt12).unwrap()));
     }
 }

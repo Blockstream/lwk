@@ -4,7 +4,7 @@ from lwk import Payment, PaymentKind
 bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
 cat = Payment(bitcoin_address)
 assert cat.kind() == PaymentKind.BITCOIN_ADDRESS
-assert cat.bitcoin_address() == bitcoin_address
+assert str(cat.bitcoin_address()) == bitcoin_address
 assert cat.liquid_address() is None
 # Non-lightning categories should return None for lightning_payment()
 assert cat.lightning_payment() is None
@@ -12,18 +12,18 @@ assert cat.lightning_payment() is None
 # Test Bitcoin address with schema
 cat = Payment(f"bitcoin:{bitcoin_address}")
 assert cat.kind() == PaymentKind.BITCOIN_ADDRESS
-assert cat.bitcoin_address() == bitcoin_address
+assert str(cat.bitcoin_address()) == bitcoin_address
 
 # Test Bitcoin address with uppercase schema
 cat = Payment(f"BITCOIN:{bitcoin_address}")
 assert cat.kind() == PaymentKind.BITCOIN_ADDRESS
-assert cat.bitcoin_address() == bitcoin_address
+assert str(cat.bitcoin_address()) == bitcoin_address
 
 # Test Bitcoin segwit address
 bitcoin_segwit = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"
 cat = Payment(bitcoin_segwit)
 assert cat.kind() == PaymentKind.BITCOIN_ADDRESS
-assert cat.bitcoin_address() == bitcoin_segwit
+assert str(cat.bitcoin_address()) == bitcoin_segwit
 
 # Test Liquid address (no schema)
 liquid_address = "lq1qqduq2l8maf4580wle4hevmk62xqqw3quckshkt2rex3ylw83824y4g96xl0uugdz4qks5v7w4pdpvztyy5kw7r7e56jcwm0p0"

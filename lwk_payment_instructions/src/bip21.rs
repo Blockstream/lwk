@@ -77,7 +77,7 @@ impl DeserializationError for Extras {
     type Error = Infallible;
 }
 
-impl<'a> DeserializeParams<'a> for Extras {
+impl DeserializeParams<'_> for Extras {
     type DeserializationState = ExtrasState;
 }
 
@@ -87,7 +87,7 @@ struct ExtrasState {
     offer: Option<Offer>,
 }
 
-impl<'de> DeserializationState<'de> for ExtrasState {
+impl DeserializationState<'_> for ExtrasState {
     type Value = Extras;
 
     fn is_param_known(&self, key: &str) -> bool {

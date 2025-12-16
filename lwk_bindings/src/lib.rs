@@ -16,7 +16,7 @@ mod liquidex;
 mod mnemonic;
 mod network;
 mod payment_instructions;
-pub use payment_instructions::{LiquidBip21, Payment, PaymentCategoryKind};
+pub use payment_instructions::{LiquidBip21, Payment, PaymentKind};
 mod persister;
 mod precision;
 mod pset;

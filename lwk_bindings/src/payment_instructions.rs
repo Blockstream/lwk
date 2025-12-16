@@ -6,7 +6,7 @@ use crate::{types::AssetId, Address, LwkError};
 
 /// The kind/type of a payment category without the associated data
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PaymentCategoryKind {
+pub enum PaymentKind {
     /// A Bitcoin address
     BitcoinAddress,
     /// A Liquid address
@@ -25,25 +25,19 @@ pub enum PaymentCategoryKind {
     LiquidBip21,
 }
 
-impl From<lwk_payment_instructions::PaymentKind> for PaymentCategoryKind {
+impl From<lwk_payment_instructions::PaymentKind> for PaymentKind {
     fn from(kind: lwk_payment_instructions::PaymentKind) -> Self {
         match kind {
-            lwk_payment_instructions::PaymentKind::BitcoinAddress => {
-                PaymentCategoryKind::BitcoinAddress
-            }
-            lwk_payment_instructions::PaymentKind::LiquidAddress => {
-                PaymentCategoryKind::LiquidAddress
-            }
+            lwk_payment_instructions::PaymentKind::BitcoinAddress => PaymentKind::BitcoinAddress,
+            lwk_payment_instructions::PaymentKind::LiquidAddress => PaymentKind::LiquidAddress,
             lwk_payment_instructions::PaymentKind::LightningInvoice => {
-                PaymentCategoryKind::LightningInvoice
+                PaymentKind::LightningInvoice
             }
-            lwk_payment_instructions::PaymentKind::LightningOffer => {
-                PaymentCategoryKind::LightningOffer
-            }
-            lwk_payment_instructions::PaymentKind::LnUrl => PaymentCategoryKind::LnUrl,
-            lwk_payment_instructions::PaymentKind::Bip353 => PaymentCategoryKind::Bip353,
-            lwk_payment_instructions::PaymentKind::Bip21 => PaymentCategoryKind::Bip21,
-            lwk_payment_instructions::PaymentKind::LiquidBip21 => PaymentCategoryKind::LiquidBip21,
+            lwk_payment_instructions::PaymentKind::LightningOffer => PaymentKind::LightningOffer,
+            lwk_payment_instructions::PaymentKind::LnUrl => PaymentKind::LnUrl,
+            lwk_payment_instructions::PaymentKind::Bip353 => PaymentKind::Bip353,
+            lwk_payment_instructions::PaymentKind::Bip21 => PaymentKind::Bip21,
+            lwk_payment_instructions::PaymentKind::LiquidBip21 => PaymentKind::LiquidBip21,
             _ => unreachable!("Unknown PaymentCategoryKind variant"),
         }
     }
@@ -69,7 +63,7 @@ pub struct Payment {
     /// The original input string
     input: String,
     /// The parsed kind
-    kind: PaymentCategoryKind,
+    kind: PaymentKind,
 }
 
 impl Display for Payment {
@@ -93,7 +87,7 @@ impl Payment {
     }
 
     /// Returns the kind of payment category
-    pub fn kind(&self) -> PaymentCategoryKind {
+    pub fn kind(&self) -> PaymentKind {
         self.kind
     }
 
@@ -169,9 +163,7 @@ impl Payment {
     #[cfg(feature = "lightning")]
     pub fn lightning_payment(&self) -> Option<Arc<crate::LightningPayment>> {
         match self.kind {
-            PaymentCategoryKind::LightningInvoice
-            | PaymentCategoryKind::LightningOffer
-            | PaymentCategoryKind::LnUrl => {
+            PaymentKind::LightningInvoice | PaymentKind::LightningOffer | PaymentKind::LnUrl => {
                 // Extract the payment string (strip schema prefix if present)
                 let payment_str = self
                     .input

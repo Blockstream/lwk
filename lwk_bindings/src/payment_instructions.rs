@@ -65,21 +65,21 @@ pub struct LiquidBip21 {
 /// This can be a Bitcoin address, Liquid address, Lightning invoice,
 /// Lightning offer, LNURL, BIP353, BIP21 URI, or Liquid BIP21 URI.
 #[derive(uniffi::Object)]
-pub struct PaymentCategory {
+pub struct Payment {
     /// The original input string
     input: String,
     /// The parsed kind
     kind: PaymentCategoryKind,
 }
 
-impl Display for PaymentCategory {
+impl Display for Payment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.input)
     }
 }
 
 #[uniffi::export]
-impl PaymentCategory {
+impl Payment {
     /// Parse a payment instruction string into a PaymentCategory
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {

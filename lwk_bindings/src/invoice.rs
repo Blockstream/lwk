@@ -106,6 +106,12 @@ impl AsRef<lwk_boltz::LightningPayment> for LightningPayment {
     }
 }
 
+impl From<lwk_boltz::LightningPayment> for LightningPayment {
+    fn from(inner: lwk_boltz::LightningPayment) -> Self {
+        Self { inner }
+    }
+}
+
 impl Display for LightningPayment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)

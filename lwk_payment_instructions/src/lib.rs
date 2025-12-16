@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::str::FromStr;
 
 use bip21::NoExtras;
 use elements::{
@@ -140,12 +140,6 @@ impl FromStr for Schema {
             "LNURLP" => Ok(Schema::LnUrlP),
             _ => Err(format!("Invalid schema: {s}")),
         }
-    }
-}
-
-impl Display for Payment {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
     }
 }
 

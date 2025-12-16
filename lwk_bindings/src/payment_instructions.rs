@@ -60,15 +60,23 @@ pub struct LiquidBip21 {
 /// Lightning offer, LNURL, BIP353, BIP21 URI, or Liquid BIP21 URI.
 #[derive(uniffi::Object)]
 pub struct Payment {
-    /// The original input string
-    input: String,
-    /// The parsed kind
-    kind: PaymentKind,
+    inner: lwk_payment_instructions::Payment,
 }
 
 impl Display for Payment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.input)
+        use lwk_payment_instructions::Payment as P;
+        match &self.inner {
+            P::BitcoinAddress(addr) => write!(f, "{}", addr.clone().assume_checked()),
+            P::LiquidAddress(addr) => write!(f, "{addr}"),
+            P::LightningInvoice(invoice) => write!(f, "{invoice}"),
+            P::LightningOffer(offer) => write!(f, "{offer}"),
+            P::LnUrlCat(lnurl) => write!(f, "{lnurl}"),
+            P::Bip353(s) => write!(f, "{s}"),
+            P::Bip21(s) => write!(f, "{s}"),
+            P::LiquidBip21(bip21) => write!(f, "{}", bip21.address),
+            _ => write!(f, "{:?}", self.inner),
+        }
     }
 }
 
@@ -77,96 +85,79 @@ impl Payment {
     /// Parse a payment instruction string into a PaymentCategory
     #[uniffi::constructor]
     pub fn new(s: &str) -> Result<Arc<Self>, LwkError> {
-        let parsed = lwk_payment_instructions::Payment::from_str(s)
+        let inner = lwk_payment_instructions::Payment::from_str(s)
             .map_err(|e| LwkError::Generic { msg: e })?;
-        let kind = parsed.kind().into();
-        Ok(Arc::new(Self {
-            input: s.to_string(),
-            kind,
-        }))
+        Ok(Arc::new(Self { inner }))
     }
 
     /// Returns the kind of payment category
     pub fn kind(&self) -> PaymentKind {
-        self.kind
+        self.inner.kind().into()
     }
 
     /// Returns the Bitcoin address if this is a BitcoinAddress category, None otherwise
     ///
     /// Returns the address portion of the original input string
     pub fn bitcoin_address(&self) -> Option<Arc<BitcoinAddress>> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed
+        self.inner
             .bitcoin_address()
             .map(|addr| Arc::new(addr.clone().into()))
     }
 
     /// Returns the Liquid address if this is a LiquidAddress category, None otherwise
     pub fn liquid_address(&self) -> Option<Arc<Address>> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed
+        self.inner
             .liquid_address()
             .map(|addr| Arc::new(Address::from(addr.clone())))
     }
 
     /// Returns the Lightning invoice as a string if this is a LightningInvoice category, None otherwise
     pub fn lightning_invoice(&self) -> Option<String> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.lightning_invoice().map(|inv| inv.to_string())
+        self.inner.lightning_invoice().map(|inv| inv.to_string())
     }
 
     /// Returns the Lightning offer as a string if this is a LightningOffer category, None otherwise
     pub fn lightning_offer(&self) -> Option<String> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.lightning_offer().map(|offer| offer.to_string())
+        self.inner.lightning_offer().map(|offer| offer.to_string())
     }
 
     /// Returns the LNURL as a string if this is an LnUrl category, None otherwise
     pub fn lnurl(&self) -> Option<String> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.lnurl().map(|lnurl| lnurl.to_string())
+        self.inner.lnurl().map(|lnurl| lnurl.to_string())
     }
 
     /// Returns the BIP353 address (without the ₿ prefix) if this is a Bip353 category, None otherwise
     pub fn bip353(&self) -> Option<String> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.bip353().map(|s| s.to_string())
+        self.inner.bip353().map(|s| s.to_string())
     }
 
     /// Returns the BIP21 URI as a string if this is a Bip21 category, None otherwise
     ///
     /// Returns the original input string since it was parsed as a BIP21 URI
     pub fn bip21(&self) -> Option<String> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.bip21().map(|_| self.input.clone())
+        self.inner.bip21().map(|s| s.to_string())
     }
 
     /// Returns the Liquid BIP21 details if this is a LiquidBip21 category, None otherwise
     pub fn liquid_bip21(&self) -> Option<LiquidBip21> {
-        let parsed = lwk_payment_instructions::Payment::from_str(&self.input).ok()?;
-        parsed.liquid_bip21().map(|bip21| LiquidBip21 {
+        self.inner.liquid_bip21().map(|bip21| LiquidBip21 {
             address: Arc::new(Address::from(bip21.address.clone())),
             asset: bip21.asset.into(),
             amount: bip21.amount,
         })
     }
 
-    /// Returns a LightningPayment if this category is payable via Lightning
+    /// Returns a `LightningPayment`` if this category is payable via Lightning
     ///
-    /// Returns Some for LightningInvoice, LightningOffer, and LnUrl categories.
-    /// The returned LightningPayment can be used with BoltzSession::prepare_pay().
+    /// Returns `Some` for `LightningInvoice`, `LightningOffer`, and `LnUrl` categories.
+    /// The returned `LightningPayment` can be used with `BoltzSession::prepare_pay()`.
     #[cfg(feature = "lightning")]
     pub fn lightning_payment(&self) -> Option<Arc<crate::LightningPayment>> {
-        match self.kind {
-            PaymentKind::LightningInvoice | PaymentKind::LightningOffer | PaymentKind::LnUrl => {
-                // Extract the payment string (strip schema prefix if present)
-                let payment_str = self
-                    .input
-                    .strip_prefix("lightning:")
-                    .or_else(|| self.input.strip_prefix("LIGHTNING:"))
-                    .unwrap_or(&self.input);
-                crate::LightningPayment::new(payment_str).ok()
-            }
+        use lwk_payment_instructions::Payment as P;
+        match &self.inner {
+            P::LightningInvoice(invoice) => crate::LightningPayment::new(&invoice.to_string()).ok(),
+            P::LightningOffer(offer) => crate::LightningPayment::new(&offer.to_string()).ok(),
+            P::LnUrlCat(lnurl) => crate::LightningPayment::new(&lnurl.to_string()).ok(),
             _ => None,
         }
     }

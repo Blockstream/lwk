@@ -4,6 +4,7 @@ use bip21_crate::de::{DeserializationError, DeserializationState, DeserializePar
 use elements::bitcoin::address::NetworkUnchecked;
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
+use silentpayments::SilentPaymentAddress;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Bip21(String);
@@ -50,6 +51,10 @@ impl Bip21 {
     pub fn payjoin_output_substitution(&self) -> bool {
         self.parsed().extras.pjos
     }
+
+    pub fn silent_payment_address(&self) -> Option<SilentPaymentAddress> {
+        self.parsed().extras.sp
+    }
 }
 
 impl PartialEq<str> for Bip21 {
@@ -82,6 +87,7 @@ struct Extras {
     pj: Option<url::Url>,
     /// Payjoin output substitution, defaults to true if absent
     pjos: bool,
+    sp: Option<SilentPaymentAddress>,
 }
 
 impl DeserializationError for Extras {
@@ -98,6 +104,7 @@ struct ExtrasState {
     pj: Option<url::Url>,
     /// Defaults to true if absent
     pjos: bool,
+    sp: Option<SilentPaymentAddress>,
 }
 
 impl Default for ExtrasState {
@@ -107,6 +114,7 @@ impl Default for ExtrasState {
             offer: None,
             pj: None,
             pjos: true,
+            sp: None,
         }
     }
 }
@@ -119,6 +127,7 @@ impl DeserializationState<'_> for ExtrasState {
             || key.eq_ignore_ascii_case("lno")
             || key.eq_ignore_ascii_case("pj")
             || key.eq_ignore_ascii_case("pjos")
+            || key.eq_ignore_ascii_case("sp")
     }
 
     fn deserialize_temp(
@@ -148,6 +157,11 @@ impl DeserializationState<'_> for ExtrasState {
                 }
             }
             Ok(ParamKind::Known)
+        } else if key.eq_ignore_ascii_case("sp") {
+            if let Ok(s) = String::try_from(value) {
+                self.sp = SilentPaymentAddress::try_from(s.as_str()).ok();
+            }
+            Ok(ParamKind::Known)
         } else {
             Ok(ParamKind::Unknown)
         }
@@ -159,6 +173,7 @@ impl DeserializationState<'_> for ExtrasState {
             offer: self.offer,
             pj: self.pj,
             pjos: self.pjos,
+            sp: self.sp,
         })
     }
 }

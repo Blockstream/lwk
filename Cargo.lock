@@ -2315,17 +2315,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lightning-invoice"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b85e5e14bcdb30d746e9785b04f27938292e8944f78f26517e01e91691f6b3f2"
-dependencies = [
- "bech32 0.11.0",
- "bitcoin",
- "lightning-types 0.3.0",
-]
-
-[[package]]
 name = "lightning-types"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2341,15 +2330,6 @@ name = "lightning-types"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2cd84d4e71472035903e43caded8ecc123066ce466329ccd5ae537a8d5488c7"
-dependencies = [
- "bitcoin",
-]
-
-[[package]]
-name = "lightning-types"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5681708d3075bdff3a1b4daa400590e2703e7871bdc14e94ee7334fb6314ae40"
 dependencies = [
  "bitcoin",
 ]
@@ -2579,7 +2559,7 @@ dependencies = [
  "bip21",
  "elements 0.25.2",
  "lightning",
- "lightning-invoice 0.34.0",
+ "lightning-invoice 0.33.2",
  "lnurl-rs",
  "rand 0.8.5",
  "silentpayments",

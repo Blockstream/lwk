@@ -72,4 +72,14 @@ impl Bip21 {
     pub fn offer(&self) -> Option<String> {
         self.inner.offer().map(|o| o.to_string())
     }
+
+    /// Returns the payjoin endpoint URL if present
+    pub fn pj(&self) -> Option<String> {
+        self.inner.pj().map(|u| u.to_string())
+    }
+
+    /// Returns whether payjoin output substitution is allowed (defaults to true if absent)
+    pub fn pjos(&self) -> bool {
+        self.inner.pjos()
+    }
 }

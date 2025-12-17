@@ -187,6 +187,20 @@ offer = bip21_obj.offer()
 assert offer is not None
 assert offer == bolt12_offer
 
+# Test BIP21 with payjoin parameters
+payjoin_bip21 = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com&pjos=0"
+pay = Payment(payjoin_bip21)
+assert pay.kind() == PaymentKind.BIP21
+bip21_obj = pay.bip21()
+assert bip21_obj is not None
+assert bip21_obj.pj() == "https://example.com/"
+assert bip21_obj.pjos() == False
+# Test pjos defaults to True when absent
+payjoin_bip21_default_pjos = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com"
+bip21_obj = Bip21(payjoin_bip21_default_pjos)
+assert bip21_obj.pj() == "https://example.com/"
+assert bip21_obj.pjos() == True
+
 # Test BIP353
 bip353 = "₿matt@mattcorallo.com"
 pay = Payment(bip353)

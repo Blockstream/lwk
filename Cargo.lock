@@ -558,13 +558,15 @@ dependencies = [
 
 [[package]]
 name = "boltz-client"
-version = "0.3.0"
-source = "git+https://github.com/RCasatta/boltz-rust/?rev=a0d5465f3ab071061ce22a5eedeec17838a56af9#a0d5465f3ab071061ce22a5eedeec17838a56af9"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdde3b716dccc688429ea704c1590332526f0a6af7926f4bf26604913f88d660"
 dependencies = [
  "async-trait",
  "bip39",
  "bip85_extended",
  "bitcoin",
+ "boltz-client-macros",
  "electrum-client",
  "elements 0.25.2",
  "env_logger 0.7.1",
@@ -575,7 +577,6 @@ dependencies = [
  "js-sys",
  "lightning-invoice 0.32.0",
  "log",
- "macros",
  "reqwest",
  "secp256k1 0.32.0-beta.0",
  "serde",
@@ -585,6 +586,17 @@ dependencies = [
  "url",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "boltz-client-macros"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bae3bbd82eb8c315b3b120d7cb1a8adef85003216315c42e23abead43ae3835"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -2712,16 +2724,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "macros"
-version = "0.0.0"
-source = "git+https://github.com/RCasatta/boltz-rust/?rev=a0d5465f3ab071061ce22a5eedeec17838a56af9#a0d5465f3ab071061ce22a5eedeec17838a56af9"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
 ]
 
 [[package]]

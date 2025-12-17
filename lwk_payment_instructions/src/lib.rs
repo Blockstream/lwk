@@ -24,6 +24,7 @@ pub enum PaymentKind {
     LnUrl,
     Bip353,
     Bip21,
+    Bip321,
     LiquidBip21,
 }
 
@@ -46,6 +47,7 @@ pub enum Payment {
     LnUrlCat(LnUrl),                  // just lnurl or lightning:<lnurl> or lnurlp://<url>
     Bip353(String),                   // ₿matt@mattcorallo.com
     Bip21(Bip21),                     // bitcoin:
+    Bip321(Bip321),                   // bitcoin: uri without an address but with a payment method
     LiquidBip21(LiquidBip21),         // liquidnetwork: liquidtestnet:
 }
 
@@ -60,6 +62,7 @@ impl Payment {
             Payment::Bip353(_) => PaymentKind::Bip353,
             Payment::Bip21(_) => PaymentKind::Bip21,
             Payment::LiquidBip21(_) => PaymentKind::LiquidBip21,
+            Payment::Bip321(_) => PaymentKind::Bip321,
         }
     }
 
@@ -108,6 +111,13 @@ impl Payment {
     pub fn bip21(&self) -> Option<&Bip21> {
         match self {
             Payment::Bip21(bip21) => Some(bip21),
+            _ => None,
+        }
+    }
+
+    pub fn bip321(&self) -> Option<&Bip321> {
+        match self {
+            Payment::Bip321(bip321) => Some(bip321),
             _ => None,
         }
     }
@@ -170,11 +180,13 @@ fn parse_with_schema(
     use Schema::*;
     match (schema, cat) {
         (Bitcoin, Ok(cat @ BitcoinAddress(_))) => Ok(cat),
-        (Bitcoin, Err(_)) => {
-            // Validate it's a correct bip21::Uri, then store as String
-            let bip21 = bip21::Bip21::from_str(s)?;
-            Ok(Bip21(bip21))
-        }
+        (Bitcoin, Err(_)) => match bip21::Bip21::from_str(s) {
+            Ok(bip21) => Ok(Bip21(bip21)),
+            Err(_) => match bip321::Bip321::from_str(s) {
+                Ok(bip321) => Ok(Bip321(bip321)),
+                Err(_) => Err(format!("Invalid bip21 or bip321 URI: {s}")),
+            },
+        },
 
         (LiquidNetwork, Ok(ref cat @ LiquidAddress(ref a))) => {
             if a.params == &AddressParams::LIQUID {
@@ -302,7 +314,10 @@ mod tests {
     #[test]
     fn test_parse_with_schema_fails() {
         let payment_category = Payment::from_str("bitcoin:invalid_address").unwrap_err();
-        assert_eq!(payment_category, "invalid BIP21 URI");
+        assert_eq!(
+            payment_category,
+            "Invalid bip21 or bip321 URI: bitcoin:invalid_address"
+        );
 
         // mixed case schema are not supported
         let payment_category =

@@ -1,5 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
+use elements::bitcoin::{address::NetworkUnchecked, Address};
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
 use silentpayments::SilentPaymentAddress;
@@ -21,11 +22,21 @@ pub struct Bip321 {
     inner: Bip21,
     /// The original URI string
     original: String,
+
+    used_mockup_address: bool,
 }
 
 impl Bip321 {
     pub fn as_str(&self) -> &str {
         &self.original
+    }
+
+    pub fn address(&self) -> Option<Address<NetworkUnchecked>> {
+        if self.used_mockup_address {
+            None
+        } else {
+            Some(self.inner.address())
+        }
     }
 
     pub fn amount(&self) -> Option<u64> {
@@ -81,6 +92,7 @@ impl FromStr for Bip321 {
             return Ok(Self {
                 inner: bip21,
                 original: s.to_string(),
+                used_mockup_address: false,
             });
         }
 
@@ -115,6 +127,7 @@ impl FromStr for Bip321 {
         Ok(Self {
             inner,
             original: s.to_string(),
+            used_mockup_address: true,
         })
     }
 }
@@ -141,6 +154,7 @@ mod tests {
             Some("ark1qq4hfssprtcgnjzf8qlw2f78yvjau5kldfugg29k34y7j96q2w4t567uy9ukgfl2ntulzvlzj7swsprfs4wy4h47m7z48khygt7qsyazckttpz".to_string())
         );
         assert_eq!(bip321.as_str(), uri);
+        assert!(bip321.address().is_none());
     }
 
     #[test]
@@ -161,6 +175,10 @@ mod tests {
         let uri = format!("bitcoin:{MOCKUP_ADDRESS}?amount=0.001");
         let bip321 = Bip321::from_str(&uri).unwrap();
         assert_eq!(bip321.amount(), Some(100_000)); // 0.001 BTC = 100_000 sats
+        assert_eq!(
+            bip321.address(),
+            Some(Address::from_str(MOCKUP_ADDRESS).unwrap())
+        );
     }
 
     #[test]

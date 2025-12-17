@@ -434,6 +434,7 @@ mod tests {
         assert_eq!(bip321_ref.ark(), Some(ark_addr.to_string()));
         assert_eq!(bip321_ref.amount(), Some(222)); // 0.00000222 BTC = 222 sats
         assert!(payment_category.bip21().is_none());
+        assert!(bip321_ref.address().is_none());
 
         let lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97";
         let payment_category = Payment::from_str(&format!("lightning:{lnurl}")).unwrap();

@@ -55,6 +55,10 @@ impl Bip21 {
     pub fn silent_payment_address(&self) -> Option<SilentPaymentAddress> {
         self.parsed().extras.sp
     }
+
+    pub fn ark(&self) -> Option<String> {
+        self.parsed().extras.ark
+    }
 }
 
 impl PartialEq<str> for Bip21 {
@@ -88,6 +92,7 @@ struct Extras {
     /// Payjoin output substitution, defaults to true if absent
     pjos: bool,
     sp: Option<SilentPaymentAddress>,
+    ark: Option<String>,
 }
 
 impl DeserializationError for Extras {
@@ -105,6 +110,7 @@ struct ExtrasState {
     /// Defaults to true if absent
     pjos: bool,
     sp: Option<SilentPaymentAddress>,
+    ark: Option<String>,
 }
 
 impl Default for ExtrasState {
@@ -115,6 +121,7 @@ impl Default for ExtrasState {
             pj: None,
             pjos: true,
             sp: None,
+            ark: None,
         }
     }
 }
@@ -128,6 +135,7 @@ impl DeserializationState<'_> for ExtrasState {
             || key.eq_ignore_ascii_case("pj")
             || key.eq_ignore_ascii_case("pjos")
             || key.eq_ignore_ascii_case("sp")
+            || key.eq_ignore_ascii_case("ark")
     }
 
     fn deserialize_temp(
@@ -162,6 +170,11 @@ impl DeserializationState<'_> for ExtrasState {
                 self.sp = SilentPaymentAddress::try_from(s.as_str()).ok();
             }
             Ok(ParamKind::Known)
+        } else if key.eq_ignore_ascii_case("ark") {
+            if let Ok(s) = String::try_from(value) {
+                self.ark = Some(s);
+            }
+            Ok(ParamKind::Known)
         } else {
             Ok(ParamKind::Unknown)
         }
@@ -174,6 +187,7 @@ impl DeserializationState<'_> for ExtrasState {
             pj: self.pj,
             pjos: self.pjos,
             sp: self.sp,
+            ark: self.ark,
         })
     }
 }
@@ -271,6 +285,23 @@ mod tests {
         let bip21 = Bip21::from_str(uri).unwrap();
         assert!(!bip21.payjoin_output_substitution());
         assert_eq!(bip21.amount(), Some(1_000_000));
+    }
+
+    #[test]
+    fn test_ark_address() {
+        // Test ark parameter
+        let uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?ark=ark1testaddr&amount=0.001";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert_eq!(bip21.ark(), Some("ark1testaddr".to_string()));
+        assert_eq!(bip21.amount(), Some(100_000)); // 0.001 BTC = 100_000 sats
+
+        // Test ark with longer address value
+        let ark_addr = "ark1qq4hfssprtcgnjzf8qlw2f78yvjau5kldfugg29k34y7j96q2w4t567uy9ukgfl2ntulzvlzj7swsprfs4wy4h47m7z48khygt7qsyazckttpz";
+        let uri =
+            format!("bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?ark={ark_addr}&amount=0.00000222");
+        let bip21 = Bip21::from_str(&uri).unwrap();
+        assert_eq!(bip21.ark(), Some(ark_addr.to_string()));
+        assert_eq!(bip21.amount(), Some(222)); // 0.00000222 BTC = 222 sats
     }
 
     #[test]

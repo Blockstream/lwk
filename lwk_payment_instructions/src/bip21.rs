@@ -199,4 +199,62 @@ mod tests {
         assert_eq!(bip21.message(), Some("For lunch Tuesday".to_string()));
         assert_eq!(bip21.offer(), Some(Offer::from_str(bolt12).unwrap()));
     }
+
+    #[test]
+    fn test_deserialize_pjos() {
+        // pjos=0 should disable output substitution
+        let uri = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com&pjos=0";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(!bip21.pjos());
+        assert_eq!(
+            bip21.pj(),
+            Some(url::Url::from_str("https://example.com").unwrap())
+        );
+
+        // pjos=1 should allow output substitution
+        let uri = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com&pjos=1";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(bip21.pjos());
+        assert_eq!(
+            bip21.pj(),
+            Some(url::Url::from_str("https://example.com").unwrap())
+        );
+
+        // Elided pjos should allow output substitution (default to true)
+        let uri = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(bip21.pjos());
+        assert_eq!(
+            bip21.pj(),
+            Some(url::Url::from_str("https://example.com").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_payjoin_with_amount() {
+        let uri =
+            "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?amount=0.01&pjos=0&pj=https://example.com";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert_eq!(bip21.amount(), Some(1_000_000)); // 0.01 BTC = 1_000_000 sats
+        assert!(!bip21.pjos());
+        assert_eq!(
+            bip21.pj(),
+            Some(url::Url::from_str("https://example.com").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_payjoin_shuffled_params() {
+        // pj before pjos
+        let uri = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com&pjos=0";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(!bip21.pjos());
+
+        // amount between pj params
+        let uri =
+            "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pjos=0&amount=0.01&pj=https://example.com";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(!bip21.pjos());
+        assert_eq!(bip21.amount(), Some(1_000_000));
+    }
 }

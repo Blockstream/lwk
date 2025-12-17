@@ -9,7 +9,9 @@ use lightning_invoice::Bolt11Invoice;
 use lnurl::lnurl::LnUrl;
 
 mod bip21;
+mod bip321;
 pub use bip21::Bip21;
+pub use bip321::Bip321;
 
 #[allow(dead_code)]
 #[non_exhaustive]

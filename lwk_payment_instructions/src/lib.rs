@@ -425,6 +425,16 @@ mod tests {
             Payment::Bip21(ref uri) if uri == bip21_upper
         ));
 
+        // BIP321 URI with ark parameter and no address
+        let ark_addr = "ark1qq4hfssprtcgnjzf8qlw2f78yvjau5kldfugg29k34y7j96q2w4t567uy9ukgfl2ntulzvlzj7swsprfs4wy4h47m7z48khygt7qsyazckttpz";
+        let bip321 = format!("bitcoin:?ark={ark_addr}&amount=0.00000222");
+        let payment_category = Payment::from_str(&bip321).unwrap();
+        assert_eq!(payment_category.kind(), PaymentKind::Bip321);
+        let bip321_ref = payment_category.bip321().unwrap();
+        assert_eq!(bip321_ref.ark(), Some(ark_addr.to_string()));
+        assert_eq!(bip321_ref.amount(), Some(222)); // 0.00000222 BTC = 222 sats
+        assert!(payment_category.bip21().is_none());
+
         let lnurl = "lnurl1dp68gurn8ghj7ctsdyhxwetewdjhytnxw4hxgtmvde6hymp0wpshj0mswfhk5etrw3ykg0f3xqcs2mcx97";
         let payment_category = Payment::from_str(&format!("lightning:{lnurl}")).unwrap();
         let expected = LnUrl::from_str(lnurl).unwrap();

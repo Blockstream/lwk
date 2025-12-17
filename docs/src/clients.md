@@ -19,7 +19,7 @@ It's also possible to connect to authenticated backends for enterprise deploymen
 | **Sync Speed** | 🏃 Average | 🐢 Slower | 🚀 Fastest |
 | **Roundtrips** | Many but batched | Many | Few |
 | **Async Support** | ❌ No | ✅ Yes | ✅ Yes |
-| **Authentication** | ❌ No | ✅ OAuth2 | 🔜 Planned |
+| **Authentication** | ❌ No | ✅ OAuth2 | ✅ OAuth2 |
 | **Maturity** | ⭐⭐⭐ Mature | ⭐⭐⭐ Mature | ⭐⭐ New |
 
 ## Electrum

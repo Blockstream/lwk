@@ -42,6 +42,14 @@ impl Bip21 {
     pub fn offer(&self) -> Option<Offer> {
         self.parsed().extras.offer
     }
+
+    pub fn pj(&self) -> Option<url::Url> {
+        self.parsed().extras.pj
+    }
+
+    pub fn pjos(&self) -> bool {
+        self.parsed().extras.pjos
+    }
 }
 
 impl PartialEq<str> for Bip21 {
@@ -71,6 +79,9 @@ impl Display for Bip21 {
 struct Extras {
     lightning: Option<Bolt11Invoice>,
     offer: Option<Offer>,
+    pj: Option<url::Url>,
+    /// Payjoin output substitution, defaults to true if absent
+    pjos: bool,
 }
 
 impl DeserializationError for Extras {
@@ -81,17 +92,33 @@ impl DeserializeParams<'_> for Extras {
     type DeserializationState = ExtrasState;
 }
 
-#[derive(Default)]
 struct ExtrasState {
     lightning: Option<Bolt11Invoice>,
     offer: Option<Offer>,
+    pj: Option<url::Url>,
+    /// Defaults to true if absent
+    pjos: bool,
+}
+
+impl Default for ExtrasState {
+    fn default() -> Self {
+        Self {
+            lightning: None,
+            offer: None,
+            pj: None,
+            pjos: true,
+        }
+    }
 }
 
 impl DeserializationState<'_> for ExtrasState {
     type Value = Extras;
 
     fn is_param_known(&self, key: &str) -> bool {
-        key.eq_ignore_ascii_case("lightning") || key.eq_ignore_ascii_case("lno")
+        key.eq_ignore_ascii_case("lightning")
+            || key.eq_ignore_ascii_case("lno")
+            || key.eq_ignore_ascii_case("pj")
+            || key.eq_ignore_ascii_case("pjos")
     }
 
     fn deserialize_temp(
@@ -109,6 +136,18 @@ impl DeserializationState<'_> for ExtrasState {
                 self.offer = Offer::from_str(&s).ok();
             }
             Ok(ParamKind::Known)
+        } else if key.eq_ignore_ascii_case("pj") {
+            if let Ok(s) = String::try_from(value) {
+                self.pj = url::Url::from_str(&s).ok();
+            }
+            Ok(ParamKind::Known)
+        } else if key.eq_ignore_ascii_case("pjos") {
+            if let Ok(s) = String::try_from(value) {
+                if s == "0" {
+                    self.pjos = false;
+                }
+            }
+            Ok(ParamKind::Known)
         } else {
             Ok(ParamKind::Unknown)
         }
@@ -118,6 +157,8 @@ impl DeserializationState<'_> for ExtrasState {
         Ok(Extras {
             lightning: self.lightning,
             offer: self.offer,
+            pj: self.pj,
+            pjos: self.pjos,
         })
     }
 }

@@ -272,4 +272,33 @@ mod tests {
         assert!(!bip21.payjoin_output_substitution());
         assert_eq!(bip21.amount(), Some(1_000_000));
     }
+
+    #[test]
+    fn test_silent_payment_address() {
+        // Valid silent payment address from BIP-352 test vectors
+        let sp_address = "sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv";
+        let uri = format!("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?sp={sp_address}");
+        let bip21 = Bip21::from_str(&uri).unwrap();
+        let parsed_sp = bip21.silent_payment_address();
+        assert!(parsed_sp.is_some());
+        assert_eq!(parsed_sp.unwrap().to_string(), sp_address);
+
+        // Silent payment address with amount
+        let uri =
+            format!("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?amount=0.001&sp={sp_address}");
+        let bip21 = Bip21::from_str(&uri).unwrap();
+        assert_eq!(bip21.amount(), Some(100_000)); // 0.001 BTC = 100_000 sats
+        assert!(bip21.silent_payment_address().is_some());
+
+        // No silent payment address
+        let uri = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?amount=0.001";
+        let bip21 = Bip21::from_str(uri).unwrap();
+        assert!(bip21.silent_payment_address().is_none());
+
+        // Invalid silent payment address doesn't make the uri fail completely but shows no sp address
+        let invalidsp = "invalidsp";
+        let uri = format!("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?sp={invalidsp}");
+        let bip21 = Bip21::from_str(&uri).unwrap();
+        assert_eq!(bip21.silent_payment_address(), None);
+    }
 }

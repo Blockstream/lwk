@@ -21,6 +21,8 @@ pub enum PaymentKind {
     Bip353,
     /// A BIP21 URI
     Bip21,
+    /// A BIP321 URI (BIP21 without address but with payment method)
+    Bip321,
     /// A Liquid BIP21 URI with amount and asset
     LiquidBip21,
 }
@@ -37,6 +39,7 @@ impl From<lwk_payment_instructions::PaymentKind> for PaymentKind {
             lwk_payment_instructions::PaymentKind::LnUrl => PaymentKind::LnUrl,
             lwk_payment_instructions::PaymentKind::Bip353 => PaymentKind::Bip353,
             lwk_payment_instructions::PaymentKind::Bip21 => PaymentKind::Bip21,
+            lwk_payment_instructions::PaymentKind::Bip321 => PaymentKind::Bip321,
             lwk_payment_instructions::PaymentKind::LiquidBip21 => PaymentKind::LiquidBip21,
             _ => unreachable!("Unknown PaymentCategoryKind variant"),
         }
@@ -74,6 +77,7 @@ impl Display for Payment {
             P::LnUrlCat(lnurl) => write!(f, "{lnurl}"),
             P::Bip353(s) => write!(f, "{s}"),
             P::Bip21(s) => write!(f, "{s}"),
+            P::Bip321(s) => write!(f, "{s}"),
             P::LiquidBip21(bip21) => write!(f, "{}", bip21.address),
             _ => write!(f, "{:?}", self.inner),
         }
@@ -139,6 +143,13 @@ impl Payment {
         self.inner
             .bip21()
             .map(|bip21| Arc::new(crate::bip21::Bip21::from(bip21.clone())))
+    }
+
+    /// Returns the BIP321 URI if this is a Bip321 category, None otherwise
+    pub fn bip321(&self) -> Option<Arc<crate::bip321::Bip321>> {
+        self.inner
+            .bip321()
+            .map(|bip321| Arc::new(crate::bip321::Bip321::from(bip321.clone())))
     }
 
     /// Returns the Liquid BIP21 details if this is a LiquidBip21 category, None otherwise

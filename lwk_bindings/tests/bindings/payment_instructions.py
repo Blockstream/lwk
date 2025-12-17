@@ -1,4 +1,4 @@
-from lwk import Payment, PaymentKind, Network, Bip21
+from lwk import Payment, PaymentKind, Network, Bip21, Bip321
 
 # Test Bitcoin address (no schema)
 bitcoin_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
@@ -209,6 +209,31 @@ assert bip21_obj.silent_payment_address() == sp_address
 # Test silent payment address absent
 bip21_obj = Bip21("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?amount=0.001")
 assert bip21_obj.silent_payment_address() is None
+
+# Test BIP321 - URI without address but with a payment method (ark, lighting...)
+ark_addr = "ark1qq4hfssprtcgnjzf8qlw2f78yvjau5kldfugg29k34y7j96q2w4t567uy9ukgfl2ntulzvlzj7swsprfs4wy4h47m7z48khygt7qsyazckttpz"
+bip321_uri = f"bitcoin:?ark={ark_addr}&amount=0.00000222"
+pay = Payment(bip321_uri)
+assert pay.kind() == PaymentKind.BIP321
+bip321_obj = pay.bip321()
+assert bip321_obj is not None
+assert bip321_obj.ark() == ark_addr
+assert bip321_obj.amount() == 222  # 0.00000222 BTC = 222 sats
+assert pay.bip21() is None  # BIP321 is different from BIP21
+
+# Test BIP321 directly constructed
+bip321_direct = Bip321(bip321_uri)
+assert bip321_direct.ark() == ark_addr
+assert bip321_direct.amount() == 222
+assert bip321_direct.as_str() == bip321_uri
+
+# Test BIP321 with silent payment address (no fallback address)
+sp_bip321 = f"bitcoin:?sp={sp_address}"
+pay = Payment(sp_bip321)
+assert pay.kind() == PaymentKind.BIP321
+bip321_obj = pay.bip321()
+assert bip321_obj is not None
+assert bip321_obj.silent_payment_address() == sp_address
 
 # Test BIP353
 bip353 = "₿matt@mattcorallo.com"

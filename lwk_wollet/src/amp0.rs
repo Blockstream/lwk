@@ -1393,7 +1393,9 @@ impl WebSocketClient {
         use tokio_tungstenite::tungstenite::Message;
 
         let mut write_stream = self.write_stream.lock().await;
-        write_stream.send(Message::Text(text.to_string())).await?;
+        write_stream
+            .send(Message::Text(text.to_string().into()))
+            .await?;
         Ok(())
     }
 
@@ -1406,7 +1408,9 @@ impl WebSocketClient {
         use tokio_tungstenite::tungstenite::Message;
 
         let mut write_stream = self.write_stream.lock().await;
-        write_stream.send(Message::Binary(data.to_vec())).await?;
+        write_stream
+            .send(Message::Binary(data.to_vec().into()))
+            .await?;
         Ok(())
     }
 }
@@ -1477,9 +1481,13 @@ impl Stream for WebSocketClient {
 
         // Try to send as text first (for JSON protocols), fall back to binary
         if let Ok(text) = std::str::from_utf8(data) {
-            write_stream.send(Message::Text(text.to_string())).await?;
+            write_stream
+                .send(Message::Text(text.to_string().into()))
+                .await?;
         } else {
-            write_stream.send(Message::Binary(data.to_vec())).await?;
+            write_stream
+                .send(Message::Binary(data.to_vec().into()))
+                .await?;
         }
         Ok(())
     }

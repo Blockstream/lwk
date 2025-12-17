@@ -1,5 +1,5 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
 //! LWK is a collection of libraries for Liquid wallets.

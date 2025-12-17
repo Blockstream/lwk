@@ -10,7 +10,7 @@ documentation = "https://docs.rs/lwk_containers"
 test = false
 
 [dependencies]
-elements = "0.25.0"
+elements.workspace = true
 rand = "0.8.5"
 tempfile = "3.8.0"
 testcontainers = "0.14.0"

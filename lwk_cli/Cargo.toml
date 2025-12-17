@@ -29,7 +29,7 @@ lwk_containers = { version = "0.13.0" }
 lwk_test_util = { version = "0.13.0" }
 
 shellwords = "1.1.0"
-elements = "0.25.0"
+elements.workspace = true
 tempfile = "3.8.0"
 
 [features]

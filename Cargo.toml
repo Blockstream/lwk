@@ -47,5 +47,5 @@ inherits = "release"
 debug = true         # Include debug symbols for profiling
 strip = "none"       # Don't strip any symbols
 
-# [workspace.dependencies] # This cause issues in publishing single crates with our current flow
-# log = "0.4.22"
+[workspace.dependencies]
+elements = { version = "0.25.0", features = ["base64", "serde"] }

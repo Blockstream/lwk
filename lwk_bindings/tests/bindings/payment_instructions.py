@@ -193,13 +193,13 @@ pay = Payment(payjoin_bip21)
 assert pay.kind() == PaymentKind.BIP21
 bip21_obj = pay.bip21()
 assert bip21_obj is not None
-assert bip21_obj.pj() == "https://example.com/"
-assert bip21_obj.pjos() == False
+assert bip21_obj.payjoin() == "https://example.com/"
+assert bip21_obj.payjoin_output_substitution() == False
 # Test pjos defaults to True when absent
 payjoin_bip21_default_pjos = "bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?pj=https://example.com"
 bip21_obj = Bip21(payjoin_bip21_default_pjos)
-assert bip21_obj.pj() == "https://example.com/"
-assert bip21_obj.pjos() == True
+assert bip21_obj.payjoin() == "https://example.com/"
+assert bip21_obj.payjoin_output_substitution() == True
 
 # Test BIP353
 bip353 = "₿matt@mattcorallo.com"

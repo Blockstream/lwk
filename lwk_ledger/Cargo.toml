@@ -11,7 +11,7 @@ lwk_common = "0.13.0"
 lwk_containers = { version = "0.13.0", optional = true }
 
 ledger-apdu = "0.11"
-elements-miniscript = { version = "0.4", features = ["serde"] }
+elements-miniscript.workspace = true
 thiserror = "1"
 #ledger-transport-hid = { path = "../../ledger-rs/ledger-transport-hid", version = "0.11.0", optional = true }
 ledger-transport-hid = { version = "0.11.0", optional = true }

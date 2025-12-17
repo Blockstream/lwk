@@ -9,7 +9,7 @@ documentation = "https://docs.rs/lwk_common"
 [dependencies]
 base64 = "0.21.4"
 elements.workspace = true
-elements-miniscript = "0.4"
+elements-miniscript.workspace = true
 qr_code = { version = "2.0.0", features = ["bmp"] }
 rand = "0.8"
 thiserror = "1.0.48"

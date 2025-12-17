@@ -26,7 +26,7 @@ thiserror = "1"
 
 log = "0.4.22"
 
-elements-miniscript = "0.4"
+elements-miniscript.workspace = true
 
 reqwest = { version = "0.12", default-features = false, features = [
     "charset",

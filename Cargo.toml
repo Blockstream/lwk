@@ -49,3 +49,4 @@ strip = "none"       # Don't strip any symbols
 
 [workspace.dependencies]
 elements = { version = "0.25.0", features = ["base64", "serde"] }
+elements-miniscript = { version = "0.4", features = ["base64", "serde"] }

@@ -3,7 +3,6 @@ use std::{fmt::Display, str::FromStr};
 use elements::bitcoin::{address::NetworkUnchecked, Address};
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
-use silentpayments::SilentPaymentAddress;
 
 use crate::bip21::Bip21;
 
@@ -67,7 +66,7 @@ impl Bip321 {
         self.inner.payjoin_output_substitution()
     }
 
-    pub fn silent_payment_address(&self) -> Option<SilentPaymentAddress> {
+    pub fn silent_payment_address(&self) -> Option<String> {
         self.inner.silent_payment_address()
     }
 

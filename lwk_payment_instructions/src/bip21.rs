@@ -4,7 +4,6 @@ use bip21_crate::de::{DeserializationError, DeserializationState, DeserializePar
 use elements::bitcoin::address::NetworkUnchecked;
 use lightning::offers::offer::Offer;
 use lightning_invoice::Bolt11Invoice;
-use silentpayments::SilentPaymentAddress;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Bip21(String);
@@ -52,7 +51,7 @@ impl Bip21 {
         self.parsed().extras.pjos
     }
 
-    pub fn silent_payment_address(&self) -> Option<SilentPaymentAddress> {
+    pub fn silent_payment_address(&self) -> Option<String> {
         self.parsed().extras.sp
     }
 
@@ -91,7 +90,7 @@ struct Extras {
     pj: Option<url::Url>,
     /// Payjoin output substitution, defaults to true if absent
     pjos: bool,
-    sp: Option<SilentPaymentAddress>,
+    sp: Option<String>,
     ark: Option<String>,
 }
 
@@ -109,7 +108,7 @@ struct ExtrasState {
     pj: Option<url::Url>,
     /// Defaults to true if absent
     pjos: bool,
-    sp: Option<SilentPaymentAddress>,
+    sp: Option<String>,
     ark: Option<String>,
 }
 
@@ -167,7 +166,8 @@ impl DeserializationState<'_> for ExtrasState {
             Ok(ParamKind::Known)
         } else if key.eq_ignore_ascii_case("sp") {
             if let Ok(s) = String::try_from(value) {
-                self.sp = SilentPaymentAddress::try_from(s.as_str()).ok();
+                // self.sp = SilentPaymentAddress::try_from(s.as_str()).ok();
+                self.sp = Some(s); // TODO: we don't validate since the silentpayment crate is duplicating secp256k1 dep (using 0.28.1 instead of 0.29.0) and we don't want to pay the price since we are not fullysupporting silent payments yet
             }
             Ok(ParamKind::Known)
         } else if key.eq_ignore_ascii_case("ark") {

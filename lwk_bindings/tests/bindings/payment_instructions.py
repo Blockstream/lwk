@@ -201,6 +201,15 @@ bip21_obj = Bip21(payjoin_bip21_default_pjos)
 assert bip21_obj.payjoin() == "https://example.com/"
 assert bip21_obj.payjoin_output_substitution() == True
 
+# Test BIP21 with silent payment address (BIP-352)
+sp_address = "sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv"
+sp_bip21 = f"bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?sp={sp_address}"
+bip21_obj = Bip21(sp_bip21)
+assert bip21_obj.silent_payment_address() == sp_address
+# Test silent payment address absent
+bip21_obj = Bip21("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?amount=0.001")
+assert bip21_obj.silent_payment_address() is None
+
 # Test BIP353
 bip353 = "₿matt@mattcorallo.com"
 pay = Payment(bip353)

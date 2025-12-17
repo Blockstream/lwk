@@ -82,4 +82,9 @@ impl Bip21 {
     pub fn payjoin_output_substitution(&self) -> bool {
         self.inner.payjoin_output_substitution()
     }
+
+    /// Returns the silent payment address (BIP-352) if present
+    pub fn silent_payment_address(&self) -> Option<String> {
+        self.inner.silent_payment_address().map(|sp| sp.to_string())
+    }
 }

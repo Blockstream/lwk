@@ -27,7 +27,7 @@ jobs:
   osx-wheels:
     strategy:
       matrix:
-        os: ["macos-13", "macos-14"] # 13 -> x86_64, 14 -> arm64 # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+        os: ["macos-14"]
     runs-on: ${{ matrix.os }}
     steps:
      - uses: actions/checkout@v4

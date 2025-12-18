@@ -1634,10 +1634,13 @@ fn test_external_utxo() {
     let address = w2.address();
     w2.fund(&env, 100_000, Some(address), None);
 
+    // ANCHOR: external_utxo_create
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
+    // ANCHOR_END: external_utxo_create
 
     let node_address = env.elementsd_getnewaddress();
+    // ANCHOR: external_utxo_add
     let mut pset = w1
         .tx_builder()
         .add_lbtc_recipient(&node_address, 110_000)
@@ -1646,18 +1649,21 @@ fn test_external_utxo() {
         .unwrap()
         .finish()
         .unwrap();
+    // ANCHOR_END: external_utxo_add
 
+    // ANCHOR: external_utxo_sign
     // Add the details for the extenal wallet to sign
     w2.wollet.add_details(&mut pset).unwrap();
     let details = w1.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.sig_details.len(), 2);
-    assert_eq!(details.sig_details[0].missing_signature.len(), 1);
-    assert_eq!(details.sig_details[1].missing_signature.len(), 1);
+    assert_eq!(details.sig_details.len(), 2); // ANCHOR: ignore
+    assert_eq!(details.sig_details[0].missing_signature.len(), 1); // ANCHOR: ignore
+    assert_eq!(details.sig_details[1].missing_signature.len(), 1); // ANCHOR: ignore
 
     let signers = [&AnySigner::Software(signer1), &AnySigner::Software(signer2)];
     for signer in signers {
         w1.sign(signer, &mut pset);
     }
+    // ANCHOR_END: external_utxo_sign
 
     let details = w1.wollet.get_details(&pset).unwrap();
     let fee = details.balance.fee;
@@ -1696,6 +1702,7 @@ fn test_external_utxo() {
     assert_eq!(w1.balance(&asset), 9_000);
     assert_eq!(w2.balance(&asset), 1_000);
 
+    // ANCHOR: external_utxo_mixed
     // Send exact amount (no change) spending only external utxo
     let utxo = &w2.wollet.utxos().unwrap()[0];
     let external_utxo = w2.make_external(utxo);
@@ -1708,6 +1715,7 @@ fn test_external_utxo() {
         .unwrap()
         .finish()
         .unwrap();
+    // ANCHOR_END: external_utxo_mixed
 
     w2.wollet.add_details(&mut pset).unwrap();
     for signer in signers {
@@ -1844,7 +1852,9 @@ fn test_unblinded_utxo() {
     assert_eq!(w.wollet.utxos().unwrap().len(), 0);
     assert_eq!(w.wollet.txos().unwrap().len(), 1);
 
+    // ANCHOR: external_utxo_unblinded
     let external_utxo = w.wollet.explicit_utxos().unwrap()[0].clone();
+    // ANCHOR_END: external_utxo_unblinded
 
     // Create tx sending the unblinded utxo
     let node_address = env.elementsd_getnewaddress();

@@ -326,10 +326,10 @@ mod tests {
         let bip21 = Bip21::from_str(uri).unwrap();
         assert!(bip21.silent_payment_address().is_none());
 
-        // Invalid silent payment address doesn't make the uri fail completely but shows no sp address
+        // Invalid silent payment address aren't validated
         let invalidsp = "invalidsp";
         let uri = format!("bitcoin:12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX?sp={invalidsp}");
         let bip21 = Bip21::from_str(&uri).unwrap();
-        assert_eq!(bip21.silent_payment_address(), None);
+        assert_eq!(bip21.silent_payment_address(), Some(invalidsp.to_string()));
     }
 }

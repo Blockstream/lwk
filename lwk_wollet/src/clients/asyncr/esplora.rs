@@ -470,6 +470,11 @@ impl EsploraClient {
                 }
 
                 batch_count += 1;
+
+                if !descriptor.descriptor.has_wildcard() {
+                    // No wildcard, 1 loop is enough
+                    return Ok(data);
+                }
             }
         }
         Ok(data)

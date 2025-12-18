@@ -4,9 +4,11 @@ set -e
 mkdir -p bin
 cd bin || exit 1
 
-# electrs
-FNAME=electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid && \
-curl -Ls https://github.com/RCasatta/electrsd/releases/download/electrs_releases/${FNAME}.gz | gunzip > ${FNAME} && \
+FNAME=electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1_liquid && \
+wget https://github.com/RCasatta/electrsd/releases/download/electrs_releases/${FNAME}.zip && \
+unzip ${FNAME}.zip && \
+rm ${FNAME}.zip && \
+mv electrs $FNAME && \
 chmod +x $FNAME
 
 # waterfalls

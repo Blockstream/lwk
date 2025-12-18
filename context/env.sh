@@ -1,5 +1,5 @@
 #!/bin/sh
-export ELECTRS_LIQUID_EXEC="$PWD/bin/electrs_linux_esplora_a33e97e1a1fc63fa9c20a116bb92579bbf43b254_liquid"
+export ELECTRS_LIQUID_EXEC="$PWD/bin/electrs_linux_esplora_027e38d3ebc2f85b28ae76f8f3448438ee4fc7b1_liquid"
 export ELEMENTSD_EXEC="$PWD/bin/elements-23.2.4/bin/elementsd"
 export BITCOIND_EXEC="$PWD/bin/bitcoin-26.0/bin/bitcoind"
 export WATERFALLS_EXEC="$PWD/bin/waterfalls_b8818e1"

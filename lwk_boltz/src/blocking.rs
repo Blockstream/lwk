@@ -12,8 +12,8 @@ use elements::bitcoin;
 use lwk_wollet::elements;
 
 use crate::{
-    prepare_pay_data::PreparePayDataSerializable, ChainSwapDataSerializable, Error, InvoiceData,
-    InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
+    prepare_pay_data::PreparePayDataSerializable, ChainSwapData, ChainSwapDataSerializable, Error,
+    InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -171,6 +171,20 @@ impl BoltzSession {
         let inner = self
             .runtime
             .block_on(self.inner.restorable_submarine_swaps(swaps, refund_address))?;
+        Ok(inner)
+    }
+
+    pub fn restorable_chain_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: &str,
+        refund_address: &str,
+    ) -> Result<Vec<ChainSwapData>, Error> {
+        let inner = self.runtime.block_on(self.inner.restorable_chain_swaps(
+            swaps,
+            claim_address,
+            refund_address,
+        ))?;
         Ok(inner)
     }
 

@@ -78,7 +78,7 @@ impl From<ChainSwapData> for ChainSwapDataSerializable {
     }
 }
 
-fn chain_from_str(chain: &str) -> Result<Chain, Error> {
+pub(crate) fn chain_from_str(chain: &str) -> Result<Chain, Error> {
     // Display format of the chain is "BTC" or "L-BTC" for regtest/testnet/mainnet
     match chain {
         "BTC" => Ok(Chain::Bitcoin(BitcoinChain::BitcoinRegtest)),

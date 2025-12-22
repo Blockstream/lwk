@@ -382,6 +382,18 @@ mod tests {
             .await
             .unwrap();
 
+        let swap_list = session.swap_restore().await.unwrap();
+        let restorable = session
+            .restorable_chain_swaps(&swap_list, &claim_address_str, &refund_address_str)
+            .await
+            .unwrap();
+        let swaps: Vec<_> = restorable
+            .iter()
+            .filter(|data| data.create_chain_response.id == response.swap_id())
+            .collect();
+        log::info!("Found {:?} restorable chain swaps", swaps);
+        assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
+
         let swap_id = response.swap_id();
         let lockup_address = response.lockup_address().to_string();
         let expected_amount = response.expected_amount();

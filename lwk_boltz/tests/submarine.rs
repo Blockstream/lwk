@@ -357,6 +357,20 @@ mod tests {
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
+
+        let swap_id = prepare_pay_response.swap_id();
+        let swap_list = session.swap_restore().await.unwrap();
+        let restorable = session
+            .restorable_submarine_swaps(&swap_list, &refund_address)
+            .await
+            .unwrap();
+        let swaps: Vec<_> = restorable
+            .iter()
+            .filter(|data| data.create_swap_response.id == swap_id)
+            .collect();
+        log::info!("Found {:?} restorable submarine swaps", swaps);
+        assert_eq!(swaps.len(), 0); // the just created swap is not restorable.
+
         utils::send_to_address(
             Chain::Liquid(LiquidChain::LiquidRegtest),
             &prepare_pay_response.uri_address().unwrap().to_string(),

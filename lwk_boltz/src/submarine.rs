@@ -210,6 +210,7 @@ impl BoltzSession {
                 e.status != "swap.expired"
                     && e.status != "transaction.claimed"
                     && e.status != "swap.created"
+                    && e.status != "invoice.set"
             })
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(

@@ -357,14 +357,15 @@ mod tests {
             .prepare_pay(&lightning_payment, &refund_address, None)
             .await
             .unwrap();
-
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.uri_address().unwrap().to_string(),
+            prepare_pay_response.uri_amount(),
+        )
+        .await
+        .unwrap();
+        sleep(Duration::from_secs(3)).await;
         let swap_id = prepare_pay_response.swap_id();
-        // WORKAROUND: The Boltz API's swap_restore response doesn't populate the amount
-        // field in RefundDetails, so uri_amount() returns 0 for restored submarine swaps.
-        // In a real application, the expected amount should be tracked separately or
-        // recovered from on-chain transaction data.
-        let expected_amount = prepare_pay_response.uri_amount();
-        log::info!("Created swap {swap_id} with expected amount {expected_amount}");
 
         // Drop the response and session (simulating app crash/restart without serializing)
         drop(prepare_pay_response);
@@ -403,18 +404,7 @@ mod tests {
         let prepare_pay_response = session.restore_prepare_pay(our_swap).await.unwrap();
         // Use the captured expected_amount since uri_amount() returns 0 for restored swaps
         // (see WORKAROUND comment above)
-        log::info!(
-            "Restored swap, sending funds to: {} amount: {}",
-            prepare_pay_response.uri_address().unwrap().to_string(),
-            expected_amount,
-        );
-        utils::send_to_address(
-            Chain::Liquid(LiquidChain::LiquidRegtest),
-            &prepare_pay_response.uri_address().unwrap().to_string(),
-            expected_amount,
-        )
-        .await
-        .unwrap();
+
         prepare_pay_response.complete_pay().await.unwrap();
         log::info!("Swap completed successfully");
 

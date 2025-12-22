@@ -216,11 +216,11 @@ impl BoltzSession {
 
     /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
     ///
-    /// - filter the chain swaps that can be restored
+    /// - filter the BTC to LBTC swaps that can be restored
     /// - Add the private information from the session needed to restore the swap
     ///
     /// The claim and refund addresses don't need to be the same used when creating the swap.
-    pub async fn restorable_chain_swaps(
+    pub async fn restorable_btc_to_lbtc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
         claim_address: &str,
@@ -229,6 +229,39 @@ impl BoltzSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Chain))
+            .filter(|e| e.to == "L-BTC" && e.from == "BTC")
+            .filter(|e| {
+                e.status != "swap.expired"
+                    && e.status != "transaction.claimed"
+                    && e.status != "swap.created"
+            })
+            .map(|e| {
+                convert_swap_restore_response_to_chain_swap_data(
+                    e,
+                    &self.mnemonic,
+                    claim_address,
+                    refund_address,
+                )
+            })
+            .collect()
+    }
+
+    /// From the swaps returned by the boltz api via [`BoltzSession::swap_restore`]:
+    ///
+    /// - filter the LBTC to BTC swaps that can be restored
+    /// - Add the private information from the session needed to restore the swap
+    ///
+    /// The claim and refund addresses don't need to be the same used when creating the swap.
+    pub async fn restorable_lbtc_to_btc_swaps(
+        &self,
+        swaps: &[SwapRestoreResponse],
+        claim_address: &str,
+        refund_address: &str,
+    ) -> Result<Vec<ChainSwapData>, Error> {
+        swaps
+            .iter()
+            .filter(|e| matches!(e.swap_type, SwapRestoreType::Chain))
+            .filter(|e| e.to == "BTC" && e.from == "L-BTC")
             .filter(|e| {
                 e.status != "swap.expired"
                     && e.status != "transaction.claimed"

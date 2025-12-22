@@ -22,7 +22,7 @@ use crate::prepare_pay_data::{to_prepare_pay_data, PreparePayData, PreparePayDat
 use crate::swap_state::SwapStateTrait;
 use crate::{
     broadcast_tx_with_retry, mnemonic_identifier, next_status, BoltzSession, LightningPayment,
-    SwapState, SwapType, WAIT_TIME,
+    SwapState, SwapType,
 };
 
 pub struct PreparePayResponse {
@@ -346,19 +346,7 @@ impl PreparePayResponse {
             }
             SwapState::TransactionLockupFailed | SwapState::InvoiceFailedToPay => {
                 log::warn!("transaction.lockupFailed Boltz failed to lockup funding tx");
-                sleep(WAIT_TIME).await;
-                let tx = self
-                    .swap_script
-                    .construct_refund(SwapTransactionParams {
-                        keys: self.data.our_keys,
-                        output_address: self.data.refund_address.to_string(),
-                        fee: Fee::Relative(0.12), // TODO make it configurable
-                        swap_id: self.swap_id(),
-                        chain_client: &self.chain_client,
-                        boltz_client: &self.api,
-                        options: None,
-                    })
-                    .await?;
+                let tx = self.make_refund_tx_with_retry().await?;
 
                 let txid = broadcast_tx_with_retry(&self.chain_client, &tx).await?;
                 log::info!("Cooperative Refund Successfully broadcasted: {txid}");
@@ -396,6 +384,37 @@ impl PreparePayResponse {
         self.data.last_state = update_status;
 
         flow
+    }
+
+    async fn make_refund_tx_with_retry(
+        &mut self,
+    ) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
+        for _ in 0..5 {
+            match self.make_refund_tx().await {
+                Ok(tx) => {
+                    return Ok(tx);
+                }
+                Err(e) => {
+                    sleep(Duration::from_secs(1)).await;
+                }
+            }
+        }
+        Err(Error::FailBuildingRefundTransaction)
+    }
+
+    async fn make_refund_tx(&mut self) -> Result<boltz_client::swaps::BtcLikeTransaction, Error> {
+        Ok(self
+            .swap_script
+            .construct_refund(SwapTransactionParams {
+                keys: self.data.our_keys,
+                output_address: self.data.refund_address.to_string(),
+                fee: Fee::Relative(0.12), // TODO make it configurable
+                swap_id: self.swap_id(),
+                chain_client: &self.chain_client,
+                boltz_client: &self.api,
+                options: None,
+            })
+            .await?)
     }
 
     pub fn serialize(&self) -> Result<String, Error> {

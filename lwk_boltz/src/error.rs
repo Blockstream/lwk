@@ -6,6 +6,9 @@ use lightning::bitcoin::XKeyIdentifier;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Failed to build refund transaction")]
+    FailBuildingRefundTransaction,
+
     #[error("Invalid electrum url: {0}")]
     InvalidElectrumUrl(#[from] lwk_wollet::UrlError),
 

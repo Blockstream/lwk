@@ -383,13 +383,13 @@ mod tests {
             .unwrap();
 
         let swap_id = response.swap_id();
-        // WORKAROUND: The Boltz API's swap_restore response may not populate the amount
-        // field correctly, so we capture it before dropping.
-        // In a real application, the expected amount should be tracked separately or
-        // recovered from on-chain transaction data.
         let lockup_address = response.lockup_address().to_string();
         let expected_amount = response.expected_amount();
-        log::info!("Created chain swap {swap_id} with expected amount {expected_amount}");
+
+        utils::send_to_address(BTC_CHAIN.into(), &lockup_address, expected_amount)
+            .await
+            .unwrap();
+        utils::mine_blocks(1).await.unwrap();
 
         // Drop the response and session (simulating app crash/restart without serializing)
         drop(response);
@@ -425,16 +425,6 @@ mod tests {
 
         // Restore and complete the swap
         let response = session.restore_lockup(our_swap).await.unwrap();
-        log::info!(
-            "Restored BTC to LBTC swap - Lockup address: {} amount: {}",
-            response.lockup_address(),
-            expected_amount,
-        );
-
-        // Use the captured expected_amount since it may not be available from restored data
-        crate::utils::send_to_address(BTC_CHAIN.into(), &lockup_address, expected_amount)
-            .await
-            .unwrap();
 
         let success = response.complete().await.unwrap();
         assert!(

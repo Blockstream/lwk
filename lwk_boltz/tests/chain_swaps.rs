@@ -343,6 +343,112 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_chain_swaps_from_swap_list() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = crate::utils::start_block_mining();
+
+        let network = ElementsNetwork::default_regtest();
+        let client =
+            Arc::new(ElectrumClient::new(DEFAULT_REGTEST_NODE, false, false, network).unwrap());
+
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic.clone())
+            .build()
+            .await
+            .unwrap();
+
+        // Test BTC to LBTC swap with restore from swap list
+        let refund_address_str = crate::utils::generate_address(BTC_CHAIN.into())
+            .await
+            .unwrap();
+        let claim_address_str = crate::utils::generate_address(LBTC_CHAIN.into())
+            .await
+            .unwrap();
+        let refund_address = bitcoin::Address::from_str(&refund_address_str)
+            .unwrap()
+            .assume_checked();
+        let claim_address = elements::Address::from_str(&claim_address_str).unwrap();
+
+        let response = session
+            .btc_to_lbtc(50_000, &refund_address, &claim_address, None)
+            .await
+            .unwrap();
+
+        let swap_id = response.swap_id();
+        // WORKAROUND: The Boltz API's swap_restore response may not populate the amount
+        // field correctly, so we capture it before dropping.
+        // In a real application, the expected amount should be tracked separately or
+        // recovered from on-chain transaction data.
+        let lockup_address = response.lockup_address().to_string();
+        let expected_amount = response.expected_amount();
+        log::info!("Created chain swap {swap_id} with expected amount {expected_amount}");
+
+        // Drop the response and session (simulating app crash/restart without serializing)
+        drop(response);
+        drop(session);
+
+        // Create a new session with the same mnemonic
+        let session = BoltzSession::builder(network, AnyClient::Electrum(client.clone()))
+            .create_swap_timeout(TIMEOUT)
+            .mnemonic(mnemonic)
+            .build()
+            .await
+            .unwrap();
+
+        // Get all swaps from Boltz API
+        let swap_list = session.swap_restore().await.unwrap();
+        log::info!("Found {} swaps in swap_restore", swap_list.len());
+
+        // Filter to get restorable chain swaps
+        let restorable = session
+            .restorable_chain_swaps(&swap_list, &claim_address_str, &refund_address_str)
+            .await
+            .unwrap();
+        log::info!("Found {} restorable chain swaps", restorable.len());
+
+        // Find our swap in the restorable list
+        let our_swap: lwk_boltz::ChainSwapDataSerializable = restorable
+            .into_iter()
+            .map(|data| data.into())
+            .find(|data: &lwk_boltz::ChainSwapDataSerializable| {
+                data.create_chain_response.id == swap_id
+            })
+            .expect("Our swap should be in the restorable list");
+
+        // Restore and complete the swap
+        let response = session.restore_lockup(our_swap).await.unwrap();
+        log::info!(
+            "Restored BTC to LBTC swap - Lockup address: {} amount: {}",
+            response.lockup_address(),
+            expected_amount,
+        );
+
+        // Use the captured expected_amount since it may not be available from restored data
+        crate::utils::send_to_address(BTC_CHAIN.into(), &lockup_address, expected_amount)
+            .await
+            .unwrap();
+
+        let success = response.complete().await.unwrap();
+        assert!(
+            success,
+            "Restored BTC to LBTC swap from swap list should succeed"
+        );
+        log::info!("Chain swap completed successfully");
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_session_restore_chain_swaps_with_random_preimages() {
         let _ = env_logger::try_init();
 

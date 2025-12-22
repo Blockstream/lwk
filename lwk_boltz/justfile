@@ -91,3 +91,4 @@ test-chain-restore: export-env-vars
     set -e
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps --nocapture --exact --ignored
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_random_preimages --nocapture --exact --ignored
+    RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_from_swap_list --nocapture --exact --ignored

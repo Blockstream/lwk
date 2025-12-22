@@ -490,19 +490,38 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable chain swaps
-    ///
-    /// Chain swaps can go either direction (BTC to LBTC or LBTC to BTC),
-    /// so addresses are passed as strings.
-    pub fn restorable_chain_swaps(
+    /// Filter the swap list to only include restorable BTC to LBTC swaps
+    pub fn restorable_btc_to_lbtc_swaps(
         &self,
         swap_list: &SwapList,
         claim_address: String,
         refund_address: String,
     ) -> Result<Vec<String>, LwkError> {
-        let response =
-            self.inner
-                .restorable_chain_swaps(&swap_list.inner, &claim_address, &refund_address)?;
+        let response = self.inner.restorable_btc_to_lbtc_swaps(
+            &swap_list.inner,
+            &claim_address,
+            &refund_address,
+        )?;
+        let data = response
+            .into_iter()
+            .map(|e| self.inner.restore_lockup(e.into()))
+            .map(|e| e.and_then(|e| e.serialize()))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(data)
+    }
+
+    /// Filter the swap list to only include restorable BTC to LBTC swaps
+    pub fn restorable_lbtc_to_btc_swaps(
+        &self,
+        swap_list: &SwapList,
+        claim_address: String,
+        refund_address: String,
+    ) -> Result<Vec<String>, LwkError> {
+        let response = self.inner.restorable_lbtc_to_btc_swaps(
+            &swap_list.inner,
+            &claim_address,
+            &refund_address,
+        )?;
         let data = response
             .into_iter()
             .map(|e| self.inner.restore_lockup(e.into()))

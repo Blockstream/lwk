@@ -110,6 +110,9 @@ impl Error {
                     "Boltz::MnemonicIdentifierMismatch"
                 }
                 lwk_boltz::Error::NoBoltzUpdate => "Boltz::NoBoltzUpdate",
+                lwk_boltz::Error::FailBuildingRefundTransaction => {
+                    "Boltz::FailBuildingRefundTransaction"
+                }
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

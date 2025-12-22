@@ -356,7 +356,7 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
         swap_tree: refund_details.tree.clone(),
         lockup_address: refund_details.lockup_address.clone(),
         server_public_key: refund_server_pubkey,
-        timeout_block_height: refund_details.timeout_block_height as u32,
+        timeout_block_height: refund_details.timeout_block_height,
         amount: 0, // Not available in RefundDetails type
         blinding_key: refund_details.blinding_key.clone(),
         refund_address: None,

@@ -400,6 +400,7 @@ impl PreparePayResponse {
                     return Ok(tx);
                 }
                 Err(e) => {
+                    log::warn!("Failed to make refund tx {e:?}, retrying...");
                     sleep(Duration::from_secs(1)).await;
                 }
             }

@@ -67,7 +67,8 @@ test-mrh: export-env-vars
 test-submarine-restore: export-env-vars
     #!/usr/bin/env bash
     set -e
-    RUST_LOG=info cargo test --test submarine -- test_session_restore_submarine --nocapture --ignored
+    RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine --nocapture --exact --ignored
+    RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine_from_swap_list --nocapture --exact --ignored
 
 
 # Run reverse restore swap test

@@ -316,6 +316,114 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires regtest environment"]
+    async fn test_session_restore_submarine_from_swap_list() {
+        let _ = env_logger::try_init();
+
+        // Start concurrent block mining task
+        let mining_handle = utils::start_block_mining();
+        let mnemonic = Mnemonic::from_str(
+            "damp cart merit asset obvious idea chef traffic absent armed road link",
+        )
+        .unwrap();
+
+        let refund_address = utils::generate_address(Chain::Liquid(LiquidChain::LiquidRegtest))
+            .await
+            .unwrap();
+        let refund_address = elements::Address::from_str(&refund_address).unwrap();
+        let client = Arc::new(
+            ElectrumClient::new(
+                DEFAULT_REGTEST_NODE,
+                false,
+                false,
+                ElementsNetwork::default_regtest(),
+            )
+            .unwrap(),
+        );
+
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic.clone())
+        .build()
+        .await
+        .unwrap();
+
+        // Create a swap but don't complete it
+        let bolt11_invoice = utils::generate_invoice_lnd(50_000).await.unwrap();
+        let lightning_payment = LightningPayment::from_str(&bolt11_invoice).unwrap();
+        let prepare_pay_response = session
+            .prepare_pay(&lightning_payment, &refund_address, None)
+            .await
+            .unwrap();
+
+        let swap_id = prepare_pay_response.swap_id();
+        // WORKAROUND: The Boltz API's swap_restore response doesn't populate the amount
+        // field in RefundDetails, so uri_amount() returns 0 for restored submarine swaps.
+        // In a real application, the expected amount should be tracked separately or
+        // recovered from on-chain transaction data.
+        let expected_amount = prepare_pay_response.uri_amount();
+        log::info!("Created swap {swap_id} with expected amount {expected_amount}");
+
+        // Drop the response and session (simulating app crash/restart without serializing)
+        drop(prepare_pay_response);
+        drop(session);
+
+        // Create a new session with the same mnemonic
+        let session = BoltzSession::builder(
+            ElementsNetwork::default_regtest(),
+            AnyClient::Electrum(client.clone()),
+        )
+        .create_swap_timeout(TIMEOUT)
+        .mnemonic(mnemonic)
+        .build()
+        .await
+        .unwrap();
+
+        // Get all swaps from Boltz API
+        let swap_list = session.swap_restore().await.unwrap();
+        log::info!("Found {} swaps in swap_restore", swap_list.len());
+
+        // Filter to get restorable submarine swaps
+        let restorable = session
+            .restorable_submarine_swaps(&swap_list, &refund_address)
+            .await
+            .unwrap();
+        log::info!("Found {} restorable submarine swaps", restorable.len());
+
+        // Find our swap in the restorable list
+        let our_swap: PreparePayDataSerializable = restorable
+            .into_iter()
+            .map(|data| data.into())
+            .find(|data: &PreparePayDataSerializable| data.create_swap_response.id == swap_id)
+            .expect("Our swap should be in the restorable list");
+
+        // Restore and complete the swap
+        let prepare_pay_response = session.restore_prepare_pay(our_swap).await.unwrap();
+        // Use the captured expected_amount since uri_amount() returns 0 for restored swaps
+        // (see WORKAROUND comment above)
+        log::info!(
+            "Restored swap, sending funds to: {} amount: {}",
+            prepare_pay_response.uri_address().unwrap().to_string(),
+            expected_amount,
+        );
+        utils::send_to_address(
+            Chain::Liquid(LiquidChain::LiquidRegtest),
+            &prepare_pay_response.uri_address().unwrap().to_string(),
+            expected_amount,
+        )
+        .await
+        .unwrap();
+        prepare_pay_response.complete_pay().await.unwrap();
+        log::info!("Swap completed successfully");
+
+        // Stop the mining task
+        mining_handle.abort();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires regtest environment"]
     async fn test_submarine() {
         let _ = env_logger::try_init();
         let chain_client = ChainClient::new().with_liquid(

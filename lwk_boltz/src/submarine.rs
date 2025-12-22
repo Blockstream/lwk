@@ -251,12 +251,15 @@ pub(crate) fn convert_swap_restore_response_to_prepare_pay_data(
     };
 
     // Reconstruct CreateSubmarineResponse from RefundDetails
+    // Note: expected_amount is not available from the Boltz API restore response,
+    // so we set it to 0. Callers should track the amount separately or recover it
+    // from on-chain transaction data.
     let create_swap_response = CreateSubmarineResponse {
         accept_zero_conf: false, // Default for restored swaps
         address: refund_details.lockup_address.clone(),
         bip21: String::new(), // Not available in restore response
         claim_public_key,
-        expected_amount: 0, // Not available in restore response
+        expected_amount: 0,
         id: e.id.clone(),
         referral_id: None, // This is important only at creation time
         swap_tree: refund_details.tree.clone(),

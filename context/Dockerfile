@@ -16,13 +16,13 @@ RUN rustup component add llvm-tools-preview
 RUN rustup target add wasm32-unknown-unknown
 RUN rustup install nightly # for docs building
 
-RUN cargo install cargo-audit
-RUN cargo install cargo-nextest
-RUN cargo install grcov
-RUN cargo install just
+RUN cargo install cargo-audit --locked
+RUN cargo install cargo-nextest@0.9.100 --locked
+RUN cargo install grcov --locked
+RUN cargo install just --locked
 
 # we don't need this, but it downloads and cache most of our dependency tree
-RUN cargo install lwk_cli
+RUN cargo install lwk_cli --locked
 
 COPY download_bins.sh /download_bins.sh
 RUN ./download_bins.sh

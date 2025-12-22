@@ -206,7 +206,11 @@ impl BoltzSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Submarine))
-            .filter(|e| e.status != "swap.expired" && e.status != "transaction.claimed")
+            .filter(|e| {
+                e.status != "swap.expired"
+                    && e.status != "transaction.claimed"
+                    && e.status != "swap.created"
+            })
             .map(|e| {
                 convert_swap_restore_response_to_prepare_pay_data(
                     e,

@@ -188,7 +188,11 @@ impl BoltzSession {
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Reverse))
-            .filter(|e| e.status != "swap.expired" && e.status != "invoice.settled")
+            .filter(|e| {
+                e.status != "swap.expired"
+                    && e.status != "invoice.settled"
+                    && e.status != "swap.created"
+            })
             .map(|e| {
                 convert_swap_restore_response_to_invoice_data(e, &self.mnemonic, claim_address)
             })

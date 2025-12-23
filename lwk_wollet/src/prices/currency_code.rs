@@ -63,3 +63,22 @@ impl std::str::FromStr for CurrencyCode {
             .ok_or(Error::UnrecognizedCurrency(s.to_string()))
     }
 }
+
+impl serde::Serialize for CurrencyCode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.alpha3)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CurrencyCode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}

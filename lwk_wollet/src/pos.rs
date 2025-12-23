@@ -49,6 +49,21 @@ impl POSConfig {
         self.show_description = Some(show_description);
         self
     }
+
+    /// Encode the POS configuration into a URL-safe base64 string.
+    pub fn encode(&self) -> Result<String, Box<dyn std::error::Error>> {
+        encode_config(
+            &self.descriptor,
+            &self.currency,
+            self.show_gear.unwrap_or(false),
+            self.show_description.unwrap_or(true),
+        )
+    }
+
+    /// Decode the POS configuration from a URL-safe base64 string.
+    pub fn decode(encoded: &str) -> Option<Self> {
+        decode_config(encoded)
+    }
 }
 
 /// Encode POS configuration into a URL-safe base64 string.

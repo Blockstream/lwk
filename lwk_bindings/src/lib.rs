@@ -70,7 +70,7 @@ pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexPr
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
-pub use pos::POSConfig;
+pub use pos::PosConfig;
 pub use precision::Precision;
 pub use pset::{Pset, PsetInput};
 pub use pset_details::{Issuance, PsetDetails};

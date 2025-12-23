@@ -11,7 +11,7 @@ use crate::{CurrencyCode, WolletDescriptor};
 /// POS configuration structure for encoding/decoding.
 /// This represents the configuration parameters for a Point of Sale setup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct POSConfig {
+pub struct PosConfig {
     /// Descriptor (d field in JSON)
     #[serde(rename = "d")]
     pub descriptor: WolletDescriptor,
@@ -26,8 +26,8 @@ pub struct POSConfig {
     pub show_description: Option<bool>,
 }
 
-impl POSConfig {
-    /// Create a new POSConfig with required fields.
+impl PosConfig {
+    /// Create a new PosConfig with required fields.
     /// Optional fields default to None and will be omitted from serialization.
     pub fn new(descriptor: WolletDescriptor, currency: CurrencyCode) -> Self {
         Self {
@@ -85,7 +85,7 @@ fn encode_config(
     show_gear: bool,
     show_description: bool,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut config = POSConfig::new(descriptor.clone(), currency.clone());
+    let mut config = PosConfig::new(descriptor.clone(), currency.clone());
 
     // Only include optional fields if they differ from defaults
     // show_gear defaults to false, so only include if true
@@ -110,8 +110,8 @@ fn encode_config(
 /// * `encoded` - The URL-safe base64 encoded configuration string
 ///
 /// # Returns
-/// `Some(POSConfig)` if decoding succeeds, `None` if the input is invalid
-fn decode_config(encoded: &str) -> Option<POSConfig> {
+/// `Some(PosConfig)` if decoding succeeds, `None` if the input is invalid
+fn decode_config(encoded: &str) -> Option<PosConfig> {
     // Decode URL-safe base64 (replace - with +, _ with /, add padding if needed)
     let mut base64 = encoded.replace('-', "+").replace('_', "/");
 
@@ -123,7 +123,7 @@ fn decode_config(encoded: &str) -> Option<POSConfig> {
     let json_bytes = URL_SAFE_NO_PAD.decode(&base64).ok()?;
     let json_str = String::from_utf8(json_bytes).ok()?;
 
-    let mut config: POSConfig = serde_json::from_str(&json_str).ok()?;
+    let mut config: PosConfig = serde_json::from_str(&json_str).ok()?;
 
     // Apply defaults for optional fields
     if config.show_gear.is_none() {

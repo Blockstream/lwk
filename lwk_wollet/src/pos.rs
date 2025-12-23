@@ -6,13 +6,15 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 
+use crate::WolletDescriptor;
+
 /// POS configuration structure for encoding/decoding.
 /// This represents the configuration parameters for a Point of Sale setup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct POSConfig {
-    /// Descriptor string (d field in JSON)
+    /// Descriptor (d field in JSON)
     #[serde(rename = "d")]
-    pub descriptor: String,
+    pub descriptor: WolletDescriptor,
     /// Currency code (3-letter alpha3 code, c field in JSON)
     #[serde(rename = "c")]
     pub currency: String,
@@ -27,7 +29,7 @@ pub struct POSConfig {
 impl POSConfig {
     /// Create a new POSConfig with required fields.
     /// Optional fields default to None and will be omitted from serialization.
-    pub fn new(descriptor: String, currency: String) -> Self {
+    pub fn new(descriptor: WolletDescriptor, currency: String) -> Self {
         Self {
             descriptor,
             currency,
@@ -55,7 +57,7 @@ impl POSConfig {
 /// URL-safe base64 encoding (replacing + with -, / with _, and removing padding).
 ///
 /// # Arguments
-/// * `descriptor` - The wallet descriptor string
+/// * `descriptor` - The wallet descriptor
 /// * `currency` - The 3-letter currency code (e.g., "USD")
 /// * `show_gear` - Whether to show the gear/settings button
 /// * `show_description` - Whether to show the description/note field
@@ -63,12 +65,12 @@ impl POSConfig {
 /// # Returns
 /// A URL-safe base64 encoded string containing the configuration
 pub fn encode_config(
-    descriptor: &str,
+    descriptor: &WolletDescriptor,
     currency: &str,
     show_gear: bool,
     show_description: bool,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut config = POSConfig::new(descriptor.to_string(), currency.to_string());
+    let mut config = POSConfig::new(descriptor.clone(), currency.to_string());
 
     // Only include optional fields if they differ from defaults
     // show_gear defaults to false, so only include if true
@@ -109,7 +111,7 @@ pub fn decode_config(encoded: &str) -> Option<POSConfig> {
     let mut config: POSConfig = serde_json::from_str(&json_str).ok()?;
 
     // Validate required fields
-    if config.descriptor.is_empty() || config.currency.len() != 3 {
+    if config.currency.len() != 3 {
         return None;
     }
 
@@ -130,13 +132,14 @@ mod tests {
 
     #[test]
     fn test_encode_decode_roundtrip() {
-        let descriptor = "ct(slip77(326412ff4dfc1123c44d3cd52f1e703e53949a5517252c607a5561e21e39d9cc),elwpkh(xpub6D1MPqdRwYThqmxXZgTa4MkuBC6i7J8h3yGvVEfrp6xCfBhkA8JbhUjoMkewAW84nu1k1kTu9SwqfhpqPuqqkG155mBx6z4tCPPLqy2vZEs/<0;1>/*))#f758dxak";
+        let descriptor_str = "ct(slip77(326412ff4dfc1123c44d3cd52f1e703e53949a5517252c607a5561e21e39d9cc),elwpkh(xpub6D1MPqdRwYThqmxXZgTa4MkuBC6i7J8h3yGvVEfrp6xCfBhkA8JbhUjoMkewAW84nu1k1kTu9SwqfhpqPuqqkG155mBx6z4tCPPLqy2vZEs/<0;1>/*))#f758dxak";
+        let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
         let currency = "USD";
         let show_gear = true;
         let show_description = true;
 
         // Encode
-        let encoded = encode_config(descriptor, currency, show_gear, show_description).unwrap();
+        let encoded = encode_config(&descriptor, currency, show_gear, show_description).unwrap();
 
         // Decode
         let decoded = decode_config(&encoded).unwrap();
@@ -150,13 +153,17 @@ mod tests {
 
     #[test]
     fn test_encode_decode_with_defaults() {
-        let descriptor = "test_descriptor";
+        // Use the same descriptor from the test data file that we know works
+        let test_data_content = include_str!("../tests/data/pos_config.json");
+        let test_data: serde_json::Value = serde_json::from_str(test_data_content).unwrap();
+        let descriptor_str = test_data["d"].as_str().unwrap();
+        let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
         let currency = "EUR";
         let show_gear = false; // default value
         let show_description = true; // default value
 
         // Encode
-        let encoded = encode_config(descriptor, currency, show_gear, show_description).unwrap();
+        let encoded = encode_config(&descriptor, currency, show_gear, show_description).unwrap();
 
         // Decode
         let decoded = decode_config(&encoded).unwrap();
@@ -182,18 +189,18 @@ mod tests {
 
     #[test]
     fn test_decode_missing_required_fields() {
-        // Missing descriptor
-        let config = r#"{"c":"USD"}"#;
-        let encoded = URL_SAFE_NO_PAD.encode(config);
-        assert!(decode_config(&encoded).is_none());
-
         // Missing currency
-        let config = r#"{"d":"test"}"#;
+        let config = r#"{"d":"ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp"}"#;
         let encoded = URL_SAFE_NO_PAD.encode(config);
         assert!(decode_config(&encoded).is_none());
 
         // Invalid currency length
-        let config = r#"{"d":"test","c":"US"}"#;
+        let config = r#"{"d":"ct(slip77(ab5824f4477b4ebb00a132adfd8eb0b7935cf24f6ac151add5d1913db374ce92),elwpkh([759db348/84'/1'/0']tpubDCRMaF33e44pcJj534LXVhFbHibPbJ5vuLhSSPFAw57kYURv4tzXFL6LSnd78bkjqdmE3USedkbpXJUPA1tdzKfuYSL7PianceqAhwL2UkA/<0;1>/*))#cch6wrnp","c":"US"}"#;
+        let encoded = URL_SAFE_NO_PAD.encode(config);
+        assert!(decode_config(&encoded).is_none());
+
+        // Invalid descriptor
+        let config = r#"{"d":"invalid_descriptor","c":"USD"}"#;
         let encoded = URL_SAFE_NO_PAD.encode(config);
         assert!(decode_config(&encoded).is_none());
     }
@@ -205,13 +212,14 @@ mod tests {
         let test_data: serde_json::Value = serde_json::from_str(test_data_content).unwrap();
 
         // Extract values from the JSON file using abbreviated field names
-        let descriptor = test_data["d"].as_str().unwrap();
+        let descriptor_str = test_data["d"].as_str().unwrap();
+        let descriptor: WolletDescriptor = descriptor_str.parse().unwrap();
         let currency = test_data["c"].as_str().unwrap();
         let show_gear = test_data["g"].as_bool().unwrap();
         // Note: "n" field is omitted when show_description is true (default)
 
         // Encode using our function
-        let encoded = encode_config(descriptor, currency, show_gear, true).unwrap();
+        let encoded = encode_config(&descriptor, currency, show_gear, true).unwrap();
 
         // Decode back
         let decoded = decode_config(&encoded).unwrap();
@@ -232,7 +240,8 @@ mod tests {
         let decoded = decode_config(encoded).unwrap();
 
         // Verify the decoded values match the JS implementation
-        let expected_descriptor = "ct(slip77(326412ff4dfc1123c44d3cd52f1e703e53949a5517252c607a5561e21e39d9cc),elwpkh(xpub6D1MPqdRwYThqmxXZgTa4MkuBC6i7J8h3yGvVEfrp6xCfBhkA8JbhUjoMkewAW84nu1k1kTu9SwqfhpqPuqqkG155mBx6z4tCPPLqy2vZEs/<0;1>/*))#f758dxak";
+        let expected_descriptor_str = "ct(slip77(326412ff4dfc1123c44d3cd52f1e703e53949a5517252c607a5561e21e39d9cc),elwpkh(xpub6D1MPqdRwYThqmxXZgTa4MkuBC6i7J8h3yGvVEfrp6xCfBhkA8JbhUjoMkewAW84nu1k1kTu9SwqfhpqPuqqkG155mBx6z4tCPPLqy2vZEs/<0;1>/*))#f758dxak";
+        let expected_descriptor: WolletDescriptor = expected_descriptor_str.parse().unwrap();
         assert_eq!(decoded.descriptor, expected_descriptor);
         assert_eq!(decoded.currency, "USD");
         assert_eq!(decoded.show_gear, Some(true));

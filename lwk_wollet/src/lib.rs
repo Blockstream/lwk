@@ -104,6 +104,7 @@ mod model;
 mod network;
 pub mod pegin;
 mod persister;
+mod pos;
 mod pset_create;
 pub mod registry;
 mod tx_builder;
@@ -128,6 +129,7 @@ pub use crate::model::{
 pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
+pub use crate::pos::{decode_config, encode_config, POSConfig};
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity, RegistryAssetData};
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};

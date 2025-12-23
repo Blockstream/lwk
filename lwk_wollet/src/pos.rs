@@ -79,7 +79,7 @@ impl POSConfig {
 ///
 /// # Returns
 /// A URL-safe base64 encoded string containing the configuration
-pub fn encode_config(
+fn encode_config(
     descriptor: &WolletDescriptor,
     currency: &CurrencyCode,
     show_gear: bool,
@@ -111,7 +111,7 @@ pub fn encode_config(
 ///
 /// # Returns
 /// `Some(POSConfig)` if decoding succeeds, `None` if the input is invalid
-pub fn decode_config(encoded: &str) -> Option<POSConfig> {
+fn decode_config(encoded: &str) -> Option<POSConfig> {
     // Decode URL-safe base64 (replace - with +, _ with /, add padding if needed)
     let mut base64 = encoded.replace('-', "+").replace('_', "/");
 

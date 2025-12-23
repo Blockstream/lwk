@@ -559,6 +559,13 @@ def main():
     webwallet = f"https://liquidwebwallet.org/#{desc.url_encoded_descriptor()}"
     print("online watch-only:", webwallet)
 
+    # Create POS config for btcpos.cash
+    usd = CurrencyCode("USD")
+    pos_config = PosConfig(desc, usd)
+    pos_encoded = pos_config.encode()
+    btcpos_link = f"https://btcpos.cash/#{pos_encoded}"
+    print("POS terminal:", btcpos_link)
+
     wollet = Wollet(network, desc, datadir=None)
 
     mnemonic_lightning = signer.derive_bip85_mnemonic(0, 12) # for security reasons using a different mnemonic for the lightning session

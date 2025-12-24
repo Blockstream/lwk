@@ -143,6 +143,7 @@ impl PricesFetcher {
             sources::Source::CoinGecko,
             sources::Source::Binance,
             sources::Source::CoinPaprika,
+            sources::Source::BlockchainInfo,
         ];
 
         let tasks: Vec<_> = fetchers

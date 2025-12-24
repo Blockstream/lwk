@@ -27,6 +27,7 @@ pub(super) enum Source {
     CoinGecko,
     Binance,
     CoinPaprika,
+    BlockchainInfo,
 }
 
 impl Source {
@@ -176,6 +177,32 @@ impl Source {
                     rate,
                     currency: currency.clone(),
                     source: "CoinPaprika".to_string(),
+                    timestamp,
+                })
+            }
+            Source::BlockchainInfo => {
+                // Blockchain.info ticker returns prices for multiple currencies
+                // https://blockchain.info/ticker
+                let url = "https://blockchain.info/ticker";
+                let response: Value = client
+                    .get(url)
+                    .send()
+                    .await
+                    .map_err(|e| Error::Http(e.to_string()))?
+                    .json()
+                    .await
+                    .map_err(|e| Error::Http(e.to_string()))?;
+
+                let rate = response
+                    .get(currency.alpha3)
+                    .and_then(|c| c.get("last"))
+                    .and_then(|v| v.as_f64())
+                    .ok_or_else(|| Error::Http("Invalid Blockchain.info response".to_string()))?;
+
+                Ok(ExchangeRate {
+                    rate,
+                    currency: currency.clone(),
+                    source: "Blockchain.info".to_string(),
                     timestamp,
                 })
             }

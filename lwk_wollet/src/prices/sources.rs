@@ -127,12 +127,13 @@ impl Source {
                 })
             }
             Source::Binance => {
-                let symbol = format!("BTC{}", currency.alpha3);
-                let (base_url, source_name) = if currency.alpha3 == "USD" {
-                    ("https://api.binance.us", "Binance US")
-                } else {
-                    ("https://api.binance.com", "Binance")
+                // Binance only supports a limited set of fiat currencies with accurate pricing
+                let (base_url, source_name) = match currency.alpha3 {
+                    "USD" => ("https://api.binance.us", "Binance US"),
+                    "EUR" | "BRL" | "ARS" => ("https://api.binance.com", "Binance"),
+                    _ => return Err(Error::Http("Currency not supported by Binance".to_string())),
                 };
+                let symbol = format!("BTC{}", currency.alpha3);
                 let url = format!("{base_url}/api/v3/ticker/price?symbol={symbol}");
                 let response: BinanceResponse = client
                     .get(&url)

@@ -114,7 +114,9 @@ pub enum Error {
     Http(String),
 }
 
-const SUPPORTED_CURRENCIES: [&str; 3] = ["USD", "EUR", "CHF"];
+const SUPPORTED_CURRENCIES: [&str; 10] = [
+    "USD", "EUR", "CHF", "GBP", "INR", "CAD", "ARS", "AUD", "BRL", "CNY",
+];
 const MIN_SOURCES: usize = 3;
 
 impl PricesFetcher {
@@ -229,7 +231,7 @@ mod test {
                 rates.median
             );
             assert_eq!(rate.currency, *currency);
-            assert!(rate.timestamp > 0);
+            assert!(rate.timestamp > 0, "{:?}", rate);
         }
 
         println!(
@@ -259,5 +261,47 @@ mod test {
     #[ignore] // This test makes real API calls
     async fn test_fetch_chf_rates() {
         test_fetch_rates(&CurrencyCode::from_str("CHF").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_gbp_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("GBP").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_inr_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("INR").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_cad_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("CAD").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_ars_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("ARS").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_aud_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("AUD").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_brl_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("BRL").unwrap()).await;
+    }
+
+    #[tokio::test]
+    #[ignore] // This test makes real API calls
+    async fn test_fetch_cny_rates() {
+        test_fetch_rates(&CurrencyCode::from_str("CNY").unwrap()).await;
     }
 }

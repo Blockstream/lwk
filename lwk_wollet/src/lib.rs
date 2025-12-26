@@ -104,7 +104,10 @@ mod model;
 mod network;
 pub mod pegin;
 mod persister;
+
+#[cfg(feature = "prices")]
 mod pos;
+
 mod pset_create;
 pub mod registry;
 mod tx_builder;
@@ -129,7 +132,6 @@ pub use crate::model::{
 pub use crate::network::ElementsNetwork;
 pub use crate::pegin::fed_peg_script;
 pub use crate::persister::{FsPersister, NoPersist, PersistError, Persister};
-pub use crate::pos::PosConfig;
 pub use crate::registry::{asset_ids, issuance_ids, Contract, Entity, RegistryAssetData};
 pub use crate::tx_builder::{TxBuilder, WolletTxBuilder};
 pub use crate::update::{DownloadTxResult, Update};
@@ -140,6 +142,9 @@ pub use crate::wollet::{Tip, Wollet, WolletBuilder};
 pub use crate::prices::{
     CurrencyCode, ExchangeRate, ExchangeRates, PricesFetcher, PricesFetcherBuilder,
 };
+
+#[cfg(feature = "prices")]
+pub use crate::pos::PosConfig;
 
 #[cfg(feature = "electrum")]
 pub use crate::wollet::full_scan_to_index_with_electrum_client;

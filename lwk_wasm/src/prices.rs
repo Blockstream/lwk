@@ -57,6 +57,12 @@ impl AsRef<lwk_wollet::CurrencyCode> for CurrencyCode {
     }
 }
 
+impl From<lwk_wollet::CurrencyCode> for CurrencyCode {
+    fn from(inner: lwk_wollet::CurrencyCode) -> Self {
+        Self { inner }
+    }
+}
+
 #[wasm_bindgen]
 impl CurrencyCode {
     #[wasm_bindgen(constructor)]

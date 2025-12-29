@@ -965,7 +965,7 @@ pub async fn async_sleep(millis: u64) {
 pub async fn async_now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("Failed to get current time")
         .as_millis() as u64
 }
 

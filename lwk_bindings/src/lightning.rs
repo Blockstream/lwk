@@ -494,13 +494,13 @@ impl BoltzSession {
     pub fn restorable_btc_to_lbtc_swaps(
         &self,
         swap_list: &SwapList,
-        claim_address: String,
-        refund_address: String,
+        claim_address: &Address,
+        refund_address: &BitcoinAddress,
     ) -> Result<Vec<String>, LwkError> {
         let response = self.inner.restorable_btc_to_lbtc_swaps(
             &swap_list.inner,
-            &claim_address,
-            &refund_address,
+            claim_address.as_ref(),
+            refund_address.as_ref(),
         )?;
         let data = response
             .into_iter()
@@ -510,17 +510,17 @@ impl BoltzSession {
         Ok(data)
     }
 
-    /// Filter the swap list to only include restorable BTC to LBTC swaps
+    /// Filter the swap list to only include restorable LBTC to BTC swaps
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swap_list: &SwapList,
-        claim_address: String,
-        refund_address: String,
+        claim_address: &BitcoinAddress,
+        refund_address: &Address,
     ) -> Result<Vec<String>, LwkError> {
         let response = self.inner.restorable_lbtc_to_btc_swaps(
             &swap_list.inner,
-            &claim_address,
-            &refund_address,
+            claim_address.as_ref(),
+            refund_address.as_ref(),
         )?;
         let data = response
             .into_iter()

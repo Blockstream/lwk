@@ -223,9 +223,11 @@ impl BoltzSession {
     pub async fn restorable_btc_to_lbtc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
-        claim_address: &str,
-        refund_address: &str,
+        claim_address: &elements::Address,
+        refund_address: &bitcoin::Address,
     ) -> Result<Vec<ChainSwapData>, Error> {
+        let claim_address = claim_address.to_string();
+        let refund_address = refund_address.to_string();
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Chain))
@@ -239,8 +241,8 @@ impl BoltzSession {
                 convert_swap_restore_response_to_chain_swap_data(
                     e,
                     &self.mnemonic,
-                    claim_address,
-                    refund_address,
+                    &claim_address,
+                    &refund_address,
                 )
             })
             .collect()
@@ -255,9 +257,11 @@ impl BoltzSession {
     pub async fn restorable_lbtc_to_btc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
-        claim_address: &str,
-        refund_address: &str,
+        claim_address: &bitcoin::Address,
+        refund_address: &elements::Address,
     ) -> Result<Vec<ChainSwapData>, Error> {
+        let claim_address = claim_address.to_string();
+        let refund_address = refund_address.to_string();
         swaps
             .iter()
             .filter(|e| matches!(e.swap_type, SwapRestoreType::Chain))
@@ -271,14 +275,20 @@ impl BoltzSession {
                 convert_swap_restore_response_to_chain_swap_data(
                     e,
                     &self.mnemonic,
-                    claim_address,
-                    refund_address,
+                    &claim_address,
+                    &refund_address,
                 )
             })
             .collect()
     }
 }
 
+/// Convert a swap restore response from Boltz API to a ChainSwapData.
+///
+/// Note: This function uses `&str` for addresses instead of typed `bitcoin::Address` or
+/// `elements::Address` because it handles both swap directions (BTC→LBTC and LBTC→BTC).
+/// The address types are swapped depending on the direction, so type safety is enforced
+/// at the public API level via `restorable_btc_to_lbtc_swaps` and `restorable_lbtc_to_btc_swaps`.
 pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     e: &SwapRestoreResponse,
     mnemonic: &Mnemonic,

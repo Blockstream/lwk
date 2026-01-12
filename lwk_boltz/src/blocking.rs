@@ -177,8 +177,8 @@ impl BoltzSession {
     pub fn restorable_btc_to_lbtc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
-        claim_address: &str,
-        refund_address: &str,
+        claim_address: &elements::Address,
+        refund_address: &bitcoin::Address,
     ) -> Result<Vec<ChainSwapData>, Error> {
         let inner = self
             .runtime
@@ -193,8 +193,8 @@ impl BoltzSession {
     pub fn restorable_lbtc_to_btc_swaps(
         &self,
         swaps: &[SwapRestoreResponse],
-        claim_address: &str,
-        refund_address: &str,
+        claim_address: &bitcoin::Address,
+        refund_address: &elements::Address,
     ) -> Result<Vec<ChainSwapData>, Error> {
         let inner = self
             .runtime

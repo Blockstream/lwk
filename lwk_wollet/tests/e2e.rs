@@ -23,7 +23,6 @@ use lwk_wollet::pegin::fetch_last_full_header;
 use lwk_wollet::*;
 use std::{collections::HashSet, str::FromStr};
 use test_wollet::{generate_signer, test_client_electrum, wait_for_tx, TestWollet};
-use waterfalls::{be, Family};
 
 #[test]
 fn liquid_send_jade_signer() {
@@ -1146,13 +1145,9 @@ async fn test_esplora_wasm_waterfalls_desc(desc: &str, url: &str) -> usize {
 }
 
 #[cfg(feature = "esplora")]
-#[tokio::test]
-async fn test_esplora_waterfalls_utxo_only() {
-    use clients::asyncr::{self, async_sleep};
-
-    init_logging();
-    let exe = std::env::var("ELEMENTSD_EXEC").unwrap();
-    let test_env = waterfalls::test_env::launch(exe, Family::Elements).await;
+#[test]
+fn test_esplora_waterfalls_utxo_only() {
+    let env = TestEnvBuilder::from_env().with_waterfalls().build();
 
     let signer = generate_signer();
     let view_key = generate_view_key();
@@ -1162,28 +1157,27 @@ async fn test_esplora_waterfalls_utxo_only() {
 
     let network = ElementsNetwork::default_regtest();
     let mut wollet = Wollet::without_persist(network, desc.clone()).unwrap();
-    let mut client = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
+    let mut client = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
-        .build()
+        .build_blocking()
         .unwrap();
 
     let mut wollet_utxo_only = Wollet::without_persist(network, desc.clone()).unwrap();
-    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(test_env.base_url(), network)
+    let mut client_utxo_only = asyncr::EsploraClientBuilder::new(&env.waterfalls_url(), network)
         .waterfalls(true)
         .utxo_only(true)
-        .build()
+        .build_blocking()
         .unwrap();
 
     let address = wollet.address(None).unwrap();
-    test_env.send_to(&to_be(address.address()), 1_000_000);
-    async_sleep(2_000).await;
+    let _txid = env.elementsd_sendtoaddress(address.address(), 1_000_000, None);
+    std::thread::sleep(std::time::Duration::from_millis(2_000));
 
     // check both wallets have the same balance
-    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    let update = client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
     let update = client_utxo_only
         .full_scan(&wollet_utxo_only)
-        .await
         .unwrap()
         .unwrap();
     wollet_utxo_only.apply_update(update).unwrap();
@@ -1203,11 +1197,10 @@ async fn test_esplora_waterfalls_utxo_only() {
     );
 
     // spend from wollet and sync again both wallets
-    let address = test_env.get_new_address(None);
-    let address = address.elements().unwrap();
+    let address = env.elementsd_getnewaddress();
     let mut pset = wollet
         .tx_builder()
-        .add_lbtc_recipient(address, 100_000)
+        .add_lbtc_recipient(&address, 100_000)
         .unwrap()
         .finish()
         .unwrap();
@@ -1216,16 +1209,15 @@ async fn test_esplora_waterfalls_utxo_only() {
 
     let tx = wollet.finalize(&mut pset).unwrap();
 
-    client.broadcast(&tx).await.unwrap();
+    client.broadcast(&tx).unwrap();
 
-    test_env.node_generate(1).await; // TODO: remove this
-    async_sleep(2_000).await;
+    env.elementsd_generate(1); // TODO: remove this
+    std::thread::sleep(std::time::Duration::from_millis(2_000));
 
-    let update = client.full_scan(&wollet).await.unwrap().unwrap();
+    let update = client.full_scan(&wollet).unwrap().unwrap();
     wollet.apply_update(update).unwrap();
     let update = client_utxo_only
         .full_scan(&wollet_utxo_only)
-        .await
         .unwrap()
         .unwrap();
     wollet_utxo_only.apply_update(update).unwrap();
@@ -1254,8 +1246,6 @@ async fn test_esplora_waterfalls_utxo_only() {
         .unwrap()
         .iter()
         .all(|tx| !tx.outputs.is_empty()));
-
-    test_env.shutdown().await;
 }
 
 #[cfg(feature = "esplora")]
@@ -3595,10 +3585,6 @@ fn test_fee_service() {
     let tx = w.wollet.finalize(&mut pset).unwrap();
     let txid = w.client.broadcast(&tx).unwrap();
     wait_for_tx(&mut w.wollet, &mut w.client, &txid);
-}
-
-fn to_be(addr: &elements::Address) -> be::Address {
-    be::Address::Elements(addr.clone())
 }
 
 #[tokio::test]

@@ -384,7 +384,7 @@ mod tests {
 
         let swap_list = session.swap_restore().await.unwrap();
         let restorable = session
-            .restorable_btc_to_lbtc_swaps(&swap_list, &claim_address_str, &refund_address_str)
+            .restorable_btc_to_lbtc_swaps(&swap_list, &claim_address, &refund_address)
             .await
             .unwrap();
         let swaps: Vec<_> = restorable
@@ -421,7 +421,7 @@ mod tests {
 
         // Filter to get restorable chain swaps
         let restorable = session
-            .restorable_btc_to_lbtc_swaps(&swap_list, &claim_address_str, &refund_address_str)
+            .restorable_btc_to_lbtc_swaps(&swap_list, &claim_address, &refund_address)
             .await
             .unwrap();
         log::info!("Found {} restorable chain swaps", restorable.len());

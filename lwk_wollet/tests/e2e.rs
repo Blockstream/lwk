@@ -1028,6 +1028,34 @@ async fn test_esplora_requests_counter() {
     println!("Total requests made: {}", client.requests());
 }
 
+// TODO: add a regtest test for last_used_index when there is a waterfalls release published on crates
+#[ignore = "require network calls"]
+#[cfg(feature = "esplora")]
+#[tokio::test]
+async fn test_esplora_waterfalls_last_used_index() {
+    let url = "https://waterfalls.liquidwebwallet.org/liquid/api";
+    let desc = "ct(slip77(2411e278affa5c47010eab6d313c1ec66628ec0dd03b6fc98d1a05a0618719e6),elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#upsg7h8m";
+    let desc = WolletDescriptor::from_str(desc).unwrap();
+
+    let mut client = clients::asyncr::EsploraClientBuilder::new(url, ElementsNetwork::Liquid)
+        .waterfalls(true)
+        .build()
+        .unwrap();
+
+    let result = client.last_used_index(&desc).await.unwrap();
+
+    // The descriptor has been used, so external or internal should be Some
+    assert!(result.external.is_some() || result.internal.is_some());
+    // Tip should be present and a valid block hash (non-zero)
+    assert!(result.tip.is_some());
+    assert_ne!(
+        result.tip.unwrap().to_string(),
+        "0000000000000000000000000000000000000000000000000000000000000000"
+    );
+
+    println!("result: {:?}", result);
+}
+
 #[ignore = "require network calls"]
 #[cfg(feature = "esplora")]
 #[tokio::test]

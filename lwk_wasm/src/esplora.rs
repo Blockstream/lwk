@@ -1,6 +1,43 @@
-use crate::{Error, Network, Pset, Transaction, Txid, Update, Wollet};
+use crate::{Error, Network, Pset, Transaction, Txid, Update, Wollet, WolletDescriptor};
 use lwk_wollet::{age, clients::asyncr};
 use wasm_bindgen::prelude::*;
+
+/// Response from the last_used_index endpoint
+///
+/// Returns the highest derivation index that has been used (has transaction history)
+/// for both external and internal chains. This is useful for quickly determining
+/// the next unused address without downloading full transaction history.
+#[wasm_bindgen]
+pub struct LastUsedIndexResponse {
+    inner: asyncr::LastUsedIndexResponse,
+}
+
+#[wasm_bindgen]
+impl LastUsedIndexResponse {
+    /// Last used index on the external (receive) chain, or undefined if no addresses have been used.
+    #[wasm_bindgen(getter)]
+    pub fn external(&self) -> Option<u32> {
+        self.inner.external
+    }
+
+    /// Last used index on the internal (change) chain, or undefined if no addresses have been used.
+    #[wasm_bindgen(getter)]
+    pub fn internal(&self) -> Option<u32> {
+        self.inner.internal
+    }
+
+    /// Current blockchain tip hash for reference.
+    #[wasm_bindgen(getter)]
+    pub fn tip(&self) -> Option<String> {
+        self.inner.tip.map(|t| t.to_string())
+    }
+}
+
+impl From<asyncr::LastUsedIndexResponse> for LastUsedIndexResponse {
+    fn from(inner: asyncr::LastUsedIndexResponse) -> Self {
+        Self { inner }
+    }
+}
 
 /// A blockchain backend implementation based on the
 /// [esplora HTTP API](https://github.com/blockstream/esplora/blob/master/API.md).
@@ -115,6 +152,27 @@ impl EsploraClient {
             .map_err(|e: &str| Error::Generic(e.to_string()))?;
         self.inner.set_waterfalls_server_recipient(recipient);
         Ok(())
+    }
+
+    /// Query the last used derivation index for a wallet's descriptor from the waterfalls server.
+    ///
+    /// This method queries the waterfalls `/v1/last_used_index` endpoint to get the last used
+    /// derivation index for both external and internal chains of the wallet's descriptor.
+    ///
+    /// Returns `LastUsedIndexResponse` containing the last used indexes and the tip block hash.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if this client was not configured with waterfalls support,
+    /// if the descriptor does not contain a wildcard,
+    /// or if the descriptor uses ELIP151 blinding.
+    #[wasm_bindgen(js_name = lastUsedIndex)]
+    pub async fn last_used_index(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<LastUsedIndexResponse, Error> {
+        let result = self.inner.last_used_index(descriptor.as_ref()).await?;
+        Ok(result.into())
     }
 }
 

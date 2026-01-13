@@ -288,6 +288,34 @@ impl InvoiceResponse {
         }
 
         log::info!("transaction.mempool/confirmed Boltz broadcasted funding tx");
+
+        // Parse the lockup transaction from the status update if available.
+        // This avoids waiting for the transaction to propagate to the chain client's mempool,
+        // significantly improving claim speed.
+        let lockup_tx = if let Some(tx_info) = &update.transaction {
+            match self.swap_script.parse_lockup_transaction(tx_info).await {
+                Ok(tx) => {
+                    log::debug!("Parsed lockup tx from status update");
+                    Some(tx)
+                }
+                Err(e) => {
+                    log::warn!("Failed to parse lockup tx from status update: {e}, will fetch from chain client");
+                    None
+                }
+            }
+        } else {
+            log::debug!("No transaction info in status update, will fetch from chain client");
+            None
+        };
+
+        // Build options with lockup_tx if available for faster claiming
+        let options = match lockup_tx {
+            Some(tx) => TransactionOptions::default()
+                .with_cooperative(true)
+                .with_lockup_tx(tx),
+            None => TransactionOptions::default().with_cooperative(true),
+        };
+
         let tx = self
             .swap_script
             .construct_claim(
@@ -297,7 +325,7 @@ impl InvoiceResponse {
                     output_address: self.data.claim_address.to_string(),
                     fee: Fee::Relative(0.12), // TODO make it configurable
                     swap_id: self.swap_id().to_string(),
-                    options: Some(TransactionOptions::default().with_cooperative(true)),
+                    options: Some(options),
                     chain_client: &self.chain_client,
                     boltz_client: &self.api,
                 },

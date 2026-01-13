@@ -499,6 +499,25 @@ impl EsploraClient {
         }
     }
 
+    /// Returns a descriptor, potentially encrypted if encryption is enabled.
+    ///
+    /// Uses cached encrypted descriptors when available to enable HTTP caching.
+    async fn get_or_encrypt_descriptor(&mut self, base_desc: &str) -> Result<String, Error> {
+        if self.waterfalls_avoid_encryption {
+            return Ok(base_desc.to_string());
+        }
+
+        if let Some(encrypted_descriptor) = self.waterfalls_encrypted_descriptors.get(base_desc) {
+            return Ok(encrypted_descriptor.clone());
+        }
+
+        let recipient = self.waterfalls_server_recipient().await?;
+        let encrypted_descriptor = encrypt(base_desc, recipient)?;
+        self.waterfalls_encrypted_descriptors
+            .insert(base_desc.to_string(), encrypted_descriptor.clone());
+        Ok(encrypted_descriptor)
+    }
+
     pub(crate) async fn get_history_waterfalls<S: WolletState>(
         &mut self,
         descriptor: &WolletDescriptor,
@@ -530,21 +549,7 @@ impl EsploraClient {
                 self.utxo_only
             );
 
-            let desc = base_desc.clone();
-            let desc = if self.waterfalls_avoid_encryption {
-                desc
-            } else {
-                match self.waterfalls_encrypted_descriptors.get(&desc) {
-                    Some(encrypted_descriptor) => encrypted_descriptor.clone(),
-                    None => {
-                        let recipient = self.waterfalls_server_recipient().await?;
-                        let encrypted_descriptor = encrypt(&desc, recipient)?;
-                        self.waterfalls_encrypted_descriptors
-                            .insert(desc, encrypted_descriptor.clone());
-                        encrypted_descriptor
-                    }
-                }
-            };
+            let desc = self.get_or_encrypt_descriptor(&base_desc).await?;
 
             let full_url = format!(
                 "{}?descriptor={}&page={}&to_index={}&utxo_only={}",

@@ -655,6 +655,47 @@ impl EsploraClient {
         Ok(data)
     }
 
+    /// Query the last used derivation index for a descriptor from the waterfalls server.
+    ///
+    /// This method queries the waterfalls `/v1/last_used_index` endpoint to get the last used
+    /// derivation index for both external and internal chains of the given descriptor.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Error::WaterfallsUnimplemented` if this client was not configured with waterfalls support.
+    /// Returns `Error::UsingWaterfallsWithElip151` if the descriptor uses ELIP151 blinding.
+    pub async fn last_used_index(
+        &mut self,
+        descriptor: &WolletDescriptor,
+    ) -> Result<LastUsedIndexResponse, Error> {
+        if !self.waterfalls {
+            return Err(Error::WaterfallsUnimplemented);
+        }
+        if descriptor.is_elip151() {
+            return Err(Error::UsingWaterfallsWithElip151);
+        }
+
+        let base_desc = descriptor.bitcoin_descriptor_without_key_origin();
+        let desc = self.get_or_encrypt_descriptor(&base_desc).await?;
+
+        let url = format!(
+            "{}/v1/last_used_index?descriptor={}",
+            self.base_url,
+            url_encode_descriptor(&desc)
+        );
+
+        let response = self.get_with_retry(&url).await?;
+        let status = response.status();
+        let body = response.text().await?;
+
+        if status != StatusCode::OK {
+            return Err(Error::Generic(body));
+        }
+
+        let result: LastUsedIndexResponse = serde_json::from_str(&body)?;
+        Ok(result)
+    }
+
     /// Avoid encrypting the descriptor when calling the waterfalls endpoint.
     pub fn avoid_encryption(&mut self) {
         self.waterfalls_avoid_encryption = true;
@@ -1011,6 +1052,21 @@ struct Status {
 struct WaterfallsResult {
     pub txs_seen: HashMap<String, Vec<Vec<History>>>,
     pub page: u16,
+    pub tip: Option<BlockHash>,
+}
+
+/// Response from the last_used_index endpoint
+///
+/// Returns the highest derivation index that has been used (has transaction history)
+/// for both external and internal chains. This is useful for quickly determining
+/// the next unused address without downloading full transaction history.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct LastUsedIndexResponse {
+    /// Last used index on the external (receive) chain, or None if no addresses have been used.
+    pub external: Option<u32>,
+    /// Last used index on the internal (change) chain, or None if no addresses have been used.
+    pub internal: Option<u32>,
+    /// Current blockchain tip hash for reference.
     pub tip: Option<BlockHash>,
 }
 

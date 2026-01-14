@@ -576,6 +576,7 @@ mod tests {
         log::info!("BTC to LBTC swap - fee: {fee}, boltz_fee: {boltz_fee}");
         assert!(fee > 0, "fee should be greater than 0");
         assert!(boltz_fee > 0, "boltz_fee should be greater than 0");
+        assert!(fee > boltz_fee, "fee should be greater than boltz_fee");
         // Boltz fee is typically a percentage of the amount (e.g., 0.1-0.5%)
         // For 50,000 sats, expect boltz_fee to be roughly 50-250 sats
         assert!(
@@ -619,6 +620,7 @@ mod tests {
         log::info!("LBTC to BTC swap - fee: {fee}, boltz_fee: {boltz_fee}");
         assert!(fee > 0, "fee should be greater than 0");
         assert!(boltz_fee > 0, "boltz_fee should be greater than 0");
+        assert!(fee > boltz_fee, "fee should be greater than boltz_fee");
         // Boltz fee is typically a percentage of the amount (e.g., 0.1-0.5%)
         // For 50,000 sats, expect boltz_fee to be roughly 50-250 sats
         assert!(

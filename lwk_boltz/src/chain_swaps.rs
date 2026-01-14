@@ -141,11 +141,24 @@ impl BoltzSession {
         let expected_lockup_amount = create_chain_response.lockup_details.amount;
         let fee = amount.saturating_sub(expected_lockup_amount);
 
+        let boltz_fee = match (from, to) {
+            (Chain::Bitcoin(_), Chain::Liquid(_)) => self
+                .chain_pairs
+                .get_btc_to_lbtc_pair()
+                .map(|pair| pair.fees.boltz(amount)),
+            (Chain::Liquid(_), Chain::Bitcoin(_)) => self
+                .chain_pairs
+                .get_lbtc_to_btc_pair()
+                .map(|pair| pair.fees.boltz(amount)),
+            _ => None,
+        };
+
         Ok(LockupResponse {
             data: ChainSwapData {
                 last_state,
                 swap_type: SwapType::Chain,
                 fee: Some(fee),
+                boltz_fee,
                 create_chain_response,
                 claim_keys,
                 refund_keys,
@@ -395,7 +408,8 @@ pub(crate) fn convert_swap_restore_response_to_chain_swap_data(
     Ok(ChainSwapData {
         last_state,
         swap_type: SwapType::Chain,
-        fee: None, // Fee information not available in restore response
+        fee: None,       // Fee information not available in restore response
+        boltz_fee: None, // Fee information not available in restore response
         create_chain_response,
         claim_keys,
         refund_keys,
@@ -437,6 +451,20 @@ impl LockupResponse {
 
     pub fn chain_to(&self) -> Chain {
         self.data.to_chain
+    }
+
+    /// The fee of the swap provider and the network fee
+    ///
+    /// It is equal to the amount requested minus the amount sent to the claim address.
+    pub fn fee(&self) -> Option<u64> {
+        self.data.fee
+    }
+
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the swap amount multiplied by the boltz fee rate.
+    pub fn boltz_fee(&self) -> Option<u64> {
+        self.data.boltz_fee
     }
 
     pub async fn advance(&mut self) -> Result<ControlFlow<bool, SwapStatus>, Error> {

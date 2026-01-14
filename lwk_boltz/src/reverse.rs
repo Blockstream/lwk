@@ -14,7 +14,7 @@ use boltz_client::boltz::SwapStatus;
 use boltz_client::boltz::Webhook;
 use boltz_client::boltz::{ClaimDetails, CreateReverseResponse};
 use boltz_client::fees::Fee;
-use boltz_client::swaps::magic_routing::check_for_mrh;
+use boltz_client::swaps::magic_routing::find_magic_routing_hint;
 use boltz_client::swaps::magic_routing::sign_address;
 use boltz_client::swaps::ChainClient;
 use boltz_client::swaps::SwapScript;
@@ -103,7 +103,10 @@ impl BoltzSession {
             .get_btc_to_lbtc_pair()
             .map(|pair| pair.fees.boltz(amount));
 
-        let _ = check_for_mrh(&self.api, &invoice_str, chain).await?.ok_or(
+        // Sanity check: Boltz-created invoices should always have the magic routing hint.
+        // We use find_magic_routing_hint (local parsing) instead of check_for_mrh
+        // to avoid an unnecessary network call to get_mrh_bip21.
+        let _ = find_magic_routing_hint(&invoice_str)?.ok_or(
             Error::InvoiceWithoutMagicRoutingHint(reverse_resp.id.clone()),
         )?;
 

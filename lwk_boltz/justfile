@@ -1,94 +1,117 @@
 # Regtest environment management
-set dotenv-load := true
 
-# Export environment variables for tests
-export-env-vars: regtest-env-start
-    #!/usr/bin/env bash
-    set -e
-    BITCOIND_COOKIE=$(cat regtest/data/bitcoind/regtest/.cookie)
-    LND_MACAROON_HEX=$(python3 -c 'import sys; print(open(sys.argv[1], "rb").read().hex())' regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon)
-    echo "BITCOIND_COOKIE=$BITCOIND_COOKIE" > .env
-    echo "LND_MACAROON_HEX=$LND_MACAROON_HEX" >> .env
-
-# Start the regtest environment
+# Start the regtest environment (skips if already running)
 regtest-env-start:
     #!/usr/bin/env bash
     set -e
-    cd regtest
-    ./start.sh
-    cd ../proxy
-    docker compose up -d
-    sleep 5
+    
+    # Skip if .env exists (environment already running)
+    if [ -f ".env" ]; then
+        echo "Regtest environment already running (.env exists)"
+        exit 0
+    fi
+    
+    (cd regtest && ./start.sh)
+    (cd proxy && docker compose up -d)
+    
+    # Wait for required files to be created (timeout after 30 seconds)
+    COOKIE_FILE="regtest/data/bitcoind/regtest/.cookie"
+    MACAROON_FILE="regtest/data/lnd1/data/chain/bitcoin/regtest/admin.macaroon"
+    TIMEOUT=30
+    ELAPSED=0
+    
+    while [ ! -f "$COOKIE_FILE" ] || [ ! -f "$MACAROON_FILE" ]; do
+        if [ $ELAPSED -ge $TIMEOUT ]; then
+            echo "Error: Timeout waiting for required files after ${TIMEOUT} seconds"
+            [ ! -f "$COOKIE_FILE" ] && echo "  Missing: $COOKIE_FILE"
+            [ ! -f "$MACAROON_FILE" ] && echo "  Missing: $MACAROON_FILE"
+            exit 1
+        fi
+        sleep 1
+        ELAPSED=$((ELAPSED + 1))
+    done
+    echo "Regtest environment ready (waited ${ELAPSED}s)"
+    
+    # Export environment variables to .env
+    BITCOIND_COOKIE=$(cat "$COOKIE_FILE")
+    LND_MACAROON_HEX=$(python3 -c 'import sys; print(open(sys.argv[1], "rb").read().hex())' "$MACAROON_FILE")
+    echo "BITCOIND_COOKIE=$BITCOIND_COOKIE" > .env
+    echo "LND_MACAROON_HEX=$LND_MACAROON_HEX" >> .env
+    echo "Environment variables exported to .env"
 
 regtest-env-stop:
     #!/usr/bin/env bash
     set -e
-    cd regtest
-    ./stop.sh
-    cd ../proxy
-    docker compose down
+    (cd regtest && ./stop.sh)
+    (cd proxy && docker compose down)
     # Clean up sensitive environment variables
-    rm -f ../.env
+    rm -f .env
 
 regtest-env-pull:
     #!/usr/bin/env bash
     set -e
-    cd regtest
-    docker compose pull
-    cd ../proxy
-    docker compose build
+    (cd regtest && docker compose pull)
+    (cd proxy && docker compose build)
 
 # Run reverse swap test
-test-reverse: export-env-vars
+test-reverse: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test reverse -- tests::test_session_reverse --nocapture --exact --ignored
 
 # Run submarine swap test
-test-submarine: export-env-vars
+test-submarine: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test submarine -- tests::test_session_submarine --nocapture --exact --ignored
 
 
 # Run onchain swap test
-test-onchain-swaps: export-env-vars
+test-onchain-swaps: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test chain_swaps -- test_session_onchain --nocapture --ignored
 
 # Run submarine swap test with magic routing hints
-test-mrh: export-env-vars
+test-mrh: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test mrh -- test_session_mrh --nocapture --ignored
 
 # Run submarine restore swap test
-test-submarine-restore: export-env-vars
+test-submarine-restore: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine --nocapture --exact --ignored
     RUST_LOG=info cargo test --test submarine -- tests::test_session_restore_submarine_from_swap_list --nocapture --exact --ignored
 
 
 # Run reverse restore swap test
-test-reverse-restore: export-env-vars
+test-reverse-restore: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse --nocapture --exact --ignored
     RUST_LOG=info cargo test --test reverse -- tests::test_session_restore_reverse_with_random_preimages --nocapture --exact --ignored
 
 
 # Run reverse swap test
-test-reverse-concurrent: export-env-vars
+test-reverse-concurrent: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test reverse -- test_session_reverse_concurrent --nocapture --ignored
 
 # Run chain swap restore test
-test-chain-restore: export-env-vars
+test-chain-restore: regtest-env-start
     #!/usr/bin/env bash
-    set -e
+    set -ea
+    source .env
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps --nocapture --exact --ignored
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_with_random_preimages --nocapture --exact --ignored
     RUST_LOG=info cargo test --test chain_swaps -- tests::test_session_restore_chain_swaps_from_swap_list --nocapture --exact --ignored

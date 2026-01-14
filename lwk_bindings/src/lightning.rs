@@ -811,6 +811,30 @@ impl LockupResponse {
             .to_string())
     }
 
+    /// The fee of the swap provider and the network fee
+    ///
+    /// It is equal to the amount requested minus the amount sent to the claim address.
+    pub fn fee(&self) -> Result<Option<u64>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .fee())
+    }
+
+    /// The fee of the swap provider
+    ///
+    /// It is equal to the swap amount multiplied by the boltz fee rate.
+    pub fn boltz_fee(&self) -> Result<Option<u64>, LwkError> {
+        Ok(self
+            .inner
+            .lock()?
+            .as_ref()
+            .ok_or(LwkError::ObjectConsumed)?
+            .boltz_fee())
+    }
+
     pub fn advance(&self) -> Result<PaymentState, LwkError> {
         let mut lock = self.inner.lock()?;
         let mut response = lock.take().ok_or(LwkError::ObjectConsumed)?;

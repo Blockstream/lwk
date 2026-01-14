@@ -139,7 +139,8 @@ impl BoltzSession {
 
         let lockup_address = create_chain_response.lockup_details.lockup_address.clone();
         let expected_lockup_amount = create_chain_response.lockup_details.amount;
-        let fee = amount.saturating_sub(expected_lockup_amount);
+        // Fee is what you lock up minus what you receive on the claim side
+        let fee = expected_lockup_amount.saturating_sub(create_chain_response.claim_details.amount);
 
         let boltz_fee = match (from, to) {
             (Chain::Bitcoin(_), Chain::Liquid(_)) => self

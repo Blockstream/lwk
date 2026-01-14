@@ -239,6 +239,7 @@ boltz:
   script:
     - cd lwk_boltz
     - git submodule update --init --recursive
+    - just regtest-env-start && sleep 15 # explicitly start the env to give more time to bitcoind to start
     - just test-chain-restore
     - just test-mrh
     - just test-onchain-swaps

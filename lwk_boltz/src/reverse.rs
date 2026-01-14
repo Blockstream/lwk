@@ -98,8 +98,8 @@ impl BoltzSession {
             Error::ExpectedAmountLowerThanInvoice(amount, reverse_resp.id.clone()),
         )?;
 
-        let reverse_info = self.api.get_reverse_pairs().await?;
-        let boltz_fee = reverse_info
+        let boltz_fee = self
+            .reverse_pairs
             .get_btc_to_lbtc_pair()
             .map(|pair| pair.fees.boltz(amount));
 

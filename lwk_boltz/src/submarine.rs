@@ -112,8 +112,8 @@ impl BoltzSession {
                 bolt11_invoice_str.clone(),
             ))?;
 
-        let submarine_info = self.api.get_submarine_pairs().await?;
-        let boltz_fee = submarine_info
+        let boltz_fee = self
+            .submarine_pairs
             .get_lbtc_to_btc_pair()
             .map(|pair| pair.fees.boltz(bolt11_amount));
 

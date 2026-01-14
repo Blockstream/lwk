@@ -28,24 +28,27 @@ taker.wait_for_tx(txid2, client)
 taker.wait_for_tx(txid_fee, client)
 assert(taker.balance()[asset] == issued_asset_units)
 
+# ANCHOR: liquidex_make
 # (maker) Create a liquidex proposal (asking for the issued asset in exchange for the policy asset)
 builder = network.tx_builder()
 utxo = maker.utxos()[0].outpoint()
 builder.liquidex_make(utxo, maker.address(None).address(), issued_asset_units, asset)
 pset = builder.finish(maker)
-assert pset.inputs()[0].sighash() == 131
+assert pset.inputs()[0].sighash() == 131 # ANCHOR: ignore
 signed_pset = signer.sign(pset)
 
 # (maker) Create the proposal  and convert it to string to pass it to the taker
 proposal = UnvalidatedLiquidexProposal.from_pset(signed_pset)
 proposal_str = str(proposal)
+# ANCHOR_END: liquidex_make
 
+# ANCHOR: liquidex_validate
 # (taker) Parse the proposal from string and validate it
 proposal_from_str = UnvalidatedLiquidexProposal(proposal_str)
 txid = proposal_from_str.needed_tx()
 previous_tx = client.get_tx(txid)
 validated_proposal = proposal_from_str.validate(previous_tx)
-
+# ANCHOR_END: liquidex_validate
 # (taker) Verify proposal details
 input_amount = validated_proposal.input().amount()
 output_amount = validated_proposal.output().amount()
@@ -56,17 +59,19 @@ assert output_amount == issued_asset_units
 assert input_asset == policy_asset
 assert output_asset == asset
 
+# ANCHOR: liquidex_take
 # (taker) Accept the proposal
 builder2 = network.tx_builder()
 builder2.liquidex_take([validated_proposal])
 pset2 = builder2.finish(taker)
-assert pset2.inputs()[1].sighash() == 1
+assert pset2.inputs()[1].sighash() == 1 # ANCHOR: ignore
 signed_pset2 = signer2.sign(pset2)
 
 # (taker) Finalize and broadcast the transaction
 finalized_pset = taker.finalize(signed_pset2)
 tx = finalized_pset.extract_tx()
 txid = client.broadcast(tx)
+# ANCHOR_END: liquidex_take
 maker.wait_for_tx(txid, client)
 taker.wait_for_tx(txid, client)
 

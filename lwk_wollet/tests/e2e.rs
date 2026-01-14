@@ -2602,6 +2602,7 @@ fn liquidex<C: BlockchainBackend>(
     sats_recv: u64,
     asset_recv: elements::AssetId,
 ) {
+    // ANCHOR: liquidex_make
     // LiquiDEX make
     let addr = wallet_maker.address_result(None).address().clone();
     let mut pset = wallet_maker
@@ -2612,21 +2613,24 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap();
 
     let details = wallet_maker.wollet.get_details(&pset).unwrap();
-    assert_eq!(details.balance.fee, 0);
-    let asset_send = pset.inputs()[0].asset.unwrap();
-    let sats_send = pset.inputs()[0].amount.unwrap();
-    let from_details_send = *details.balance.balances.get(&asset_send).unwrap();
-    let from_details_recv = *details.balance.balances.get(&asset_recv).unwrap();
-    assert_eq!(from_details_send, -(sats_send as i64));
-    assert_eq!(from_details_recv, sats_recv as i64);
+    assert_eq!(details.balance.fee, 0); // ANCHOR: ignore
+    let asset_send = pset.inputs()[0].asset.unwrap(); // ANCHOR: ignore
+    let sats_send = pset.inputs()[0].amount.unwrap(); // ANCHOR: ignore
+    let from_details_send = *details.balance.balances.get(&asset_send).unwrap(); // ANCHOR: ignore
+    let from_details_recv = *details.balance.balances.get(&asset_recv).unwrap(); // ANCHOR: ignore
+    assert_eq!(from_details_send, -(sats_send as i64)); // ANCHOR: ignore
+    assert_eq!(from_details_recv, sats_recv as i64); // ANCHOR: ignore
 
     wallet_maker.sign(signer_maker, &mut pset);
     let proposal = LiquidexProposal::from_pset(&pset).unwrap();
+    // ANCHOR_END: liquidex_make
 
+    // ANCHOR: liquidex_validate
     let txid = proposal.needed_tx().unwrap();
-    assert_eq!(txid, utxo_send.txid);
+    assert_eq!(txid, utxo_send.txid); // ANCHOR: ignore
     let tx = wallet_maker.wollet.transaction(&txid).unwrap().unwrap().tx;
     let proposal = proposal.validate(tx).unwrap();
+    // ANCHOR_END: liquidex_validate
 
     // Extract validated assets and amounts from the proposal
     let AssetAmount {
@@ -2642,6 +2646,7 @@ fn liquidex<C: BlockchainBackend>(
     assert_eq!(maker_output_sats, sats_recv);
     assert_eq!(maker_output_asset, asset_recv);
 
+    // ANCHOR: liquidex_take
     // LiquiDEX take
     let mut pset = wallet_taker
         .tx_builder()
@@ -2649,6 +2654,7 @@ fn liquidex<C: BlockchainBackend>(
         .unwrap()
         .finish()
         .unwrap();
+    // ANCHOR_END: liquidex_take
 
     let details = wallet_taker.wollet.get_details(&pset).unwrap();
     let fee = details.balance.fee as i64;
@@ -2666,8 +2672,10 @@ fn liquidex<C: BlockchainBackend>(
     assert_eq!(from_details_send, sats_send as i64);
     assert_eq!(from_details_recv, -(sats_recv as i64));
 
+    // ANCHOR: liquidex_take_2
     wallet_taker.sign(signer_taker, &mut pset);
     let _txid = wallet_taker.send(&mut pset);
+    // ANCHOR_END: liquidex_take_2
     wait_tx_update(wallet_maker);
 }
 

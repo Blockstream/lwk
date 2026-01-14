@@ -25,7 +25,7 @@
   * [AMP2]() #(amp2.md) ❌
   * [Jade]() #(jade.md) ❌
   * [Ledger]() #(ledger.md) ❌
-  * [LiquiDEX]() #(liquidex.md) ❌
+  * [LiquiDEX](liquidex.md) ✅
   * [Pegin]() #(pegin.md) ❌
   * [Bip85](bip85.md) ✅
   * [CLI]() #(cli.md) 🚧

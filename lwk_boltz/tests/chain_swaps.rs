@@ -570,6 +570,19 @@ mod tests {
             .await
             .unwrap();
 
+        // Assert fees are present and reasonable
+        let fee = response.fee().expect("fee should be present");
+        let boltz_fee = response.boltz_fee().expect("boltz_fee should be present");
+        log::info!("BTC to LBTC swap - fee: {fee}, boltz_fee: {boltz_fee}");
+        assert!(fee > 0, "fee should be greater than 0");
+        assert!(boltz_fee > 0, "boltz_fee should be greater than 0");
+        // Boltz fee is typically a percentage of the amount (e.g., 0.1-0.5%)
+        // For 50,000 sats, expect boltz_fee to be roughly 50-250 sats
+        assert!(
+            boltz_fee < 500,
+            "boltz_fee should be less than 1% of amount"
+        );
+
         log::info!(
             "BTC to LBTC swap - Lockup address: {}",
             response.lockup_address()
@@ -599,6 +612,19 @@ mod tests {
             .lbtc_to_btc(50_000, &refund_address, &claim_address, None)
             .await
             .unwrap();
+
+        // Assert fees are present and reasonable
+        let fee = response.fee().expect("fee should be present");
+        let boltz_fee = response.boltz_fee().expect("boltz_fee should be present");
+        log::info!("LBTC to BTC swap - fee: {fee}, boltz_fee: {boltz_fee}");
+        assert!(fee > 0, "fee should be greater than 0");
+        assert!(boltz_fee > 0, "boltz_fee should be greater than 0");
+        // Boltz fee is typically a percentage of the amount (e.g., 0.1-0.5%)
+        // For 50,000 sats, expect boltz_fee to be roughly 50-250 sats
+        assert!(
+            boltz_fee < 500,
+            "boltz_fee should be less than 1% of amount"
+        );
 
         log::info!(
             "LBTC to BTC swap - Lockup address: {}",

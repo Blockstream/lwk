@@ -22,6 +22,7 @@ use bip39::Mnemonic;
 use boltz_client::boltz::BoltzApiClientV2;
 use boltz_client::boltz::BoltzWsApi;
 use boltz_client::boltz::BoltzWsConfig;
+use boltz_client::boltz::GetChainPairsResponse;
 use boltz_client::boltz::GetReversePairsResponse;
 use boltz_client::boltz::GetSubmarinePairsResponse;
 use boltz_client::boltz::SwapStatus;
@@ -91,6 +92,10 @@ pub struct BoltzSession {
     referral_id: Option<String>,
 
     random_preimages: bool,
+
+    submarine_pairs: GetSubmarinePairsResponse,
+    reverse_pairs: GetReversePairsResponse,
+    chain_pairs: GetChainPairsResponse,
 }
 
 impl BoltzSession {
@@ -180,6 +185,13 @@ impl BoltzSession {
 
         start_ws(ws.clone());
 
+        // Fetch pairs data concurrently
+        let (submarine_pairs, reverse_pairs, chain_pairs) = tokio::try_join!(
+            api.get_submarine_pairs(),
+            api.get_reverse_pairs(),
+            api.get_chain_pairs(),
+        )?;
+
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => {
                 let next_index_to_use = match next_index_to_use {
@@ -204,6 +216,9 @@ impl BoltzSession {
             timeout_advance: timeout_advance.unwrap_or(Duration::from_secs(180)),
             referral_id,
             random_preimages,
+            submarine_pairs,
+            reverse_pairs,
+            chain_pairs,
         })
     }
 

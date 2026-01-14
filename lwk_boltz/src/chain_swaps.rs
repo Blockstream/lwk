@@ -462,7 +462,42 @@ impl LockupResponse {
                     "Server lockup confirmed, claiming on {} chain",
                     self.chain_to()
                 );
-                sleep(WAIT_TIME).await; //TODO can we do better?
+
+                // Parse the server's lockup transaction from the status update if available.
+                // This avoids waiting for the transaction to propagate to the chain client's mempool,
+                // significantly improving claim speed.
+                let lockup_tx = if let Some(tx_info) = &update.transaction {
+                    match self.claim_script.parse_lockup_transaction(tx_info).await {
+                        Ok(tx) => {
+                            log::debug!("Parsed server lockup tx from status update");
+                            Some(tx)
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to parse server lockup tx from status update: {e}, will fetch from chain client");
+                            None
+                        }
+                    }
+                } else {
+                    log::debug!(
+                        "No transaction info in status update, will fetch from chain client"
+                    );
+                    None
+                };
+
+                // If we don't have the lockup tx, fall back to waiting for propagation
+                if lockup_tx.is_none() {
+                    sleep(WAIT_TIME).await;
+                }
+
+                // Build options with lockup_tx if available for faster claiming
+                let options = match lockup_tx {
+                    Some(tx) => TransactionOptions::default()
+                        .with_chain_claim(self.data.refund_keys, self.lockup_script.clone())
+                        .with_lockup_tx(tx),
+                    None => TransactionOptions::default()
+                        .with_chain_claim(self.data.refund_keys, self.lockup_script.clone()),
+                };
+
                 let tx = self
                     .claim_script
                     .construct_claim(
@@ -474,10 +509,7 @@ impl LockupResponse {
                             swap_id: self.swap_id(),
                             chain_client: &self.chain_client,
                             boltz_client: &self.api,
-                            options: Some(TransactionOptions::default().with_chain_claim(
-                                self.data.refund_keys,
-                                self.lockup_script.clone(),
-                            )),
+                            options: Some(options),
                         },
                     )
                     .await?;

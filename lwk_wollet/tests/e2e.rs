@@ -1385,6 +1385,53 @@ fn drain() {
     }
 }
 
+#[test]
+fn send_all_vs_send_balance_minus_fee() {
+    // Create a send_all transaction to extract the fee, then verify that sending
+    // (balance - fee) with a normal transaction results in the same outcome.
+    let env = TestEnvBuilder::from_env().with_electrum().build();
+    let signer = generate_signer();
+    let view_key = generate_view_key();
+    let desc = format!("ct({},elwpkh({}/*))", view_key, signer.xpub());
+    let signer = AnySigner::Software(signer);
+
+    let client = test_client_electrum(&env.electrum_url());
+    let mut wallet = TestWollet::new(client, &desc);
+
+    // Fund the wallet
+    wallet.fund_btc(&env);
+
+    let node_address = env.elementsd_getnewaddress();
+    let balance = wallet.balance_btc();
+
+    // Create a send_all transaction without broadcasting to extract the fee
+    let pset_send_all = wallet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .drain_lbtc_to(node_address.clone())
+        .finish()
+        .unwrap();
+
+    let details = wallet.wollet.get_details(&pset_send_all).unwrap();
+    let fee = details.balance.fee;
+
+    // Create a normal send transaction with amount = balance - fee
+    let amount = balance - fee;
+    let mut pset = wallet
+        .tx_builder()
+        .drain_lbtc_wallet()
+        .add_lbtc_recipient(&node_address, amount)
+        .unwrap()
+        .finish()
+        .unwrap();
+
+    wallet.sign(&signer, &mut pset);
+    wallet.send(&mut pset);
+
+    // Verify the wallet is now empty
+    assert_eq!(wallet.balance_btc(), 0);
+}
+
 fn wait_tx_update<C: BlockchainBackend>(wallet: &mut TestWollet<C>) {
     for _ in 0..50 {
         if let Some(update) = wallet.client.full_scan(&wallet.wollet).unwrap() {

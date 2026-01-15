@@ -1172,16 +1172,23 @@ impl TxBuilder {
             });
         }
         let satoshi_change = satoshi_in - satoshi_out - temp_fee;
-        let addressee = if let Some(address) = self.drain_to {
-            Recipient::from_address(satoshi_change, &address, wollet.policy_asset())
-        } else {
-            wollet.addressee_change(
+        // Track whether we add a change/drain output (needed later for fee adjustment).
+        // Skip change only when: drain_lbtc is set AND there are explicit recipients AND no drain_to.
+        // If there are no recipients (satoshi_out == 0), we always need a change/drain output.
+        let has_change_output = self.drain_to.is_some() || !self.drain_lbtc || satoshi_out == 0;
+        if let Some(address) = self.drain_to {
+            let addressee =
+                Recipient::from_address(satoshi_change, &address, wollet.policy_asset());
+            wollet.add_output(&mut pset, &addressee)?;
+        } else if !self.drain_lbtc || satoshi_out == 0 {
+            let addressee = wollet.addressee_change(
                 satoshi_change,
                 wollet.policy_asset(),
                 &mut last_unused_internal,
-            )?
-        };
-        wollet.add_output(&mut pset, &addressee)?;
+            )?;
+            wollet.add_output(&mut pset, &addressee)?;
+        }
+
         let fee_output =
             Output::new_explicit(Script::default(), temp_fee, wollet.policy_asset(), None);
         pset.add_output(fee_output);
@@ -1203,7 +1210,7 @@ impl TxBuilder {
 
         let vsize = weight.div_ceil(4);
         let fee = (vsize as f32 * self.fee_rate / 1000.0).ceil() as u64;
-        if satoshi_in <= (satoshi_out + fee) {
+        if satoshi_in < (satoshi_out + fee) {
             return Err(Error::InsufficientFunds {
                 missing_sats: (satoshi_out + fee + 1) - satoshi_in, // +1 to ensure we have more than just equal
                 asset_id: wollet.policy_asset(),
@@ -1214,8 +1221,11 @@ impl TxBuilder {
         // Replace change and fee outputs
         let n_outputs = pset.n_outputs();
         let outputs = pset.outputs_mut();
-        let change_output = &mut outputs[n_outputs - 2]; // index check: we always have the lbtc change and the fee output at least
-        change_output.amount = Some(satoshi_change);
+        // Update change output only if it exists (not when drain_lbtc without drain_to)
+        if has_change_output {
+            let change_output = &mut outputs[n_outputs - 2]; // index check: we always have the lbtc change and the fee output at least
+            change_output.amount = Some(satoshi_change);
+        }
         let fee_output = &mut outputs[n_outputs - 1];
         fee_output.amount = Some(fee);
 

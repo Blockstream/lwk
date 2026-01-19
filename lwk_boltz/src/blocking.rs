@@ -2,8 +2,8 @@ use std::{ops::ControlFlow, sync::Arc};
 
 use boltz_client::{
     boltz::{
-        ChainSwapStates, GetReversePairsResponse, GetSubmarinePairsResponse, RevSwapStates,
-        SubSwapStates, SwapRestoreResponse, Webhook,
+        ChainSwapStates, GetChainPairsResponse, GetReversePairsResponse, GetSubmarinePairsResponse,
+        RevSwapStates, SubSwapStates, SwapRestoreResponse, Webhook,
     },
     network::Chain,
     Bolt11Invoice,
@@ -221,7 +221,14 @@ impl BoltzSession {
 
     pub fn fetch_swaps_info(
         &self,
-    ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {
+    ) -> Result<
+        (
+            GetReversePairsResponse,
+            GetSubmarinePairsResponse,
+            GetChainPairsResponse,
+        ),
+        Error,
+    > {
         let inner = self.runtime.block_on(self.inner.fetch_swaps_info())?;
         Ok(inner)
     }

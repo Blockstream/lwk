@@ -280,10 +280,18 @@ impl BoltzSession {
     /// Fetch information, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
     pub async fn fetch_swaps_info(
         &self,
-    ) -> Result<(GetReversePairsResponse, GetSubmarinePairsResponse), Error> {
+    ) -> Result<
+        (
+            GetReversePairsResponse,
+            GetSubmarinePairsResponse,
+            GetChainPairsResponse,
+        ),
+        Error,
+    > {
         let a = self.api.get_reverse_pairs().await?;
         let b = self.api.get_submarine_pairs().await?;
-        Ok((a, b))
+        let c = self.api.get_chain_pairs().await?;
+        Ok((a, b, c))
     }
 
     /// Returns a preimage from the keys or a random one according to flag `self.random_preimage`

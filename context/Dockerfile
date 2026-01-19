@@ -34,7 +34,7 @@ RUN sh ./get-docker.sh
 # move following layers up once upper layers needs modification
 
 RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
-RUN apt update -qq && apt install -y dotnet-sdk-8.0
+RUN apt update -qq && apt install -y dotnet-sdk-10.0
 
 RUN cargo install uniffi-bindgen-cs --git https://github.com/RCasatta/uniffi-bindgen-cs --rev fa87c381f88c8cacd26cf3e91e5c63af60162c3f
 

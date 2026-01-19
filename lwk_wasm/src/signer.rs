@@ -33,6 +33,28 @@ impl Signer {
         Ok(pset.into())
     }
 
+    /// Sign a 32-byte message using Schnorr (BIP-340)
+    ///
+    /// `msg_hex` must be a 64-character hex string (32 bytes)
+    /// Returns the signature as a 128-character hex string (64 bytes)
+    #[wasm_bindgen(js_name = signSchnorr)]
+    pub fn sign_schnorr(&self, msg_hex: &str, derivation_path: &str) -> Result<String, Error> {
+        use lwk_wollet::elements::hex::{FromHex, ToHex};
+
+        let msg_bytes = Vec::<u8>::from_hex(msg_hex)
+            .map_err(|e| Error::Generic(format!("Invalid hex: {e}")))?;
+        let msg_array: [u8; 32] = msg_bytes
+            .try_into()
+            .map_err(|_| Error::Generic("Message must be exactly 32 bytes".to_string()))?;
+
+        let message = lwk_wollet::elements::bitcoin::secp256k1::Message::from_digest(msg_array);
+        let path: bip32::DerivationPath = derivation_path.parse()?;
+
+        let sig = lwk_common::SchnorrSigner::sign_schnorr(&self.inner, message, &path)?;
+
+        Ok(sig.as_ref().to_hex())
+    }
+
     /// Sign a message with the master key, return the signature as a base64 string
     #[wasm_bindgen(js_name = signMessage)]
     pub fn sign_message(&self, message: &str) -> Result<String, Error> {

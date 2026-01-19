@@ -4,6 +4,7 @@ use elements::{
     bitcoin::{
         self,
         bip32::{ChildNumber, DerivationPath, Fingerprint, Xpub},
+        secp256k1::{self, Message},
         sign_message::MessageSignature,
         XKeyIdentifier,
     },
@@ -93,6 +94,16 @@ pub trait Signer {
         message: &str,
         path: &DerivationPath,
     ) -> Result<MessageSignature, Self::Error>;
+}
+
+/// A trait for signers that support Schnorr signatures (BIP-340).
+pub trait SchnorrSigner: Signer {
+    /// Sign a message using Schnorr (BIP-340).
+    fn sign_schnorr(
+        &self,
+        msg: Message,
+        path: &DerivationPath,
+    ) -> Result<secp256k1::schnorr::Signature, Self::Error>;
 }
 
 #[cfg(feature = "amp0")]

@@ -11,6 +11,7 @@ use elements_miniscript::{
     elements::{
         bitcoin::{
             bip32::{self, Fingerprint, Xpriv, Xpub},
+            secp256k1::{schnorr, Keypair},
             Network,
         },
         hashes::Hash,
@@ -405,6 +406,19 @@ impl Signer for SwSigner {
 #[cfg(feature = "amp0")]
 impl lwk_common::Amp0Signer for SwSigner {}
 
+impl lwk_common::SchnorrSigner for SwSigner {
+    fn sign_schnorr(
+        &self,
+        msg: Message,
+        path: &DerivationPath,
+    ) -> Result<schnorr::Signature, Self::Error> {
+        let derived = self.xprv.derive_priv(&self.secp, path)?;
+        let keypair = Keypair::from_secret_key(&self.secp, &derived.private_key);
+
+        Ok(self.secp.sign_schnorr(&msg, &keypair))
+    }
+}
+
 /// Sign a PSET with a given secret key
 pub fn sign_with_seckey(
     seckey: bitcoin::secp256k1::SecretKey,
@@ -664,5 +678,29 @@ mod tests {
         // ANCHOR_END: test_bip85_derivation
 
         Ok(())
+    }
+
+    #[test]
+    fn test_schnorr_sign_verify() {
+        use lwk_common::SchnorrSigner;
+        use std::str::FromStr;
+
+        let signer = SwSigner::new(lwk_test_util::TEST_MNEMONIC, false).unwrap();
+        let path = DerivationPath::from_str("m/86'/1'/0'/0/0").unwrap();
+
+        let msg = Message::from_digest([0x42u8; 32]);
+        let signature = signer.sign_schnorr(msg, &path).unwrap();
+
+        assert_eq!(signature.as_ref().len(), 64);
+
+        let (xonly_pk, _) = signer
+            .derive_xpub(&path)
+            .unwrap()
+            .public_key
+            .x_only_public_key();
+        assert!(signer
+            .secp
+            .verify_schnorr(&signature, &msg, &xonly_pk)
+            .is_ok());
     }
 }

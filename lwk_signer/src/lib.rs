@@ -13,8 +13,9 @@ pub use bip39;
 use elements_miniscript::bitcoin::bip32::{self, DerivationPath, Fingerprint};
 use elements_miniscript::bitcoin::sign_message::MessageSignature;
 use elements_miniscript::elements::bitcoin::bip32::Xpub;
+use elements_miniscript::elements::bitcoin::secp256k1::{schnorr, Message};
 use elements_miniscript::elements::pset::PartiallySignedTransaction;
-use lwk_common::Signer;
+use lwk_common::{SchnorrSigner, Signer};
 
 /// Possible errors when signing with [`AnySigner`]
 #[derive(thiserror::Error, Debug)]
@@ -33,6 +34,9 @@ pub enum SignerError {
 
     #[error(transparent)]
     Bip32Error(#[from] bip32::Error),
+
+    #[error("Schnorr signing not supported by this signer")]
+    SchnorrNotSupported,
 }
 
 /// A signer that can be a software signer [`SwSigner`] or a [`lwk_jade::Jade`]
@@ -150,5 +154,33 @@ impl Signer for &AnySigner {
             #[cfg(feature = "ledger")]
             AnySigner::Ledger(s, _) => s.sign_message(message, path)?,
         })
+    }
+}
+
+impl SchnorrSigner for &AnySigner {
+    fn sign_schnorr(
+        &self,
+        msg: Message,
+        path: &DerivationPath,
+    ) -> Result<schnorr::Signature, Self::Error> {
+        match self {
+            AnySigner::Software(s) => Ok(s.sign_schnorr(msg, path)?),
+
+            #[cfg(feature = "jade")]
+            AnySigner::Jade(_, _) => Err(SignerError::SchnorrNotSupported),
+
+            #[cfg(feature = "ledger")]
+            AnySigner::Ledger(_, _) => Err(SignerError::SchnorrNotSupported),
+        }
+    }
+}
+
+impl SchnorrSigner for AnySigner {
+    fn sign_schnorr(
+        &self,
+        msg: Message,
+        path: &DerivationPath,
+    ) -> Result<schnorr::Signature, Self::Error> {
+        SchnorrSigner::sign_schnorr(&self, msg, path)
     }
 }

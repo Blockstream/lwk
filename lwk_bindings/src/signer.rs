@@ -98,6 +98,28 @@ impl Signer {
         Ok(Arc::new(pset.into()))
     }
 
+    /// Sign a 32-byte message using Schnorr (BIP-340)
+    ///
+    /// `msg_hex` must be a 64-character hex string (32 bytes)
+    /// Returns the signature as a 128-character hex string (64 bytes)
+    pub fn sign_schnorr(&self, msg_hex: &str, derivation_path: &str) -> Result<String, LwkError> {
+        use elements::hex::{FromHex, ToHex};
+
+        let msg_bytes = Vec::<u8>::from_hex(msg_hex).map_err(|e| LwkError::Generic {
+            msg: format!("Invalid hex: {e}"),
+        })?;
+        let msg_array: [u8; 32] = msg_bytes.try_into().map_err(|_| LwkError::Generic {
+            msg: "Message must be exactly 32 bytes".to_string(),
+        })?;
+
+        let message = elements::bitcoin::secp256k1::Message::from_digest(msg_array);
+        let path: elements::bitcoin::bip32::DerivationPath = derivation_path.parse()?;
+
+        let sig = lwk_common::SchnorrSigner::sign_schnorr(&self.inner, message, &path)?;
+
+        Ok(sig.as_ref().to_hex())
+    }
+
     /// Return the witness public key hash, slip77 descriptor of this signer
     pub fn wpkh_slip77_descriptor(&self) -> Result<Arc<WolletDescriptor>, LwkError> {
         self.singlesig_desc(Singlesig::Wpkh, DescriptorBlindingKey::Slip77)

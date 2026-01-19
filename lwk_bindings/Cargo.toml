@@ -13,6 +13,7 @@ lwk_wollet = { version = "0.13.0" }
 lwk_test_util = { version = "0.13.0" }
 lwk_payment_instructions = { version = "0.1.0" }
 lwk_boltz = { version = "0.13.0", optional = true }
+lwk_simplicity_options = { version = "0.1.0", optional = true }
 tokio = { version = "1.0", features = [
     "rt",
 ], optional = true } # move into lwk_boltz
@@ -34,6 +35,7 @@ name = "lwk"
 default = ["lightning"]
 foreign_bindings = []
 lightning = ["lwk_boltz", "tokio", "log"]
+simplicity = ["lwk_simplicity_options"]
 
 [package.metadata.docs.rs]
 all-features = true

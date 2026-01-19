@@ -43,6 +43,11 @@ pub use invoice::{Bolt11Invoice, LightningPayment};
 #[cfg(feature = "lightning")]
 pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 
+#[cfg(feature = "simplicity")]
+mod simplicity;
+#[cfg(feature = "simplicity")]
+pub use simplicity::test_args;
+
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;
 pub use blockdata::block_header::BlockHeader;

@@ -2392,6 +2392,7 @@ dependencies = [
  "lwk_common",
  "lwk_payment_instructions",
  "lwk_signer",
+ "lwk_simplicity_options",
  "lwk_test_util",
  "lwk_wollet",
  "serde_json",

@@ -262,4 +262,23 @@ mod tests {
             derived_mnemonic_0_again.to_string()
         );
     }
+
+    #[test]
+    fn test_schnorr_sign() {
+        let mnemonic_str = lwk_test_util::TEST_MNEMONIC;
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
+        let network: crate::Network = ElementsNetwork::default_regtest().into();
+
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+
+        let msg_hex = "42".repeat(32);
+        let path = "m/86'/1'/0'/0/0";
+
+        let sig_hex = signer.sign_schnorr(&msg_hex, path).unwrap();
+
+        assert_eq!(sig_hex.len(), 128);
+
+        assert!(signer.sign_schnorr("not_hex", path).is_err());
+        assert!(signer.sign_schnorr("4242", path).is_err());
+    }
 }

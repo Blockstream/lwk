@@ -209,4 +209,22 @@ mod tests {
             signer.derive_bip85_mnemonic(0, 12).unwrap().to_string()
         );
     }
+
+    #[wasm_bindgen_test]
+    fn test_schnorr_sign() {
+        let mnemonic_str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let mnemonic = Mnemonic::new(mnemonic_str).unwrap();
+        let network: crate::Network = network_regtest().into();
+
+        let signer = Signer::new(&mnemonic, &network).unwrap();
+
+        let msg_hex = "42".repeat(32);
+        let path = "m/86'/1'/0'/0/0";
+
+        let sig_hex = signer.sign_schnorr(&msg_hex, path).unwrap();
+        assert_eq!(sig_hex.len(), 128);
+
+        assert!(signer.sign_schnorr("not_hex", path).is_err());
+        assert!(signer.sign_schnorr("4242", path).is_err());
+    }
 }

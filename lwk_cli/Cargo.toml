@@ -1,6 +1,6 @@
 [package]
 name = "lwk_cli"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2021"
 autotests = false
 description = "Liquid Wallet Kit - Command line interface to interact with the RPC server"
@@ -25,8 +25,8 @@ clap_complete = "~4.5"
 uniffi = { version = "0.28.2", features = ["cli"], optional = true }
 
 [dev-dependencies]
-lwk_containers = { version = "0.13.0" }
-lwk_test_util = { version = "0.13.0" }
+lwk_containers = { version = "0.14.0" }
+lwk_test_util = { version = "0.14.0" }
 
 shellwords = "1.1.0"
 elements.workspace = true

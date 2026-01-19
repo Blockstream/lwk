@@ -1,6 +1,6 @@
 [package]
 name = "lwk_containers"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2021"
 description = "Liquid Wallet Kit - Docker containers for tests environment"
 license = "MIT OR BSD-2-Clause"

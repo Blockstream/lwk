@@ -7,10 +7,10 @@ license = "MIT OR BSD-2-Clause"
 documentation = "https://docs.rs/lwk_app"
 
 [dependencies]
-lwk_common = { version = "0.13.0" }
-lwk_jade = { version = "0.13.0" }
-lwk_signer = { version = "0.13.0" }
-lwk_wollet = { version = "0.13.0" }
+lwk_common = { version = "0.14.0" }
+lwk_jade = { version = "0.14.0" }
+lwk_signer = { version = "0.14.0" }
+lwk_wollet = { version = "0.14.0" }
 lwk_rpc_model = { version = "0.13.0" }
 lwk_tiny_jrpc = { version = "0.13.0" }
 

@@ -65,3 +65,23 @@ jobs:
           name: csharp-windows
           path: target/release/csharp
 
+  simplicity:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build with simplicity feature
+        run: cargo build --release -p lwk_bindings --features simplicity
+      - name: Generate Python bindings
+        run: |
+          ./target/release/lwk_cli generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
+          cp target/release/liblwk.so target/release/bindings/
+      - name: Run Simplicity Python tests
+        run: |
+          cd lwk_bindings/tests/bindings
+          PYTHONPATH=../../../target/release/bindings/ python3 simplicity_p2pk.py
+

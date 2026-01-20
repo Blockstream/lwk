@@ -2,6 +2,9 @@
 name = "lwk_payment_instructions"
 version = "0.14.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Parser for addresses, invoices and other payment instructions"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_payment_instructions"
 
 [dependencies]
 # rand std/std_rng features needed by lnurl-rs for bitcoin::secp256k1::rand::random

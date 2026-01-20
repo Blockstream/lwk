@@ -2,6 +2,9 @@
 name = "lwk_boltz"
 version = "0.14.0"
 edition = "2021"
+description = "Liquid Wallet Kit - Boltz integration"
+license = "MIT OR BSD-2-Clause"
+documentation = "https://docs.rs/lwk_boltz"
 
 [features]
 default = ["blocking"]

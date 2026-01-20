@@ -2592,7 +2592,7 @@ dependencies = [
 
 [[package]]
 name = "lwk_wasm"
-version = "0.14.0"
+version = "0.14.1"
 dependencies = [
  "byteorder",
  "console_error_panic_hook",

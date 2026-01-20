@@ -4,9 +4,9 @@ use crate::{
     types::{AssetId, SecretKey},
     Address, LwkError, Network, Script, TxOutSecrets,
 };
-use std::sync::Arc;
-use elements::{confidential, TxOutWitness};
 use elements::pset::serialize::Deserialize;
+use elements::{confidential, TxOutWitness};
+use std::sync::Arc;
 
 /// A transaction output.
 #[derive(uniffi::Object, Debug, Clone)]

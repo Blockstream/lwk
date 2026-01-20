@@ -193,15 +193,8 @@ just:
   extends: .base
   script:
     - just python-test-bindings
+    - just python-test-bindings-simplicity
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package
-
-simplicity:
-  extends: .base
-  script:
-    - cargo build --release --features simplicity,bindings
-    - ./target/release/lwk_cli generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
-    - cp target/release/liblwk.so target/release/bindings/
-    - cd lwk_bindings/tests/bindings && PYTHONPATH=../../../target/release/bindings/ python3 simplicity_p2pk.py
 
 wasm:
   extends: .base

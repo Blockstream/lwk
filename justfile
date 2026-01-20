@@ -18,6 +18,19 @@ python-build-bindings: build-bindings-lib
 python-test-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3 -c 'import lwk'
 
+# build the bindings lib with simplicity feature
+build-bindings-lib-simplicity:
+    cargo build --release -p lwk_bindings --features simplicity
+
+# build the python bindings with simplicity enabled
+python-build-bindings-simplicity: build-bindings-lib-simplicity
+    cargo run --release --features bindings,simplicity -- generate --library target/release/liblwk.so --language python --out-dir target/release/bindings
+    cp target/release/liblwk.so target/release/bindings
+
+# smoke test the python bindings with simplicity
+python-test-bindings-simplicity: python-build-bindings-simplicity
+    PYTHONPATH=target/release/bindings/ python3 lwk_bindings/tests/bindings/simplicity_p2pk.py
+
 # build the python bindings and start a python env with them
 python-env-bindings: python-build-bindings
     PYTHONPATH=target/release/bindings/ python3

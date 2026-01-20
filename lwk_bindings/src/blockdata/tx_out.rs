@@ -5,9 +5,11 @@ use crate::{
     Address, LwkError, Network, Script, TxOutSecrets,
 };
 use std::sync::Arc;
+use elements::{confidential, TxOutWitness};
+use elements::pset::serialize::Deserialize;
 
 /// A transaction output.
-#[derive(uniffi::Object, Debug)]
+#[derive(uniffi::Object, Debug, Clone)]
 pub struct TxOut {
     inner: elements::TxOut,
 }
@@ -18,8 +20,63 @@ impl From<elements::TxOut> for TxOut {
     }
 }
 
+impl AsRef<elements::TxOut> for TxOut {
+    fn as_ref(&self) -> &elements::TxOut {
+        &self.inner
+    }
+}
+
+impl From<TxOut> for elements::TxOut {
+    fn from(value: TxOut) -> Self {
+        value.inner
+    }
+}
+
+impl From<&TxOut> for elements::TxOut {
+    fn from(value: &TxOut) -> Self {
+        value.inner.clone()
+    }
+}
+
 #[uniffi::export]
 impl TxOut {
+    /// Create a TxOut with explicit asset and value from script pubkey hex, asset ID hex, and value.
+    ///
+    /// This is useful for constructing UTXOs for Simplicity transaction signing.
+    #[uniffi::constructor]
+    pub fn from_explicit(
+        script_pubkey_hex: &str,
+        asset_id_hex: &str,
+        value: u64,
+    ) -> Result<Arc<Self>, LwkError> {
+        use elements::hex::FromHex;
+        use std::str::FromStr;
+
+        let script_bytes =
+            Vec::<u8>::from_hex(script_pubkey_hex).map_err(|e| LwkError::Generic {
+                msg: format!("Invalid script pubkey hex: {e}"),
+            })?;
+        let script_pubkey =
+            elements::Script::deserialize(&script_bytes).map_err(|e| LwkError::Generic {
+                msg: format!("Invalid script: {e}"),
+            })?;
+
+        let asset_id =
+            elements::AssetId::from_str(asset_id_hex).map_err(|e| LwkError::Generic {
+                msg: format!("Invalid asset ID: {e}"),
+            })?;
+
+        let inner = elements::TxOut {
+            script_pubkey,
+            asset: confidential::Asset::Explicit(asset_id),
+            value: confidential::Value::Explicit(value),
+            nonce: confidential::Nonce::Null,
+            witness: TxOutWitness::default(),
+        };
+
+        Ok(Arc::new(Self { inner }))
+    }
+
     /// Scriptpubkey
     pub fn script_pubkey(&self) -> Arc<Script> {
         let spk = self.inner.script_pubkey.clone().into();

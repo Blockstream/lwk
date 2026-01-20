@@ -46,7 +46,12 @@ pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 #[cfg(feature = "simplicity")]
 mod simplicity;
 #[cfg(feature = "simplicity")]
-pub use simplicity::test_args;
+pub use simplicity::{
+    simplicity_control_block, simplicity_create_p2pk_signature, simplicity_create_p2tr_address,
+    simplicity_derive_xonly_pubkey, simplicity_finalize_transaction, simplicity_get_sighash_all,
+    simplicity_load_program, SimplicityArguments, SimplicityLogLevel, SimplicityProgram,
+    SimplicityWitnessValues,
+};
 
 pub use blockdata::address::Address;
 pub use blockdata::address_result::AddressResult;

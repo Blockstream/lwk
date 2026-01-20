@@ -2,6 +2,8 @@ use std::{fmt::Display, sync::Arc};
 
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 
+use elements::hex::ToHex;
+
 use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
 
 /// The network of the elements blockchain.
@@ -113,6 +115,11 @@ impl Network {
     /// Return the policy asset (eg LBTC for mainnet) for this network
     pub fn policy_asset(&self) -> AssetId {
         self.inner.policy_asset().into()
+    }
+
+    /// Return the genesis block hash for this network as hex string.
+    pub fn genesis_block_hash(&self) -> String {
+        self.inner.genesis_block_hash().to_hex()
     }
 
     /// Return a new `TxBuilder` for this network

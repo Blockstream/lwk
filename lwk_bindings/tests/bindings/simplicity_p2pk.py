@@ -17,103 +17,49 @@ TEST_FINALIZED_TX = "02000000010113226c2af4a18516258790b9c6f118afdf0bfe9cb0cf795
 TEST_CMR = "b685a4424842507d7d747e6611a740d8c421038e9744e75d423d0e2e9f164d02"
 TEST_ADDRESS = "tex1plzu3devry87vlds49yj9hjh8d00semdukr0jkg7z4j834hld2a6s6y4amk"
 
-def test_p2pk_load_program():
-    """Test loading p2pk program with public key argument"""
-    args = SimplicityArguments()
-    args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
+network = Network.testnet()
+genesis_hash = network.genesis_block_hash()
 
-    program = simplicity_load_program(P2PK_SOURCE, args)
+assert genesis_hash == "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
+assert len(genesis_hash) == 64
 
-    cmr = program.cmr()
-    assert cmr == TEST_CMR
+# Test loading p2pk program with public key argument
+args = SimplicityArguments()
+args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
 
+program = simplicity_load_program(P2PK_SOURCE, args)
+cmr = program.cmr()
+assert cmr == TEST_CMR
 
-def test_p2pk_create_address():
-    """Test creating P2TR address for p2pk program"""
-    args = SimplicityArguments()
-    args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
+# Test creating P2TR address for p2pk program
+address = simplicity_create_p2tr_address(program, TEST_PUBLIC_KEY, network)
+assert address is not None
+assert str(address) == TEST_ADDRESS
 
-    program = simplicity_load_program(P2PK_SOURCE, args)
-    network = Network.testnet()
+# Test building witness values with signature (64 bytes)
+witness = SimplicityWitnessValues()
+witness = witness.add_bytes("SIGNATURE", TEST_SIGNATURE)
+assert witness is not None
 
-    address = simplicity_create_p2tr_address(program, TEST_PUBLIC_KEY, network)
+# Test adding numeric values (for other programs that need them)
+args_with_number = SimplicityArguments()
+args_with_number = args_with_number.add_number("THRESHOLD", 2)
+assert args_with_number is not None
 
-    assert address is not None
-    assert str(address) == TEST_ADDRESS
+# Test creating TxOut from explicit values
+utxo_script = Script(TEST_UTXO_SCRIPT_PUBKEY)
+utxo = TxOut.from_explicit(utxo_script, network.policy_asset(), TEST_UTXO_VALUE)
+assert utxo is not None
+assert utxo.value() == TEST_UTXO_VALUE
 
-def test_p2pk_finalize_transaction():
-    """Test full transaction finalization with real test vectors"""
-    # Build program
-    args = SimplicityArguments()
-    args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
-    program = simplicity_load_program(P2PK_SOURCE, args)
+# Test full transaction finalization with real test vectors
+tx = Transaction(TEST_UNSIGNED_TX)
 
-    network = Network.testnet()
+finalized_tx = simplicity_finalize_transaction(
+    tx, program, TEST_PUBLIC_KEY, [utxo], 0,
+    witness, network, genesis_hash, SimplicityLogLevel.NONE
+)
 
-    # Create transaction and UTXO
-    tx = Transaction(TEST_UNSIGNED_TX)
-    utxo = TxOut.from_explicit(TEST_UTXO_SCRIPT_PUBKEY, network.policy_asset(), TEST_UTXO_VALUE)
-
-    genesis_hash = network.genesis_block_hash()
-
-    # Build witness with the known signature
-    witness = SimplicityWitnessValues()
-    witness = witness.add_bytes("SIGNATURE", TEST_SIGNATURE)
-
-    # Finalize the transaction
-    finalized_tx = simplicity_finalize_transaction(
-        tx, program, TEST_PUBLIC_KEY, [utxo], 0,
-        witness, network, genesis_hash, SimplicityLogLevel.NONE
-    )
-
-    assert finalized_tx is not None
-    finalized_hex = str(finalized_tx)
-    assert finalized_hex == TEST_FINALIZED_TX
-
-
-def test_p2pk_witness_values():
-    """Test building witness values with signature (64 bytes)"""
-    witness = SimplicityWitnessValues()
-    witness = witness.add_bytes("SIGNATURE", TEST_SIGNATURE)
-
-    assert witness is not None
-
-
-def test_p2pk_with_number():
-    """Test adding numeric values (for other programs that need them)"""
-    args = SimplicityArguments()
-    args = args.add_number("THRESHOLD", 2)
-
-    assert args is not None
-
-
-def test_txout_from_explicit():
-    """Test creating TxOut from explicit values"""
-    network = Network.testnet()
-
-    utxo = TxOut.from_explicit(
-        TEST_UTXO_SCRIPT_PUBKEY,
-        network.policy_asset(),
-        TEST_UTXO_VALUE
-    )
-
-    assert utxo is not None
-    assert utxo.value() == TEST_UTXO_VALUE
-
-def test_network_genesis_hash():
-    """Test getting genesis block hash from network"""
-    network = Network.testnet()
-    genesis_hash = network.genesis_block_hash()
-
-    assert genesis_hash == "a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1"
-    assert len(genesis_hash) == 64
-
-if __name__ == "__main__":
-    test_network_genesis_hash()
-    test_p2pk_load_program()
-    test_p2pk_create_address()
-    test_p2pk_witness_values()
-    test_p2pk_with_number()
-    test_txout_from_explicit()
-    test_p2pk_finalize_transaction()
-    print("All p2pk tests passed!")
+assert finalized_tx is not None
+finalized_hex = str(finalized_tx)
+assert finalized_hex == TEST_FINALIZED_TX

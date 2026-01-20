@@ -8,7 +8,7 @@ use lwk_simplicity_options::signer;
 use lwk_simplicity_options::simplicityhl;
 use lwk_simplicity_options::utils::{
     convert_values_to_map, network_to_address_params, parse_genesis_hash, validate_bytes_length,
-    NetworkKind, SimplicityValue,
+    SimplicityValue,
 };
 
 use crate::blockdata::tx_out::TxOut;
@@ -147,6 +147,7 @@ pub fn simplicity_load_program(
 ///
 /// # Returns
 /// The P2TR address that locks funds to this program.
+// TODO(KyrylR): Add a proper XOnlyPublicKey type in lwk_bindings instead of using Hex.
 #[uniffi::export]
 pub fn simplicity_create_p2tr_address(
     program: &SimplicityProgram,
@@ -165,7 +166,7 @@ pub fn simplicity_create_p2tr_address(
             msg: format!("Invalid x-only public key: {e}"),
         })?;
 
-    let params = network_to_address_params(get_network_kind(network));
+    let params = network_to_address_params(network.into());
     let cmr = program.inner.commit().cmr();
     let address = scripts::create_p2tr_address(cmr, &x_only_key, params);
 
@@ -240,7 +241,7 @@ pub fn simplicity_get_sighash_all(
         })?;
 
     let genesis = get_genesis_hash(&genesis_hash)?;
-    let params = network_to_address_params(get_network_kind(network));
+    let params = network_to_address_params(network.into());
 
     let utxos_inner: Vec<elements::TxOut> = utxos
         .iter()
@@ -302,7 +303,7 @@ pub fn simplicity_finalize_transaction(
         })?;
 
     let genesis = get_genesis_hash(&genesis_hash)?;
-    let params = network_to_address_params(get_network_kind(network));
+    let params = network_to_address_params(network.into());
 
     let utxos_inner: Vec<elements::TxOut> = utxos
         .iter()
@@ -365,7 +366,7 @@ pub fn simplicity_create_p2pk_signature(
     let x_only_pubkey = keypair.x_only_public_key().0;
 
     let genesis = get_genesis_hash(&genesis_hash)?;
-    let params = network_to_address_params(get_network_kind(network));
+    let params = network_to_address_params(network.into());
 
     let utxos_inner: Vec<elements::TxOut> = utxos
         .iter()
@@ -415,14 +416,6 @@ pub fn simplicity_derive_xonly_pubkey(
     let (xonly, _parity) = keypair.x_only_public_key();
 
     Ok(Hex::from(xonly.serialize().to_vec()))
-}
-
-fn get_network_kind(network: &Network) -> NetworkKind {
-    match network.inner {
-        lwk_wollet::ElementsNetwork::Liquid => NetworkKind::Liquid,
-        lwk_wollet::ElementsNetwork::LiquidTestnet => NetworkKind::LiquidTestnet,
-        lwk_wollet::ElementsNetwork::ElementsRegtest { .. } => NetworkKind::ElementsRegtest,
-    }
 }
 
 fn get_genesis_hash(genesis_hash: &Hex) -> Result<simplicityhl::elements::BlockHash, LwkError> {

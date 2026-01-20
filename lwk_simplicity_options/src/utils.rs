@@ -56,20 +56,12 @@ pub fn convert_values_to_map(
         .collect()
 }
 
-/// Network type for address parameter selection.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NetworkKind {
-    Liquid,
-    LiquidTestnet,
-    ElementsRegtest,
-}
-
 /// Get the address parameters for a network.
-pub fn network_to_address_params(network: NetworkKind) -> &'static AddressParams {
+pub fn network_to_address_params(network: lwk_common::Network) -> &'static AddressParams {
     match network {
-        NetworkKind::Liquid => &AddressParams::LIQUID,
-        NetworkKind::LiquidTestnet => &AddressParams::LIQUID_TESTNET,
-        NetworkKind::ElementsRegtest => &AddressParams::ELEMENTS,
+        lwk_common::Network::Liquid => &AddressParams::LIQUID,
+        lwk_common::Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
+        lwk_common::Network::LocaltestLiquid => &AddressParams::ELEMENTS,
     }
 }
 

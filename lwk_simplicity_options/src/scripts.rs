@@ -1,5 +1,3 @@
-use sha2::{Digest, Sha256};
-
 use simplicityhl::elements::{
     taproot, Address, AddressParams, AssetId, ContractHash, OutPoint, Script,
 };
@@ -78,9 +76,7 @@ pub fn control_block(
 /// SHA256 hash of an address's scriptPubKey bytes.
 #[must_use]
 pub fn hash_script(script: &Script) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    sha2::digest::Update::update(&mut hasher, script.as_bytes());
-    hasher.finalize().into()
+    sha256::Hash::hash(script.as_bytes()).to_byte_array()
 }
 
 /// Compute issuance entropy for a new asset given an outpoint and contract hash entropy.

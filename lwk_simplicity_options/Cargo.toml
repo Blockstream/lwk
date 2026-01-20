@@ -8,6 +8,4 @@ lwk_common = { version = "0.13.0", path = "../lwk_common" }
 
 simplicityhl = { version = "0.4.0" }
 
-sha2 = { version = "0.10.9", features = ["compress"] }
-
 thiserror = "2"

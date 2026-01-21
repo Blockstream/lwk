@@ -160,6 +160,20 @@ impl Wollet {
             .collect())
     }
 
+    /// Get all the wallet transaction
+    pub fn transaction(&self, txid: &Txid) -> Result<Arc<WalletTx>, LwkError> {
+        let err = || LwkError::Generic {
+            msg: "tx not found".to_string(),
+        };
+        Ok(Arc::new(
+            self.inner
+                .lock()?
+                .transaction(&txid.into())?
+                .ok_or_else(err)?
+                .into(),
+        ))
+    }
+
     /// Get the unspent transaction outputs of the wallet
     pub fn utxos(&self) -> Result<Vec<Arc<WalletTxOut>>, LwkError> {
         Ok(self

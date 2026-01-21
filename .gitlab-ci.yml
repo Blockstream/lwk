@@ -192,6 +192,7 @@ cpp:
 just:
   extends: .base
   script:
+    - cp ./context/env.sh / && cd / && . ./env.sh && cd -
     - just python-test-bindings
     - just python-test-bindings-simplicity
     - just kotlin # kotlin-android would require cargo-ndk and various targets, tested on github which produce the kotlin package

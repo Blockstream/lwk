@@ -27,6 +27,7 @@ client = ElectrumClient.from_url(node.electrum_url())
 sats = 100000
 txid = node.send_to_address(addr.address(), sats, asset=None)
 wollet.wait_for_tx(txid, client)
+assert wollet.transaction(txid).balance()[network.policy_asset()] == sats
 
 # ANCHOR: txs
 txs = wollet.transactions()

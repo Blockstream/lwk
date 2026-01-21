@@ -13,7 +13,7 @@ use elements::bitcoin;
 use elements_miniscript::elements;
 
 use elements::hex::FromHex;
-use elements::{Address, AssetId, Txid};
+use elements::{Address, AssetId, BlockHash, Txid};
 
 use serde_json::Value;
 use std::str::FromStr;
@@ -134,6 +134,7 @@ impl TestEnvBuilder {
             "-acceptdiscountct=1",
             "-rest",
             "-txindex=1",
+            "-evbparams=simplicity:-1:::", // Enable Simplicity from block 0
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
             //TODO remove this bad code once Conf::args is not Vec<&str>
@@ -397,6 +398,19 @@ impl TestEnv {
             .call("getblockchaininfo", &[])
             .unwrap();
         raw.get("blocks").unwrap().as_u64().unwrap()
+    }
+
+    /// Get the genesis block hash from the running elementsd node.
+    ///
+    /// Could differ from the hardcoded one because parameters like `-initialfreecoins`
+    /// change the genesis hash.
+    pub fn elementsd_genesis_block_hash(&self) -> BlockHash {
+        let raw: Value = self
+            .elementsd
+            .client
+            .call("getblockhash", &[0.into()])
+            .unwrap();
+        BlockHash::from_str(raw.as_str().unwrap()).unwrap()
     }
 
     pub fn elementsd_getpeginaddress(&self) -> (bitcoin::Address, String) {

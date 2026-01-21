@@ -71,4 +71,9 @@ impl LwkTestEnv {
     pub fn waterfalls_url(&self) -> String {
         self.inner.waterfalls_url()
     }
+
+    /// Get the genesis block hash from the running node.
+    pub fn genesis_block_hash(&self) -> String {
+        self.inner.elementsd_genesis_block_hash().to_string()
+    }
 }

@@ -28,4 +28,7 @@ uniffi::build_foreign_language_testcases!(
 );
 
 #[cfg(all(feature = "foreign_bindings", feature = "simplicity"))]
-uniffi::build_foreign_language_testcases!("tests/bindings/simplicity_p2pk.py");
+uniffi::build_foreign_language_testcases!(
+    "tests/bindings/simplicity_p2pk.py",
+    "tests/bindings/simplicity_p2pk_regtest.py"
+);

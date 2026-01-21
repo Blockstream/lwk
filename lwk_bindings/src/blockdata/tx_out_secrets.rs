@@ -1,5 +1,7 @@
 //! Liquid transaction output secrets
 
+use std::sync::Arc;
+
 use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
@@ -26,6 +28,19 @@ impl From<&TxOutSecrets> for elements::TxOutSecrets {
 
 #[uniffi::export]
 impl TxOutSecrets {
+    /// Create TxOutSecrets from explicit (unblinded) values.
+    #[uniffi::constructor]
+    pub fn from_explicit(asset_id: AssetId, value: u64) -> Arc<Self> {
+        Arc::new(Self {
+            inner: elements::TxOutSecrets::new(
+                asset_id.into(),
+                AssetBlindingFactor::zero(),
+                value,
+                ValueBlindingFactor::zero(),
+            ),
+        })
+    }
+
     /// Return the asset identifier of the output.
     pub fn asset(&self) -> AssetId {
         self.inner.asset.into()

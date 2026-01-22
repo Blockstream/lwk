@@ -244,7 +244,7 @@ assert pay.bip353() == "matt@mattcorallo.com"  # Without the ₿ prefix
 # Test Liquid BIP21
 address = "VJLDJCJZja8GZNBkLFAHWSNwuxMrzs1BpX1CAUqvfwgtRtDdVtPFWiQwnYMf76rMamsUgFFJVgf36eag"
 asset = "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"
-amount = 10
+amount = "0.00000010"
 liquid_bip21 = f"liquidnetwork:{address}?amount={amount}&assetid={asset}"
 pay = Payment(liquid_bip21)
 assert pay.kind() == PaymentKind.LIQUID_BIP21
@@ -253,7 +253,7 @@ assert bip21_data is not None
 assert str(bip21_data.address) == address
 assert bip21_data.address.network() == Network.mainnet()
 assert bip21_data.asset == asset
-assert bip21_data.amount == amount
+assert bip21_data.satoshi == 10
 assert pay.liquid_address() is None  # LiquidBip21 is different from plain address
 
 # Test Liquid BIP21 on testnet

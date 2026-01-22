@@ -512,13 +512,13 @@ mod tests {
     #[test]
     fn test_parse_liquid_bip21() {
         let liquid_bip21 = "liquidnetwork:VJL67HETqJCTg8Jak34N4RQaZD8HopbuhiU6F5kdo4d8QBJKTNJY3N1ictsXc1KAVNpaTEuCEoUCAzEj?amount=0.00001000&assetid=6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
-        let _payment_category = Payment::from_str(&liquid_bip21).unwrap();
+        let _payment_category = Payment::from_str(liquid_bip21).unwrap();
     }
 
     #[test]
     fn test_parse_liquid_bip21_only_asset() {
         let liquid_bip21 = "liquidnetwork:VJLGMJ6mExPjidy3evXx5qjfbL4G4iVnyLLmaCTdzSUna3NbXrAR6MheMk3xcSGs3A1TYuJn1C8dQ8W5?assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
-        let _payment_category = Payment::from_str(&liquid_bip21).unwrap();
+        let _payment_category = Payment::from_str(liquid_bip21).unwrap();
     }
 
     #[test]

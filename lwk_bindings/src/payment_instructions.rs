@@ -54,7 +54,7 @@ pub struct LiquidBip21 {
     /// The asset identifier
     pub asset: AssetId,
     /// The amount in satoshis
-    pub amount: u64,
+    pub satoshi: Option<u64>,
 }
 
 /// A parsed payment category from a payment instruction string.
@@ -157,7 +157,7 @@ impl Payment {
         self.inner.liquid_bip21().map(|bip21| LiquidBip21 {
             address: Arc::new(Address::from(bip21.address.clone())),
             asset: bip21.asset.into(),
-            amount: bip21.amount,
+            satoshi: bip21.satoshi,
         })
     }
 

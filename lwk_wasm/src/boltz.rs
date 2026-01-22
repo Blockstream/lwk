@@ -351,7 +351,9 @@ impl LightningPayment {
     }
 }
 
-#[cfg(all(test, target_arch = "wasm32"))]
+// Launch boltz regtest and remove "disable_regtest" to use these tests
+// these test relies on .env file to be present at compile time.
+#[cfg(all(test, target_arch = "wasm32", disabled_regtest))]
 mod tests {
     use wasm_bindgen_test::*;
 
@@ -399,7 +401,6 @@ mod tests {
             .unwrap();
     }
 
-    #[ignore = "requires regtest environment"]
     #[wasm_bindgen_test]
     async fn test_boltz_submarine_reverse() {
         let network = Network::regtest_default();

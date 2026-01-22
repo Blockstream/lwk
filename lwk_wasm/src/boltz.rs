@@ -399,7 +399,7 @@ mod tests {
             .unwrap();
     }
 
-    // #[ignore = "requires regtest environment"]
+    #[ignore = "requires regtest environment"]
     #[wasm_bindgen_test]
     async fn test_boltz_submarine_reverse() {
         let network = Network::regtest_default();

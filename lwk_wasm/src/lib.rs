@@ -32,6 +32,7 @@ mod registry;
 #[cfg(all(feature = "serial", target_arch = "wasm32"))]
 mod serial;
 mod signer;
+mod store;
 mod tx_builder;
 mod update;
 
@@ -75,6 +76,7 @@ pub use pset::Pset;
 pub use pset_details::{Issuance, PsetDetails};
 pub use registry::{AssetMeta, Registry, RegistryPost};
 pub use signer::Signer;
+pub use store::{JsStorage, JsStoreLink, JsTestStore};
 pub use tx_builder::TxBuilder;
 pub use update::Update;
 

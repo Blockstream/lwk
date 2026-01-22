@@ -159,7 +159,8 @@ mod tests {
                     return store.get(key) || null;
                 },
                 put: function(key, value) {
-                    store.set(key, value);
+                    // Copy the value - WASM may reuse memory buffer
+                    store.set(key, value ? new Uint8Array(value) : null);
                 },
                 delete: function(key) {
                     store.delete(key);

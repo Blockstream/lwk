@@ -1,6 +1,7 @@
 #[cfg(feature = "foreign_bindings")]
 uniffi::build_foreign_language_testcases!(
     "tests/bindings/custom_persister.py",
+    "tests/bindings/custom_store.py",
     "tests/bindings/external_unblind.py",
     "tests/bindings/list_transactions.py",
     "tests/bindings/issue_asset.py",

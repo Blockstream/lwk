@@ -18,11 +18,11 @@ mod fee;
 mod keyorigin_xpub;
 mod model;
 mod network;
-mod persister;
 pub mod precision;
 mod qr;
 mod segwit;
 mod signer;
+mod store;
 
 pub use crate::address::{Address, AddressParseError};
 pub use crate::balance::{Balance, SignedBalance};
@@ -33,7 +33,6 @@ pub use crate::descriptor::{
 };
 pub use crate::error::Error;
 pub use crate::keyorigin_xpub::{keyorigin_xpub_from_str, InvalidKeyOriginXpub};
-pub use crate::persister::{MemoryPersister, Persister};
 pub use crate::model::*;
 pub use crate::network::Network;
 pub use crate::precision::Precision;
@@ -42,6 +41,7 @@ pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
+pub use crate::store::{MemoryStore, Store};
 pub use fee::*;
 
 /// A trait for async read/write operations used by hardware wallet connections

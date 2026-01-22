@@ -127,7 +127,8 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_prices_fetcher() {
         let fetcher = PricesFetcher::new().unwrap();
-        let rates = fetcher.rates("USD").await.unwrap();
+        let usd = CurrencyCode::new("USD").unwrap();
+        let rates = fetcher.rates(&usd).await.unwrap();
 
         assert!(rates.median() > 0.0);
         assert!(rates.results_count() >= 3);
@@ -139,8 +140,8 @@ mod tests {
     #[wasm_bindgen_test]
     async fn test_prices_fetcher_builder() {
         let fetcher = PricesFetcher::new().unwrap();
-
-        let rates = fetcher.rates("EUR").await.unwrap();
+        let eur = CurrencyCode::new("EUR").unwrap();
+        let rates = fetcher.rates(&eur).await.unwrap();
 
         assert!(rates.median() > 0.0);
         assert!(rates.results_count() >= 3);
@@ -148,15 +149,16 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn test_invalid_currency() {
-        let fetcher = PricesFetcher::new().unwrap();
-        let err = fetcher.rates("INVALID").await;
+        let err = CurrencyCode::new("INVALID");
         assert!(err.is_err());
     }
 
     #[wasm_bindgen_test]
     async fn test_unsupported_currency() {
         let fetcher = PricesFetcher::new().unwrap();
-        let err = fetcher.rates("JPY").await;
+        // JPY is a valid currency code but not supported by price sources
+        let jpy = CurrencyCode::new("JPY").unwrap();
+        let err = fetcher.rates(&jpy).await;
         assert!(err.is_err());
     }
 }

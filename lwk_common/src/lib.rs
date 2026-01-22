@@ -14,6 +14,7 @@ mod address;
 mod balance;
 mod descriptor;
 mod error;
+mod fee;
 mod keyorigin_xpub;
 mod model;
 mod network;
@@ -39,6 +40,7 @@ pub use crate::segwit::is_provably_segwit;
 #[cfg(feature = "amp0")]
 pub use crate::signer::amp0::{Amp0Signer, Amp0SignerData};
 pub use crate::signer::Signer;
+pub use fee::*;
 
 /// A trait for async read/write operations used by hardware wallet connections
 pub trait Stream {

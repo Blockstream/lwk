@@ -78,3 +78,31 @@ impl Persister for MemoryPersister {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn memory_persister() {
+        let persister = MemoryPersister::new();
+
+        // Get non-existent key returns None
+        assert_eq!(persister.get("key").unwrap(), None);
+
+        // Put and get
+        persister.put("key", b"value").unwrap();
+        assert_eq!(persister.get("key").unwrap(), Some(b"value".to_vec()));
+
+        // Overwrite
+        persister.put("key", b"new_value").unwrap();
+        assert_eq!(persister.get("key").unwrap(), Some(b"new_value".to_vec()));
+
+        // Delete
+        persister.delete("key").unwrap();
+        assert_eq!(persister.get("key").unwrap(), None);
+
+        // Delete non-existent key is ok
+        persister.delete("key").unwrap();
+    }
+}

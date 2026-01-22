@@ -25,6 +25,7 @@ pub use bip21::Bip21;
 pub use bip321::Bip321;
 mod persister;
 mod precision;
+mod store;
 mod pset;
 mod pset_details;
 mod signer;
@@ -80,6 +81,7 @@ pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexPr
 pub use mnemonic::Mnemonic;
 pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
+pub use store::{ForeignStore, ForeignStoreLink};
 pub use pos::PosConfig;
 pub use precision::Precision;
 pub use pset::{Pset, PsetInput};

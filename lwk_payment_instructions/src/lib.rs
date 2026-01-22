@@ -25,6 +25,8 @@ pub enum PaymentKind {
     Bip353,
     Bip21,
     Bip321,
+
+    /// Liquid BIP21 URI, follows rules defined in https://github.com/ElementsProject/elements/issues/805
     LiquidBip21,
 }
 
@@ -34,8 +36,8 @@ pub struct LiquidBip21 {
     pub address: elements::Address,
     pub asset: AssetId,
 
-    /// The amount in satoshis or units of the asset
-    pub amount: u64,
+    /// The amount in satoshis or units of the asset (optional)
+    pub amount: Option<u64>,
 }
 
 #[allow(dead_code)]
@@ -257,15 +259,16 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
         .map(|(_, value)| value)
         .ok_or_else(|| "error".to_string())?;
     let asset = AssetId::from_str(&asset_str).map_err(|e| e.to_string())?;
-    let amount_str = url
+
+    // BIP21 amounts are in BTC (decimal), convert to satoshis (optional)
+    let amount = url
         .query_pairs()
         .find(|(key, _)| key == "amount")
-        .map(|(_, value)| value)
-        .ok_or_else(|| "error".to_string())?;
-    // BIP21 amounts are in BTC (decimal), convert to satoshis
-    let amount = bitcoin::Amount::from_str_in(&amount_str, bitcoin::Denomination::Bitcoin)
-        .map_err(|e| e.to_string())?
-        .to_sat();
+        .map(|(_, value)| {
+            bitcoin::Amount::from_str_in(&value, bitcoin::Denomination::Bitcoin).map(|a| a.to_sat())
+        })
+        .transpose()
+        .map_err(|e| e.to_string())?;
 
     Ok(Payment::LiquidBip21(LiquidBip21 {
         address,
@@ -486,7 +489,7 @@ mod tests {
             elements::Address::from_str(address).unwrap()
         );
         assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
-        assert_eq!(bip21_ref.amount, 10);
+        assert_eq!(bip21_ref.amount, Some(10));
         assert!(payment_category.liquid_address().is_none());
 
         let address =
@@ -502,13 +505,19 @@ mod tests {
             elements::Address::from_str(address).unwrap()
         );
         assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
-        assert_eq!(bip21_ref.amount, 10);
+        assert_eq!(bip21_ref.amount, Some(10));
         assert!(payment_category.liquid_address().is_none());
     }
 
     #[test]
     fn test_parse_liquid_bip21() {
         let liquid_bip21 = "liquidnetwork:VJL67HETqJCTg8Jak34N4RQaZD8HopbuhiU6F5kdo4d8QBJKTNJY3N1ictsXc1KAVNpaTEuCEoUCAzEj?amount=0.00001000&assetid=6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d";
+        let _payment_category = Payment::from_str(&liquid_bip21).unwrap();
+    }
+
+    #[test]
+    fn test_parse_liquid_bip21_only_asset() {
+        let liquid_bip21 = "liquidnetwork:VJLGMJ6mExPjidy3evXx5qjfbL4G4iVnyLLmaCTdzSUna3NbXrAR6MheMk3xcSGs3A1TYuJn1C8dQ8W5?assetid=ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2";
         let _payment_category = Payment::from_str(&liquid_bip21).unwrap();
     }
 

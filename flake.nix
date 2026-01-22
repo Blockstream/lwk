@@ -24,6 +24,8 @@
       url = "github:RCasatta/waterfalls";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
+      inputs.rust-overlay.follows = "rust-overlay";
+      inputs.crane.follows = "crane";
     };
 
     registry-flake = {

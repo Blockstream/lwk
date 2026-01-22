@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crate::{types::AssetId, Address, Txid};
+use crate::{store::ForeignStoreLink, types::AssetId, Address, LwkError, Txid};
+use lwk_common::Store;
 
 /// Test environment
 ///
@@ -75,5 +76,43 @@ impl LwkTestEnv {
     /// Get the genesis block hash from the running node.
     pub fn genesis_block_hash(&self) -> String {
         self.inner.elementsd_genesis_block_hash().to_string()
+    }
+}
+
+/// A lightweight test helper for [`ForeignStore`](crate::ForeignStore) implementations.
+///
+/// Use this to verify that Rust can correctly read/write through an FFI store.
+#[derive(uniffi::Object)]
+pub struct LwkTestStore {
+    store: Arc<ForeignStoreLink>,
+}
+
+#[uniffi::export]
+impl LwkTestStore {
+    /// Create a new test store helper wrapping the given store.
+    #[uniffi::constructor]
+    pub fn new(store: Arc<ForeignStoreLink>) -> Self {
+        Self { store }
+    }
+
+    /// Write a key-value pair to the store.
+    pub fn write(&self, key: String, value: Vec<u8>) -> Result<(), LwkError> {
+        self.store.put(key, value).map_err(|e| LwkError::Generic {
+            msg: format!("{e}"),
+        })
+    }
+
+    /// Read a value from the store.
+    pub fn read(&self, key: String) -> Result<Option<Vec<u8>>, LwkError> {
+        self.store.get(key).map_err(|e| LwkError::Generic {
+            msg: format!("{e}"),
+        })
+    }
+
+    /// Delete a key from the store.
+    pub fn delete(&self, key: String) -> Result<(), LwkError> {
+        self.store.delete(key).map_err(|e| LwkError::Generic {
+            msg: format!("{e}"),
+        })
     }
 }

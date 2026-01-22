@@ -86,7 +86,7 @@ pub use pos::PosConfig;
 pub use precision::Precision;
 pub use pset::{Pset, PsetInput};
 pub use pset_details::{Issuance, PsetDetails};
-pub use test_env::LwkTestEnv;
+pub use test_env::{LwkTestEnv, LwkTestStore};
 pub use tx_builder::TxBuilder;
 pub use update::Update;
 

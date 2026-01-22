@@ -37,7 +37,7 @@ pub struct LiquidBip21 {
     pub asset: AssetId,
 
     /// The amount in satoshis or units of the asset (optional)
-    pub amount: Option<u64>,
+    pub satoshi: Option<u64>,
 }
 
 #[allow(dead_code)]
@@ -273,7 +273,7 @@ fn parse_liquid_bip21(s: &str, is_mainnet: bool) -> Result<Payment, String> {
     Ok(Payment::LiquidBip21(LiquidBip21 {
         address,
         asset,
-        amount,
+        satoshi: amount,
     }))
 }
 
@@ -489,7 +489,7 @@ mod tests {
             elements::Address::from_str(address).unwrap()
         );
         assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
-        assert_eq!(bip21_ref.amount, Some(10));
+        assert_eq!(bip21_ref.satoshi, Some(10));
         assert!(payment_category.liquid_address().is_none());
 
         let address =
@@ -505,7 +505,7 @@ mod tests {
             elements::Address::from_str(address).unwrap()
         );
         assert_eq!(bip21_ref.asset, AssetId::from_str(asset).unwrap());
-        assert_eq!(bip21_ref.amount, Some(10));
+        assert_eq!(bip21_ref.satoshi, Some(10));
         assert!(payment_category.liquid_address().is_none());
     }
 

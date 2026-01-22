@@ -19,7 +19,7 @@ pub trait ForeignStore: Send + Sync {
     /// Remove a value by key.
     ///
     /// Returns `Ok(())` even if the key did not exist.
-    fn delete(&self, key: String) -> Result<(), LwkError>;
+    fn remove(&self, key: String) -> Result<(), LwkError>;
 }
 
 /// Error type for the store bridge.
@@ -69,10 +69,10 @@ impl lwk_common::Store for ForeignStoreLink {
             .map_err(|e| StoreError::Foreign(format!("{e:?}")))
     }
 
-    fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
         let key_str = String::from_utf8_lossy(key.as_ref()).into_owned();
         self.inner
-            .delete(key_str)
+            .remove(key_str)
             .map_err(|e| StoreError::Foreign(format!("{e:?}")))
     }
 }
@@ -106,7 +106,7 @@ mod test {
             Ok(())
         }
 
-        fn delete(&self, key: String) -> Result<(), LwkError> {
+        fn remove(&self, key: String) -> Result<(), LwkError> {
             self.data.lock().unwrap().remove(&key);
             Ok(())
         }
@@ -123,7 +123,7 @@ mod test {
         link.put("key", b"value").unwrap();
         assert_eq!(link.get("key").unwrap(), Some(b"value".to_vec()));
 
-        link.delete("key").unwrap();
+        link.remove("key").unwrap();
         assert_eq!(link.get("key").unwrap(), None);
     }
 }

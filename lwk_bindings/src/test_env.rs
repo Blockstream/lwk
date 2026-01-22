@@ -109,9 +109,9 @@ impl LwkTestStore {
         })
     }
 
-    /// Delete a key from the store.
-    pub fn delete(&self, key: String) -> Result<(), LwkError> {
-        self.store.delete(key).map_err(|e| LwkError::Generic {
+    /// Remove a key from the store.
+    pub fn remove(&self, key: String) -> Result<(), LwkError> {
+        self.store.remove(key).map_err(|e| LwkError::Generic {
             msg: format!("{e}"),
         })
     }

@@ -32,7 +32,7 @@ pub trait Store: Send + Sync + Debug {
     /// Remove a value by key.
     ///
     /// Returns `Ok(())` even if the key did not exist.
-    fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>;
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error>;
 }
 
 /// A simple in-memory implementation of [`Store`].
@@ -70,7 +70,7 @@ impl Store for MemoryStore {
         Ok(())
     }
 
-    fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
         self.data
             .lock()
             .expect("lock poisoned")
@@ -98,11 +98,11 @@ mod test {
         store.put("key", b"new_value").unwrap();
         assert_eq!(store.get("key").unwrap(), Some(b"new_value".to_vec()));
 
-        // Delete
-        store.delete("key").unwrap();
+        // Remove
+        store.remove("key").unwrap();
         assert_eq!(store.get("key").unwrap(), None);
 
-        // Delete non-existent key is ok
-        store.delete("key").unwrap();
+        // Remove non-existent key is ok
+        store.remove("key").unwrap();
     }
 }

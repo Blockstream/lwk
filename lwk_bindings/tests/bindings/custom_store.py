@@ -13,7 +13,7 @@ class PythonStore(ForeignStore):
     def put(self, key, value):
         self.data[key] = value
 
-    def delete(self, key):
+    def remove(self, key):
         self.data.pop(key, None)
 
 
@@ -39,13 +39,13 @@ test.write("key", b"new_value")
 result = test.read("key")
 assert result == b"new_value", "Rust should read updated value"
 
-# Test Rust deleting
-test.delete("key")
+# Test Rust removing
+test.remove("key")
 result = test.read("key")
-assert result is None, "Deleted key should return None"
+assert result is None, "Removed key should return None"
 
-# Test delete non-existent key (should not raise)
-test.delete("key")
+# Test remove non-existent key (should not raise)
+test.remove("key")
 
 # Test with namespaced keys (as intended for LWK usage)
 test.write("Liquid:Tx:abc123", b"tx_data")

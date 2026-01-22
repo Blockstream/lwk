@@ -16,7 +16,7 @@ function createStorage() {
             const valueCopy = value ? new Uint8Array(value) : null;
             store.set(key, valueCopy);
         },
-        delete(key) {
+        remove(key) {
             store.delete(key);
         },
         // Helper for testing - not required by the interface
@@ -57,13 +57,13 @@ async function runCustomStoreTest() {
         "Rust should read updated value"
     );
 
-    // Test Rust deleting
-    test.delete("key");
+    // Test Rust removing
+    test.remove("key");
     result = test.read("key");
-    assert(result === null || result === undefined, "Deleted key should return null/undefined");
+    assert(result === null || result === undefined, "Removed key should return null/undefined");
 
-    // Test delete non-existent key (should not throw)
-    test.delete("key");
+    // Test remove non-existent key (should not throw)
+    test.remove("key");
 
     // Test with namespaced keys (as intended for LWK usage)
     test.write("Liquid:Tx:abc123", new Uint8Array([1, 2, 3]));

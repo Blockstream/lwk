@@ -1,7 +1,7 @@
 //! Duck-typed JavaScript storage interface for WASM.
 //!
 //! JavaScript doesn't have traits, so we use duck typing: any JS object with
-//! `get`, `put`, and `delete` methods can be used as storage.
+//! `get`, `put`, and `remove` methods can be used as storage.
 
 use wasm_bindgen::prelude::*;
 
@@ -14,7 +14,7 @@ extern "C" {
     /// A duck-typed JavaScript storage object.
     ///
     /// Any JS object with `get(key) -> Uint8Array|null`, `put(key, value)`,
-    /// and `delete(key)` methods can be used.
+    /// and `remove(key)` methods can be used.
     ///
     /// Example JS implementation:
     /// ```js
@@ -22,7 +22,7 @@ extern "C" {
     ///     _data: new Map(),
     ///     get(key) { return this._data.get(key) || null; },
     ///     put(key, value) { this._data.set(key, value); },
-    ///     delete(key) { this._data.delete(key); }
+    ///     remove(key) { this._data.delete(key); }
     /// };
     /// ```
     pub type JsStorage;
@@ -35,9 +35,9 @@ extern "C" {
     #[wasm_bindgen(method, catch)]
     fn put(this: &JsStorage, key: &str, value: &[u8]) -> Result<(), JsValue>;
 
-    /// Delete a key.
+    /// Remove a key.
     #[wasm_bindgen(method, catch)]
-    fn delete(this: &JsStorage, key: &str) -> Result<(), JsValue>;
+    fn remove(this: &JsStorage, key: &str) -> Result<(), JsValue>;
 }
 
 /// Error type for the JS store bridge.
@@ -64,7 +64,7 @@ impl std::fmt::Debug for JsStoreLink {
 impl JsStoreLink {
     /// Create a new `JsStoreLink` from a JavaScript storage object.
     ///
-    /// The JS object must have `get(key)`, `put(key, value)`, and `delete(key)` methods.
+    /// The JS object must have `get(key)`, `put(key, value)`, and `remove(key)` methods.
     #[wasm_bindgen(constructor)]
     pub fn new(storage: JsStorage) -> Self {
         Self { inner: storage }
@@ -88,10 +88,10 @@ impl lwk_common::Store for JsStoreLink {
             .map_err(|e| JsStoreError::Js(format!("{e:?}")))
     }
 
-    fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
+    fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<(), Self::Error> {
         let key_str = String::from_utf8_lossy(key.as_ref());
         self.inner
-            .delete(&key_str)
+            .remove(&key_str)
             .map_err(|e| JsStoreError::Js(format!("{e:?}")))
     }
 }
@@ -133,11 +133,11 @@ impl JsTestStore {
             .map_err(|e| Error::Generic(format!("{e}")))
     }
 
-    /// Delete a key from the store.
-    pub fn delete(&self, key: &str) -> Result<(), Error> {
+    /// Remove a key from the store.
+    pub fn remove(&self, key: &str) -> Result<(), Error> {
         use lwk_common::Store;
         self.store
-            .delete(key)
+            .remove(key)
             .map_err(|e| Error::Generic(format!("{e}")))
     }
 }
@@ -162,7 +162,7 @@ mod tests {
                     // Copy the value - WASM may reuse memory buffer
                     store.set(key, value ? new Uint8Array(value) : null);
                 },
-                delete: function(key) {
+                remove: function(key) {
                     store.delete(key);
                 }
             };
@@ -189,12 +189,12 @@ mod tests {
         link.put("key", b"new_value").unwrap();
         assert_eq!(link.get("key").unwrap(), Some(b"new_value".to_vec()));
 
-        // Test delete
-        link.delete("key").unwrap();
+        // Test remove
+        link.remove("key").unwrap();
         assert_eq!(link.get("key").unwrap(), None);
 
-        // Test delete non-existent key
-        link.delete("key").unwrap();
+        // Test remove non-existent key
+        link.remove("key").unwrap();
 
         // Test with namespaced keys
         link.put("Liquid:Tx:abc123", b"tx_data").unwrap();
@@ -213,7 +213,7 @@ mod tests {
         test.write("key", b"value").unwrap();
         assert_eq!(test.read("key").unwrap(), Some(b"value".to_vec()));
 
-        test.delete("key").unwrap();
+        test.remove("key").unwrap();
         assert_eq!(test.read("key").unwrap(), None);
     }
 }

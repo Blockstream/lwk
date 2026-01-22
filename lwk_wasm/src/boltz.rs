@@ -351,9 +351,9 @@ impl LightningPayment {
     }
 }
 
-// Launch boltz regtest and remove "disable_regtest" to use these tests
-// these test relies on .env file to be present at compile time.
-#[cfg(all(test, target_arch = "wasm32", feature = "disabled_regtest"))]
+// Launch boltz regtest and activate "boltz_regtest" to launch these tests
+// (these tests relies on .env file, created by boltz regtest, to be present at compile time)
+#[cfg(all(test, target_arch = "wasm32", feature = "boltz_regtest"))]
 mod tests {
     use wasm_bindgen_test::*;
 

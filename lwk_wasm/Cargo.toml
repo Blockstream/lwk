@@ -12,7 +12,9 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["console_error_panic_hook"]
 serial = ["web-sys"]
-disabled_regtest = []
+
+# this feature is needed when running test requiring active boltz regtest
+boltz_regtest = []
 
 [dependencies]
 lwk_jade = { version = "0.14.0", default-features = false, features = [

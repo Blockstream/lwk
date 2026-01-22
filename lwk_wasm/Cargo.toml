@@ -12,6 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["console_error_panic_hook"]
 serial = ["web-sys"]
+disabled_regtest = []
 
 [dependencies]
 lwk_jade = { version = "0.14.0", default-features = false, features = [

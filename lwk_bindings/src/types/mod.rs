@@ -6,10 +6,14 @@
 
 mod asset_id;
 mod hex;
+mod public_key;
 mod secret_key;
+mod sequence;
 mod xonly_public_key;
 
 pub use asset_id::AssetId;
 pub use hex::Hex;
+pub use public_key::PublicKey;
 pub use secret_key::SecretKey;
+pub use sequence::Sequence;
 pub use xonly_public_key::XOnlyPublicKey;

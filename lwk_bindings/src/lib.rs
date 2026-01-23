@@ -3,6 +3,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+#[cfg(not(target_arch = "wasm32"))]
 mod amp0;
 mod amp2;
 pub mod blockdata;
@@ -10,8 +11,10 @@ mod chain;
 mod contract;
 mod currency_code;
 mod desc;
+#[cfg(not(target_arch = "wasm32"))]
 mod electrum_client;
 mod error;
+#[cfg(not(target_arch = "wasm32"))]
 mod esplora_client;
 mod liquidex;
 mod mnemonic;
@@ -29,19 +32,20 @@ mod pset;
 mod pset_details;
 mod signer;
 mod store;
+#[cfg(all(not(target_arch = "wasm32"), feature = "test_env"))]
 mod test_env;
 mod tx_builder;
 pub mod types;
 mod update;
 mod wollet;
 
-#[cfg(feature = "lightning")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "lightning"))]
 mod invoice;
-#[cfg(feature = "lightning")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "lightning"))]
 mod lightning;
-#[cfg(feature = "lightning")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "lightning"))]
 pub use invoice::{Bolt11Invoice, LightningPayment};
-#[cfg(feature = "lightning")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "lightning"))]
 pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 
 #[cfg(feature = "simplicity")]
@@ -78,8 +82,10 @@ pub use crate::wollet::Wollet;
 pub use chain::Chain;
 pub use currency_code::CurrencyCode;
 pub use desc::WolletDescriptor;
+#[cfg(not(target_arch = "wasm32"))]
 pub use electrum_client::ElectrumClient;
 pub use error::LwkError;
+#[cfg(not(target_arch = "wasm32"))]
 pub use esplora_client::{EsploraClient, EsploraClientBuilder};
 pub use liquidex::{AssetAmount, UnvalidatedLiquidexProposal, ValidatedLiquidexProposal};
 pub use mnemonic::Mnemonic;
@@ -90,6 +96,7 @@ pub use precision::Precision;
 pub use pset::{Pset, PsetInput};
 pub use pset_details::{Issuance, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
+#[cfg(all(not(target_arch = "wasm32"), feature = "test_env"))]
 pub use test_env::{LwkTestEnv, LwkTestStore};
 pub use tx_builder::TxBuilder;
 pub use update::Update;

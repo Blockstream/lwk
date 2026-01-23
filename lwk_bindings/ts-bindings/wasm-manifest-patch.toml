@@ -1,0 +1,57 @@
+# Patch file for WASM manifest - follows lwk_wasm pattern
+# Directly declare lwk_* deps with WASM-compatible features to override transitive deps
+
+# Use edition 2021 which has resolver 2 by default (target-specific feature resolution)
+[package]
+edition = "2021"
+
+[dependencies]
+# The main lwk_bindings crate (required by generated lib.rs)
+lwk_bindings = { version = "0.14.0", path = "../../../lwk_bindings", default-features = false, features = [] }
+
+# Direct deps following lwk_wasm pattern - these override transitive deps from lwk_bindings
+lwk_wollet = { version = "0.14.0", default-features = false, features = [
+    "esplora",
+    "amp2",
+    "amp0",
+    "prices",
+    "registry",
+] }
+lwk_signer = { version = "0.14.0", default-features = false, features = [
+    "amp0",
+] }
+lwk_common = "0.14.0"
+
+# WASM-specific deps
+wasm-bindgen-futures = "0.4.41"
+serde_json = "1"
+
+# Override reqwest with WASM-compatible features (no blocking, no rustls-tls)
+reqwest = { version = "0.12", default-features = false, features = [
+    "charset",
+    "http2",
+    "json",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[patch.crates-io]
+# Patch lwk crates to use local paths (relative to generated crate at ts-bindings/lwk_bindings/)
+lwk_common = { path = "../../../lwk_common" }
+lwk_wollet = { path = "../../../lwk_wollet" }
+lwk_signer = { path = "../../../lwk_signer" }
+lwk_jade = { path = "../../../lwk_jade" }
+lwk_ledger = { path = "../../../lwk_ledger" }
+lwk_tiny_jrpc = { path = "../../../lwk_tiny_jrpc" }
+lwk_test_util = { path = "../../../lwk_test_util" }
+lwk_boltz = { path = "../../../lwk_boltz" }
+lwk_payment_instructions = { path = "../../../lwk_payment_instructions" }
+lwk_simplicity_options = { path = "../../../lwk_simplicity_options" }
+
+# Use resolver 2 for target-specific feature resolution
+[workspace]
+resolver = "2"
+
+[profile.release]
+opt-level = "s"

@@ -1,10 +1,15 @@
 use std::{fmt::Display, sync::Arc};
 
+#[cfg(not(target_arch = "wasm32"))]
 use lwk_common::electrum_ssl::{LIQUID_SOCKET, LIQUID_TESTNET_SOCKET};
 
 use elements::hex::ToHex;
 
-use crate::{types::AssetId, ElectrumClient, EsploraClient, LwkError, TxBuilder};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::ElectrumClient;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::EsploraClient;
+use crate::{types::AssetId, LwkError, TxBuilder};
 
 /// The network of the elements blockchain.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
@@ -81,6 +86,30 @@ impl Network {
         Arc::new(lwk_wollet::ElementsNetwork::ElementsRegtest { policy_asset }.into())
     }
 
+    /// Return true if the network is the mainnet network
+    pub fn is_mainnet(&self) -> bool {
+        matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
+    }
+
+    /// Return the policy asset (eg LBTC for mainnet) for this network
+    pub fn policy_asset(&self) -> AssetId {
+        self.inner.policy_asset().into()
+    }
+
+    /// Return the genesis block hash for this network as hex string.
+    pub fn genesis_block_hash(&self) -> String {
+        self.inner.genesis_block_hash().to_hex()
+    }
+
+    /// Return a new `TxBuilder` for this network
+    pub fn tx_builder(&self) -> Arc<TxBuilder> {
+        Arc::new(TxBuilder::new(self))
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[uniffi::export]
+impl Network {
     /// Return the default electrum client for this network
     pub fn default_electrum_client(&self) -> Result<Arc<ElectrumClient>, LwkError> {
         let (url, validate_domain, tls) = match &self.inner {
@@ -105,25 +134,5 @@ impl Network {
         };
 
         EsploraClient::new(url, &self.inner.into())
-    }
-
-    /// Return true if the network is the mainnet network
-    pub fn is_mainnet(&self) -> bool {
-        matches!(&self.inner, &lwk_wollet::ElementsNetwork::Liquid)
-    }
-
-    /// Return the policy asset (eg LBTC for mainnet) for this network
-    pub fn policy_asset(&self) -> AssetId {
-        self.inner.policy_asset().into()
-    }
-
-    /// Return the genesis block hash for this network as hex string.
-    pub fn genesis_block_hash(&self) -> String {
-        self.inner.genesis_block_hash().to_hex()
-    }
-
-    /// Return a new `TxBuilder` for this network
-    pub fn tx_builder(&self) -> Arc<TxBuilder> {
-        Arc::new(TxBuilder::new(self))
     }
 }

@@ -236,29 +236,6 @@ impl Wollet {
         Ok(self.inner.lock()?.max_weight_to_satisfy() as u32)
     }
 
-    /// Note this a test method but we are not feature gating in test because we need it in
-    /// destination language examples
-    pub fn wait_for_tx(
-        &self,
-        txid: &Txid,
-        client: &crate::ElectrumClient,
-    ) -> Result<Arc<WalletTx>, LwkError> {
-        for _ in 0..30 {
-            let update = client.full_scan(self)?;
-            if let Some(update) = update {
-                self.apply_update(&update)?;
-            }
-            let mut txs = self.transactions()?;
-            txs.retain(|t| *t.txid() == *txid);
-            if let Some(tx) = txs.pop() {
-                return Ok(tx);
-            }
-
-            std::thread::sleep(std::time::Duration::from_secs(1));
-        }
-        panic!("I wait 30s but I didn't see {txid}");
-    }
-
     /// Get the utxo with unspent transaction outputs of the wallet
     /// Return utxos unblinded with a specific blinding key
     pub fn unblind_utxos_with(
@@ -285,5 +262,32 @@ impl Wollet {
             .map(Into::into)
             .map(Arc::new)
             .collect())
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[uniffi::export]
+impl Wollet {
+    /// Note this a test method but we are not feature gating in test because we need it in
+    /// destination language examples
+    pub fn wait_for_tx(
+        &self,
+        txid: &Txid,
+        client: &crate::ElectrumClient,
+    ) -> Result<Arc<WalletTx>, LwkError> {
+        for _ in 0..30 {
+            let update = client.full_scan(self)?;
+            if let Some(update) = update {
+                self.apply_update(&update)?;
+            }
+            let mut txs = self.transactions()?;
+            txs.retain(|t| *t.txid() == *txid);
+            if let Some(tx) = txs.pop() {
+                return Ok(tx);
+            }
+
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+        panic!("I wait 30s but I didn't see {txid}");
     }
 }

@@ -1,0 +1,62 @@
+{
+  "name": "lwk-uniffi-web",
+  "version": "0.14.0",
+  "description": "Liquid Wallet Kit - TypeScript/WASM bindings for building Liquid Network wallets and applications",
+  "type": "module",
+  "main": "./dist/index.web.js",
+  "module": "./dist/index.web.js",
+  "types": "./dist/index.web.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.web.js",
+      "types": "./dist/index.web.d.ts"
+    },
+    "./wasm": {
+      "import": "./dist/generated/wasm-bindgen/index.js",
+      "types": "./dist/generated/wasm-bindgen/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "ubrn:generate": "yarn ubrn generate all",
+    "ubrn:wasm": "yarn ubrn build web --and-generate --release",
+    "build": "tsc && mkdir -p dist/generated/wasm-bindgen && cp src/generated/wasm-bindgen/* dist/generated/wasm-bindgen/",
+    "prepublishOnly": "yarn build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:basic": "vitest run tests/basic.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockstream/lwk.git"
+  },
+  "keywords": [
+    "liquid",
+    "liquid-network",
+    "bitcoin",
+    "wallet",
+    "wasm",
+    "webassembly",
+    "elements",
+    "blockstream",
+    "uniffi"
+  ],
+  "author": "Blockstream",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Blockstream/lwk/issues"
+  },
+  "homepage": "https://blockstream.github.io/lwk/book",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.0.0",
+    "uniffi-bindgen-react-native": "0.29.3-1",
+    "vitest": "^2.0.0"
+  }
+}

@@ -146,3 +146,39 @@ mdbook:
 # Serve the mdbook documentation locally for development
 mdbook-serve: mdbook
     cd docs && mdbook serve
+
+# Install TypeScript/WASM bindings dependencies
+ts-install:
+    cd lwk_bindings/ts-bindings && yarn install
+
+# Generate TypeScript bindings and WASM via ubrn
+ts-wasm: build-bindings-lib ts-install
+    mkdir -p target/debug target/release
+    if [ "$(uname -s)" = "Darwin" ]; then \
+        ln -sf liblwk.dylib target/debug/liblwk_bindings.dylib; \
+        ln -sf liblwk.dylib target/release/liblwk_bindings.dylib; \
+    else \
+        ln -sf liblwk.so target/debug/liblwk_bindings.so; \
+        ln -sf liblwk.so target/release/liblwk_bindings.so; \
+    fi
+    ln -sf liblwk.a target/debug/liblwk_bindings.a || true
+    ln -sf liblwk.a target/release/liblwk_bindings.a || true
+    # Update ubrn dependencies for rustc compatibility (home 0.5.12+ requires rustc 1.88)
+    cd lwk_bindings/ts-bindings/node_modules/uniffi-bindgen-react-native && cargo update home --precise 0.5.9
+    # Step 1: Generate bindings and wasm crate without building wasm
+    cd lwk_bindings/ts-bindings && yarn ubrn build web --and-generate --release --no-wasm-pack
+    # Step 2: Fix extern crate name - lwk_bindings has [lib] name = "lwk", so extern crate is "lwk" not "lwk_bindings"
+    sed -i '' 's/use lwk_bindings;/extern crate lwk as lwk_bindings;/' lwk_bindings/ts-bindings/lwk_bindings/src/lib.rs
+    # Step 3: Update dependencies for rustc compatibility
+    cd lwk_bindings/ts-bindings/lwk_bindings && cargo update
+    # Step 4: Build wasm with wasm-pack
+    cd lwk_bindings/ts-bindings/lwk_bindings && wasm-pack build --target web --release
+    mkdir -p lwk_bindings/ts-bindings/src/generated/wasm-bindgen
+    cp lwk_bindings/ts-bindings/lwk_bindings/pkg/lwk_uniffi_web.d.ts lwk_bindings/ts-bindings/src/generated/wasm-bindgen/index.d.ts
+    cp lwk_bindings/ts-bindings/lwk_bindings/pkg/lwk_uniffi_web.js lwk_bindings/ts-bindings/src/generated/wasm-bindgen/index.js
+    cp lwk_bindings/ts-bindings/lwk_bindings/pkg/lwk_uniffi_web_bg.wasm lwk_bindings/ts-bindings/src/generated/wasm-bindgen/index_bg.wasm
+    cp lwk_bindings/ts-bindings/lwk_bindings/pkg/lwk_uniffi_web_bg.wasm.d.ts lwk_bindings/ts-bindings/src/generated/wasm-bindgen/index_bg.wasm.d.ts
+
+# Run TypeScript tests for uniffi-ts bindings
+ts-uniffi-check: ts-install
+    cd lwk_bindings/ts-bindings && yarn test

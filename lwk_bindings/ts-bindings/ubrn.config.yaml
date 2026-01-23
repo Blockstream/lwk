@@ -1,0 +1,13 @@
+rust:
+  directory: ../..
+  manifestPath: lwk_bindings/Cargo.toml
+
+bindings:
+  ts: src/generated
+  cpp: cpp/generated
+
+web:
+  manifestPath: lwk_bindings/Cargo.toml
+  defaultFeatures: false
+  features: []
+  manifestPatchFile: wasm-manifest-patch.toml

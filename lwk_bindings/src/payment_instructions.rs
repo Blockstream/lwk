@@ -115,14 +115,6 @@ impl Payment {
             .map(|addr| Arc::new(Address::from(addr.clone())))
     }
 
-    /// Returns the Lightning invoice if this is a `LightningInvoice` category, `None` otherwise
-    #[cfg(feature = "lightning")]
-    pub fn lightning_invoice(&self) -> Option<Arc<crate::Bolt11Invoice>> {
-        self.inner
-            .lightning_invoice()
-            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
-    }
-
     /// Returns the Lightning offer as a string if this is a LightningOffer category, None otherwise
     pub fn lightning_offer(&self) -> Option<String> {
         self.inner.lightning_offer().map(|offer| offer.to_string())
@@ -161,11 +153,23 @@ impl Payment {
         })
     }
 
+}
+
+/// Lightning-related methods (native only, requires lightning feature)
+#[cfg(all(not(target_arch = "wasm32"), feature = "lightning"))]
+#[uniffi::export]
+impl Payment {
+    /// Returns the Lightning invoice if this is a `LightningInvoice` category, `None` otherwise
+    pub fn lightning_invoice(&self) -> Option<Arc<crate::Bolt11Invoice>> {
+        self.inner
+            .lightning_invoice()
+            .and_then(|inv| crate::Bolt11Invoice::new(&inv.to_string()).ok())
+    }
+
     /// Returns a `LightningPayment`` if this category is payable via Lightning
     ///
     /// Returns `Some` for `LightningInvoice`, `LightningOffer`, and `LnUrl` categories.
     /// The returned `LightningPayment` can be used with `BoltzSession::prepare_pay()`.
-    #[cfg(feature = "lightning")]
     pub fn lightning_payment(&self) -> Option<Arc<crate::LightningPayment>> {
         use lwk_payment_instructions::Payment as P;
         match &self.inner {

@@ -1,6 +1,8 @@
+use crate::LwkError;
+
 use std::{fmt::Display, str::FromStr, sync::Arc};
 
-use crate::LwkError;
+use elements::hex::ToHex;
 
 /// An x-only public key, used for verification of Taproot signatures
 /// and serialized according to BIP-340.
@@ -31,6 +33,11 @@ impl XOnlyPublicKey {
     /// Serialize to 32 bytes.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.serialize().to_vec()
+    }
+
+    /// Get hex representation of the x-only public key
+    pub fn to_hex(&self) -> String {
+        self.inner.to_hex()
     }
 }
 

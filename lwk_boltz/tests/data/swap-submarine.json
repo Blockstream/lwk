@@ -1,0 +1,48 @@
+{
+  "BTC": {
+    "BTC": {
+      "hash": "b931dda736dba0b2ee254ff298acb4518e197e97ddca0617c18a61f3089b8537",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 25000,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": 453
+      }
+    }
+  },
+  "L-BTC": {
+    "BTC": {
+      "hash": "58ef08a576993761ece14f846e4031fdfb838017a18351dd53eb1d6ea980257b",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 1000,
+        "maximalZeroConf": 500000,
+        "minimalBatched": 21
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": 19
+      }
+    }
+  },
+  "RBTC": {
+    "BTC": {
+      "hash": "27951bdf4bfc6b6b5794f68d89d3ae22ec888c5b0df176f926b321329b7057c3",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 2500,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": 32
+      }
+    }
+  }
+}

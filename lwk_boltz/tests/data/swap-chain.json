@@ -1,0 +1,122 @@
+{
+  "BTC": {
+    "L-BTC": {
+      "hash": "a3ab26a2823ee8ef033c34f757c8f480f4b64ae3021522222696958b0dde0f61",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 25000,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 480,
+          "user": {
+            "claim": 20,
+            "lockup": 462
+          }
+        }
+      }
+    },
+    "RBTC": {
+      "hash": "ccac67798f0b52de5fe905da1a925e371425499f0f7fb56d5da0e3de2141aa4a",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 25000,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 574,
+          "user": {
+            "claim": 64,
+            "lockup": 462
+          }
+        }
+      }
+    }
+  },
+  "L-BTC": {
+    "BTC": {
+      "hash": "8cdc1dbe6afd8580a428d45a9f340812c33483a3ea4dc5b387a0b41026abe137",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 25000,
+        "maximalZeroConf": 500000
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 481,
+          "user": {
+            "claim": 333,
+            "lockup": 27
+          }
+        }
+      }
+    },
+    "RBTC": {
+      "hash": "8315f6ee8da47d7b3ed89a883b4b348f5ec1e4a330860d11c46b40af1a0b1be2",
+      "rate": 1,
+      "limits": {
+        "maximal": 10000000,
+        "minimal": 2500,
+        "maximalZeroConf": 500000
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 140,
+          "user": {
+            "claim": 64,
+            "lockup": 27
+          }
+        }
+      }
+    }
+  },
+  "RBTC": {
+    "BTC": {
+      "hash": "fc70e4ad57a097f8c6d6d8d9ed7ec3cbc330ed3a102ce534f00c946cfd346d2b",
+      "rate": 1,
+      "limits": {
+        "maximal": 25000000,
+        "minimal": 25000,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 494,
+          "user": {
+            "claim": 333,
+            "lockup": 121
+          }
+        }
+      }
+    },
+    "L-BTC": {
+      "hash": "20c562563175d03aecc3e865a9fbf3727830e6eb36dc2d07e8689ab940f2d9ce",
+      "rate": 1,
+      "limits": {
+        "maximal": 10000000,
+        "minimal": 2500,
+        "maximalZeroConf": 0
+      },
+      "fees": {
+        "percentage": 0.1,
+        "minerFees": {
+          "server": 59,
+          "user": {
+            "claim": 20,
+            "lockup": 121
+          }
+        }
+      }
+    }
+  }
+}

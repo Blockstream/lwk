@@ -9,6 +9,15 @@ use boltz_client::boltz::{
 
 use crate::Error;
 
+/// Extra fee added when claiming on Liquid to cover the "uncooperative claim" scenario.
+///
+/// When a cooperative Schnorr signature claim fails, Boltz falls back to using the
+/// script path which requires a slightly larger transaction.
+///
+/// From Boltz web app:
+/// <https://github.com/BoltzExchange/boltz-web-app/blob/f3f14669822dc0e4a7fb950964087a2d5b5cd06d/src/context/Global.tsx#L38>
+const LIQUID_UNCOOPERATIVE_EXTRA: u64 = 3;
+
 /// Asset type for swap quotes
 ///
 /// Used to specify the source and destination of a swap when creating a quote.
@@ -111,13 +120,14 @@ impl QuoteBuilder {
         match (from, to) {
             (SwapAsset::LightningBtc, SwapAsset::Liquid) => {
                 // Reverse swap: Lightning -> Liquid
-                // From Boltz web app: fee = claim + lockup
+                // From Boltz web app: fee = claim + lockup + LIQUID_UNCOOPERATIVE_EXTRA
                 let pair = self
                     .reverse_pairs
                     .get_btc_to_lbtc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let boltz_fee = pair.fees.boltz(self.amount);
-                let network_fee = pair.fees.claim_estimate() + pair.fees.lockup();
+                let network_fee =
+                    pair.fees.claim_estimate() + pair.fees.lockup() + LIQUID_UNCOOPERATIVE_EXTRA;
                 Ok(Quote {
                     receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
                     network_fee,
@@ -144,13 +154,14 @@ impl QuoteBuilder {
             }
             (SwapAsset::OnchainBtc, SwapAsset::Liquid) => {
                 // Chain swap: BTC -> L-BTC
-                // From Boltz web app: fee = server + user.claim
+                // From Boltz web app: fee = server + user.claim + LIQUID_UNCOOPERATIVE_EXTRA
                 let pair = self
                     .chain_pairs
                     .get_btc_to_lbtc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let boltz_fee = pair.fees.boltz(self.amount);
-                let network_fee = pair.fees.server() + pair.fees.claim_estimate();
+                let network_fee =
+                    pair.fees.server() + pair.fees.claim_estimate() + LIQUID_UNCOOPERATIVE_EXTRA;
                 Ok(Quote {
                     receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
                     network_fee,
@@ -213,11 +224,12 @@ mod tests {
         // From swap-reverse.json BTC -> L-BTC pair:
         // percentage: 0.25, claim: 20, lockup: 27
         // boltz_fee = ceil(0.25 / 100 * 25000) = ceil(62.5) = 63
-        // network_fee = claim + lockup = 20 + 27 = 47 (from Boltz web app Fees.tsx)
-        // receive_amount = 25000 - 63 - 47 = 24890
+        // network_fee = claim + lockup + LIQUID_UNCOOPERATIVE_EXTRA = 20 + 27 + 3 = 50
+        // receive_amount = 25000 - 63 - 50 = 24887
+        // This matches the Boltz web app screenshot exactly!
         assert_eq!(quote.boltz_fee, 63);
-        assert_eq!(quote.network_fee, 47);
-        assert_eq!(quote.receive_amount, 24890);
+        assert_eq!(quote.network_fee, 50);
+        assert_eq!(quote.receive_amount, 24887);
         assert_eq!(quote.min, 100);
         assert_eq!(quote.max, 25_000_000);
     }
@@ -284,11 +296,11 @@ mod tests {
         // From swap-chain.json BTC -> L-BTC pair:
         // percentage: 0.1, server: 480, user.claim: 20, user.lockup: 462
         // boltz_fee = ceil(0.1 / 100 * 50000) = ceil(50) = 50
-        // network_fee = server + claim = 480 + 20 = 500
-        // receive_amount = 50000 - 50 - 500 = 49450
+        // network_fee = server + claim + LIQUID_UNCOOPERATIVE_EXTRA = 480 + 20 + 3 = 503
+        // receive_amount = 50000 - 50 - 503 = 49447
         assert_eq!(quote.boltz_fee, 50);
-        assert_eq!(quote.network_fee, 500);
-        assert_eq!(quote.receive_amount, 49450);
+        assert_eq!(quote.network_fee, 503);
+        assert_eq!(quote.receive_amount, 49447);
         assert_eq!(quote.min, 25000);
         assert_eq!(quote.max, 25_000_000);
     }

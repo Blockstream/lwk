@@ -209,6 +209,22 @@ impl From<elements::bitcoin::bip32::Error> for LwkError {
     }
 }
 
+impl From<elements::locktime::Error> for LwkError {
+    fn from(value: elements::locktime::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::VerificationError> for LwkError {
+    fn from(value: elements::VerificationError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 #[cfg(feature = "simplicity")]
 impl From<lwk_simplicity_options::error::ProgramError> for LwkError {
     fn from(value: lwk_simplicity_options::error::ProgramError) -> Self {

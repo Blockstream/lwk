@@ -4,7 +4,7 @@ use elements::{
     hex::ToHex,
     pset::serialize::{Deserialize, Serialize},
 };
-use lwk_wollet::WalletTx;
+use lwk_wollet::{WalletTx, EC};
 
 use crate::{
     types::{AssetId, Hex},
@@ -102,6 +102,15 @@ impl Transaction {
             .iter()
             .map(|i| Arc::new(i.clone().into()))
             .collect()
+    }
+
+    /// Verify transaction amount proofs against UTXOs.
+    ///
+    /// See [`elements::Transaction::verify_tx_amt_proofs`].
+    pub fn verify_tx_amt_proofs(&self, utxos: Vec<Arc<TxOut>>) -> Result<(), LwkError> {
+        let utxos_inner: Vec<elements::TxOut> = utxos.iter().map(|u| u.as_ref().into()).collect();
+        self.inner.verify_tx_amt_proofs(&EC, &utxos_inner)?;
+        Ok(())
     }
 }
 

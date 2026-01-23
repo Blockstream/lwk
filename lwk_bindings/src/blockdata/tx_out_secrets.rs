@@ -2,11 +2,13 @@
 
 use std::sync::Arc;
 
-use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
 use elements::secp256k1_zkp::{Generator, PedersenCommitment, Tag};
 use lwk_wollet::EC;
 
-use crate::types::{AssetId, Hex};
+use crate::types::{
+    AssetBlindingFactor as BindingsAssetBlindingFactor, AssetId, Hex,
+    ValueBlindingFactor as BindingsValueBlindingFactor,
+};
 
 /// Contains unblinded information such as the asset and the value of a transaction output
 #[derive(uniffi::Object, PartialEq, Eq, Debug)]
@@ -28,15 +30,33 @@ impl From<&TxOutSecrets> for elements::TxOutSecrets {
 
 #[uniffi::export]
 impl TxOutSecrets {
+    /// Create TxOutSecrets with explicit blinding factors.
+    #[uniffi::constructor]
+    pub fn new(
+        asset_id: AssetId,
+        asset_bf: &BindingsAssetBlindingFactor,
+        value: u64,
+        value_bf: &BindingsValueBlindingFactor,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            inner: elements::TxOutSecrets::new(
+                asset_id.into(),
+                asset_bf.into(),
+                value,
+                value_bf.into(),
+            ),
+        })
+    }
+
     /// Create TxOutSecrets from explicit (unblinded) values.
     #[uniffi::constructor]
     pub fn from_explicit(asset_id: AssetId, value: u64) -> Arc<Self> {
         Arc::new(Self {
             inner: elements::TxOutSecrets::new(
                 asset_id.into(),
-                AssetBlindingFactor::zero(),
+                elements::confidential::AssetBlindingFactor::zero(),
                 value,
-                ValueBlindingFactor::zero(),
+                elements::confidential::ValueBlindingFactor::zero(),
             ),
         })
     }
@@ -71,8 +91,8 @@ impl TxOutSecrets {
 
     /// Return true if the output is explicit (no blinding factors).
     pub fn is_explicit(&self) -> bool {
-        self.inner.asset_bf == AssetBlindingFactor::zero()
-            && self.inner.value_bf == ValueBlindingFactor::zero()
+        self.inner.asset_bf == elements::confidential::AssetBlindingFactor::zero()
+            && self.inner.value_bf == elements::confidential::ValueBlindingFactor::zero()
     }
 
     /// Get the asset commitment
@@ -118,10 +138,14 @@ impl TxOutSecrets {
 
 #[cfg(test)]
 mod tests {
+    use crate::UniffiCustomTypeConverter;
+    use crate::{types, TxOutSecrets};
+
+    use std::str::FromStr;
+
     use elements::confidential::{AssetBlindingFactor, ValueBlindingFactor};
     use elements::hex::FromHex;
     use elements::AssetId;
-    use std::str::FromStr;
 
     #[test]
     fn tx_out_secrets() {
@@ -163,5 +187,24 @@ mod tests {
         assert_eq!(txoutsecrets_blinded.value_bf().to_string(), vbf_hex,);
         assert_eq!(txoutsecrets_blinded.asset_commitment().to_string(), ac_hex);
         assert_eq!(txoutsecrets_blinded.value_commitment().to_string(), vc_hex);
+    }
+
+    #[test]
+    fn test_tx_out_secrets_new_with_blinding() {
+        let asset_hex = "1111111111111111111111111111111111111111111111111111111111111111";
+        let abf_hex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let vbf_hex = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        let asset_id = types::AssetId::into_custom(asset_hex.to_string()).unwrap();
+        let asset_bf = types::AssetBlindingFactor::from_hex(abf_hex).unwrap();
+        let value_bf = types::ValueBlindingFactor::from_hex(vbf_hex).unwrap();
+
+        let secrets = TxOutSecrets::new(asset_id, &asset_bf, 1000, &value_bf);
+
+        assert!(!secrets.is_explicit());
+        assert_eq!(secrets.asset().to_string(), asset_hex);
+        assert_eq!(secrets.asset_bf().to_string(), abf_hex);
+        assert_eq!(secrets.value(), 1000);
+        assert_eq!(secrets.value_bf().to_string(), vbf_hex);
     }
 }

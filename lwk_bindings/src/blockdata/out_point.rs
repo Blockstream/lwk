@@ -45,6 +45,14 @@ impl OutPoint {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Create an OutPoint from a transaction id and output index.
+    #[uniffi::constructor]
+    pub fn from_parts(txid: &Txid, vout: u32) -> Arc<Self> {
+        Arc::new(Self {
+            inner: elements::OutPoint::new(txid.into(), vout),
+        })
+    }
+
     /// Return the transaction identifier.
     pub fn txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.txid.into())
@@ -58,7 +66,7 @@ impl OutPoint {
 
 #[cfg(test)]
 mod tests {
-    use crate::OutPoint;
+    use crate::{OutPoint, Txid};
     use std::str::FromStr;
 
     #[test]
@@ -81,5 +89,21 @@ mod tests {
         assert_eq!(expected_txid, out_point.txid().to_string());
 
         assert_eq!(expected_vout, out_point.vout());
+    }
+
+    #[test]
+    fn test_out_point_from_parts() {
+        let txid_hex = "0000000000000000000000000000000000000000000000000000000000000001";
+        let txid = Txid::new(&txid_hex.parse().unwrap()).unwrap();
+        let vout = 5;
+
+        let out_point = OutPoint::from_parts(&txid, vout);
+
+        assert_eq!(out_point.txid().to_string(), txid_hex);
+        assert_eq!(out_point.vout(), vout);
+        assert_eq!(
+            out_point.to_string(),
+            format!("[elements]{txid_hex}:{vout}")
+        );
     }
 }

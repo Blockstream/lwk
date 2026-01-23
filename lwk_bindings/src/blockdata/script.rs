@@ -46,6 +46,22 @@ impl Script {
         Ok(Arc::new(Self { inner }))
     }
 
+    /// Create an empty script (for fee outputs).
+    #[uniffi::constructor]
+    pub fn empty() -> Arc<Self> {
+        Arc::new(Self {
+            inner: elements::Script::new(),
+        })
+    }
+
+    /// Create an OP_RETURN script (for burn outputs).
+    #[uniffi::constructor]
+    pub fn new_op_return(data: Vec<u8>) -> Arc<Self> {
+        Arc::new(Self {
+            inner: elements::Script::new_op_return(&data),
+        })
+    }
+
     /// Return the consensus encoded bytes of the script.
     pub fn bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
@@ -98,5 +114,22 @@ mod tests {
 
         let burn = Script::new(&"6a".parse().unwrap()).unwrap();
         assert!(burn.is_provably_unspendable());
+    }
+
+    #[test]
+    fn test_script_empty() {
+        let script = Script::empty();
+        assert!(script.bytes().is_empty());
+        assert_eq!(script.to_string(), "");
+        assert_eq!(script.to_asm(), "");
+    }
+
+    #[test]
+    fn test_script_op_return() {
+        let data = b"burn".to_vec();
+        let script = Script::new_op_return(data.clone());
+        // OP_RETURN + OP_PUSHBYTES_4 + "burn"
+        assert!(script.is_provably_unspendable());
+        assert!(script.to_asm().starts_with("OP_RETURN"));
     }
 }

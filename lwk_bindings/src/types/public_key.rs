@@ -48,9 +48,7 @@ impl FromStr for PublicKey {
     type Err = LwkError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let inner = elements::bitcoin::PublicKey::from_str(s).map_err(|e| LwkError::Generic {
-            msg: format!("Invalid public key: {e}"),
-        })?;
+        let inner = elements::bitcoin::PublicKey::from_str(s)?;
         Ok(Self { inner })
     }
 }
@@ -66,19 +64,14 @@ impl PublicKey {
     /// See [`elements::bitcoin::PublicKey::from_slice`].
     #[uniffi::constructor]
     pub fn from_bytes(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
-        let inner =
-            elements::bitcoin::PublicKey::from_slice(bytes).map_err(|e| LwkError::Generic {
-                msg: format!("Invalid public key: {e}"),
-            })?;
+        let inner = elements::bitcoin::PublicKey::from_slice(bytes)?;
         Ok(Arc::new(PublicKey { inner }))
     }
 
     /// Creates a `PublicKey` from a hex string.
     #[uniffi::constructor]
     pub fn from_hex(hex: &str) -> Result<Arc<Self>, LwkError> {
-        let bytes = Vec::<u8>::from_hex(hex).map_err(|e| LwkError::Generic {
-            msg: format!("Invalid hex: {e}"),
-        })?;
+        let bytes = Vec::<u8>::from_hex(hex)?;
         Self::from_bytes(&bytes)
     }
 

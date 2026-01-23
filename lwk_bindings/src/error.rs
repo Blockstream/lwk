@@ -177,6 +177,30 @@ impl From<elements::bitcoin::secp256k1::Error> for LwkError {
     }
 }
 
+impl From<elements::bitcoin::key::FromSliceError> for LwkError {
+    fn from(value: elements::bitcoin::key::FromSliceError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::bitcoin::key::ParsePublicKeyError> for LwkError {
+    fn from(value: elements::bitcoin::key::ParsePublicKeyError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::secp256k1_zkp::Error> for LwkError {
+    fn from(value: elements::secp256k1_zkp::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<elements::bitcoin::bip32::Error> for LwkError {
     fn from(value: elements::bitcoin::bip32::Error) -> Self {
         LwkError::Generic {

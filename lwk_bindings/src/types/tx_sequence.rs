@@ -2,7 +2,7 @@ use crate::LwkError;
 
 use std::sync::Arc;
 
-/// Bitcoin transaction input sequence number.
+/// Transaction input sequence number.
 ///
 /// See [`elements::Sequence`] for more details.
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]

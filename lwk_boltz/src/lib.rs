@@ -76,6 +76,168 @@ pub use boltz_client::boltz::SwapRestoreType as SwapType;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 
+/// Asset type for swap quotes
+///
+/// Used to specify the source and destination of a swap when creating a quote.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SwapAsset {
+    /// Lightning Bitcoin (for reverse/submarine swaps)
+    LightningBtc,
+    /// Onchain Bitcoin (for chain swaps)
+    OnchainBtc,
+    /// Liquid Bitcoin (onchain)
+    Liquid,
+}
+
+/// Quote result containing fee breakdown for a swap
+#[derive(Debug, Clone)]
+pub struct Quote {
+    /// Amount the user will receive after fees
+    pub receive_amount: u64,
+    /// Network/miner fee in satoshis
+    pub network_fee: u64,
+    /// Boltz service fee in satoshis
+    pub boltz_fee: u64,
+    /// Minimum amount for this swap pair
+    pub min: u64,
+    /// Maximum amount for this swap pair
+    pub max: u64,
+}
+
+/// Builder for creating swap quotes
+///
+/// Created via [`BoltzSession::quote`].
+///
+/// # Example
+/// ```ignore
+/// let quote = session.quote(25000)
+///     .from(SwapAsset::LightningBtc)
+///     .to(SwapAsset::Liquid)
+///     .build()?;
+/// ```
+pub struct QuoteBuilder {
+    amount: u64,
+    from: Option<SwapAsset>,
+    to: Option<SwapAsset>,
+    // Cloned pairs data for binding compatibility (no lifetimes)
+    submarine_pairs: GetSubmarinePairsResponse,
+    reverse_pairs: GetReversePairsResponse,
+    chain_pairs: GetChainPairsResponse,
+}
+
+impl QuoteBuilder {
+    pub(crate) fn new(
+        amount: u64,
+        submarine_pairs: GetSubmarinePairsResponse,
+        reverse_pairs: GetReversePairsResponse,
+        chain_pairs: GetChainPairsResponse,
+    ) -> Self {
+        Self {
+            amount,
+            from: None,
+            to: None,
+            submarine_pairs,
+            reverse_pairs,
+            chain_pairs,
+        }
+    }
+
+    /// Set the source asset for the swap
+    pub fn from(mut self, asset: SwapAsset) -> Self {
+        self.from = Some(asset);
+        self
+    }
+
+    /// Set the destination asset for the swap
+    pub fn to(mut self, asset: SwapAsset) -> Self {
+        self.to = Some(asset);
+        self
+    }
+
+    /// Build the quote, calculating fees and receive amount
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `from` or `to` was not set
+    /// - The swap pair is not supported
+    /// - The pair is not available from the Boltz API
+    pub fn build(self) -> Result<Quote, Error> {
+        let from = self.from.ok_or(Error::MissingQuoteParam("from"))?;
+        let to = self.to.ok_or(Error::MissingQuoteParam("to"))?;
+
+        match (from, to) {
+            (SwapAsset::LightningBtc, SwapAsset::Liquid) => {
+                // Reverse swap: Lightning -> Liquid
+                let pair = self
+                    .reverse_pairs
+                    .get_btc_to_lbtc_pair()
+                    .ok_or(Error::PairNotAvailable)?;
+                let boltz_fee = pair.fees.boltz(self.amount);
+                let network_fee = pair.fees.claim_estimate() + pair.fees.lockup();
+                Ok(Quote {
+                    receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
+                    network_fee,
+                    boltz_fee,
+                    min: pair.limits.minimal,
+                    max: pair.limits.maximal,
+                })
+            }
+            (SwapAsset::Liquid, SwapAsset::LightningBtc) => {
+                // Submarine swap: Liquid -> Lightning
+                let pair = self
+                    .submarine_pairs
+                    .get_lbtc_to_btc_pair()
+                    .ok_or(Error::PairNotAvailable)?;
+                let boltz_fee = pair.fees.boltz(self.amount);
+                let network_fee = pair.fees.network();
+                Ok(Quote {
+                    receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
+                    network_fee,
+                    boltz_fee,
+                    min: pair.limits.minimal,
+                    max: pair.limits.maximal,
+                })
+            }
+            (SwapAsset::OnchainBtc, SwapAsset::Liquid) => {
+                // Chain swap: BTC -> L-BTC
+                let pair = self
+                    .chain_pairs
+                    .get_btc_to_lbtc_pair()
+                    .ok_or(Error::PairNotAvailable)?;
+                let boltz_fee = pair.fees.boltz(self.amount);
+                let network_fee =
+                    pair.fees.server() + pair.fees.claim_estimate() + pair.fees.lockup();
+                Ok(Quote {
+                    receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
+                    network_fee,
+                    boltz_fee,
+                    min: pair.limits.minimal,
+                    max: pair.limits.maximal,
+                })
+            }
+            (SwapAsset::Liquid, SwapAsset::OnchainBtc) => {
+                // Chain swap: L-BTC -> BTC
+                let pair = self
+                    .chain_pairs
+                    .get_lbtc_to_btc_pair()
+                    .ok_or(Error::PairNotAvailable)?;
+                let boltz_fee = pair.fees.boltz(self.amount);
+                let network_fee =
+                    pair.fees.server() + pair.fees.claim_estimate() + pair.fees.lockup();
+                Ok(Quote {
+                    receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
+                    network_fee,
+                    boltz_fee,
+                    min: pair.limits.minimal,
+                    max: pair.limits.maximal,
+                })
+            }
+            _ => Err(Error::InvalidSwapPair { from, to }),
+        }
+    }
+}
+
 pub struct BoltzSession {
     ws: Arc<BoltzWsApi>,
     api: Arc<BoltzApiClientV2>,
@@ -301,6 +463,30 @@ impl BoltzSession {
         } else {
             preimage_from_keypair(our_keys)
         }
+    }
+
+    /// Create a quote builder for calculating swap fees
+    ///
+    /// This uses the cached pairs data from session initialization.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let quote = session.quote(25000)
+    ///     .from(SwapAsset::LightningBtc)
+    ///     .to(SwapAsset::Liquid)
+    ///     .build()?;
+    ///
+    /// println!("You will receive: {} sats", quote.receive_amount);
+    /// println!("Network fee: {} sats", quote.network_fee);
+    /// println!("Boltz fee: {} sats", quote.boltz_fee);
+    /// ```
+    pub fn quote(&self, send_amount: u64) -> QuoteBuilder {
+        QuoteBuilder::new(
+            send_amount,
+            self.submarine_pairs.clone(),
+            self.reverse_pairs.clone(),
+            self.chain_pairs.clone(),
+        )
     }
 }
 
@@ -694,5 +880,162 @@ mod tests {
         let data = include_str!("../tests/data/swap_restore_response.json");
         let data: Vec<SwapRestoreResponse> = serde_json::from_str(data).unwrap();
         assert_eq!(data.len(), 32);
+    }
+
+    #[test]
+    fn test_quote_builder_reverse() {
+        // Load test data for reverse swap pairs (Lightning -> Liquid)
+        let reverse_pairs: boltz_client::boltz::GetReversePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-reverse.json")).unwrap();
+        let submarine_pairs: boltz_client::boltz::GetSubmarinePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-submarine.json")).unwrap();
+        let chain_pairs: boltz_client::boltz::GetChainPairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-chain.json")).unwrap();
+
+        // Test reverse swap: Lightning -> Liquid (25000 sats)
+        let quote = crate::QuoteBuilder::new(
+            25000,
+            submarine_pairs.clone(),
+            reverse_pairs.clone(),
+            chain_pairs.clone(),
+        )
+        .from(crate::SwapAsset::LightningBtc)
+        .to(crate::SwapAsset::Liquid)
+        .build()
+        .unwrap();
+
+        // From swap-reverse.json BTC -> L-BTC pair:
+        // percentage: 0.25, claim: 20, lockup: 27
+        // boltz_fee = ceil(0.25 / 100 * 25000) = ceil(62.5) = 63
+        // network_fee = 20 + 27 = 47
+        // receive_amount = 25000 - 63 - 47 = 24890
+        assert_eq!(quote.boltz_fee, 63);
+        assert_eq!(quote.network_fee, 47);
+        assert_eq!(quote.receive_amount, 24890);
+        assert_eq!(quote.min, 100);
+        assert_eq!(quote.max, 25_000_000);
+    }
+
+    #[test]
+    fn test_quote_builder_submarine() {
+        // Load test data
+        let reverse_pairs: boltz_client::boltz::GetReversePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-reverse.json")).unwrap();
+        let submarine_pairs: boltz_client::boltz::GetSubmarinePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-submarine.json")).unwrap();
+        let chain_pairs: boltz_client::boltz::GetChainPairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-chain.json")).unwrap();
+
+        // Test submarine swap: Liquid -> Lightning (10000 sats)
+        let quote = crate::QuoteBuilder::new(
+            10000,
+            submarine_pairs.clone(),
+            reverse_pairs.clone(),
+            chain_pairs.clone(),
+        )
+        .from(crate::SwapAsset::Liquid)
+        .to(crate::SwapAsset::LightningBtc)
+        .build()
+        .unwrap();
+
+        // From swap-submarine.json L-BTC -> BTC pair:
+        // percentage: 0.1, minerFees: 19
+        // boltz_fee = ceil(0.1 / 100 * 10000) = ceil(10) = 10
+        // network_fee = 19
+        // receive_amount = 10000 - 10 - 19 = 9971
+        assert_eq!(quote.boltz_fee, 10);
+        assert_eq!(quote.network_fee, 19);
+        assert_eq!(quote.receive_amount, 9971);
+        assert_eq!(quote.min, 1000);
+        assert_eq!(quote.max, 25_000_000);
+    }
+
+    #[test]
+    fn test_quote_builder_chain_btc_to_lbtc() {
+        // Load test data
+        let reverse_pairs: boltz_client::boltz::GetReversePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-reverse.json")).unwrap();
+        let submarine_pairs: boltz_client::boltz::GetSubmarinePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-submarine.json")).unwrap();
+        let chain_pairs: boltz_client::boltz::GetChainPairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-chain.json")).unwrap();
+
+        // Test chain swap: BTC -> L-BTC (50000 sats)
+        let quote = crate::QuoteBuilder::new(
+            50000,
+            submarine_pairs.clone(),
+            reverse_pairs.clone(),
+            chain_pairs.clone(),
+        )
+        .from(crate::SwapAsset::OnchainBtc)
+        .to(crate::SwapAsset::Liquid)
+        .build()
+        .unwrap();
+
+        // From swap-chain.json BTC -> L-BTC pair:
+        // percentage: 0.1, server: 480, user.claim: 20, user.lockup: 462
+        // boltz_fee = ceil(0.1 / 100 * 50000) = ceil(50) = 50
+        // network_fee = 480 + 20 + 462 = 962
+        // receive_amount = 50000 - 50 - 962 = 48988
+        assert_eq!(quote.boltz_fee, 50);
+        assert_eq!(quote.network_fee, 962);
+        assert_eq!(quote.receive_amount, 48988);
+        assert_eq!(quote.min, 25000);
+        assert_eq!(quote.max, 25_000_000);
+    }
+
+    #[test]
+    fn test_quote_builder_invalid_pair() {
+        let reverse_pairs: boltz_client::boltz::GetReversePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-reverse.json")).unwrap();
+        let submarine_pairs: boltz_client::boltz::GetSubmarinePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-submarine.json")).unwrap();
+        let chain_pairs: boltz_client::boltz::GetChainPairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-chain.json")).unwrap();
+
+        // Test invalid pair: Lightning -> Lightning
+        let result = crate::QuoteBuilder::new(
+            25000,
+            submarine_pairs.clone(),
+            reverse_pairs.clone(),
+            chain_pairs.clone(),
+        )
+        .from(crate::SwapAsset::LightningBtc)
+        .to(crate::SwapAsset::LightningBtc)
+        .build();
+
+        assert!(matches!(result, Err(crate::Error::InvalidSwapPair { .. })));
+    }
+
+    #[test]
+    fn test_quote_builder_missing_params() {
+        let reverse_pairs: boltz_client::boltz::GetReversePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-reverse.json")).unwrap();
+        let submarine_pairs: boltz_client::boltz::GetSubmarinePairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-submarine.json")).unwrap();
+        let chain_pairs: boltz_client::boltz::GetChainPairsResponse =
+            serde_json::from_str(include_str!("../tests/data/swap-chain.json")).unwrap();
+
+        // Test missing 'from' param
+        let result = crate::QuoteBuilder::new(
+            25000,
+            submarine_pairs.clone(),
+            reverse_pairs.clone(),
+            chain_pairs.clone(),
+        )
+        .to(crate::SwapAsset::Liquid)
+        .build();
+
+        assert!(matches!(
+            result,
+            Err(crate::Error::MissingQuoteParam("from"))
+        ));
+
+        // Test missing 'to' param
+        let result = crate::QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
+            .from(crate::SwapAsset::LightningBtc)
+            .build();
+
+        assert!(matches!(result, Err(crate::Error::MissingQuoteParam("to"))));
     }
 }

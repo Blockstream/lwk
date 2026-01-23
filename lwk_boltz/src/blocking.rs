@@ -13,7 +13,8 @@ use lwk_wollet::elements;
 
 use crate::{
     prepare_pay_data::PreparePayDataSerializable, ChainSwapData, ChainSwapDataSerializable, Error,
-    InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, RescueFile, SwapStatus,
+    InvoiceData, InvoiceDataSerializable, LightningPayment, PreparePayData, QuoteBuilder,
+    RescueFile, SwapStatus,
 };
 
 pub struct BoltzSession {
@@ -231,6 +232,13 @@ impl BoltzSession {
     > {
         let inner = self.runtime.block_on(self.inner.fetch_swaps_info())?;
         Ok(inner)
+    }
+
+    /// Create a quote builder for calculating swap fees
+    ///
+    /// This uses the cached pairs data from session initialization.
+    pub fn quote(&self, send_amount: u64) -> QuoteBuilder {
+        self.inner.quote(send_amount)
     }
 }
 

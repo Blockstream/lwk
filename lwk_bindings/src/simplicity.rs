@@ -150,7 +150,7 @@ pub fn simplicity_load_program(
 #[uniffi::export]
 pub fn simplicity_create_p2tr_address(
     program: &SimplicityProgram,
-    internal_key: XOnlyPublicKey,
+    internal_key: &XOnlyPublicKey,
     network: &Network,
 ) -> Result<Arc<Address>, LwkError> {
     let x_only_key = internal_key.to_simplicityhl()?;
@@ -173,7 +173,7 @@ pub fn simplicity_create_p2tr_address(
 #[uniffi::export]
 pub fn simplicity_control_block(
     program: &SimplicityProgram,
-    internal_key: XOnlyPublicKey,
+    internal_key: &XOnlyPublicKey,
 ) -> Result<Hex, LwkError> {
     let x_only_key = internal_key.to_simplicityhl()?;
 
@@ -200,7 +200,7 @@ pub fn simplicity_control_block(
 pub fn simplicity_get_sighash_all(
     tx: &Transaction,
     program: &SimplicityProgram,
-    program_public_key: XOnlyPublicKey,
+    program_public_key: &XOnlyPublicKey,
     utxos: Vec<Arc<TxOut>>,
     input_index: u32,
     network: &Network,
@@ -249,7 +249,7 @@ pub fn simplicity_get_sighash_all(
 pub fn simplicity_finalize_transaction(
     tx: &Transaction,
     program: &SimplicityProgram,
-    program_public_key: XOnlyPublicKey,
+    program_public_key: &XOnlyPublicKey,
     utxos: Vec<Arc<TxOut>>,
     input_index: u32,
     witness_values: &SimplicityWitnessValues,
@@ -359,7 +359,7 @@ pub fn simplicity_create_p2pk_signature(
 pub fn simplicity_derive_xonly_pubkey(
     signer: &crate::Signer,
     derivation_path: String,
-) -> Result<XOnlyPublicKey, LwkError> {
+) -> Result<Arc<XOnlyPublicKey>, LwkError> {
     let path = DerivationPath::from_str(&derivation_path).map_err(|e| LwkError::Generic {
         msg: format!("Invalid derivation path: {e}"),
     })?;

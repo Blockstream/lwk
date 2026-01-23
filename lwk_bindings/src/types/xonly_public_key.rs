@@ -1,39 +1,48 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr, sync::Arc};
 
-use crate::{LwkError, UniffiCustomTypeConverter};
+use crate::LwkError;
 
 /// An x-only public key, used for verification of Taproot signatures
 /// and serialized according to BIP-340.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(uniffi::Object, PartialEq, Eq, Debug, Clone, Copy)]
 pub struct XOnlyPublicKey {
     inner: elements::bitcoin::XOnlyPublicKey,
 }
 
+#[uniffi::export]
 impl XOnlyPublicKey {
-    /// Create from a keypair, returning the x-only public key.
-    #[must_use]
-    pub fn from_keypair(keypair: &elements::bitcoin::secp256k1::Keypair) -> Self {
-        let (xonly, _parity) = keypair.x_only_public_key();
-        Self::from(xonly)
+    /// Create from a hex string (64 hex characters = 32 bytes).
+    #[uniffi::constructor]
+    pub fn new(hex: &str) -> Result<Arc<Self>, LwkError> {
+        Ok(Arc::new(Self::from_str(hex)?))
     }
 
     /// Create from raw bytes (32 bytes).
-    pub fn from_slice(bytes: &[u8]) -> Result<Self, LwkError> {
+    #[uniffi::constructor]
+    pub fn from_slice(bytes: &[u8]) -> Result<Arc<Self>, LwkError> {
         let inner = elements::bitcoin::XOnlyPublicKey::from_slice(bytes).map_err(|e| {
             LwkError::Generic {
                 msg: format!("Invalid x-only public key: {e}"),
             }
         })?;
-
-        Ok(Self { inner })
-    }
-
-    /// Deserialize from 32 bytes. Alias for `from_slice`.
-    pub fn deserialize(bytes: &[u8; 32]) -> Result<Self, LwkError> {
-        Self::from_slice(bytes)
+        Ok(Arc::new(Self { inner }))
     }
 
     /// Serialize to 32 bytes.
+    pub fn bytes(&self) -> Vec<u8> {
+        self.inner.serialize().to_vec()
+    }
+}
+
+impl XOnlyPublicKey {
+    /// Create from a keypair, returning the x-only public key
+    #[must_use]
+    pub fn from_keypair(keypair: &elements::bitcoin::secp256k1::Keypair) -> Arc<Self> {
+        let (xonly, _parity) = keypair.x_only_public_key();
+        Arc::new(Self::from(xonly))
+    }
+
+    /// Serialize to 32 bytes
     #[must_use]
     pub fn serialize(&self) -> [u8; 32] {
         self.inner.serialize()
@@ -94,19 +103,6 @@ impl Display for XOnlyPublicKey {
     }
 }
 
-uniffi::custom_type!(XOnlyPublicKey, String);
-impl UniffiCustomTypeConverter for XOnlyPublicKey {
-    type Builtin = String;
-
-    fn into_custom(val: Self::Builtin) -> uniffi::Result<Self> {
-        Ok(Self::from_str(&val)?)
-    }
-
-    fn from_custom(obj: Self) -> Self::Builtin {
-        obj.to_string()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -114,20 +110,15 @@ mod tests {
     use elements::bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 
     use super::XOnlyPublicKey;
-    use crate::UniffiCustomTypeConverter;
 
     #[test]
     fn xonly_public_key_roundtrip() {
         let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let key = XOnlyPublicKey::from_str(hex).unwrap();
+        let key = XOnlyPublicKey::new(hex).unwrap();
 
-        assert_eq!(
-            <XOnlyPublicKey as UniffiCustomTypeConverter>::into_custom(
-                UniffiCustomTypeConverter::from_custom(key)
-            )
-            .unwrap(),
-            key
-        );
+        let as_string = key.to_string();
+        let key2 = XOnlyPublicKey::new(&as_string).unwrap();
+        assert_eq!(*key, *key2);
     }
 
     #[test]
@@ -143,14 +134,14 @@ mod tests {
     }
 
     #[test]
-    fn xonly_public_key_serialize_deserialize_roundtrip() {
+    fn xonly_public_key_bytes_roundtrip() {
         let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         let key = XOnlyPublicKey::from_str(hex).unwrap();
 
-        let serialized = key.serialize();
-        let deserialized = XOnlyPublicKey::deserialize(&serialized).unwrap();
+        let serialized = key.bytes();
+        let deserialized = XOnlyPublicKey::from_slice(&serialized).unwrap();
 
-        assert_eq!(key, deserialized);
+        assert_eq!(key, *deserialized);
     }
 
     #[test]
@@ -164,16 +155,16 @@ mod tests {
     }
 
     #[test]
-    fn xonly_public_key_from_str_invalid() {
+    fn xonly_public_key_new_invalid() {
         // Too short
-        assert!(XOnlyPublicKey::from_str("aabb").is_err());
+        assert!(XOnlyPublicKey::new("aabb").is_err());
         // Too long
-        assert!(XOnlyPublicKey::from_str(
+        assert!(XOnlyPublicKey::new(
             "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800"
         )
         .is_err());
         // Invalid hex
-        assert!(XOnlyPublicKey::from_str(
+        assert!(XOnlyPublicKey::new(
             "xx79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f817"
         )
         .is_err());
@@ -182,7 +173,7 @@ mod tests {
     #[test]
     fn xonly_public_key_display() {
         let hex = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-        let key = XOnlyPublicKey::from_str(hex).unwrap();
+        let key = XOnlyPublicKey::new(hex).unwrap();
 
         assert_eq!(key.to_string(), hex);
     }

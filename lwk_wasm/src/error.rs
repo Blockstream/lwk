@@ -113,6 +113,10 @@ impl Error {
                 lwk_boltz::Error::FailBuildingRefundTransaction => {
                     "Boltz::FailBuildingRefundTransaction"
                 }
+                lwk_boltz::Error::InvalidSwapPair { .. } => "Boltz::InvalidSwapPair",
+                lwk_boltz::Error::MissingQuoteParam(_) => "Boltz::MissingQuoteParam",
+                lwk_boltz::Error::PairNotAvailable => "Boltz::PairNotAvailable",
+                lwk_boltz::Error::LockPoisoned(_) => "Boltz::LockPoisoned",
             },
             Error::HexToArray(_) => "HexToArray",
             Error::Wollet(_) => "Wollet",

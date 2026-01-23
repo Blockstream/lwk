@@ -9,6 +9,7 @@ mod error;
 mod invoice_data;
 mod lightning_payment;
 mod prepare_pay_data;
+mod quote;
 mod reverse;
 mod submarine;
 mod swap_state;
@@ -52,6 +53,7 @@ use lwk_wollet::ElectrumUrl;
 use lwk_wollet::ElementsNetwork;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::error::TryRecvError;
+use tokio::sync::Mutex;
 
 pub use crate::chain_data::{to_chain_data, ChainSwapData, ChainSwapDataSerializable};
 pub use crate::chain_swaps::LockupResponse;
@@ -63,6 +65,7 @@ pub use crate::invoice_data::InvoiceDataSerializable;
 pub use crate::lightning_payment::LightningPayment;
 pub use crate::prepare_pay_data::PreparePayData;
 pub use crate::prepare_pay_data::PreparePayDataSerializable;
+pub use crate::quote::{Quote, QuoteBuilder, SwapAsset};
 pub use crate::reverse::InvoiceResponse;
 pub use crate::submarine::PreparePayResponse;
 pub use crate::swap_state::SwapState;
@@ -75,6 +78,13 @@ use lwk_wollet::hashes::Hash;
 pub use boltz_client::boltz::SwapRestoreType as SwapType;
 
 pub(crate) const WAIT_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+
+#[derive(Clone)]
+pub struct SwapInfo {
+    pub reverse_pairs: GetReversePairsResponse,
+    pub submarine_pairs: GetSubmarinePairsResponse,
+    pub chain_pairs: GetChainPairsResponse,
+}
 
 pub struct BoltzSession {
     ws: Arc<BoltzWsApi>,
@@ -93,9 +103,7 @@ pub struct BoltzSession {
 
     random_preimages: bool,
 
-    submarine_pairs: GetSubmarinePairsResponse,
-    reverse_pairs: GetReversePairsResponse,
-    chain_pairs: GetChainPairsResponse,
+    swap_info: Mutex<SwapInfo>,
 }
 
 impl BoltzSession {
@@ -186,11 +194,7 @@ impl BoltzSession {
         start_ws(ws.clone());
 
         // Fetch pairs data concurrently
-        let (submarine_pairs, reverse_pairs, chain_pairs) = tokio::try_join!(
-            api.get_submarine_pairs(),
-            api.get_reverse_pairs(),
-            api.get_chain_pairs(),
-        )?;
+        let swap_info = fetch_swap_info_concurrently(api.clone()).await?;
 
         let (next_index_to_use, mnemonic) = match mnemonic {
             Some(mnemonic) => {
@@ -216,9 +220,7 @@ impl BoltzSession {
             timeout_advance: timeout_advance.unwrap_or(Duration::from_secs(180)),
             referral_id,
             random_preimages,
-            submarine_pairs,
-            reverse_pairs,
-            chain_pairs,
+            swap_info: Mutex::new(swap_info),
         })
     }
 
@@ -277,21 +279,18 @@ impl BoltzSession {
         Ok(result)
     }
 
-    /// Fetch information, such as min and max amounts, about the reverse and submarine pairs from the boltz api.
-    pub async fn fetch_swaps_info(
-        &self,
-    ) -> Result<
-        (
-            GetReversePairsResponse,
-            GetSubmarinePairsResponse,
-            GetChainPairsResponse,
-        ),
-        Error,
-    > {
-        let a = self.api.get_reverse_pairs().await?;
-        let b = self.api.get_submarine_pairs().await?;
-        let c = self.api.get_chain_pairs().await?;
-        Ok((a, b, c))
+    /// Fetch information, such as min and max amounts, about the swap pairs from the boltz api.
+    pub async fn fetch_swaps_info(&self) -> Result<SwapInfo, Error> {
+        fetch_swap_info_concurrently(self.api.clone()).await
+    }
+
+    /// Refresh the cached pairs data from the Boltz API
+    ///
+    /// This updates the internal cache used by [`BoltzSession::quote()`].
+    pub async fn refresh_swap_info(&self) -> Result<(), Error> {
+        let swap_info = self.fetch_swaps_info().await?;
+        *self.swap_info.lock().await = swap_info;
+        Ok(())
     }
 
     /// Returns a preimage from the keys or a random one according to flag `self.random_preimage`
@@ -302,6 +301,45 @@ impl BoltzSession {
             preimage_from_keypair(our_keys)
         }
     }
+
+    /// Create a quote builder for calculating swap fees
+    ///
+    /// This uses the cached pairs data from session initialization.
+    ///
+    /// If the pairs data is stale, you can refresh it using [`BoltzSession::refresh_swap_info()`].
+    ///
+    /// # Example
+    /// ```ignore
+    /// let quote = session
+    ///     .quote(25000)
+    ///     .await
+    ///     .send(SwapAsset::LightningBtc)
+    ///     .receive(SwapAsset::Liquid)
+    ///     .build()?;
+    ///
+    /// println!("You will receive: {} sats", quote.receive_amount);
+    /// println!("Network fee: {} sats", quote.network_fee);
+    /// println!("Boltz fee: {} sats", quote.boltz_fee);
+    /// ```
+    pub async fn quote(&self, send_amount: u64) -> QuoteBuilder {
+        // Clone the pairs data from the mutex.
+        let swap_info = self.swap_info.lock().await;
+        QuoteBuilder::new(send_amount, swap_info.clone())
+    }
+}
+
+async fn fetch_swap_info_concurrently(api: Arc<BoltzApiClientV2>) -> Result<SwapInfo, Error> {
+    let (submarine_pairs, reverse_pairs, chain_pairs) = tokio::try_join!(
+        api.get_submarine_pairs(),
+        api.get_reverse_pairs(),
+        api.get_chain_pairs(),
+    )?;
+
+    Ok(SwapInfo {
+        reverse_pairs,
+        submarine_pairs,
+        chain_pairs,
+    })
 }
 
 #[cfg(feature = "blocking")]

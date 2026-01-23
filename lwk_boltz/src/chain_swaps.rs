@@ -142,16 +142,19 @@ impl BoltzSession {
         // Fee is what you lock up minus what you receive on the claim side
         let fee = expected_lockup_amount.saturating_sub(create_chain_response.claim_details.amount);
 
-        let boltz_fee = match (from, to) {
-            (Chain::Bitcoin(_), Chain::Liquid(_)) => self
-                .chain_pairs
-                .get_btc_to_lbtc_pair()
-                .map(|pair| pair.fees.boltz(amount)),
-            (Chain::Liquid(_), Chain::Bitcoin(_)) => self
-                .chain_pairs
-                .get_lbtc_to_btc_pair()
-                .map(|pair| pair.fees.boltz(amount)),
-            _ => None,
+        let boltz_fee = {
+            let swap_info = self.swap_info.lock().await;
+            match (from, to) {
+                (Chain::Bitcoin(_), Chain::Liquid(_)) => swap_info
+                    .chain_pairs
+                    .get_btc_to_lbtc_pair()
+                    .map(|pair| pair.fees.boltz(amount)),
+                (Chain::Liquid(_), Chain::Bitcoin(_)) => swap_info
+                    .chain_pairs
+                    .get_lbtc_to_btc_pair()
+                    .map(|pair| pair.fees.boltz(amount)),
+                _ => None,
+            }
         };
 
         Ok(LockupResponse {

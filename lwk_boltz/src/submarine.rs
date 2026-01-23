@@ -113,6 +113,9 @@ impl BoltzSession {
             ))?;
 
         let boltz_fee = self
+            .swap_info
+            .lock()
+            .await
             .submarine_pairs
             .get_lbtc_to_btc_pair()
             .map(|pair| pair.fees.boltz(bolt11_amount));

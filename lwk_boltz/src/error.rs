@@ -1,3 +1,4 @@
+use crate::SwapAsset;
 use crate::SwapState;
 use boltz_client::elements::AddressError;
 use boltz_client::error::Error as BoltzError;
@@ -91,6 +92,18 @@ pub enum Error {
 
     #[error("No update available, continuing polling")]
     NoBoltzUpdate,
+
+    #[error("Invalid swap pair: {from:?} -> {to:?}")]
+    InvalidSwapPair { from: SwapAsset, to: SwapAsset },
+
+    #[error("Quote builder missing {0} parameter")]
+    MissingQuoteParam(&'static str),
+
+    #[error("Swap pair not available from Boltz API")]
+    PairNotAvailable,
+
+    #[error("Internal lock error: {0}")]
+    LockPoisoned(String),
 }
 
 impl From<BoltzError> for Error {

@@ -99,6 +99,9 @@ impl BoltzSession {
         )?;
 
         let boltz_fee = self
+            .swap_info
+            .lock()
+            .await
             .reverse_pairs
             .get_btc_to_lbtc_pair()
             .map(|pair| pair.fees.boltz(amount));

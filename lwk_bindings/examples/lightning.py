@@ -387,6 +387,88 @@ def show_swaps_info(boltz_session):
     except Exception as e:
         print(f"Error fetching swaps info: {e}")
 
+def get_quote(boltz_session):
+    """Get a quote for a swap showing fees before creating it"""
+    # Refresh swap info to ensure quote uses latest fees/limits
+    boltz_session.refresh_swap_info()
+    print("\nSwap Asset Types:")
+    print("  1) Lightning BTC")
+    print("  2) Onchain BTC")
+    print("  3) Liquid")
+    
+    # Get 'from' asset
+    while True:
+        from_choice = input("Select source asset (1-3): ").strip()
+        if from_choice == '1':
+            from_asset = SwapAsset.LIGHTNING_BTC
+            from_name = "Lightning BTC"
+            break
+        elif from_choice == '2':
+            from_asset = SwapAsset.ONCHAIN_BTC
+            from_name = "Onchain BTC"
+            break
+        elif from_choice == '3':
+            from_asset = SwapAsset.LIQUID
+            from_name = "Liquid"
+            break
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
+    
+    # Get 'to' asset
+    while True:
+        to_choice = input("Select destination asset (1-3): ").strip()
+        if to_choice == '1':
+            to_asset = SwapAsset.LIGHTNING_BTC
+            to_name = "Lightning BTC"
+            break
+        elif to_choice == '2':
+            to_asset = SwapAsset.ONCHAIN_BTC
+            to_name = "Onchain BTC"
+            break
+        elif to_choice == '3':
+            to_asset = SwapAsset.LIQUID
+            to_name = "Liquid"
+            break
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
+    
+    # Get amount
+    while True:
+        try:
+            amount_str = input("Enter amount in satoshis: ").strip()
+            amount = int(amount_str)
+            if amount <= 0:
+                print("Amount must be positive. Please try again.")
+                continue
+            break
+        except ValueError:
+            print("Invalid amount. Please enter a valid number.")
+    
+    try:
+        # Create quote
+        builder = boltz_session.quote(amount)
+        builder.send(from_asset)
+        builder.receive(to_asset)
+        quote = builder.build()
+        
+        print(f"\n=== Quote: {from_name} → {to_name} ===")
+        print(f"Send amount:    {amount:,} sats")
+        print(f"Receive amount: {quote.receive_amount:,} sats")
+        print(f"Network fee:    {quote.network_fee:,} sats")
+        print(f"Boltz fee:      {quote.boltz_fee:,} sats")
+        print(f"Min amount:     {quote.min:,} sats")
+        print(f"Max amount:     {quote.max:,} sats")
+        
+    except Exception as e:
+        # Handle errors - invalid swap pairs will raise an exception
+        error_str = str(e)
+        if "InvalidSwapPair" in error_str:
+            print(f"Invalid swap pair: {from_name} → {to_name} is not supported")
+        elif "PairNotAvailable" in error_str:
+            print(f"Pair not available: {from_name} → {to_name}")
+        else:
+            print(f"Error getting quote: {e}")
+
 def lbtc_to_btc_swap(boltz_session, wollet, esplora_client, signer):
     """Create a swap to convert LBTC to BTC"""
     # Ask for the swap amount
@@ -669,6 +751,7 @@ def main():
         print("9) Show swaps info")
         print("10) Swap LBTC to BTC (chain swap)")
         print("11) Swap BTC to LBTC (chain swap) (requires external btc wallet)")
+        print("12) Get swap quote")
         print("q) Quit")
 
         choice = input("Choose option: ").strip().lower()
@@ -717,6 +800,9 @@ def main():
         elif choice == '11':
             print("\n=== Swapping BTC to LBTC ===")
             btc_to_lbtc_swap(boltz_session, wollet)
+        elif choice == '12':
+            print("\n=== Get Swap Quote ===")
+            get_quote(boltz_session)
         elif choice == 'q':
             print("Goodbye!")
             break

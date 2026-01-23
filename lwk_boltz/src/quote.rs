@@ -44,8 +44,8 @@ pub struct Quote {
 /// # Example
 /// ```ignore
 /// let quote = session.quote(25000)
-///     .from(SwapAsset::LightningBtc)
-///     .to(SwapAsset::Liquid)
+///     .send(SwapAsset::LightningBtc)
+///     .receive(SwapAsset::Liquid)
 ///     .build()?;
 /// ```
 pub struct QuoteBuilder {
@@ -76,13 +76,13 @@ impl QuoteBuilder {
     }
 
     /// Set the source asset for the swap
-    pub fn from(mut self, asset: SwapAsset) -> Self {
+    pub fn send(mut self, asset: SwapAsset) -> Self {
         self.from = Some(asset);
         self
     }
 
     /// Set the destination asset for the swap
-    pub fn to(mut self, asset: SwapAsset) -> Self {
+    pub fn receive(mut self, asset: SwapAsset) -> Self {
         self.to = Some(asset);
         self
     }
@@ -91,13 +91,12 @@ impl QuoteBuilder {
     ///
     /// # Fee Calculation
     ///
-    /// The fee calculation follows the Boltz web app behavior:
+    /// The fee calculation follows the Boltz web app behavior
+    /// (see `boltz-web-app/src/components/Fees.tsx`):
     ///
-    /// - **Reverse swaps** (Lightning → onchain): User pays the `claim` fee only
-    ///   (the lockup is on Lightning side, handled by Boltz)
+    /// - **Reverse swaps** (Lightning → onchain): User pays `claim + lockup` fees
     /// - **Submarine swaps** (onchain → Lightning): User pays the `minerFees` value
-    /// - **Chain swaps** (BTC ↔ L-BTC): User pays `server + claim` fees
-    ///   (server fee covers Boltz's lockup on the destination chain)
+    /// - **Chain swaps** (BTC ↔ L-BTC): User pays `server + user.claim` fees
     ///
     /// # Errors
     ///
@@ -106,20 +105,19 @@ impl QuoteBuilder {
     /// - The swap pair is not supported
     /// - The pair is not available from the Boltz API
     pub fn build(self) -> Result<Quote, Error> {
-        let from = self.from.ok_or(Error::MissingQuoteParam("from"))?;
-        let to = self.to.ok_or(Error::MissingQuoteParam("to"))?;
+        let from = self.from.ok_or(Error::MissingQuoteParam("send"))?;
+        let to = self.to.ok_or(Error::MissingQuoteParam("receive"))?;
 
         match (from, to) {
             (SwapAsset::LightningBtc, SwapAsset::Liquid) => {
                 // Reverse swap: Lightning -> Liquid
-                // User receives onchain, so they pay the claim fee only
+                // From Boltz web app: fee = claim + lockup
                 let pair = self
                     .reverse_pairs
                     .get_btc_to_lbtc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let boltz_fee = pair.fees.boltz(self.amount);
-                // Only claim fee - lockup is on Lightning side (Boltz's cost)
-                let network_fee = pair.fees.claim_estimate();
+                let network_fee = pair.fees.claim_estimate() + pair.fees.lockup();
                 Ok(Quote {
                     receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
                     network_fee,
@@ -146,13 +144,12 @@ impl QuoteBuilder {
             }
             (SwapAsset::OnchainBtc, SwapAsset::Liquid) => {
                 // Chain swap: BTC -> L-BTC
-                // User pays server fee (for Boltz's L-BTC lockup) + claim fee (to claim L-BTC)
+                // From Boltz web app: fee = server + user.claim
                 let pair = self
                     .chain_pairs
                     .get_btc_to_lbtc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let boltz_fee = pair.fees.boltz(self.amount);
-                // Server + claim only (user's lockup fee is part of what they send)
                 let network_fee = pair.fees.server() + pair.fees.claim_estimate();
                 Ok(Quote {
                     receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
@@ -164,13 +161,12 @@ impl QuoteBuilder {
             }
             (SwapAsset::Liquid, SwapAsset::OnchainBtc) => {
                 // Chain swap: L-BTC -> BTC
-                // User pays server fee (for Boltz's BTC lockup) + claim fee (to claim BTC)
+                // From Boltz web app: fee = server + user.claim
                 let pair = self
                     .chain_pairs
                     .get_lbtc_to_btc_pair()
                     .ok_or(Error::PairNotAvailable)?;
                 let boltz_fee = pair.fees.boltz(self.amount);
-                // Server + claim only (user's lockup fee is part of what they send)
                 let network_fee = pair.fees.server() + pair.fees.claim_estimate();
                 Ok(Quote {
                     receive_amount: self.amount.saturating_sub(boltz_fee + network_fee),
@@ -209,19 +205,19 @@ mod tests {
 
         // Test reverse swap: Lightning -> Liquid (25000 sats)
         let quote = QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::LightningBtc)
-            .to(SwapAsset::Liquid)
+            .send(SwapAsset::LightningBtc)
+            .receive(SwapAsset::Liquid)
             .build()
             .unwrap();
 
         // From swap-reverse.json BTC -> L-BTC pair:
         // percentage: 0.25, claim: 20, lockup: 27
         // boltz_fee = ceil(0.25 / 100 * 25000) = ceil(62.5) = 63
-        // network_fee = claim only = 20 (user claims onchain)
-        // receive_amount = 25000 - 63 - 20 = 24917
+        // network_fee = claim + lockup = 20 + 27 = 47 (from Boltz web app Fees.tsx)
+        // receive_amount = 25000 - 63 - 47 = 24890
         assert_eq!(quote.boltz_fee, 63);
-        assert_eq!(quote.network_fee, 20);
-        assert_eq!(quote.receive_amount, 24917);
+        assert_eq!(quote.network_fee, 47);
+        assert_eq!(quote.receive_amount, 24890);
         assert_eq!(quote.min, 100);
         assert_eq!(quote.max, 25_000_000);
     }
@@ -232,8 +228,8 @@ mod tests {
 
         // Test submarine swap: Liquid -> Lightning (25000 sats) to match screenshot
         let quote = QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::Liquid)
-            .to(SwapAsset::LightningBtc)
+            .send(SwapAsset::Liquid)
+            .receive(SwapAsset::LightningBtc)
             .build()
             .unwrap();
 
@@ -256,8 +252,8 @@ mod tests {
 
         // Test chain swap: L-BTC -> BTC (25000 sats) to match screenshot
         let quote = QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::Liquid)
-            .to(SwapAsset::OnchainBtc)
+            .send(SwapAsset::Liquid)
+            .receive(SwapAsset::OnchainBtc)
             .build()
             .unwrap();
 
@@ -280,8 +276,8 @@ mod tests {
 
         // Test chain swap: BTC -> L-BTC (50000 sats)
         let quote = QuoteBuilder::new(50000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::OnchainBtc)
-            .to(SwapAsset::Liquid)
+            .send(SwapAsset::OnchainBtc)
+            .receive(SwapAsset::Liquid)
             .build()
             .unwrap();
 
@@ -308,16 +304,16 @@ mod tests {
             reverse_pairs.clone(),
             chain_pairs.clone(),
         )
-        .from(SwapAsset::LightningBtc)
-        .to(SwapAsset::LightningBtc)
+        .send(SwapAsset::LightningBtc)
+        .receive(SwapAsset::LightningBtc)
         .build();
 
         assert!(matches!(result, Err(Error::InvalidSwapPair { .. })));
 
         // Test invalid pair: OnchainBtc -> OnchainBtc
         let result = QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::OnchainBtc)
-            .to(SwapAsset::OnchainBtc)
+            .send(SwapAsset::OnchainBtc)
+            .receive(SwapAsset::OnchainBtc)
             .build();
 
         assert!(matches!(result, Err(Error::InvalidSwapPair { .. })));
@@ -327,23 +323,23 @@ mod tests {
     fn test_quote_builder_missing_params() {
         let (submarine_pairs, reverse_pairs, chain_pairs) = load_test_pairs();
 
-        // Test missing 'from' param
+        // Test missing 'send' param
         let result = QuoteBuilder::new(
             25000,
             submarine_pairs.clone(),
             reverse_pairs.clone(),
             chain_pairs.clone(),
         )
-        .to(SwapAsset::Liquid)
+        .receive(SwapAsset::Liquid)
         .build();
 
-        assert!(matches!(result, Err(Error::MissingQuoteParam("from"))));
+        assert!(matches!(result, Err(Error::MissingQuoteParam("send"))));
 
-        // Test missing 'to' param
+        // Test missing 'receive' param
         let result = QuoteBuilder::new(25000, submarine_pairs, reverse_pairs, chain_pairs)
-            .from(SwapAsset::LightningBtc)
+            .send(SwapAsset::LightningBtc)
             .build();
 
-        assert!(matches!(result, Err(Error::MissingQuoteParam("to"))));
+        assert!(matches!(result, Err(Error::MissingQuoteParam("receive"))));
     }
 }

@@ -221,18 +221,18 @@ fn quote_builder_consumed() -> LwkError {
 #[uniffi::export]
 impl QuoteBuilder {
     /// Set the source asset for the swap
-    pub fn from(&self, asset: SwapAsset) -> Result<(), LwkError> {
+    pub fn send(&self, asset: SwapAsset) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let builder = lock.take().ok_or_else(quote_builder_consumed)?;
-        *lock = Some(builder.from(asset.into()));
+        *lock = Some(builder.send(asset.into()));
         Ok(())
     }
 
     /// Set the destination asset for the swap
-    pub fn to(&self, asset: SwapAsset) -> Result<(), LwkError> {
+    pub fn receive(&self, asset: SwapAsset) -> Result<(), LwkError> {
         let mut lock = self.inner.lock()?;
         let builder = lock.take().ok_or_else(quote_builder_consumed)?;
-        *lock = Some(builder.to(asset.into()));
+        *lock = Some(builder.receive(asset.into()));
         Ok(())
     }
 
@@ -648,8 +648,8 @@ impl BoltzSession {
     /// # Example
     /// ```ignore
     /// let builder = session.quote(25000);
-    /// builder.from(SwapAsset::LightningBtc);
-    /// builder.to(SwapAsset::Liquid);
+    /// builder.send(SwapAsset::LightningBtc);
+    /// builder.receive(SwapAsset::Liquid);
     /// let quote = builder.build()?;
     /// ```
     pub fn quote(&self, send_amount: u64) -> Arc<QuoteBuilder> {

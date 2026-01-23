@@ -18,18 +18,19 @@ pub enum SimplicityValue {
 
 /// Validate byte length for Simplicity values.
 /// Returns error message if invalid, None if valid.
+#[must_use]
 pub fn validate_bytes_length(len: usize) -> Option<String> {
     if len != 32 && len != 64 {
         Some(format!(
-            "bytes must be exactly 32 (u256) or 64 (signature) bytes, got {}",
-            len
+            "bytes must be exactly 32 (u256) or 64 (signature) bytes, got {len}"
         ))
     } else {
         None
     }
 }
 
-/// Convert a HashMap of SimplicityValue to the simplicityhl Value format.
+/// Convert a `HashMap` of `SimplicityValue` to the simplicityhl Value format.
+#[must_use]
 pub fn convert_values_to_map(
     values: &HashMap<String, SimplicityValue>,
 ) -> HashMap<WitnessName, Value> {
@@ -57,7 +58,8 @@ pub fn convert_values_to_map(
 }
 
 /// Get the address parameters for a network.
-pub fn network_to_address_params(network: lwk_common::Network) -> &'static AddressParams {
+#[must_use]
+pub const fn network_to_address_params(network: lwk_common::Network) -> &'static AddressParams {
     match network {
         lwk_common::Network::Liquid => &AddressParams::LIQUID,
         lwk_common::Network::TestnetLiquid => &AddressParams::LIQUID_TESTNET,
@@ -65,8 +67,9 @@ pub fn network_to_address_params(network: lwk_common::Network) -> &'static Addre
     }
 }
 
-/// Parse a genesis hash from hex bytes (display format) to BlockHash.
-/// The bytes are in big-endian (display) format, but BlockHash::from_byte_array
+/// Parse a genesis hash from hex bytes (display format) to `BlockHash`.
+///
+/// The bytes are in big-endian (display) format, but `BlockHash::from_byte_array`
 /// expects little-endian (internal) format, so we need to reverse the bytes.
 pub fn parse_genesis_hash(
     genesis_bytes: &[u8],

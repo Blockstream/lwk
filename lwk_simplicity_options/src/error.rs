@@ -38,3 +38,48 @@ pub enum ProgramError {
     #[error("Input index exceeds u32 maximum: {0}")]
     InputIndexOverflow(#[from] std::num::TryFromIntError),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum PsetBuilderError {
+    #[error("Failed to blind PSET: {0}")]
+    Blinding(String),
+
+    #[error("Failed to extract transaction: {0}")]
+    Extract(String),
+
+    #[error("Failed to verify amount proofs: {0}")]
+    VerifyProofs(String),
+
+    #[error("Invalid input index {0} for secrets")]
+    InvalidInputIndex(u32),
+
+    #[error("PSET error: {0}")]
+    Pset(#[from] elements::pset::Error),
+
+    #[error("Failed to finalize Simplicity input: {0}")]
+    SimplicityFinalization(#[from] ProgramError),
+
+    #[error("Failed to compute sighash: {0}")]
+    Sighash(String),
+
+    #[error("No inputs added to transaction")]
+    NoInputs,
+
+    #[error("Input value overflow")]
+    InputValueOverflow,
+
+    #[error("Output value overflow")]
+    OutputValueOverflow,
+
+    #[error("Fee overflow")]
+    FeeOverflow,
+
+    #[error("Insufficient L-BTC: have {have}, need {need} (including fee {fee})")]
+    InsufficientFunds { have: u64, need: u64, fee: u64 },
+
+    #[error("Signing error: {0}")]
+    Signing(String),
+
+    #[error("Missing witness for input {0}")]
+    MissingWitness(usize),
+}

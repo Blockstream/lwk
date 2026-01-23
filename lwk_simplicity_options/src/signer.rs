@@ -12,7 +12,7 @@ use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::tracker::TrackerLogLevel;
 use simplicityhl::{elements, CompiledProgram, WitnessValues};
 
-/// Compute the sighash_all for signing a Simplicity program input.
+/// Compute the `sighash_all` for signing a Simplicity program input.
 ///
 /// This function returns the message that needs to be signed with a Schnorr signature.
 /// The caller is responsible for signing the message with the appropriate key.

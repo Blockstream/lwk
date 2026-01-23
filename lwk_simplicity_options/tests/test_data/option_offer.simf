@@ -1,0 +1,213 @@
+/*
+ * Option Offer
+ *
+ * A covenant that allows a user to deposit collateral and premium assets, 
+ * and have a counterparty swap settlement asset for both.
+ * The user can withdraw accumulated settlement asset at any time (with signature).
+ * After expiry, the user can reclaim any remaining collateral and premium (with signature).
+ *
+ * Paths:
+ *  1. Exercise: Counterparty swaps settlement asset for collateral + premium (no time restriction, optional change)
+ *  2. Withdraw: User withdraws settlement asset (no time restriction, signature required, full amount)
+ *  3. Expiry: User reclaims collateral + premium (after expiry, signature required, full amount)
+ *
+ * Constraints:
+ *   settlement_amount = COLLATERAL_PER_CONTRACT * collateral_amount
+ *   premium_amount = PREMIUM_PER_COLLATERAL * collateral_amount
+ */
+
+/// Assert: a == b * expected_q, via divmod
+fn divmod_eq(a: u64, b: u64, expected_q: u64) {
+    let (q, r): (u64, u64) = jet::div_mod_64(a, b);
+    assert!(jet::eq_64(q, expected_q));
+    assert!(jet::eq_64(r, 0));
+}
+
+fn get_input_script_hash(index: u32) -> u256 {
+    unwrap(jet::input_script_hash(index))
+}
+
+fn get_output_explicit_asset_amount(index: u32) -> (u256, u64) {
+    let pair: (Asset1, Amount1) = unwrap(jet::output_amount(index));
+    let (asset, amount): (Asset1, Amount1) = pair;
+    let asset_bits: u256 = unwrap_right::<(u1, u256)>(asset);
+    let amount: u64 = unwrap_right::<(u1, u256)>(amount);
+    (asset_bits, amount)
+}
+
+fn get_input_explicit_asset_amount(index: u32) -> (u256, u64) {
+    let pair: (Asset1, Amount1) = unwrap(jet::input_amount(index));
+    let (asset, amount): (Asset1, Amount1) = pair;
+    let asset_bits: u256 = unwrap_right::<(u1, u256)>(asset);
+    let amount: u64 = unwrap_right::<(u1, u256)>(amount);
+    (asset_bits, amount)
+}
+
+fn ensure_zero_bit(bit: bool) { 
+    assert!(jet::eq_1(<bool>::into(bit), 0)); 
+}
+
+fn ensure_output_asset_with_amount_eq(index: u32, expected_bits: u256, expected_amount: u64) {
+    let (asset, amount): (u256, u64) = get_output_explicit_asset_amount(index);
+    assert!(jet::eq_256(asset, expected_bits));
+    assert!(jet::eq_64(amount, expected_amount));
+}
+
+fn ensure_output_script_hash_eq(index: u32, expected: u256) {
+    assert!(jet::eq_256(unwrap(jet::output_script_hash(index)), expected));
+}
+
+fn ensure_input_and_output_script_hash_eq(index: u32) {
+    assert!(jet::eq_256(unwrap(jet::input_script_hash(index)), unwrap(jet::output_script_hash(index))));
+}
+
+fn check_user_signature(sig: Signature) {
+    let msg: u256 = jet::sig_all_hash();
+    jet::bip_0340_verify((param::USER_PUBKEY, msg), sig);
+}
+
+fn ensure_correct_change_at_index(index: u32, asset_id: u256, asset_amount_to_spend: u64, contract_script_hash: u256, is_change_needed: bool) {
+    let (asset_bits, available_asset_amount): (u256, u64) = get_input_explicit_asset_amount(index);
+    assert!(jet::eq_256(unwrap(jet::input_script_hash(index)), contract_script_hash));
+    
+    match is_change_needed {
+        true => {
+            ensure_input_and_output_script_hash_eq(index);
+
+            let (carry, asset_change): (bool, u64) = jet::subtract_64(available_asset_amount, asset_amount_to_spend);
+            ensure_zero_bit(carry);
+            ensure_output_asset_with_amount_eq(index, asset_id, asset_change);
+        },
+        false => assert!(jet::eq_64(asset_amount_to_spend, available_asset_amount)),
+    }
+}
+
+/*
+ * Exercise Path
+ * 
+ * Counterparty swaps settlement asset for collateral + premium.
+ * No time restriction - works before and after expiry.
+ * 
+ * Constraints:
+ *   settlement_amount = COLLATERAL_PER_CONTRACT * collateral_amount
+ *   premium_amount = PREMIUM_PER_COLLATERAL * collateral_amount
+ *
+ * Layout:
+ * 
+ * Both:
+ *   Input[0]: Collateral from covenant
+ *   Input[1]: Premium from covenant
+ * 
+ * With change (partial swap):
+ *   Output[0]: Collateral change → covenant
+ *   Output[1]: Premium change → covenant
+ *   Output[2]: Settlement asset → covenant
+ *   Output[3]: Collateral → counterparty
+ *   Output[4]: Premium → counterparty
+ * 
+ * Without change (full swap):
+ *   Output[0]: Settlement asset → covenant
+ *   Output[1]: Collateral → counterparty
+ *   Output[2]: Premium → counterparty
+ */
+fn exercise_path(collateral_amount: u64, is_change_needed: bool) {
+    assert!(jet::le_32(jet::current_index(), 1));
+
+    let expected_covenant_script_hash: u256 = get_input_script_hash(0);
+
+    assert!(jet::eq_256(get_input_script_hash(1), expected_covenant_script_hash));
+
+    let premium_amount_u128: u128 = jet::multiply_64(collateral_amount, param::PREMIUM_PER_COLLATERAL);
+    let (left_part, premium_amount): (u64, u64) = dbg!(<u128>::into(premium_amount_u128));
+    assert!(jet::eq_64(left_part, 0));
+
+    // Check collateral changes
+    ensure_correct_change_at_index(0, param::COLLATERAL_ASSET_ID, collateral_amount, expected_covenant_script_hash, is_change_needed);
+    ensure_correct_change_at_index(1, param::PREMIUM_ASSET_ID, premium_amount, expected_covenant_script_hash, is_change_needed);
+
+    let (settlement_output_index, collateral_output_index, premium_output_index): (u32, u32, u32) = match is_change_needed {
+        true => (2, 3, 4),
+        false => (0, 1, 2),
+    };
+
+    ensure_output_script_hash_eq(settlement_output_index, expected_covenant_script_hash);
+
+    let (output_asset, settlement_amount): (u256, u64) = get_output_explicit_asset_amount(settlement_output_index);
+    assert!(jet::eq_256(output_asset, param::SETTLEMENT_ASSET_ID));
+
+    divmod_eq(settlement_amount, param::COLLATERAL_PER_CONTRACT, collateral_amount);
+
+    ensure_output_asset_with_amount_eq(collateral_output_index, param::COLLATERAL_ASSET_ID, collateral_amount);
+    ensure_output_asset_with_amount_eq(premium_output_index, param::PREMIUM_ASSET_ID, premium_amount);
+}
+
+/*
+ * Withdraw Path
+ * 
+ * User withdraws accumulated settlement asset.
+ * No time restriction.
+ * Requires signature from USER_PUBKEY.
+ * No change - full withdrawal only.
+ * 
+ * Layout:
+ *   Input[0]: Settlement asset from covenant
+ *   Output[0]: Settlement asset → user (any address)
+ */
+fn withdraw_path(sig: Signature) {
+    assert!(jet::eq_32(jet::current_index(), 0));
+
+    let (input_asset, input_amount): (u256, u64) = get_input_explicit_asset_amount(0);
+    assert!(jet::eq_256(input_asset, param::SETTLEMENT_ASSET_ID));
+    
+    check_user_signature(sig);
+    
+    ensure_output_asset_with_amount_eq(0, param::SETTLEMENT_ASSET_ID, input_amount);
+}
+
+/*
+ * Expiry Path
+ * 
+ * User reclaims remaining collateral and premium after expiry.
+ * Only allowed after EXPIRY_TIME.
+ * Requires signature from USER_PUBKEY.
+ * No change - full reclaim only.
+ * 
+ * Layout:
+ *   Input[0]: Collateral from covenant
+ *   Input[1]: Premium from covenant
+ *   Output[0]: Collateral → user (any address)
+ *   Output[1]: Premium → user (any address)
+ */
+fn expiry_path(sig: Signature) {
+    jet::check_lock_time(param::EXPIRY_TIME);
+    
+    assert!(jet::le_32(jet::current_index(), 1));
+    
+    let expected_covenant_script_hash: u256 = get_input_script_hash(0);
+
+    assert!(jet::eq_256(get_input_script_hash(1), expected_covenant_script_hash));
+    
+    let (collateral_asset, collateral_amount): (u256, u64) = get_input_explicit_asset_amount(0);
+    assert!(jet::eq_256(collateral_asset, param::COLLATERAL_ASSET_ID));
+
+    let (premium_asset, premium_amount): (u256, u64) = get_input_explicit_asset_amount(1);
+    assert!(jet::eq_256(premium_asset, param::PREMIUM_ASSET_ID));
+    
+    check_user_signature(sig);
+    
+    ensure_output_asset_with_amount_eq(0, param::COLLATERAL_ASSET_ID, collateral_amount);
+    ensure_output_asset_with_amount_eq(1, param::PREMIUM_ASSET_ID, premium_amount);
+}
+
+fn main() {
+    match witness::PATH {
+        Left(params: (u64, bool)) => {
+            let (collateral_amount, is_change_needed): (u64, bool) = params;
+            exercise_path(collateral_amount, is_change_needed)
+        },
+        Right(withdraw_or_expiry: Either<Signature, Signature>) => match withdraw_or_expiry {
+            Left(sig: Signature) => withdraw_path(sig),
+            Right(sig: Signature) => expiry_path(sig),
+        },
+    }
+}

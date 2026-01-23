@@ -7,5 +7,11 @@ edition = "2021"
 lwk_common = { version = "0.14.0" }
 
 simplicityhl = { version = "0.4.0" }
+elements = { version = "0.25.0", features = ["base64", "serde"] }
+rand = "0.8"
 
 thiserror = "2"
+
+[dev-dependencies]
+lwk_test_util = { version = "0.14.0" }
+lwk_signer = { version = "0.14.0" }

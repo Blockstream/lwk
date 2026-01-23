@@ -2554,7 +2554,11 @@ dependencies = [
 name = "lwk_simplicity_options"
 version = "0.1.0"
 dependencies = [
+ "elements 0.25.2",
  "lwk_common",
+ "lwk_signer",
+ "lwk_test_util",
+ "rand 0.8.5",
  "simplicityhl",
  "thiserror 2.0.17",
 ]

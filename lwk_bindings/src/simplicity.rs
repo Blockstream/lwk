@@ -104,12 +104,17 @@ impl SimplicityWitnessValues {
     fn to_inner(&self) -> simplicityhl::WitnessValues {
         simplicityhl::WitnessValues::from(convert_values_to_map(&self.inner))
     }
+
+    /// Get access to the inner HashMap for crate-internal use
+    pub(crate) fn inner_map(&self) -> &HashMap<String, SimplicityValue> {
+        &self.inner
+    }
 }
 
 /// A compiled Simplicity program ready for use in transactions.
 #[derive(uniffi::Object)]
 pub struct SimplicityProgram {
-    inner: simplicityhl::CompiledProgram,
+    pub(crate) inner: simplicityhl::CompiledProgram,
 }
 
 #[uniffi::export]

@@ -12,7 +12,7 @@ use lwk_simplicity_options::utils::{
 };
 
 use crate::blockdata::tx_out::TxOut;
-use crate::types::Hex;
+use crate::types::{Hex, XOnlyPublicKey};
 use crate::{Address, LwkError, Network, Transaction};
 
 /// Log level for Simplicity program execution tracing.
@@ -142,29 +142,18 @@ pub fn simplicity_load_program(
 ///
 /// # Arguments
 /// * `program` - The compiled Simplicity program
-/// * `internal_key` - The x-only public key (32 bytes hex)
+/// * `internal_key` - The x-only public key
 /// * `network` - The network for address encoding
 ///
 /// # Returns
 /// The P2TR address that locks funds to this program.
-// TODO(KyrylR): Add a proper XOnlyPublicKey type in lwk_bindings instead of using Hex.
 #[uniffi::export]
 pub fn simplicity_create_p2tr_address(
     program: &SimplicityProgram,
-    internal_key: Hex,
+    internal_key: XOnlyPublicKey,
     network: &Network,
 ) -> Result<Arc<Address>, LwkError> {
-    let key_bytes: [u8; 32] = internal_key
-        .as_ref()
-        .try_into()
-        .map_err(|_| LwkError::Generic {
-            msg: "internal_key must be exactly 32 bytes".to_string(),
-        })?;
-
-    let x_only_key = simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(&key_bytes)
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid x-only public key: {e}"),
-        })?;
+    let x_only_key = internal_key.to_simplicityhl()?;
 
     let params = network_to_address_params(network.into());
     let cmr = program.inner.commit().cmr();
@@ -177,26 +166,16 @@ pub fn simplicity_create_p2tr_address(
 ///
 /// # Arguments
 /// * `program` - The compiled Simplicity program
-/// * `internal_key` - The x-only public key (32 bytes hex)
+/// * `internal_key` - The x-only public key
 ///
 /// # Returns
 /// The serialized control block as hex.
 #[uniffi::export]
 pub fn simplicity_control_block(
     program: &SimplicityProgram,
-    internal_key: Hex,
+    internal_key: XOnlyPublicKey,
 ) -> Result<Hex, LwkError> {
-    let key_bytes: [u8; 32] = internal_key
-        .as_ref()
-        .try_into()
-        .map_err(|_| LwkError::Generic {
-            msg: "internal_key must be exactly 32 bytes".to_string(),
-        })?;
-
-    let x_only_key = simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(&key_bytes)
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid x-only public key: {e}"),
-        })?;
+    let x_only_key = internal_key.to_simplicityhl()?;
 
     let cmr = program.inner.commit().cmr();
     let control_block = scripts::control_block(cmr, x_only_key);
@@ -209,7 +188,7 @@ pub fn simplicity_control_block(
 /// # Arguments
 /// * `tx` - The transaction to sign
 /// * `program` - The compiled Simplicity program
-/// * `program_public_key` - The x-only public key used in the address (32 bytes hex)
+/// * `program_public_key` - The x-only public key used in the address
 /// * `utxos` - The UTXOs being spent (in input order)
 /// * `input_index` - The index of the input being signed
 /// * `network` - The network
@@ -221,24 +200,13 @@ pub fn simplicity_control_block(
 pub fn simplicity_get_sighash_all(
     tx: &Transaction,
     program: &SimplicityProgram,
-    program_public_key: Hex,
+    program_public_key: XOnlyPublicKey,
     utxos: Vec<Arc<TxOut>>,
     input_index: u32,
     network: &Network,
     genesis_hash: Hex,
 ) -> Result<Hex, LwkError> {
-    let key_bytes: [u8; 32] =
-        program_public_key
-            .as_ref()
-            .try_into()
-            .map_err(|_| LwkError::Generic {
-                msg: "program_public_key must be exactly 32 bytes".to_string(),
-            })?;
-
-    let x_only_key = simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(&key_bytes)
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid x-only public key: {e}"),
-        })?;
+    let x_only_key = program_public_key.to_simplicityhl()?;
 
     let genesis = get_genesis_hash(&genesis_hash)?;
     let params = network_to_address_params(network.into());
@@ -266,7 +234,7 @@ pub fn simplicity_get_sighash_all(
 /// # Arguments
 /// * `tx` - The transaction to finalize
 /// * `program` - The compiled Simplicity program
-/// * `program_public_key` - The x-only public key used in the address (32 bytes hex)
+/// * `program_public_key` - The x-only public key used in the address
 /// * `utxos` - The UTXOs being spent (in input order)
 /// * `input_index` - The index of the input being finalized
 /// * `witness_values` - Runtime witness values (e.g., signatures)
@@ -281,7 +249,7 @@ pub fn simplicity_get_sighash_all(
 pub fn simplicity_finalize_transaction(
     tx: &Transaction,
     program: &SimplicityProgram,
-    program_public_key: Hex,
+    program_public_key: XOnlyPublicKey,
     utxos: Vec<Arc<TxOut>>,
     input_index: u32,
     witness_values: &SimplicityWitnessValues,
@@ -289,18 +257,7 @@ pub fn simplicity_finalize_transaction(
     genesis_hash: Hex,
     log_level: SimplicityLogLevel,
 ) -> Result<Arc<Transaction>, LwkError> {
-    let key_bytes: [u8; 32] =
-        program_public_key
-            .as_ref()
-            .try_into()
-            .map_err(|_| LwkError::Generic {
-                msg: "program_public_key must be exactly 32 bytes".to_string(),
-            })?;
-
-    let x_only_key = simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_slice(&key_bytes)
-        .map_err(|e| LwkError::Generic {
-            msg: format!("Invalid x-only public key: {e}"),
-        })?;
+    let x_only_key = program_public_key.to_simplicityhl()?;
 
     let genesis = get_genesis_hash(&genesis_hash)?;
     let params = network_to_address_params(network.into());
@@ -397,12 +354,12 @@ pub fn simplicity_create_p2pk_signature(
 /// * `derivation_path` - The BIP32 derivation path (e.g., "m/86'/1'/0'/0/0")
 ///
 /// # Returns
-/// The 32-byte x-only public key as hex.
+/// The x-only public key.
 #[uniffi::export]
 pub fn simplicity_derive_xonly_pubkey(
     signer: &crate::Signer,
     derivation_path: String,
-) -> Result<Hex, LwkError> {
+) -> Result<XOnlyPublicKey, LwkError> {
     let path = DerivationPath::from_str(&derivation_path).map_err(|e| LwkError::Generic {
         msg: format!("Invalid derivation path: {e}"),
     })?;
@@ -413,9 +370,7 @@ pub fn simplicity_derive_xonly_pubkey(
         &derived_xprv.private_key,
     );
 
-    let (xonly, _parity) = keypair.x_only_public_key();
-
-    Ok(Hex::from(xonly.serialize().to_vec()))
+    Ok(XOnlyPublicKey::from_keypair(&keypair))
 }
 
 fn get_genesis_hash(genesis_hash: &Hex) -> Result<simplicityhl::elements::BlockHash, LwkError> {

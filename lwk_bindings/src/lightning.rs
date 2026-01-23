@@ -160,6 +160,91 @@ pub enum PaymentState {
     Failed,
 }
 
+/// Asset type for swap quotes
+#[derive(uniffi::Enum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SwapAsset {
+    /// Lightning Bitcoin (for reverse/submarine swaps)
+    LightningBtc,
+    /// Onchain Bitcoin (for chain swaps)
+    OnchainBtc,
+    /// Liquid Bitcoin (onchain)
+    Liquid,
+}
+
+impl From<SwapAsset> for lwk_boltz::SwapAsset {
+    fn from(asset: SwapAsset) -> Self {
+        match asset {
+            SwapAsset::LightningBtc => lwk_boltz::SwapAsset::LightningBtc,
+            SwapAsset::OnchainBtc => lwk_boltz::SwapAsset::OnchainBtc,
+            SwapAsset::Liquid => lwk_boltz::SwapAsset::Liquid,
+        }
+    }
+}
+
+/// Quote result containing fee breakdown for a swap
+#[derive(uniffi::Record)]
+pub struct Quote {
+    /// Amount the user will receive after fees
+    pub receive_amount: u64,
+    /// Network/miner fee in satoshis
+    pub network_fee: u64,
+    /// Boltz service fee in satoshis
+    pub boltz_fee: u64,
+    /// Minimum amount for this swap pair
+    pub min: u64,
+    /// Maximum amount for this swap pair
+    pub max: u64,
+}
+
+impl From<lwk_boltz::Quote> for Quote {
+    fn from(quote: lwk_boltz::Quote) -> Self {
+        Self {
+            receive_amount: quote.receive_amount,
+            network_fee: quote.network_fee,
+            boltz_fee: quote.boltz_fee,
+            min: quote.min,
+            max: quote.max,
+        }
+    }
+}
+
+/// Builder for creating swap quotes
+#[derive(uniffi::Object)]
+pub struct QuoteBuilder {
+    inner: Mutex<Option<lwk_boltz::QuoteBuilder>>,
+}
+
+fn quote_builder_consumed() -> LwkError {
+    "This quote builder has already been consumed".into()
+}
+
+#[uniffi::export]
+impl QuoteBuilder {
+    /// Set the source asset for the swap
+    pub fn send(&self, asset: SwapAsset) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        *lock = Some(builder.send(asset.into()));
+        Ok(())
+    }
+
+    /// Set the destination asset for the swap
+    pub fn receive(&self, asset: SwapAsset) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        *lock = Some(builder.receive(asset.into()));
+        Ok(())
+    }
+
+    /// Build the quote, calculating fees and receive amount
+    pub fn build(&self) -> Result<Quote, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let builder = lock.take().ok_or_else(quote_builder_consumed)?;
+        let quote = builder.build()?;
+        Ok(quote.into())
+    }
+}
+
 #[derive(uniffi::Object)]
 pub enum AnyClient {
     Electrum(Arc<ElectrumClient>),
@@ -544,6 +629,15 @@ impl BoltzSession {
         Ok(result_json)
     }
 
+    /// Refresh the cached pairs data from the Boltz API
+    ///
+    /// This updates the internal cache used by [`BoltzSession::quote()`].
+    /// Call this if you need up-to-date fee information after the session was created.
+    pub fn refresh_swap_info(&self) -> Result<(), LwkError> {
+        self.inner.refresh_swap_info()?;
+        Ok(())
+    }
+
     /// Get the next index to use for deriving keypairs
     pub fn next_index_to_use(&self) -> u32 {
         self.inner.next_index_to_use()
@@ -554,6 +648,23 @@ impl BoltzSession {
     /// This may be necessary to handle multiple sessions with the same mnemonic.
     pub fn set_next_index_to_use(&self, next_index_to_use: u32) {
         self.inner.set_next_index_to_use(next_index_to_use);
+    }
+
+    /// Create a quote builder for calculating swap fees
+    ///
+    /// This uses the cached pairs data from session initialization.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let builder = session.quote(25000);
+    /// builder.send(SwapAsset::LightningBtc);
+    /// builder.receive(SwapAsset::Liquid);
+    /// let quote = builder.build()?;
+    /// ```
+    pub fn quote(&self, send_amount: u64) -> Arc<QuoteBuilder> {
+        Arc::new(QuoteBuilder {
+            inner: Mutex::new(Some(self.inner.quote(send_amount))),
+        })
     }
 }
 

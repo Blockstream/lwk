@@ -70,7 +70,7 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 
 pub use crate::contract::Contract;
 pub use crate::signer::{Bip, Signer};
-pub use crate::types::{PublicKey, Sequence, XOnlyPublicKey};
+pub use crate::types::{PublicKey, TxSequence, XOnlyPublicKey};
 pub use crate::wollet::Wollet;
 pub use chain::Chain;
 pub use currency_code::CurrencyCode;

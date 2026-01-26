@@ -70,8 +70,8 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 pub use crate::contract::Contract;
 pub use crate::signer::{Bip, Signer};
 pub use crate::types::{
-    AssetBlindingFactor, Keypair, LockTime, PublicKey, Tweak, TxSequence, ValueBlindingFactor,
-    XOnlyPublicKey,
+    simplicity_control_block, AssetBlindingFactor, ControlBlock, Keypair, LockTime, PublicKey,
+    Tweak, TxSequence, ValueBlindingFactor, XOnlyPublicKey,
 };
 pub use crate::wollet::Wollet;
 pub use chain::Chain;

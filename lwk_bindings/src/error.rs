@@ -243,6 +243,30 @@ impl From<elements::UnblindError> for LwkError {
     }
 }
 
+impl From<elements::bitcoin::taproot::TaprootBuilderError> for LwkError {
+    fn from(value: elements::bitcoin::taproot::TaprootBuilderError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::bitcoin::taproot::TaprootError> for LwkError {
+    fn from(value: elements::bitcoin::taproot::TaprootError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<elements::bitcoin::taproot::HiddenNodesError> for LwkError {
+    fn from(value: elements::bitcoin::taproot::HiddenNodesError) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
         LwkError::Generic {

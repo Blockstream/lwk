@@ -1,3 +1,4 @@
+use std::array::TryFromSliceError;
 use std::sync::{MutexGuard, PoisonError};
 
 use elements::pset::ParseError;
@@ -244,6 +245,14 @@ impl From<elements::UnblindError> for LwkError {
 
 impl From<lwk_wollet::elements_miniscript::psbt::Error> for LwkError {
     fn from(value: lwk_wollet::elements_miniscript::psbt::Error) -> Self {
+        LwkError::Generic {
+            msg: format!("{value:?}"),
+        }
+    }
+}
+
+impl From<TryFromSliceError> for LwkError {
+    fn from(value: TryFromSliceError) -> Self {
         LwkError::Generic {
             msg: format!("{value:?}"),
         }

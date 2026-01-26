@@ -85,7 +85,7 @@ pub use network::Network;
 pub use persister::{ForeignPersister, ForeignPersisterLink};
 pub use pos::PosConfig;
 pub use precision::Precision;
-pub use pset::{Pset, PsetInput};
+pub use pset::{Pset, PsetInput, PsetOutput};
 pub use pset_details::{Issuance, PsetDetails};
 pub use store::{ForeignStore, ForeignStoreLink};
 pub use test_env::{LwkTestEnv, LwkTestStore};

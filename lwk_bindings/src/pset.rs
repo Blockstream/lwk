@@ -1,5 +1,8 @@
-use crate::{types::AssetId, Issuance, LwkError, Script, Transaction, Txid};
-use elements::pset::{Input, PartiallySignedTransaction};
+use crate::types::{AssetId, Hex, Tweak};
+use crate::{
+    Issuance, LwkError, OutPoint, PublicKey, Script, Transaction, TxOut, TxSequence, Txid,
+};
+use elements::pset::{Input, Output, PartiallySignedTransaction};
 use elements::{hashes::Hash, BlockHash};
 use lwk_wollet::elements_miniscript::psbt::finalize;
 use lwk_wollet::EC;
@@ -86,9 +89,15 @@ impl Pset {
 }
 
 /// PSET input
-#[derive(uniffi::Object, Debug)]
+#[derive(uniffi::Object, Debug, Clone)]
 pub struct PsetInput {
     inner: Input,
+}
+
+impl AsRef<Input> for PsetInput {
+    fn as_ref(&self) -> &Input {
+        &self.inner
+    }
 }
 
 impl From<Input> for PsetInput {
@@ -99,6 +108,64 @@ impl From<Input> for PsetInput {
 
 #[uniffi::export]
 impl PsetInput {
+    /// Construct a PsetInput from an outpoint.
+    #[uniffi::constructor]
+    pub fn from_prevout(outpoint: &OutPoint) -> Arc<Self> {
+        Arc::new(Self {
+            inner: Input::from_prevout(outpoint.into()),
+        })
+    }
+
+    /// Set the witness UTXO
+    pub fn with_witness_utxo(&self, utxo: &TxOut) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.witness_utxo = Some(utxo.into());
+        Arc::new(Self { inner: new })
+    }
+
+    /// Set the sequence number
+    pub fn with_sequence(&self, sequence: &TxSequence) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.sequence = Some((*sequence).into());
+        Arc::new(Self { inner: new })
+    }
+
+    /// Set the issuance value amount
+    pub fn with_issuance_value_amount(&self, amount: u64) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.issuance_value_amount = Some(amount);
+        Arc::new(Self { inner: new })
+    }
+
+    /// Set the issuance inflation keys
+    pub fn with_issuance_inflation_keys(&self, amount: Option<u64>) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.issuance_inflation_keys = amount;
+        Arc::new(Self { inner: new })
+    }
+
+    /// Set the issuance asset entropy
+    pub fn with_issuance_asset_entropy(&self, entropy: &Hex) -> Result<Arc<Self>, LwkError> {
+        let bytes: [u8; 32] = entropy.as_ref().try_into()?;
+        let mut new = self.inner.clone();
+        new.issuance_asset_entropy = Some(bytes);
+        Ok(Arc::new(Self { inner: new }))
+    }
+
+    /// Set the blinded issuance flag
+    pub fn with_blinded_issuance(&self, flag: u8) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.blinded_issuance = Some(flag);
+        Arc::new(Self { inner: new })
+    }
+
+    /// Set the issuance blinding nonce
+    pub fn with_issuance_blinding_nonce(&self, nonce: &Tweak) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.issuance_blinding_nonce = Some(nonce.into());
+        Arc::new(Self { inner: new })
+    }
+
     /// Prevout TXID of the input
     pub fn previous_txid(&self) -> Arc<Txid> {
         Arc::new(self.inner.previous_txid.into())
@@ -152,9 +219,82 @@ impl PsetInput {
     }
 }
 
+/// PSET output
+#[derive(uniffi::Object, Debug, Clone)]
+pub struct PsetOutput {
+    inner: Output,
+}
+
+impl From<Output> for PsetOutput {
+    fn from(inner: Output) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<&PsetOutput> for Output {
+    fn from(value: &PsetOutput) -> Self {
+        value.inner.clone()
+    }
+}
+
+impl AsRef<Output> for PsetOutput {
+    fn as_ref(&self) -> &Output {
+        &self.inner
+    }
+}
+
+#[uniffi::export]
+impl PsetOutput {
+    /// Construct a PsetOutput with explicit asset and value.
+    #[uniffi::constructor]
+    pub fn new_explicit(
+        script_pubkey: &Script,
+        satoshi: u64,
+        asset: AssetId,
+        blinding_key: Option<Arc<PublicKey>>,
+    ) -> Arc<Self> {
+        let inner = Output {
+            script_pubkey: script_pubkey.into(),
+            amount: Some(satoshi),
+            asset: Some(asset.into()),
+            blinding_key: blinding_key.map(|k| k.as_ref().into()),
+            ..Default::default()
+        };
+        Arc::new(Self { inner })
+    }
+
+    /// Set the blinder index
+    pub fn with_blinder_index(&self, index: Option<u32>) -> Arc<Self> {
+        let mut new = self.inner.clone();
+        new.blinder_index = index;
+        Arc::new(Self { inner: new })
+    }
+
+    /// Get the script pubkey.
+    pub fn script_pubkey(&self) -> Arc<Script> {
+        Arc::new(self.inner.script_pubkey.clone().into())
+    }
+
+    /// Get the explicit amount, if set.
+    pub fn amount(&self) -> Option<u64> {
+        self.inner.amount
+    }
+
+    /// Get the explicit asset ID, if set.
+    pub fn asset(&self) -> Option<AssetId> {
+        self.inner.asset.map(Into::into)
+    }
+
+    /// Get the blinder index, if set.
+    pub fn blinder_index(&self) -> Option<u32> {
+        self.inner.blinder_index
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Pset;
+    use crate::{OutPoint, Script, TxSequence, Txid};
 
     #[test]
     fn pset_roundtrip() {
@@ -205,5 +345,32 @@ mod tests {
             // sequence number is 0xffffffff, unique id set it to 0 before computing the hash, so txid is different
             assert_ne!(unique_id, *pset.extract_tx().unwrap().txid());
         }
+    }
+
+    #[test]
+    fn pset_input_builder() {
+        let txid = Txid::new(
+            &"0000000000000000000000000000000000000000000000000000000000000001"
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
+        let outpoint = OutPoint::from_parts(&txid, 0);
+        let input = super::PsetInput::from_prevout(&outpoint);
+        let input = input.with_sequence(&TxSequence::zero());
+        assert_eq!(input.previous_vout(), 0);
+    }
+
+    #[test]
+    fn pset_output_builder() {
+        let script = Script::empty();
+        let asset: crate::types::AssetId = crate::UniffiCustomTypeConverter::into_custom(
+            "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d".to_string(),
+        )
+        .unwrap();
+        let output = super::PsetOutput::new_explicit(&script, 1000, asset, None);
+        let output = output.with_blinder_index(Some(0));
+        assert_eq!(output.amount(), Some(1000));
+        assert_eq!(output.blinder_index(), Some(0));
     }
 }

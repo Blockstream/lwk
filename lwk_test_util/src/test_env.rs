@@ -135,6 +135,8 @@ impl TestEnvBuilder {
             "-rest",
             "-txindex=1",
             "-evbparams=simplicity:-1:::", // Enable Simplicity from block 0
+            "-minrelaytxfee=0",            // test tx with no fees/asset fees
+            "-blockmintxfee=0",            // test tx with no fees/asset fees
         ];
         if let Some(bitcoind) = bitcoind.as_ref() {
             //TODO remove this bad code once Conf::args is not Vec<&str>

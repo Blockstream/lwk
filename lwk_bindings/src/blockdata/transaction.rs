@@ -7,10 +7,14 @@ use elements::{
 use lwk_wollet::{WalletTx, EC};
 
 use crate::{
+    blockdata::tx_in_witness::TxInWitness,
     types::{AssetId, Hex},
     LwkError, TxIn, TxOut, Txid,
 };
-use std::{fmt::Display, sync::Arc};
+use std::{
+    fmt::Display,
+    sync::{Arc, Mutex},
+};
 
 /// A Liquid transaction
 #[derive(uniffi::Object, PartialEq, Eq, Debug, Clone)]
@@ -111,6 +115,58 @@ impl Transaction {
         let utxos_inner: Vec<elements::TxOut> = utxos.iter().map(|u| u.as_ref().into()).collect();
         self.inner.verify_tx_amt_proofs(&EC, &utxos_inner)?;
         Ok(())
+    }
+}
+
+/// Builder for modifying transactions.
+///
+/// See [`elements::Transaction`] for more details.
+#[derive(uniffi::Object, Debug)]
+pub struct TransactionBuilder {
+    inner: Mutex<Option<elements::Transaction>>,
+}
+
+fn builder_consumed() -> LwkError {
+    LwkError::ObjectConsumed
+}
+
+#[uniffi::export]
+impl TransactionBuilder {
+    /// Create a builder from an existing transaction.
+    #[uniffi::constructor]
+    pub fn from_transaction(tx: &Transaction) -> Arc<Self> {
+        Arc::new(Self {
+            inner: Mutex::new(Some(tx.inner.clone())),
+        })
+    }
+
+    /// Set the witness for a specific input.
+    pub fn set_input_witness(
+        &self,
+        input_index: u32,
+        witness: &TxInWitness,
+    ) -> Result<(), LwkError> {
+        let idx = input_index as usize;
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(builder_consumed)?;
+        if idx >= inner.input.len() {
+            return Err(LwkError::Generic {
+                msg: format!(
+                    "Input index {} out of bounds (transaction has {} inputs)",
+                    input_index,
+                    inner.input.len()
+                ),
+            });
+        }
+        inner.input[idx].witness = witness.as_ref().clone();
+        Ok(())
+    }
+
+    /// Build the transaction, consuming the builder.
+    pub fn build(&self) -> Result<Arc<Transaction>, LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.take().ok_or_else(builder_consumed)?;
+        Ok(Arc::new(Transaction { inner }))
     }
 }
 

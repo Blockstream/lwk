@@ -58,7 +58,7 @@ pub use blockdata::block_header::BlockHeader;
 pub use blockdata::external_utxo::ExternalUtxo;
 pub use blockdata::out_point::OutPoint;
 pub use blockdata::script::Script;
-pub use blockdata::transaction::Transaction;
+pub use blockdata::transaction::{Transaction, TransactionBuilder};
 pub use blockdata::tx_in::TxIn;
 pub use blockdata::tx_in_witness::{TxInWitness, TxInWitnessBuilder};
 pub use blockdata::tx_out::TxOut;

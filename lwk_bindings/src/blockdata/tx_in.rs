@@ -1,6 +1,6 @@
 //! Liquid transaction input
 
-use crate::OutPoint;
+use crate::{blockdata::tx_in_witness::TxInWitness, OutPoint};
 use std::sync::Arc;
 
 /// A transaction input.
@@ -26,5 +26,15 @@ impl TxIn {
     /// Outpoint
     pub fn outpoint(&self) -> Arc<OutPoint> {
         Arc::new(self.inner.previous_output.into())
+    }
+
+    /// Get the witness for this input.
+    pub fn witness(&self) -> Arc<TxInWitness> {
+        Arc::new(self.inner.witness.clone().into())
+    }
+
+    /// Get the sequence number for this input.
+    pub fn sequence(&self) -> u32 {
+        self.inner.sequence.0
     }
 }

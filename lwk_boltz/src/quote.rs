@@ -22,9 +22,9 @@ const LIQUID_UNCOOPERATIVE_EXTRA: u64 = 3;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SwapAsset {
     /// Lightning Bitcoin (for reverse/submarine swaps)
-    LightningBtc,
+    Lightning,
     /// Onchain Bitcoin (for chain swaps)
-    OnchainBtc,
+    Onchain,
     /// Liquid Bitcoin (onchain)
     Liquid,
 }
@@ -53,7 +53,7 @@ pub struct Quote {
 /// let quote = session
 ///     .quote(25000)
 ///     .await
-///     .send(SwapAsset::LightningBtc)
+///     .send(SwapAsset::Lightning)
 ///     .receive(SwapAsset::Liquid)
 ///     .build()?;
 /// ```
@@ -109,7 +109,7 @@ impl QuoteBuilder {
         let to = self.to.ok_or(Error::MissingQuoteParam("receive"))?;
 
         match (from, to) {
-            (SwapAsset::LightningBtc, SwapAsset::Liquid) => {
+            (SwapAsset::Lightning, SwapAsset::Liquid) => {
                 // Reverse swap: Lightning -> Liquid
                 // From Boltz web app: fee = claim + lockup + LIQUID_UNCOOPERATIVE_EXTRA
                 let pair = self
@@ -128,7 +128,7 @@ impl QuoteBuilder {
                     max: pair.limits.maximal,
                 })
             }
-            (SwapAsset::Liquid, SwapAsset::LightningBtc) => {
+            (SwapAsset::Liquid, SwapAsset::Lightning) => {
                 // Submarine swap: Liquid -> Lightning
                 let pair = self
                     .swap_info
@@ -145,7 +145,7 @@ impl QuoteBuilder {
                     max: pair.limits.maximal,
                 })
             }
-            (SwapAsset::OnchainBtc, SwapAsset::Liquid) => {
+            (SwapAsset::Onchain, SwapAsset::Liquid) => {
                 // Chain swap: BTC -> L-BTC
                 // From Boltz web app: fee = server + user.claim + LIQUID_UNCOOPERATIVE_EXTRA
                 let pair = self
@@ -164,7 +164,7 @@ impl QuoteBuilder {
                     max: pair.limits.maximal,
                 })
             }
-            (SwapAsset::Liquid, SwapAsset::OnchainBtc) => {
+            (SwapAsset::Liquid, SwapAsset::Onchain) => {
                 // Chain swap: L-BTC -> BTC
                 // From Boltz web app: fee = server + user.claim
                 let pair = self
@@ -209,7 +209,7 @@ mod tests {
     fn test_quote_builder_reverse() {
         // Test reverse swap: Lightning -> Liquid (25000 sats)
         let quote = QuoteBuilder::new(25000, load_test_pairs())
-            .send(SwapAsset::LightningBtc)
+            .send(SwapAsset::Lightning)
             .receive(SwapAsset::Liquid)
             .build()
             .unwrap();
@@ -232,7 +232,7 @@ mod tests {
         // Test submarine swap: Liquid -> Lightning (25000 sats) to match screenshot
         let quote = QuoteBuilder::new(25000, load_test_pairs())
             .send(SwapAsset::Liquid)
-            .receive(SwapAsset::LightningBtc)
+            .receive(SwapAsset::Lightning)
             .build()
             .unwrap();
 
@@ -254,7 +254,7 @@ mod tests {
         // Test chain swap: L-BTC -> BTC (25000 sats) to match screenshot
         let quote = QuoteBuilder::new(25000, load_test_pairs())
             .send(SwapAsset::Liquid)
-            .receive(SwapAsset::OnchainBtc)
+            .receive(SwapAsset::Onchain)
             .build()
             .unwrap();
 
@@ -275,7 +275,7 @@ mod tests {
     fn test_quote_builder_chain_btc_to_lbtc() {
         // Test chain swap: BTC -> L-BTC (50000 sats)
         let quote = QuoteBuilder::new(50000, load_test_pairs())
-            .send(SwapAsset::OnchainBtc)
+            .send(SwapAsset::Onchain)
             .receive(SwapAsset::Liquid)
             .build()
             .unwrap();
@@ -297,16 +297,16 @@ mod tests {
         // Test invalid pair: Lightning -> Lightning
         let swap_info = load_test_pairs();
         let result = QuoteBuilder::new(25000, swap_info.clone())
-            .send(SwapAsset::LightningBtc)
-            .receive(SwapAsset::LightningBtc)
+            .send(SwapAsset::Lightning)
+            .receive(SwapAsset::Lightning)
             .build();
 
         assert!(matches!(result, Err(Error::InvalidSwapPair { .. })));
 
-        // Test invalid pair: OnchainBtc -> OnchainBtc
+        // Test invalid pair: Onchain -> Onchain
         let result = QuoteBuilder::new(25000, swap_info)
-            .send(SwapAsset::OnchainBtc)
-            .receive(SwapAsset::OnchainBtc)
+            .send(SwapAsset::Onchain)
+            .receive(SwapAsset::Onchain)
             .build();
 
         assert!(matches!(result, Err(Error::InvalidSwapPair { .. })));
@@ -324,7 +324,7 @@ mod tests {
 
         // Test missing 'receive' param
         let result = QuoteBuilder::new(25000, swap_info)
-            .send(SwapAsset::LightningBtc)
+            .send(SwapAsset::Lightning)
             .build();
 
         assert!(matches!(result, Err(Error::MissingQuoteParam("receive"))));

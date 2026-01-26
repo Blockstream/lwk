@@ -313,7 +313,7 @@ impl BoltzSession {
     /// let quote = session
     ///     .quote(25000)
     ///     .await
-    ///     .send(SwapAsset::LightningBtc)
+    ///     .send(SwapAsset::Lightning)
     ///     .receive(SwapAsset::Liquid)
     ///     .build()?;
     ///

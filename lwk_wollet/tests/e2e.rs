@@ -1,4 +1,5 @@
 mod amp0;
+mod fees;
 mod prune;
 #[cfg(feature = "registry")]
 mod registry;

@@ -27,12 +27,12 @@ assert len(genesis_hash) == 64
 args = SimplicityArguments()
 args = args.add_bytes("PUBLIC_KEY", TEST_PUBLIC_KEY)
 
-program = simplicity_load_program(P2PK_SOURCE, args)
+program = SimplicityProgram.load(P2PK_SOURCE, args)
 cmr = program.cmr()
 assert cmr == TEST_CMR
 
 # Test creating P2TR address for p2pk program
-address = simplicity_create_p2tr_address(program, XOnlyPublicKey(TEST_PUBLIC_KEY), network)
+address = program.create_p2tr_address(XOnlyPublicKey(TEST_PUBLIC_KEY), network)
 assert address is not None
 assert str(address) == TEST_ADDRESS
 
@@ -55,8 +55,8 @@ assert utxo.value() == TEST_UTXO_VALUE
 # Test full transaction finalization with real test vectors
 tx = Transaction(TEST_UNSIGNED_TX)
 
-finalized_tx = simplicity_finalize_transaction(
-    tx, program, XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0,
+finalized_tx = program.finalize_transaction(
+    tx, XOnlyPublicKey(TEST_PUBLIC_KEY), [utxo], 0,
     witness, network, genesis_hash, SimplicityLogLevel.NONE
 )
 

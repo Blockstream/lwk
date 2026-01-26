@@ -184,6 +184,8 @@ impl From<SwapAsset> for lwk_boltz::SwapAsset {
 /// Quote result containing fee breakdown for a swap
 #[derive(uniffi::Record)]
 pub struct Quote {
+    /// Amount the user sends (before fees)
+    pub send_amount: u64,
     /// Amount the user will receive after fees
     pub receive_amount: u64,
     /// Network/miner fee in satoshis
@@ -199,6 +201,7 @@ pub struct Quote {
 impl From<lwk_boltz::Quote> for Quote {
     fn from(quote: lwk_boltz::Quote) -> Self {
         Self {
+            send_amount: quote.send_amount,
             receive_amount: quote.receive_amount,
             network_fee: quote.network_fee,
             boltz_fee: quote.boltz_fee,
@@ -664,6 +667,25 @@ impl BoltzSession {
     pub fn quote(&self, send_amount: u64) -> Arc<QuoteBuilder> {
         Arc::new(QuoteBuilder {
             inner: Mutex::new(Some(self.inner.quote(send_amount))),
+        })
+    }
+
+    /// Create a quote builder for calculating send amount from desired receive amount
+    ///
+    /// This is the inverse of [`BoltzSession::quote()`] - given the amount you want
+    /// to receive, it calculates how much you need to send.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let builder = session.quote_receive(24887);
+    /// builder.send(SwapAsset::Lightning);
+    /// builder.receive(SwapAsset::Liquid);
+    /// let quote = builder.build()?;
+    /// // quote.send_amount will be 25000
+    /// ```
+    pub fn quote_receive(&self, receive_amount: u64) -> Arc<QuoteBuilder> {
+        Arc::new(QuoteBuilder {
+            inner: Mutex::new(Some(self.inner.quote_receive(receive_amount))),
         })
     }
 }

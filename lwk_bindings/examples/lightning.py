@@ -391,6 +391,23 @@ def get_quote(boltz_session):
     """Get a quote for a swap showing fees before creating it"""
     # Refresh swap info to ensure quote uses latest fees/limits
     boltz_session.refresh_swap_info()
+    
+    # Ask whether to specify send or receive amount
+    print("\nQuote by:")
+    print("  1) Send amount (how much will I receive?)")
+    print("  2) Receive amount (how much do I need to send?)")
+    
+    while True:
+        mode_choice = input("Select mode (1-2): ").strip()
+        if mode_choice == '1':
+            quote_by_receive = False
+            break
+        elif mode_choice == '2':
+            quote_by_receive = True
+            break
+        else:
+            print("Invalid choice. Please enter 1 or 2.")
+    
     print("\nSwap Asset Types:")
     print("  1) Lightning BTC")
     print("  2) Onchain BTC")
@@ -433,9 +450,14 @@ def get_quote(boltz_session):
             print("Invalid choice. Please enter 1, 2, or 3.")
     
     # Get amount
+    if quote_by_receive:
+        prompt = "Enter desired receive amount in satoshis: "
+    else:
+        prompt = "Enter send amount in satoshis: "
+    
     while True:
         try:
-            amount_str = input("Enter amount in satoshis: ").strip()
+            amount_str = input(prompt).strip()
             amount = int(amount_str)
             if amount <= 0:
                 print("Amount must be positive. Please try again.")
@@ -445,14 +467,18 @@ def get_quote(boltz_session):
             print("Invalid amount. Please enter a valid number.")
     
     try:
-        # Create quote
-        builder = boltz_session.quote(amount)
+        # Create quote using appropriate method
+        if quote_by_receive:
+            builder = boltz_session.quote_receive(amount)
+        else:
+            builder = boltz_session.quote(amount)
+        
         builder.send(from_asset)
         builder.receive(to_asset)
         quote = builder.build()
         
         print(f"\n=== Quote: {from_name} → {to_name} ===")
-        print(f"Send amount:    {amount:,} sats")
+        print(f"Send amount:    {quote.send_amount:,} sats")
         print(f"Receive amount: {quote.receive_amount:,} sats")
         print(f"Network fee:    {quote.network_fee:,} sats")
         print(f"Boltz fee:      {quote.boltz_fee:,} sats")

@@ -8,4 +8,4 @@ pub use arguments::{SimplicityArguments, SimplicityWitnessValues};
 pub use log_level::SimplicityLogLevel;
 pub use program::SimplicityProgram;
 pub use run_result::SimplicityRunResult;
-pub use utils::simplicity_derive_xonly_pubkey;
+pub use utils::{simplicity_control_block, simplicity_derive_xonly_pubkey};

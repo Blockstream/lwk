@@ -18,7 +18,7 @@ mod xonly_public_key;
 
 pub use asset_id::AssetId;
 pub use blinding_factor::{AssetBlindingFactor, ValueBlindingFactor};
-pub use control_block::{simplicity_control_block, ControlBlock};
+pub use control_block::ControlBlock;
 pub use hex::Hex;
 pub use keypair::Keypair;
 pub use lock_time::LockTime;

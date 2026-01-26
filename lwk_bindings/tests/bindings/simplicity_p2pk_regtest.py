@@ -98,18 +98,45 @@ finalized_tx = program.finalize_transaction(
 # 11b. Verify TxInWitness can be built manually and matches finalize_transaction output
 finalized_witness = finalized_tx.inputs()[0].witness()
 assert not finalized_witness.is_empty(), "Finalized witness should not be empty"
+finalized_script_witness = finalized_witness.script_witness()
+assert len(finalized_script_witness) == 4, "Simplicity witness should have 4 elements"
 
-# Build the same witness manually
-control_block = simplicity_control_block(program.cmr(), xonly_pubkey)
-manual_witness = TxInWitness.from_script_witness(finalized_witness.script_witness())
-assert manual_witness.script_witness() == finalized_witness.script_witness(), \
-    "Manual witness should match finalized witness"
+# Run the program to get the pruned program and witness bytes
+run_result = program.run(
+    unsigned_tx, xonly_pubkey, all_utxos, 0,
+    witness, network, genesis_hash, SimplicityLogLevel.NONE
+)
+
+# Build the witness manually from its components:
+# [simplicity_witness_bytes, simplicity_program_bytes, cmr, control_block]
+simplicity_witness_bytes = run_result.witness_bytes()
+simplicity_program_bytes = run_result.program_bytes()
+cmr = run_result.cmr()
+
+control_block = simplicity_control_block(cmr, xonly_pubkey)
+control_block_hex = control_block.serialize().hex()
+
+# Verify it matches what program.control_block() returns
+program_control_block_hex = str(program.control_block(xonly_pubkey))
+assert control_block_hex == program_control_block_hex, \
+    "simplicity_control_block should match program.control_block()"
+
+manual_script_witness = [
+    str(simplicity_witness_bytes),
+    str(simplicity_program_bytes),
+    str(cmr),
+    control_block_hex,
+]
+
+manual_witness = TxInWitness.from_script_witness(manual_script_witness)
+assert manual_witness.script_witness() == finalized_script_witness, \
+    f"Manual witness should match finalized witness:\n  manual={manual_witness.script_witness()}\n  finalized={finalized_script_witness}"
 
 # Test TransactionBuilder.set_input_witness produces same result
 tx_builder = TransactionBuilder.from_transaction(unsigned_tx)
-tx_builder.set_input_witness(0, finalized_witness)
+tx_builder.set_input_witness(0, manual_witness)
 tx_with_manual_witness = tx_builder.build()
-assert tx_with_manual_witness.inputs()[0].witness().script_witness() == finalized_witness.script_witness(), \
+assert tx_with_manual_witness.inputs()[0].witness().script_witness() == finalized_script_witness, \
     "TransactionBuilder.set_input_witness should produce matching witness"
 
 # 12. Broadcast and verify inclusion in block

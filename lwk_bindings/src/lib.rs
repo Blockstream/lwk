@@ -48,8 +48,8 @@ pub use lightning::{BoltzSession, LogLevel, Logging, LoggingLink};
 mod simplicity;
 #[cfg(feature = "simplicity")]
 pub use simplicity::{
-    simplicity_derive_xonly_pubkey, SimplicityArguments, SimplicityLogLevel, SimplicityProgram,
-    SimplicityRunResult, SimplicityWitnessValues,
+    simplicity_control_block, simplicity_derive_xonly_pubkey, SimplicityArguments,
+    SimplicityLogLevel, SimplicityProgram, SimplicityRunResult, SimplicityWitnessValues,
 };
 
 pub use blockdata::address::Address;
@@ -70,8 +70,8 @@ pub use blockdata::wallet_tx_out::WalletTxOut;
 pub use crate::contract::Contract;
 pub use crate::signer::{Bip, Signer};
 pub use crate::types::{
-    simplicity_control_block, AssetBlindingFactor, ControlBlock, Keypair, LockTime, PublicKey,
-    Tweak, TxSequence, ValueBlindingFactor, XOnlyPublicKey,
+    AssetBlindingFactor, ControlBlock, Keypair, LockTime, PublicKey, Tweak, TxSequence,
+    ValueBlindingFactor, XOnlyPublicKey,
 };
 pub use crate::wollet::Wollet;
 pub use chain::Chain;

@@ -2,12 +2,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use elements::bitcoin::bip32::DerivationPath;
+use lwk_simplicity_options::scripts;
 use lwk_simplicity_options::simplicityhl;
 use lwk_simplicity_options::utils::parse_genesis_hash;
 
 use crate::blockdata::tx_out::TxOut;
 use crate::types::{Hex, XOnlyPublicKey};
-use crate::LwkError;
+use crate::{ControlBlock, LwkError};
 
 /// Get the x-only public key for a given derivation path from a signer.
 #[uniffi::export]
@@ -17,6 +18,19 @@ pub fn simplicity_derive_xonly_pubkey(
 ) -> Result<Arc<XOnlyPublicKey>, LwkError> {
     let keypair = derive_keypair(signer, &derivation_path)?;
     Ok(XOnlyPublicKey::from_keypair(&keypair))
+}
+
+/// Compute the Taproot control block for Simplicity script-path spending.
+#[uniffi::export]
+pub fn simplicity_control_block(
+    cmr: &Hex,
+    internal_key: &XOnlyPublicKey,
+) -> Result<Arc<ControlBlock>, LwkError> {
+    let cmr = simplicityhl::simplicity::Cmr::from_byte_array(cmr.as_ref().try_into()?);
+    let internal_key = internal_key.to_simplicityhl()?;
+    let control_block = scripts::control_block(cmr, internal_key);
+    let serialized = control_block.serialize();
+    Ok(ControlBlock::from_slice(&serialized)?)
 }
 
 pub(crate) fn get_genesis_hash(

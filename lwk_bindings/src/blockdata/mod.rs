@@ -11,6 +11,7 @@ pub mod out_point;
 pub mod script;
 pub mod transaction;
 pub mod tx_in;
+pub mod tx_in_witness;
 pub mod tx_out;
 pub mod tx_out_secrets;
 pub mod txid;

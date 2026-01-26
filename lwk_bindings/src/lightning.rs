@@ -164,9 +164,9 @@ pub enum PaymentState {
 #[derive(uniffi::Enum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SwapAsset {
     /// Lightning Bitcoin (for reverse/submarine swaps)
-    LightningBtc,
+    Lightning,
     /// Onchain Bitcoin (for chain swaps)
-    OnchainBtc,
+    Onchain,
     /// Liquid Bitcoin (onchain)
     Liquid,
 }
@@ -174,8 +174,8 @@ pub enum SwapAsset {
 impl From<SwapAsset> for lwk_boltz::SwapAsset {
     fn from(asset: SwapAsset) -> Self {
         match asset {
-            SwapAsset::LightningBtc => lwk_boltz::SwapAsset::LightningBtc,
-            SwapAsset::OnchainBtc => lwk_boltz::SwapAsset::OnchainBtc,
+            SwapAsset::Lightning => lwk_boltz::SwapAsset::Lightning,
+            SwapAsset::Onchain => lwk_boltz::SwapAsset::Onchain,
             SwapAsset::Liquid => lwk_boltz::SwapAsset::Liquid,
         }
     }
@@ -657,7 +657,7 @@ impl BoltzSession {
     /// # Example
     /// ```ignore
     /// let builder = session.quote(25000);
-    /// builder.send(SwapAsset::LightningBtc);
+    /// builder.send(SwapAsset::Lightning);
     /// builder.receive(SwapAsset::Liquid);
     /// let quote = builder.build()?;
     /// ```

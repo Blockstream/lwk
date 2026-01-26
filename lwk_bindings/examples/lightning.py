@@ -400,11 +400,11 @@ def get_quote(boltz_session):
     while True:
         from_choice = input("Select source asset (1-3): ").strip()
         if from_choice == '1':
-            from_asset = SwapAsset.LIGHTNING_BTC
+            from_asset = SwapAsset.LIGHTNING
             from_name = "Lightning BTC"
             break
         elif from_choice == '2':
-            from_asset = SwapAsset.ONCHAIN_BTC
+            from_asset = SwapAsset.ONCHAIN
             from_name = "Onchain BTC"
             break
         elif from_choice == '3':
@@ -418,11 +418,11 @@ def get_quote(boltz_session):
     while True:
         to_choice = input("Select destination asset (1-3): ").strip()
         if to_choice == '1':
-            to_asset = SwapAsset.LIGHTNING_BTC
+            to_asset = SwapAsset.LIGHTNING
             to_name = "Lightning BTC"
             break
         elif to_choice == '2':
-            to_asset = SwapAsset.ONCHAIN_BTC
+            to_asset = SwapAsset.ONCHAIN
             to_name = "Onchain BTC"
             break
         elif to_choice == '3':

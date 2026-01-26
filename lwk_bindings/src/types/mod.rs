@@ -11,6 +11,7 @@ mod keypair;
 mod lock_time;
 mod public_key;
 mod secret_key;
+mod tweak;
 mod tx_sequence;
 mod xonly_public_key;
 
@@ -21,5 +22,6 @@ pub use keypair::Keypair;
 pub use lock_time::LockTime;
 pub use public_key::PublicKey;
 pub use secret_key::SecretKey;
+pub use tweak::Tweak;
 pub use tx_sequence::TxSequence;
 pub use xonly_public_key::XOnlyPublicKey;

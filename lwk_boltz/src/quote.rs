@@ -652,14 +652,10 @@ mod tests {
                 let bf_check = ((*percentage * send_approx as f64) / 100.0).ceil() as u64;
                 let calculated_receive = send_approx.saturating_sub(bf_check + network_fee);
 
-                if calculated_receive == receive {
-                    exact_count += 1;
-                } else if calculated_receive > receive {
-                    overshot_count += 1;
-                    // This means we get MORE than requested - need to decrease send
-                } else {
-                    undershot_count += 1;
-                    // This means we get LESS than requested - need to increase send
+                match calculated_receive.cmp(&receive) {
+                    std::cmp::Ordering::Equal => exact_count += 1,
+                    std::cmp::Ordering::Greater => overshot_count += 1,
+                    std::cmp::Ordering::Less => undershot_count += 1,
                 }
             }
 

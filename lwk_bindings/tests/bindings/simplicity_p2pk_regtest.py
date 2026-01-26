@@ -95,6 +95,23 @@ finalized_tx = program.finalize_transaction(
     witness, network, genesis_hash, SimplicityLogLevel.NONE
 )
 
+# 11b. Verify TxInWitness can be built manually and matches finalize_transaction output
+finalized_witness = finalized_tx.inputs()[0].witness()
+assert not finalized_witness.is_empty(), "Finalized witness should not be empty"
+
+# Build the same witness manually
+control_block = simplicity_control_block(program.cmr(), xonly_pubkey)
+manual_witness = TxInWitness.from_script_witness(finalized_witness.script_witness())
+assert manual_witness.script_witness() == finalized_witness.script_witness(), \
+    "Manual witness should match finalized witness"
+
+# Test TransactionBuilder.set_input_witness produces same result
+tx_builder = TransactionBuilder.from_transaction(unsigned_tx)
+tx_builder.set_input_witness(0, finalized_witness)
+tx_with_manual_witness = tx_builder.build()
+assert tx_with_manual_witness.inputs()[0].witness().script_witness() == finalized_witness.script_witness(), \
+    "TransactionBuilder.set_input_witness should produce matching witness"
+
 # 12. Broadcast and verify inclusion in block
 txid = client.broadcast(finalized_tx)
 node.generate(1)

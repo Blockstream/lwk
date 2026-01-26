@@ -2,11 +2,15 @@ use crate::types::{AssetId, Hex, Tweak};
 use crate::{
     Issuance, LwkError, OutPoint, PublicKey, Script, Transaction, TxOut, TxSequence, Txid,
 };
+
+use std::fmt::Display;
+use std::sync::{Arc, Mutex};
+
 use elements::pset::{Input, Output, PartiallySignedTransaction};
 use elements::{hashes::Hash, BlockHash};
+
 use lwk_wollet::elements_miniscript::psbt::finalize;
 use lwk_wollet::EC;
-use std::{fmt::Display, sync::Arc};
 
 /// A Partially Signed Elements Transaction
 #[derive(uniffi::Object, PartialEq, Debug, Clone)]
@@ -77,7 +81,7 @@ impl Pset {
         self.inner
             .inputs()
             .iter()
-            .map(|i| Arc::new(i.clone().into()))
+            .map(|i| Arc::new(PsetInput::from_inner(i.clone())))
             .collect()
     }
 }
@@ -89,20 +93,35 @@ impl Pset {
 }
 
 /// PSET input
-#[derive(uniffi::Object, Debug, Clone)]
+#[derive(uniffi::Object, Debug)]
 pub struct PsetInput {
-    inner: Input,
+    /// Uses Mutex for in-place mutation. See [`crate::TxBuilder`] for rationale.
+    inner: Mutex<Option<Input>>,
 }
 
-impl AsRef<Input> for PsetInput {
-    fn as_ref(&self) -> &Input {
+fn input_consumed() -> LwkError {
+    "PsetInput already consumed".into()
+}
+
+impl AsRef<Mutex<Option<Input>>> for PsetInput {
+    fn as_ref(&self) -> &Mutex<Option<Input>> {
         &self.inner
     }
 }
 
 impl From<Input> for PsetInput {
     fn from(inner: Input) -> Self {
-        Self { inner }
+        Self {
+            inner: Mutex::new(Some(inner)),
+        }
+    }
+}
+
+impl PsetInput {
+    fn from_inner(inner: Input) -> Self {
+        Self {
+            inner: Mutex::new(Some(inner)),
+        }
     }
 }
 
@@ -112,133 +131,153 @@ impl PsetInput {
     #[uniffi::constructor]
     pub fn from_prevout(outpoint: &OutPoint) -> Arc<Self> {
         Arc::new(Self {
-            inner: Input::from_prevout(outpoint.into()),
+            inner: Mutex::new(Some(Input::from_prevout(outpoint.into()))),
         })
     }
 
-    /// Set the witness UTXO
-    pub fn with_witness_utxo(&self, utxo: &TxOut) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.witness_utxo = Some(utxo.into());
-        Arc::new(Self { inner: new })
+    /// Set the witness UTXO.
+    pub fn set_witness_utxo(&self, utxo: &TxOut) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.witness_utxo = Some(utxo.into());
+        Ok(())
     }
 
-    /// Set the sequence number
-    pub fn with_sequence(&self, sequence: &TxSequence) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.sequence = Some((*sequence).into());
-        Arc::new(Self { inner: new })
+    /// Set the sequence number.
+    pub fn set_sequence(&self, sequence: &TxSequence) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.sequence = Some((*sequence).into());
+        Ok(())
     }
 
-    /// Set the issuance value amount
-    pub fn with_issuance_value_amount(&self, amount: u64) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.issuance_value_amount = Some(amount);
-        Arc::new(Self { inner: new })
+    /// Set the issuance value amount.
+    pub fn set_issuance_value_amount(&self, amount: u64) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.issuance_value_amount = Some(amount);
+        Ok(())
     }
 
-    /// Set the issuance inflation keys
-    pub fn with_issuance_inflation_keys(&self, amount: Option<u64>) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.issuance_inflation_keys = amount;
-        Arc::new(Self { inner: new })
+    /// Set the issuance inflation keys.
+    pub fn set_issuance_inflation_keys(&self, amount: u64) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.issuance_inflation_keys = Some(amount);
+        Ok(())
     }
 
-    /// Set the issuance asset entropy
-    pub fn with_issuance_asset_entropy(&self, entropy: &Hex) -> Result<Arc<Self>, LwkError> {
+    /// Set the issuance asset entropy.
+    pub fn set_issuance_asset_entropy(&self, entropy: &Hex) -> Result<(), LwkError> {
         let bytes: [u8; 32] = entropy.as_ref().try_into()?;
-        let mut new = self.inner.clone();
-        new.issuance_asset_entropy = Some(bytes);
-        Ok(Arc::new(Self { inner: new }))
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.issuance_asset_entropy = Some(bytes);
+        Ok(())
     }
 
-    /// Set the blinded issuance flag
-    pub fn with_blinded_issuance(&self, flag: u8) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.blinded_issuance = Some(flag);
-        Arc::new(Self { inner: new })
+    /// Set the blinded issuance flag.
+    pub fn set_blinded_issuance(&self, flag: u8) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.blinded_issuance = Some(flag);
+        Ok(())
     }
 
-    /// Set the issuance blinding nonce
-    pub fn with_issuance_blinding_nonce(&self, nonce: &Tweak) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.issuance_blinding_nonce = Some(nonce.into());
-        Arc::new(Self { inner: new })
+    /// Set the issuance blinding nonce.
+    pub fn set_issuance_blinding_nonce(&self, nonce: &Tweak) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(input_consumed)?;
+        inner.issuance_blinding_nonce = Some(nonce.into());
+        Ok(())
     }
 
-    /// Prevout TXID of the input
-    pub fn previous_txid(&self) -> Arc<Txid> {
-        Arc::new(self.inner.previous_txid.into())
+    /// Prevout TXID of the input.
+    pub fn previous_txid(&self) -> Result<Arc<Txid>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(Arc::new(inner.previous_txid.into()))
     }
 
-    /// Prevout vout of the input
-    pub fn previous_vout(&self) -> u32 {
-        self.inner.previous_output_index
+    /// Prevout vout of the input.
+    pub fn previous_vout(&self) -> Result<u32, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner.previous_output_index)
     }
 
-    /// Prevout scriptpubkey of the input
-    pub fn previous_script_pubkey(&self) -> Option<Arc<Script>> {
-        self.inner
+    /// Prevout scriptpubkey of the input.
+    pub fn previous_script_pubkey(&self) -> Result<Option<Arc<Script>>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner
             .witness_utxo
             .as_ref()
-            .map(|txout| Arc::new(txout.script_pubkey.clone().into()))
+            .map(|txout| Arc::new(txout.script_pubkey.clone().into())))
     }
 
-    /// Redeem script of the input
-    pub fn redeem_script(&self) -> Option<Arc<Script>> {
-        self.inner
+    /// Redeem script of the input.
+    pub fn redeem_script(&self) -> Result<Option<Arc<Script>>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner
             .redeem_script
             .as_ref()
-            .map(|s| Arc::new(s.clone().into()))
+            .map(|s| Arc::new(s.clone().into())))
     }
 
-    /// If the input has an issuance, the asset id
-    pub fn issuance_asset(&self) -> Option<AssetId> {
-        self.inner
+    /// If the input has an issuance, the asset id.
+    pub fn issuance_asset(&self) -> Result<Option<AssetId>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner.has_issuance().then(|| inner.issuance_ids().0.into()))
+    }
+
+    /// If the input has an issuance, the token id.
+    pub fn issuance_token(&self) -> Result<Option<AssetId>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner.has_issuance().then(|| inner.issuance_ids().1.into()))
+    }
+
+    /// If the input has a (re)issuance, the issuance object.
+    pub fn issuance(&self) -> Result<Option<Arc<Issuance>>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner
             .has_issuance()
-            .then(|| self.inner.issuance_ids().0.into())
+            .then(|| Arc::new(lwk_common::Issuance::new(inner).into())))
     }
 
-    /// If the input has an issuance, the token id
-    pub fn issuance_token(&self) -> Option<AssetId> {
-        self.inner
-            .has_issuance()
-            .then(|| self.inner.issuance_ids().1.into())
-    }
-
-    /// If the input has a (re)issuance, the issuance object
-    pub fn issuance(&self) -> Option<Arc<Issuance>> {
-        self.inner
-            .has_issuance()
-            .then(|| Arc::new(lwk_common::Issuance::new(&self.inner).into()))
-    }
-
-    /// Input sighash
-    pub fn sighash(&self) -> u32 {
-        self.inner.sighash_type.map(|s| s.to_u32()).unwrap_or(1)
+    /// Input sighash.
+    pub fn sighash(&self) -> Result<u32, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(input_consumed)?;
+        Ok(inner.sighash_type.map(|s| s.to_u32()).unwrap_or(1))
     }
 }
 
 /// PSET output
-#[derive(uniffi::Object, Debug, Clone)]
+#[derive(uniffi::Object, Debug)]
 pub struct PsetOutput {
-    inner: Output,
+    /// Uses Mutex for in-place mutation. See [`crate::TxBuilder`] for rationale.
+    inner: Mutex<Option<Output>>,
+}
+
+fn output_consumed() -> LwkError {
+    "PsetOutput already consumed".into()
 }
 
 impl From<Output> for PsetOutput {
     fn from(inner: Output) -> Self {
-        Self { inner }
+        Self {
+            inner: Mutex::new(Some(inner)),
+        }
     }
 }
 
-impl From<&PsetOutput> for Output {
-    fn from(value: &PsetOutput) -> Self {
-        value.inner.clone()
-    }
-}
-
-impl AsRef<Output> for PsetOutput {
-    fn as_ref(&self) -> &Output {
+impl AsRef<Mutex<Option<Output>>> for PsetOutput {
+    fn as_ref(&self) -> &Mutex<Option<Output>> {
         &self.inner
     }
 }
@@ -260,34 +299,45 @@ impl PsetOutput {
             blinding_key: blinding_key.map(|k| k.as_ref().into()),
             ..Default::default()
         };
-        Arc::new(Self { inner })
+        Arc::new(Self {
+            inner: Mutex::new(Some(inner)),
+        })
     }
 
-    /// Set the blinder index
-    pub fn with_blinder_index(&self, index: Option<u32>) -> Arc<Self> {
-        let mut new = self.inner.clone();
-        new.blinder_index = index;
-        Arc::new(Self { inner: new })
+    /// Set the blinder index.
+    pub fn set_blinder_index(&self, index: Option<u32>) -> Result<(), LwkError> {
+        let mut lock = self.inner.lock()?;
+        let inner = lock.as_mut().ok_or_else(output_consumed)?;
+        inner.blinder_index = index;
+        Ok(())
     }
 
     /// Get the script pubkey.
-    pub fn script_pubkey(&self) -> Arc<Script> {
-        Arc::new(self.inner.script_pubkey.clone().into())
+    pub fn script_pubkey(&self) -> Result<Arc<Script>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(output_consumed)?;
+        Ok(Arc::new(inner.script_pubkey.clone().into()))
     }
 
     /// Get the explicit amount, if set.
-    pub fn amount(&self) -> Option<u64> {
-        self.inner.amount
+    pub fn amount(&self) -> Result<Option<u64>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(output_consumed)?;
+        Ok(inner.amount)
     }
 
     /// Get the explicit asset ID, if set.
-    pub fn asset(&self) -> Option<AssetId> {
-        self.inner.asset.map(Into::into)
+    pub fn asset(&self) -> Result<Option<AssetId>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(output_consumed)?;
+        Ok(inner.asset.map(Into::into))
     }
 
     /// Get the blinder index, if set.
-    pub fn blinder_index(&self) -> Option<u32> {
-        self.inner.blinder_index
+    pub fn blinder_index(&self) -> Result<Option<u32>, LwkError> {
+        let lock = self.inner.lock()?;
+        let inner = lock.as_ref().ok_or_else(output_consumed)?;
+        Ok(inner.blinder_index)
     }
 }
 
@@ -312,13 +362,13 @@ mod tests {
         assert_eq!(pset.inputs().len(), tx.inputs().len());
         let pset_in = &pset.inputs()[0];
         let tx_in = &tx.inputs()[0];
-        assert_eq!(pset_in.previous_txid(), tx_in.outpoint().txid());
-        assert_eq!(pset_in.previous_vout(), tx_in.outpoint().vout());
-        assert!(pset_in.previous_script_pubkey().is_some());
-        assert!(pset_in.redeem_script().is_none());
+        assert_eq!(pset_in.previous_txid().unwrap(), tx_in.outpoint().txid());
+        assert_eq!(pset_in.previous_vout().unwrap(), tx_in.outpoint().vout());
+        assert!(pset_in.previous_script_pubkey().unwrap().is_some());
+        assert!(pset_in.redeem_script().unwrap().is_none());
 
-        assert!(pset_in.issuance_asset().is_none());
-        assert!(pset_in.issuance_token().is_none());
+        assert!(pset_in.issuance_asset().unwrap().is_none());
+        assert!(pset_in.issuance_token().unwrap().is_none());
     }
 
     #[test]
@@ -357,8 +407,8 @@ mod tests {
         .unwrap();
         let outpoint = OutPoint::from_parts(&txid, 0);
         let input = super::PsetInput::from_prevout(&outpoint);
-        let input = input.with_sequence(&TxSequence::zero());
-        assert_eq!(input.previous_vout(), 0);
+        input.set_sequence(&TxSequence::zero()).unwrap();
+        assert_eq!(input.previous_vout().unwrap(), 0);
     }
 
     #[test]
@@ -369,8 +419,8 @@ mod tests {
         )
         .unwrap();
         let output = super::PsetOutput::new_explicit(&script, 1000, asset, None);
-        let output = output.with_blinder_index(Some(0));
-        assert_eq!(output.amount(), Some(1000));
-        assert_eq!(output.blinder_index(), Some(0));
+        output.set_blinder_index(Some(0)).unwrap();
+        assert_eq!(output.amount().unwrap(), Some(1000));
+        assert_eq!(output.blinder_index().unwrap(), Some(0));
     }
 }

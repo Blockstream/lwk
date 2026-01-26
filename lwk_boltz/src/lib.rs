@@ -324,7 +324,35 @@ impl BoltzSession {
     pub async fn quote(&self, send_amount: u64) -> QuoteBuilder {
         // Clone the pairs data from the mutex.
         let swap_info = self.swap_info.lock().await;
-        QuoteBuilder::new(send_amount, swap_info.clone())
+        QuoteBuilder::new_send(send_amount, swap_info.clone())
+    }
+
+    /// Create a quote builder for calculating send amount from desired receive amount
+    ///
+    /// This is the inverse of [`BoltzSession::quote()`] - given the amount you want
+    /// to receive, it calculates how much you need to send.
+    ///
+    /// This uses the cached pairs data from session initialization.
+    ///
+    /// If the pairs data is stale, you can refresh it using [`BoltzSession::refresh_swap_info()`].
+    ///
+    /// # Example
+    /// ```ignore
+    /// let quote = session
+    ///     .quote_receive(24887)
+    ///     .await
+    ///     .send(SwapAsset::Lightning)
+    ///     .receive(SwapAsset::Liquid)
+    ///     .build()?;
+    ///
+    /// println!("You need to send: {} sats", quote.send_amount);
+    /// println!("Network fee: {} sats", quote.network_fee);
+    /// println!("Boltz fee: {} sats", quote.boltz_fee);
+    /// ```
+    pub async fn quote_receive(&self, receive_amount: u64) -> QuoteBuilder {
+        // Clone the pairs data from the mutex.
+        let swap_info = self.swap_info.lock().await;
+        QuoteBuilder::new_receive(receive_amount, swap_info.clone())
     }
 }
 

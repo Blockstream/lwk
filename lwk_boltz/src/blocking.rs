@@ -251,6 +251,14 @@ impl BoltzSession {
     pub fn quote(&self, send_amount: u64) -> QuoteBuilder {
         self.runtime.block_on(self.inner.quote(send_amount))
     }
+
+    /// Create a quote builder for calculating send amount from desired receive amount
+    ///
+    /// This is the inverse of [`BoltzSession::quote()`].
+    pub fn quote_receive(&self, receive_amount: u64) -> QuoteBuilder {
+        self.runtime
+            .block_on(self.inner.quote_receive(receive_amount))
+    }
 }
 
 impl PreparePayResponse {

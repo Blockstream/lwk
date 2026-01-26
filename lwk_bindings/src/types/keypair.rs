@@ -1,10 +1,12 @@
-use super::{PublicKey, SecretKey, XOnlyPublicKey};
+use super::{Hex, PublicKey, SecretKey, XOnlyPublicKey};
 
 use crate::LwkError;
 
 use std::sync::Arc;
 
-use elements::bitcoin::secp256k1::{self, Secp256k1};
+use lwk_wollet::EC;
+
+use elements::bitcoin::secp256k1::{self, Message, Secp256k1};
 
 /// A secp256k1 keypair.
 ///
@@ -86,6 +88,13 @@ impl Keypair {
         let (xonly, _parity) = self.inner.x_only_public_key();
         xonly.into()
     }
+
+    /// Sign a 32-byte message hash using Schnorr signature.
+    pub fn sign_schnorr(&self, msg: &Hex) -> Result<Hex, LwkError> {
+        let message = Message::from_digest(msg.as_ref().try_into()?);
+        let sig = EC.sign_schnorr(&message, &self.inner);
+        Ok(sig.serialize().to_vec().into())
+    }
 }
 
 #[cfg(feature = "simplicity")]
@@ -111,6 +120,10 @@ impl Keypair {
 
 #[cfg(test)]
 mod tests {
+    use lwk_wollet::EC;
+
+    use lwk_wollet::secp256k1::{schnorr, Message};
+
     use super::{Keypair, SecretKey};
 
     #[test]
@@ -154,5 +167,22 @@ mod tests {
         let kp = Keypair::from_secret_bytes(&bytes).unwrap();
         let sk = kp.secret_key();
         assert_eq!(sk.bytes(), bytes);
+    }
+
+    #[test]
+    fn test_keypair_sign_schnorr() {
+        let kp = Keypair::from_secret_bytes(&[1u8; 32]).unwrap();
+        let msg_bytes = [2u8; 32];
+        let msg: super::Hex = msg_bytes.as_slice().into();
+
+        let sig = kp.sign_schnorr(&msg).unwrap();
+        assert_eq!(sig.as_ref().len(), 64);
+
+        let sig = schnorr::Signature::from_slice(sig.as_ref()).unwrap();
+        let message = Message::from_digest(msg_bytes);
+
+        let pubkey: elements::bitcoin::secp256k1::XOnlyPublicKey = kp.x_only_public_key().into();
+
+        assert!(EC.verify_schnorr(&sig, &message, &pubkey).is_ok());
     }
 }
